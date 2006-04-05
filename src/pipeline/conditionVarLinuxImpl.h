@@ -1,5 +1,5 @@
-// Filename: atomicAdjustPosixImpl.h
-// Created by:  drose (10Feb06)
+// Filename: conditionVarLinuxImpl.h
+// Created by:  drose (28Mar06)
 //
 ////////////////////////////////////////////////////////////////////
 //
@@ -16,36 +16,38 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#ifndef ATOMICADJUSTPOSIXIMPL_H
-#define ATOMICADJUSTPOSIXIMPL_H
+#ifndef CONDITIONVARLINUXIMPL_H
+#define CONDITIONVARLINUXIMPL_H
 
 #include "pandabase.h"
 #include "selectThreadImpl.h"
 
-#ifdef THREAD_POSIX_IMPL
+#ifdef THREAD_LINUX_IMPL
 
+#include "mutexLinuxImpl.h"
 #include "pnotify.h"
-#include "numeric_types.h"
 
-#include <pthread.h>
+class MutexLinuxImpl;
 
 ////////////////////////////////////////////////////////////////////
-//       Class : AtomicAdjustPosixImpl
-// Description : Uses POSIX to implement atomic adjustments.
+//       Class : ConditionVarLinuxImpl
+// Description : Uses Linux threads to implement a conditionVar.
 ////////////////////////////////////////////////////////////////////
-class EXPCL_PANDAEXPRESS AtomicAdjustPosixImpl {
+class EXPCL_PANDA ConditionVarLinuxImpl {
 public:
-  INLINE static PN_int32 inc(PN_int32 &var);
-  INLINE static PN_int32 dec(PN_int32 &var);
-  INLINE static PN_int32 set(PN_int32 &var, PN_int32 new_value);
-  INLINE static PN_int32 get(const PN_int32 &var);
+  INLINE ConditionVarLinuxImpl(MutexLinuxImpl &mutex);
+  INLINE ~ConditionVarLinuxImpl();
+
+  void wait();
+  void signal();
 
 private:
-  static pthread_mutex_t _mutex;
+  MutexLinuxImpl &_mutex;
+  PN_int32 _counter;
 };
 
-#include "atomicAdjustPosixImpl.I"
+#include "conditionVarLinuxImpl.I"
 
-#endif  // THREAD_POSIX_IMPL
+#endif  // THREAD_LINUX_IMPL
 
 #endif
