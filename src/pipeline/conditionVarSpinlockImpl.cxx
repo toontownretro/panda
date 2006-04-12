@@ -1,5 +1,5 @@
-// Filename: conditionVarNsprImpl.cxx
-// Created by:  drose (09Aug02)
+// Filename: conditionVarSpinlockImpl.cxx
+// Created by:  drose (11Apr06)
 //
 ////////////////////////////////////////////////////////////////////
 //
@@ -18,8 +18,24 @@
 
 #include "selectThreadImpl.h"
 
-#ifdef HAVE_NSPR
+#ifdef MUTEX_SPINLOCK
 
-#include "conditionVarNsprImpl.h"
+#include "conditionVarSpinlockImpl.h"
 
-#endif  // HAVE_NSPR
+////////////////////////////////////////////////////////////////////
+//     Function: ConditionVarSpinlockImpl::wait
+//       Access: Public
+//  Description: 
+////////////////////////////////////////////////////////////////////
+void ConditionVarSpinlockImpl::
+wait() {
+  PN_int32 current = _event;
+  _mutex.release();
+
+  while (AtomicAdjust::get(_event) == current) {
+  }
+
+  _mutex.lock();
+}
+
+#endif  // MUTEX_SPINLOCK
