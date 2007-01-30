@@ -1,5 +1,5 @@
-// Filename: reversedNumericData.cxx
-// Created by:  drose (09May01)
+// Filename: encrypt_string.h
+// Created by:  drose (30Jan07)
 //
 ////////////////////////////////////////////////////////////////////
 //
@@ -16,20 +16,18 @@
 //
 ////////////////////////////////////////////////////////////////////
 
+#ifndef ENCRYPT_STRING_H
+#define ENCRYPT_STRING_H
 
-#include "pnotify.h"
+#include "pandabase.h"
 
-#include "reversedNumericData.h"
+#ifdef HAVE_OPENSSL
 
-////////////////////////////////////////////////////////////////////
-//     Function: ReversedNumericData::reverse_assign
-//       Access: Private
-//  Description: Actually does the data reversal.
-////////////////////////////////////////////////////////////////////
-void ReversedNumericData::
-reverse_assign(const char *source, size_t length) {
-  nassertv((int)length <= max_numeric_size);
-  for (size_t i = 0; i < length; i++) {
-    _data[i] = source[length - 1 - i];
-  }
-}
+BEGIN_PUBLISH
+EXPCL_PANDAEXPRESS string encrypt_string(const string &source, const string &password);
+EXPCL_PANDAEXPRESS string decrypt_string(const string &source, const string &password);
+END_PUBLISH
+
+#endif  // HAVE_OPENSSL
+
+#endif
