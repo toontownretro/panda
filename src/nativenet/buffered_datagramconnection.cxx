@@ -1,5 +1,5 @@
-// Filename: pprerror.h
-// Created by:  drose (08Feb00)
+// Filename: buffered_datagramconnection.cxx
+// Created by:  drose (05Mar07)
 //
 ////////////////////////////////////////////////////////////////////
 //
@@ -16,12 +16,6 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#ifndef PPRERROR_H
-#define PPRERROR_H
+#include "buffered_datagramconnection.h"
 
-#include "pandabase.h"
-
-void pprerror(const char *format, ...);
-
-#endif
-
+TypeHandle Buffered_DatagramConnection::_type_handle;
