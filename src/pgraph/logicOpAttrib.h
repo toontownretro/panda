@@ -6,36 +6,57 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file fogAttrib.h
- * @author drose
- * @date 2002-03-14
+ * @file logicOpAttrib.I
+ * @author rdb
+ * @date 2016-03-24
  */
 
-#ifndef FOGATTRIB_H
-#define FOGATTRIB_H
+#ifndef LOGICOPATTRIB_H
+#define LOGICOPATTRIB_H
 
 #include "pandabase.h"
-
+#include "luse.h"
 #include "renderAttrib.h"
-#include "fog.h"
+
+class FactoryParams;
 
 /**
- * Applies a Fog to the geometry at and below this node.
+ * If enabled, specifies that a custom logical operation be performed instead
+ * of any color blending.  Setting it to a value other than M_none will cause
+ * color blending to be disabled and the given logic operation to be performed.
  */
-class EXPCL_PANDA_PGRAPH FogAttrib : public RenderAttrib {
+class EXPCL_PANDA_PGRAPH LogicOpAttrib : public RenderAttrib {
+PUBLISHED:
+  enum Operation {
+    O_none,  // LogicOp disabled, regular blending occurs.
+    O_clear, // Clears framebuffer value.
+    O_and,
+    O_and_reverse,
+    O_copy,  // Writes the incoming color to the framebuffer.
+    O_and_inverted,
+    O_noop,  // Leaves the framebuffer value unaltered.
+    O_xor,
+    O_or,
+    O_nor,
+    O_equivalent,
+    O_invert,
+    O_or_reverse,
+    O_copy_inverted,
+    O_or_inverted,
+    O_nand,
+    O_set,   // Sets all the bits in the framebuffer to 1.
+  };
+
 private:
-  INLINE FogAttrib();
+  INLINE LogicOpAttrib(Operation op);
 
 PUBLISHED:
-  static CPT(RenderAttrib) make(Fog *fog);
   static CPT(RenderAttrib) make_off();
+  static CPT(RenderAttrib) make(Operation op);
   static CPT(RenderAttrib) make_default();
 
-  INLINE bool is_off() const;
-  INLINE Fog *get_fog() const;
-
-PUBLISHED:
-  MAKE_PROPERTY(fog, get_fog);
+  INLINE Operation get_operation() const;
+  MAKE_PROPERTY(operation, get_operation);
 
 public:
   virtual void output(ostream &out) const;
@@ -46,7 +67,7 @@ protected:
   virtual CPT(RenderAttrib) get_auto_shader_attrib_impl(const RenderState *state) const;
 
 private:
-  PT(Fog) _fog;
+  Operation _op;
 
 PUBLISHED:
   static int get_class_slot() {
@@ -59,7 +80,6 @@ PUBLISHED:
 public:
   static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &dg);
-  virtual int complete_pointers(TypedWritable **plist, BamReader *manager);
 
 protected:
   static TypedWritable *make_from_bam(const FactoryParams &params);
@@ -71,9 +91,9 @@ public:
   }
   static void init_type() {
     RenderAttrib::init_type();
-    register_type(_type_handle, "FogAttrib",
+    register_type(_type_handle, "LogicOpAttrib",
                   RenderAttrib::get_class_type());
-    _attrib_slot = register_slot(_type_handle, 100, new FogAttrib);
+    _attrib_slot = register_slot(_type_handle, 100, new LogicOpAttrib(O_none));
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -85,6 +105,8 @@ private:
   static int _attrib_slot;
 };
 
-#include "fogAttrib.I"
+EXPCL_PANDA_PGRAPH ostream &operator << (ostream &out, LogicOpAttrib::Operation op);
+
+#include "logicOpAttrib.I"
 
 #endif
