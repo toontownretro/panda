@@ -6,37 +6,33 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file filename_ext.h
+ * @file shaderAttrib_ext.h
  * @author rdb
- * @date 2014-09-17
+ * @date 2017-10-08
  */
 
-#ifndef FILENAME_EXT_H
-#define FILENAME_EXT_H
+#ifndef SHADERATTRIB_EXT_H
+#define SHADERATTRIB_EXT_H
 
 #include "dtoolbase.h"
 
 #ifdef HAVE_PYTHON
 
 #include "extension.h"
-#include "filename.h"
+#include "shaderAttrib.h"
 #include "py_panda.h"
 
 /**
- * This class defines the extension methods for Filename, which are called
+ * This class defines the extension methods for ShaderAttrib, which are called
  * instead of any C++ methods with the same prototype.
  */
 template<>
-class Extension<Filename> : public ExtensionBase<Filename> {
+class Extension<ShaderAttrib> : public ExtensionBase<ShaderAttrib> {
 public:
-  void __init__(PyObject *path);
-
-  PyObject *__reduce__(PyObject *self) const;
-  PyObject *__repr__() const;
-  PyObject *__fspath__() const;
-  PyObject *scan_directory() const;
+  CPT(RenderAttrib) set_shader_input(CPT_InternalName id, PyObject *value, int priority=0) const;
+  CPT(RenderAttrib) set_shader_inputs(PyObject *args, PyObject *kwargs) const;
 };
 
 #endif  // HAVE_PYTHON
 
-#endif  // FILENAME_EXT_H
+#endif  // SHADERATTRIB_EXT_H

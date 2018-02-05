@@ -6,32 +6,32 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file typeHandle_ext.h
+ * @file shaderInput_ext.h
  * @author rdb
- * @date 2014-09-17
+ * @date 2017-10-06
  */
 
-#ifndef TYPEHANDLE_EXT_H
-#define TYPEHANDLE_EXT_H
+#ifndef SHADERINPUT_EXT_H
+#define SHADERINPUT_EXT_H
 
 #include "dtoolbase.h"
 
 #ifdef HAVE_PYTHON
 
 #include "extension.h"
-#include "typeHandle.h"
+#include "shaderInput.h"
 #include "py_panda.h"
 
 /**
- * This class defines the extension methods for TypeHandle, which are called
+ * This class defines the extension methods for NodePath, which are called
  * instead of any C++ methods with the same prototype.
  */
 template<>
-class Extension<TypeHandle> : public ExtensionBase<TypeHandle> {
+class Extension<ShaderInput> : public ExtensionBase<ShaderInput> {
 public:
-  static TypeHandle make(PyTypeObject *tp);
+  void __init__(CPT_InternalName name, PyObject *value, int priority=0);
 };
 
 #endif  // HAVE_PYTHON
 
-#endif  // TYPEHANDLE_EXT_H
+#endif  // SHADERINPUT_EXT_H
