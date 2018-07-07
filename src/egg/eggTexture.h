@@ -19,6 +19,7 @@
 #include "eggRenderMode.h"
 #include "eggFilenameNode.h"
 #include "eggTransform.h"
+#include "texture.h"
 
 #include "pset.h"
 #include "luse.h"
@@ -163,6 +164,11 @@ PUBLISHED:
     QL_normal,
     QL_best,
   };
+
+  INLINE void set_texture_ptr( PT( Texture ) ptr );
+  INLINE PT( Texture ) get_texture_ptr() const;
+  INLINE bool has_texture_ptr() const;
+  INLINE void clear_texture_ptr();
 
   INLINE void set_texture_type(TextureType texture_type);
   INLINE TextureType get_texture_type() const;
@@ -354,6 +360,8 @@ PUBLISHED:
                           set_max_lod, clear_max_lod);
   MAKE_PROPERTY2(lod_bias, has_lod_bias, get_lod_bias,
                            set_lod_bias, clear_lod_bias);
+  MAKE_PROPERTY2( texture_ptr, has_texture_ptr, get_texture_ptr,
+		  set_texture_ptr, clear_texture_ptr );
 
   MAKE_PROPERTY(multitexture_sort, get_multitexture_sort);
 
@@ -382,6 +390,7 @@ private:
     F_has_min_lod            = 0x1000,
     F_has_max_lod            = 0x2000,
     F_has_lod_bias           = 0x4000,
+    F_has_texture_ptr	     = 0x8000,
   };
 
   TextureType _texture_type;
@@ -412,6 +421,7 @@ private:
   double _min_lod;
   double _max_lod;
   double _lod_bias;
+  PT( Texture ) _texture_ptr;
 
   class SourceAndOperand {
   public:

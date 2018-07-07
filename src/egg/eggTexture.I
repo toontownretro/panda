@@ -947,6 +947,32 @@ get_lod_bias() const {
   return _lod_bias;
 }
 
+INLINE void EggTexture::
+set_texture_ptr( PT( Texture ) ptr )
+{
+	_texture_ptr = ptr;
+	_flags |= F_has_texture_ptr;
+}
+
+INLINE void EggTexture::
+clear_texture_ptr()
+{
+	_texture_ptr = nullptr;
+	_flags &= ~F_has_texture_ptr;
+}
+
+INLINE PT(Texture) EggTexture::
+get_texture_ptr() const
+{
+	return _texture_ptr;
+}
+
+INLINE bool EggTexture::
+has_texture_ptr() const
+{
+	return ( _flags & F_has_texture_ptr ) != 0;
+}
+
 /**
  * Returns an integer that represents the depth to which this texture is
  * layered on all other textures in the egg file.  In general, if texture A is

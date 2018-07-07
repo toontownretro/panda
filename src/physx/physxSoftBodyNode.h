@@ -56,7 +56,7 @@ private:
   NxVec3 compute_bary_coords(NxVec3 vertex, NxVec3 p0, NxVec3 p1, NxVec3 p2, NxVec3 p3) const;
 
   pvector<TetraLink> _tetraLinks;
-  pvector<bool> _drainedTriVertices;
+  pvector<int> _drainedTriVertices;
   pvector<LVecBase3f> _normals;
 
   NxBounds3 _bounds;

@@ -72,6 +72,9 @@ PUBLISHED:
   INLINE void recompute_polygon_normals();
   INLINE void strip_normals();
 
+  INLINE void set_bsp_mode(bool flag);
+  INLINE bool is_bsp_mode() const;
+
 protected:
   virtual void write(std::ostream &out, int indent_level = 0) const;
 
@@ -79,6 +82,7 @@ private:
   void post_read();
   void pre_write();
 
+  bool _bsp_mode;
   bool _auto_resolve_externals;
   bool _had_absolute_pathnames;
   CoordinateSystem _coordsys;

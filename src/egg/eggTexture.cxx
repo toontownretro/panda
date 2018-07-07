@@ -54,6 +54,7 @@ EggTexture(const string &tref_name, const Filename &filename)
   _alpha_file_channel = 0;
   _read_mipmaps = false;
   _multitexture_sort = 0;
+  _texture_ptr = nullptr;
 }
 
 /**
@@ -106,6 +107,7 @@ operator = (const EggTexture &copy) {
   _multitexture_sort = 0;
   _combiner[0] = copy._combiner[0];
   _combiner[1] = copy._combiner[1];
+  _texture_ptr = copy._texture_ptr;
 
   return *this;
 }

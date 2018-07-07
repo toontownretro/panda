@@ -120,7 +120,6 @@ public:
   typedef CopyOnWriteObj< pvector<GeomEntry> > GeomList;
 
 private:
-
   bool _preserved;
   typedef pmap<const InternalName *, int> NameCount;
 

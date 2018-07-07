@@ -27,6 +27,7 @@ class PhysxSceneDesc;
 class PhysxHeightField;
 class PhysxHeightFieldDesc;
 class PhysxTriangleMesh;
+class PhysxTriangleMeshDesc;
 class PhysxConvexMesh;
 class PhysxClothMesh;
 class PhysxSoftBodyMesh;

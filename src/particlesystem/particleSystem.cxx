@@ -60,6 +60,7 @@ ParticleSystem(int pool_size) :
   _i_was_spawned_flag = false;
   _particle_pool_size = 0;
   _floor_z = -HUGE_VAL;
+  _physical_orientation = false;
 
   // just in case someone tries to do something that requires the use of an
   // emitter, renderer, or factory before they've actually assigned one.  This
@@ -102,6 +103,7 @@ ParticleSystem(const ParticleSystem& copy) :
   _emitter = copy._emitter;
   _renderer = copy._renderer->make_copy();
   _factory = copy._factory;
+  _physical_orientation = copy._physical_orientation;
 
   _render_parent = copy._render_parent;
   _render_node_path = _renderer->get_render_node_path();
@@ -186,6 +188,12 @@ birth_particle() {
     new_vel = new_vel * birth_to_render_xform;
 
   bp->reset_position(world_pos/* + (NORMALIZED_RAND() * new_vel)*/);
+  if (_physical_orientation) {
+    // This particle should match the orientation of our physical_np.
+    // Usefull for things like a water spray that shoots in the direction of the nozzle.
+    // The water particles should be oriented like the nozzle.
+    bp->reset_orientation(transform->get_quat());
+  }
   bp->set_velocity(new_vel);
 
   ++_living_particles;

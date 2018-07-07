@@ -21,10 +21,13 @@ Material(const std::string &name) : Namable(name) {
   _diffuse.set(1.0f, 1.0f, 1.0f, 1.0f);
   _specular.set(0.0f, 0.0f, 0.0f, 1.0f);
   _emission.set(0.0f, 0.0f, 0.0f, 1.0f);
+  _rim_color.set(0.0f, 0.0f, 0.0f, 1.0f);
+  _rim_width = 0;
   _shininess = 0;
   _roughness = 1;
   _metallic = 0;
   _refractive_index = 1;
+  _lightwarp_texture = NULL;
   _flags = 0;
 }
 
@@ -235,6 +238,36 @@ has_refractive_index() const {
 INLINE PN_stdfloat Material::
 get_refractive_index() const {
   return _refractive_index;
+}
+
+INLINE const LColor &Material::
+get_rim_color() const {
+  return _rim_color;
+}
+
+INLINE bool Material::
+has_rim_color() const {
+  return (_flags & F_rim_color) != 0;
+}
+
+INLINE PN_stdfloat Material::
+get_rim_width() const {
+  return _rim_width;
+}
+
+INLINE bool Material::
+has_rim_width() const {
+  return (_flags & F_rim_width) != 0;
+}
+
+INLINE PT(Texture) Material::
+get_lightwarp_texture() const {
+  return _lightwarp_texture;
+}
+
+INLINE bool Material::
+has_lightwarp_texture() const {
+  return (_flags & F_lightwarp_texture) != 0;
 }
 
 /**

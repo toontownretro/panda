@@ -224,6 +224,9 @@ public:
 
     STO_stage_i,
     STO_light_i_shadow_map,
+
+    // Textures for materials that need to be sampled in the shader.
+    STO_material_texture,
   };
 
   enum ShaderArgClass {

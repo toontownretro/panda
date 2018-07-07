@@ -40,7 +40,6 @@
 #include "config_mathutil.h"
 #include "preparedGraphicsObjects.h"
 
-
 bool allow_flatten_color = ConfigVariableBool
     ("allow-flatten-color", false,
      PRC_DESC("allows color to always be flattened to vertices"));
@@ -501,7 +500,7 @@ is_renderable() const {
  */
 void GeomNode::
 add_for_draw(CullTraverser *trav, CullTraverserData &data) {
-  trav->_geom_nodes_pcollector.add_level(1);
+  trav->_geom_nodes_pcollector.add_level( 1 );
 
   if (pgraph_cat.is_spam()) {
     pgraph_cat.spam()
@@ -512,7 +511,6 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   // Get all the Geoms, with no decalling.
   Geoms geoms = get_geoms(trav->get_current_thread());
   int num_geoms = geoms.get_num_geoms();
-  trav->_geoms_pcollector.add_level(num_geoms);
   CPT(TransformState) internal_transform = data.get_internal_transform(trav);
 
   for (int i = 0; i < num_geoms; i++) {
@@ -561,7 +559,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     CullableObject *object =
       new CullableObject(std::move(geom), std::move(state), internal_transform);
     trav->get_cull_handler()->record_object(object, trav);
+    trav->_geoms_pcollector.add_level( 1 );
   }
+
 }
 
 /**

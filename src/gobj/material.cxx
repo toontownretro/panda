@@ -18,6 +18,8 @@
 #include "datagramIterator.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "texturePool.h"
+#include "filename.h"
 
 TypeHandle Material::_type_handle;
 PT(Material) Material::_default;
@@ -36,7 +38,10 @@ operator = (const Material &copy) {
   _shininess = copy._shininess;
   _roughness = copy._roughness;
   _metallic = copy._metallic;
+  _rim_color = copy._rim_color;
+  _rim_width = copy._rim_width;
   _refractive_index = copy._refractive_index;
+  _lightwarp_texture = copy._lightwarp_texture;
   _flags = copy._flags & (~F_attrib_lock);
 }
 
@@ -328,6 +333,39 @@ clear_metallic() {
   }
 }
 
+void Material::
+set_rim_color(const LColor &color) {
+  if (enforce_attrib_lock) {
+    if ((_flags & F_rim_color)==0) {
+      nassertv(!is_attrib_locked());
+    }
+  }
+  _rim_color = color;
+  _flags |= F_rim_color;
+}
+
+void Material::
+set_rim_width(PN_stdfloat width) {
+  if (enforce_attrib_lock) {
+    if ((_flags & F_rim_width)==0) {
+      nassertv(!is_attrib_locked());
+    }
+  }
+  _rim_width = width;
+  _flags |= F_rim_width;
+}
+
+void Material::
+set_lightwarp_texture(PT(Texture) tex) {
+  if (enforce_attrib_lock) {
+    if ((_flags & F_lightwarp_texture) == 0) {
+      nassertv(!is_attrib_locked());
+    }
+  }
+  _lightwarp_texture = tex;
+  _flags |= F_lightwarp_texture;
+}
+
 /**
  * Sets the index of refraction of the material, which is used to determine
  * the specular color in absence of an explicit specular color assignment.
@@ -387,6 +425,15 @@ compare_to(const Material &other) const {
   if (get_refractive_index() != other.get_refractive_index()) {
     return get_refractive_index() < other.get_refractive_index() ? -1 : 1;
   }
+  if (has_rim_color() && get_rim_color() != other.get_rim_color()) {
+    return get_rim_color().compare_to(other.get_rim_color());
+  }
+  if (has_rim_width() && get_rim_width() != other.get_rim_width()) {
+    return get_rim_width() < other.get_rim_width() ? -1 : 1; 
+  }
+  if (has_lightwarp_texture() && get_lightwarp_texture() != other.get_lightwarp_texture()) {
+    return get_lightwarp_texture() < other.get_lightwarp_texture() ? -1 : 1;
+  }
 
   return strcmp(get_name().c_str(), other.get_name().c_str());
 }
@@ -424,6 +471,15 @@ output(std::ostream &out) const {
   if (_flags & F_metallic) {
     out << " m" << _metallic;
   }
+  if (_flags & F_rim_color) {
+    out << " rc(" << get_rim_color() << ")";
+  }
+  if (_flags & F_rim_width) {
+    out << " rw" << get_rim_width();
+  }
+  if (_flags & F_lightwarp_texture) {
+    out << " lwt" << get_lightwarp_texture();
+  }
   out << " l" << get_local()
       << " t" << get_twoside();
 }
@@ -458,6 +514,15 @@ write(std::ostream &out, int indent_level) const {
   }
   if (has_metallic()) {
     indent(out, indent_level + 2) << "metallic = " << get_metallic() << "\n";
+  }
+  if (has_rim_color()) {
+    indent(out, indent_level + 2) << "rim_color = " << get_rim_color() << "\n";
+  }
+  if (has_rim_width()) {
+    indent(out, indent_level + 2) << "rim_width = " << get_rim_width() << "\n";
+  }
+  if (has_lightwarp_texture()) {
+    indent(out, indent_level + 2) << "lightwarp_texture = " << get_lightwarp_texture() << "\n";
   }
   indent(out, indent_level + 2) << "local = " << get_local() << "\n";
   indent(out, indent_level + 2) << "twoside = " << get_twoside() << "\n";
@@ -494,6 +559,9 @@ write_datagram(BamWriter *manager, Datagram &me) {
       _specular.write_datagram(me);
     }
     _emission.write_datagram(me);
+    if (_flags & F_rim_color) {
+      _rim_color.write_datagram(me);
+    }
 
     if (_flags & F_roughness) {
       me.add_stdfloat(_roughness);
@@ -502,11 +570,26 @@ write_datagram(BamWriter *manager, Datagram &me) {
     }
 
     me.add_stdfloat(_refractive_index);
+    if (_flags & F_rim_width) {
+      me.add_stdfloat(_rim_width);
+    }
+    if (_flags & F_lightwarp_texture) {
+      me.add_string(get_lightwarp_texture()->get_fullpath().get_fullpath());
+    }
   } else {
     _ambient.write_datagram(me);
     _diffuse.write_datagram(me);
     _specular.write_datagram(me);
     _emission.write_datagram(me);
+    if (_flags & F_rim_color) {
+      _rim_color.write_datagram(me);
+    }
+    if (_flags & F_rim_width) {
+      me.add_stdfloat(_rim_width);
+    }
+    if (_flags & F_lightwarp_texture) {
+      me.add_string(get_lightwarp_texture()->get_fullpath().get_fullpath());
+    }
     me.add_stdfloat(_shininess);
     me.add_int32(_flags & 0x7f);
   }
@@ -549,6 +632,9 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       _specular.read_datagram(scan);
     }
     _emission.read_datagram(scan);
+    if (_flags & F_rim_color) {
+      _rim_color.read_datagram(scan);
+    }
 
     if (_flags & F_roughness) {
       set_roughness(scan.get_stdfloat());
@@ -556,12 +642,27 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       _shininess = scan.get_stdfloat();
     }
     _refractive_index = scan.get_stdfloat();
+    if (_flags & F_rim_width) {
+      _rim_width = scan.get_stdfloat();
+    }
+    if (_flags & F_lightwarp_texture) {
+      _lightwarp_texture = TexturePool::load_texture(Filename(scan.get_string()));
+    }
 
   } else {
     _ambient.read_datagram(scan);
     _diffuse.read_datagram(scan);
     _specular.read_datagram(scan);
     _emission.read_datagram(scan);
+    if (_flags & F_rim_color) {
+      _rim_color.read_datagram(scan);
+    }
+    if (_flags & F_rim_width) {
+      _rim_width = scan.get_stdfloat();
+    }
+    if (_flags & F_lightwarp_texture) {
+      _lightwarp_texture = TexturePool::load_texture(Filename(scan.get_string()));
+    }
     _shininess = scan.get_stdfloat();
     _flags = scan.get_int32();
 

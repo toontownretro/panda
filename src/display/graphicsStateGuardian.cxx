@@ -990,7 +990,8 @@ fetch_specified_part(Shader::ShaderMatInput part, InternalName *name,
     }
     Material *m = target_material->get_material();
     t.set_row(0, m->get_base_color());
-    t.set_row(3, LVecBase4(m->get_metallic(), m->get_refractive_index(), 0, m->get_roughness()));
+    t.set_row(1, m->get_rim_color());
+    t.set_row(3, LVecBase4(m->get_metallic(), m->get_refractive_index(), m->get_rim_width(), m->get_roughness()));
     return &t;
   }
   case Shader::SMO_attr_color: {
@@ -1881,6 +1882,20 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
           sampler = tex->get_default_sampler();
         }
         return tex;
+      }
+    }
+    break;
+
+  case Shader::STO_material_texture:
+    {
+      const MaterialAttrib *target_material = (const MaterialAttrib *)
+        _target_rs->get_attrib_def(MaterialAttrib::get_class_slot());
+      if (target_material->is_off()) {
+        return nullptr;
+      }
+      Material *m = target_material->get_material();
+      if (spec._name->get_name() == "lightwarp") {
+        return m->get_lightwarp_texture();
       }
     }
     break;

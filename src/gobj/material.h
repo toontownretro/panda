@@ -21,6 +21,7 @@
 #include "luse.h"
 #include "numeric_types.h"
 #include "config_gobj.h"
+#include "texture.h"
 
 class FactoryParams;
 
@@ -88,6 +89,18 @@ PUBLISHED:
   INLINE bool has_refractive_index() const;
   INLINE PN_stdfloat get_refractive_index() const;
   void set_refractive_index(PN_stdfloat refractive_index);
+  
+  INLINE bool has_rim_width() const;
+  INLINE PN_stdfloat get_rim_width() const;
+  void set_rim_width(PN_stdfloat width);
+  
+  INLINE bool has_rim_color() const;
+  INLINE const LColor &get_rim_color() const;
+  void set_rim_color(const LColor &color);
+
+  INLINE bool has_lightwarp_texture() const;
+  INLINE PT(Texture) get_lightwarp_texture() const;
+  void set_lightwarp_texture(PT(Texture) tex);
 
   INLINE bool get_local() const;
   INLINE void set_local(bool local);
@@ -119,6 +132,10 @@ PUBLISHED:
                            set_emission, clear_emission);
 
   MAKE_PROPERTY(shininess, get_shininess, set_shininess);
+  MAKE_PROPERTY(rim_color, get_rim_color, set_rim_color);
+  MAKE_PROPERTY(rim_width, get_rim_width, set_rim_width);
+  MAKE_PROPERTY(lightwarp_texture, get_lightwarp_texture,
+                                   set_lightwarp_texture);
   MAKE_PROPERTY(roughness, get_roughness, set_roughness);
   MAKE_PROPERTY(metallic, get_metallic, set_metallic);
   MAKE_PROPERTY(refractive_index, get_refractive_index,
@@ -142,6 +159,9 @@ public:
     F_metallic    = 0x100,
     F_base_color  = 0x200,
     F_refractive_index = 0x400,
+    F_rim_width   = 0x800,
+    F_rim_color   = 0x1000,
+    F_lightwarp_texture = 0x2000,
   };
 
 private:
@@ -150,10 +170,13 @@ private:
   LColor _diffuse;
   LColor _specular;
   LColor _emission;
+  LColor _rim_color;
+  PN_stdfloat _rim_width;
   PN_stdfloat _shininess;
   PN_stdfloat _roughness;
   PN_stdfloat _metallic;
   PN_stdfloat _refractive_index;
+  PT(Texture) _lightwarp_texture;
 
   static PT(Material) _default;
 

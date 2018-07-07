@@ -940,7 +940,18 @@ compile_parameter(ShaderArgInfo &p, int *arg_dim) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-    } else if (pieces[1] == "color") {
+	  } else if (pieces[1] == "material2") {
+      if (!cp_errchk_parameter_float(p, 16, 16)) {
+        return false;
+	    }
+      bind._id = p._id;
+      bind._piece = SMP_transpose;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_attr_material2;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+	  } else if (pieces[1] == "color") {
       if (!cp_errchk_parameter_float(p,3,4)) {
         return false;
       }
@@ -1348,6 +1359,36 @@ compile_parameter(ShaderArgInfo &p, int *arg_dim) {
     case SAT_sampler_cube:   bind._desired_type = Texture::TT_cube_map; break;
     default:
       cp_report_error(p, "Invalid type for a shadow-parameter");
+      return false;
+    }
+    _tex_spec.push_back(bind);
+    return true;
+  }
+
+  if (pieces[0] == "materialtex") {
+    if ((!cp_errchk_parameter_in(p)) ||
+      (!cp_errchk_parameter_uniform(p)) ||
+        (!cp_errchk_parameter_sampler(p)))
+      return false;
+    if (pieces.size() != 2) {
+      cp_report_error(p, "Invalid parameter name");
+      return false;
+    }
+    ShaderTexSpec bind;
+    bind._id = p._id;
+    bind._name = InternalName::make(pieces[1]);
+    bind._stage = 0;
+    bind._part = STO_material_texture;
+    switch (p._type) {
+    case SAT_sampler1d:      bind._desired_type = Texture::TT_1d_texture; break;
+    case SAT_sampler2d:      bind._desired_type = Texture::TT_2d_texture; break;
+    case SAT_sampler3d:      bind._desired_type = Texture::TT_3d_texture; break;
+    case SAT_sampler2d_array:bind._desired_type = Texture::TT_2d_texture_array; break;
+    case SAT_sampler_cube:   bind._desired_type = Texture::TT_cube_map; break;
+    case SAT_sampler_buffer: bind._desired_type = Texture::TT_buffer_texture; break;
+    case SAT_sampler_cube_array:bind._desired_type = Texture::TT_cube_map_array; break;
+    default:
+      cp_report_error(p, "Invalid type for a materialtex-parameter");
       return false;
     }
     _tex_spec.push_back(bind);

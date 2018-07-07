@@ -10,6 +10,16 @@
  * @author charles
  * @date 2000-06-14
  */
+ 
+INLINE void ParticleSystem::
+set_physical_orientation_flag(bool flag) {
+  _physical_orientation = flag;
+}
+
+INLINE bool ParticleSystem::
+get_physical_orientation_flag() const {
+  return _physical_orientation;
+}
 
 /**
  * Populates an attached GeomNode structure with the particle geometry for
