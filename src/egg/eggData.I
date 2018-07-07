@@ -18,7 +18,6 @@ INLINE EggData::
 EggData() {
   _auto_resolve_externals = false;
   _had_absolute_pathnames = false;
-  _bsp_mode = false;
   _coordsys = CS_default;
   _egg_timestamp = 0;
 }
@@ -30,7 +29,6 @@ EggData() {
 INLINE EggData::
 EggData(const EggData &copy) :
   EggGroupNode(copy),
-  _bsp_mode(copy._bsp_mode),
   _auto_resolve_externals(copy._auto_resolve_externals),
   _had_absolute_pathnames(copy._had_absolute_pathnames),
   _coordsys(copy._coordsys),
@@ -45,27 +43,12 @@ EggData(const EggData &copy) :
 INLINE EggData &EggData::
 operator = (const EggData &copy) {
   EggGroupNode::operator = (copy);
-  _bsp_mode = copy._bsp_mode;
   _auto_resolve_externals = copy._auto_resolve_externals;
   _had_absolute_pathnames = copy._had_absolute_pathnames;
   _coordsys = copy._coordsys;
   _egg_filename = copy._egg_filename;
   _egg_timestamp = copy._egg_timestamp;
   return *this;
-}
-
-/**
- * Indicates whether the geometry under this EggData will not be rendered
- * unless explicity told to do so each frame. The default is false.
- */
-INLINE void EggData::
-set_bsp_mode(bool flag) {
-  _bsp_mode = flag;
-}
-
-INLINE bool EggData::
-is_bsp_mode() const {
-  return _bsp_mode;
 }
 
 /**
