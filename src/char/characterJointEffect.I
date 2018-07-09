@@ -35,9 +35,5 @@ get_character() const {
  */
 INLINE bool CharacterJointEffect::
 matches_character(Character *character) const {
-  if (_character.was_deleted()) {
-    return false;
-  }
-
   return _character == character;
 }
