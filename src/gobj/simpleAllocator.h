@@ -30,7 +30,6 @@ class EXPCL_PANDA_GOBJ SimpleAllocator : public LinkedListNode {
 PUBLISHED:
   INLINE explicit SimpleAllocator(size_t max_size, Mutex &lock);
   SimpleAllocator(SimpleAllocator &&from) noexcept;
-  SimpleAllocator(const SimpleAllocator &) = default;
   virtual ~SimpleAllocator();
 
   INLINE SimpleAllocatorBlock *alloc(size_t size, size_t alignment=1);

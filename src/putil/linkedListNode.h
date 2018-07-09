@@ -33,7 +33,6 @@ protected:
   INLINE LinkedListNode();
   INLINE LinkedListNode(bool);
   INLINE LinkedListNode(LinkedListNode &&from) noexcept;
-  LinkedListNode(const LinkedListNode &) = default;
   INLINE ~LinkedListNode();
 
   INLINE LinkedListNode &operator = (LinkedListNode &&from);
