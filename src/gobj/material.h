@@ -22,6 +22,7 @@
 #include "numeric_types.h"
 #include "config_gobj.h"
 #include "texture.h"
+#include "graphicsStateGuardianBase.h"
 
 class FactoryParams;
 
@@ -144,7 +145,11 @@ PUBLISHED:
   MAKE_PROPERTY(local, get_local, set_local);
   MAKE_PROPERTY(twoside, get_twoside, set_twoside);
 
+protected:
+  INLINE bool is_used_by_auto_shader() const;
+
 public:
+  INLINE void mark_used_by_auto_shader();
   INLINE int get_flags() const;
 
   enum Flags {
@@ -159,9 +164,10 @@ public:
     F_metallic    = 0x100,
     F_base_color  = 0x200,
     F_refractive_index = 0x400,
-    F_rim_width   = 0x800,
-    F_rim_color   = 0x1000,
-    F_lightwarp_texture = 0x2000,
+    F_used_by_auto_shader = 0x800,
+    F_rim_width = 0x1000,
+    F_rim_color = 0x2000,
+    F_lightwarp_texture = 0x4000,
   };
 
 private:
