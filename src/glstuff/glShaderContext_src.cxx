@@ -973,7 +973,23 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _shader->_mat_deps |= bind._dep[0];
         return;
 
-      } else if (noprefix == "Material.ambient") {
+      } 
+      else if ( noprefix == "Material.rimColor" )
+      {
+              if ( param_type != GL_FLOAT_VEC4 )
+              {
+                      GLCAT.error()
+                              << "p3d_Material.rimColor should be vec4\n";
+              }
+              bind._part[0] = Shader::SMO_attr_material2;
+              bind._piece = Shader::SMP_row1;
+              bind._dep[0] |= Shader::SSD_color;
+              _shader->_mat_spec.push_back( bind );
+              _shader->_mat_deps |= bind._dep[0];
+              return;
+      }
+      else if ( noprefix == "Material.ambient" )
+      {
         if (param_type != GL_FLOAT_VEC4) {
           GLCAT.error()
             << "p3d_Material.ambient should be vec4\n";
@@ -1055,6 +1071,19 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _shader->_mat_spec.push_back(bind);
         _shader->_mat_deps |= bind._dep[0];
         return;
+      }
+      else if ( noprefix == "Material.rimWidth" )
+      {
+              if ( param_type != GL_FLOAT )
+              {
+                      GLCAT.error()
+                              << "p3d_Material.rimWidth should be float\n";
+              }
+              bind._part[0] = Shader::SMO_attr_material2;
+              bind._piece = Shader::SMP_cell14;
+              _shader->_mat_spec.push_back( bind );
+              _shader->_mat_deps |= bind._dep[0];
+              return;
       }
     }
     if (noprefix == "ColorScale") {
