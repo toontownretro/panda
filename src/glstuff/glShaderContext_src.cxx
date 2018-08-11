@@ -989,7 +989,27 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _shader->_mat_deps |= bind._dep[0];
         return;
 
-      } 
+      }
+      else if ( noprefix == "Material.lightwarp" )
+      {
+              if ( param_type != GL_SAMPLER_2D )
+              {
+                      GLCAT.error()
+                              << "p3d_Material.lightwarp should be sampler2D\n";
+              }
+              Shader::ShaderTexSpec bind;
+              bind._id = arg_id;
+              bind._part = Shader::STO_material_texture;
+              bind._name = 0;
+              bind._desired_type = Texture::TT_2d_texture;
+              bind._stage = 0;
+              if ( get_sampler_texture_type( bind._desired_type, param_type ) )
+              {
+                      _glgsg->_glUniform1i( p, _shader->_tex_spec.size() );
+                      _shader->_tex_spec.push_back( bind );
+              }
+              return;
+      }
       else if ( noprefix == "Material.rimColor" )
       {
               if ( param_type != GL_FLOAT_VEC4 )
