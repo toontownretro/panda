@@ -28,6 +28,7 @@ Material(const std::string &name) : Namable(name) {
   _metallic = 0;
   _refractive_index = 1;
   _lightwarp_texture = NULL;
+  _shade_model = SM_lambert;
   _flags = 0;
 }
 
@@ -49,6 +50,7 @@ Material(const Material &copy) :
   _lightwarp_texture(copy._lightwarp_texture),
   _rim_color(copy._rim_color),
   _rim_width(copy._rim_width),
+  _shade_model(copy._shade_model),
   _flags(copy._flags & ~(F_attrib_lock | F_used_by_auto_shader)) {
 }
 
@@ -281,6 +283,16 @@ get_lightwarp_texture() const {
 INLINE bool Material::
 has_lightwarp_texture() const {
   return (_flags & F_lightwarp_texture) != 0;
+}
+
+INLINE bool Material::
+has_shade_model() const {
+  return (_flags & F_shade_model) != 0;
+}
+
+INLINE int Material::
+get_shade_model() const {
+  return _shade_model;
 }
 
 /**

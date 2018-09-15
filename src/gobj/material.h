@@ -43,6 +43,13 @@ class FactoryParams;
  */
 class EXPCL_PANDA_GOBJ Material : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
+
+  enum ShadeModel
+  {
+    SM_lambert,
+    SM_half_lambert,
+  };
+
   INLINE explicit Material(const std::string &name = "");
   INLINE Material(const Material &copy);
   void operator = (const Material &copy);
@@ -103,6 +110,10 @@ PUBLISHED:
   INLINE PT(Texture) get_lightwarp_texture() const;
   void set_lightwarp_texture(PT(Texture) tex);
 
+  INLINE bool has_shade_model() const;
+  INLINE int get_shade_model() const;
+  void set_shade_model(int model);
+
   INLINE bool get_local() const;
   INLINE void set_local(bool local);
   INLINE bool get_twoside() const;
@@ -144,6 +155,7 @@ PUBLISHED:
 
   MAKE_PROPERTY(local, get_local, set_local);
   MAKE_PROPERTY(twoside, get_twoside, set_twoside);
+  MAKE_PROPERTY(shade_model, get_shade_model, set_shade_model);
 
 protected:
   INLINE bool is_used_by_auto_shader() const;
@@ -168,6 +180,7 @@ public:
     F_rim_width = 0x1000,
     F_rim_color = 0x2000,
     F_lightwarp_texture = 0x4000,
+    F_shade_model = 0x8000,
   };
 
 private:
@@ -183,6 +196,7 @@ private:
   PN_stdfloat _metallic;
   PN_stdfloat _refractive_index;
   PT(Texture) _lightwarp_texture;
+  int _shade_model;
 
   static PT(Material) _default;
 

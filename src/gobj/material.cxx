@@ -47,6 +47,7 @@ operator = (const Material &copy) {
   _rim_width = copy._rim_width;
   _refractive_index = copy._refractive_index;
   _lightwarp_texture = copy._lightwarp_texture;
+  _shade_model = copy._shade_model;
   _flags = (copy._flags & ~(F_attrib_lock | F_used_by_auto_shader)) | (_flags & (F_attrib_lock | F_used_by_auto_shader));
 }
 
@@ -350,6 +351,17 @@ set_lightwarp_texture(PT(Texture) tex) {
   _flags |= F_lightwarp_texture;
 }
 
+void Material::
+set_shade_model( int model )
+{
+        if ( (!has_shade_model() || _shade_model != model) && is_used_by_auto_shader() )
+        {
+                GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+        }
+        _shade_model = model;
+        _flags |= F_shade_model;
+}
+
 /**
  * Sets the index of refraction of the material, which is used to determine
  * the specular color in absence of an explicit specular color assignment.
@@ -508,6 +520,10 @@ write(std::ostream &out, int indent_level) const {
   if (has_lightwarp_texture()) {
     indent(out, indent_level + 2) << "lightwarp_texture = " << get_lightwarp_texture() << "\n";
   }
+  if ( has_shade_model() )
+  {
+          indent( out, indent_level + 2 ) << "shade_model = " << get_shade_model() << "\n";
+  }
   indent(out, indent_level + 2) << "local = " << get_local() << "\n";
   indent(out, indent_level + 2) << "twoside = " << get_twoside() << "\n";
 }
@@ -560,6 +576,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
     if (_flags & F_lightwarp_texture) {
       me.add_string(get_lightwarp_texture()->get_fullpath().get_fullpath());
     }
+    if ( _flags & F_shade_model )
+    {
+            me.add_uint8( _shade_model );
+    }
   } else {
     _ambient.write_datagram(me);
     _diffuse.write_datagram(me);
@@ -576,6 +596,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
     }
     me.add_stdfloat(_shininess);
     me.add_int32(_flags & 0x7f);
+    if ( _flags & F_shade_model )
+    {
+            me.add_uint8( _shade_model );
+    }
+    
   }
 }
 
@@ -631,6 +656,12 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     }
     if (_flags & F_lightwarp_texture) {
       _lightwarp_texture = TexturePool::load_texture(Filename(scan.get_string()));
+      _lightwarp_texture->set_wrap_u(SamplerState::WM_clamp);
+      _lightwarp_texture->set_wrap_v(SamplerState::WM_clamp);
+    }
+    if ( _flags & F_shade_model )
+    {
+            _shade_model = scan.get_uint8();
     }
 
   } else {
@@ -646,6 +677,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     }
     if (_flags & F_lightwarp_texture) {
       _lightwarp_texture = TexturePool::load_texture(Filename(scan.get_string()));
+      _lightwarp_texture->set_wrap_u(SamplerState::WM_clamp);
+      _lightwarp_texture->set_wrap_v(SamplerState::WM_clamp);
     }
     _shininess = scan.get_stdfloat();
     _flags = scan.get_int32();
@@ -653,6 +686,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     if (_flags & F_roughness) {
       // The shininess we read is actually a roughness value.
       set_roughness(_shininess);
+    }
+
+    if ( _flags & F_shade_model )
+    {
+            _shade_model = scan.get_uint8();
     }
   }
 
