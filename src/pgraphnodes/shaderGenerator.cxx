@@ -258,6 +258,7 @@ analyze_renderstate(ShaderKey &key, const RenderState *rs) {
     // states to be rehashed.
     mat->mark_used_by_auto_shader();
     key._material_flags = mat->get_flags();
+    key._shade_model = mat->get_shade_model();
   }
 
   // Break out the lights by type.
@@ -765,6 +766,18 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     }
   }
 
+
+  if ( key._shade_model == Material::SM_half_lambert )
+  {
+          text << "float half_lambert(float dp)\n";
+          text << "{\n";
+          text << "\tfloat hl = dp * 0.5;\n";
+          text << "\thl += 0.5;\n";
+          text << "\thl *= hl;\n";
+          text << "\treturn hl;\n";
+          text << "}\n";
+  }
+  
   text << "void vshader(\n";
   for (size_t i = 0; i < key._textures.size(); ++i) {
     const ShaderKey::TextureInfo &tex = key._textures[i];
@@ -1272,6 +1285,10 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       }
       text << "\t lvec   = attr_light" << i << "[3].xyz;\n";
       text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec.xyz));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
       if (have_lightwarp) {
         text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
       } else {
@@ -1314,6 +1331,10 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       }
       text << "\t lattenv = 1/(latten.x + latten.y*ldist + latten.z*ldist*ldist);\n";
       text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
       text << "\t lcolor *= lattenv;\n";
       if (have_lightwarp) {
         text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
@@ -1357,6 +1378,10 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       text << "\t lattenv *= pow(langle, latten.w);\n";
       text << "\t if (langle < ldir.w) lattenv = 0;\n";
       text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
       text << "\t lcolor *= lattenv;\n";
       if (have_lightwarp) {
         text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
@@ -1434,31 +1459,31 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     if (key._have_separate_ambient) {
       if (key._material_flags & Material::F_ambient) {
         text << "\t result += tot_ambient * attr_material[0];\n";
-      } else if (key._color_type == ColorAttrib::T_vertex) {
-        text << "\t result += tot_ambient * l_color;\n";
-      } else if (key._color_type == ColorAttrib::T_flat) {
-        text << "\t result += tot_ambient * attr_color;\n";
       } else {
         text << "\t result += tot_ambient;\n";
       }
     }
-    if (have_rim) {
-      text << "\t result += tot_rim;\n";
-    }
     if (key._material_flags & Material::F_diffuse) {
       text << "\t result += tot_diffuse * attr_material[1];\n";
-    } else if (key._color_type == ColorAttrib::T_vertex) {
-      text << "\t result += tot_diffuse * l_color;\n";
-    } else if (key._color_type == ColorAttrib::T_flat) {
-      text << "\t result += tot_diffuse * attr_color;\n";
     } else {
       text << "\t result += tot_diffuse;\n";
     }
-    if (key._light_ramp == nullptr ||
-        key._light_ramp->get_mode() == LightRampAttrib::LRT_default) {
-      text << "\t result = saturate(result);\n";
+    if (have_rim) {
+      text << "\t result += tot_rim;\n";
     }
-    
+    if ( key._color_type == ColorAttrib::T_vertex )
+    {
+            text << "\t result *= l_color;\n";
+    }
+    else if ( key._color_type == ColorAttrib::T_flat )
+    {
+            text << "\t result *= attr_color;\n";
+    }
+    //if (key._light_ramp == nullptr ||
+    //    key._light_ramp->get_mode() == LightRampAttrib::LRT_default) {
+    //  text << "\t result = saturate(result);\n";
+    //}
+
     text << "\t // End view-space light calculations\n";
 
     // Combine in alpha, which bypasses lighting calculations.  Use of lerp
@@ -1850,7 +1875,8 @@ ShaderKey() :
   _alpha_test_mode(RenderAttrib::M_none),
   _alpha_test_ref(0.0),
   _num_clip_planes(0),
-  _light_ramp(nullptr) {
+  _light_ramp(nullptr),
+  _shade_model(Material::SM_lambert) {
 }
 
 /**
@@ -1861,6 +1887,10 @@ bool ShaderGenerator::ShaderKey::
 operator < (const ShaderKey &other) const {
   if (_anim_spec != other._anim_spec) {
     return _anim_spec < other._anim_spec;
+  }
+  if ( _shade_model != other._shade_model )
+  {
+          return _shade_model < other._shade_model;
   }
   if (_color_type != other._color_type) {
     return _color_type < other._color_type;
@@ -1961,6 +1991,10 @@ operator == (const ShaderKey &other) const {
   }
   if (_textures.size() != other._textures.size()) {
     return false;
+  }
+  if ( _shade_model != other._shade_model )
+  {
+          return false;
   }
   for (size_t i = 0; i < _textures.size(); ++i) {
     const ShaderKey::TextureInfo &tex = _textures[i];

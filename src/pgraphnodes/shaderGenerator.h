@@ -125,6 +125,7 @@ protected:
     ColorAttrib::Type _color_type;
     int _material_flags;
     int _texture_flags;
+    int _shade_model;
 
     struct TextureInfo {
       CPT_InternalName _texcoord_name;
