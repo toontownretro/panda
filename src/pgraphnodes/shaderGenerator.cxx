@@ -1479,10 +1479,10 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     {
             text << "\t result *= attr_color;\n";
     }
-    //if (key._light_ramp == nullptr ||
-    //    key._light_ramp->get_mode() == LightRampAttrib::LRT_default) {
-    //  text << "\t result = saturate(result);\n";
-    //}
+    if (key._light_ramp == nullptr ||
+        key._light_ramp->get_mode() == LightRampAttrib::LRT_default) {
+      text << "\t result = saturate(result);\n";
+    }
 
     text << "\t // End view-space light calculations\n";
 
