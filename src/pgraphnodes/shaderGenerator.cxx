@@ -266,6 +266,7 @@ analyze_renderstate(ShaderKey &key, const RenderState *rs) {
     // states to be rehashed.
     mat->mark_used_by_auto_shader();
     key._material_flags = mat->get_flags();
+    key._shade_model = mat->get_shade_model();
 
     if ((key._material_flags & Material::F_base_color) != 0) {
       key._material_flags |= (Material::F_diffuse | Material::F_specular | Material::F_ambient);
@@ -748,6 +749,23 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       have_specular = true;
     }
   }
+  
+  bool have_rim = false;
+  if (key._lighting) {
+    if (key._material_flags & Material::F_rim_color &&
+        key._material_flags & Material::F_rim_width) {
+      have_rim = true;
+      need_eye_normal = true;
+      need_eye_position = true;
+    }
+  }
+
+  bool have_lightwarp = false;
+  if (key._lighting) {
+    if (key._material_flags & Material::F_lightwarp_texture) {
+      have_lightwarp = true;
+    }
+  }
 
   bool need_color = false;
   if (key._color_type != ColorAttrib::T_off) {
@@ -762,6 +780,18 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     }
   }
 
+
+  if ( key._shade_model == Material::SM_half_lambert )
+  {
+          text << "float half_lambert(float dp)\n";
+          text << "{\n";
+          text << "\tfloat hl = dp * 0.5;\n";
+          text << "\thl += 0.5;\n";
+          text << "\thl *= hl;\n";
+          text << "\treturn hl;\n";
+          text << "}\n";
+  }
+  
   text << "void vshader(\n";
   for (size_t i = 0; i < key._textures.size(); ++i) {
     const ShaderKey::TextureInfo &tex = key._textures[i];
@@ -1038,6 +1068,13 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
   if (key._material_flags & (Material::F_ambient | Material::F_diffuse | Material::F_emission | Material::F_specular)) {
     text << "\t uniform float4x4 attr_material,\n";
   }
+  if (key._material_flags & (Material::F_rim_color | Material::F_rim_width)) {
+    // Rim lighting data is stored in attr_material2.
+    text << "\t uniform float4x4 attr_material2,\n";
+  }
+  if (have_lightwarp) {
+    text << "\t uniform sampler2D materialtex_lightwarp,\n";
+  }
   if (key._texture_flags & ShaderKey::TF_map_height) {
     text << "\t float3 l_eyevec,\n";
   }
@@ -1219,9 +1256,12 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
   }
   if (key._lighting) {
     text << "\t // Begin view-space light calculations\n";
-    text << "\t float ldist,lattenv,langle,lshad;\n";
+    text << "\t float ldist,lattenv,langle,lshad,lintensity;\n";
     text << "\t float4 lcolor,lspec,lpoint,latten,ldir,leye;\n";
     text << "\t float3 lvec,lhalf;\n";
+    if (have_rim) {
+      text << "\t float4 tot_rim = float4(0,0,0,0);\n";
+    }
     if (key._have_separate_ambient) {
       text << "\t float4 tot_ambient = float4(0,0,0,0);\n";
     }
@@ -1239,6 +1279,13 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     } else {
       text << "\t tot_diffuse += attr_ambient;\n";
     }
+    
+    if (have_rim) {
+      text << "\t float3 rim_eye_pos = normalize(-l_eye_position.xyz);\n";
+      text << "\t float intensity = attr_material2[3].z - max(dot(rim_eye_pos, l_eye_normal.xyz), 0.0);\n";
+      text << "\t intensity = max(0.0, intensity);\n";
+      text << "\t tot_rim += float4(intensity * attr_material2[1]);\n";
+    }
   }
   for (size_t i = 0; i < key._lights.size(); ++i) {
     const ShaderKey::LightInfo &light = key._lights[i];
@@ -1251,7 +1298,16 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
         text << "\t lspec  = lcolor;\n";
       }
       text << "\t lvec   = attr_light" << i << "[3].xyz;\n";
-      text << "\t lcolor *= saturate(dot(l_eye_normal.xyz, lvec.xyz));\n";
+      text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec.xyz));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
+      if (have_lightwarp) {
+        text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
+      } else {
+        text << "\t lcolor *= lintensity;\n";
+      }
       if (light._flags & ShaderKey::LF_has_shadows) {
         if (_use_shadow_filter) {
           text << "\t lshad = shadow2DProj(shadow_" << i << ", l_lightcoord" << i << ").r;\n";
@@ -1288,7 +1344,17 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
         text << "\t ldist = max(ldist, attr_light" << i << "[2].w);\n";
       }
       text << "\t lattenv = 1/(latten.x + latten.y*ldist + latten.z*ldist*ldist);\n";
-      text << "\t lcolor *= lattenv * saturate(dot(l_eye_normal.xyz, lvec));\n";
+      text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
+      text << "\t lcolor *= lattenv;\n";
+      if (have_lightwarp) {
+        text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
+      } else {
+        text << "\t lcolor *= lintensity;\n";
+      }
       if (light._flags & ShaderKey::LF_has_shadows) {
         text << "\t ldist = max(abs(l_lightcoord" << i << ".x), max(abs(l_lightcoord" << i << ".y), abs(l_lightcoord" << i << ".z)));\n";
         text << "\t ldist = ((latten.w+lpoint.w)/(latten.w-lpoint.w))+((-2*latten.w*lpoint.w)/(ldist * (latten.w-lpoint.w)));\n";
@@ -1325,7 +1391,17 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       text << "\t lattenv = 1/(latten.x + latten.y*ldist + latten.z*ldist*ldist);\n";
       text << "\t lattenv *= pow(langle, latten.w);\n";
       text << "\t if (langle < ldir.w) lattenv = 0;\n";
-      text << "\t lcolor *= lattenv * saturate(dot(l_eye_normal.xyz, lvec));\n";
+      text << "\t lintensity = saturate(dot(l_eye_normal.xyz, lvec));\n";
+      if ( key._shade_model == Material::SM_half_lambert )
+      {
+              text << "\t lintensity = half_lambert(lintensity);\n";
+      }
+      text << "\t lcolor *= lattenv;\n";
+      if (have_lightwarp) {
+        text << "\t lcolor *= tex2D(materialtex_lightwarp, float2(lintensity * 0.5 + 0.5, 0.5));\n";
+      } else {
+        text << "\t lcolor *= lintensity;\n";
+      }
       if (light._flags & ShaderKey::LF_has_shadows) {
         if (_use_shadow_filter) {
           text << "\t lshad = shadow2DProj(shadow_" << i << ", l_lightcoord" << i << ").r;\n";
@@ -1413,6 +1489,17 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
       text << "\t result += tot_diffuse * attr_color;\n";
     } else {
       text << "\t result += tot_diffuse;\n";
+    }
+    if (have_rim) {
+      text << "\t result += tot_rim;\n";
+    }
+    if ( key._color_type == ColorAttrib::T_vertex )
+    {
+            text << "\t result *= l_color;\n";
+    }
+    else if ( key._color_type == ColorAttrib::T_flat )
+    {
+            text << "\t result *= attr_color;\n";
     }
     if (key._light_ramp == nullptr ||
         key._light_ramp->get_mode() == LightRampAttrib::LRT_default) {
@@ -1809,7 +1896,8 @@ ShaderKey() :
   _alpha_test_mode(RenderAttrib::M_none),
   _alpha_test_ref(0.0),
   _num_clip_planes(0),
-  _light_ramp(nullptr) {
+  _light_ramp(nullptr),
+  _shade_model(Material::SM_lambert) {
 }
 
 /**
@@ -1820,6 +1908,10 @@ bool ShaderGenerator::ShaderKey::
 operator < (const ShaderKey &other) const {
   if (_anim_spec != other._anim_spec) {
     return _anim_spec < other._anim_spec;
+  }
+  if ( _shade_model != other._shade_model )
+  {
+          return _shade_model < other._shade_model;
   }
   if (_color_type != other._color_type) {
     return _color_type < other._color_type;
@@ -1920,6 +2012,10 @@ operator == (const ShaderKey &other) const {
   }
   if (_textures.size() != other._textures.size()) {
     return false;
+  }
+  if ( _shade_model != other._shade_model )
+  {
+          return false;
   }
   for (size_t i = 0; i < _textures.size(); ++i) {
     const ShaderKey::TextureInfo &tex = _textures[i];
