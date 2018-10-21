@@ -769,15 +769,7 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
 
   bool need_color = false;
   if (key._color_type != ColorAttrib::T_off) {
-    if (key._lighting) {
-      if (((key._material_flags & Material::F_ambient) == 0 && key._have_separate_ambient) ||
-          (key._material_flags & Material::F_diffuse) == 0 ||
-          key._calc_primary_alpha) {
-        need_color = true;
-      }
-    } else {
-      need_color = true;
-    }
+    need_color = true;
   }
 
 
@@ -1473,20 +1465,12 @@ synthesize_shader(const RenderState *rs, const GeomVertexAnimationSpec &anim) {
     if (key._have_separate_ambient) {
       if (key._material_flags & Material::F_ambient) {
         text << "\t result += tot_ambient * attr_material[0];\n";
-      } else if (key._color_type == ColorAttrib::T_vertex) {
-        text << "\t result += tot_ambient * l_color;\n";
-      } else if (key._color_type == ColorAttrib::T_flat) {
-        text << "\t result += tot_ambient * attr_color;\n";
       } else {
         text << "\t result += tot_ambient;\n";
       }
     }
     if (key._material_flags & Material::F_diffuse) {
       text << "\t result += tot_diffuse * attr_material[1];\n";
-    } else if (key._color_type == ColorAttrib::T_vertex) {
-      text << "\t result += tot_diffuse * l_color;\n";
-    } else if (key._color_type == ColorAttrib::T_flat) {
-      text << "\t result += tot_diffuse * attr_color;\n";
     } else {
       text << "\t result += tot_diffuse;\n";
     }
