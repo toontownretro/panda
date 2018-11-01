@@ -6680,9 +6680,6 @@ issue_timer_query(int pstats_index) {
  */
 void CLP(GraphicsStateGuardian)::
 dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z) {
-  if (_current_shader_context == nullptr || !_supports_compute_shaders) {
-    return;
-  }
   maybe_gl_finish();
 
   PStatGPUTimer timer(this, _compute_dispatch_pcollector);
