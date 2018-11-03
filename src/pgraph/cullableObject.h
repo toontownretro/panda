@@ -62,6 +62,8 @@ public:
   INLINE void draw_callback(GraphicsStateGuardianBase *gsg,
                             bool force, Thread *current_thread);
 
+  INLINE virtual void ensure_generated_shader(GraphicsStateGuardianBase *gsg);
+
 public:
   ALLOC_DELETED_CHAIN(CullableObject);
 

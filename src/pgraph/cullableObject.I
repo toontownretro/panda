@@ -64,6 +64,11 @@ operator = (const CullableObject &copy) {
   _draw_callback = copy._draw_callback;
 }
 
+INLINE void CullableObject::
+ensure_generated_shader(GraphicsStateGuardianBase *gsg) {
+  gsg->ensure_generated_shader(_state);
+}
+
 /**
  * Draws the cullable object on the GSG immediately, in the GSG's current
  * state.  This should only be called from the draw thread.

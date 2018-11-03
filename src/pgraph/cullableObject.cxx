@@ -152,7 +152,7 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
         _state = _state->compose(state);
       }
 
-      gsg->ensure_generated_shader(_state);
+      ensure_generated_shader(gsg);
     } else {
       // We may need to munge the state for the fixed-function pipeline.
       StateMunger *state_munger = (StateMunger *)munger;
