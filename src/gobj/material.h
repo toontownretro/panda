@@ -123,6 +123,8 @@ PUBLISHED:
   INLINE bool operator != (const Material &other) const;
   INLINE bool operator < (const Material &other) const;
 
+  virtual int compare_to_impl(const Material *other) const;
+  virtual size_t get_hash_impl() const;
   int compare_to(const Material &other) const;
 
   void output(std::ostream &out) const;

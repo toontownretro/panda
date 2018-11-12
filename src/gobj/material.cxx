@@ -20,6 +20,7 @@
 #include "bamWriter.h"
 #include "texturePool.h"
 #include "filename.h"
+#include "stl_compares.h"
 
 TypeHandle Material::_type_handle;
 PT(Material) Material::_default;
@@ -323,43 +324,38 @@ clear_metallic() {
 
 void Material::
 set_rim_color(const LColor &color) {
-        if ( !has_rim_color() && is_used_by_auto_shader() )
-        {
-                GraphicsStateGuardianBase::mark_rehash_generated_shaders();
-        }
+  if (!has_rim_color() && is_used_by_auto_shader()) {
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
   _rim_color = color;
   _flags |= F_rim_color;
 }
 
 void Material::
 set_rim_width(PN_stdfloat width) {
-        if ( !has_rim_width() && is_used_by_auto_shader() )
-        {
-                GraphicsStateGuardianBase::mark_rehash_generated_shaders();
-        }
+  if (!has_rim_width() && is_used_by_auto_shader()) {
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
   _rim_width = width;
   _flags |= F_rim_width;
 }
 
 void Material::
 set_lightwarp_texture(PT(Texture) tex) {
-        if ( !has_lightwarp_texture() && is_used_by_auto_shader() )
-        {
-                GraphicsStateGuardianBase::mark_rehash_generated_shaders();
-        }
+  if (!has_lightwarp_texture() && is_used_by_auto_shader()) {
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
   _lightwarp_texture = tex;
   _flags |= F_lightwarp_texture;
 }
 
 void Material::
-set_shade_model( int model )
-{
-        if ( (!has_shade_model() || _shade_model != model) && is_used_by_auto_shader() )
-        {
-                GraphicsStateGuardianBase::mark_rehash_generated_shaders();
-        }
-        _shade_model = model;
-        _flags |= F_shade_model;
+set_shade_model(int model) {
+  if ((!has_shade_model() || _shade_model != model) && is_used_by_auto_shader()) {
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
+  _shade_model = model;
+  _flags |= F_shade_model;
 }
 
 /**
@@ -386,6 +382,27 @@ set_refractive_index(PN_stdfloat refractive_index) {
   }
 }
 
+size_t Material::
+get_hash_impl() const {
+  size_t hash = 0;
+  
+  hash = int_hash::add_hash(hash, (int)_flags);
+  hash = get_base_color().add_hash(hash);
+  hash = get_ambient().add_hash(hash);
+  hash = get_diffuse().add_hash(hash);
+  hash = get_specular().add_hash(hash);
+  hash = get_emission().add_hash(hash);
+  hash = float_hash().add_hash(hash, get_shininess());
+  hash = float_hash().add_hash(hash, get_metallic());
+  hash = float_hash().add_hash(hash, get_refractive_index());
+  hash = get_rim_color().add_hash(hash);
+  hash = float_hash().add_hash(hash, get_rim_width());
+  hash = pointer_hash::add_hash(hash, get_lightwarp_texture());
+  hash = string_hash::add_hash(hash, get_name());
+  
+  return hash;
+}
+
 /**
  * Returns a number less than zero if this material sorts before the other
  * one, greater than zero if it sorts after, or zero if they are equivalent.
@@ -394,44 +411,56 @@ set_refractive_index(PN_stdfloat refractive_index) {
  */
 int Material::
 compare_to(const Material &other) const {
-  if (_flags != other._flags) {
-    return _flags - other._flags;
-  }
-  if (has_base_color() && get_base_color() != other.get_base_color()) {
-    return get_base_color().compare_to(other.get_base_color());
-  }
-  if (has_ambient() && get_ambient() != other.get_ambient()) {
-    return get_ambient().compare_to(other.get_ambient());
-  }
-  if (has_diffuse() && get_diffuse() != other.get_diffuse()) {
-    return get_diffuse().compare_to(other.get_diffuse());
-  }
-  if (has_specular() && get_specular() != other.get_specular()) {
-    return get_specular().compare_to(other.get_specular());
-  }
-  if (has_emission() && get_emission() != other.get_emission()) {
-    return get_emission().compare_to(other.get_emission());
-  }
-  if (get_shininess() != other.get_shininess()) {
-    return get_shininess() < other.get_shininess() ? -1 : 1;
-  }
-  if (get_metallic() != other.get_metallic()) {
-    return get_metallic() < other.get_metallic() ? -1 : 1;
-  }
-  if (get_refractive_index() != other.get_refractive_index()) {
-    return get_refractive_index() < other.get_refractive_index() ? -1 : 1;
-  }
-  if (has_rim_color() && get_rim_color() != other.get_rim_color()) {
-    return get_rim_color().compare_to(other.get_rim_color());
-  }
-  if (has_rim_width() && get_rim_width() != other.get_rim_width()) {
-    return get_rim_width() < other.get_rim_width() ? -1 : 1; 
-  }
-  if (has_lightwarp_texture() && get_lightwarp_texture() != other.get_lightwarp_texture()) {
-    return get_lightwarp_texture() < other.get_lightwarp_texture() ? -1 : 1;
+  TypeHandle type = get_type();
+  TypeHandle other_type = other.get_type();
+  if (type != other_type) {
+    return type.get_index() - other_type.get_index();
   }
 
-  return strcmp(get_name().c_str(), other.get_name().c_str());
+  // We only call compare_to_impl() if they have the same type.
+  return compare_to_impl(&other);
+}
+
+int Material::
+compare_to_impl(const Material *other) const {
+  if (_flags != other->_flags) {
+    return _flags - other->_flags;
+  }
+  if (has_base_color() && get_base_color() != other->get_base_color()) {
+    return get_base_color().compare_to(other->get_base_color());
+  }
+  if (has_ambient() && get_ambient() != other->get_ambient()) {
+    return get_ambient().compare_to(other->get_ambient());
+  }
+  if (has_diffuse() && get_diffuse() != other->get_diffuse()) {
+    return get_diffuse().compare_to(other->get_diffuse());
+  }
+  if (has_specular() && get_specular() != other->get_specular()) {
+    return get_specular().compare_to(other->get_specular());
+  }
+  if (has_emission() && get_emission() != other->get_emission()) {
+    return get_emission().compare_to(other->get_emission());
+  }
+  if (get_shininess() != other->get_shininess()) {
+    return get_shininess() < other->get_shininess() ? -1 : 1;
+  }
+  if (get_metallic() != other->get_metallic()) {
+    return get_metallic() < other->get_metallic() ? -1 : 1;
+  }
+  if (get_refractive_index() != other->get_refractive_index()) {
+    return get_refractive_index() < other->get_refractive_index() ? -1 : 1;
+  }
+  if (has_rim_color() && get_rim_color() != other->get_rim_color()) {
+    return get_rim_color().compare_to(other->get_rim_color());
+  }
+  if (has_rim_width() && get_rim_width() != other->get_rim_width()) {
+    return get_rim_width() < other->get_rim_width() ? -1 : 1; 
+  }
+  if (has_lightwarp_texture() && get_lightwarp_texture() != other->get_lightwarp_texture()) {
+    return get_lightwarp_texture() < other->get_lightwarp_texture() ? -1 : 1;
+  }
+
+  return strcmp(get_name().c_str(), other->get_name().c_str());
 }
 
 /**
@@ -520,9 +549,8 @@ write(std::ostream &out, int indent_level) const {
   if (has_lightwarp_texture()) {
     indent(out, indent_level + 2) << "lightwarp_texture = " << get_lightwarp_texture() << "\n";
   }
-  if ( has_shade_model() )
-  {
-          indent( out, indent_level + 2 ) << "shade_model = " << get_shade_model() << "\n";
+  if (has_shade_model()) {
+    indent(out, indent_level + 2) << "shade_model = " << get_shade_model() << "\n";
   }
   indent(out, indent_level + 2) << "local = " << get_local() << "\n";
   indent(out, indent_level + 2) << "twoside = " << get_twoside() << "\n";
@@ -576,9 +604,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
     if (_flags & F_lightwarp_texture) {
       me.add_string(get_lightwarp_texture()->get_fullpath().get_fullpath());
     }
-    if ( _flags & F_shade_model )
-    {
-            me.add_uint8( _shade_model );
+    if (_flags & F_shade_model) {
+      me.add_uint8(_shade_model);
     }
   } else {
     _ambient.write_datagram(me);
@@ -596,9 +623,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
     }
     me.add_stdfloat(_shininess);
     me.add_int32(_flags & 0x7f);
-    if ( _flags & F_shade_model )
-    {
-            me.add_uint8( _shade_model );
+    if (_flags & F_shade_model) {
+      me.add_uint8(_shade_model);
     }
     
   }
@@ -659,9 +685,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       _lightwarp_texture->set_wrap_u(SamplerState::WM_clamp);
       _lightwarp_texture->set_wrap_v(SamplerState::WM_clamp);
     }
-    if ( _flags & F_shade_model )
-    {
-            _shade_model = scan.get_uint8();
+    if (_flags & F_shade_model) {
+      _shade_model = scan.get_uint8();
     }
 
   } else {
@@ -688,9 +713,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       set_roughness(_shininess);
     }
 
-    if ( _flags & F_shade_model )
-    {
-            _shade_model = scan.get_uint8();
+    if (_flags & F_shade_model) {
+      _shade_model = scan.get_uint8();
     }
   }
 
