@@ -46,6 +46,8 @@ public:
 
   INLINE CullableObject(const CullableObject &copy);
   INLINE void operator = (const CullableObject &copy);
+  
+  virtual CullableObject *make_copy();
 
   bool munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
                   const CullTraverser *traverser, bool force);
@@ -62,7 +64,7 @@ public:
   INLINE void draw_callback(GraphicsStateGuardianBase *gsg,
                             bool force, Thread *current_thread);
 
-  INLINE virtual void ensure_generated_shader(GraphicsStateGuardianBase *gsg);
+  virtual void ensure_generated_shader(GraphicsStateGuardianBase *gsg);
 
 public:
   ALLOC_DELETED_CHAIN(CullableObject);

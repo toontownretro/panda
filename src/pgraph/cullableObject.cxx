@@ -43,6 +43,16 @@ PStatCollector CullableObject::_sw_sprites_pcollector("SW Sprites");
 
 TypeHandle CullableObject::_type_handle;
 
+void CullableObject::
+ensure_generated_shader(GraphicsStateGuardianBase *gsg) {
+  gsg->ensure_generated_shader(_state);
+}
+
+CullableObject *CullableObject::
+make_copy() {
+  return new CullableObject(*this);
+}
+
 /**
  * Uses the indicated GeomMunger to transform the geom and/or its vertices.
  *

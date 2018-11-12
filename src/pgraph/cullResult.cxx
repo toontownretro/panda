@@ -132,7 +132,7 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
   const RenderModeAttrib *rmode;
   if (object->_state->get_attrib(rmode)) {
     if (rmode->get_mode() == RenderModeAttrib::M_filled_wireframe) {
-      CullableObject *wireframe_part = new CullableObject(*object);
+      CullableObject *wireframe_part = object->make_copy();
       wireframe_part->_state = get_wireframe_overlay_state(rmode);
 
       if (wireframe_part->munge_geom
@@ -203,7 +203,7 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
           if (m_dual_transparent)
 #endif
             {
-              CullableObject *transparent_part = new CullableObject(*object);
+              CullableObject *transparent_part = object->make_copy();
               CPT(RenderState) transparent_state = get_dual_transparent_state();
               transparent_part->_state = object->_state->compose(transparent_state);
               if (transparent_part->munge_geom
