@@ -989,43 +989,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _shader->_mat_deps |= bind._dep[0];
         return;
 
-      }
-      else if ( noprefix == "Material.lightwarp" )
-      {
-              if ( param_type != GL_SAMPLER_2D )
-              {
-                      GLCAT.error()
-                              << "p3d_Material.lightwarp should be sampler2D\n";
-              }
-              Shader::ShaderTexSpec bind;
-              bind._id = arg_id;
-              bind._part = Shader::STO_material_texture;
-              bind._name = 0;
-              bind._desired_type = Texture::TT_2d_texture;
-              bind._stage = 0;
-              if ( get_sampler_texture_type( bind._desired_type, param_type ) )
-              {
-                      _glgsg->_glUniform1i( p, _shader->_tex_spec.size() );
-                      _shader->_tex_spec.push_back( bind );
-              }
-              return;
-      }
-      else if ( noprefix == "Material.rimColor" )
-      {
-              if ( param_type != GL_FLOAT_VEC4 )
-              {
-                      GLCAT.error()
-                              << "p3d_Material.rimColor should be vec4\n";
-              }
-              bind._part[0] = Shader::SMO_attr_material2;
-              bind._piece = Shader::SMP_row1;
-              bind._dep[0] |= Shader::SSD_color;
-              _shader->_mat_spec.push_back( bind );
-              _shader->_mat_deps |= bind._dep[0];
-              return;
-      }
-      else if ( noprefix == "Material.ambient" )
-      {
+      } else if (noprefix == "Material.ambient") {
         if (param_type != GL_FLOAT_VEC4) {
           GLCAT.error()
             << "p3d_Material.ambient should be vec4\n";
@@ -1107,19 +1071,6 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _shader->_mat_spec.push_back(bind);
         _shader->_mat_deps |= bind._dep[0];
         return;
-      }
-      else if ( noprefix == "Material.rimWidth" )
-      {
-              if ( param_type != GL_FLOAT )
-              {
-                      GLCAT.error()
-                              << "p3d_Material.rimWidth should be float\n";
-              }
-              bind._part[0] = Shader::SMO_attr_material2;
-              bind._piece = Shader::SMP_cell14;
-              _shader->_mat_spec.push_back( bind );
-              _shader->_mat_deps |= bind._dep[0];
-              return;
       }
     }
     if (noprefix == "ColorScale") {
@@ -1203,10 +1154,10 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       bind._part[1] = Shader::SMO_identity;
       bind._arg[1] = nullptr;
       bind._dep[1] = Shader::SSD_NONE;
-      
+
       if (noprefix == "Fog.color") {
         bind._part[0] = Shader::SMO_attr_fogcolor;
-        
+
         if (param_type == GL_FLOAT_VEC3) {
           bind._piece = Shader::SMP_row3x3;
         } else if (param_type == GL_FLOAT_VEC4) {
@@ -1216,18 +1167,52 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
             << "p3d_Fog.color should be vec3 or vec4\n";
           return;
         }
-      } else if (noprefix == "Fog.parameters") {
+
+      } else if (noprefix == "Fog.density") {
         bind._part[0] = Shader::SMO_attr_fog;
-        
-        if (param_type == GL_FLOAT_VEC4) {
-          bind._piece = Shader::SMP_row3;
+
+        if (param_type == GL_FLOAT) {
+          bind._piece = Shader::SMP_row3x1;
         } else {
           GLCAT.error()
-            << "p3d_Fog.parameters should be vec4\n";
+            << "p3d_Fog.density should be float\n";
+          return;
+        }
+
+      } else if (noprefix == "Fog.start") {
+        bind._part[0] = Shader::SMO_attr_fog;
+
+        if (param_type == GL_FLOAT) {
+          bind._piece = Shader::SMP_cell13;
+        } else {
+          GLCAT.error()
+            << "p3d_Fog.start should be float\n";
+          return;
+        }
+
+      } else if (noprefix == "Fog.end") {
+        bind._part[0] = Shader::SMO_attr_fog;
+
+        if (param_type == GL_FLOAT) {
+          bind._piece = Shader::SMP_cell14;
+        } else {
+          GLCAT.error()
+            << "p3d_Fog.end should be float\n";
+          return;
+        }
+
+      } else if (noprefix == "Fog.scale") {
+        bind._part[0] = Shader::SMO_attr_fog;
+
+        if (param_type == GL_FLOAT) {
+          bind._piece = Shader::SMP_cell15;
+        } else {
+          GLCAT.error()
+            << "p3d_Fog.scale should be float\n";
           return;
         }
       }
-      
+
       _shader->_mat_spec.push_back(bind);
       _shader->_mat_deps |= bind._dep[0];
       return;
