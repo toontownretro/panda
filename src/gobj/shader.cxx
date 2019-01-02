@@ -1630,6 +1630,15 @@ get_compiled(unsigned int &format, string &binary) const {
   return !binary.empty();
 }
 
+/**
+ * Called by the graphics back-end to specify the caps with which we will
+ * likely want to be compiling our shaders.
+ */
+void Shader::
+set_default_caps(const ShaderCaps &caps) {
+  _default_caps = caps;
+}
+
 #ifdef HAVE_CG
 /**
  *
@@ -2405,9 +2414,15 @@ Shader(ShaderLanguage lang) :
   _cg_fprofile = CG_PROFILE_UNKNOWN;
   _cg_gprofile = CG_PROFILE_UNKNOWN;
   if (_default_caps._ultimate_vprofile == 0 || _default_caps._ultimate_vprofile == CG_PROFILE_UNKNOWN) {
-    _default_caps._active_vprofile = CG_PROFILE_GENERIC;
-    _default_caps._active_fprofile = CG_PROFILE_GENERIC;
-    _default_caps._active_gprofile = CG_PROFILE_GENERIC;
+    if (basic_shaders_only) {
+      _default_caps._active_vprofile = CG_PROFILE_ARBVP1;
+      _default_caps._active_fprofile = CG_PROFILE_ARBFP1;
+      _default_caps._active_gprofile = CG_PROFILE_UNKNOWN;
+    } else {
+      _default_caps._active_vprofile = CG_PROFILE_UNKNOWN;
+      _default_caps._active_fprofile = CG_PROFILE_UNKNOWN;
+      _default_caps._active_gprofile = CG_PROFILE_UNKNOWN;
+    }
     _default_caps._ultimate_vprofile = cgGetProfile("glslv");
     _default_caps._ultimate_fprofile = cgGetProfile("glslf");
     _default_caps._ultimate_gprofile = cgGetProfile("glslg");
@@ -2791,6 +2806,7 @@ r_preprocess_source(ostream &out, istream &in, const Filename &fn,
   int ext_google_include = 0; // 1 = warn, 2 = enable
   int ext_google_line = 0;
   bool had_include = false;
+  bool had_version = false;
   int lineno = 0;
   bool write_line_directive = (fileno != 0);
 
@@ -2961,6 +2977,9 @@ r_preprocess_source(ostream &out, istream &in, const Filename &fn,
         write_line_directive = true;
       }
 
+    } else if (strcmp(directive, "version") == 0) {
+      had_version = true;
+
     } else if (strcmp(directive, "extension") == 0) {
       // Check for special preprocessing extensions.
       char extension[256];
@@ -3086,6 +3105,11 @@ r_preprocess_source(ostream &out, istream &in, const Filename &fn,
       write_line_directive = false;
     }
     out << line << "\n";
+  }
+
+  if (fileno == 0 && !had_version) {
+    shader_cat.warning()
+      << "GLSL shader " << fn << " does not contain a #version line!\n";
   }
 
   return true;
@@ -3746,7 +3770,7 @@ clear_prepared(PreparedGraphicsObjects *prepared_objects) {
   } else {
     // If this assertion fails, clear_prepared() was given a prepared_objects
     // which the texture didn't know about.
-    nassertv(false);
+    nassert_raise("unknown PreparedGraphicsObjects");
   }
 }
 
