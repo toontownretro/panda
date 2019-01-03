@@ -43,7 +43,6 @@
 #include "showBoundsEffect.h"
 #include "transparencyAttrib.h"
 #include "antialiasAttrib.h"
-#include "audioVolumeAttrib.h"
 #include "texProjectorEffect.h"
 #include "scissorEffect.h"
 #include "texturePool.h"
@@ -4987,101 +4986,6 @@ get_antialias() const {
   }
 
   return AntialiasAttrib::M_none;
-}
-
-/**
- * Returns true if an audio volume has been applied to the referenced node,
- * false otherwise.  It is still possible that volume at this node might have
- * been scaled by an ancestor node.
- */
-bool NodePath::
-has_audio_volume() const {
-  nassertr_always(!is_empty(), false);
-  return node()->has_attrib(AudioVolumeAttrib::get_class_slot());
-}
-
-/**
- * Completely removes any audio volume from the referenced node.  This is
- * preferable to simply setting the audio volume to identity, as it also
- * removes the overhead associated with having an audio volume at all.
- */
-void NodePath::
-clear_audio_volume() {
-  nassertv_always(!is_empty());
-  node()->clear_attrib(AudioVolumeAttrib::get_class_slot());
-}
-
-/**
- * Sets the audio volume component of the transform
- */
-void NodePath::
-set_audio_volume(PN_stdfloat volume, int priority) {
-  nassertv_always(!is_empty());
-
-  const RenderAttrib *attrib =
-    node()->get_attrib(AudioVolumeAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    priority = max(priority,
-                   node()->get_state()->get_override(AudioVolumeAttrib::get_class_slot()));
-    CPT(AudioVolumeAttrib) ava = DCAST(AudioVolumeAttrib, attrib);
-
-    // Modify the existing AudioVolumeAttrib to add the indicated volume.
-    node()->set_attrib(ava->set_volume(volume), priority);
-
-  } else {
-    // Create a new AudioVolumeAttrib for this node.
-    node()->set_attrib(AudioVolumeAttrib::make(volume), priority);
-  }
-}
-
-/**
- * Disables any audio volume attribute inherited from above.  This is not the
- * same thing as clear_audio_volume(), which undoes any previous
- * set_audio_volume() operation on this node; rather, this actively disables
- * any set_audio_volume() that might be inherited from a parent node.
- *
- * It is legal to specify a new volume on the same node with a subsequent call
- * to set_audio_volume(); this new scale will apply to lower nodes.
- */
-void NodePath::
-set_audio_volume_off(int priority) {
-  nassertv_always(!is_empty());
-  node()->set_attrib(AudioVolumeAttrib::make_off(), priority);
-}
-
-/**
- * Returns the complete audio volume that has been applied to this node via a
- * previous call to set_audio_volume(), or 1. (identity) if no volume has been
- * applied to this particular node.
- */
-PN_stdfloat NodePath::
-get_audio_volume() const {
-  const RenderAttrib *attrib =
-    node()->get_attrib(AudioVolumeAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    const AudioVolumeAttrib *ava = DCAST(AudioVolumeAttrib, attrib);
-    return ava->get_volume();
-  }
-
-  return 1.0f;
-}
-
-/**
- * Returns the complete audio volume for this node taking highers nodes in the
- * graph into account.
- */
-PN_stdfloat NodePath::
-get_net_audio_volume() const {
-  CPT(RenderState) net_state = get_net_state();
-  const RenderAttrib *attrib = net_state->get_attrib(AudioVolumeAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    const AudioVolumeAttrib *ava = DCAST(AudioVolumeAttrib, attrib);
-    if (ava != nullptr) {
-      return ava->get_volume();
-    }
-  }
-
-  return 1.0f;
 }
 
 /**

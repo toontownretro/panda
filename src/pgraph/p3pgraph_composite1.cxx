@@ -1,7 +1,6 @@
 #include "accumulatedAttribs.cxx"
 #include "antialiasAttrib.cxx"
 #include "attribNodeRegistry.cxx"
-#include "audioVolumeAttrib.cxx"
 #include "auxBitplaneAttrib.cxx"
 #include "auxSceneData.cxx"
 #include "bamFile.cxx"

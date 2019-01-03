@@ -14,7 +14,6 @@
 #include "config_pgraph.h"
 
 #include "alphaTestAttrib.h"
-#include "audioVolumeAttrib.h"
 #include "auxBitplaneAttrib.h"
 #include "antialiasAttrib.h"
 #include "auxSceneData.h"
@@ -389,7 +388,6 @@ init_libpgraph() {
 
   AlphaTestAttrib::init_type();
   AntialiasAttrib::init_type();
-  //AudioVolumeAttrib::init_type();
   AuxBitplaneAttrib::init_type();
   AuxSceneData::init_type();
   BillboardEffect::init_type();
@@ -423,7 +421,7 @@ init_libpgraph() {
   Loader::init_type();
   LoaderFileType::init_type();
   LoaderFileTypeBam::init_type();
-  //LogicOpAttrib::init_type();
+  LogicOpAttrib::init_type();
   MaterialAttrib::init_type();
   ModelFlattenRequest::init_type();
   ModelLoadRequest::init_type();
@@ -465,7 +463,6 @@ init_libpgraph() {
 
   AlphaTestAttrib::register_with_read_factory();
   AntialiasAttrib::register_with_read_factory();
-  //AudioVolumeAttrib::register_with_read_factory();
   AuxBitplaneAttrib::register_with_read_factory();
   BillboardEffect::register_with_read_factory();
   Camera::register_with_read_factory();
@@ -487,7 +484,7 @@ init_libpgraph() {
   LensNode::register_with_read_factory();
   LightAttrib::register_with_read_factory();
   LightRampAttrib::register_with_read_factory();
-  //LogicOpAttrib::register_with_read_factory();
+  LogicOpAttrib::register_with_read_factory();
   MaterialAttrib::register_with_read_factory();
   ModelNode::register_with_read_factory();
   ModelRoot::register_with_read_factory();
