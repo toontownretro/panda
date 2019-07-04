@@ -1434,12 +1434,7 @@ fetch_specified_part(Shader::ShaderMatInput part, InternalName *name,
       // Apply the default OpenGL lights otherwise.
       // Special exception for light 0, which defaults to white.
       string basename = name->get_basename();
-      if (basename == "color" || basename == "diffuse") {
-        t.set_row(3, _light_color_scale);
-        return &t;
-      } else if (basename == "specular") {
-        return &LMatrix4::ones_mat();
-      }
+      return &LMatrix4::ones_mat();
     }
     return fetch_specified_member(NodePath(), name, t);
   }
@@ -1495,7 +1490,7 @@ fetch_specified_part(Shader::ShaderMatInput part, InternalName *name,
     } else if (index == 0) {
       // Apply the default OpenGL lights otherwise.
       // Special exception for light 0, which defaults to white.
-      t.set_row(0, _light_color_scale);
+      t.set_row(0, LVecBase4(1, 1, 1, 1));
     }
     return &t;
   }
@@ -1540,7 +1535,6 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
     Light *light = node->as_light();
     nassertr(light != nullptr, &LMatrix4::ident_mat());
     LColor c = light->get_color();
-    c.componentwise_mult(_light_color_scale);
     t.set_row(3, c);
     return &t;
 
@@ -1552,7 +1546,6 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
     nassertr(light != nullptr, &LMatrix4::ident_mat());
     if (node->is_ambient_light()) {
       LColor c = light->get_color();
-      c.componentwise_mult(_light_color_scale);
       t.set_row(3, c);
     } else {
       // Non-ambient lights don't currently have an ambient color in Panda3D.
@@ -1571,7 +1564,6 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       t.set_row(3, LColor(0.0f, 0.0f, 0.0f, 1.0f));
     } else {
       LColor c = light->get_color();
-      c.componentwise_mult(_light_color_scale);
       t.set_row(3, c);
     }
     return &t;
@@ -1922,6 +1914,14 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 const Shader::ShaderPtrData *GraphicsStateGuardian::
 fetch_ptr_parameter(const Shader::ShaderPtrSpec& spec) {
   return (_target_shader->get_shader_input_ptr(spec._arg));
+}
+
+/**
+ *
+ */
+bool GraphicsStateGuardian::
+fetch_ptr_parameter(const Shader::ShaderPtrSpec& spec, Shader::ShaderPtrData &data) {
+  return _target_shader->get_shader_input_ptr(spec._arg, data);
 }
 
 /**
@@ -2838,6 +2838,12 @@ do_issue_light() {
     }
 
   } else {
+    // Don't forget to still enable lighting if we have only an ambient light.
+    if (!_lighting_enabled) {
+      enable_lighting(true);
+      _lighting_enabled = true;
+    }
+
     set_ambient_light(target_light->get_ambient_contribution());
   }
 
