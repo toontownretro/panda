@@ -122,6 +122,7 @@ operator = (SimpleHashMap<Key, Value, Compare> &&from) noexcept {
     from._table_size = 0;
     from._num_entries = 0;
   }
+  return *this;
 }
 
 /**
