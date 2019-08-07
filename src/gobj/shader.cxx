@@ -3315,8 +3315,10 @@ load(const Filename &file, ShaderLanguage lang) {
       shader_cat.info()
         << "Shader " << file << " was modified on disk, reloading.\n";
     } else {
-      shader_cat.debug()
-        << "Shader " << file << " was found in shader cache.\n";
+      if (shader_cat.is_debug()) {
+        shader_cat.debug()
+          << "Shader " << file << " was found in shader cache.\n";
+      }
       return i->second;
     }
   }
@@ -3353,8 +3355,10 @@ load(ShaderLanguage lang, const Filename &vertex,
       shader_cat.info()
         << "Shader was modified on disk, reloading.\n";
     } else {
-      shader_cat.debug()
-        << "Shader was found in shader cache.\n";
+      if (shader_cat.is_debug()) {
+        shader_cat.debug()
+          << "Shader was found in shader cache.\n";
+      }
       return i->second;
     }
   }
@@ -3406,8 +3410,10 @@ load_compute(ShaderLanguage lang, const Filename &fn) {
       shader_cat.info()
         << "Compute shader " << fn << " was modified on disk, reloading.\n";
     } else {
-      shader_cat.debug()
-        << "Compute shader " << fn << " was found in shader cache.\n";
+      if (shader_cat.is_debug()) {
+        shader_cat.debug()
+          << "Compute shader " << fn << " was found in shader cache.\n";
+      }
       return i->second;
     }
   }
