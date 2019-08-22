@@ -43,11 +43,11 @@ public:
   // limit, we will need to go to a 64-bit type instead.  It will be
   // interesting to see whether a BitMask64 or a DoubleBitMask<BitMask32> will
   // be faster on a 32-bit machine.
-  typedef BitMask32 SlotMask;
+  typedef BitMask64 SlotMask;
 
   // Raise this number whenever we add a new attrib.  This used to be
   // determined at runtime, but it's better to have it as a constexpr.
-  static const int _max_slots = 32;
+  static const int _max_slots = 64;
 
   int register_slot(TypeHandle type_handle, int sort,
                     RenderAttrib *default_attrib);
