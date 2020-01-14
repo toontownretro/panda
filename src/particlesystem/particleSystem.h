@@ -60,6 +60,7 @@ PUBLISHED:
   INLINE void set_emitter(BaseParticleEmitter *e);
   INLINE void set_factory(BaseParticleFactory *f);
   INLINE void set_floor_z(PN_stdfloat z);
+  INLINE void set_physical_orientation_flag(bool flag);
 
   INLINE void clear_floor_z();
 
@@ -83,6 +84,7 @@ PUBLISHED:
   INLINE BaseParticleEmitter *get_emitter() const;
   INLINE BaseParticleFactory *get_factory() const;
   INLINE PN_stdfloat get_floor_z() const;
+  INLINE bool get_physical_orientation_flag() const;
   INLINE PN_stdfloat get_tics_since_birth() const;
 
   // particle template vector
@@ -127,6 +129,7 @@ private:
   PN_stdfloat _system_age;
   PN_stdfloat _system_lifespan;
   PN_stdfloat _floor_z;
+  bool _physical_orientation;
 
   PT(BaseParticleFactory) _factory;
   PT(BaseParticleEmitter) _emitter;
