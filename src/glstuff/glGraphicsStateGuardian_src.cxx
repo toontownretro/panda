@@ -2523,6 +2523,20 @@ reset() {
   }
 #endif
 
+#if defined(OPENGLES) && !defined(OPENGLES_1)
+  if (is_at_least_gles_version(3, 0)) {
+    _glReadBuffer = (PFNGLREADBUFFERPROC)
+      get_extension_func("glReadBuffer");
+
+  } else if (has_extension("GL_NV_read_buffer")) {
+    _glReadBuffer = (PFNGLREADBUFFERPROC)
+      get_extension_func("glReadBufferNV");
+
+  } else {
+    _glReadBuffer = nullptr;
+  }
+#endif
+
 #ifndef OPENGLES_1
   _max_color_targets = 1;
   if (_glDrawBuffers != nullptr) {
@@ -6206,7 +6220,7 @@ release_geom(GeomContext *gc) {
  */
 ShaderContext *CLP(GraphicsStateGuardian)::
 prepare_shader(Shader *se) {
-  PStatGPUTimer timer(this, _prepare_shader_pcollector);
+  PStatGPUTimer timer(this, se->get_prepare_shader_pcollector());
 
 #ifndef OPENGLES_1
   ShaderContext *result = nullptr;
@@ -6214,7 +6228,9 @@ prepare_shader(Shader *se) {
   switch (se->get_language()) {
   case Shader::SL_GLSL:
     if (_supports_glsl) {
+      push_group_marker(std::string("Prepare Shader ") + se->get_debug_name());
       result = new CLP(ShaderContext)(this, se);
+      pop_group_marker();
       break;
     } else {
       GLCAT.error()
@@ -6225,7 +6241,9 @@ prepare_shader(Shader *se) {
   case Shader::SL_Cg:
 #if defined(HAVE_CG) && !defined(OPENGLES)
     if (_supports_basic_shaders) {
+      push_group_marker(std::string("Prepare Shader ") + se->get_debug_name());
       result = new CLP(CgShaderContext)(this, se);
+      pop_group_marker();
       break;
     } else {
       GLCAT.error()
@@ -8956,7 +8974,7 @@ do_get_extension_func(const char *) {
  */
 void CLP(GraphicsStateGuardian)::
 set_draw_buffer(int rbtype) {
-#ifndef OPENGLES  // Draw buffers not supported by OpenGL ES. (TODO!)
+#ifndef OPENGLES_1  // Draw buffers not supported by OpenGL ES 1.
   if (_current_fbo) {
     GLuint buffers[16];
     int nbuffers = 0;
@@ -8991,9 +9009,14 @@ set_draw_buffer(int rbtype) {
       }
       ++index;
     }
-    _glDrawBuffers(nbuffers, buffers);
+    if (_glDrawBuffers != nullptr) {
+      _glDrawBuffers(nbuffers, buffers);
+    } else {
+      nassertv(nbuffers == 1 && buffers[0] == GL_COLOR_ATTACHMENT0_EXT);
+    }
 
   } else {
+#ifndef OPENGLES
     switch (rbtype & RenderBuffer::T_color) {
     case RenderBuffer::T_front:
       glDrawBuffer(GL_FRONT);
@@ -9034,8 +9057,9 @@ set_draw_buffer(int rbtype) {
     default:
       break;
     }
-  }
 #endif  // OPENGLES
+  }
+#endif  // OPENGLES_1
 
   // Also ensure that any global color channels are masked out.
   set_color_write_mask(_color_write_mask);
@@ -9050,7 +9074,7 @@ set_draw_buffer(int rbtype) {
  */
 void CLP(GraphicsStateGuardian)::
 set_read_buffer(int rbtype) {
-#ifndef OPENGLES  // Draw buffers not supported by OpenGL ES. (TODO!)
+#ifndef OPENGLES_1  // Draw buffers not supported by OpenGL ES 1.
   if (rbtype & (RenderBuffer::T_depth | RenderBuffer::T_stencil)) {
     // Special case: don't have to call ReadBuffer for these.
     return;
@@ -9083,10 +9107,14 @@ set_read_buffer(int rbtype) {
       }
       ++index;
     }
+#ifdef OPENGLES
+    _glReadBuffer(buffer);
+#else
     glReadBuffer(buffer);
+#endif
 
   } else {
-
+#ifndef OPENGLES
     switch (rbtype & RenderBuffer::T_color) {
     case RenderBuffer::T_front:
       glReadBuffer(GL_FRONT);
@@ -9123,10 +9151,11 @@ set_read_buffer(int rbtype) {
     default:
       break;
     }
+#endif  // OPENGLES
   }
 
   report_my_gl_errors();
-#endif  // OPENGLES
+#endif  // OPENGLES_1
 }
 
 /**
