@@ -549,7 +549,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         // Cull this Geom.
         continue;
       }
-      if (!data._cull_planes->is_empty()) {
+      if (data._cull_planes != nullptr) {
         // Also cull the Geom against the cull planes.
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
         const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();

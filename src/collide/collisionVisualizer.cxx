@@ -145,12 +145,9 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       bool was_detected = (solid_info._detected_count > 0);
       PT(PandaNode) node = solid->get_viz(trav, xform_data, !was_detected);
       if (node != nullptr) {
-        CullTraverserData next_data(xform_data, node);
-
         // We don't want to inherit the render state from above for these
         // guys.
-        next_data._state = get_viz_state();
-        trav->traverse(next_data);
+        trav->traverse_child(xform_data, node, xform_data._net_transform, get_viz_state());
       }
     }
 

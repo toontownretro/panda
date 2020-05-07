@@ -774,6 +774,41 @@ get_sort() const {
 }
 
 /**
+ * Compares the running draw mask computed during a traversal with this child's
+ * net draw masks.  Returns true if the child should be traversed into, or
+ * false if there is nothing at this level or below that will be visible to
+ * the indicated camera_mask.
+ */
+INLINE bool PandaNode::DownConnection::
+compare_draw_mask(DrawMask running_draw_mask, DrawMask camera_mask) const {
+  // As a special case, if net_draw_show_mask is all 0, it means either that
+  // all nodes under this node are hidden to all cameras, or that none of them
+  // are renderable nodes (or some combination). In either case, we might as
+  // well short-circuit.
+  if (_net_draw_show_mask.is_zero()) {
+    return false;
+  }
+
+  DrawMask net_draw_control_mask, net_draw_show_mask;
+  net_draw_control_mask = _net_draw_control_mask;
+  net_draw_show_mask = _net_draw_show_mask;
+
+  // Now the bits that are not in net_draw_control_mask--that is, those bits
+  // that are not changed by any of the nodes at this level and below--are
+  // taken from running_draw_mask, which is inherited from above.  On the
+  // other hand, the bits that *are* in net_draw_control_mask--those bits that
+  // are changed by any of the nodes at this level and below--are taken from
+  // net_draw_show_mask, which is propagated upwards from below.
+
+  // This way, we will traverse into this node if it has any children which
+  // want to be visited by the traversal, but we will avoid traversing into it
+  // if all of its children are hidden to this camera.
+  DrawMask compare_mask = (running_draw_mask & ~net_draw_control_mask) | (net_draw_show_mask & net_draw_control_mask);
+
+  return !((compare_mask & PandaNode::_overall_bit).is_zero()) && !((compare_mask & camera_mask).is_zero());
+}
+
+/**
  *
  */
 INLINE PandaNode::UpConnection::

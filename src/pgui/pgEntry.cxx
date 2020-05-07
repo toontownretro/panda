@@ -180,8 +180,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   update_cursor();
 
   // Now render the text.
-  CullTraverserData next_data(data, _text_render_root.node());
-  trav->traverse(next_data);
+  trav->traverse_child(data, _text_render_root.node());
 
   // Now continue to render everything else below this node.
   return true;

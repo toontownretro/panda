@@ -463,8 +463,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   PT(PandaNode) internal_geom = do_get_internal_geom();
   if (internal_geom != nullptr) {
     // Render the text with this node.
-    CullTraverserData next_data(data, internal_geom);
-    trav->traverse(next_data);
+    trav->traverse_child(data, internal_geom);
   }
 
   // Now continue to render everything else below this node.

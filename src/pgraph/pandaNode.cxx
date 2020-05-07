@@ -3239,16 +3239,22 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
       off_clip_planes = ClipPlaneAttrib::make();
     }
 
-    // Also get the list of the node's children.
-    Children children(cdata);
-
     int num_vertices = cdata->_internal_vertices;
+
+    // Also get the list of the node's children.  When the cdataw destructs, it
+    // will also release the lock, since we've got all the data we need from the
+    // node.
+    PT(Down) down;
+    {
+      CDStageWriter cdataw(_cycler, pipeline_stage, cdata);
+      down = cdataw->modify_down();
+    }
 
     // Now that we've got all the data we need from the node, we can release
     // the lock.
-    _cycler.release_read_stage(pipeline_stage, cdata.take_pointer());
+    //_cycler.release_read_stage(pipeline_stage, cdata.take_pointer());
 
-    int num_children = children.get_num_children();
+    int num_children = down->size();
 
     // We need to keep references to the bounding volumes, since in a threaded
     // environment the pointers might go away while we're working (since we're
@@ -3285,7 +3291,8 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
     // Now expand those contents to include all of our children.
 
     for (int i = 0; i < num_children; ++i) {
-      PandaNode *child = children.get_child(i);
+      DownConnection &connection = (*down)[i];
+      PandaNode *child = connection.get_child();
 
       const ClipPlaneAttrib *orig_cp = DCAST(ClipPlaneAttrib, off_clip_planes);
 
@@ -3299,7 +3306,9 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         // Child needs update.
         CDStageWriter child_cdataw = child->update_cached(update_bounds, pipeline_stage, child_cdata);
 
-        net_collide_mask |= child_cdataw->_net_collide_mask;
+        CollideMask child_collide_mask = child_cdataw->_net_collide_mask;
+        net_collide_mask |= child_collide_mask;
+        connection._net_collide_mask = child_collide_mask;
 
         if (drawmask_cat.is_debug()) {
           drawmask_cat.debug(false)
@@ -3379,11 +3388,18 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
             }
           }
           num_vertices += child_cdataw->_nested_vertices;
+
+          connection._external_bounds = child_cdataw->_external_bounds->as_geometric_bounding_volume();
         }
+
+        connection._net_draw_control_mask = child_control_mask;
+        connection._net_draw_show_mask = child_show_mask;
 
       } else {
         // Child is good.
-        net_collide_mask |= child_cdata->_net_collide_mask;
+        CollideMask child_collide_mask = child_cdata->_net_collide_mask;
+        net_collide_mask |= child_collide_mask;
+        connection._net_collide_mask = child_collide_mask;
 
         // See comments in similar block above.
         if (drawmask_cat.is_debug()) {
@@ -3434,7 +3450,12 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
             }
           }
           num_vertices += child_cdata->_nested_vertices;
+
+          connection._external_bounds = child_cdata->_external_bounds->as_geometric_bounding_volume();
         }
+
+        connection._net_draw_control_mask = child_control_mask;
+        connection._net_draw_show_mask = child_show_mask;
       }
     }
 

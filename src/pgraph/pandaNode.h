@@ -46,6 +46,7 @@
 #include "lightReMutex.h"
 #include "extension.h"
 #include "simpleHashMap.h"
+#include "geometricBoundingVolume.h"
 
 class NodePathComponent;
 class CullTraverser;
@@ -453,11 +454,30 @@ public:
     INLINE void set_child(PandaNode *child);
     INLINE int get_sort() const;
 
+    INLINE CollideMask get_net_collide_mask() const {
+      return _net_collide_mask;
+    }
+    INLINE const GeometricBoundingVolume *get_bounds() const {
+      return _external_bounds;
+    }
+
+    INLINE bool compare_draw_mask(DrawMask running_draw_mask,
+                                  DrawMask camera_mask) const;
+
   private:
     // Child pointers are reference counted.  That way, holding a pointer to
     // the root of a subgraph keeps the entire subgraph around.
     PT(PandaNode) _child;
     int _sort;
+
+    // These values are cached here so that a traverser can efficiently check
+    // whether a node is in view before recursing.
+    CollideMask _net_collide_mask;
+    CPT(GeometricBoundingVolume) _external_bounds;
+    DrawMask _net_draw_control_mask;
+    DrawMask _net_draw_show_mask;
+
+    friend class PandaNode;
   };
 
 private:
@@ -711,6 +731,10 @@ PUBLISHED:
     INLINE size_t get_num_children() const;
     INLINE PandaNode *get_child(size_t n) const;
     INLINE int get_child_sort(size_t n) const;
+
+    INLINE const DownConnection &get_child_connection(size_t n) const {
+      return (*_down)[n];
+    }
 
   PUBLISHED:
     INLINE PandaNode *operator [](size_t n) const { return get_child(n); }
