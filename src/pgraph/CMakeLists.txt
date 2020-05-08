@@ -3,7 +3,6 @@ set(P3PGRAPH_HEADERS
   alphaTestAttrib.I alphaTestAttrib.h
   antialiasAttrib.I antialiasAttrib.h
   attribNodeRegistry.I attribNodeRegistry.h
-  audioVolumeAttrib.I audioVolumeAttrib.h
   auxSceneData.I auxSceneData.h
   auxBitplaneAttrib.I auxBitplaneAttrib.h
   bamFile.I bamFile.h
@@ -48,7 +47,6 @@ set(P3PGRAPH_HEADERS
   loaderFileType.h
   loaderFileTypeBam.h
   loaderFileTypeRegistry.h
-  logicOpAttrib.I logicOpAttrib.h
   materialAttrib.I materialAttrib.h
   materialCollection.I materialCollection.h
   modelFlattenRequest.I modelFlattenRequest.h
@@ -104,7 +102,6 @@ set(P3PGRAPH_SOURCES
   alphaTestAttrib.cxx
   antialiasAttrib.cxx
   attribNodeRegistry.cxx
-  audioVolumeAttrib.cxx
   auxBitplaneAttrib.cxx
   auxSceneData.cxx
   bamFile.cxx
@@ -148,7 +145,6 @@ set(P3PGRAPH_SOURCES
   loaderFileType.cxx
   loaderFileTypeBam.cxx
   loaderFileTypeRegistry.cxx
-  logicOpAttrib.cxx
   materialAttrib.cxx
   materialCollection.cxx
   modelFlattenRequest.cxx

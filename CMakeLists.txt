@@ -34,6 +34,7 @@ add_subdirectory(src/glxdisplay)
 add_subdirectory(src/gobj)
 add_subdirectory(src/grutil)
 add_subdirectory(src/gsgbase)
+add_subdirectory(src/keyvalues) # -- lachbr
 add_subdirectory(src/linmath)
 add_subdirectory(src/mathutil)
 add_subdirectory(src/movies)
@@ -68,6 +69,7 @@ add_subdirectory(src/ode)
 # physics
 add_subdirectory(src/particlesystem)
 add_subdirectory(src/physics)
+#add_subdirectory(src/bspbase)
 
 # Include panda metalibs
 add_subdirectory(metalibs/panda)
@@ -85,7 +87,7 @@ set(CORE_MODULE_COMPONENTS
   p3downloader p3dxml p3event p3express p3gobj p3grutil p3gsgbase p3linmath
   p3mathutil p3movies p3parametrics p3pgraph p3pgraphnodes p3pgui
   p3pipeline p3pnmimage p3pstatclient p3putil p3recorder p3text p3tform
-  p3prc p3dtoolutil p3dtoolbase
+  p3prc p3dtoolutil p3dtoolbase p3keyvalues
 )
 
 if(WANT_NATIVE_NET)
