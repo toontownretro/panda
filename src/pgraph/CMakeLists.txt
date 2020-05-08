@@ -47,6 +47,7 @@ set(P3PGRAPH_HEADERS
   loaderFileType.h
   loaderFileTypeBam.h
   loaderFileTypeRegistry.h
+  logicOpAttrib.I logicOpAttrib.h
   materialAttrib.I materialAttrib.h
   materialCollection.I materialCollection.h
   modelFlattenRequest.I modelFlattenRequest.h
@@ -145,6 +146,7 @@ set(P3PGRAPH_SOURCES
   loaderFileType.cxx
   loaderFileTypeBam.cxx
   loaderFileTypeRegistry.cxx
+  logicOpAttrib.cxx
   materialAttrib.cxx
   materialCollection.cxx
   modelFlattenRequest.cxx
