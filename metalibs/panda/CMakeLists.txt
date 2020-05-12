@@ -3,7 +3,7 @@ set(PANDA_LINK_TARGETS
   p3event p3gobj p3grutil p3gsgbase p3linmath p3mathutil
   p3movies p3parametrics p3pgraph p3pgraphnodes p3pgui p3pipeline
   p3pnmimage p3pnmimagetypes p3pstatclient p3putil p3recorder p3text p3tform
-  p3keyvalues
+  p3keyvalues p3bspinternal
 )
 
 if(WANT_NATIVE_NET)

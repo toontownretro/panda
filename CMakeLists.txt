@@ -5,6 +5,7 @@ endif()
 # Include panda source directories
 add_subdirectory(src/audio)
 add_subdirectory(src/audiotraits)
+add_subdirectory(src/bspinternal) # -- lachbr
 add_subdirectory(src/chan)
 add_subdirectory(src/char)
 add_subdirectory(src/cocoadisplay)
