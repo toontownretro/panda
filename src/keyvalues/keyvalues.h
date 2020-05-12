@@ -21,6 +21,8 @@
 #include "pointerTo.h"
 #include "simpleHashMap.h"
 #include "luse.h"
+#include "vector_int.h"
+#include "vector_float.h"
 
 class CKeyValuesTokenizer;
 
@@ -29,7 +31,7 @@ class CKeyValuesTokenizer;
  * Has a map of string key-value pairs, and can have a list of child blocks.
  */
 class EXPCL_VIF CKeyValues : public ReferenceCount {
-public:
+PUBLISHED:
 	CKeyValues(const std::string &name, CKeyValues *parent = nullptr);
 
 	//void set_parent( CKeyValues *parent );
@@ -57,13 +59,13 @@ public:
 private:
 	void parse(CKeyValuesTokenizer *tokenizer);
 
-public:
+PUBLISHED:
 	static PT(CKeyValues) load(const Filename &filename);
 
-  static pvector<int> parse_num_list_str(const std::string &str);
-	static pvector<float> parse_float_list_str(const std::string &str);
-	static pvector<pvector<int>> parse_int_tuple_list_str(const std::string &str);
-	static pvector<pvector<float>> parse_num_array_str(const std::string &str);
+  static vector_int parse_num_list_str(const std::string &str);
+	static vector_float parse_float_list_str(const std::string &str);
+	static pvector<vector_int> parse_int_tuple_list_str(const std::string &str);
+	static pvector<vector_float> parse_num_array_str(const std::string &str);
 	static LVecBase3f to_3f(const std::string &str);
 	static LVecBase2f to_2f(const std::string &str);
 	static LVecBase4f to_4f(const std::string &str);

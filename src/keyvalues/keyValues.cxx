@@ -317,8 +317,8 @@ PT(CKeyValues) CKeyValues::load(const Filename &filename) {
 // Helper functions for parsing string values that represent numbers.
 //------------------------------------------------------------------------------------------------
 
-pvector<float> CKeyValues::parse_float_list_str(const std::string &str) {
-	pvector<float> result;
+vector_float CKeyValues::parse_float_list_str(const std::string &str) {
+	vector_float result;
 	std::string curr_num_string;
 	int current = 0;
 	while (current < str.length()) {
@@ -340,8 +340,8 @@ pvector<float> CKeyValues::parse_float_list_str(const std::string &str) {
 	return result;
 }
 
-pvector<int> CKeyValues::parse_num_list_str(const std::string &str) {
-	pvector<int> result;
+vector_int CKeyValues::parse_num_list_str(const std::string &str) {
+	vector_int result;
 	std::string curr_num_string;
 	int current = 0;
 	while (current < str.length()) {
@@ -363,11 +363,11 @@ pvector<int> CKeyValues::parse_num_list_str(const std::string &str) {
 	return result;
 }
 
-pvector<pvector<int>> CKeyValues::parse_int_tuple_list_str(const std::string &str) {
-	pvector<pvector<int>> result;
+pvector<vector_int> CKeyValues::parse_int_tuple_list_str(const std::string &str) {
+	pvector<vector_int> result;
 	int current = 0;
 	std::string curr_num_string;
-	pvector<int> tuple_result;
+	vector_int tuple_result;
 
 	while (current < str.length()) {
 		char let = str[current];
@@ -389,11 +389,11 @@ pvector<pvector<int>> CKeyValues::parse_int_tuple_list_str(const std::string &st
 	return result;
 }
 
-pvector<pvector<float>> CKeyValues::parse_num_array_str(const std::string &str) {
-	pvector<pvector<float>> result;
+pvector<vector_float> CKeyValues::parse_num_array_str(const std::string &str) {
+	pvector<vector_float> result;
 	int current = 0;
 	std::string curr_num_string;
-	pvector<float> array_result;
+	vector_float array_result;
 	while (current < str.length()) {
 		char let = str[current];
 		if (let == '[') {
@@ -435,19 +435,19 @@ pvector<pvector<float>> CKeyValues::parse_num_array_str(const std::string &str) 
 }
 
 LVecBase2f CKeyValues::to_2f(const std::string &str) {
-	pvector<float> vec = CKeyValues::parse_float_list_str(str);
+	vector_float vec = CKeyValues::parse_float_list_str(str);
 	nassertr(vec.size() >= 2, LVecBase2f(0));
 	return LVecBase2f(vec[0], vec[1]);
 }
 
 LVecBase3f CKeyValues::to_3f(const std::string &str) {
-	pvector<float> vec = CKeyValues::parse_float_list_str(str);
+  vector_float vec = CKeyValues::parse_float_list_str(str);
 	nassertr(vec.size() >= 3, LVecBase3f(0));
 	return LVecBase3f(vec[0], vec[1], vec[2]);
 }
 
 LVecBase4f CKeyValues::to_4f(const std::string &str) {
-	pvector<float> vec = CKeyValues::parse_float_list_str(str);
+	vector_float vec = CKeyValues::parse_float_list_str(str);
 	nassertr(vec.size() >= 4, LVecBase4f(0));
 	return LVecBase4f(vec[0], vec[1], vec[2], vec[3]);
 }

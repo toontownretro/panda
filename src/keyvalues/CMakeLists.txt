@@ -11,7 +11,7 @@ set(P3KEYVALUES_SOURCES
 composite_sources(p3keyvalues P3KEYVALUES_SOURCES)
 add_component_library(p3keyvalues SYMBOL BUILDING_VIFPARSER
   ${P3KEYVALUES_HEADERS} ${P3KEYVALUES_SOURCES})
-target_link_libraries(p3keyvalues p3pandabase p3linmath pandaexpress p3putil)
+target_link_libraries(p3keyvalues p3putil p3linmath pandaexpress)
 target_interrogate(p3keyvalues ALL)
 
 if(NOT BUILD_METALIBS)

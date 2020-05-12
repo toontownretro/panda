@@ -1,8 +1,7 @@
 #include "config_keyvalues.h"
-
 #include "dconfig.h"
 
-ConfigureDef(config_keyvalues)
+Configure(config_keyvalues)
 
 ConfigureFn(config_keyvalues) {
   init_libkeyvalues();
