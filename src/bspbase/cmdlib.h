@@ -132,8 +132,6 @@ using std::endl;
 #pragma warning(disable: 4005)
 #endif
 
-
-#ifdef STDC_HEADERS
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -142,7 +140,6 @@ using std::endl;
 #include <time.h>
 #include <stdarg.h>
 #include <limits.h>
-#endif
 
 #include <stdint.h> //--vluzacn
 

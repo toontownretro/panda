@@ -10,7 +10,7 @@
 #include "win32fix.h"
 #include "mathlib.h"
 #include "bspfile.h"
-#include "boundingbox.h"
+#include "bsp_boundingbox.h"
 
 #define MAX_POINTS_ON_WINDING 128
 // TODO: FIX THIS STUPID SHIT (MAX_POINTS_ON_WINDING)
