@@ -18,7 +18,7 @@ add_component_library(p3bspinternal SYMBOL BUILDING_BSPINTERNAL
 target_link_libraries(p3bspinternal p3putil p3linmath pandaexpress p3gobj p3pgraph p3keyvalues)
 # NOTE: While the CXX code is part of libpanda, the interrogated code is compiled
 # into panda3d.bsp to remain consistent.
-target_interrogate(p3bspinternal ALL)
+target_interrogate(p3bspinternal ${P3BSPINT_HEADERS})
 
 if(NOT BUILD_METALIBS)
   install(TARGETS p3bspinternal

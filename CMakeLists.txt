@@ -5,7 +5,6 @@ endif()
 # Include panda source directories
 add_subdirectory(src/audio)
 add_subdirectory(src/audiotraits)
-add_subdirectory(src/bspbase) # -- lachbr
 add_subdirectory(src/bspinternal) # -- lachbr
 add_subdirectory(src/chan)
 add_subdirectory(src/char)
@@ -71,7 +70,6 @@ add_subdirectory(src/ode)
 # physics
 add_subdirectory(src/particlesystem)
 add_subdirectory(src/physics)
-#add_subdirectory(src/bspbase)
 
 # Include panda metalibs
 add_subdirectory(metalibs/panda)
@@ -173,8 +171,6 @@ bdist_apps = direct.dist.commands:bdist_apps
 
   add_python_module(panda3d.fx pandafx IMPORT panda3d.core)
   add_python_module(panda3d.physics p3physics p3particlesystem LINK pandaphysics IMPORT panda3d.core)
-
-  add_python_module(panda3d.bsp p3bspinternal pandabsp IMPORT panda3d.core panda3d.bullet) # -- lachbr
 
   if(HAVE_ODE)
     add_python_module(panda3d.ode p3ode IMPORT panda3d.core COMPONENT ODEPython)
