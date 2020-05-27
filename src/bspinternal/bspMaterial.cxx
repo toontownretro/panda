@@ -18,7 +18,7 @@ static LightReMutex g_matmutex("MaterialMutex");
 
 //====================================================================//
 
-#include "keyvalues.h"
+#include "keyValues.h"
 #include <virtualFileSystem.h>
 
 NotifyCategoryDef(bspmaterial, "");
