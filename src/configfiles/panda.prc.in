@@ -94,21 +94,13 @@ egg-object-type-notouch         <DCS> { no_touch }
 # mark the geometry at this level and below as invisible collision
 # polygons, which can be used by Panda's collision system to detect
 # collisions more optimally than regular visible polygons.
-egg-object-type-barrier         <Collide> { Polyset descend }
-egg-object-type-sphere          <Collide> { Sphere descend }
 egg-object-type-invsphere       <Collide> { InvSphere descend }
 egg-object-type-tube            <Collide> { Tube descend }
-
-# As above, but these are flagged to be "intangible", so that they
-# will trigger an event but not stop an object from passing through.
-egg-object-type-trigger         <Collide> { Polyset descend intangible }
-egg-object-type-trigger-sphere  <Collide> { Sphere descend intangible }
 
 # "floor" and "dupefloor" define the nodes in question as floor
 # polygons.  dupefloor means to duplicate the geometry first so that
 # the same polygons serve both as visible geometry and as collision
 # polygons.
-egg-object-type-floor           <Collide> { Polyset descend level }
 egg-object-type-dupefloor       <Collide> { Polyset keep descend level }
 
 # "bubble" puts an invisible bubble around an object, but does not
@@ -128,3 +120,27 @@ egg-object-type-glow            <Scalar> blend { add }
 # This isn't used in the egg loader, it controls a setting only within
 # maya2egg itself.  So if it appears in an egg file, it means nothing.
 egg-object-type-keep-all-uvsets
+
+# We must currently set this to avoid messing up some of
+# the suits' faces.
+egg-retesselate-coplanar	#f
+
+# Custom ObjectTypes for Toontown.
+# "barrier" means a vertical wall, with bitmask 0x01
+# "floor" means a horizontal floor, with bitmask 0x02
+# "camera-collide" means things that the camera should avoid, with bitmask 0x04
+egg-object-type-barrier         <Scalar> collide-mask { 0x01 } <Collide> { Polyset descend }
+egg-object-type-trigger         <Scalar> collide-mask { 0x01 } <Collide> { Polyset descend intangible }
+egg-object-type-sphere          <Scalar> collide-mask { 0x01 } <Collide> { Sphere descend }
+egg-object-type-trigger-sphere  <Scalar> collide-mask { 0x01 } <Collide> { Sphere descend intangible }
+egg-object-type-floor           <Scalar> collide-mask { 0x02 } <Collide> { Polyset descend }
+egg-object-type-camera-collide  <Scalar> collide-mask { 0x04 } <Collide> { Polyset descend }
+egg-object-type-camera-collide-sphere  <Scalar> collide-mask { 0x04 } <Collide> { Sphere descend }
+egg-object-type-camera-barrier  <Scalar> collide-mask { 0x05 } <Collide> { Polyset descend }
+egg-object-type-camera-barrier-sphere  <Scalar> collide-mask { 0x05 } <Collide> { Sphere descend }
+
+# Define a "shadow" object type, so we can render all shadows in their
+# own bin and have them not fight with each other (or with other
+# transparent geometry).
+egg-object-type-shadow          <Scalar> bin { shadow } <Scalar> alpha { blend-no-occlude }
+cull-bin shadow 15 unsorted
