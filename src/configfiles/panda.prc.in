@@ -25,6 +25,8 @@ ${AUX_DISPLAYS}
 # Define an appropriate default audio library.
 audio-library-name ${AUDIO_LIBRARY_NAME}
 
+notify-level-maya info
+
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files
 # are always loadable).
@@ -137,10 +139,14 @@ egg-object-type-floor           <Scalar> collide-mask { 0x02 } <Collide> { Polys
 egg-object-type-camera-collide  <Scalar> collide-mask { 0x04 } <Collide> { Polyset descend }
 egg-object-type-camera-collide-sphere  <Scalar> collide-mask { 0x04 } <Collide> { Sphere descend }
 egg-object-type-camera-barrier  <Scalar> collide-mask { 0x05 } <Collide> { Polyset descend }
+egg-object-type-cambarrier      <Scalar> collide-mask { 0x05 } <Collide> { Polyset descend }
 egg-object-type-camera-barrier-sphere  <Scalar> collide-mask { 0x05 } <Collide> { Sphere descend }
 
 # Define a "shadow" object type, so we can render all shadows in their
 # own bin and have them not fight with each other (or with other
 # transparent geometry).
 egg-object-type-shadow          <Scalar> bin { shadow } <Scalar> alpha { blend-no-occlude }
-cull-bin shadow 15 unsorted
+egg-object-type-shground        <Scalar> bin { ground }
+egg-object-type-shadow-ground   <Scalar> bin { ground }
+cull-bin shadow 19 back-to-front
+cull-bin ground 18 unsorted
