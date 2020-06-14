@@ -147,6 +147,7 @@ egg-object-type-camera-barrier-sphere  <Scalar> collide-mask { 0x05 } <Collide> 
 # transparent geometry).
 egg-object-type-shadow          <Scalar> bin { shadow } <Scalar> alpha { blend-no-occlude }
 egg-object-type-shground        <Scalar> bin { ground }
+egg-object-type-ground          <Scalar> bin { ground }
 egg-object-type-shadow-ground   <Scalar> bin { ground }
 cull-bin shadow 19 back-to-front
 cull-bin ground 18 unsorted
