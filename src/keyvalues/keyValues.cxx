@@ -23,13 +23,13 @@
 
 NotifyCategoryDeclNoExport(keyvalues) NotifyCategoryDef(keyvalues, "")
 
-    enum {
-      KVTOKEN_NONE,
-      KVTOKEN_BLOCK_BEGIN,
-      KVTOKEN_BLOCK_END,
-      KVTOKEN_STRING,
-      KVTOKEN_MACROS,
-    };
+enum {
+  KVTOKEN_NONE,
+  KVTOKEN_BLOCK_BEGIN,
+  KVTOKEN_BLOCK_END,
+  KVTOKEN_STRING,
+  KVTOKEN_MACROS,
+};
 
 struct KeyValueToken_t
 {
@@ -362,7 +362,7 @@ CKeyValues::load(const Filename &filename)
   CKeyValuesTokenizer tokenizer(buffer);
 
   PT(CKeyValues)
-  kv = new CKeyValues("__root");
+  kv = new CKeyValues;
   kv->_filename = filename;
   kv->parse(&tokenizer);
 
@@ -440,31 +440,26 @@ vector_int CKeyValues::parse_num_list_str(const std::string &str)
 }
 
 pvector<vector_int>
-CKeyValues::parse_int_tuple_list_str(const std::string &str)
-{
+CKeyValues::
+parse_int_tuple_list_str(const std::string &str) {
   pvector<vector_int> result;
   int current = 0;
   std::string curr_num_string;
   vector_int tuple_result;
 
-  while (current < str.length())
-  {
+  while (current < str.length()) {
     char let = str[current];
-    if (let == '(' || (let == ' ' && str[current - 1] == ')'))
-    {
+    if (let == '(' || (let == ' ' && str[current - 1] == ')')) {
       tuple_result.clear();
-    }
-    else if (let == ' ' || let == ')')
-    {
+
+    } else if (let == ' ' || let == ')') {
       tuple_result.push_back(stoi(curr_num_string));
       curr_num_string = "";
-      if (let == ')')
-      {
+      if (let == ')') {
         result.push_back(tuple_result);
       }
-    }
-    else
-    {
+
+    } else {
       curr_num_string += let;
     }
     current++;
@@ -473,38 +468,31 @@ CKeyValues::parse_int_tuple_list_str(const std::string &str)
   return result;
 }
 
-pvector<vector_float> CKeyValues::parse_num_array_str(const std::string &str)
-{
+pvector<vector_float> CKeyValues::
+parse_num_array_str(const std::string &str) {
   pvector<vector_float> result;
   int current = 0;
   std::string curr_num_string;
   vector_float array_result;
-  while (current < str.length())
-  {
+  while (current < str.length()) {
     char let = str[current];
-    if (let == '[')
-    {
-    }
-    else if (let == ' ' && str[current - 1] != ']')
-    {
+    if (let == '[') {
+
+    } else if (let == ' ' && str[current - 1] != ']') {
       array_result.push_back(stof(curr_num_string));
       curr_num_string = "";
-    }
-    else if (let == ' ')
-    {
-    }
-    else if (let == ']')
-    {
-      if (curr_num_string.length() > 0)
-      {
+
+    } else if (let == ' ') {
+
+    } else if (let == ']') {
+      if (curr_num_string.length() > 0) {
         array_result.push_back(stof(curr_num_string));
       }
       result.push_back(array_result);
       array_result.clear();
       curr_num_string = "";
-    }
-    else
-    {
+
+    } else {
       curr_num_string += let;
       // cout << curr_num_string << endl;
     }
@@ -512,15 +500,12 @@ pvector<vector_float> CKeyValues::parse_num_array_str(const std::string &str)
 
     // Take care of the possible numbers at the end that are not enclosed in
     // brackets.
-    if (current >= str.length())
-    {
-      if (curr_num_string.length() > 0)
-      {
+    if (current >= str.length()) {
+      if (curr_num_string.length() > 0) {
         array_result.push_back(stof(curr_num_string));
         curr_num_string = "";
       }
-      if (array_result.size() > 0)
-      {
+      if (array_result.size() > 0) {
         result.push_back(array_result);
         array_result.clear();
       }
@@ -530,39 +515,38 @@ pvector<vector_float> CKeyValues::parse_num_array_str(const std::string &str)
   return result;
 }
 
-LVecBase2f CKeyValues::to_2f(const std::string &str)
-{
+LVecBase2f CKeyValues::
+to_2f(const std::string &str) {
   vector_float vec = CKeyValues::parse_float_list_str(str);
   nassertr(vec.size() >= 2, LVecBase2f(0));
   return LVecBase2f(vec[0], vec[1]);
 }
 
-LVecBase3f CKeyValues::to_3f(const std::string &str)
-{
+LVecBase3f CKeyValues::
+to_3f(const std::string &str) {
   vector_float vec = CKeyValues::parse_float_list_str(str);
   nassertr(vec.size() >= 3, LVecBase3f(0));
   return LVecBase3f(vec[0], vec[1], vec[2]);
 }
 
-LVecBase4f CKeyValues::to_4f(const std::string &str)
-{
+LVecBase4f CKeyValues::
+to_4f(const std::string &str) {
   vector_float vec = CKeyValues::parse_float_list_str(str);
   nassertr(vec.size() >= 4, LVecBase4f(0));
   return LVecBase4f(vec[0], vec[1], vec[2], vec[3]);
 }
 
 template <class T>
-std::string CKeyValues::to_string(T v)
-{
+std::string CKeyValues::
+to_string(T v) {
   return std::to_string(v);
 }
 
 template <class T>
-std::string CKeyValues::to_string(const pvector<T> &v)
-{
+std::string CKeyValues::
+to_string(const pvector<T> &v) {
   std::string res = "[ ";
-  for (size_t i = 0; i < v.size(); i++)
-  {
+  for (size_t i = 0; i < v.size(); i++) {
     res += to_string(v[i]);
   }
 
@@ -571,23 +555,88 @@ std::string CKeyValues::to_string(const pvector<T> &v)
   return res;
 }
 
-std::string CKeyValues::to_string(const LVecBase2f &v)
-{
+std::string CKeyValues::
+to_string(const LVecBase2f &v) {
   std::ostringstream ss;
   ss << "[ " << v[0] << " " << v[1] << " ]";
   return ss.str();
 }
 
-std::string CKeyValues::to_string(const LVecBase3f &v)
-{
+std::string CKeyValues::
+to_string(const LVecBase3f &v) {
   std::ostringstream ss;
   ss << "[ " << v[0] << " " << v[1] << " " << v[2] << " ]";
   return ss.str();
 }
 
-std::string CKeyValues::to_string(const LVecBase4f &v)
-{
+std::string CKeyValues::
+to_string(const LVecBase4f &v) {
   std::ostringstream ss;
   ss << "[ " << v[0] << " " << v[1] << " " << v[2] << " " << v[3] << " ]";
   return ss.str();
+}
+
+void CKeyValues::
+write(const Filename &filename, int indent) {
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  std::ostringstream out;
+
+  int curr_indent = 0;
+  do_write(out, indent, curr_indent);
+
+  vfs->write_file(filename, out.str(), false);
+}
+
+void CKeyValues::
+do_indent(std::ostringstream &out, int curr_indent) {
+  int indents = curr_indent;
+  for (int i = 0; i < indents; i++) {
+    out << " ";
+  }
+}
+
+void CKeyValues::
+do_write(std::ostringstream &out, int indent, int &curr_indent) {
+  bool is_root = _name == root_block_name;
+
+  // Don't write a block or keyvalues if we're the root.
+  // The keyvalues format can have multiple root level blocks,
+  // but can't have keyvalues outside of a block.
+  if (!is_root) {
+    // Open the block
+    do_indent(out, curr_indent);
+    out << _name << "\n";
+    do_indent(out, curr_indent);
+    out << "{\n";
+    curr_indent += indent;
+
+    // Write out keyvalues
+    for (size_t i = 0; i < _keyvalues.size(); i++) {
+      do_indent(out, curr_indent);
+      out << "\"" << _keyvalues.get_key(i) << "\"" << " " << "\"" << _keyvalues.get_data(i) << "\"\n";
+    }
+
+    // Only put a line break after the keyvalues if we have child blocks.
+    if (_children.size() != 0) {
+      out << "\n";
+    }
+  }
+
+  // Now write the child blocks
+  for (size_t i = 0; i < _children.size(); i++) {
+    CKeyValues *child = _children[i];
+    child->do_write(out, indent, curr_indent);
+    // Add an extra line break in between child blocks, but not
+    // after the last child block.
+    if (i != _children.size() - 1) {
+      out << "\n";
+    }
+  }
+
+  if (!is_root) {
+    // Close the block
+    curr_indent -= indent;
+    do_indent(out, curr_indent);
+    out << "}\n";
+  }
 }

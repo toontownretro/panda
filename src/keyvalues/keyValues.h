@@ -26,13 +26,16 @@
 
 class CKeyValuesTokenizer;
 
+static const std::string root_block_name = "__root";
+static const std::string not_found = "not found";
+
 /**
  * Represents a single block from a key-values file.
  * Has a map of string key-value pairs, and can have a list of child blocks.
  */
 class EXPCL_VIF CKeyValues : public ReferenceCount {
 PUBLISHED:
-	CKeyValues(const std::string &name, CKeyValues *parent = nullptr);
+	CKeyValues(const std::string &name = root_block_name, CKeyValues *parent = nullptr);
 
 	//void set_parent( CKeyValues *parent );
 	CKeyValues *get_parent() const;
@@ -48,16 +51,23 @@ PUBLISHED:
 
 	std::string &operator [](const std::string &key);
 
+	void set_key_value(const std::string &key, const std::string &value);
+
 	size_t get_num_keys() const;
 	bool has_key(const std::string &name) const;
 	int find_key(const std::string &name) const;
 	const std::string &get_key(size_t n) const;
 	const std::string &get_value(size_t n) const;
+	const std::string &get_value(const std::string &key) const;
 
 	const Filename &get_filename() const;
 
+	void write(const Filename &filename, int indent = 4);
+
 private:
 	void parse(CKeyValuesTokenizer *tokenizer);
+	void do_write(std::ostringstream &out, int indent, int &curr_indent);
+	void do_indent(std::ostringstream &out, int curr_indent);
 
 PUBLISHED:
 	static PT(CKeyValues) load(const Filename &filename);
@@ -88,9 +98,12 @@ private:
 	pvector<PT(CKeyValues)> _children;
 };
 
-inline CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {
+INLINE CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {
 	_name = name;
 	_parent = parent;
+	if (parent) {
+		parent->add_child(this);
+	}
 }
 
 //inline void CKeyValues::set_parent( CKeyValues *parent )
@@ -98,55 +111,70 @@ inline CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {
 //	_parent = parent;
 //}
 
-inline CKeyValues *CKeyValues::get_parent() const {
+INLINE CKeyValues *CKeyValues::get_parent() const {
 	return _parent;
 }
 
-inline void CKeyValues::set_name(const std::string &name) {
+INLINE void CKeyValues::set_name(const std::string &name) {
 	_name = name;
 }
 
-inline const std::string &CKeyValues::get_name() const {
+INLINE const std::string &CKeyValues::get_name() const {
 	return _name;
 }
 
-inline void CKeyValues::add_child(CKeyValues *child) {
+INLINE void CKeyValues::add_child(CKeyValues *child) {
 	child->_parent = this;
 	_children.push_back(child);
 }
 
-inline CKeyValues *CKeyValues::get_child(size_t n) const {
+INLINE CKeyValues *CKeyValues::get_child(size_t n) const {
 	return _children[n];
 }
 
-inline size_t CKeyValues::get_num_children() const {
+INLINE size_t CKeyValues::get_num_children() const {
 	return _children.size();
 }
 
-inline std::string &CKeyValues::operator[](const std::string &key) {
+INLINE std::string &CKeyValues::operator[](const std::string &key) {
 	return _keyvalues[key];
 }
 
-inline size_t CKeyValues::get_num_keys() const {
+INLINE void CKeyValues::
+set_key_value(const std::string &key, const std::string &value) {
+	_keyvalues[key] = value;
+}
+
+INLINE const std::string &CKeyValues::
+get_value(const std::string &key) const {
+	int itr = find_key(key);
+	if (itr != -1) {
+		return get_value(itr);
+	}
+
+	return not_found;
+}
+
+INLINE size_t CKeyValues::get_num_keys() const {
 	return _keyvalues.size();
 }
 
-inline bool CKeyValues::has_key(const std::string &key) const {
+INLINE bool CKeyValues::has_key(const std::string &key) const {
 	return _keyvalues.find(key) != -1;
 }
 
-inline int CKeyValues::find_key(const std::string &key) const {
+INLINE int CKeyValues::find_key(const std::string &key) const {
 	return _keyvalues.find(key);
 }
 
-inline const std::string &CKeyValues::get_key(size_t n) const {
+INLINE const std::string &CKeyValues::get_key(size_t n) const {
 	return _keyvalues.get_key(n);
 }
 
-inline const std::string &CKeyValues::get_value(size_t n) const {
+INLINE const std::string &CKeyValues::get_value(size_t n) const {
 	return _keyvalues.get_data(n);
 }
 
-inline const Filename &CKeyValues::get_filename() const {
+INLINE const Filename &CKeyValues::get_filename() const {
 	return _filename;
 }
