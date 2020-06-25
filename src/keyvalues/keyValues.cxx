@@ -139,7 +139,7 @@ std::string CKeyValuesTokenizer::get_string()
     }
 
     // These characters are not part of unquoted strings.
-    if (!quoted && (c == '{' || c == '}'))
+    if (!quoted && (c == '{' || c == '}' || c == ' ' || c == '\t'))
     {
       break;
     }
@@ -147,6 +147,18 @@ std::string CKeyValuesTokenizer::get_string()
     // Check if it's the end of a quoted string.
     if (!escape && quoted && c == '"')
     {
+      break;
+    }
+
+    // Check if it's the end of the line
+    if (c == '\n' || c == '\r') {
+      if (quoted) {
+        // If we reached the end of a line in a quoted string,
+        // this is a syntax error.
+        keyvalues_cat.error()
+          << "Syntax error: reached end of line while parsing quoted string\n";
+      }
+      forward();
       break;
     }
 
@@ -168,8 +180,7 @@ std::string CKeyValuesTokenizer::get_string()
     {
       escape = true;
     }
-    else if (c != '\n' && c != '\r')
-    {
+    else {
       result += c;
     }
 
