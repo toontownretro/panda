@@ -316,7 +316,6 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
         child = new CKeyValues(key, this);
         child->_filename = _filename;
         child->parse(tokenizer);
-        _children.push_back(child);
       }
       else if (token.type == KVTOKEN_STRING)
       {
