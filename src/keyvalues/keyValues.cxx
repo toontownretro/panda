@@ -555,12 +555,10 @@ to_string(T v) {
 template <class T>
 std::string CKeyValues::
 to_string(const pvector<T> &v) {
-  std::string res = "[ ";
+  std::string res = "";
   for (size_t i = 0; i < v.size(); i++) {
     res += to_string(v[i]);
   }
-
-  res += " ]";
 
   return res;
 }
@@ -568,21 +566,21 @@ to_string(const pvector<T> &v) {
 std::string CKeyValues::
 to_string(const LVecBase2f &v) {
   std::ostringstream ss;
-  ss << "[ " << v[0] << " " << v[1] << " ]";
+  ss << v[0] << " " << v[1];
   return ss.str();
 }
 
 std::string CKeyValues::
 to_string(const LVecBase3f &v) {
   std::ostringstream ss;
-  ss << "[ " << v[0] << " " << v[1] << " " << v[2] << " ]";
+  ss << v[0] << " " << v[1] << " " << v[2];
   return ss.str();
 }
 
 std::string CKeyValues::
 to_string(const LVecBase4f &v) {
   std::ostringstream ss;
-  ss << "[ " << v[0] << " " << v[1] << " " << v[2] << " " << v[3] << " ]";
+  ss << v[0] << " " << v[1] << " " << v[2] << " " << v[3];
   return ss.str();
 }
 
