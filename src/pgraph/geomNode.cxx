@@ -40,6 +40,7 @@
 #include "config_mathutil.h"
 #include "preparedGraphicsObjects.h"
 
+
 bool allow_flatten_color = ConfigVariableBool
     ("allow-flatten-color", false,
      PRC_DESC("allows color to always be flattened to vertices"));
@@ -498,7 +499,7 @@ is_renderable() const {
  */
 void GeomNode::
 add_for_draw(CullTraverser *trav, CullTraverserData &data) {
-  trav->_geom_nodes_pcollector.add_level( 1 );
+  trav->_geom_nodes_pcollector.add_level(1);
 
   if (pgraph_cat.is_spam()) {
     pgraph_cat.spam()
@@ -511,42 +512,47 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   // Get all the Geoms, with no decalling.
   Geoms geoms = get_geoms(current_thread);
   int num_geoms = geoms.get_num_geoms();
+  trav->_geoms_pcollector.add_level(num_geoms);
   CPT(TransformState) internal_transform = data.get_internal_transform(trav);
 
-  for (int i = 0; i < num_geoms; i++) {
-    CPT(Geom) geom = geoms.get_geom(i);
-    if (geom->is_empty()) {
-      continue;
-    }
-
-    CPT(RenderState) state = data._state->compose(geoms.get_geom_state(i));
-    if (state->has_cull_callback() && !state->cull_callback(trav, data)) {
-      // Cull.
-      continue;
-    }
-
-    // Cull the Geom bounding volume against the view frustum andor the cull
-    // planes.  Don't bother unless we've got more than one Geom, since
-    // otherwise the bounding volume of the GeomNode is (probably) the same as
-    // that of the one Geom, and we've already culled against that.
-    if (num_geoms > 1) {
-      if (data._view_frustum != nullptr) {
-        // Cull the individual Geom against the view frustum.
-        CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
-        const GeometricBoundingVolume *geom_gbv =
-          geom_volume->as_geometric_bounding_volume();
-
-        int result = data._view_frustum->contains(geom_gbv);
-        if (result == BoundingVolume::IF_no_intersection) {
-          // Cull this Geom.
-          continue;
-        }
+  if (num_geoms == 1) {
+    // If there's only one Geom, we don't need to bother culling each individual
+    // Geom bounding volume against the view frustum, since we've already
+    // checked the one on the GeomNode itself.
+    CPT(Geom) geom = geoms.get_geom(0);
+    if (!geom->is_empty()) {
+      CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
+      if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
+        CullableObject *object =
+          new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
+        trav->get_cull_handler()->record_object(object, trav);
       }
-      if (!data._cull_planes->is_empty()) {
+    }
+  }
+  else {
+    // More than one Geom.
+    for (int i = 0; i < num_geoms; i++) {
+      CPT(Geom) geom = geoms.get_geom(i);
+      if (geom->is_empty()) {
+        continue;
+      }
+
+      CPT(RenderState) state = data._state->compose(geoms.get_geom_state(i));
+      if (state->has_cull_callback() && !state->cull_callback(trav, data)) {
+        // Cull.
+        continue;
+      }
+
+      // Cull the individual Geom against the view frustum.
+      if (data._view_frustum != nullptr &&
+          !geom->is_in_view(data._view_frustum, current_thread)) {
+        // Cull this Geom.
+        continue;
+      }
+      if (data._cull_planes != nullptr) {
         // Also cull the Geom against the cull planes.
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
-        const GeometricBoundingVolume *geom_gbv =
-          geom_volume->as_geometric_bounding_volume();
+        const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();
         int result;
         data._cull_planes->do_cull(result, state, geom_gbv);
         if (result == BoundingVolume::IF_no_intersection) {
@@ -554,14 +560,12 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
           continue;
         }
       }
+
+      CullableObject *object =
+        new CullableObject(std::move(geom), std::move(state), internal_transform);
+      trav->get_cull_handler()->record_object(object, trav);
     }
-
-    CullableObject *object =
-      new CullableObject(std::move(geom), std::move(state), internal_transform);
-    trav->get_cull_handler()->record_object(object, trav);
-    trav->_geoms_pcollector.add_level( 1 );
   }
-
 }
 
 /**

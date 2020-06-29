@@ -132,7 +132,9 @@ traverse(const NodePath &root) {
                            _initial_state, _view_frustum,
                            _current_thread);
 
-    traverse(data);
+    if (data.is_in_view(_camera_mask)) {
+      do_traverse(data);
+    }
 
     // Finally add the lines to be drawn
     if (debug_portal_cull) {
@@ -143,27 +145,22 @@ traverse(const NodePath &root) {
     NodePath cull_center = _scene_setup->get_cull_center();
     CPT(TransformState) transform = cull_center.get_transform(root);
 
-    CullTraverserData my_data(data, portal_viewer._previous);
-    my_data._net_transform = my_data._net_transform->compose(transform);
-    traverse(my_data);
+    CullTraverserData my_data(data, portal_viewer._previous,
+                              data._net_transform->compose(transform),
+                              data._state, data._view_frustum);
+    if (my_data.is_in_view(_camera_mask)) {
+      do_traverse(my_data);
+    }
 
   } else {
     CullTraverserData data(root, TransformState::make_identity(),
                            _initial_state, _view_frustum,
                            _current_thread);
 
-    do_traverse(data);
+    if (data.is_in_view(_camera_mask)) {
+      do_traverse(data);
+    }
   }
-}
-
-/**
- * Traverses from the next node with the given data, which has been
- * constructed with the node but has not yet been converted into the node's
- * space.
- */
-void CullTraverser::
-traverse(CullTraverserData &data) {
-  do_traverse(data);
 }
 
 /**
@@ -201,14 +198,14 @@ traverse_below(CullTraverserData &data) {
   int num_children = children.get_num_children();
   if (!node->has_selective_visibility()) {
     for (int i = 0; i < num_children; ++i) {
-      CullTraverserData next_data(data, children.get_child(i));
-      do_traverse(next_data);
+      const PandaNode::DownConnection &child = children.get_child_connection(i);
+      traverse_child(data, child, data._state);
     }
   } else {
     int i = node->get_first_visible_child();
     while (i < num_children) {
-      CullTraverserData next_data(data, children.get_child(i));
-      do_traverse(next_data);
+      const PandaNode::DownConnection &child = children.get_child_connection(i);
+      traverse_child(data, child, data._state);
       i = node->get_next_visible_child(i);
     }
   }
@@ -243,16 +240,6 @@ draw_bounding_volume(const BoundingVolume *vol,
                          internal_transform);
     _cull_handler->record_object(inner_viz, this);
   }
-}
-
-/**
- * Returns true if the current node is fully or partially within the viewing
- * area and should be drawn, or false if it (and all of its children) should
- * be pruned.
- */
-bool CullTraverser::
-is_in_view(CullTraverserData &data) {
-  return data.is_in_view(_camera_mask);
 }
 
 /**

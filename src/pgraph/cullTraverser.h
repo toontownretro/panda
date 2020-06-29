@@ -78,8 +78,8 @@ PUBLISHED:
   INLINE bool get_effective_incomplete_render() const;
 
   void traverse(const NodePath &root);
-  void traverse(CullTraverserData &data);
   virtual void traverse_below(CullTraverserData &data);
+  INLINE void do_traverse(CullTraverserData &data);
 
   virtual void end_traverse();
 
@@ -88,10 +88,11 @@ PUBLISHED:
   void draw_bounding_volume(const BoundingVolume *vol,
                             const TransformState *internal_transform) const;
 
-protected:
-  INLINE void do_traverse(CullTraverserData &data);
-
-  virtual bool is_in_view(CullTraverserData &data);
+public:
+  INLINE void traverse_child(const CullTraverserData &data, PandaNode *child);
+  INLINE void traverse_child(const CullTraverserData &data, PandaNode *child, const TransformState *net_transform, const RenderState *state);
+  INLINE void traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child);
+  INLINE void traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child, const RenderState *state);
 
 public:
   // Statistics

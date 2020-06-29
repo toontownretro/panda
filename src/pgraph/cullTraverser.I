@@ -195,53 +195,121 @@ flush_level() {
 }
 
 /**
- * This is implemented inline to reduce recursion.
+ * Traverses a child of the given node/data.
+ */
+INLINE void CullTraverser::
+traverse_child(const CullTraverserData &data, PandaNode *node) {
+  traverse_child(data, node, data._net_transform, data._state);
+}
+
+/**
+ * Traverses a child of the given node/data, overriding the transform and state.
+ */
+INLINE void CullTraverser::
+traverse_child(const CullTraverserData &data, PandaNode *node,
+               const TransformState *net_transform, const RenderState *state) {
+  PandaNodePipelineReader node_reader(node, data._node_reader.get_current_thread());
+
+  int result = data.is_child_in_view(node_reader, _camera_mask);
+  if (result == BoundingVolume::IF_no_intersection) {
+    return;
+  }
+
+  GeometricBoundingVolume *view_frustum = nullptr;
+  if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
+    view_frustum = data._view_frustum;
+  }
+
+  CullTraverserData next_data(data, std::move(node_reader), net_transform, state, view_frustum);
+  if (data._cull_planes != nullptr &&
+      !next_data.apply_cull_planes(data._cull_planes, node_reader.get_bounds()->as_geometric_bounding_volume())) {
+    return;
+  }
+
+  do_traverse(next_data);
+}
+
+/**
+ * Traverses a child of the given node/data.
+ */
+INLINE void CullTraverser::
+traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child) {
+  traverse_child(data, child, data._state);
+}
+
+/**
+ * Traverses a child of the given node/data, overriding the state.
+ */
+INLINE void CullTraverser::
+traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child, const RenderState *state) {
+  int result = data.is_child_in_view(child, _camera_mask);
+  if (result == BoundingVolume::IF_no_intersection) {
+    return;
+  }
+
+  PandaNodePipelineReader node_reader(child.get_child(), data._node_reader.get_current_thread());
+
+  GeometricBoundingVolume *view_frustum = nullptr;
+  if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
+    view_frustum = data._view_frustum;
+  }
+
+  CullTraverserData next_data(data, std::move(node_reader), data._net_transform, state, view_frustum);
+
+  if (data._cull_planes != nullptr &&
+      !next_data.apply_cull_planes(data._cull_planes, child.get_bounds())) {
+    return;
+  }
+
+  do_traverse(next_data);
+}
+
+/**
+ *
  */
 INLINE void CullTraverser::
 do_traverse(CullTraverserData &data) {
-  if (is_in_view(data)) {
-    if (pgraph_cat.is_spam()) {
-      pgraph_cat.spam()
-        << "\n" << data.get_node_path()
-        << " " << data._draw_mask << "\n";
-    }
-
-    PandaNodePipelineReader *node_reader = data.node_reader();
-    int fancy_bits = node_reader->get_fancy_bits();
-
-    if (fancy_bits == 0 && data._cull_planes->is_empty()) {
-      // Nothing interesting in this node; just move on.
-
-    } else {
-      // Something in this node is worth taking a closer look.
-      const RenderEffects *node_effects = node_reader->get_effects();
-      if (node_effects->has_show_bounds()) {
-        // If we should show the bounding volume for this node, make it up
-        // now.
-        show_bounds(data, node_effects->has_show_tight_bounds());
-      }
-
-      data.apply_transform_and_state(this);
-
-      const FogAttrib *fog = (const FogAttrib *)
-        node_reader->get_state()->get_attrib(FogAttrib::get_class_slot());
-
-      if (fog != nullptr && fog->get_fog() != nullptr) {
-        // If we just introduced a FogAttrib here, call adjust_to_camera()
-        // now.  This maybe isn't the perfect time to call it, but it's good
-        // enough; and at this time we have all the information we need for
-        // it.
-        fog->get_fog()->adjust_to_camera(get_camera_transform());
-      }
-
-      if (fancy_bits & PandaNode::FB_cull_callback) {
-        PandaNode *node = data.node();
-        if (!node->cull_callback(this, data)) {
-          return;
-        }
-      }
-    }
-
-    traverse_below(data);
+  if (pgraph_cat.is_spam()) {
+    pgraph_cat.spam()
+      << "\n" << data.get_node_path()
+      << " " << data._draw_mask << "\n";
   }
+
+  PandaNodePipelineReader *node_reader = data.node_reader();
+  int fancy_bits = node_reader->get_fancy_bits();
+
+  if (fancy_bits == 0 && data._cull_planes == nullptr) {
+    // Nothing interesting in this node; just move on.
+
+  } else {
+    // Something in this node is worth taking a closer look.
+    const RenderEffects *node_effects = node_reader->get_effects();
+    if (node_effects->has_show_bounds()) {
+      // If we should show the bounding volume for this node, make it up
+      // now.
+      show_bounds(data, node_effects->has_show_tight_bounds());
+    }
+
+    data.apply_transform_and_state(this);
+
+    const FogAttrib *fog = (const FogAttrib *)
+      node_reader->get_state()->get_attrib(FogAttrib::get_class_slot());
+
+    if (fog != nullptr && fog->get_fog() != nullptr) {
+      // If we just introduced a FogAttrib here, call adjust_to_camera()
+      // now.  This maybe isn't the perfect time to call it, but it's good
+      // enough; and at this time we have all the information we need for
+      // it.
+      fog->get_fog()->adjust_to_camera(get_camera_transform());
+    }
+
+    if (fancy_bits & PandaNode::FB_cull_callback) {
+      PandaNode *node = data.node();
+      if (!node->cull_callback(this, data)) {
+        return;
+      }
+    }
+  }
+
+  traverse_below(data);
 }

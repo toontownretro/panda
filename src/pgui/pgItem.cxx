@@ -268,8 +268,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   if (state_def_root != nullptr) {
     // This item has a current state definition that we should use to render
     // the item.
-    CullTraverserData next_data(data, state_def_root);
-    trav->traverse(next_data);
+    trav->traverse_child(data, state_def_root);
   }
 
   // Now continue to render everything else below this node.
