@@ -135,6 +135,7 @@ PUBLISHED:
   }
 
   static const BSPMaterial *get_from_file(const Filename &file);
+  static const BSPMaterial *get_default_material();
 
 private:
   Filename _file;
@@ -151,6 +152,8 @@ private:
 
   typedef SimpleHashMap<std::string, CPT(BSPMaterial), string_hash> materialcache_t;
   static materialcache_t _material_cache;
+
+  static PT(BSPMaterial) _default_material;
 
 public:
   static TypeHandle get_class_type() {

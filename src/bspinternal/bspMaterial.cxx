@@ -27,6 +27,16 @@ TypeHandle BSPMaterial::_type_handle;
 
 BSPMaterial::materialcache_t BSPMaterial::_material_cache;
 
+PT(BSPMaterial) BSPMaterial::_default_material = nullptr;
+
+const BSPMaterial *BSPMaterial::get_default_material() {
+  if (!_default_material) {
+    _default_material = new BSPMaterial;
+  }
+
+  return _default_material;
+}
+
 const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
   LightReMutexHolder holder(g_matmutex);
 
@@ -40,7 +50,7 @@ const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
   if (!vfs->exists(file)) {
     bspmaterial_cat.error()
       << "Could not find material file " << file.get_fullpath() << "\n";
-    return nullptr;
+    return get_default_material();
   }
 
   bspmaterial_cat.info()
@@ -53,7 +63,7 @@ const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
   if (!kv) {
     bspmaterial_cat.error()
       << "Problem loading " << file.get_fullpath() << "\n";
-    return nullptr;
+    return get_default_material();
   }
   CKeyValues *mat_kv = kv->get_child(0);
   if (mat_kv->get_name() == "patch") {
@@ -65,7 +75,7 @@ const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
         bspmaterial_cat.error()
           << "Could not load $include material `" << include_file
           << "` referenced by patch material `" << file << "`\n";
-        return nullptr;
+        return get_default_material();
       }
 
       // Use the shader from the included material
@@ -80,7 +90,7 @@ const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
     } else {
       bspmaterial_cat.error()
         << "Patch material " << file << " didn't provide an $include\n";
-      return nullptr;
+      return get_default_material();
     }
   } else {
     mat->set_shader(mat_kv->get_name()); // ->VertexLitGeneric<- {...}
