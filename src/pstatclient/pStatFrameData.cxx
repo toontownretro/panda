@@ -35,22 +35,22 @@ sort_time() {
 bool PStatFrameData::
 write_datagram(Datagram &destination, PStatClient *client) const {
   Data::const_iterator di;
-  if (_time_data.size() >= 65536 || _level_data.size() >= 65536) {
-    pstats_cat.info()
-      << "Dropping frame with " << _time_data.size()
-      << " time measurements and " << _level_data.size()
-      << " level measurements.\n";
-    return false;
-  }
+  //if (_time_data.size() >= 65536 || _level_data.size() >= 65536) {
+  //  pstats_cat.info()
+  //    << "Dropping frame with " << _time_data.size()
+  //    << " time measurements and " << _level_data.size()
+  //    << " level measurements.\n";
+  //  return false;
+  //}
 
-  destination.add_uint16(_time_data.size());
+  destination.add_uint32(_time_data.size());
   for (di = _time_data.begin(); di != _time_data.end(); ++di) {
-    destination.add_uint16((*di)._index);
+    destination.add_uint32((*di)._index);
     destination.add_float32((*di)._value);
   }
-  destination.add_uint16(_level_data.size());
+  destination.add_uint32(_level_data.size());
   for (di = _level_data.begin(); di != _level_data.end(); ++di) {
-    destination.add_uint16((*di)._index);
+    destination.add_uint32((*di)._index);
     destination.add_float32((*di)._value);
   }
 
@@ -65,19 +65,19 @@ read_datagram(DatagramIterator &source, PStatClientVersion *) {
   clear();
 
   int i;
-  int time_size = source.get_uint16();
+  int time_size = source.get_uint32();
   for (i = 0; i < time_size; i++) {
     nassertv(source.get_remaining_size() > 0);
     DataPoint dp;
-    dp._index = source.get_uint16();
+    dp._index = source.get_uint32();
     dp._value = source.get_float32();
     _time_data.push_back(dp);
   }
-  int level_size = source.get_uint16();
+  int level_size = source.get_uint32();
   for (i = 0; i < level_size; i++) {
     nassertv(source.get_remaining_size() > 0);
     DataPoint dp;
-    dp._index = source.get_uint16();
+    dp._index = source.get_uint32();
     dp._value = source.get_float32();
     _level_data.push_back(dp);
   }
