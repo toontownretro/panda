@@ -23,6 +23,14 @@
 
 NotifyCategoryDeclNoExport(keyvalues) NotifyCategoryDef(keyvalues, "")
 
+char asciitolower(char in) {
+  if (in <= 'Z' && in >= 'A') {
+    return in - ('Z' - 'z');
+  }
+
+  return in;
+}
+
 enum {
   KVTOKEN_NONE,
   KVTOKEN_BLOCK_BEGIN,
@@ -228,7 +236,9 @@ bool CKeyValuesTokenizer::ignore_comment()
   {
     while (current() != '\n')
     {
-      forward();
+      if (!forward()) {
+        return true;
+      }
     }
 
     return true;
@@ -360,14 +370,32 @@ PT(CKeyValues)
 CKeyValues::load(const Filename &filename)
 {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->exists(filename))
+
+  Filename load_filename;
+  if (filename.is_local()) {
+    // Look along the model path for the file
+    DSearchPath search_path(get_model_path());
+    for (int i = 0; i < search_path.get_num_directories(); i++) {
+      Filename search(search_path.get_directory(i), filename);
+      if (vfs->exists(search)) {
+        load_filename = search;
+        break;
+      }
+    }
+
+  } else {
+    // This is an absolute filename. Use it as-is
+    load_filename = filename;
+  }
+
+  if (load_filename.empty())
   {
     keyvalues_cat.error() << "Unable to find `" << filename.get_fullpath()
                           << "`\n";
     return nullptr;
   }
 
-  std::string buffer = vfs->read_file(filename, true);
+  std::string buffer = vfs->read_file(load_filename, true);
 
   CKeyValuesTokenizer tokenizer(buffer);
 
@@ -391,7 +419,7 @@ CKeyValues::load(const Filename &filename)
 // Helper functions for parsing string values that represent numbers.
 //------------------------------------------------------------------------------------------------
 
-vector_float CKeyValues::parse_float_list_str(const std::string &str)
+vector_float CKeyValues::parse_float_list(const std::string &str)
 {
   vector_float result;
   std::string curr_num_string;
@@ -420,7 +448,7 @@ vector_float CKeyValues::parse_float_list_str(const std::string &str)
   return result;
 }
 
-vector_int CKeyValues::parse_num_list_str(const std::string &str)
+vector_int CKeyValues::parse_int_list(const std::string &str)
 {
   vector_int result;
   std::string curr_num_string;
@@ -449,13 +477,13 @@ vector_int CKeyValues::parse_num_list_str(const std::string &str)
   return result;
 }
 
-pvector<vector_int>
+pvector<vector_float>
 CKeyValues::
-parse_int_tuple_list_str(const std::string &str) {
-  pvector<vector_int> result;
+parse_float_tuple_list(const std::string &str) {
+  pvector<vector_float> result;
   int current = 0;
   std::string curr_num_string;
-  vector_int tuple_result;
+  vector_float tuple_result;
 
   while (current < str.length()) {
     char let = str[current];
@@ -463,7 +491,7 @@ parse_int_tuple_list_str(const std::string &str) {
       tuple_result.clear();
 
     } else if (let == ' ' || let == ')') {
-      tuple_result.push_back(stoi(curr_num_string));
+      tuple_result.push_back(std::stof(curr_num_string));
       curr_num_string = "";
       if (let == ')') {
         result.push_back(tuple_result);
@@ -478,72 +506,47 @@ parse_int_tuple_list_str(const std::string &str) {
   return result;
 }
 
-pvector<vector_float> CKeyValues::
-parse_num_array_str(const std::string &str) {
-  pvector<vector_float> result;
-  int current = 0;
-  std::string curr_num_string;
-  vector_float array_result;
-  while (current < str.length()) {
-    char let = str[current];
-    if (let == '[') {
+void CKeyValues::
+parse_material_axis(const std::string &str, LVector3 &axis, LVector2 &shift_scale) {
+  sscanf(str.c_str(), "[%f %f %f %f] %f", &axis[0], &axis[1], &axis[2], &shift_scale[0], &shift_scale[1]);
+}
 
-    } else if (let == ' ' && str[current - 1] != ']') {
-      array_result.push_back(stof(curr_num_string));
-      curr_num_string = "";
-
-    } else if (let == ' ') {
-
-    } else if (let == ']') {
-      if (curr_num_string.length() > 0) {
-        array_result.push_back(stof(curr_num_string));
-      }
-      result.push_back(array_result);
-      array_result.clear();
-      curr_num_string = "";
-
-    } else {
-      curr_num_string += let;
-      // cout << curr_num_string << endl;
-    }
-    current++;
-
-    // Take care of the possible numbers at the end that are not enclosed in
-    // brackets.
-    if (current >= str.length()) {
-      if (curr_num_string.length() > 0) {
-        array_result.push_back(stof(curr_num_string));
-        curr_num_string = "";
-      }
-      if (array_result.size() > 0) {
-        result.push_back(array_result);
-        array_result.clear();
-      }
-    }
-  }
-
-  return result;
+void CKeyValues::
+parse_plane_points(const std::string &str, LPoint3 &p0, LPoint3 &p1, LPoint3 &p2) {
+  sscanf(str.c_str(), "(%f %f %f) (%f %f %f) (%f %f %f)",
+    &p0[0], &p0[1], &p0[2],
+    &p1[0], &p1[1], &p1[2],
+    &p2[0], &p2[1], &p2[2]);
 }
 
 LVecBase2f CKeyValues::
 to_2f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list_str(str);
-  nassertr(vec.size() >= 2, LVecBase2f(0));
-  return LVecBase2f(vec[0], vec[1]);
+  vector_float vec = CKeyValues::parse_float_list(str);
+  LVecBase2f lvec;
+  for (size_t i = 0; i < vec.size(); i++) {
+      lvec[i] = vec[i];
+  }
+  return lvec;
 }
 
 LVecBase3f CKeyValues::
 to_3f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list_str(str);
-  nassertr(vec.size() >= 3, LVecBase3f(0));
-  return LVecBase3f(vec[0], vec[1], vec[2]);
+  vector_float vec = CKeyValues::parse_float_list(str);
+  LVecBase3f lvec;
+  for (size_t i = 0; i < vec.size(); i++) {
+      lvec[i] = vec[i];
+  }
+  return lvec;
 }
 
 LVecBase4f CKeyValues::
 to_4f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list_str(str);
-  nassertr(vec.size() >= 4, LVecBase4f(0));
-  return LVecBase4f(vec[0], vec[1], vec[2], vec[3]);
+  vector_float vec = CKeyValues::parse_float_list(str);
+  LVecBase4f lvec;
+  for (size_t i = 0; i < vec.size(); i++) {
+      lvec[i] = vec[i];
+  }
+  return lvec;
 }
 
 template <class T>

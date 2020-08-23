@@ -72,13 +72,18 @@ private:
 PUBLISHED:
 	static PT(CKeyValues) load(const Filename &filename);
 
-  static vector_int parse_num_list_str(const std::string &str);
-	static vector_float parse_float_list_str(const std::string &str);
-	static pvector<vector_int> parse_int_tuple_list_str(const std::string &str);
-	static pvector<vector_float> parse_num_array_str(const std::string &str);
+  static vector_int parse_int_list(const std::string &str);
+	static vector_float parse_float_list(const std::string &str);
+	static pvector<vector_float> parse_float_tuple_list(const std::string &str);
+	static void parse_material_axis(const std::string &str, LVector3 &axis, LVector2 &shift_scale);
+	static void parse_plane_points(const std::string &str, LPoint3 &p0, LPoint3 &p1, LPoint3 &p2);
 	static LVecBase3f to_3f(const std::string &str);
 	static LVecBase2f to_2f(const std::string &str);
 	static LVecBase4f to_4f(const std::string &str);
+
+	EXTENSION(PyObject *as_int_list(const std::string &str));
+	EXTENSION(PyObject *as_float_list(const std::string &str));
+  EXTENSION(PyObject *as_float_tuple_list(const std::string &str));
 
 	template<class T>
 	static std::string to_string(T v);

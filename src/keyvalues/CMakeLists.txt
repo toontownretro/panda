@@ -8,11 +8,16 @@ set(P3KEYVALUES_SOURCES
   keyValues.cxx
 )
 
+set(P3KEYVALUES_EXT
+  keyValues_ext.cxx
+  keyValues_ext.h
+)
+
 composite_sources(p3keyvalues P3KEYVALUES_SOURCES)
 add_component_library(p3keyvalues SYMBOL BUILDING_VIFPARSER
   ${P3KEYVALUES_HEADERS} ${P3KEYVALUES_SOURCES})
 target_link_libraries(p3keyvalues p3putil p3linmath pandaexpress)
-target_interrogate(p3keyvalues ALL)
+target_interrogate(p3keyvalues ALL EXTENSIONS ${P3KEYVALUES_EXT})
 
 if(NOT BUILD_METALIBS)
   install(TARGETS p3keyvalues
