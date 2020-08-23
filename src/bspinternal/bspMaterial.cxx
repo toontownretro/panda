@@ -20,6 +20,7 @@ static LightReMutex g_matmutex("MaterialMutex");
 
 #include "keyValues.h"
 #include <virtualFileSystem.h>
+#include "dSearchPath.h"
 
 NotifyCategoryDef(bspmaterial, "");
 
@@ -44,13 +45,6 @@ const BSPMaterial *BSPMaterial::get_from_file(const Filename &file) {
   if (idx != -1) {
     // We've already loaded this material file.
     return _material_cache.get_data(idx);
-  }
-
-  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->exists(file)) {
-    bspmaterial_cat.error()
-      << "Could not find material file " << file.get_fullpath() << "\n";
-    return get_default_material();
   }
 
   bspmaterial_cat.info()
