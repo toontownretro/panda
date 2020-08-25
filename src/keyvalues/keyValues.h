@@ -71,6 +71,7 @@ private:
 
 PUBLISHED:
 	static PT(CKeyValues) load(const Filename &filename);
+	static PT(CKeyValues) from_string(const std::string &data);
 
   static vector_int parse_int_list(const std::string &str);
 	static vector_float parse_float_list(const std::string &str);

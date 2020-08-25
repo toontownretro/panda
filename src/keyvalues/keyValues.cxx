@@ -329,39 +329,28 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
       break;
     }
 
-    if (has_key)
+    if (token.type == KVTOKEN_BLOCK_END)
     {
-      if (token.type == KVTOKEN_BLOCK_BEGIN)
-      {
-        PT(CKeyValues)
-        child = new CKeyValues(key, this);
-        child->_filename = _filename;
-        child->parse(tokenizer);
-      }
-      else if (token.type == KVTOKEN_STRING)
-      {
-        _keyvalues[key] = token.data;
-      }
-      else
-      {
-        keyvalues_cat.error() << "Invalid token " << token.type << "\n";
-        break;
-      }
+      break;
+    }
+    else if (token.type == KVTOKEN_BLOCK_BEGIN)
+    {
+      PT(CKeyValues)
+      child = new CKeyValues(key, this);
+      child->_filename = _filename;
+      child->parse(tokenizer);
       has_key = false;
     }
-    else
+    else if (token.type == KVTOKEN_STRING)
     {
-      if (token.type == KVTOKEN_BLOCK_END)
-      {
-        break;
+      if (has_key) {
+        _keyvalues[key] = token.data;
+        key = "";
+        has_key = false;
+      } else {
+        key = token.data;
+        has_key = true;
       }
-      if (token.type != KVTOKEN_STRING)
-      {
-        keyvalues_cat.error() << "Invalid token " << token.type << "\n";
-        break;
-      }
-      has_key = true;
-      key = token.data;
     }
   }
 }
@@ -369,6 +358,10 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
 PT(CKeyValues)
 CKeyValues::load(const Filename &filename)
 {
+  if (filename.empty()) {
+    return nullptr;
+  }
+
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
   Filename load_filename;
@@ -397,18 +390,22 @@ CKeyValues::load(const Filename &filename)
 
   std::string buffer = vfs->read_file(load_filename, true);
 
+  PT(CKeyValues) kv = from_string(buffer);
+  kv->_filename = filename;
+
+  return kv;
+}
+
+PT(CKeyValues) CKeyValues::
+from_string(const std::string &buffer) {
   CKeyValuesTokenizer tokenizer(buffer);
 
-  PT(CKeyValues)
-  kv = new CKeyValues;
-  kv->_filename = filename;
+  PT(CKeyValues) kv = new CKeyValues;
   kv->parse(&tokenizer);
 
   // We should have nothing left.
-  if (!tokenizer.next_token().invalid())
-  {
-    keyvalues_cat.error() << "Unexpected end-of-file for `" << filename
-                          << "`\n";
+  if (!tokenizer.next_token().invalid()) {
+    keyvalues_cat.error() << "Unexpected EOF\n";
     return nullptr;
   }
 
