@@ -32,7 +32,8 @@ PT(BSPMaterial) BSPMaterial::_default_material = nullptr;
 
 const BSPMaterial *BSPMaterial::get_default_material() {
   if (!_default_material) {
-    _default_material = new BSPMaterial;
+    _default_material = new BSPMaterial("UnlitGeneric");
+    _default_material->set_keyvalue("$basetexture", "__ERROR_TEXTURE");
   }
 
   return _default_material;

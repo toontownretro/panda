@@ -71,6 +71,7 @@ PStatCollector Texture::_texture_read_pcollector("*:Texture:Read");
 TypeHandle Texture::_type_handle;
 TypeHandle Texture::CData::_type_handle;
 AutoTextureScale Texture::_textures_power_2 = ATS_unspecified;
+PT(Texture) Texture::_error_texture = nullptr;
 
 // Stuff to read and write DDS files.
 
@@ -10426,6 +10427,37 @@ do_fillin_from(CData *cdata, const Texture *dummy) {
       cdata->_simple_image_date_generated = cdata_dummy->_simple_image_date_generated;
     }
   }
+}
+
+/**
+ *
+ */
+Texture *Texture::
+get_error_texture() {
+  if (!_error_texture) {
+
+    static int checker_size = 4;
+    static int size = 32;
+    static LColorf color1(0, 0, 0, 0.5);
+    static LColorf color2(1, 0, 1, 1);
+
+    PNMImage image(size, size);
+    for (int x = 0; x < size; x++) {
+      for (int y = 0; y < size; y++) {
+        LRGBColorf color;
+        if ((x & checker_size) ^ (y & checker_size)) {
+          image.set_xel_a(x, y, color1);
+        } else {
+          image.set_xel_a(x, y, color2);
+        }
+      }
+    }
+
+    _error_texture = new Texture;
+    _error_texture->load(image);
+  }
+
+  return _error_texture;
 }
 
 /**

@@ -611,6 +611,8 @@ PUBLISHED:
   static std::string format_quality_level(QualityLevel tql);
   static QualityLevel string_quality_level(const std::string &str);
 
+  static Texture *get_error_texture();
+
 public:
   void texture_uploaded();
 
@@ -1064,6 +1066,7 @@ private:
 
   static AutoTextureScale _textures_power_2;
   static PStatCollector _texture_read_pcollector;
+  static PT(Texture) _error_texture;
 
   // Datagram stuff
 public:

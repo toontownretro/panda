@@ -331,7 +331,7 @@ ns_load_texture(const Filename &orig_filename, int primary_file_num_channels,
         // No such file.
         gobj_cat.error()
           << "Could not find " << key._fullpath << "\n";
-        return nullptr;
+        return Texture::get_error_texture();
       }
 
       if (gobj_cat.is_debug()) {
@@ -344,7 +344,7 @@ ns_load_texture(const Filename &orig_filename, int primary_file_num_channels,
       vfs->close_read_file(in);
 
       if (tex == nullptr) {
-        return nullptr;
+        return Texture::get_error_texture();
       }
       tex->set_fullpath(key._fullpath);
       tex->clear_alpha_fullpath();
@@ -357,7 +357,7 @@ ns_load_texture(const Filename &orig_filename, int primary_file_num_channels,
                      0, 0, false, read_mipmaps, record, options)) {
         // This texture was not found or could not be read.
         report_texture_unreadable(key._fullpath);
-        return nullptr;
+        return Texture::get_error_texture();
       }
     }
 
@@ -389,7 +389,7 @@ ns_load_texture(const Filename &orig_filename, int primary_file_num_channels,
   }
 
   // Set the original filename, before we searched along the path.
-  nassertr(tex != nullptr, nullptr);
+  nassertr(tex != nullptr, Texture::get_error_texture());
   tex->set_filename(orig_filename);
   tex->set_fullpath(key._fullpath);
   tex->_texture_pool_key = key._fullpath;
