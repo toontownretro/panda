@@ -23,8 +23,11 @@ TypeHandle PythonGraphicsWindowProc::_type_handle;
  * handler and name.
  */
 PythonGraphicsWindowProc::
-PythonGraphicsWindowProc(PyObject* function, PyObject* name) :
+PythonGraphicsWindowProc(PyObject* function, PyObject* name)
+#ifndef CPPPARSER
+  :
   PythonCallbackObject(function)
+#endif
 {
   _name = name;
   Py_INCREF(_name);
