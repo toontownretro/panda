@@ -31,10 +31,16 @@ static const std::string not_found = "not found";
 
 /**
  * Represents a single block from a key-values file.
- * Has a map of string key-value pairs, and can have a list of child blocks.
+ * Has a list of string key-value pairs, and can have a list of child blocks.
  */
 class EXPCL_VIF CKeyValues : public ReferenceCount {
 PUBLISHED:
+	class Pair {
+	PUBLISHED:
+		std::string key;
+		std::string value;
+	};
+
 	CKeyValues(const std::string &name = root_block_name, CKeyValues *parent = nullptr);
 
 	//void set_parent( CKeyValues *parent );
@@ -59,10 +65,14 @@ PUBLISHED:
 	const std::string &get_key(size_t n) const;
 	const std::string &get_value(size_t n) const;
 	const std::string &get_value(const std::string &key) const;
+	void add_key_value(const std::string &key, const std::string &value);
 
 	const Filename &get_filename() const;
 
 	void write(const Filename &filename, int indent = 4);
+
+	Pair *find_pair(const std::string &key);
+	const Pair *find_pair(const std::string &key) const;
 
 private:
 	void parse(CKeyValuesTokenizer *tokenizer);
@@ -100,7 +110,7 @@ private:
 	PT(CKeyValues) _parent;
 	Filename _filename;
 	std::string _name;
-	SimpleHashMap<std::string, std::string, string_hash> _keyvalues;
+	pvector<Pair> _keyvalues;
 	pvector<PT(CKeyValues)> _children;
 };
 
@@ -143,12 +153,35 @@ INLINE size_t CKeyValues::get_num_children() const {
 }
 
 INLINE std::string &CKeyValues::operator[](const std::string &key) {
-	return _keyvalues[key];
+	Pair *pair = find_pair(key);
+	if (pair) {
+		return pair->value;
+
+	} else {
+		Pair newpair;
+		newpair.key = key;
+		size_t index = _keyvalues.size();
+		_keyvalues.push_back(newpair);
+		return _keyvalues[index].value;
+	}
 }
 
 INLINE void CKeyValues::
 set_key_value(const std::string &key, const std::string &value) {
-	_keyvalues[key] = value;
+	Pair *pair = find_pair(key);
+	if (!pair) {
+		add_key_value(key, value);
+	} else {
+		pair->value = value;
+	}
+}
+
+INLINE void CKeyValues::
+add_key_value(const std::string &key, const std::string &value) {
+	Pair newpair;
+	newpair.key = key;
+	newpair.value = value;
+	_keyvalues.push_back(newpair);
 }
 
 INLINE const std::string &CKeyValues::
@@ -166,19 +199,19 @@ INLINE size_t CKeyValues::get_num_keys() const {
 }
 
 INLINE bool CKeyValues::has_key(const std::string &key) const {
-	return _keyvalues.find(key) != -1;
+	return find_pair(key) != nullptr;
 }
 
 INLINE int CKeyValues::find_key(const std::string &key) const {
-	return _keyvalues.find(key);
+	return find_pair(key) - _keyvalues.data();
 }
 
 INLINE const std::string &CKeyValues::get_key(size_t n) const {
-	return _keyvalues.get_key(n);
+	return _keyvalues[n].key;
 }
 
 INLINE const std::string &CKeyValues::get_value(size_t n) const {
-	return _keyvalues.get_data(n);
+	return _keyvalues[n].value;
 }
 
 INLINE const Filename &CKeyValues::get_filename() const {

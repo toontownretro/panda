@@ -282,6 +282,32 @@ std::string CKeyValuesTokenizer::location()
 
 //------------------------------------------------------------------------------------------------
 
+CKeyValues::Pair *CKeyValues::
+find_pair(const std::string &key) {
+  size_t count = _keyvalues.size();
+  for (size_t i = 0; i < count; i++) {
+    Pair *pair = &_keyvalues[i];
+    if (pair->key == key) {
+      return pair;
+    }
+  }
+
+  return nullptr;
+}
+
+const CKeyValues::Pair *CKeyValues::
+find_pair(const std::string &key) const {
+  size_t count = _keyvalues.size();
+  for (size_t i = 0; i < count; i++) {
+    const Pair *pair = &_keyvalues[i];
+    if (pair->key == key) {
+      return pair;
+    }
+  }
+
+  return nullptr;
+}
+
 int CKeyValues::find_child(const std::string &name) const
 {
   size_t count = _children.size();
@@ -344,7 +370,7 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
     else if (token.type == KVTOKEN_STRING)
     {
       if (has_key) {
-        _keyvalues[key] = token.data;
+        add_key_value(key, token.data);
         key = "";
         has_key = false;
       } else {
@@ -621,7 +647,7 @@ do_write(std::ostringstream &out, int indent, int &curr_indent) {
     // Write out keyvalues
     for (size_t i = 0; i < _keyvalues.size(); i++) {
       do_indent(out, curr_indent);
-      out << "\"" << _keyvalues.get_key(i) << "\"" << " " << "\"" << _keyvalues.get_data(i) << "\"\n";
+      out << "\"" << get_key(i) << "\"" << " " << "\"" << get_value(i) << "\"\n";
     }
 
     // Only put a line break after the keyvalues if we have child blocks.
