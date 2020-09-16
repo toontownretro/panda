@@ -7624,8 +7624,8 @@ do_issue_shader() {
   }
 
   // If it failed, try applying the default shader.
-  if (_default_shader != nullptr && shader != _default_shader &&
-      (context == 0 || !context->valid())) {
+  if ((context == 0 || !context->valid()) && _default_shader != nullptr &&
+      shader != _default_shader) {
     shader = _default_shader;
     nassertv(shader != nullptr);
     if (_current_shader != shader) {
@@ -11429,6 +11429,8 @@ set_state_and_transform(const RenderState *target,
   }
   _target_rs = target;
 
+  bool fixed_function_pipeline = has_fixed_function_pipeline();
+
 #ifndef OPENGLES_1
   determine_target_shader();
   _instance_count = _target_shader->get_instance_count();
@@ -11440,7 +11442,7 @@ set_state_and_transform(const RenderState *target,
     _state_mask.clear_bit(TextureAttrib::get_class_slot());
     _state_mask.set_bit(shader_slot);
   }
-  else if (!has_fixed_function_pipeline() && _current_shader == nullptr) { // In the case of OpenGL ES 2.x, we need to glUseShader before we draw anything.
+  else if (!fixed_function_pipeline && _current_shader == nullptr) { // In the case of OpenGL ES 2.x, we need to glUseShader before we draw anything.
     do_issue_shader();
     _state_mask.clear_bit(TextureAttrib::get_class_slot());
     _state_mask.set_bit(shader_slot);
@@ -11449,23 +11451,6 @@ set_state_and_transform(const RenderState *target,
   // Update all of the state that is bound to the shader program.
   if (_current_shader_context != nullptr) {
     _current_shader_context->set_state_and_transform(target, transform, _scene_setup->get_camera_transform(), _projection_mat);
-  }
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-  if (has_fixed_function_pipeline()) {
-    int alpha_test_slot = AlphaTestAttrib::get_class_slot();
-    if (_target_rs->get_attrib(alpha_test_slot) != _state_rs->get_attrib(alpha_test_slot) ||
-        !_state_mask.get_bit(alpha_test_slot)
-#ifndef OPENGLES_1
-        || (_target_shader->get_flag(ShaderAttrib::F_subsume_alpha_test) !=
-            _state_shader->get_flag(ShaderAttrib::F_subsume_alpha_test))
-#endif
-        ) {
-      // PStatGPUTimer timer(this, _draw_set_state_alpha_test_pcollector);
-      do_issue_alpha_test();
-      _state_mask.set_bit(alpha_test_slot);
-    }
   }
 #endif
 
@@ -11538,26 +11523,6 @@ set_state_and_transform(const RenderState *target,
     _state_mask.set_bit(render_mode_slot);
   }
 
-#ifdef SUPPORT_FIXED_FUNCTION
-  if (has_fixed_function_pipeline()) {
-    int rescale_normal_slot = RescaleNormalAttrib::get_class_slot();
-    if (_target_rs->get_attrib(rescale_normal_slot) != _state_rs->get_attrib(rescale_normal_slot) ||
-        !_state_mask.get_bit(rescale_normal_slot)) {
-      // PStatGPUTimer timer(this, _draw_set_state_rescale_normal_pcollector);
-      do_issue_rescale_normal();
-      _state_mask.set_bit(rescale_normal_slot);
-    }
-
-    int shade_model_slot = ShadeModelAttrib::get_class_slot();
-    if (_target_rs->get_attrib(shade_model_slot) != _state_rs->get_attrib(shade_model_slot) ||
-        !_state_mask.get_bit(shade_model_slot)) {
-      // PStatGPUTimer timer(this, _draw_set_state_shade_model_pcollector);
-      do_issue_shade_model();
-      _state_mask.set_bit(shade_model_slot);
-    }
-  }
-#endif
-
 #if !defined(OPENGLES) || defined(OPENGLES_1)
   int logic_op_slot = LogicOpAttrib::get_class_slot();
   if (_target_rs->get_attrib(logic_op_slot) != _state_rs->get_attrib(logic_op_slot) ||
@@ -11625,7 +11590,7 @@ set_state_and_transform(const RenderState *target,
       !_state_mask.get_bit(tex_matrix_slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_tex_matrix_pcollector);
 #ifdef SUPPORT_FIXED_FUNCTION
-    if (has_fixed_function_pipeline()) {
+    if (fixed_function_pipeline) {
       do_issue_tex_matrix();
     }
 #endif
@@ -11637,8 +11602,53 @@ set_state_and_transform(const RenderState *target,
 #endif
   }
 
+  int stencil_slot = StencilAttrib::get_class_slot();
+  if (_target_rs->get_attrib(stencil_slot) != _state_rs->get_attrib(stencil_slot) ||
+      !_state_mask.get_bit(stencil_slot)) {
+    // PStatGPUTimer timer(this, _draw_set_state_stencil_pcollector);
+    do_issue_stencil();
+    _state_mask.set_bit(stencil_slot);
+  }
+
+  int scissor_slot = ScissorAttrib::get_class_slot();
+  if (_target_rs->get_attrib(scissor_slot) != _state_rs->get_attrib(scissor_slot) ||
+      !_state_mask.get_bit(scissor_slot)) {
+    // PStatGPUTimer timer(this, _draw_set_state_scissor_pcollector);
+    do_issue_scissor();
+    _state_mask.set_bit(scissor_slot);
+  }
+
 #ifdef SUPPORT_FIXED_FUNCTION
-  if (has_fixed_function_pipeline()) {
+  if (fixed_function_pipeline) {
+    int alpha_test_slot = AlphaTestAttrib::get_class_slot();
+    if (_target_rs->get_attrib(alpha_test_slot) != _state_rs->get_attrib(alpha_test_slot) ||
+        !_state_mask.get_bit(alpha_test_slot)
+#ifndef OPENGLES_1
+        || (_target_shader->get_flag(ShaderAttrib::F_subsume_alpha_test) !=
+            _state_shader->get_flag(ShaderAttrib::F_subsume_alpha_test))
+#endif
+        ) {
+      // PStatGPUTimer timer(this, _draw_set_state_alpha_test_pcollector);
+      do_issue_alpha_test();
+      _state_mask.set_bit(alpha_test_slot);
+    }
+
+    int rescale_normal_slot = RescaleNormalAttrib::get_class_slot();
+    if (_target_rs->get_attrib(rescale_normal_slot) != _state_rs->get_attrib(rescale_normal_slot) ||
+        !_state_mask.get_bit(rescale_normal_slot)) {
+      // PStatGPUTimer timer(this, _draw_set_state_rescale_normal_pcollector);
+      do_issue_rescale_normal();
+      _state_mask.set_bit(rescale_normal_slot);
+    }
+
+    int shade_model_slot = ShadeModelAttrib::get_class_slot();
+    if (_target_rs->get_attrib(shade_model_slot) != _state_rs->get_attrib(shade_model_slot) ||
+        !_state_mask.get_bit(shade_model_slot)) {
+      // PStatGPUTimer timer(this, _draw_set_state_shade_model_pcollector);
+      do_issue_shade_model();
+      _state_mask.set_bit(shade_model_slot);
+    }
+
     int tex_gen_slot = TexGenAttrib::get_class_slot();
     if (_target_tex_gen != _state_tex_gen ||
         !_state_mask.get_bit(tex_gen_slot)) {
@@ -11673,22 +11683,6 @@ set_state_and_transform(const RenderState *target,
     }
   }
 #endif
-
-  int stencil_slot = StencilAttrib::get_class_slot();
-  if (_target_rs->get_attrib(stencil_slot) != _state_rs->get_attrib(stencil_slot) ||
-      !_state_mask.get_bit(stencil_slot)) {
-    // PStatGPUTimer timer(this, _draw_set_state_stencil_pcollector);
-    do_issue_stencil();
-    _state_mask.set_bit(stencil_slot);
-  }
-
-  int scissor_slot = ScissorAttrib::get_class_slot();
-  if (_target_rs->get_attrib(scissor_slot) != _state_rs->get_attrib(scissor_slot) ||
-      !_state_mask.get_bit(scissor_slot)) {
-    // PStatGPUTimer timer(this, _draw_set_state_scissor_pcollector);
-    do_issue_scissor();
-    _state_mask.set_bit(scissor_slot);
-  }
 
   _state_rs = _target_rs;
   maybe_gl_finish();
