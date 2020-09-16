@@ -3591,6 +3591,20 @@ set_scene_root_func(SceneRootFunc *func) {
 }
 
 /**
+ * Stores on the node a pointer to some data that is meaningful to the user.
+ */
+void PandaNode::
+set_user_data(TypedReferenceCount *data) {
+  // We have to do this for all pipeline stages.
+  Thread *current_thread = Thread::get_current_thread();
+  OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
+    CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
+    cdata->_user_data = data;
+  }
+  CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
+}
+
+/**
  * Tells the BamReader how to create objects of type PandaNode.
  */
 void PandaNode::

@@ -198,8 +198,8 @@ PUBLISHED:
                       Thread *current_thread = Thread::get_current_thread()) const;
   void clear_tag(const std::string &key,
                  Thread *current_thread = Thread::get_current_thread());
-				 
-  INLINE void set_user_data(TypedReferenceCount *data);
+
+  void set_user_data(TypedReferenceCount *data);
   INLINE TypedReferenceCount *get_user_data() const;
 
 public:
