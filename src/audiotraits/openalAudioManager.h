@@ -175,13 +175,13 @@ private:
   };
 
 
-  typedef phash_map<std::string, SoundData *> SampleCache;
+  typedef phash_map<std::string, SoundData *, string_hash> SampleCache;
   SampleCache _sample_cache;
 
   typedef phash_set<PT(OpenALAudioSound)> SoundsPlaying;
   SoundsPlaying _sounds_playing;
 
-  typedef phash_set<OpenALAudioSound *> AllSounds;
+  typedef phash_set<OpenALAudioSound *, pointer_hash> AllSounds;
   AllSounds _all_sounds;
 
   // State:
