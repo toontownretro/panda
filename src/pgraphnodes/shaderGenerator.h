@@ -164,7 +164,7 @@ protected:
     CPT(LightRampAttrib) _light_ramp;
   };
 
-  typedef phash_map<ShaderKey, CPT(ShaderAttrib)> GeneratedShaders;
+  typedef pmap<ShaderKey, CPT(ShaderAttrib)> GeneratedShaders;
   GeneratedShaders _generated_shaders;
 
   void analyze_renderstate(ShaderKey &key, const RenderState *rs);
