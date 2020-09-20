@@ -200,6 +200,8 @@ PUBLISHED:
                  Thread *current_thread = Thread::get_current_thread());
 
   void set_user_data(TypedReferenceCount *data);
+  INLINE void clear_user_data();
+  INLINE bool has_user_data() const;
   INLINE TypedReferenceCount *get_user_data() const;
 
 public:

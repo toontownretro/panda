@@ -3595,7 +3595,6 @@ set_scene_root_func(SceneRootFunc *func) {
  */
 void PandaNode::
 set_user_data(TypedReferenceCount *data) {
-  // We have to do this for all pipeline stages.
   Thread *current_thread = Thread::get_current_thread();
   OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
