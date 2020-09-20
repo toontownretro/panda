@@ -11582,7 +11582,7 @@ set_state_and_transform(const RenderState *target,
       !_state_mask.get_bit(tex_matrix_slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_tex_matrix_pcollector);
 #ifdef SUPPORT_FIXED_FUNCTION
-    if (fixed_function_pipeline) {
+    if (has_fixed_function_pipeline()) {
       do_issue_tex_matrix();
     }
 #endif
@@ -11611,7 +11611,7 @@ set_state_and_transform(const RenderState *target,
   }
 
 #ifdef SUPPORT_FIXED_FUNCTION
-  if (fixed_function_pipeline) {
+  if (has_fixed_function_pipeline()) {
     int alpha_test_slot = AlphaTestAttrib::get_class_slot();
     if (_target_rs->get_attrib(alpha_test_slot) != _state_rs->get_attrib(alpha_test_slot) ||
         !_state_mask.get_bit(alpha_test_slot)
