@@ -231,6 +231,61 @@ INLINE std::ostream &operator << (std::ostream &out, const RenderAttrib &attrib)
   return out;
 }
 
+#define DECLARE_ATTRIB(classname, parentname)\
+private:\
+  static TypeHandle _type_handle;\
+  static int _attrib_slot;\
+protected:\
+  virtual int compare_to_impl( const RenderAttrib *other ) const;\
+  virtual size_t get_hash_impl() const;\
+PUBLISHED:\
+  static int get_class_slot() {\
+    return _attrib_slot;\
+  }\
+  virtual int get_slot() const {\
+    return get_class_slot();\
+  }\
+  MAKE_PROPERTY( class_slot, get_class_slot );\
+public:\
+  static TypeHandle get_class_type() {\
+    return _type_handle;\
+  }\
+  static void init_type() {\
+    parentname::init_type();\
+    register_type(_type_handle, #classname,\
+                  parentname::get_class_type());\
+    _attrib_slot = register_slot( _type_handle, 100, new classname );\
+  }\
+  virtual TypeHandle get_type() const {\
+    return classname::get_class_type();\
+  }\
+  virtual TypeHandle force_init_type() { init_type(); return get_class_type(); }
+
+#define IMPLEMENT_ATTRIB(classname)\
+TypeHandle classname::_type_handle;\
+int classname::_attrib_slot;
+
+#define STUB_ATTRIB(classname)\
+class classname : public RenderAttrib {\
+  DECLARE_ATTRIB(classname, RenderAttrib);\
+  PUBLISHED:\
+    static CPT(RenderAttrib) make();\
+};\
+IMPLEMENT_ATTRIB(classname);\
+CPT(RenderAttrib) classname::make()\
+{\
+        classname *attr = new classname;\
+        return return_new(attr);\
+}\
+int classname::compare_to_impl( const RenderAttrib *other ) const\
+{\
+	return 0;\
+}\
+size_t classname::get_hash_impl() const\
+{\
+	return 0;\
+}
+
 #include "renderAttrib.I"
 
 #endif
