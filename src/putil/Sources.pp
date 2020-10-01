@@ -32,7 +32,7 @@
     copyOnWriteObject.h copyOnWriteObject.I \
     copyOnWritePointer.h copyOnWritePointer.I \
     compareTo.I compareTo.h \
-    config_util.N config_util.h configurable.h \
+    config_putil.N config_putil.h configurable.h \
     cPointerCallbackObject.h cPointerCallbackObject.I \
     datagramInputFile.I datagramInputFile.h \
     datagramOutputFile.I datagramOutputFile.h \
@@ -54,7 +54,7 @@
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
     modifierButtons.I modifierButtons.h mouseButton.h \
-    mouseData.I mouseData.h nameUniquifier.I nameUniquifier.h \
+    mouseData.h nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \
     pbitops.I pbitops.h \
@@ -92,7 +92,7 @@
     callbackObject.cxx \
     clockObject.cxx \
     colorSpace.cxx \
-    config_util.cxx configurable.cxx \
+    config_putil.cxx configurable.cxx \
     copyOnWriteObject.cxx \
     copyOnWritePointer.cxx \
     cPointerCallbackObject.cxx \
@@ -107,7 +107,7 @@
     linkedListNode.cxx \
     load_prc_file.cxx \
     loaderOptions.cxx \
-    modifierButtons.cxx mouseButton.cxx mouseData.cxx \
+    modifierButtons.cxx mouseButton.cxx \
     nameUniquifier.cxx \
     nodeCachedReferenceCount.cxx \
     paramValue.cxx \
@@ -145,7 +145,7 @@
     copyOnWriteObject.h copyOnWriteObject.I \
     copyOnWritePointer.h copyOnWritePointer.I \
     compareTo.I compareTo.h \
-    config_util.h configurable.h \
+    config_putil.h configurable.h \
     cPointerCallbackObject.h cPointerCallbackObject.I \
     datagramInputFile.I datagramInputFile.h \
     datagramOutputFile.I datagramOutputFile.h \
@@ -233,14 +233,6 @@
 
   #define SOURCES \
     test_filename.cxx
-
-#end test_bin_target
-
-#begin test_bin_target
-  #define TARGET test_uniqueIdAllocator
-
-  #define SOURCES \
-    uniqueIdAllocator.cxx test_uniqueIdAllocator.cxx
 
 #end test_bin_target
 
