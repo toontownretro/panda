@@ -16,7 +16,7 @@
     bamCacheIndex.h bamCacheIndex.I \
     bamCacheRecord.h bamCacheRecord.I \
     bamEnums.h \
-    bamReader.I bamReader.N bamReader.h bamReaderParam.I \
+    bamReader.I bamReader.h bamReaderParam.I \
     bamReaderParam.h \
     bamWriter.I bamWriter.h \
     bitArray.I bitArray.h \
@@ -34,6 +34,7 @@
     compareTo.I compareTo.h \
     config_putil.N config_putil.h configurable.h \
     cPointerCallbackObject.h cPointerCallbackObject.I \
+    datagramBuffer.I datagramBuffer.h \
     datagramInputFile.I datagramInputFile.h \
     datagramOutputFile.I datagramOutputFile.h \
     doubleBitMask.I doubleBitMask.h \
@@ -44,12 +45,14 @@
     factoryParams.h \
     firstOfPairCompare.I firstOfPairCompare.h \
     firstOfPairLess.I firstOfPairLess.h \
+    gamepadButton.h \
     globalPointerRegistry.I globalPointerRegistry.h \
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
     ioPtaDatagramShort.h keyboardButton.h \
+    iterator_types.h \
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
@@ -60,8 +63,6 @@
     pbitops.I pbitops.h \
     portalMask.h \
     pta_ushort.h \
-    pythonCallbackObject.cxx \
-    pythonCallbackObject.h pythonCallbackObject.I \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
     timedCycle.I timedCycle.h typedWritable.I \
@@ -96,10 +97,12 @@
     copyOnWriteObject.cxx \
     copyOnWritePointer.cxx \
     cPointerCallbackObject.cxx \
+    datagramBuffer.cxx \
     datagramInputFile.cxx datagramOutputFile.cxx \
     doubleBitMask.cxx \
     factoryBase.cxx \
     factoryParam.cxx factoryParams.cxx \
+    gamepadButton.cxx \
     globalPointerRegistry.cxx \
     ioPtaDatagramFloat.cxx \
     ioPtaDatagramInt.cxx ioPtaDatagramShort.cxx \
@@ -147,6 +150,7 @@
     compareTo.I compareTo.h \
     config_putil.h configurable.h \
     cPointerCallbackObject.h cPointerCallbackObject.I \
+    datagramBuffer.I datagramBuffer.h \
     datagramInputFile.I datagramInputFile.h \
     datagramOutputFile.I datagramOutputFile.h \
     doubleBitMask.I doubleBitMask.h \
@@ -156,12 +160,14 @@
     factoryParams.I factoryParams.h \
     firstOfPairCompare.I firstOfPairCompare.h \
     firstOfPairLess.I firstOfPairLess.h \
+    gamepadButton.h \
     globalPointerRegistry.I globalPointerRegistry.h \
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
-    ioPtaDatagramShort.h iterator_types.h keyboardButton.h \
+    ioPtaDatagramShort.h keyboardButton.h \
+    iterator_types.h \
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \

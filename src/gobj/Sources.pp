@@ -55,6 +55,7 @@
     perspectiveLens.h \
     preparedGraphicsObjects.I preparedGraphicsObjects.h \
     queryContext.I queryContext.h \
+    samplerContext.I samplerContext.h \
     samplerState.I samplerState.h \
     savedContext.I savedContext.h \
     shader.I shader.h \
@@ -133,9 +134,11 @@
     perspectiveLens.cxx \
     preparedGraphicsObjects.cxx \
     queryContext.cxx \
+    samplerContext.cxx \
     samplerState.cxx \
     savedContext.cxx \
     shader.cxx \
+    shaderBuffer.cxx \
     shaderContext.cxx \
     simpleAllocator.cxx \
     simpleLru.cxx \
@@ -212,9 +215,11 @@
     perspectiveLens.I perspectiveLens.h \
     preparedGraphicsObjects.I preparedGraphicsObjects.h \
     queryContext.I queryContext.h \
+    samplerContext.I samplerContext.h \
     samplerState.I samplerState.h \
     savedContext.I savedContext.h \
     shader.I shader.h \
+    shaderBuffer.I shaderBuffer.h \
     shaderContext.h shaderContext.I \
     simpleAllocator.h simpleAllocator.I \
     simpleLru.h simpleLru.I \
