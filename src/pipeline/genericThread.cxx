@@ -31,10 +31,10 @@ GenericThread(const std::string &name, const std::string &sync_name) :
  *
  */
 GenericThread::
-GenericThread(const std::string &name, const std::string &sync_name, GenericThread::ThreadFunc *function, void *user_data) :
+GenericThread(const std::string &name, const std::string &sync_name, GenericThread::ThreadFunc *func, void *ud) :
   Thread(name, sync_name),
-  _function(function),
-  _user_data(user_data)
+  _function(func),
+  _user_data(ud)
 {
 }
 

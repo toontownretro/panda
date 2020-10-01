@@ -2,7 +2,7 @@
 
 #define OTHER_LIBS p3interrogatedb \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
-#define USE_PACKAGES x11 xf86dga xrandr xcursor
+#define USE_PACKAGES x11
 
 #begin lib_target
   #define TARGET p3x11display

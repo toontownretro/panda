@@ -1,11 +1,11 @@
 #define BUILD_DIRECTORY $[HAVE_FREETYPE]
-#define USE_PACKAGES freetype
 
 #define OTHER_LIBS p3interrogatedb \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
+#define USE_PACKAGES freetype
+
 #begin lib_target
-  #define USE_PACKAGES freetype
 
   #define BUILDING_DLL BUILDING_PANDA_PNMTEXT
 

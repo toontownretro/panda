@@ -4,7 +4,7 @@
 
 #define BUILDING_DLL BUILDING_FFMPEG
 
-#define USE_PACKAGES ffmpeg swscale swresample
+#define USE_PACKAGES ffmpeg
 
 #begin lib_target
   #define TARGET p3ffmpeg

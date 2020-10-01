@@ -12,9 +12,11 @@ win-size 800 600
 # is found that works, unless the user specifically requests a
 # particular display type with the load-display directive.
 
+aux-display pandagl
 aux-display p3tinydisplay
 
 # Define an appropriate default audio library.
+audio-library-name p3openal_audio
 
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files

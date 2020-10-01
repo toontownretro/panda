@@ -33,9 +33,9 @@ GenericAsyncTask(const std::string &name) :
  *
  */
 GenericAsyncTask::
-GenericAsyncTask(const std::string &name, GenericAsyncTask::TaskFunc *function, void *user_data) :
+GenericAsyncTask(const std::string &name, GenericAsyncTask::TaskFunc *func, void *user_data) :
   AsyncTask(name),
-  _function(function),
+  _function(func),
   _user_data(user_data)
 {
   _upon_birth = nullptr;
