@@ -11,8 +11,8 @@
     p3physics p3particlesystem
 
 #define LOCAL_LIBS p3linmath p3putil p3express
-#define OTHER_LIBS p3interrogatedb:m \
-    p3dtoolbase:c p3dtoolutil:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3interrogatedb \
+    p3dtoolbase:c p3dtoolutil:c p3dtool:m p3prc
 
 #begin metalib_target
   #define TARGET pandaphysics

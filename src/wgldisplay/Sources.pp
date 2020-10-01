@@ -3,7 +3,7 @@
 #define USE_PACKAGES gl cg
 
 
-#define OTHER_LIBS p3interrogatedb:m \
+#define OTHER_LIBS p3interrogatedb \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
 
 #begin lib_target

@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_EGG]
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 #define YACC_PREFIX eggyy
 #define FLEXFLAGS -i
 #define USE_PACKAGES zlib

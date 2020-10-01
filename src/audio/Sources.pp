@@ -1,5 +1,5 @@
 #define OTHER_LIBS \
-     p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+     p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 
 #begin lib_target

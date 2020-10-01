@@ -1,4 +1,4 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
 
 #begin lib_target
   #define TARGET p3downloader

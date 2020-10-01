@@ -12,8 +12,8 @@
     p3gles2gsg egl2display
 
 #define LOCAL_LIBS p3gsgbase p3display p3express
-#define OTHER_LIBS p3interrogatedb:m  \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3interrogatedb  \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #begin metalib_target
   #define TARGET pandagles2

@@ -1,31 +1,32 @@
 #define OTHER_LIBS p3dtool:m p3dtoolbase:c p3dtoolutil:c \
-    p3putil:c p3prc:m
+    p3putil:c p3prc
 
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 
-#begin lib_target
-  #define TARGET miles_audio
-  #define BUILD_TARGET $[HAVE_RAD_MSS]
-  #define USE_PACKAGES rad_mss
-  #define BUILDING_DLL BUILDING_MILES_AUDIO
-  #define LOCAL_LIBS p3audio p3event p3pipeline
-  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
+// FIXME: Could possibly restore Miles support
+//#begin lib_target
+//  #define TARGET miles_audio
+//  #define BUILD_TARGET $[HAVE_RAD_MSS]
+//  #define USE_PACKAGES rad_mss
+//  #define BUILDING_DLL BUILDING_MILES_AUDIO
+//  #define LOCAL_LIBS p3audio p3event p3pipeline
+//  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
 
-  #define SOURCES \
-      config_milesAudio.h \
-      milesAudioManager.h \
-      milesAudioSound.I milesAudioSound.h \
-      milesAudioSample.I milesAudioSample.h \
-      milesAudioSequence.I milesAudioSequence.h \
-      milesAudioStream.I milesAudioStream.h \
-      globalMilesManager.I globalMilesManager.h
+//  #define SOURCES \
+//      config_milesAudio.h \
+//      milesAudioManager.h \
+//      milesAudioSound.I milesAudioSound.h \
+//      milesAudioSample.I milesAudioSample.h \
+//      milesAudioSequence.I milesAudioSequence.h \
+//      milesAudioStream.I milesAudioStream.h \
+//      globalMilesManager.I globalMilesManager.h
 
-  #define COMPOSITE_SOURCES \
-      config_milesAudio.cxx milesAudioManager.cxx milesAudioSound.cxx \
-      milesAudioStream.cxx globalMilesManager.cxx milesAudioSample.cxx \
-      milesAudioSequence.cxx
+//  #define COMPOSITE_SOURCES \
+//      config_milesAudio.cxx milesAudioManager.cxx milesAudioSound.cxx \
+//      milesAudioStream.cxx globalMilesManager.cxx milesAudioSample.cxx \
+//      milesAudioSequence.cxx
 
-#end lib_target
+//#end lib_target
 
 #begin lib_target
   #define TARGET p3fmod_audio

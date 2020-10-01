@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3interrogatedb:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3interrogatedb \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 // Most of the files here are not actually compiled into anything;
 // they're just included by various other directories.

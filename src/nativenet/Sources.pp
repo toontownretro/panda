@@ -1,8 +1,8 @@
 #define LOCAL_LIBS p3express p3pandabase
 
 #define OTHER_LIBS \
-    p3interrogatedb:m \
-    p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
+    p3interrogatedb \
+    p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
 
 #define BUILD_DIRECTORY $[WANT_NATIVE_NET]
 #define USE_PACKAGES native_net openssl

@@ -9,7 +9,7 @@
 #define USE_PACKAGES net
 
 #define COMPONENT_LIBS p3downloader p3express p3pandabase
-#define OTHER_LIBS p3prc:m p3interrogatedb:m p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define OTHER_LIBS p3prc p3interrogatedb p3dtoolutil:c p3dtoolbase:c p3dtool:m
 
 #begin metalib_target
   #define TARGET pandaexpress

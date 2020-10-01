@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_X11]
 
-#define OTHER_LIBS p3interrogatedb:m \
+#define OTHER_LIBS p3interrogatedb \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
 #define USE_PACKAGES x11 xf86dga xrandr xcursor
 

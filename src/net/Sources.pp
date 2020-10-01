@@ -1,6 +1,6 @@
 #define OTHER_LIBS \
-   p3interrogatedb:m \
-   p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
+   p3interrogatedb \
+   p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
 #define WIN_SYS_LIBS iphlpapi.lib
 
 #define BUILD_DIRECTORY $[and $[HAVE_NET],$[WANT_NATIVE_NET]]

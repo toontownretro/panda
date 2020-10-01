@@ -1,5 +1,5 @@
 #define LOCAL_LIBS p3putil p3express p3pandabase p3pstatclient p3linmath
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #begin lib_target
   #define TARGET p3event
@@ -75,7 +75,7 @@
   #define TARGET test_task
   #define LOCAL_LIBS $[LOCAL_LIBS] p3mathutil
   #define OTHER_LIBS \
-   p3dtoolbase:c p3prc:m \
+   p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \

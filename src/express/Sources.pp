@@ -1,5 +1,5 @@
 #define LOCAL_LIBS p3pandabase
-#define OTHER_LIBS p3interrogatedb:m p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3interrogatedb p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #begin lib_target
   #define TARGET p3express
@@ -262,7 +262,7 @@
 #begin test_bin_target
   #define TARGET test_types
   #define LOCAL_LIBS $[LOCAL_LIBS] p3express
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc:c p3dtoolconfig:m
+  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
 
   #define SOURCES \
     test_types.cxx
@@ -277,7 +277,7 @@
     test_ordered_vector.cxx
 
   #define LOCAL_LIBS $[LOCAL_LIBS] p3putil
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc:c p3dtoolconfig:m
+  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
 
 #end test_bin_target
 
@@ -287,7 +287,7 @@
   #define TARGET test_zstream
   #define USE_PACKAGES zlib
   #define LOCAL_LIBS $[LOCAL_LIBS] p3express
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc:c p3dtoolconfig:m
+  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
 
   #define SOURCES \
     test_zstream.cxx

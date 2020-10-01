@@ -2,8 +2,8 @@
 #define BUILDING_DLL BUILDING_TINYDISPLAY
 
 #define OSX_SYS_FRAMEWORKS $[if $[not $[BUILD_IPHONE]],ApplicationServices Carbon CoreServices Cocoa ]
-#define OTHER_LIBS p3interrogatedb:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define OTHER_LIBS p3interrogatedb \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #define USE_PACKAGES sdl
 #if $[UNIX_PLATFORM]
@@ -29,8 +29,6 @@
     tinyXGraphicsPipe.I tinyXGraphicsPipe.h \
     tinyXGraphicsWindow.h tinyXGraphicsWindow.I \
     tinyOffscreenGraphicsPipe.I tinyOffscreenGraphicsPipe.h \
-    tinyOsxGraphicsPipe.I tinyOsxGraphicsPipe.h \
-    tinyOsxGraphicsWindow.h tinyOsxGraphicsWindow.I \
     $[if $[and $[IS_OSX],$[HAVE_CARBON]],tinyOsxGraphicsWindow.mm,] \
     zbuffer.h zfeatures.h zgl.h \
     zline.h zmath.h \
@@ -57,7 +55,6 @@
     tinyGraphicsBuffer.cxx \
     tinyGraphicsStateGuardian.cxx \
     tinyOffscreenGraphicsPipe.cxx \
-    tinyOsxGraphicsPipe.cxx \
     tinySDLGraphicsPipe.cxx \
     tinySDLGraphicsWindow.cxx \
     tinyTextureContext.cxx \

@@ -20,8 +20,8 @@
   p3downloader p3express p3pandabase
 #define OTHER_LIBS \
   pandaexpress:m \
-  p3interrogatedb:m p3dtoolconfig:m \
-  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+  p3interrogatedb  \
+  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #begin metalib_target
   #define TARGET panda
