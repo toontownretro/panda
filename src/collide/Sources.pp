@@ -108,13 +108,3 @@
   #define IGATESCAN all
 
 #end lib_target
-
-#begin test_bin_target
-  #define TARGET test_collide
-  #define LOCAL_LIBS \
-    p3collide
-
-  #define SOURCES \
-    test_collide.cxx
-
-#end test_bin_target
