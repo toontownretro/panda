@@ -214,7 +214,6 @@
     alphaTestAttrib.I alphaTestAttrib.h \
     antialiasAttrib.I antialiasAttrib.h \
     attribNodeRegistry.I attribNodeRegistry.h \
-    audioVolumeAttrib.I audioVolumeAttrib.h \
     auxSceneData.I auxSceneData.h \
     auxBitplaneAttrib.I auxBitplaneAttrib.h \
     bamFile.I bamFile.h \

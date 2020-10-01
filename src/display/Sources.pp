@@ -34,6 +34,7 @@
     graphicsWindowInputDevice.h \
     graphicsWindowProc.h \
     graphicsWindowProcCallbackData.I graphicsWindowProcCallbackData.h \
+    mouseAndKeyboard.h \
     nativeWindowHandle.I nativeWindowHandle.h \
     parasiteBuffer.I parasiteBuffer.h \
     pStatGPUTimer.I pStatGPUTimer.h \
@@ -69,6 +70,7 @@
     graphicsWindowProc.cxx \
     graphicsWindowProcCallbackData.cxx \
     graphicsDevice.cxx \
+    mouseAndKeyboard.cxx \
     nativeWindowHandle.cxx \
     parasiteBuffer.cxx \
     windowHandle.cxx \
@@ -103,6 +105,7 @@
     graphicsThreadingModel.I graphicsThreadingModel.h \
     graphicsWindowInputDevice.I graphicsWindowInputDevice.h \
     graphicsDevice.I graphicsDevice.h \
+    mouseAndKeyboard.h \
     nativeWindowHandle.I nativeWindowHandle.h \
     parasiteBuffer.I parasiteBuffer.h \
     pStatGPUTimer.I pStatGPUTimer.h \
@@ -127,14 +130,3 @@
     windowProperties_ext.h
 
 #end lib_target
-
-
-#begin test_bin_target
-  #define TARGET test_display
-  #define LOCAL_LIBS \
-    p3display p3putil
-
-  #define SOURCES \
-    test_display.cxx
-
-#end test_bin_target

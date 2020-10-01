@@ -74,7 +74,6 @@
     clientDialDevice.I clientDialDevice.h \
     clientTrackerDevice.I clientTrackerDevice.h \
     config_device.h \
-    mouseAndKeyboard.h \
     dialNode.I dialNode.h  \
     trackerData.I trackerData.h \
     trackerNode.I trackerNode.h \
