@@ -261,13 +261,3 @@
     pythonTexturePoolFilter.h
 
 #end lib_target
-
-#begin test_bin_target
-  #define TARGET test_gobj
-  #define LOCAL_LIBS \
-    p3gobj p3putil
-
-  #define SOURCES \
-    test_gobj.cxx
-
-#end test_bin_target
