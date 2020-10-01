@@ -27,12 +27,16 @@
   #endif
 #endif
 
+  #define SOURCES \
+    config_framework.h \
+    pandaFramework.I pandaFramework.h \
+    windowFramework.I windowFramework.h \
+    rock_floor.rgb_src.c shuttle_controls.bam_src.c
 
   #define COMPOSITE_SOURCES \
-    config_framework.cxx config_framework.h \
-    pandaFramework.cxx pandaFramework.I pandaFramework.h \
-    windowFramework.cxx windowFramework.I windowFramework.h \
-    rock_floor.rgb_src.c shuttle_controls.bam_src.c
+    config_framework.cxx \
+    pandaFramework.cxx \
+    windowFramework.cxx
 
   #define INSTALL_HEADERS \
     config_framework.h \

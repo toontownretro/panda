@@ -27,7 +27,8 @@
     textGraphic.I textGraphic.h \
     textNode.I textNode.h \
     textProperties.I textProperties.h \
-    textPropertiesManager.I textPropertiesManager.h
+    textPropertiesManager.I textPropertiesManager.h \
+    cmss12.bam_src.c cmss12.bam.pz_src.c persans.ttf_src.c
 
   #define COMPOSITE_SOURCES \
     config_text.cxx \
@@ -43,8 +44,7 @@
     textGraphic.cxx \
     textNode.cxx \
     textProperties.cxx \
-    textPropertiesManager.cxx \
-    cmss12.bam_src.c cmss12.bam.pz_src.c persans.ttf_src.c
+    textPropertiesManager.cxx
 
   #define INSTALL_HEADERS \
     config_text.h \
