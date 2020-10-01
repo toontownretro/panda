@@ -5,7 +5,7 @@
 
 #begin lib_target
   #define TARGET p3bullet
-  #define LOCAL_LIBS p3pgraph p3linmath p3grutil
+  #define LOCAL_LIBS p3pgraph p3linmath p3grutil p3collide
   #define USE_PACKAGES bullet
 
   #define SOURCES \

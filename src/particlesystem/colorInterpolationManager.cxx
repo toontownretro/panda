@@ -168,12 +168,12 @@ interpolate(const PN_stdfloat t) const {
  */
 
 ColorInterpolationSegment::
-ColorInterpolationSegment(ColorInterpolationFunction* function,
+ColorInterpolationSegment(ColorInterpolationFunction* func,
                           const PN_stdfloat &time_begin,
                           const PN_stdfloat &time_end,
                           const bool is_modulated,
                           const int id) :
-  _color_inter_func(function),
+  _color_inter_func(func),
   _t_begin(time_begin),
   _t_end(time_end),
   _t_total(time_end-time_begin),

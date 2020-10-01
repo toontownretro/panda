@@ -134,9 +134,9 @@ BulletWorld() {
  */
 LightMutex &BulletWorld::
 get_global_lock() {
-  
+
   static LightMutex lock;
-  
+
   return lock;
 }
 
@@ -968,7 +968,7 @@ sweep_test_closest(BulletShape *shape, const TransformState &from_ts, const Tran
 
   const btConvexShape *convex = (const btConvexShape *) shape->ptr();
   nassertr(convex->isConvex(), BulletClosestHitSweepResult::empty());
-  
+
   nassertr(!from_ts.is_invalid(), BulletClosestHitSweepResult::empty());
   nassertr(!to_ts.is_invalid(), BulletClosestHitSweepResult::empty());
 

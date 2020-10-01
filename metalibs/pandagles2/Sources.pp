@@ -9,7 +9,7 @@
 #define BUILD_DIRECTORY $[HAVE_GLES2]
 
 #define COMPONENT_LIBS \
-    p3gles2gsg egl2display
+    p3gles2gsg p3egldisplay_gles2
 
 #define LOCAL_LIBS p3gsgbase p3display p3express
 #define OTHER_LIBS p3interrogatedb  \

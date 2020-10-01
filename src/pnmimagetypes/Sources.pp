@@ -27,6 +27,7 @@
      config_pnmimagetypes.cxx  \
      pnmFileTypeBMPReader.cxx pnmFileTypeBMPWriter.cxx  \
      pnmFileTypeBMP.cxx \
+     pnmFileTypeEXR.cxx \
      pnmFileTypeIMG.cxx \
      pnmFileTypeJPG.cxx pnmFileTypeJPGReader.cxx pnmFileTypeJPGWriter.cxx \
      pnmFileTypePNG.cxx \

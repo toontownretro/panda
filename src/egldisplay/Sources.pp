@@ -28,7 +28,7 @@
 #end lib_target
 
 #begin lib_target
-  #define TARGET egldisplay_gles2
+  #define TARGET p3egldisplay_gles2
   #define BUILD_TARGET $[HAVE_GLES2]
   #define USE_PACKAGES gles2 egl x11
   #define EXTRA_CDEFS OPENGLES_2
