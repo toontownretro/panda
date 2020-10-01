@@ -38,7 +38,8 @@
     ztriangle_code_1.h ztriangle_code_2.h \
     ztriangle_code_3.h ztriangle_code_4.h \
     ztriangle_table.h ztriangle_table.cxx \
-    store_pixel.h store_pixel_code.h store_pixel_table.h
+    store_pixel.h store_pixel_code.h store_pixel_table.h \
+    srgb_tables.h
 
   #define COMPOSITE_SOURCES \
     clip.cxx \
@@ -49,6 +50,7 @@
     td_light.cxx \
     memory.cxx \
     specbuf.cxx \
+    srgb_tables.cxx \
     store_pixel.cxx \
     td_texture.cxx \
     tinyGeomMunger.cxx \

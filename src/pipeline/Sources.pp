@@ -140,7 +140,7 @@
   #define TARGET test_threaddata
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -153,7 +153,7 @@
   #define TARGET test_diners
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -166,7 +166,7 @@
   #define TARGET test_mutex
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -179,7 +179,7 @@
   #define TARGET test_concurrency
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -192,7 +192,7 @@
   #define TARGET test_delete
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -205,7 +205,7 @@
   #define TARGET test_atomic
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
@@ -219,7 +219,7 @@
   #define TARGET test_setjmp
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dconfig:c p3dtoolbase:c p3prc \
+   p3interrogatedb p3dtoolbase:c p3prc \
    p3dtoolutil:c p3dtool:m
 
   #define SOURCES \

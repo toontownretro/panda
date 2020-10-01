@@ -98,45 +98,52 @@
      vector_PT_EggVertex.cxx
 
   #define INSTALL_HEADERS \
-    eggAnimData.I eggAnimData.h \
-    eggAnimPreload.I eggAnimPreload.h \
-    eggAttributes.I eggAttributes.h eggBin.h eggBinMaker.h eggComment.I \
-    eggComment.h \
-    eggCompositePrimitive.I eggCompositePrimitive.h \
-    eggCoordinateSystem.I eggCoordinateSystem.h eggCurve.I \
-    eggCurve.h eggData.I eggData.h eggExternalReference.I \
-    eggExternalReference.h eggFilenameNode.I eggFilenameNode.h \
-    eggGroup.I eggGroup.h \
-    eggGroupNode.I eggGroupNode.h \
-    eggGroupUniquifier.h \
-    eggLine.I eggLine.h \
-    eggMaterial.I \
-    eggMaterial.h eggMaterialCollection.I eggMaterialCollection.h \
-    eggMorph.I eggMorph.h eggMorphList.I eggMorphList.h \
-    eggNamedObject.I eggNamedObject.h eggNameUniquifier.h eggNode.I eggNode.h \
-    eggNurbsCurve.I eggNurbsCurve.h eggNurbsSurface.I eggNurbsSurface.h \
-    eggObject.I eggObject.h eggParameters.h \
-    eggPatch.I eggPatch.h \
-    eggPoint.I eggPoint.h \
-    eggPolygon.I eggPolygon.h eggPolysetMaker.h eggPoolUniquifier.h \
-    eggPrimitive.I eggPrimitive.h eggRenderMode.I eggRenderMode.h \
-    eggSAnimData.I eggSAnimData.h eggSurface.I eggSurface.h \
-    eggSwitchCondition.h eggTable.I eggTable.h eggTexture.I \
-    eggTexture.h eggTextureCollection.I eggTextureCollection.h \
-    eggTransform.I eggTransform.h \
-    eggTriangleFan.I eggTriangleFan.h \
-    eggTriangleStrip.I eggTriangleStrip.h \
-    eggUserData.I eggUserData.h \
-    eggUtilities.I eggUtilities.h \
-    eggVertex.I eggVertex.h \
-    eggVertexAux.I eggVertexAux.h \
-    eggVertexPool.I eggVertexPool.h \
-    eggVertexUV.I eggVertexUV.h \
-    eggXfmAnimData.I eggXfmAnimData.h \
-    eggXfmSAnim.I eggXfmSAnim.h \
-    pt_EggMaterial.h vector_PT_EggMaterial.h \
-    pt_EggTexture.h vector_PT_EggTexture.h \
-    pt_EggVertex.h vector_PT_EggVertex.h
+     config_egg.h eggAnimData.I eggAnimData.h \
+     eggAnimPreload.I eggAnimPreload.h \
+     eggAttributes.I  \
+     eggAttributes.h eggBin.h eggBinMaker.h eggComment.I  \
+     eggComment.h \
+     eggCompositePrimitive.I eggCompositePrimitive.h \
+     eggCoordinateSystem.I eggCoordinateSystem.h  \
+     eggCurve.I eggCurve.h eggData.I eggData.h  \
+     eggExternalReference.I eggExternalReference.h  \
+     eggFilenameNode.I eggFilenameNode.h eggGroup.I eggGroup.h  \
+     eggGroupNode.I eggGroupNode.h eggGroupUniquifier.h  \
+     eggLine.I eggLine.h \
+     eggMaterial.I eggMaterial.h eggMaterialCollection.I  \
+     eggMaterialCollection.h \
+     eggMesher.h eggMesher.I \
+     eggMesherEdge.h eggMesherEdge.I \
+     eggMesherFanMaker.h eggMesherFanMaker.I \
+     eggMesherStrip.h eggMesherStrip.I \
+     eggMiscFuncs.I eggMiscFuncs.h  \
+     eggMorph.I eggMorph.h eggMorphList.I eggMorphList.h  \
+     eggNamedObject.I eggNamedObject.h eggNameUniquifier.h  \
+     eggNode.I eggNode.h eggNurbsCurve.I eggNurbsCurve.h  \
+     eggNurbsSurface.I eggNurbsSurface.h eggObject.I eggObject.h  \
+     eggParameters.h \
+     eggPatch.I eggPatch.h \
+     eggPoint.I eggPoint.h eggPolygon.I  \
+     eggPolygon.h eggPolysetMaker.h eggPoolUniquifier.h \
+     eggPrimitive.I eggPrimitive.h \
+     eggRenderMode.I eggRenderMode.h  \
+     eggSAnimData.I eggSAnimData.h eggSurface.I eggSurface.h  \
+     eggSwitchCondition.h eggTable.I eggTable.h eggTexture.I  \
+     eggTexture.h eggTextureCollection.I eggTextureCollection.h  \
+     eggTriangleFan.I eggTriangleFan.h \
+     eggTriangleStrip.I eggTriangleStrip.h \
+     eggTransform.I eggTransform.h \
+     eggUserData.I eggUserData.h \
+     eggUtilities.I eggUtilities.h \
+     eggVertex.I eggVertex.h \
+     eggVertexAux.I eggVertexAux.h \
+     eggVertexPool.I eggVertexPool.h \
+     eggVertexUV.I eggVertexUV.h \
+     eggXfmAnimData.I  \
+     eggXfmAnimData.h eggXfmSAnim.I eggXfmSAnim.h parserDefs.h  \
+     parser.yxx lexerDefs.h lexer.lxx pt_EggMaterial.h  \
+     vector_PT_EggMaterial.h pt_EggTexture.h  \
+     vector_PT_EggTexture.h pt_EggVertex.h vector_PT_EggVertex.h
 
   #define IGATESCAN all
   #define IGATEEXT \

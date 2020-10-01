@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[BUILD_IPHONE]
 
-#define OTHER_LIBS p3interrogatedb p3dconfig:c  \
+#define OTHER_LIBS p3interrogatedb  \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
 
 #define OSX_SYS_FRAMEWORKS Foundation QuartzCore UIKit OpenGLES

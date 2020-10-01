@@ -61,6 +61,7 @@
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \
     pbitops.I pbitops.h \
+    pointerData.h pointerData.I \
     portalMask.h \
     pta_ushort.h \
     simpleHashMap.I simpleHashMap.h \
@@ -177,6 +178,7 @@
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \
     pbitops.I pbitops.h \
+    pointerData.h pointerData.I \
     portalMask.h \
     pta_ushort.h \
     simpleHashMap.I simpleHashMap.h \

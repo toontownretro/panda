@@ -66,18 +66,30 @@
 
   #define INSTALL_HEADERS \
     analogNode.I analogNode.h \
-    buttonNode.I buttonNode.h \
+    buttonNode.I buttonNode.h  \
     clientAnalogDevice.I clientAnalogDevice.h \
     clientBase.I clientBase.h \
-    clientButtonDevice.I clientButtonDevice.h \
+    clientButtonDevice.I clientButtonDevice.h  \
     clientDevice.I clientDevice.h \
-    clientDialDevice.I clientDialDevice.h \
-    clientTrackerDevice.I clientTrackerDevice.h \
+    clientDialDevice.I clientDialDevice.h  \
+    clientTrackerDevice.I clientTrackerDevice.h  \
     config_device.h \
     dialNode.I dialNode.h  \
+    evdevInputDevice.I evdevInputDevice.h \
+    inputDevice.I inputDevice.h \
+    inputDeviceManager.I inputDeviceManager.h \
+    inputDeviceNode.h \
+    inputDeviceSet.h inputDeviceSet.I \
+    ioKitInputDevice.h \
+    ioKitInputDeviceManager.h \
+    linuxInputDeviceManager.h \
+    linuxJoystickDevice.h linuxJoystickDevice.I \
     trackerData.I trackerData.h \
     trackerNode.I trackerNode.h \
-    virtualMouse.h
+    virtualMouse.h \
+    winInputDeviceManager.h \
+    winRawInputDevice.h \
+    xInputDevice.h
 
   #define IGATESCAN all
 
