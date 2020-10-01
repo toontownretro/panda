@@ -1,12 +1,13 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS \
     p3event p3gsgbase p3gobj p3putil p3linmath \
     p3downloader p3express p3pandabase p3pstatclient p3pgraph
-#define USE_PACKAGES python
 
 #begin lib_target
   #define TARGET p3pgraphnodes
+
+  #define BUILDING_DLL BUILDING_PANDA_PGRAPHNODES
 
   #define SOURCES \
     ambientLight.h ambientLight.I \
@@ -20,10 +21,12 @@
     lodNode.I lodNode.h lodNodeType.h \
     nodeCullCallbackData.h nodeCullCallbackData.I \
     pointLight.h pointLight.I \
+    rectangleLight.h rectangleLight.I \
     sceneGraphAnalyzer.h sceneGraphAnalyzer.I \
     selectiveChildNode.h selectiveChildNode.I \
     sequenceNode.h sequenceNode.I \
     shaderGenerator.h shaderGenerator.I \
+    sphereLight.h sphereLight.I \
     spotlight.h spotlight.I \
     switchNode.h switchNode.I \
     uvScrollNode.I uvScrollNode.h
@@ -40,10 +43,12 @@
     lodNode.cxx lodNodeType.cxx \
     nodeCullCallbackData.cxx \
     pointLight.cxx \
+    rectangleLight.cxx \
     sceneGraphAnalyzer.cxx \
     selectiveChildNode.cxx \
     sequenceNode.cxx \
     shaderGenerator.cxx \
+    sphereLight.cxx \
     spotlight.cxx \
     switchNode.cxx \
     uvScrollNode.cxx
@@ -60,10 +65,12 @@
     lodNode.I lodNode.h lodNodeType.h \
     nodeCullCallbackData.h nodeCullCallbackData.I \
     pointLight.h pointLight.I \
+    rectangleLight.h rectangleLight.I \
     sceneGraphAnalyzer.h sceneGraphAnalyzer.I \
     selectiveChildNode.h selectiveChildNode.I \
     sequenceNode.h sequenceNode.I \
     shaderGenerator.h shaderGenerator.I \
+    sphereLight.h sphereLight.I \
     spotlight.h spotlight.I \
     switchNode.h switchNode.I \
     uvScrollNode.I uvScrollNode.h

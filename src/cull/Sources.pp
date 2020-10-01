@@ -1,12 +1,11 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS \
-    p3pgraph p3event p3gsgbase p3gobj p3putil p3linmath \
-    p3downloader p3express p3pandabase p3pstatclient
-
+    p3pgraph
 
 #begin lib_target
   #define TARGET p3cull
+
+  #define BUILDING_DLL BUILDING_PANDA_CULL
 
   #define SOURCES \
     binCullHandler.h binCullHandler.I \

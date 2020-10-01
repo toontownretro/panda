@@ -1,8 +1,8 @@
 #define BUILD_DIRECTORY $[WINDOWS_PLATFORM]
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
+#define OTHER_LIBS p3interrogatedb:m \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
-#define WIN_SYS_LIBS Imm32.lib
+#define WIN_SYS_LIBS imm32.lib user32.lib
 
 #define BUILDING_DLL BUILDING_PANDAWIN
 

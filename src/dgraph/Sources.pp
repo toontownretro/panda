@@ -1,10 +1,11 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3dgraph
   #define LOCAL_LIBS \
-    p3pstatclient p3pgraph p3putil p3mathutil p3event
+    p3pgraph
+
+  #define BUILDING_DLL BUILDING_PANDA_DGRAPH
 
   #define SOURCES \
     config_dgraph.h \

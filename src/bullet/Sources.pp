@@ -1,7 +1,7 @@
 #define BUILD_DIRECTORY $[HAVE_BULLET]
 #define BUILDING_DLL BUILDING_PANDABULLET
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3bullet
@@ -39,6 +39,7 @@
     bulletPersistentManifold.h bulletPersistentManifold.I \
     bulletPlaneShape.h bulletPlaneShape.I \
     bulletRigidBodyNode.h bulletRigidBodyNode.I \
+    bulletRotationalLimitMotor.h bulletRotationalLimitMotor.I \
     bulletShape.h bulletShape.I \
     bulletSliderConstraint.h bulletSliderConstraint.I \
     bulletSoftBodyConfig.h bulletSoftBodyConfig.I \
@@ -50,6 +51,7 @@
     bulletSphereShape.h bulletSphereShape.I \
     bulletSphericalConstraint.h bulletSphericalConstraint.I \
     bulletTickCallbackData.h bulletTickCallbackData.I \
+    bulletTranslationalLimitMotor.h bulletTranslationalLimitMotor.I \
     bulletTriangleMesh.h bulletTriangleMesh.I \
     bulletTriangleMeshShape.h bulletTriangleMeshShape.I \
     bulletVehicle.h bulletVehicle.I \
@@ -89,6 +91,7 @@
     bulletPersistentManifold.cxx \
     bulletPlaneShape.cxx \
     bulletRigidBodyNode.cxx \
+    bulletRotationalLimitMotor.cxx \
     bulletShape.cxx \
     bulletSliderConstraint.cxx \
     bulletSoftBodyConfig.cxx \
@@ -100,6 +103,7 @@
     bulletSphereShape.cxx \
     bulletSphericalConstraint.cxx \
     bulletTickCallbackData.cxx \
+    bulletTranslationalLimitMotor.cxx \
     bulletTriangleMesh.cxx \
     bulletTriangleMeshShape.cxx \
     bulletVehicle.cxx \
@@ -139,6 +143,7 @@
     bulletPersistentManifold.h bulletPersistentManifold.I \
     bulletPlaneShape.h bulletPlaneShape.I \
     bulletRigidBodyNode.h bulletRigidBodyNode.I \
+    bulletRotationalLimitMotor.h bulletRotationalLimitMotor.I \
     bulletShape.h bulletShape.I \
     bulletSliderConstraint.h bulletSliderConstraint.I \
     bulletSoftBodyConfig.h bulletSoftBodyConfig.I \
@@ -150,6 +155,7 @@
     bulletSphereShape.h bulletSphereShape.I \
     bulletSphericalConstraint.h bulletSphericalConstraint.I \
     bulletTickCallbackData.h bulletTickCallbackData.I \
+    bulletTranslationalLimitMotor.h bulletTranslationalLimitMotor.I \
     bulletTriangleMesh.h bulletTriangleMesh.I \
     bulletTriangleMeshShape.h bulletTriangleMeshShape.I \
     bulletVehicle.h bulletVehicle.I \

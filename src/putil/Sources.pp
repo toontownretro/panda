@@ -1,10 +1,12 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS p3pipeline p3linmath p3express p3pandabase
 #define USE_PACKAGES zlib
 
 #begin lib_target
   #define TARGET p3putil
+
+  #define BUILDING_DLL BUILDING_PANDA_PUTIL
 
   #define SOURCES \
     animInterface.h animInterface.I \
@@ -25,7 +27,6 @@
     cachedTypedWritableReferenceCount.h cachedTypedWritableReferenceCount.I \
     callbackData.h callbackData.I \
     callbackObject.h callbackObject.I \
-    callbackObject_ext.h callbackObject_ext.I \
     clockObject.h clockObject.I \
     colorSpace.h collideMask.h \
     copyOnWriteObject.h copyOnWriteObject.I \
@@ -64,11 +65,12 @@
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
     timedCycle.I timedCycle.h typedWritable.I \
-    typedWritable.h typedWritable_ext.h typedWritable_ext.cxx \
+    typedWritable.h \
     typedWritableReferenceCount.I \
     typedWritableReferenceCount.h updateSeq.I updateSeq.h \
     uniqueIdAllocator.h \
     vector_typedWritable.h \
+    vector_ulong.h \
     vector_ushort.h vector_writable.h \
     writableConfigurable.h \
     writableParam.I writableParam.h
@@ -138,7 +140,6 @@
     cachedTypedWritableReferenceCount.h cachedTypedWritableReferenceCount.I \
     callbackData.h callbackData.I \
     callbackObject.h callbackObject.I \
-    callbackObject_ext.h callbackObject_ext.I \
     clockObject.h clockObject.I \
     colorSpace.h collideMask.h \
     copyOnWriteObject.h copyOnWriteObject.I \
@@ -165,26 +166,45 @@
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
     modifierButtons.I \
-    modifierButtons.h mouseButton.h mouseData.I mouseData.h \
+    modifierButtons.h mouseButton.h mouseData.h \
     nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \
     pbitops.I pbitops.h \
     portalMask.h \
     pta_ushort.h \
-    pythonCallbackObject.h pythonCallbackObject.I \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
     timedCycle.I timedCycle.h typedWritable.I \
-    typedWritable.h typedWritable_ext.h typedWritableReferenceCount.I \
+    typedWritable.h typedWritableReferenceCount.I \
     typedWritableReferenceCount.h updateSeq.I updateSeq.h \
     uniqueIdAllocator.h \
     vector_typedWritable.h \
+    vector_ulong.h \
     vector_ushort.h vector_writable.h \
     writableConfigurable.h writableParam.I \
     writableParam.h
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    bamReader_ext.cxx \
+    bamReader_ext.h \
+    bitArray_ext.cxx \
+    bitArray_ext.h \
+    bitArray_ext.I \
+    bitMask_ext.h \
+    bitMask_ext.I \
+    callbackObject_ext.h \
+    doubleBitMask_ext.h \
+    doubleBitMask_ext.I \
+    pythonCallbackObject.cxx \
+    pythonCallbackObject.h \
+    sparseArray_ext.cxx \
+    sparseArray_ext.h \
+    sparseArray_ext.I \
+    typedWritable_ext.cxx \
+    typedWritable_ext.h
 
 #end lib_target
 

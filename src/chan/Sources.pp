@@ -1,22 +1,24 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3chan
   #define LOCAL_LIBS \
-    p3pgraph p3putil p3linmath p3mathutil p3event
+    p3pgraph
+
+  #define BUILDING_DLL BUILDING_PANDA_CHAN
 
   #define SOURCES \
     animBundle.I animBundle.h \
     animBundleNode.I animBundleNode.h \
     animChannel.I animChannel.h animChannelBase.I  \
     animChannelBase.h \
+    animChannelFixed.I animChannelFixed.h \
     animChannelMatrixDynamic.I animChannelMatrixDynamic.h \
     animChannelMatrixFixed.I animChannelMatrixFixed.h \
     animChannelMatrixXfmTable.I animChannelMatrixXfmTable.h \
     animChannelScalarDynamic.I animChannelScalarDynamic.h \
     animChannelScalarTable.I animChannelScalarTable.h \
-    animControl.I animControl.N  \
+    animControl.I \
     animControl.h animControlCollection.I  \
     animControlCollection.h animGroup.I animGroup.h \
     animPreloadTable.I animPreloadTable.h \
@@ -38,6 +40,7 @@
     animBundleNode.cxx \
     animChannel.cxx  \
     animChannelBase.cxx \
+    animChannelFixed.cxx \
     animChannelMatrixDynamic.cxx  \
     animChannelMatrixFixed.cxx  \
     animChannelMatrixXfmTable.cxx  \

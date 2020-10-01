@@ -1,10 +1,12 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-     p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS \
+     p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 
 #begin lib_target
   #define TARGET p3audio
   #define LOCAL_LIBS p3putil p3event p3movies p3linmath
+
+  #define BUILDING_DLL BUILDING_PANDA_AUDIO
 
   #define SOURCES \
     config_audio.h \

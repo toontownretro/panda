@@ -12,7 +12,6 @@
  */
 
 #include "dcast.h"
-#include "config_express.h"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -20,6 +19,8 @@
 #endif
 #include <windows.h>  // for IsBadWritePtr()
 #endif
+
+#define DO_DCAST 1
 
 /**
  * This function performs the actual check that the indicated TypedObject
@@ -37,18 +38,18 @@ _dcast_verify(TypeHandle want_handle, size_t want_size,
     }
 #if defined(_DEBUG) && defined(_WIN32)
     if (IsBadWritePtr((TypedObject *)ptr, want_size)) {
-      express_cat->warning()
+      std::cerr
         << "Attempt to cast invalid pointer to "
         << want_handle << "\n";
       return false;
     }
 #endif
     if (!ptr->is_of_type(want_handle)) {
-      express_cat->error()
+      std::cerr
         << "Attempt to cast pointer from " << ptr->get_type()
         << " to " << want_handle << "\n";
       if (ptr->get_type() == TypedObject::get_class_type()) {
-        express_cat->error(false)
+        std::cerr
           << "Perhaps pointer was inadvertently deleted?\n";
       }
       return false;

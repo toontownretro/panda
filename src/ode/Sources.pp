@@ -1,8 +1,8 @@
 #define BUILD_DIRECTORY $[HAVE_ODE]
 #define BUILDING_DLL BUILDING_PANDAODE
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3ode
@@ -15,14 +15,12 @@
     ode_includes.h config_ode.h \
     odeWorld.I odeWorld.h \
     odeMass.I odeMass.h \
-    odeBody.I odeBody.h odeBody_ext.h \
+    odeBody.I odeBody.h \
     odeJointGroup.I odeJointGroup.h \
-    odeJoint.I odeJoint.h odeJoint_ext.h \
-    odeUtil.h odeUtil_ext.h \
+    odeJoint.I odeJoint.h \
+    odeUtil.h \
     odeSpace.I odeSpace.h \
-    odeSpace_ext.I odeSpace_ext.h \
     odeGeom.I odeGeom.h \
-    odeGeom_ext.I odeGeom_ext.h \
     odeSurfaceParameters.I odeSurfaceParameters.h \
     odeContactGeom.I odeContactGeom.h \
     odeContact.I odeContact.h \
@@ -55,12 +53,12 @@
   #define COMPOSITE_SOURCES \
     config_ode.cxx \
     odeWorld.cxx odeMass.cxx \
-    odeBody.cxx odeBody_ext.cxx \
+    odeBody.cxx \
     odeJointGroup.cxx \
-    odeJoint.cxx odeJoint_ext.cxx \
-    odeUtil.cxx odeUtil_ext.cxx \
-    odeSpace.cxx odeSpace_ext.cxx \
-    odeGeom.cxx odeGeom_ext.cxx \
+    odeJoint.cxx \
+    odeUtil.cxx \
+    odeSpace.cxx \
+    odeGeom.cxx \
     odeSurfaceParameters.cxx \
     odeContactGeom.cxx odeContact.cxx \
     odeAMotorJoint.cxx odeBallJoint.cxx \
@@ -117,5 +115,20 @@
     odeCollisionEntry.I odeCollisionEntry.h
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    odeBody_ext.cxx \
+    odeBody_ext.h \
+    odeBody_ext.I \
+    odeGeom_ext.cxx \
+    odeGeom_ext.h \
+    odeGeom_ext.I \
+    odeJoint_ext.cxx \
+    odeJoint_ext.h \
+    odeSpace_ext.cxx \
+    odeSpace_ext.h \
+    odeSpace_ext.I \
+    odeUtil_ext.cxx \
+    odeUtil_ext.h
 
 #end lib_target

@@ -1,14 +1,18 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
-#define USE_PACKAGES jpeg png zlib tiff
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
+#define USE_PACKAGES jpeg tiff png openexr
 
 #begin lib_target
   #define TARGET p3pnmimagetypes
   #define LOCAL_LIBS \
     p3pnmimage
 
+  #define BUILDING_DLL BUILDING_PANDA_PNMIMAGETYPES
+
   #define SOURCES  \
-     config_pnmimagetypes.h pnmFileTypeBMP.h  \
+     config_pnmimagetypes.h \
+     pnmFileTypeBMP.h  \
+     pnmFileTypeEXR.h  \
      pnmFileTypeIMG.h  \
      pnmFileTypePNG.h \
      pnmFileTypePNM.h \
@@ -16,7 +20,8 @@
      pnmFileTypeSGI.h pnmFileTypeSoftImage.h  \
      pnmFileTypeTGA.h \
      pnmFileTypeTIFF.h \
-     pnmFileTypeJPG.h
+     pnmFileTypeJPG.h \
+     sgi.h
 
   #define COMPOSITE_SOURCES  \
      config_pnmimagetypes.cxx  \

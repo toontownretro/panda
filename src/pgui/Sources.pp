@@ -1,11 +1,13 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3pgui
   #define LOCAL_LIBS \
     p3audio p3grutil p3text p3tform p3linmath p3event p3putil p3gobj \
     p3mathutil
+
+  #define BUILDING_DLL BUILDING_PANDA_PGUI
 
   #define SOURCES  \
     config_pgui.h \

@@ -1,11 +1,13 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3tform
   #define LOCAL_LIBS \
     p3grutil p3dgraph p3pgraph p3linmath p3display p3event p3putil p3gobj p3gsgbase \
     p3mathutil p3device
+
+  #define BUILDING_DLL BUILDING_PANDA_TFORM
 
   #define SOURCES  \
     buttonThrower.I buttonThrower.h \
@@ -14,7 +16,8 @@
     mouseInterfaceNode.I mouseInterfaceNode.h \
     mouseSubregion.I mouseSubregion.h \
     mouseWatcher.I mouseWatcher.h \
-    mouseWatcherBase.h mouseWatcherGroup.h \
+    mouseWatcherBase.h mouseWatcherBase.I \
+    mouseWatcherGroup.h \
     mouseWatcherParameter.I mouseWatcherParameter.h \
     mouseWatcherRegion.I mouseWatcherRegion.h \
     trackball.h \
@@ -40,7 +43,8 @@
     mouseInterfaceNode.I mouseInterfaceNode.h \
     mouseSubregion.I mouseSubregion.h \
     mouseWatcher.I mouseWatcher.h \
-    mouseWatcherBase.h mouseWatcherGroup.h \
+    mouseWatcherBase.h mouseWatcherBase.I \
+    mouseWatcherGroup.h \
     mouseWatcherParameter.I mouseWatcherParameter.h \
     mouseWatcherRegion.I mouseWatcherRegion.h \
     trackball.h \

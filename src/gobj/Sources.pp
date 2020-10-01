@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 //#define OSX_SYS_LIBS mx
 #define USE_PACKAGES zlib cg squish
 
@@ -7,6 +7,8 @@
   #define TARGET p3gobj
   #define LOCAL_LIBS \
     p3pstatclient p3event p3linmath p3mathutil p3pnmimage p3gsgbase p3putil
+
+  #define BUILDING_DLL BUILDING_PANDA_GOBJ
 
   #define SOURCES \
     adaptiveLru.I adaptiveLru.h \
@@ -22,13 +24,16 @@
     geomPrimitive.h geomPrimitive.I \
     geomPatches.h \
     geomTriangles.h \
+    geomTrianglesAdjacency.h \
     geomTristrips.h \
+    geomTristripsAdjacency.h \
     geomTrifans.h \
     geomLines.h \
+    geomLinesAdjacency.h \
     geomLinestrips.h \
+    geomLinestripsAdjacency.h \
     geomPoints.h \
     geomVertexArrayData.h geomVertexArrayData.I \
-    geomVertexArrayData_ext.h \
     geomVertexArrayFormat.h geomVertexArrayFormat.I \
     geomCacheEntry.h geomCacheEntry.I \
     geomCacheManager.h geomCacheManager.I \
@@ -41,7 +46,6 @@
     geomVertexWriter.h geomVertexWriter.I \
     indexBufferContext.I indexBufferContext.h \
     internalName.I internalName.h \
-    internalName_ext.h \
     lens.h lens.I \
     material.I material.h materialPool.I materialPool.h  \
     matrixLens.I matrixLens.h \
@@ -54,13 +58,13 @@
     samplerState.I samplerState.h \
     savedContext.I savedContext.h \
     shader.I shader.h \
+    shaderBuffer.h shaderBuffer.I \
     shaderContext.h shaderContext.I \
     simpleAllocator.h simpleAllocator.I \
     simpleLru.h simpleLru.I \
     sliderTable.I sliderTable.h \
     texture.I texture.h \
     textureCollection.I textureCollection.h \
-    textureCollection_ext.h \
     textureContext.I textureContext.h \
     texturePeeker.I texturePeeker.h \
     texturePool.I texturePool.h \
@@ -98,13 +102,16 @@
     geomPrimitive.cxx \
     geomPatches.cxx \
     geomTriangles.cxx \
+    geomTrianglesAdjacency.cxx \
     geomTristrips.cxx \
+    geomTristripsAdjacency.cxx \
     geomTrifans.cxx \
     geomLines.cxx \
+    geomLinesAdjacency.cxx \
     geomLinestrips.cxx \
+    geomLinestripsAdjacency.cxx \
     geomPoints.cxx \
     geomVertexArrayData.cxx \
-    geomVertexArrayData_ext.cxx \
     geomVertexArrayFormat.cxx \
     geomCacheEntry.cxx \
     geomCacheManager.cxx \
@@ -118,7 +125,6 @@
     indexBufferContext.cxx \
     material.cxx  \
     internalName.cxx \
-    internalName_ext.cxx \
     lens.cxx  \
     materialPool.cxx matrixLens.cxx \
     occlusionQueryContext.cxx \
@@ -136,7 +142,6 @@
     sliderTable.cxx \
     texture.cxx \
     textureCollection.cxx \
-    textureCollection_ext.cxx \
     textureContext.cxx \
     texturePeeker.cxx \
     texturePool.cxx \
@@ -176,10 +181,14 @@
     geomPrimitive.h geomPrimitive.I \
     geomPatches.h \
     geomTriangles.h \
+    geomTrianglesAdjacency.h \
     geomTristrips.h \
+    geomTristripsAdjacency.h \
     geomTrifans.h \
     geomLines.h \
+    geomLinesAdjacency.h \
     geomLinestrips.h \
+    geomLinestripsAdjacency.h \
     geomPoints.h \
     geomVertexArrayData.h geomVertexArrayData.I \
     geomVertexArrayFormat.h geomVertexArrayFormat.I \
@@ -235,8 +244,21 @@
     vertexTransform.I vertexTransform.h \
     videoTexture.I videoTexture.h
 
-
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    internalName_ext.cxx \
+    internalName_ext.h \
+    geomVertexArrayData_ext.cxx \
+    geomVertexArrayData_ext.h \
+    texture_ext.cxx \
+    texture_ext.h \
+    textureCollection_ext.cxx \
+    textureCollection_ext.h \
+    texturePool_ext.cxx \
+    texturePool_ext.h \
+    pythonTexturePoolFilter.cxx \
+    pythonTexturePoolFilter.h
 
 #end lib_target
 

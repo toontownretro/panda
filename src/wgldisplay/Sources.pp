@@ -3,13 +3,15 @@
 #define USE_PACKAGES gl cg
 
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
+#define OTHER_LIBS p3interrogatedb:m \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
 
 #begin lib_target
   #define TARGET p3wgldisplay
   #define LOCAL_LIBS \
     p3display p3putil p3windisplay p3glgsg
+
+  #define BUILDING_DLL BUILDING_PANDA_WGLDISPLAY
 
   #define INSTALL_HEADERS \
     config_wgldisplay.h \

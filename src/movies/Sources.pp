@@ -1,16 +1,21 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 
 #begin lib_target
   #define TARGET p3movies
   #define LOCAL_LIBS p3gobj
 
-  #define USE_PACKAGES dx9 vorbis
+  #define USE_PACKAGES vorbis opus
   #define WIN_SYS_LIBS $[WIN_SYS_LIBS] strmiids.lib winmm.lib
 
+  #define BUILDING_DLL BUILDING_PANDA_MOVIES
+
   #define SOURCES \
+    dr_flac.h \
     config_movies.h \
+    flacAudio.h flacAudio.I \
+    flacAudioCursor.h flacAudioCursor.I \
     inkblotVideo.h inkblotVideo.I \
     inkblotVideoCursor.h inkblotVideoCursor.I \
     microphoneAudio.h microphoneAudio.I \
@@ -19,6 +24,8 @@
     movieTypeRegistry.h movieTypeRegistry.I \
     movieVideo.h movieVideo.I \
     movieVideoCursor.h movieVideoCursor.I \
+    opusAudio.h opusAudio.I \
+    opusAudioCursor.h opusAudioCursor.I \
     userDataAudio.h userDataAudio.I \
     userDataAudioCursor.h userDataAudioCursor.I \
     vorbisAudio.h vorbisAudio.I \
@@ -28,6 +35,8 @@
 
   #define COMPOSITE_SOURCES \
     config_movies.cxx \
+    flacAudio.cxx \
+    flacAudioCursor.cxx \
     inkblotVideo.cxx \
     inkblotVideoCursor.cxx \
     microphoneAudio.cxx \
@@ -37,6 +46,8 @@
     movieTypeRegistry.cxx \
     movieVideo.cxx \
     movieVideoCursor.cxx \
+    opusAudio.cxx \
+    opusAudioCursor.cxx \
     userDataAudio.cxx \
     userDataAudioCursor.cxx \
     vorbisAudio.cxx \
@@ -45,19 +56,7 @@
     wavAudioCursor.cxx
 
   #define INSTALL_HEADERS \
-    config_movies.h \
-    inkblotVideo.h inkblotVideo.I \
-    inkblotVideoCursor.h inkblotVideoCursor.I \
-    microphoneAudio.h microphoneAudio.I \
-    movieAudio.h movieAudio.I \
-    movieAudioCursor.h movieAudioCursor.I \
-    movieTypeRegistry.h movieTypeRegistry.I \
-    movieVideo.h movieVideo.I \
-    movieVideoCursor.h movieVideoCursor.I \
-    vorbisAudio.h vorbisAudio.I \
-    vorbisAudioCursor.h vorbisAudioCursor.I \
-    wavAudio.h wavAudio.I \
-    wavAudioCursor.h wavAudioCursor.I
+    $[SOURCES]
 
   #define IGATESCAN all
 

@@ -1,9 +1,11 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS p3dgraph p3putil p3express p3pandabase
 
 #begin lib_target
   #define TARGET p3recorder
+
+  #define BUILDING_DLL BUILDING_PANDA_RECORDER
 
   #define SOURCES \
     config_recorder.h \

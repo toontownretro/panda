@@ -1,6 +1,6 @@
 #define LOCAL_LIBS p3express p3pandabase
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #define SELECT_TAU select.tau
 
@@ -8,21 +8,19 @@
   #define TARGET p3pipeline
   #define USE_PACKAGES threads
 
-  #define SOURCES \
-    asyncTaskBase.h asyncTaskBase.I \
-    contextSwitch.c contextSwitch.h \
+  #define BUILDING_DLL BUILDING_PANDA_PIPELINE
+
+  #define HEADERS \
+    contextSwitch.h \
     blockerSimple.h blockerSimple.I \
     conditionVar.h conditionVar.I \
     conditionVarDebug.h conditionVarDebug.I \
     conditionVarDirect.h conditionVarDirect.I \
     conditionVarDummyImpl.h conditionVarDummyImpl.I \
-    conditionVarFull.h conditionVarFull.I \
-    conditionVarFullDebug.h conditionVarFullDebug.I \
-    conditionVarFullDirect.h conditionVarFullDirect.I \
-    conditionVarFullWin32Impl.h conditionVarFullWin32Impl.I \
+    conditionVarFull.h \
     conditionVarImpl.h \
     conditionVarPosixImpl.h conditionVarPosixImpl.I \
-    conditionVarWin32Impl.h conditionVarWin32Impl.I \
+    $[if $[WINDOWS_PLATFORM], conditionVarWin32Impl.h conditionVarWin32Impl.I] \
     conditionVarSimpleImpl.h conditionVarSimpleImpl.I \
     conditionVarSpinlockImpl.h conditionVarSpinlockImpl.I \
     config_pipeline.h \
@@ -56,38 +54,33 @@
     pipelineCyclerTrivialImpl.h pipelineCyclerTrivialImpl.I \
     pipelineCyclerTrueImpl.h pipelineCyclerTrueImpl.I \
     pmutex.h pmutex.I \
-    pythonThread.h \
     reMutex.I reMutex.h \
     reMutexDirect.h reMutexDirect.I \
     reMutexHolder.I reMutexHolder.h \
+    reMutexSpinlockImpl.h reMutexSpinlockImpl.I \
     psemaphore.h psemaphore.I \
     thread.h thread.I threadImpl.h \
     threadDummyImpl.h threadDummyImpl.I \
     threadPosixImpl.h threadPosixImpl.I \
     threadSimpleImpl.h threadSimpleImpl.I  \
     threadSimpleManager.h threadSimpleManager.I  \
-    threadWin32Impl.h threadWin32Impl.I \
+    $[if $[WINDOWS_PLATFORM], threadWin32Impl.h threadWin32Impl.I] \
     threadPriority.h
 
+  #define SOURCES \
+    $[HEADERS]
+    contextSwitch.c
+
   #define COMPOSITE_SOURCES  \
-    asyncTaskBase.cxx \
     conditionVar.cxx \
     conditionVarDebug.cxx \
     conditionVarDirect.cxx \
     conditionVarDummyImpl.cxx \
-    conditionVarFull.cxx \
-    conditionVarFullDebug.cxx \
-    conditionVarFullDirect.cxx \
-    conditionVarFullWin32Impl.cxx \
     conditionVarPosixImpl.cxx \
-    conditionVarWin32Impl.cxx \
+    $[if $[WINDOWS_PLATFORM], conditionVarWin32Impl.cxx] \
     conditionVarSimpleImpl.cxx \
     conditionVarSpinlockImpl.cxx \
     config_pipeline.cxx \
-    contextSwitch_longjmp_src.c \
-    contextSwitch_posix_src.c \
-    contextSwitch_ucontext_src.c \
-    contextSwitch_windows_src.c \
     cycleData.cxx \
     cycleDataLockedReader.cxx \
     cycleDataLockedStageReader.cxx \
@@ -115,7 +108,6 @@
     pipelineCyclerTrivialImpl.cxx \
     pipelineCyclerTrueImpl.cxx \
     pmutex.cxx \
-    pythonThread.cxx \
     reMutex.cxx \
     reMutexDirect.cxx \
     reMutexHolder.cxx \
@@ -125,71 +117,21 @@
     threadPosixImpl.cxx \
     threadSimpleImpl.cxx \
     threadSimpleManager.cxx \
-    threadWin32Impl.cxx \
+    $[if $[WINDOWS_PLATFORM], threadWin32Impl.cxx] \
     threadPriority.cxx
 
   #define INSTALL_HEADERS  \
-    asyncTaskBase.h asyncTaskBase.I \
-    contextSwitch.h \
-    blockerSimple.h blockerSimple.I \
-    conditionVar.h conditionVar.I \
-    conditionVarDebug.h conditionVarDebug.I \
-    conditionVarDirect.h conditionVarDirect.I \
-    conditionVarDummyImpl.h conditionVarDummyImpl.I \
-    conditionVarFull.h conditionVarFull.I \
-    conditionVarFullDebug.h conditionVarFullDebug.I \
-    conditionVarFullDirect.h conditionVarFullDirect.I \
-    conditionVarFullWin32Impl.h conditionVarFullWin32Impl.I \
-    conditionVarImpl.h \
-    conditionVarPosixImpl.h conditionVarPosixImpl.I \
-    conditionVarWin32Impl.h conditionVarWin32Impl.I \
-    conditionVarSimpleImpl.h conditionVarSimpleImpl.I \
-    conditionVarSpinlockImpl.h conditionVarSpinlockImpl.I \
-    config_pipeline.h \
-    cycleData.h cycleData.I \
-    cycleDataLockedReader.h cycleDataLockedReader.I \
-    cycleDataLockedStageReader.h cycleDataLockedStageReader.I \
-    cycleDataReader.h cycleDataReader.I \
-    cycleDataStageReader.h cycleDataStageReader.I \
-    cycleDataStageWriter.h cycleDataStageWriter.I \
-    cycleDataWriter.h cycleDataWriter.I \
-    cyclerHolder.h cyclerHolder.I \
-    externalThread.h \
-    genericThread.h genericThread.I \
-    lightMutex.I lightMutex.h \
-    lightMutexDirect.h lightMutexDirect.I \
-    lightMutexHolder.I lightMutexHolder.h \
-    lightReMutex.I lightReMutex.h \
-    lightReMutexDirect.h lightReMutexDirect.I \
-    lightReMutexHolder.I lightReMutexHolder.h \
-    mainThread.h \
-    mutexDebug.h mutexDebug.I \
-    mutexDirect.h mutexDirect.I \
-    mutexHolder.h mutexHolder.I \
-    mutexSimpleImpl.h mutexSimpleImpl.I \
-    mutexTrueImpl.h \
-    pipeline.h pipeline.I \
-    pipelineCycler.h pipelineCycler.I \
-    pipelineCyclerLinks.h pipelineCyclerLinks.I \
-    pipelineCyclerBase.h  \
-    pipelineCyclerDummyImpl.h pipelineCyclerDummyImpl.I \
-    pipelineCyclerTrivialImpl.h pipelineCyclerTrivialImpl.I \
-    pipelineCyclerTrueImpl.h pipelineCyclerTrueImpl.I \
-    pmutex.h pmutex.I \
-    pythonThread.h \
-    reMutex.I reMutex.h \
-    reMutexDirect.h reMutexDirect.I \
-    reMutexHolder.I reMutexHolder.h \
-    psemaphore.h psemaphore.I \
-    thread.h thread.I threadImpl.h \
-    threadDummyImpl.h threadDummyImpl.I \
-    threadPosixImpl.h threadPosixImpl.I \
-    threadSimpleImpl.h threadSimpleImpl.I \
-    threadSimpleManager.h threadSimpleManager.I \
-    threadWin32Impl.h threadWin32Impl.I \
-    threadPriority.h
+    $[HEADERS]
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    pmutex_ext.h \
+    pmutex_ext.I \
+    pythonThread.cxx \
+    pythonThread.h \
+    reMutex_ext.h \
+    reMutex_ext.I
 
 #end lib_target
 
@@ -198,7 +140,7 @@
   #define TARGET test_threaddata
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -211,7 +153,7 @@
   #define TARGET test_diners
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -224,7 +166,7 @@
   #define TARGET test_mutex
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -237,7 +179,7 @@
   #define TARGET test_concurrency
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -250,7 +192,7 @@
   #define TARGET test_delete
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -263,7 +205,7 @@
   #define TARGET test_atomic
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \
@@ -277,7 +219,7 @@
   #define TARGET test_setjmp
   #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
+   p3interrogatedb:m p3dconfig:c p3dtoolbase:c p3prc:c \
    p3dtoolutil:c p3dtool:m p3dtoolconfig:m
 
   #define SOURCES \

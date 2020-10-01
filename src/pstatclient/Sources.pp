@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define LOCAL_LIBS \
@@ -7,8 +7,10 @@
 
   #define TARGET p3pstatclient
 
+  #define BUILDING_DLL BUILDING_PANDA_PSTATCLIENT
+
   #define SOURCES \
-     config_pstats.h pStatClient.I pStatClient.h \
+     config_pstatclient.h pStatClient.I pStatClient.h \
      pStatClientImpl.I pStatClientImpl.h \
      pStatClientVersion.I  \
      pStatClientVersion.h pStatClientControlMessage.h  \
@@ -19,7 +21,7 @@
      pStatTimer.I pStatTimer.h
 
   #define COMPOSITE_SOURCES  \
-     config_pstats.cxx pStatClient.cxx pStatClientImpl.cxx \
+     config_pstatclient.cxx pStatClient.cxx pStatClientImpl.cxx \
      pStatClientVersion.cxx  \
      pStatClientControlMessage.cxx \
      pStatCollector.cxx \
@@ -30,7 +32,7 @@
      pStatThread.cxx
 
   #define INSTALL_HEADERS \
-    config_pstats.h pStatClient.I pStatClient.h \
+    config_pstatclient.h pStatClient.I pStatClient.h \
     pStatClientImpl.I pStatClientImpl.h \
     pStatClientVersion.I pStatClientVersion.h \
     pStatClientControlMessage.h pStatCollector.I pStatCollector.h \

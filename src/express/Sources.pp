@@ -1,14 +1,14 @@
 #define LOCAL_LIBS p3pandabase
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3express
-  #define USE_PACKAGES zlib openssl tar
+  #define USE_PACKAGES zlib openssl
+
+  #define BUILDING_DLL BUILDING_PANDA_EXPRESS
 
   #define SOURCES \
     buffer.I buffer.h \
-    ca_bundle_data_src.c \
     checksumHashGenerator.I checksumHashGenerator.h circBuffer.I \
     circBuffer.h \
     compress_string.h \
@@ -17,13 +17,11 @@
     datagram.I datagram.h datagramGenerator.I \
     datagramGenerator.h \
     datagramIterator.I datagramIterator.h datagramSink.I datagramSink.h \
-    dcast.T dcast.h \
+    dcast.h dcast.T \
     encrypt_string.h \
     error_utils.h \
     export_dtool.h \
-    filename_ext.h \
     fileReference.h fileReference.I \
-    globPattern_ext.h \
     hashGeneratorBase.I hashGeneratorBase.h \
     hashVal.I hashVal.h \
     indirectLess.I indirectLess.h \
@@ -31,7 +29,6 @@
     memoryUsage.I memoryUsage.h \
     memoryUsagePointerCounts.I memoryUsagePointerCounts.h \
     memoryUsagePointers.I memoryUsagePointers.h \
-    memoryUsagePointers_ext.h \
     multifile.I multifile.h \
     namable.I \
     namable.h \
@@ -45,36 +42,30 @@
     patchfile.I patchfile.h \
     pointerTo.I pointerTo.h \
     pointerToArray.I pointerToArray.h \
-    pointerToArray_ext.h \
     pointerToArrayBase.I pointerToArrayBase.h \
     pointerToBase.I pointerToBase.h \
     pointerToVoid.I pointerToVoid.h \
-    profileTimer.I profileTimer.h \
     pta_int.h \
     pta_uchar.h pta_double.h pta_float.h \
     pta_stdfloat.h \
-    ramfile.I ramfile.h ramfile_ext.h \
+    ramfile.I ramfile.h \
     referenceCount.I referenceCount.h \
+    stringStreamBuf.I stringStreamBuf.h \
+    stringStream.I stringStream.h \
     subStream.I subStream.h subStreamBuf.h \
     subfileInfo.h subfileInfo.I \
-    streamReader_ext.h \
     temporaryFile.h temporaryFile.I \
-    threadSafePointerTo.I threadSafePointerTo.h \
-    threadSafePointerToBase.I threadSafePointerToBase.h \
     trueClock.I trueClock.h \
-    typeHandle_ext.h \
     typedReferenceCount.I typedReferenceCount.h typedef.h \
-    vector_uchar.h vector_double.h vector_float.h \
-    vector_stdfloat.h \
     virtualFile.I virtualFileList.I virtualFileList.h virtualFileMount.h \
     virtualFileComposite.h virtualFileComposite.I virtualFile.h \
     virtualFileMount.I virtualFileMountMultifile.h \
+    virtualFileMountAndroidAsset.h virtualFileMountAndroidAsset.I \
     virtualFileMountMultifile.I \
     virtualFileMountRamdisk.h virtualFileMountRamdisk.I \
     virtualFileMountSystem.h virtualFileMountSystem.I \
     virtualFileSimple.h virtualFileSimple.I \
     virtualFileSystem.h virtualFileSystem.I \
-    virtualFileSystem_ext.h \
     weakPointerCallback.I weakPointerCallback.h \
     weakPointerTo.I weakPointerTo.h \
     weakPointerToBase.I weakPointerToBase.h \
@@ -90,13 +81,13 @@
     copy_stream.cxx \
     datagram.cxx datagramGenerator.cxx \
     datagramIterator.cxx \
-    datagramSink.cxx dcast.cxx \
+    datagramSink.cxx \
+    dcast.cxx \
     encrypt_string.cxx \
     error_utils.cxx \
     fileReference.cxx \
     hashGeneratorBase.cxx hashVal.cxx \
     memoryInfo.cxx memoryUsage.cxx memoryUsagePointerCounts.cxx \
-    memoryUsagePointers_ext.cxx \
     memoryUsagePointers.cxx multifile.cxx \
     namable.cxx \
     nodePointerTo.cxx \
@@ -111,28 +102,24 @@
     pointerToArray.cxx \
     pointerToBase.cxx \
     pointerToVoid.cxx \
-    profileTimer.cxx \
     pta_int.cxx \
     pta_uchar.cxx pta_double.cxx pta_float.cxx \
-    ramfile_ext.cxx \
     ramfile.cxx \
     referenceCount.cxx \
-    streamReader_ext.cxx \
+    stringStreamBuf.cxx \
+    stringStream.cxx \
     subStream.cxx subStreamBuf.cxx \
     subfileInfo.cxx \
     temporaryFile.cxx \
-    threadSafePointerTo.cxx \
-    threadSafePointerToBase.cxx \
     trueClock.cxx \
     typedReferenceCount.cxx \
-    vector_uchar.cxx vector_double.cxx vector_float.cxx \
     virtualFileComposite.cxx virtualFile.cxx virtualFileList.cxx \
     virtualFileMount.cxx \
+    $[if $[ANDROID_PLATFORM], virtualFileMountAndroidAsset.cxx] \
     virtualFileMountMultifile.cxx \
     virtualFileMountRamdisk.cxx \
     virtualFileMountSystem.cxx \
     virtualFileSimple.cxx virtualFileSystem.cxx \
-    virtualFileSystem_ext.cxx \
     weakPointerCallback.cxx \
     weakPointerTo.cxx \
     weakPointerToBase.cxx \
@@ -143,7 +130,6 @@
 
   #define INSTALL_HEADERS  \
     buffer.I buffer.h \
-    ca_bundle_data_src.c \
     checksumHashGenerator.I checksumHashGenerator.h circBuffer.I \
     circBuffer.h \
     compress_string.h \
@@ -152,7 +138,7 @@
     datagram.I datagram.h datagramGenerator.I \
     datagramGenerator.h \
     datagramIterator.I datagramIterator.h datagramSink.I datagramSink.h \
-    dcast.T dcast.h \
+    dcast.h dcast.T \
     encrypt_string.h \
     error_utils.h \
     fileReference.h fileReference.I \
@@ -179,21 +165,18 @@
     pointerToArrayBase.I pointerToArrayBase.h \
     pointerToBase.I pointerToBase.h \
     pointerToVoid.I pointerToVoid.h \
-    profileTimer.I profileTimer.h \
     pta_int.h \
     pta_uchar.h pta_double.h pta_float.h \
     pta_stdfloat.h \
     ramfile.I ramfile.h \
     referenceCount.I referenceCount.h \
+    stringStreamBuf.I stringStreamBuf.h \
+    stringStream.I stringStream.h \
     subStream.I subStream.h subStreamBuf.h \
     subfileInfo.h subfileInfo.I \
     temporaryFile.h temporaryFile.I \
-    threadSafePointerTo.I threadSafePointerTo.h \
-    threadSafePointerToBase.I threadSafePointerToBase.h \
     trueClock.I trueClock.h \
     typedReferenceCount.I typedReferenceCount.h typedef.h \
-    vector_uchar.h vector_double.h vector_float.h \
-    vector_stdfloat.h \
     virtualFile.I virtualFileList.I virtualFileList.h virtualFileMount.h \
     virtualFileComposite.h virtualFileComposite.I virtualFile.h \
     virtualFileMount.I virtualFileMountMultifile.h \
@@ -211,6 +194,41 @@
     zStream.I zStream.h zStreamBuf.h
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    datagram_ext.h \
+    memoryUsagePointers_ext.cxx \
+    memoryUsagePointers_ext.h \
+    pointerToArray_ext.h \
+    ramfile_ext.cxx \
+    ramfile_ext.h \
+    stringStream_ext.cxx \
+    stringStream_ext.h \
+    virtualFileSystem_ext.cxx \
+    virtualFileSystem_ext.h \
+    virtualFile_ext.cxx \
+    virtualFile_ext.h
+
+  // These are extensions of classes in dtool.  We define them here because we
+  // can't directly run interrogate on dtool.  See config_express.N for more
+  // information on this.
+  #define IGATEEXT $[IGATEEXT] \
+    filename_ext.cxx \
+    filename_ext.h \
+    globPattern_ext.cxx \
+    globPattern_ext.h \
+    iostream_ext.cxx \
+    iostream_ext.h \
+    streamReader_ext.cxx \
+    streamReader_ext.h \
+    streamWriter_ext.cxx \
+    streamWriter_ext.h \
+    textEncoder_ext.cxx \
+    textEncoder_ext.h \
+    textEncoder_ext.I \
+    typeHandle_ext.cxx \
+    typeHandle_ext.h
+
   #define WIN_SYS_LIBS \
      advapi32.lib ws2_32.lib $[WIN_SYS_LIBS]
 
@@ -218,6 +236,9 @@
   // them here so they get into the panda build system.
   #if $[ne $[PLATFORM], FreeBSD]
     #define UNIX_SYS_LIBS dl
+  #endif
+  #if $[ANDROID_PLATFORM]
+    #define UNIX_SYS_LIBS android
   #endif
   #define WIN_SYS_LIBS shell32.lib $[WIN_SYS_LIBS]
   #define OSX_SYS_FRAMEWORKS Foundation $[if $[not $[BUILD_IPHONE]],AppKit]

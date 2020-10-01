@@ -1,7 +1,7 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
-#define USE_PACKAGES opencv artoolkit jpeg
+#define USE_PACKAGES opencv artoolkit
 
 #define BUILDING_DLL BUILDING_VISION
 
@@ -10,13 +10,17 @@
   #define LOCAL_LIBS \
     p3display p3text p3pgraph p3gobj p3linmath p3putil p3audio p3movies
 
+  #define BUILDNG_DLL BUILDING_PANDA_VISION
+
   #define SOURCES \
     arToolKit.I arToolKit.h \
     config_vision.h \
     openCVTexture.I openCVTexture.h \
+    webcamVideoCursorOpenCV.h \
+    webcamVideoCursorV4L.h \
     webcamVideo.h webcamVideo.I \
-    webcamVideoCursorOpenCV.h webcamVideoOpenCV.h \
-    webcamVideoCursorV4L.h webcamVideoV4L.h
+    webcamVideoOpenCV.h \
+    webcamVideoV4L.h
 
   #define COMPOSITE_SOURCES \
     arToolKit.cxx \
@@ -31,10 +35,13 @@
 
   #define INSTALL_HEADERS \
     arToolKit.I arToolKit.h \
+    config_vision.h \
     openCVTexture.I openCVTexture.h \
+    webcamVideoCursorOpenCV.h \
+    webcamVideoCursorV4L.h \
     webcamVideo.h webcamVideo.I \
-    webcamVideoCursorOpenCV.h webcamVideoOpenCV.h \
-    webcamVideoCursorV4L.h webcamVideoV4L.h
+    webcamVideoOpenCV.h \
+    webcamVideoV4L.h
 
   #define IGATESCAN all
 

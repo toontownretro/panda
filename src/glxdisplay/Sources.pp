@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_GLX]
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
+#define OTHER_LIBS p3interrogatedb:m \
                    p3dtoolutil:c p3dtoolbase:c p3dtool:m
 #define USE_PACKAGES gl glx cg
 #if $[LINK_IN_GLXGETPROCADDRESS]
@@ -17,7 +17,7 @@
     glxGraphicsBuffer.h glxGraphicsBuffer.I \
     glxGraphicsPipe.h glxGraphicsPipe.I \
     glxGraphicsPixmap.h glxGraphicsPixmap.I \
-    glxGraphicsWindow.h \
+    glxGraphicsWindow.h glxGraphicsWindow.I \
     glxGraphicsStateGuardian.h glxGraphicsStateGuardian.I \
     posixGraphicsStateGuardian.h posixGraphicsStateGuardian.I \
     panda_glxext.h
@@ -34,6 +34,6 @@
   #define INSTALL_HEADERS \
     glxGraphicsBuffer.I glxGraphicsBuffer.h \
     glxGraphicsPipe.h glxGraphicsPipe.I \
-    glxGraphicsWindow.h
+    glxGraphicsWindow.h glxGraphicsWindow.I
 
 #end lib_target

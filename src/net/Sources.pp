@@ -1,7 +1,7 @@
 #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-   p3dtoolutil:c p3dtoolbase:c p3prc:c p3dtool:m
-#define WIN_SYS_LIBS Iphlpapi.lib
+   p3interrogatedb:m \
+   p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
+#define WIN_SYS_LIBS iphlpapi.lib
 
 #define BUILD_DIRECTORY $[and $[HAVE_NET],$[WANT_NATIVE_NET]]
 #define USE_PACKAGES net
@@ -10,6 +10,8 @@
   #define TARGET p3net
   #define LOCAL_LIBS \
     p3express p3downloader p3pandabase p3nativenet p3pipeline
+
+  #define BUILDING_DLL BUILDING_PANDA_NET
 
   #define SOURCES \
      config_net.h connection.h connectionListener.h  \

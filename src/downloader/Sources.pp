@@ -1,10 +1,10 @@
-#define LOCAL_LIBS p3express p3pandabase
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3prc:c p3dtool:m
-#define USE_PACKAGES zlib net openssl
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
 
 #begin lib_target
   #define TARGET p3downloader
+  #define LOCAL_LIBS p3express
+
+  #define BUILDING_DLL BUILDING_PANDA_DOWNLOADER
 
   #define SOURCES \
     config_downloader.h \
@@ -17,7 +17,7 @@
     documentSpec.I documentSpec.h \
     downloadDb.I downloadDb.h \
     download_utils.h \
-    extractor.h \
+    extractor.h extractor.I \
     httpAuthorization.I httpAuthorization.h \
     httpBasicAuthorization.I httpBasicAuthorization.h \
     httpChannel.I httpChannel.h \
@@ -33,8 +33,6 @@
     multiplexStreamBuf.I multiplexStreamBuf.h \
     patcher.h patcher.I \
     socketStream.h socketStream.I \
-    stringStreamBuf.I stringStreamBuf.h \
-    stringStream.I stringStream.h \
     urlSpec.I urlSpec.h \
     virtualFileHTTP.I virtualFileHTTP.h \
     virtualFileMountHTTP.I virtualFileMountHTTP.h
@@ -63,8 +61,6 @@
     multiplexStream.cxx multiplexStreamBuf.cxx \
     patcher.cxx \
     socketStream.cxx \
-    stringStreamBuf.cxx \
-    stringStream.cxx \
     urlSpec.cxx \
     virtualFileHTTP.cxx \
     virtualFileMountHTTP.cxx
@@ -79,7 +75,7 @@
     decompressor.h decompressor.I \
     documentSpec.h documentSpec.I \
     download_utils.h downloadDb.h downloadDb.I \
-    extractor.h \
+    extractor.h extractor.I \
     httpAuthorization.I httpAuthorization.h \
     httpBasicAuthorization.I httpBasicAuthorization.h \
     httpChannel.I httpChannel.h \
@@ -95,8 +91,6 @@
     multiplexStreamBuf.I multiplexStreamBuf.h \
     patcher.h patcher.I \
     socketStream.h socketStream.I \
-    stringStreamBuf.I stringStreamBuf.h \
-    stringStream.I stringStream.h \
     urlSpec.h urlSpec.I \
     virtualFileHTTP.I virtualFileHTTP.h \
     virtualFileMountHTTP.I virtualFileMountHTTP.h

@@ -1,7 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_EGG]
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define YACC_PREFIX eggyy
 #define FLEXFLAGS -i
 #define USE_PACKAGES zlib
@@ -10,6 +9,8 @@
   #define TARGET p3egg
   #define LOCAL_LIBS \
     p3mathutil p3linmath p3putil
+
+  #define BUILDING_DLL BUILDING_PANDA_EGG
 
   #define SOURCES \
      config_egg.h eggAnimData.I eggAnimData.h \
@@ -22,7 +23,6 @@
      eggCurve.I eggCurve.h eggData.I eggData.h  \
      eggExternalReference.I eggExternalReference.h  \
      eggFilenameNode.I eggFilenameNode.h eggGroup.I eggGroup.h  \
-     eggGroupNode_ext.cxx eggGroupNode_ext.h \
      eggGroupNode.I eggGroupNode.h eggGroupUniquifier.h  \
      eggLine.I eggLine.h \
      eggMaterial.I eggMaterial.h eggMaterialCollection.I  \
@@ -107,7 +107,7 @@
     eggCurve.h eggData.I eggData.h eggExternalReference.I \
     eggExternalReference.h eggFilenameNode.I eggFilenameNode.h \
     eggGroup.I eggGroup.h \
-    eggGroupNode_ext.h eggGroupNode.I eggGroupNode.h \
+    eggGroupNode.I eggGroupNode.h \
     eggGroupUniquifier.h \
     eggLine.I eggLine.h \
     eggMaterial.I \
@@ -139,6 +139,9 @@
     pt_EggVertex.h vector_PT_EggVertex.h
 
   #define IGATESCAN all
+  #define IGATEEXT \
+    eggGroupNode_ext.cxx \
+    eggGroupNode_ext.h
 
 #end lib_target
 

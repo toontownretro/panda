@@ -14,7 +14,7 @@
 #ifndef DCAST_H
 #define DCAST_H
 
-#include "pandabase.h"
+#include "dtoolbase.h"
 
 #include "typeHandle.h"
 #include "typedObject.h"

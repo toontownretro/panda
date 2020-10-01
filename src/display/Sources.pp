@@ -1,18 +1,18 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define WIN_SYS_LIBS $[WIN_SYS_LIBS] ws2_32.lib
+
+#define USE_PACKAGES x11
 
 #begin lib_target
   #define TARGET p3display
   #define LOCAL_LIBS \
-    p3pgraph p3pgraphnodes p3cull p3putil p3gsgbase p3gobj p3linmath p3mathutil \
-    p3pstatclient
+    p3cull p3device p3pgraphnodes
+
+  #define BUILDING_DLL BUILDING_PANDA_DISPLAY
 
   #define SOURCES  \
     standardMunger.I standardMunger.h \
     config_display.h \
-    $[if $[HAVE_PYTHON], pythonGraphicsWindowProc.h] \
-    $[if $[HAVE_PYTHON], pythonGraphicsWindowProc.cxx] \
     callbackGraphicsWindow.I callbackGraphicsWindow.h \
     drawableRegion.I drawableRegion.h \
     displayRegion.I displayRegion.h  \
@@ -26,11 +26,10 @@
     graphicsDevice.h graphicsDevice.I \
     graphicsPipe.I graphicsPipe.h  \
     graphicsPipeSelection.I graphicsPipeSelection.h \
+    graphicsStateGuardian.cxx \
     graphicsStateGuardian.I graphicsStateGuardian.h \
-    graphicsStateGuardian_ext.cxx graphicsStateGuardian_ext.h \
     graphicsThreadingModel.I graphicsThreadingModel.h \
     graphicsWindow.I graphicsWindow.h \
-    graphicsWindow_ext.cxx graphicsWindow_ext.h \
     graphicsWindowInputDevice.I  \
     graphicsWindowInputDevice.h \
     graphicsWindowProc.h \
@@ -65,7 +64,6 @@
     graphicsBuffer.cxx \
     graphicsPipe.cxx \
     graphicsPipeSelection.cxx \
-    graphicsStateGuardian.cxx  \
     graphicsThreadingModel.cxx \
     graphicsWindow.cxx graphicsWindowInputDevice.cxx  \
     graphicsWindowProc.cxx \
@@ -77,12 +75,12 @@
     windowProperties.cxx \
     stereoDisplayRegion.cxx \
     subprocessWindow.cxx \
+    $[if $[OSX_PLATFORM], subprocessWindowBuffer.cxx] \
     touchInfo.cxx
 
   #define INSTALL_HEADERS \
     standardMunger.I standardMunger.h \
     config_display.h \
-    $[if $[HAVE_PYTHON], pythonGraphicsWindowProc.h] \
     callbackGraphicsWindow.I callbackGraphicsWindow.h \
     drawableRegion.I drawableRegion.h \
     displayInformation.h \
@@ -113,10 +111,20 @@
     renderBuffer.h \
     stereoDisplayRegion.I stereoDisplayRegion.h \
     subprocessWindow.h subprocessWindow.I \
-    subprocessWindowBuffer.h subprocessWindowBuffer.I \
+    $[if $[OSX_PLATFORM], subprocessWindowBuffer.h subprocessWindowBuffer.I] \
     touchInfo.h
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    graphicsStateGuardian_ext.cxx \
+    graphicsStateGuardian_ext.h \
+    graphicsWindow_ext.cxx \
+    graphicsWindow_ext.h \
+    pythonGraphicsWindowProc.cxx \
+    pythonGraphicsWindowProc.h \
+    windowProperties_ext.cxx \
+    windowProperties_ext.h
 
 #end lib_target
 

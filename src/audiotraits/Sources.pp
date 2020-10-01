@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3dtoolconfig p3dtool p3dtoolbase:c p3dtoolutil:c \
-    p3putil:c p3prc:c p3interrogatedb:c p3dconfig:c
+#define OTHER_LIBS p3dtool:m p3dtoolbase:c p3dtoolutil:c \
+    p3putil:c p3prc:m
 
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 

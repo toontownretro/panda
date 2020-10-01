@@ -1,14 +1,15 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3collide
   #define LOCAL_LIBS \
-    p3tform p3gobj p3pgraph p3putil \
-    p3pstatclient
+    p3tform
+
+  #define BUILDING_DLL BUILDING_PANDA_COLLIDE
 
   #define SOURCES \
     collisionBox.I collisionBox.h \
+    collisionCapsule.I collisionCapsule.h \
     collisionEntry.I collisionEntry.h \
     collisionGeom.I collisionGeom.h \
     collisionHandler.I collisionHandler.h  \
@@ -35,12 +36,13 @@
     collisionSolid.I collisionSolid.h \
     collisionSphere.I collisionSphere.h \
     collisionTraverser.I collisionTraverser.h  \
-    collisionTube.I collisionTube.h \
+    collisionTube.h \
     collisionVisualizer.I collisionVisualizer.h \
     config_collide.h
 
  #define COMPOSITE_SOURCES \
     collisionBox.cxx \
+    collisionCapsule.cxx \
     collisionEntry.cxx \
     collisionGeom.cxx \
     collisionHandler.cxx \
@@ -67,12 +69,12 @@
     collisionSolid.cxx \
     collisionSphere.cxx  \
     collisionTraverser.cxx \
-    collisionTube.cxx \
     collisionVisualizer.cxx \
     config_collide.cxx
 
   #define INSTALL_HEADERS \
     collisionBox.I collisionBox.h \
+    collisionCapsule.I collisionCapsule.h \
     collisionEntry.I collisionEntry.h \
     collisionGeom.I collisionGeom.h \
     collisionHandler.I collisionHandler.h \
@@ -99,7 +101,6 @@
     collisionSolid.I collisionSolid.h \
     collisionSphere.I collisionSphere.h \
     collisionTraverser.I collisionTraverser.h \
-    collisionTube.I collisionTube.h \
     collisionVisualizer.I collisionVisualizer.h \
     config_collide.h
 

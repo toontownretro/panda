@@ -1,9 +1,8 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS \
     p3event p3gsgbase p3gobj p3putil p3linmath \
     p3downloader p3express p3pandabase p3pstatclient
-#define USE_PACKAGES python
 
 #begin lib_target
   #define TARGET p3pgraph
@@ -12,12 +11,13 @@
   // file--at least on Windows.
   #define DONT_COMPOSITE $[WINDOWS_PLATFORM]
 
+  #define BUILDING_DLL BUILDING_PANDA_PGRAPH
+
   #define SOURCES \
     accumulatedAttribs.I accumulatedAttribs.h \
     alphaTestAttrib.I alphaTestAttrib.h \
     antialiasAttrib.I antialiasAttrib.h \
     attribNodeRegistry.I attribNodeRegistry.h \
-    audioVolumeAttrib.I audioVolumeAttrib.h \
     auxSceneData.I auxSceneData.h \
     auxBitplaneAttrib.I auxBitplaneAttrib.h \
     bamFile.I bamFile.h \
@@ -62,6 +62,7 @@
     loaderFileType.h \
     loaderFileTypeBam.h  \
     loaderFileTypeRegistry.h \
+    logicOpAttrib.I logicOpAttrib.h \
     materialAttrib.I materialAttrib.h \
     materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
@@ -71,9 +72,7 @@
     modelPool.I modelPool.h \
     modelRoot.I modelRoot.h \
     nodePath.I nodePath.h nodePath.cxx \
-    nodePath_ext.I nodePath_ext.h \
     nodePathCollection.I nodePathCollection.h \
-    nodePathCollection_ext.h \
     nodePathComponent.I nodePathComponent.h \
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
@@ -112,18 +111,12 @@
     transparencyAttrib.I transparencyAttrib.h \
     weakNodePath.I weakNodePath.h \
     workingNodePath.I workingNodePath.h \
-    nodePath_ext.h nodePath_ext.I \
-    nodePathCollection_ext.h \
-    pandaNode_ext.h \
-    renderState_ext.h \
-    transformState_ext.h
 
   #define COMPOSITE_SOURCES \
     accumulatedAttribs.cxx \
     alphaTestAttrib.cxx \
     antialiasAttrib.cxx \
     attribNodeRegistry.cxx \
-    audioVolumeAttrib.cxx \
     auxBitplaneAttrib.cxx \
     auxSceneData.cxx \
     bamFile.cxx \
@@ -167,6 +160,7 @@
     loaderFileType.cxx  \
     loaderFileTypeBam.cxx \
     loaderFileTypeRegistry.cxx  \
+    logicOpAttrib.cxx \
     materialAttrib.cxx \
     materialCollection.cxx \
     modelFlattenRequest.cxx \
@@ -213,12 +207,7 @@
     transformState.cxx \
     transparencyAttrib.cxx \
     weakNodePath.cxx \
-    workingNodePath.cxx \
-    nodePath_ext.cxx \
-    nodePathCollection_ext.cxx \
-    pandaNode_ext.cxx \
-    renderState_ext.cxx \
-    transformState_ext.cxx
+    workingNodePath.cxx
 
   #define INSTALL_HEADERS \
     accumulatedAttribs.I accumulatedAttribs.h \
@@ -268,6 +257,7 @@
     loaderFileType.h \
     loaderFileTypeBam.h \
     loaderFileTypeRegistry.h \
+    logicOpAttrib.I logicOpAttrib.h \
     materialAttrib.I materialAttrib.h \
     materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
@@ -282,7 +272,6 @@
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
-    pandaNode_ext.h pandaNode_ext.cxx \
     pandaNodeChain.I pandaNodeChain.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
@@ -296,7 +285,6 @@
     renderEffects.I renderEffects.h \
     renderModeAttrib.I renderModeAttrib.h \
     renderState.I renderState.h \
-    renderState_ext.h renderState_ext.cxx \
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
@@ -315,7 +303,6 @@
     texGenAttrib.I texGenAttrib.h \
     textureStageCollection.I textureStageCollection.h \
     transformState.I transformState.h \
-    transformState_ext.h transformState_ext.cxx \
     transparencyAttrib.I transparencyAttrib.h \
     weakNodePath.I weakNodePath.h \
     workingNodePath.I workingNodePath.h
@@ -325,6 +312,27 @@
 //    findApproxPath.I findApproxPath.h \
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    loaderFileTypeRegistry_ext.cxx \
+    loaderFileTypeRegistry_ext.h \
+    nodePathCollection_ext.cxx \
+    nodePathCollection_ext.h \
+    nodePath_ext.cxx \
+    nodePath_ext.h \
+    nodePath_ext.I \
+    pandaNode_ext.cxx \
+    pandaNode_ext.h \
+    pythonLoaderFileType.cxx \
+    pythonLoaderFileType.h \
+    renderState_ext.cxx \
+    renderState_ext.h \
+    shaderAttrib_ext.cxx \
+    shaderAttrib_ext.h \
+    shaderInput_ext.cxx \
+    shaderInput_ext.h \
+    transformState_ext.cxx \
+    transformState_ext.h
 
 // Uncomment these lines to compile everything individually instead of
 // combining into p3pgraph_composite*.cxx.

@@ -12,8 +12,8 @@
     p3glesgsg p3egldisplay p3androiddisplay
 
 #define LOCAL_LIBS p3gsgbase p3display p3express
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin metalib_target
   #define TARGET pandagles

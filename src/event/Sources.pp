@@ -1,11 +1,13 @@
 #define LOCAL_LIBS p3putil p3express p3pandabase p3pstatclient p3linmath
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3event
 
+  #define BUILDING_DLL BUILDING_PANDA_EVENT
+
   #define SOURCES \
+    asyncFuture.h asyncFuture.I \
     asyncTask.h asyncTask.I \
     asyncTaskChain.h asyncTaskChain.I \
     asyncTaskCollection.h asyncTaskCollection.I \
@@ -18,13 +20,13 @@
     genericAsyncTask.h genericAsyncTask.I \
     pointerEvent.I pointerEvent.h \
     pointerEventList.I pointerEventList.h \
-    pythonTask.h pythonTask.I pythonTask.cxx \
     event.I event.h eventHandler.h eventHandler.I \
     eventParameter.I eventParameter.h \
     eventQueue.I eventQueue.h eventReceiver.h \
     pt_Event.h throw_event.I throw_event.h
 
   #define COMPOSITE_SOURCES \
+    asyncFuture.cxx \
     asyncTask.cxx \
     asyncTaskChain.cxx \
     asyncTaskCollection.cxx \
@@ -41,6 +43,7 @@
     pt_Event.cxx
 
   #define INSTALL_HEADERS \
+    asyncFuture.h asyncFuture.I \
     asyncTask.h asyncTask.I \
     asyncTaskChain.h asyncTaskChain.I \
     asyncTaskCollection.h asyncTaskCollection.I \
@@ -52,7 +55,6 @@
     genericAsyncTask.h genericAsyncTask.I \
     pointerEvent.I pointerEvent.h \
     pointerEventList.I pointerEventList.h \
-    pythonTask.h pythonTask.I \
     event.I event.h eventHandler.h eventHandler.I \
     eventParameter.I eventParameter.h \
     eventQueue.I eventQueue.h eventReceiver.h \
@@ -60,14 +62,21 @@
 
   #define IGATESCAN all
 
+  #define IGATEEXT \
+    asyncFuture_ext.cxx \
+    asyncFuture_ext.h \
+    pythonTask.cxx \
+    pythonTask.h \
+    pythonTask.I
+
 #end lib_target
 
 #begin test_bin_target
   #define TARGET test_task
   #define LOCAL_LIBS $[LOCAL_LIBS] p3mathutil
   #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolbase:c p3prc:c \
-   p3dtoolutil:c p3dtool:m p3dtoolconfig:m
+   p3dtoolbase:c p3prc:m \
+   p3dtoolutil:c p3dtool:m
 
   #define SOURCES \
     test_task.cxx

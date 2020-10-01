@@ -26,7 +26,7 @@ _dcast_get_typehandle(WantType *) {
     // This type handle is unregistered.  Oops!
     WantType::init_type();
     handle = WantType::get_class_type();
-    express_cat->warning()
+    std::cerr
       << "Type " << handle << " was unregistered!\n";
   }
 #endif

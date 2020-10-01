@@ -1,10 +1,12 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3particlesystem
   #define LOCAL_LIBS \
     p3pgraph p3physics
+
+  #define BUILDING_DLL BUILDING_PANDA_PARTICLESYSTEM
 
   #define SOURCES \
      baseParticle.I baseParticle.h baseParticleEmitter.I  \

@@ -1,5 +1,4 @@
-#define OTHER_LIBS p3interrogatedb:c p3prc:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define LOCAL_LIBS p3downloader p3express
 #define USE_PACKAGES openssl zlib
 

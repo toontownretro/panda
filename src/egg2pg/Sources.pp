@@ -1,14 +1,13 @@
 #define BUILD_DIRECTORY $[HAVE_EGG]
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
-
-#define USE_PACKAGES nurbspp
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3egg2pg
   #define LOCAL_LIBS \
     p3parametrics p3collide p3egg p3pgraph p3chan p3char
+
+  #define BUILDING_DLL BUILDING_PANDA_EGG2PG
 
   #define SOURCES \
     animBundleMaker.h \
@@ -44,8 +43,8 @@
   #endif
 
   #define INSTALL_HEADERS \
-    egg_parametrics.h load_egg_file.h save_egg_file.h config_egg2pg.h
+    $[SOURCES]
 
-  #define IGATESCAN load_egg_file.h save_egg_file.h
+  #define IGATESCAN all
 
 #end lib_target

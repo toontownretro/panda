@@ -1,3 +1,66 @@
+# The express directory is the earliest entry point into the Panda tree.
+# We cannot run interrogate on code in the dtool tree while building dtool
+# because interrogate is a dependency on dtool. Therefore, force interrogate
+# here to export these types defined in dtool.
+
+defconstruct TypeHandle TypeHandle(TypeHandle::none())
+
+forcetype PandaSystem
+forcetype DSearchPath
+forcetype DSearchPath::Results
+forcetype ExecutionEnvironment
+forcetype TextEncoder
+forcetype Filename
+forcetype GlobPattern
+forcetype Notify
+forcetype NotifyCategory
+forcetype NotifySeverity
+forcetype TypedObject
+forcetype TypeHandle
+forcetype TypeRegistry
+forcetype StreamReader
+forcetype StreamWriter
+forcetype NeverFreeMemory
+forcetype IFileStream
+forcetype OFileStream
+forcetype FileStream
+forcetype IDecryptStream
+forcetype OEncryptStream
+forcetype LineStream
+
+forcetype std::ofstream
+forcetype std::ifstream
+forcetype std::fstream
+
+forcetype ConfigFlags
+forcetype ConfigPage
+forcetype ConfigPageManager
+forcetype ConfigDeclaration
+forcetype ConfigVariableCore
+forcetype ConfigVariable
+forcetype ConfigVariableBase
+forcetype ConfigVariableBool
+forcetype ConfigVariableDouble
+forcetype ConfigVariableFilename
+forcetype ConfigVariableInt
+forcetype ConfigVariableInt64
+forcetype ConfigVariableList
+forcetype ConfigVariableManager
+forcetype ConfigVariableSearchPath
+forcetype ConfigVariableString
+
+forcetype std::ios_base
+forcetype std::basic_ios<char>
+forcetype std::ios
+forcetype std::istream
+forcetype std::ostream
+forcetype std::iostream
+
+forcetype StreamWrapperBase
+forcetype IStreamWrapper
+forcetype OStreamWrapper
+forcetype StreamWrapper
+
 forcetype PTA_uchar
 forcetype CPTA_uchar
 forcetype PTA_float

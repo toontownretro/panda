@@ -1,14 +1,16 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
-  #define USE_PACKAGES freetype zlib
+  #define USE_PACKAGES harfbuzz
 
   #define TARGET p3text
   #define LOCAL_LIBS \
     p3putil p3gobj p3pgraph p3linmath \
     p3pnmtext p3pnmimage p3gsgbase p3mathutil \
     p3parametrics
+
+  #define BUILDING_DLL BUILDING_PANDA_TEXT
 
   #define SOURCES \
     config_text.h \

@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3char
   #define LOCAL_LIBS \
-    p3chan p3linmath p3putil p3event p3mathutil p3gsgbase \
-    p3pstatclient
+    p3chan
+
+  #define BUILDING_DLL BUILDING_PANDA_CHAR
 
   #define SOURCES \
     character.I character.h \

@@ -1,15 +1,16 @@
 #define BUILD_DIRECTORY $[and $[HAVE_EGL],$[HAVE_X11]]
 
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m
 
 #begin lib_target
-  #define TARGET p3egldisplay
+  #define TARGET p3egldisplay_gles1
   #define BUILD_TARGET $[HAVE_GLES]
   #define USE_PACKAGES gles egl x11
   #define EXTRA_CDEFS OPENGLES_1
   #define LOCAL_LIBS \
     p3glesgsg p3x11display
+
+  #define BUILDING_DLL BUILDING_PANDAGLES
 
   #define SOURCES \
     config_egldisplay.cxx config_egldisplay.h \
@@ -27,12 +28,14 @@
 #end lib_target
 
 #begin lib_target
-  #define TARGET egl2display
+  #define TARGET egldisplay_gles2
   #define BUILD_TARGET $[HAVE_GLES2]
   #define USE_PACKAGES gles2 egl x11
   #define EXTRA_CDEFS OPENGLES_2
   #define LOCAL_LIBS \
     p3gles2gsg p3x11display
+
+  #define BUILDING_DLL BUILDING_PANDAGLES2
 
   #define SOURCES \
     config_egldisplay.cxx config_egldisplay.h \

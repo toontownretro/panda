@@ -12,13 +12,12 @@
 #define COMPONENT_LIBS \
     p3dxgsg9
 #define LOCAL_LIBS p3gsgbase p3display p3express p3gobj
-#define OTHER_LIBS p3dtoolconfig p3dtool
+#define OTHER_LIBS p3dtool
 
 #begin metalib_target
   #define TARGET pandadx9
   #define SOURCES pandadx9.cxx
   #define WIN_SYS_LIBS \
      ddraw.lib dxguid.lib winmm.lib \
-     kernel32.lib gdi32.lib user32.lib advapi32.lib $[WIN_SYS_LIBS]  
+     kernel32.lib gdi32.lib user32.lib advapi32.lib $[WIN_SYS_LIBS]
 #end metalib_target
-

@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3framework
@@ -17,6 +17,8 @@
     #define LOCAL_LIBS pandadx9 $[LOCAL_LIBS]
   #elif $[HAVE_TINYDISPLAY]
     #define LOCAL_LIBS p3tinydisplay $[LOCAL_LIBS]
+  #else
+    #print Warning: No renderer library available to link to p3framework.
   #endif
 
   // And we might like to have the p3egg loader available.

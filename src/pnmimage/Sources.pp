@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 #define USE_PACKAGES zlib
 
 #begin lib_target
@@ -7,12 +7,13 @@
   #define LOCAL_LIBS \
     p3linmath p3putil p3express p3mathutil
 
+  #define BUILDING_DLL BUILDING_PANDA_PNMIMAGE
+
   #define SOURCES \
      config_pnmimage.h \
      convert_srgb.I convert_srgb.h \
      convert_srgb_sse2.cxx \
      pfmFile.I pfmFile.h \
-     pfmFile_ext.cxx pfmFile_ext.h \
      pnmbitio.h \
      pnmBrush.h pnmBrush.I \
      pnmFileType.h pnmFileTypeRegistry.h pnmImage.I  \
@@ -39,7 +40,6 @@
      config_pnmimage.h \
      convert_srgb.I convert_srgb.h \
      pfmFile.I pfmFile.h \
-     pfmFile_ext.cxx pfmFile_ext.h \
      pnmBrush.h pnmBrush.I \
      pnmFileType.h pnmFileTypeRegistry.h pnmImage.I \
      pnmImage.h pnmImageHeader.I pnmImageHeader.h \
@@ -48,5 +48,9 @@
      pnmReader.h pnmWriter.I pnmWriter.h pnmimage_base.h
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+   pfmFile_ext.cxx \
+   pfmFile_ext.h
 
 #end lib_target

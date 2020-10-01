@@ -18,10 +18,11 @@
 #begin lib_target
   #define TARGET p3dxml
 
+  #define BUILDING_DLL BUILDING_PANDA_DXML
+
   #define LOCAL_LIBS p3pandabase
   #define OTHER_LIBS \
-    p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-    p3dtoolutil:c p3dtoolbase:c p3prc:c p3dtool:m
+    p3dtoolutil:c p3dtoolbase:c p3prc:m p3dtool:m
 
   #define SOURCES \
     config_dxml.h tinyxml.h
@@ -29,6 +30,8 @@
   #define COMPOSITE_SOURCES \
     config_dxml.cxx \
     tinyxml.cpp tinyxmlparser.cpp tinyxmlerror.cpp
+
+  #define C++FLAGS -DTIXML_USE_STL
 
   // It's important not to include tinyxml.h on the IGATESCAN list,
   // because that file has to be bracketed by BEGIN_PUBLISH

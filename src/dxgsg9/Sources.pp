@@ -1,7 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_DX9]
 
 #define OTHER_LIBS \
-   p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
    p3dtoolutil:c p3dtoolbase:c p3dtool:m
 
 #define USE_PACKAGES dx9 cg cgdx9
@@ -12,11 +11,16 @@
     p3gsgbase p3gobj p3display p3windisplay \
     p3putil p3linmath p3mathutil p3pnmimage p3event
 
+  #define BUILDING_DLL BUILDING_PANDADX
+
+  #define C++FLAGS -DUSE_GENERIC_DXERR_LIBRARY
+
   // build dxGraphicsStateGuardian separately since its so big
 
   #define SOURCES \
     dxGraphicsStateGuardian9.cxx \
     dxGraphicsDevice9.h \
+    wdxGraphicsBuffer9.h wdxGraphicsBuffer9.I \
     wdxGraphicsPipe9.I wdxGraphicsPipe9.h \
     wdxGraphicsWindow9.I wdxGraphicsWindow9.h \
     dxgsg9base.h config_dxgsg9.h dxGraphicsStateGuardian9.I dxGraphicsStateGuardian9.h \

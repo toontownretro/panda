@@ -1,10 +1,12 @@
-#define OTHER_LIBS p3interrogatedb:c p3dconfig:c p3dtoolconfig:m \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:c
+#define OTHER_LIBS p3interrogatedb:m \
+                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc:m
 
 #begin lib_target
   #define TARGET p3grutil
   #define LOCAL_LIBS \
     p3display p3text p3pgraph p3gobj p3linmath p3putil p3movies p3audio
+
+  #define BUILDING_DLL BUILDING_PANDA_GRUTIL
 
   #define SOURCES \
     pipeOcclusionCullTraverser.I pipeOcclusionCullTraverser.h \
@@ -18,6 +20,7 @@
     geoMipTerrain.I geoMipTerrain.h \
     sceneGraphAnalyzerMeter.I sceneGraphAnalyzerMeter.h \
     heightfieldTesselator.I heightfieldTesselator.h \
+    shaderTerrainMesh.I shaderTerrainMesh.h \
     lineSegs.I lineSegs.h \
     multitexReducer.I multitexReducer.h multitexReducer.cxx \
     nodeVertexTransform.I nodeVertexTransform.h \
@@ -35,6 +38,7 @@
     geoMipTerrain.cxx \
     sceneGraphAnalyzerMeter.cxx \
     heightfieldTesselator.cxx \
+    shaderTerrainMesh.cxx \
     nodeVertexTransform.cxx \
     pfmVizzer.cxx \
     pipeOcclusionCullTraverser.cxx \
@@ -51,6 +55,7 @@
     geoMipTerrain.I geoMipTerrain.h \
     sceneGraphAnalyzerMeter.I sceneGraphAnalyzerMeter.h \
     heightfieldTesselator.I heightfieldTesselator.h \
+    shaderTerrainMesh.I shaderTerrainMesh.h \
     lineSegs.I lineSegs.h \
     multitexReducer.I multitexReducer.h \
     nodeVertexTransform.I nodeVertexTransform.h \
