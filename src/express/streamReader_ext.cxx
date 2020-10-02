@@ -87,6 +87,41 @@ readline() {
 }
 
 /**
+ * Assumes the stream represents a text file, and extracts one line up to and
+ * including the trailing newline character.  Returns empty string when the
+ * end of file is reached.
+ *
+ * The interface here is intentionally designed to be similar to that for
+ * Python's File.readline() function.
+ */
+PyObject *Extension<StreamReader>::
+readline_str() {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  PyThreadState *_save;
+  Py_UNBLOCK_THREADS
+#endif  // HAVE_THREADS && !SIMPLE_THREADS
+
+  std::istream *in = _this->get_istream();
+
+  std::string line;
+  int ch = in->get();
+  while (ch != EOF && !in->fail()) {
+    line += ch;
+    if (ch == '\n' || in->eof()) {
+      // Here's the newline character.
+      break;
+    }
+    ch = in->get();
+  }
+
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  Py_BLOCK_THREADS
+#endif  // HAVE_THREADS && !SIMPLE_THREADS
+
+  return PyUnicode_FromStringAndSize(line.data(), line.size());
+}
+
+/**
  * Reads all the lines at once and returns a list.  Also see the documentation
  * for readline().
  */
@@ -131,6 +166,57 @@ readlines() {
   Py_ssize_t i = 0;
   for (const std::string &line : lines) {
     PyObject *py_line = PyBytes_FromStringAndSize(line.data(), line.size());
+    PyList_SET_ITEM(lst, i++, py_line);
+  }
+
+  return lst;
+}
+
+/**
+ * Reads all the lines at once and returns a list.  Also see the documentation
+ * for readline().
+ */
+PyObject *Extension<StreamReader>::
+readlines_str() {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  PyThreadState *_save;
+  Py_UNBLOCK_THREADS
+#endif  // HAVE_THREADS && !SIMPLE_THREADS
+
+  std::istream *in = _this->get_istream();
+  vector_string lines;
+
+  while (true) {
+    std::string line;
+    int ch = in->get();
+    while (ch != EOF && !in->fail()) {
+      line += ch;
+      if (ch == '\n' || in->eof()) {
+        // Here's the newline character.
+        break;
+      }
+      ch = in->get();
+    }
+
+    if (line.empty()) {
+      break;
+    }
+
+    lines.push_back(std::move(line));
+  }
+
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  Py_BLOCK_THREADS
+#endif  // HAVE_THREADS && !SIMPLE_THREADS
+
+  PyObject *lst = PyList_New(lines.size());
+  if (lst == nullptr) {
+    return nullptr;
+  }
+
+  Py_ssize_t i = 0;
+  for (const std::string &line : lines) {
+    PyObject *py_line = PyUnicode_FromStringAndSize(line.data(), line.size());
     PyList_SET_ITEM(lst, i++, py_line);
   }
 

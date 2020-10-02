@@ -31,7 +31,9 @@ class Extension<StreamReader> : public ExtensionBase<StreamReader> {
 public:
   PyObject *extract_bytes(size_t size);
   PyObject *readline();
+  PyObject *readline_str();
   PyObject *readlines();
+  PyObject *readlines_str();
 };
 
 #endif  // HAVE_PYTHON
