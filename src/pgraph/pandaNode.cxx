@@ -128,7 +128,8 @@ PandaNode::
  */
 PandaNode::
 PandaNode(const PandaNode &copy) :
-  TypedWritableReferenceCount(copy),
+  TypedWritable(copy),
+  ReferenceCount(copy),
   Namable(copy),
   _paths_lock("PandaNode::_paths_lock"),
   _dirty_prev_transform(false),
@@ -172,6 +173,15 @@ PandaNode(const PandaNode &copy) :
     cdata->_final_bounds = copy_cdata->_final_bounds;
     cdata->_fancy_bits = copy_cdata->_fancy_bits;
   }
+}
+
+/**
+ * Returns the pointer cast to a ReferenceCount pointer,
+ * if it is in fact of that type.
+ */
+ReferenceCount *PandaNode::
+as_reference_count() {
+  return this;
 }
 
 /**

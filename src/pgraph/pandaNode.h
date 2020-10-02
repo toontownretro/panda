@@ -62,8 +62,9 @@ class GraphicsStateGuardianBase;
  * all specialized nodes, and also serves as a generic node with no special
  * properties.
  */
-class EXPCL_PANDA_PGRAPH PandaNode : public TypedWritableReferenceCount,
-                                     public Namable, public LinkedListNode {
+class EXPCL_PANDA_PGRAPH PandaNode : public TypedWritable, public Namable,
+                                     public LinkedListNode,
+                                     virtual public ReferenceCount {
 PUBLISHED:
   explicit PandaNode(const std::string &name);
   virtual ~PandaNode();
@@ -76,6 +77,7 @@ protected:
   PandaNode &operator = (const PandaNode &copy) = delete;
 
 public:
+  virtual ReferenceCount *as_reference_count();
   virtual PandaNode *dupe_for_flatten() const;
 
   virtual bool safe_to_flatten() const;
@@ -828,10 +830,12 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    TypedWritableReferenceCount::init_type();
+    TypedWritable::init_type();
+    ReferenceCount::init_type();
     Namable::init_type();
     register_type(_type_handle, "PandaNode",
-                  TypedWritableReferenceCount::get_class_type(),
+                  TypedWritable::get_class_type(),
+                  ReferenceCount::get_class_type(),
                   Namable::get_class_type());
     CData::init_type();
     Down::init_type();

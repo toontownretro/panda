@@ -35,6 +35,7 @@
 #include "depthOffsetAttrib.h"
 #include "depthTestAttrib.h"
 #include "depthWriteAttrib.h"
+#include "eventStorePandaNode.h"
 #include "findApproxLevelEntry.h"
 #include "fog.h"
 #include "fogAttrib.h"
@@ -408,6 +409,7 @@ init_libpgraph() {
   DepthOffsetAttrib::init_type();
   DepthTestAttrib::init_type();
   DepthWriteAttrib::init_type();
+  EventStorePandaNode::init_type();
   FindApproxLevelEntry::init_type();
   Fog::init_type();
   FogAttrib::init_type();
