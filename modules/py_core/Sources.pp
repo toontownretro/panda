@@ -8,4 +8,5 @@
     p3mathutil p3movies p3parametrics p3pgraph p3pgraphnodes p3pgui \
     p3pipeline p3pnmimage p3pstatclient p3putil p3recorder p3text p3tform \
     p3prc p3nativenet p3net p3audio p3pnmtext
+  #define LOCAL_LIBS panda
 #end python_module_target
