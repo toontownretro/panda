@@ -4,16 +4,16 @@
  * Copyright (c) Brian Lach <brianlach72@gmail.com>
  * All rights reserved.
  *
- * @file keyvalues.cpp
+ * @file keyValues.cxx
  * @author Brian Lach
- * @date April 15, 2020
+ * @date 2020-04-15
  *
  * @desc The new and much cleaner interface for dealing with Valve's KeyValue
- *	 format. KeyValues can either be created procedurally or loaded from
- *	 disk.
+ *	     format. KeyValues can either be created procedurally or loaded from
+ *	     disk.
  *
  * Parsing code is based on the implementation from
- *https://github.com/JulioC/keyvalues-python.
+ * https://github.com/JulioC/keyvalues-python.
  *
  */
 

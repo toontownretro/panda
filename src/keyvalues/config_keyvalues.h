@@ -1,5 +1,5 @@
-#ifndef __CONFIG_VIFPARSER_H__
-#define __CONFIG_VIFPARSER_H__
+#ifndef CONFIG_KEYVALUES_H
+#define CONFIG_KEYVALUES_H
 
 #include "pandabase.h"
 
@@ -13,4 +13,4 @@
 
 extern EXPCL_VIF void init_libkeyvalues();
 
-#endif // __CONFIG_VIFPARSER_H__
+#endif // CONFIG_KEYVALUES_H

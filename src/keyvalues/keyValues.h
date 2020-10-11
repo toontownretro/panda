@@ -4,13 +4,13 @@
  * Copyright (c) Brian Lach <brianlach72@gmail.com>
  * All rights reserved.
  *
- * @file keyvalues.h
+ * @file keyValues.h
  * @author Brian Lach
  * @date April 15, 2020
  *
  * @desc The new and much cleaner interface for dealing with Valve's KeyValue
- *	 format. KeyValues can either be created procedurally or loaded from
-	 disk.
+ *	     format. KeyValues can either be created procedurally or loaded from
+ *       disk.
  */
 
 #pragma once
