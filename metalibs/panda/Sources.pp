@@ -14,7 +14,7 @@
   p3pnmimage p3pnmimagetypes p3pstatclient p3putil p3recorder p3text p3tform \
   p3nativenet p3net \
   p3audio \
-  p3pnmtext
+  p3pnmtext p3steamnet
 
 #define LOCAL_LIBS \
   p3downloader p3express p3pandabase
