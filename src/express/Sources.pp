@@ -64,6 +64,7 @@
     virtualFileMountMultifile.I \
     virtualFileMountRamdisk.h virtualFileMountRamdisk.I \
     virtualFileMountSystem.h virtualFileMountSystem.I \
+    virtualFileMountZip.h virtualFileMountZip.I \
     virtualFileSimple.h virtualFileSimple.I \
     virtualFileSystem.h virtualFileSystem.I \
     weakPointerCallback.I weakPointerCallback.h \
@@ -72,6 +73,7 @@
     weakPointerToVoid.I weakPointerToVoid.h \
     weakReferenceList.I weakReferenceList.h \
     windowsRegistry.h \
+    zipArchive.I zipArchive.h \
     zStream.I zStream.h zStreamBuf.h
 
   #define COMPOSITE_SOURCES  \
@@ -119,6 +121,7 @@
     virtualFileMountMultifile.cxx \
     virtualFileMountRamdisk.cxx \
     virtualFileMountSystem.cxx \
+    virtualFileMountZip.cxx \
     virtualFileSimple.cxx virtualFileSystem.cxx \
     weakPointerCallback.cxx \
     weakPointerTo.cxx \
@@ -126,6 +129,7 @@
     weakPointerToVoid.cxx \
     weakReferenceList.cxx \
     windowsRegistry.cxx \
+    zipArchive.cxx \
     zStream.cxx zStreamBuf.cxx
 
   #define INSTALL_HEADERS  \
@@ -183,6 +187,7 @@
     virtualFileMountMultifile.I \
     virtualFileMountRamdisk.h virtualFileMountRamdisk.I \
     virtualFileMountSystem.h virtualFileMountSystem.I \
+    virtualFileMountZip.h virtualFileMountZip.I \
     virtualFileSimple.h virtualFileSimple.I \
     virtualFileSystem.h virtualFileSystem.I \
     weakPointerCallback.I weakPointerCallback.h \
@@ -191,6 +196,7 @@
     weakPointerToVoid.I weakPointerToVoid.h \
     weakReferenceList.I weakReferenceList.h \
     windowsRegistry.h \
+    zipArchive.I zipArchive.h \
     zStream.I zStream.h zStreamBuf.h
 
   #define IGATESCAN all

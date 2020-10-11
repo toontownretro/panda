@@ -226,7 +226,7 @@ private:
   typedef phash_set<PT(FMODAudioSound)> SoundsPlaying;
   SoundsPlaying _sounds_playing;
 
-  typedef phash_set<FMODAudioSound *> AllSounds;
+  typedef phash_set<FMODAudioSound *, pointer_hash> AllSounds;
   AllSounds _all_sounds;
 
   // Mapping of Panda DSP instance to FMOD DSP instance.

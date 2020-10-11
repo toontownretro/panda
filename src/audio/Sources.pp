@@ -10,12 +10,27 @@
 
   #define SOURCES \
     config_audio.h \
-    filterProperties.h filterProperties.I\
+    filterProperties.h filterProperties.I \
     audioLoadRequest.h audioLoadRequest.I \
-    audioManager.h audioManager.I\
-    audioSound.h audioSound.I\
+    audioManager.h audioManager.I \
+    audioSound.h audioSound.I \
+    chorusDSP.h chorusDSP.I \
+    compressorDSP.h compressorDSP.I \
+    distortionDSP.h distortionDSP.I \
+    dsp.h dsp.I \
+    echoDSP.h echoDSP.I \
+    faderDSP.h faderDSP.I \
+    flangeDSP.h flangeDSP.I \
+    highpassDSP.h highpassDSP.I \
+    limiterDSP.h limiterDSP.I \
+    lowpassDSP.h lowpassDSP.I \
+    normalizeDSP.h normalizeDSP.I \
     nullAudioManager.h \
-    nullAudioSound.h
+    nullAudioSound.h \
+    oscillatorDSP.h oscillatorDSP.I \
+    paramEQDSP.h paramEQDSP.I \
+    pitchShiftDSP.h pitchShiftDSP.I \
+    sfxReverbDSP.h sfxReverbDSP.I
 
   #define COMPOSITE_SOURCES \
     config_audio.cxx \
@@ -23,17 +38,47 @@
     audioLoadRequest.cxx \
     audioManager.cxx \
     audioSound.cxx \
+    chorusDSP.cxx \
+    compressorDSP.cxx \
+    distortionDSP.cxx \
+    dsp.cxx \
+    echoDSP.cxx \
+    faderDSP.cxx \
+    flangeDSP.cxx \
+    highpassDSP.cxx \
+    limiterDSP.cxx \
+    lowpassDSP.cxx \
+    normalizeDSP.cxx \
     nullAudioManager.cxx \
-    nullAudioSound.cxx
+    nullAudioSound.cxx \
+    oscillatorDSP.cxx \
+    paramEQDSP.cxx \
+    pitchShiftDSP.cxx \
+    sfxReverbDSP.cxx
 
   #define INSTALL_HEADERS \
     config_audio.h \
-    filterProperties.h filterProperties.I\
+    filterProperties.h filterProperties.I \
     audioLoadRequest.h audioLoadRequest.I \
-    audioManager.h audioManager.I\
-    audioSound.h audioSound.I\
+    audioManager.h audioManager.I \
+    audioSound.h audioSound.I \
+    chorusDSP.h chorusDSP.I \
+    compressorDSP.h compressorDSP.I \
+    distortionDSP.h distortionDSP.I \
+    dsp.h dsp.I \
+    echoDSP.h echoDSP.I \
+    faderDSP.h faderDSP.I \
+    flangeDSP.h flangeDSP.I \
+    highpassDSP.h highpassDSP.I \
+    limiterDSP.h limiterDSP.I \
+    lowpassDSP.h lowpassDSP.I \
+    normalizeDSP.h normalizeDSP.I \
     nullAudioManager.h \
-    nullAudioSound.h
+    nullAudioSound.h \
+    oscillatorDSP.h oscillatorDSP.I \
+    paramEQDSP.h paramEQDSP.I \
+    pitchShiftDSP.h pitchShiftDSP.I \
+    sfxReverbDSP.h sfxReverbDSP.I
 
   #define IGATESCAN all
 #end lib_target
