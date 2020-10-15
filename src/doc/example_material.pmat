@@ -1,0 +1,128 @@
+//
+// This is an example render state/material definition script, outlining the
+// various attributes that can be set and the ways to set them.
+//
+
+// The format of render state scripts are simple key-value pairs.  There is a
+// single key-value definition per line.  A key-value pair is defined by a key
+// name, whitespace, and a value.  Wrap the key name or value in double quotes
+// for multiple word keys or values.
+//
+// Key-value pairs can also be defined under named blocks.  This is useful for
+// grouping logically related key-value pairs, such as an attribute that has
+// multiple parameters.
+
+// This block defines the shader that the render state should use and the
+// values for shader-specific parameters.
+shader {
+  // Name of shader to be used.
+  name VertexLitGeneric
+
+  // Shader-specific parameters.
+  halflambert 1
+  selfillum 1
+  // Note that each component of a vector or color is separated by a space.
+  // Since the value contains spaces, it must be wrapped in double quotes.
+  selfillumtint "1.0 0.75 0.5"
+}
+
+// Specify the textures that should be used.  This is under a block to support
+// multitexture pipelines.
+texture {
+  // <texture type> <filename/internal texture name>
+
+  albedo "phase_3/maps/avatar_head"
+
+  // ARME is a texture that controls the appearance of the surface under
+  // lighting.  Each channel is a different parameter in the lighting equation.
+  // Red channel - ambient occlusion
+  // Green channel - roughness
+  // Blue channel - metalness
+  // Alpha channel - emission
+  arme "phase_3/maps/avatar_head_arme"
+
+  // This texture is not a file, but the name of a texture that is internal to
+  // the engine.  In this example, it is the texture that contains the
+  // framebuffer output.
+  blurColor "_rt_FullscreenFB"
+}
+
+// Enable or disable transparency.  There are many different transparency modes:
+// transparency 0/off/no/none/false - Disable transparency
+// transparency 1/on/yes/true/alpha - Enable simple alpha transparency
+// transparency 2/premultiplied_alpha - Enable premultiplied alpha transparency
+// transparency 3/multisample - Enable multisample transparency
+// transparency 4/multisample_mask - Enable multisample mask transparency
+// transparency 5/binary - Enable binary transparency (fully transparent or fully opaque)
+// transparency 6/dual - Enable dualing transparency (opaque parts drawn first)
+transparency dual
+
+// Apply a color (R G B A)
+// Replaces down the scene graph.
+color "1.0 0.2 0.2 1.0"
+
+// Apply a color scale (R G B A)
+// Multiplies down the scene graph.
+color_scale "0.5 0.5 0.5 1.0"
+
+// Note that for boolean values like the ones defined below, false can be
+// indicated with "0", "off", "no", "false", or "none".  Anything else is
+// assumed to be true.  To indicate true, you can put "1", "yes", "on",
+// "true", or even "bananas".  It is all interpreted as true.
+
+// Enable or disable writing to the Z-buffer.
+z_write off
+
+// Enable or disable testing against the Z-buffer.
+z_test on
+
+// Apply a Z offset.  Useful for decals.
+z_offset 3
+
+// Shortcut to disable both Z writing and Z testing.
+no_z true
+
+// Completely disable fogging.
+no_fog false
+
+// Completely disable lighting.
+no_light 1
+
+// Change culling mode.
+// cull none
+// cull ccw
+cull cw
+
+// Enable two-sided polygons.  Alias for "cull none".
+two_sided 1
+
+// Specify how the polygons are to be drawn.
+render_mode {
+  mode filled_wireframe
+  thickness 2.0
+  perspective false
+  wireframe_color "0.25 0.5 1.0 1.0"
+}
+
+// Enable or disable writing to the color buffer.
+color_write off
+// You can also turn on individual channels, if you need that.
+// color_write rb
+// color_write rgb
+// color_write 1/true/on/all/rgba
+
+// You can also put the geometry in a specific bin to control draw order.
+bin {
+  // Name of the bin to put the geometry in.
+  name foreground
+  // Control the order that the geometry is drawn *within* the bin.
+  sort 100
+}
+
+// Enables alpha testing.
+alpha_test {
+  // The reference alpha value.
+  reference 0.5
+  // The comparison function.
+  compare less_equal
+}
