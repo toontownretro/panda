@@ -1,12 +1,12 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define USE_PACKAGES eigen
 
 #begin lib_target
-  #define TARGET p3linmath
+  #define TARGET linmath
   #define LOCAL_LIBS \
-    p3express p3pandabase
+    express pandabase
 
   #define BUILDING_DLL BUILDING_PANDA_LINMATH
 
@@ -98,7 +98,7 @@
 #begin test_bin_target
   #define TARGET test_math
   #define LOCAL_LIBS \
-    p3linmath
+    linmath
 
   #define SOURCES \
     test_math.cxx

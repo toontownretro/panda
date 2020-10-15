@@ -1,9 +1,9 @@
-#define OTHER_LIBS p3interrogatedb \
-                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
-#define LOCAL_LIBS p3dgraph p3putil p3express p3pandabase
+#define OTHER_LIBS interrogatedb \
+                  dtoolutil:c dtoolbase:c dtool:m prc
+#define LOCAL_LIBS dgraph putil express pandabase
 
 #begin lib_target
-  #define TARGET p3recorder
+  #define TARGET recorder
 
   #define BUILDING_DLL BUILDING_PANDA_RECORDER
 

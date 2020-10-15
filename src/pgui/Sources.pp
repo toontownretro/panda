@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3pgui
+  #define TARGET pgui
   #define LOCAL_LIBS \
-    p3audio p3grutil p3text p3tform p3linmath p3event p3putil p3gobj \
-    p3mathutil
+    audio grutil text tform linmath event putil gobj \
+    mathutil
 
   #define BUILDING_DLL BUILDING_PANDA_PGUI
 
@@ -78,10 +78,10 @@
   #define TARGET test_pgentry
 
   #define LOCAL_LIBS \
-    p3framework p3putil p3collide p3pgraph p3chan p3text \
-    p3pnmimage p3pnmimagetypes p3event p3gobj p3display \
-    p3mathutil p3putil p3express p3dgraph p3device p3tform \
-    p3linmath p3pstatclient panda
+    framework putil collide pgraph chan text \
+    pnmimage pnmimagetypes event gobj display \
+    mathutil putil express dgraph device tform \
+    linmath pstatclient panda
 
   #define UNIX_SYS_LIBS m
 

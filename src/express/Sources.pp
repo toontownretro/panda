@@ -1,8 +1,8 @@
-#define LOCAL_LIBS p3pandabase
-#define OTHER_LIBS p3interrogatedb p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define LOCAL_LIBS pandabase
+#define OTHER_LIBS interrogatedb dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3express
+  #define TARGET express
   #define USE_PACKAGES zlib openssl
 
   #define BUILDING_DLL BUILDING_PANDA_EXPRESS
@@ -256,8 +256,8 @@
   // ca_bundle_data_src.c.
 
   #define TARGET make_ca_bundle
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3express
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m
+  #define LOCAL_LIBS $[LOCAL_LIBS] express
+  #define OTHER_LIBS dtoolutil:c dtool:m
 
   #define SOURCES \
     make_ca_bundle.cxx
@@ -267,8 +267,8 @@
 
 #begin test_bin_target
   #define TARGET test_types
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3express
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
+  #define LOCAL_LIBS $[LOCAL_LIBS] express
+  #define OTHER_LIBS dtoolutil:c dtool:m prc
 
   #define SOURCES \
     test_types.cxx
@@ -282,8 +282,8 @@
   #define SOURCES \
     test_ordered_vector.cxx
 
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3putil
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
+  #define LOCAL_LIBS $[LOCAL_LIBS] putil
+  #define OTHER_LIBS dtoolutil:c dtool:m prc
 
 #end test_bin_target
 
@@ -292,8 +292,8 @@
 #begin test_bin_target
   #define TARGET test_zstream
   #define USE_PACKAGES zlib
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3express
-  #define OTHER_LIBS p3dtoolutil:c p3dtool:m p3prc
+  #define LOCAL_LIBS $[LOCAL_LIBS] express
+  #define OTHER_LIBS dtoolutil:c dtool:m prc
 
   #define SOURCES \
     test_zstream.cxx

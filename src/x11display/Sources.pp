@@ -1,12 +1,12 @@
 #define BUILD_DIRECTORY $[HAVE_X11]
 
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m
 #define USE_PACKAGES x11
 
 #begin lib_target
-  #define TARGET p3x11display
-  #define LOCAL_LIBS p3display
+  #define TARGET x11display
+  #define LOCAL_LIBS display
 
   #define BUILDING_DLL BUILDING_PANDAX11
 

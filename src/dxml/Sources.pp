@@ -1,5 +1,5 @@
 #begin static_lib_target
-  #define TARGET p3tinyxml
+  #define TARGET tinyxml
 
   #define SOURCES \
      tinyxml.h
@@ -16,13 +16,13 @@
 #end static_lib_target
 
 #begin lib_target
-  #define TARGET p3dxml
+  #define TARGET dxml
 
   #define BUILDING_DLL BUILDING_PANDA_DXML
 
-  #define LOCAL_LIBS p3pandabase
+  #define LOCAL_LIBS pandabase
   #define OTHER_LIBS \
-    p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
+    dtoolutil:c dtoolbase:c prc dtool:m
 
   #define SOURCES \
     config_dxml.h tinyxml.h

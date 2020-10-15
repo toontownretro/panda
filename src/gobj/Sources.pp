@@ -1,12 +1,12 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 //#define OSX_SYS_LIBS mx
 #define USE_PACKAGES zlib cg squish
 
 #begin lib_target
-  #define TARGET p3gobj
+  #define TARGET gobj
   #define LOCAL_LIBS \
-    p3pstatclient p3event p3linmath p3mathutil p3pnmimage p3gsgbase p3putil
+    pstatclient event linmath mathutil pnmimage gsgbase putil
 
   #define BUILDING_DLL BUILDING_PANDA_GOBJ
 

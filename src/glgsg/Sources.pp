@@ -1,12 +1,12 @@
 #define BUILD_DIRECTORY $[HAVE_GL]
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 #define USE_PACKAGES gl cg cggl
 #begin lib_target
-  #define TARGET p3glgsg
+  #define TARGET glgsg
   #define LOCAL_LIBS \
-    p3glstuff p3gsgbase p3gobj p3display \
-    p3putil p3linmath p3mathutil p3pnmimage
+    glstuff gsgbase gobj display \
+    putil linmath mathutil pnmimage
 
   #define SOURCES \
     config_glgsg.h \

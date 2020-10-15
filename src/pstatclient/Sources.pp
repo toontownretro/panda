@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
   #define LOCAL_LIBS \
-    p3net p3putil p3express
+    net putil express
 
-  #define TARGET p3pstatclient
+  #define TARGET pstatclient
 
   #define BUILDING_DLL BUILDING_PANDA_PSTATCLIENT
 
@@ -49,7 +49,7 @@
 
 #begin test_bin_target
   #define LOCAL_LIBS \
-    p3pstatclient
+    pstatclient
 
   #define TARGET test_client
 

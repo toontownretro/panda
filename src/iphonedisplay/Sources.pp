@@ -1,18 +1,18 @@
 #define BUILD_DIRECTORY $[BUILD_IPHONE]
 
-#define OTHER_LIBS p3interrogatedb  \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb  \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define OSX_SYS_FRAMEWORKS Foundation QuartzCore UIKit OpenGLES
 
 #begin lib_target
-  #define TARGET p3iphonedisplay
+  #define TARGET iphonedisplay
 
   #define LOCAL_LIBS \
-    p3framework p3putil p3collide p3pgraph p3chan p3text \
-    p3pnmimage p3pnmimagetypes p3event p3gobj p3display \
-    p3mathutil p3putil p3express p3dgraph p3device p3tform \
-    p3linmath p3pstatclient panda p3glstuff p3glesgsg
+    framework putil collide pgraph chan text \
+    pnmimage pnmimagetypes event gobj display \
+    mathutil putil express dgraph device tform \
+    linmath pstatclient panda glstuff glesgsg
 
   #define SOURCES \
     config_iphonedisplay.h config_iphonedisplay.mm \

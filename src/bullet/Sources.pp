@@ -1,11 +1,11 @@
 #define BUILD_DIRECTORY $[HAVE_BULLET]
 #define BUILDING_DLL BUILDING_PANDABULLET
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3bullet
-  #define LOCAL_LIBS p3pgraph p3linmath p3grutil p3collide
+  #define TARGET bullet
+  #define LOCAL_LIBS pgraph linmath grutil collide
   #define USE_PACKAGES bullet
 
   #define SOURCES \

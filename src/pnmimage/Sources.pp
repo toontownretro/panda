@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 #define USE_PACKAGES zlib
 
 #begin lib_target
-  #define TARGET p3pnmimage
+  #define TARGET pnmimage
   #define LOCAL_LIBS \
-    p3linmath p3putil p3express p3mathutil
+    linmath putil express mathutil
 
   #define BUILDING_DLL BUILDING_PANDA_PNMIMAGE
 

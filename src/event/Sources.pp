@@ -1,8 +1,8 @@
-#define LOCAL_LIBS p3putil p3express p3pandabase p3pstatclient p3linmath
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define LOCAL_LIBS putil express pandabase pstatclient linmath
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3event
+  #define TARGET event
 
   #define BUILDING_DLL BUILDING_PANDA_EVENT
 
@@ -73,10 +73,10 @@
 
 #begin test_bin_target
   #define TARGET test_task
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3mathutil
+  #define LOCAL_LIBS $[LOCAL_LIBS] mathutil
   #define OTHER_LIBS \
-   p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_task.cxx

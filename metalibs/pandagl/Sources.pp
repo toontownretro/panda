@@ -9,12 +9,12 @@
 #define BUILD_DIRECTORY $[HAVE_GL]
 
 #define COMPONENT_LIBS \
-    p3glgsg p3x11display p3glxdisplay  \
-    p3wgldisplay p3osxdisplay p3cocoadisplay
+    glgsg x11display glxdisplay  \
+    wgldisplay osxdisplay cocoadisplay
 
-#define LOCAL_LIBS p3gsgbase p3display p3express
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define LOCAL_LIBS gsgbase display express
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin metalib_target
   #define TARGET pandagl

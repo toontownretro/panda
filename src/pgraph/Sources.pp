@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
-    p3event p3gsgbase p3gobj p3putil p3linmath \
-    p3downloader p3express p3pandabase p3pstatclient
+    event gsgbase gobj putil linmath \
+    downloader express pandabase pstatclient
 
 #begin lib_target
-  #define TARGET p3pgraph
+  #define TARGET pgraph
 
   // This directory is too big to combine into a single composite
   // file--at least on Windows.
@@ -337,7 +337,7 @@
     transformState_ext.h
 
 // Uncomment these lines to compile everything individually instead of
-// combining into p3pgraph_composite*.cxx.
+// combining into pgraph_composite*.cxx.
 
 //  #define SOURCES $[SOURCES] $[COMPOSITE_SOURCES]
 //  #define COMPOSITE_SOURCES
@@ -351,6 +351,6 @@
   #define SOURCES \
     test_pgraph.cxx
 
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pgraph
+  #define LOCAL_LIBS $[LOCAL_LIBS] pgraph
 
 #end test_bin_target

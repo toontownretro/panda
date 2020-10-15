@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                  p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
-#define LOCAL_LIBS p3pipeline p3linmath p3express p3pandabase
+#define OTHER_LIBS interrogatedb \
+                  dtoolutil:c dtoolbase:c dtool:m prc
+#define LOCAL_LIBS pipeline linmath express pandabase
 #define USE_PACKAGES zlib
 
 #begin lib_target
-  #define TARGET p3putil
+  #define TARGET putil
 
   #define BUILDING_DLL BUILDING_PANDA_PUTIL
 
@@ -219,7 +219,7 @@
 #begin test_bin_target
   #define TARGET test_bamRead
   #define LOCAL_LIBS \
-    p3putil p3pgraph
+    putil pgraph
 
   #define SOURCES \
     test_bam.cxx test_bam.h test_bamRead.cxx
@@ -229,7 +229,7 @@
 #begin test_bin_target
   #define TARGET test_bamWrite
   #define LOCAL_LIBS \
-    p3putil p3pgraph
+    putil pgraph
 
   #define SOURCES \
     test_bam.cxx test_bam.h test_bamWrite.cxx
@@ -250,7 +250,7 @@
   #define SOURCES \
     test_glob.cxx
 
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3putil
+  #define LOCAL_LIBS $[LOCAL_LIBS] putil
 
 #end test_bin_target
 
@@ -260,6 +260,6 @@
   #define SOURCES \
     test_linestream.cxx
 
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3putil
+  #define LOCAL_LIBS $[LOCAL_LIBS] putil
 
 #end test_bin_target

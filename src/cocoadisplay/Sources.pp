@@ -1,13 +1,13 @@
 #define BUILD_DIRECTORY $[and $[IS_OSX],$[HAVE_GL],$[HAVE_COCOA]]
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m
 
 #define OSX_SYS_FRAMEWORKS ApplicationServices AppKit Carbon CoreVideo
 
 #begin lib_target
-  #define TARGET p3cocoadisplay
+  #define TARGET cocoadisplay
   #define LOCAL_LIBS \
-    p3display p3putil p3glgsg
+    display putil glgsg
 
   #define BUILDING_DLL BUILDING_PANDA_COCOADISPLAY
 

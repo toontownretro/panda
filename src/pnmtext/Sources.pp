@@ -1,7 +1,7 @@
 #define BUILD_DIRECTORY $[HAVE_FREETYPE]
 
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define USE_PACKAGES freetype
 
@@ -9,9 +9,9 @@
 
   #define BUILDING_DLL BUILDING_PANDA_PNMTEXT
 
-  #define TARGET p3pnmtext
+  #define TARGET pnmtext
   #define LOCAL_LIBS \
-    p3parametrics p3pnmimage
+    parametrics pnmimage
 
   #define SOURCES \
     config_pnmtext.h \

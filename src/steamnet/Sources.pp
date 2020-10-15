@@ -1,10 +1,10 @@
 #define BUILD_DIRECTORY $[and $[HAVE_NET],$[WANT_NATIVE_NET],$[HAVE_VALVE_STEAMNET]]
 
 #begin lib_target
-  #define TARGET p3steamnet
+  #define TARGET steamnet
 
   #define USE_PACKAGES valve_steamnet
-  #define LOCAL_LIBS p3express p3net p3putil
+  #define LOCAL_LIBS express net putil
 
   #define SOURCES \
     config_steamnet.h \

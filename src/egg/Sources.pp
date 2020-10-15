@@ -1,14 +1,14 @@
 #define BUILD_DIRECTORY $[HAVE_EGG]
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 #define YACC_PREFIX eggyy
 #define FLEXFLAGS -i
 #define USE_PACKAGES zlib
 
 #begin lib_target
-  #define TARGET p3egg
+  #define TARGET egg
   #define LOCAL_LIBS \
-    p3mathutil p3linmath p3putil
+    mathutil linmath putil
 
   #define BUILDING_DLL BUILDING_PANDA_EGG
 
@@ -155,7 +155,7 @@
 #begin test_bin_target
   #define TARGET test_egg
   #define LOCAL_LIBS \
-    p3egg p3putil p3mathutil
+    egg putil mathutil
 
   #define SOURCES \
     test_egg.cxx

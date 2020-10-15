@@ -8,8 +8,8 @@
 #define BUILDING_DLL BUILDING_PANDAEXPRESS
 #define USE_PACKAGES net
 
-#define COMPONENT_LIBS p3downloader p3express p3pandabase
-#define OTHER_LIBS p3prc p3interrogatedb p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define COMPONENT_LIBS downloader express pandabase
+#define OTHER_LIBS prc interrogatedb dtoolutil:c dtoolbase:c dtool:m
 
 #begin metalib_target
   #define TARGET pandaexpress

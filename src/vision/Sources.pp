@@ -1,14 +1,14 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define USE_PACKAGES opencv artoolkit
 
 #define BUILDING_DLL BUILDING_VISION
 
 #begin lib_target
-  #define TARGET p3vision
+  #define TARGET vision
   #define LOCAL_LIBS \
-    p3display p3text p3pgraph p3gobj p3linmath p3putil p3audio p3movies
+    display text pgraph gobj linmath putil audio movies
 
   #define BUILDNG_DLL BUILDING_PANDA_VISION
 

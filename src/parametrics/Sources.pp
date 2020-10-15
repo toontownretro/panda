@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3parametrics
+  #define TARGET parametrics
   #define LOCAL_LIBS \
-    p3pgraph p3linmath p3express p3putil p3pandabase
+    pgraph linmath express putil pandabase
 
   #define BUILDING_DLL BUILDING_PANDA_PARAMETRICS
 
@@ -68,7 +68,7 @@
 #begin test_bin_target
   #define TARGET test_parametrics
   #define LOCAL_LIBS \
-    p3parametrics
+    parametrics
 
   #define SOURCES \
     test_parametrics.cxx

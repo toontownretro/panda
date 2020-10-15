@@ -1,8 +1,8 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
+#define OTHER_LIBS dtoolutil:c dtoolbase:c prc dtool:m
 
 #begin lib_target
-  #define TARGET p3downloader
-  #define LOCAL_LIBS p3express
+  #define TARGET downloader
+  #define LOCAL_LIBS express
 
   #define BUILDING_DLL BUILDING_PANDA_DOWNLOADER
 

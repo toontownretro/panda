@@ -1,8 +1,8 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3pandabase
+  #define TARGET pandabase
 
   #define SOURCES \
     pandabase.cxx pandabase.h pandasymbols.h \

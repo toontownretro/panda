@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 
 #begin lib_target
-  #define TARGET p3movies
-  #define LOCAL_LIBS p3gobj
+  #define TARGET movies
+  #define LOCAL_LIBS gobj
 
   #define USE_PACKAGES vorbis opus
   #define WIN_SYS_LIBS $[WIN_SYS_LIBS] strmiids.lib winmm.lib

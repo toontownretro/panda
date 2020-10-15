@@ -1,14 +1,14 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
   #define USE_PACKAGES harfbuzz
 
-  #define TARGET p3text
+  #define TARGET text
   #define LOCAL_LIBS \
-    p3putil p3gobj p3pgraph p3linmath \
-    p3pnmtext p3pnmimage p3gsgbase p3mathutil \
-    p3parametrics
+    putil gobj pgraph linmath \
+    pnmtext pnmimage gsgbase mathutil \
+    parametrics
 
   #define BUILDING_DLL BUILDING_PANDA_TEXT
 

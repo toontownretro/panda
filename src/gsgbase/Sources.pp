@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3gsgbase
+  #define TARGET gsgbase
   #define LOCAL_LIBS \
-    p3putil p3linmath
+    putil linmath
 
   #define BUILDING_DLL BUILDING_PANDA_GSGBASE
 
@@ -30,7 +30,7 @@
 #begin test_bin_target
   #define TARGET test_gsgbase
   #define LOCAL_LIBS \
-    p3gsgbase
+    gsgbase
 
   #define SOURCES \
     test_gsgbase.cxx

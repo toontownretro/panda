@@ -1,12 +1,12 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 #define WIN_SYS_LIBS $[WIN_SYS_LIBS] ws2_32.lib
 
 #define USE_PACKAGES x11
 
 #begin lib_target
-  #define TARGET p3display
+  #define TARGET display
   #define LOCAL_LIBS \
-    p3cull p3device p3pgraphnodes
+    cull device pgraphnodes
 
   #define BUILDING_DLL BUILDING_PANDA_DISPLAY
 

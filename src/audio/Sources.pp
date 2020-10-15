@@ -1,10 +1,10 @@
 #define OTHER_LIBS \
-     p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+     dtoolutil:c dtoolbase:c dtool:m prc
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 
 #begin lib_target
-  #define TARGET p3audio
-  #define LOCAL_LIBS p3putil p3event p3movies p3linmath
+  #define TARGET audio
+  #define LOCAL_LIBS putil event movies linmath
 
   #define BUILDING_DLL BUILDING_PANDA_AUDIO
 
@@ -86,7 +86,7 @@
 #begin test_bin_target
   #define TARGET test_audio
   #define LOCAL_LIBS \
-    p3audio
+    audio
 
   #define SOURCES \
     test_audio.cxx

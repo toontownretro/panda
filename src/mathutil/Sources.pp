@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3mathutil
+  #define TARGET mathutil
   #define LOCAL_LIBS \
-    p3linmath p3putil p3event p3express
+    linmath putil event express
   #define USE_PACKAGES fftw
   #define UNIX_SYS_LIBS m
 
@@ -80,7 +80,7 @@
 #begin test_bin_target
   #define TARGET test_mathutil
   #define LOCAL_LIBS \
-    p3mathutil p3pipeline
+    mathutil pipeline
 
   #define SOURCES \
     test_mathutil.cxx
@@ -91,7 +91,7 @@
 #begin test_bin_target
   #define TARGET test_tri
   #define LOCAL_LIBS \
-    p3mathutil p3pipeline
+    mathutil pipeline
 
   #define SOURCES \
     test_tri.cxx

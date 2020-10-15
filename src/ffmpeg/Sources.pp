@@ -1,15 +1,15 @@
 #define BUILD_DIRECTORY $[HAVE_FFMPEG]
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #define BUILDING_DLL BUILDING_FFMPEG
 
 #define USE_PACKAGES ffmpeg
 
 #begin lib_target
-  #define TARGET p3ffmpeg
+  #define TARGET ffmpeg
 
-  #define LOCAL_LIBS p3movies
+  #define LOCAL_LIBS movies
 
   #define SOURCES \
     config_ffmpeg.h \

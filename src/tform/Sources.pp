@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3tform
+  #define TARGET tform
   #define LOCAL_LIBS \
-    p3grutil p3dgraph p3pgraph p3linmath p3display p3event p3putil p3gobj p3gsgbase \
-    p3mathutil p3device
+    grutil dgraph pgraph linmath display event putil gobj gsgbase \
+    mathutil device
 
   #define BUILDING_DLL BUILDING_PANDA_TFORM
 

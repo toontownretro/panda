@@ -1,14 +1,14 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 // Most of the files here are not actually compiled into anything;
 // they're just included by various other directories.
 
 #begin lib_target
-  #define TARGET p3glstuff
+  #define TARGET glstuff
   #define LOCAL_LIBS \
-    p3gsgbase p3gobj p3display \
-    p3putil p3linmath p3mathutil p3pnmimage
+    gsgbase gobj display \
+    putil linmath mathutil pnmimage
 
   #if $[OSX_PLATFORM]
     // We acknowledge Apple's hostility to open standards so that the SDK won't

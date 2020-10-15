@@ -1,9 +1,9 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3collide
+  #define TARGET collide
   #define LOCAL_LIBS \
-    p3tform
+    tform
 
   #define BUILDING_DLL BUILDING_PANDA_COLLIDE
 

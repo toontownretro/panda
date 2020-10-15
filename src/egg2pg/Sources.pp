@@ -1,11 +1,11 @@
 #define BUILD_DIRECTORY $[HAVE_EGG]
 
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3egg2pg
+  #define TARGET egg2pg
   #define LOCAL_LIBS \
-    p3parametrics p3collide p3egg p3pgraph p3chan p3char
+    parametrics collide egg pgraph chan char
 
   #define BUILDING_DLL BUILDING_PANDA_EGG2PG
 

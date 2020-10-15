@@ -1,11 +1,11 @@
-#define LOCAL_LIBS p3express p3pandabase
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define LOCAL_LIBS express pandabase
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define SELECT_TAU select.tau
 
 #begin lib_target
-  #define TARGET p3pipeline
+  #define TARGET pipeline
   #define USE_PACKAGES threads
 
   #define BUILDING_DLL BUILDING_PANDA_PIPELINE
@@ -138,10 +138,10 @@
 
 #begin test_bin_target
   #define TARGET test_threaddata
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_threaddata.cxx
@@ -151,10 +151,10 @@
 
 #begin test_bin_target
   #define TARGET test_diners
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_diners.cxx
@@ -164,10 +164,10 @@
 
 #begin test_bin_target
   #define TARGET test_mutex
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_mutex.cxx
@@ -177,10 +177,10 @@
 
 #begin test_bin_target
   #define TARGET test_concurrency
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_concurrency.cxx
@@ -190,10 +190,10 @@
 
 #begin test_bin_target
   #define TARGET test_delete
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_delete.cxx
@@ -203,10 +203,10 @@
 
 #begin test_bin_target
   #define TARGET test_atomic
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_atomic.cxx
@@ -217,10 +217,10 @@
 
 #begin test_bin_target
   #define TARGET test_setjmp
-  #define LOCAL_LIBS $[LOCAL_LIBS] p3pipeline
+  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
   #define OTHER_LIBS \
-   p3interrogatedb p3dtoolbase:c p3prc \
-   p3dtoolutil:c p3dtool:m
+   interrogatedb dtoolbase:c prc \
+   dtoolutil:c dtool:m
 
   #define SOURCES \
     test_setjmp.cxx

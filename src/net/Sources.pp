@@ -1,15 +1,15 @@
 #define OTHER_LIBS \
-   p3interrogatedb \
-   p3dtoolutil:c p3dtoolbase:c p3prc p3dtool:m
+   interrogatedb \
+   dtoolutil:c dtoolbase:c prc dtool:m
 #define WIN_SYS_LIBS iphlpapi.lib
 
 #define BUILD_DIRECTORY $[and $[HAVE_NET],$[WANT_NATIVE_NET]]
 #define USE_PACKAGES net
 
 #begin lib_target
-  #define TARGET p3net
+  #define TARGET net
   #define LOCAL_LIBS \
-    p3express p3downloader p3pandabase p3nativenet p3pipeline
+    express downloader pandabase nativenet pipeline
 
   #define BUILDING_DLL BUILDING_PANDA_NET
 
@@ -59,7 +59,7 @@
 
 #begin test_bin_target
   #define TARGET test_datagram
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     test_datagram.cxx
@@ -68,7 +68,7 @@
 
 #begin test_bin_target
   #define TARGET test_spam_client
-  #define LOCAL_LIBS p3net p3putil
+  #define LOCAL_LIBS net putil
 
   #define SOURCES \
     datagram_ui.cxx datagram_ui.h test_spam_client.cxx
@@ -77,7 +77,7 @@
 
 #begin test_bin_target
   #define TARGET test_spam_server
-  #define LOCAL_LIBS p3net p3putil
+  #define LOCAL_LIBS net putil
 
   #define SOURCES \
     datagram_ui.cxx datagram_ui.h test_spam_server.cxx
@@ -86,7 +86,7 @@
 
 #begin test_bin_target
   #define TARGET test_tcp_client
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     datagram_ui.cxx datagram_ui.h test_tcp_client.cxx
@@ -95,7 +95,7 @@
 
 #begin test_bin_target
   #define TARGET test_tcp_server
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     datagram_ui.cxx datagram_ui.h test_tcp_server.cxx
@@ -104,7 +104,7 @@
 
 #begin test_bin_target
   #define TARGET test_raw_server
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     test_raw_server.cxx
@@ -113,7 +113,7 @@
 
 #begin test_bin_target
   #define TARGET test_udp
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     datagram_ui.cxx datagram_ui.h test_udp.cxx
@@ -122,7 +122,7 @@
 
 #begin test_bin_target
   #define TARGET fake_http_server
-  #define LOCAL_LIBS p3net
+  #define LOCAL_LIBS net
 
   #define SOURCES \
     fake_http_server.cxx

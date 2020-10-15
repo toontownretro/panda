@@ -1,5 +1,5 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
-#define LOCAL_LIBS p3downloader p3express
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
+#define LOCAL_LIBS downloader express
 #define USE_PACKAGES openssl zlib
 
 //#begin bin_target

@@ -1,11 +1,11 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
-    p3event p3gsgbase p3gobj p3putil p3linmath \
-    p3downloader p3express p3pandabase p3pstatclient p3pgraph
+    event gsgbase gobj putil linmath \
+    downloader express pandabase pstatclient pgraph
 
 #begin lib_target
-  #define TARGET p3pgraphnodes
+  #define TARGET pgraphnodes
 
   #define BUILDING_DLL BUILDING_PANDA_PGRAPHNODES
 

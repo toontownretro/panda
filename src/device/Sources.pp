@@ -1,9 +1,9 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3device
+  #define TARGET device
   #define LOCAL_LIBS \
-    p3dgraph
+    dgraph
 
   #define WIN_SYS_LIBS $[WIN_SYS_LIBS] cfgmgr32.lib
   #define OSX_SYS_FRAMEWORKS IOKit

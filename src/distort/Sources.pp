@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 //#define OSX_SYS_LIBS mx
 
 #begin lib_target
   #define TARGET pandafx
   #define LOCAL_LIBS \
-    p3display p3pgraph p3gobj p3linmath
+    display pgraph gobj linmath
 
   #define BUILDING_DLL BUILDING_PANDAFX
 

@@ -9,11 +9,11 @@
 #define BUILDING_DLL BUILDING_PANDAEGG
 
 #define COMPONENT_LIBS \
-    p3egg2pg egg2sg p3egg
+    egg2pg egg2sg egg
 
-#define LOCAL_LIBS p3putil p3express
-#define OTHER_LIBS p3interrogatedb \
-    p3dtoolbase:c p3dtoolutil:c p3dtool:m p3prc
+#define LOCAL_LIBS putil express
+#define OTHER_LIBS interrogatedb \
+    dtoolbase:c dtoolutil:c dtool:m prc
 
 #begin metalib_target
   #define TARGET pandaegg

@@ -1,6 +1,6 @@
 #begin lib_target
-  #define TARGET p3bspinternal
-  #define LOCAL_LIBS p3keyvalues p3pgraph p3gobj
+  #define TARGET bspinternal
+  #define LOCAL_LIBS keyvalues pgraph gobj
 
   #define BUILDING_DLL BUILDING_BSPINTERNAL
 

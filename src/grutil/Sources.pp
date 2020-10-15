@@ -1,10 +1,10 @@
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET p3grutil
+  #define TARGET grutil
   #define LOCAL_LIBS \
-    p3display p3text p3pgraph p3gobj p3linmath p3putil p3movies p3audio
+    display text pgraph gobj linmath putil movies audio
 
   #define BUILDING_DLL BUILDING_PANDA_GRUTIL
 

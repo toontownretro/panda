@@ -1,15 +1,15 @@
 #define BUILD_DIRECTORY $[HAVE_DX9]
 
 #define OTHER_LIBS \
-   p3dtoolutil:c p3dtoolbase:c p3dtool:m
+   dtoolutil:c dtoolbase:c dtool:m
 
 #define USE_PACKAGES dx9 cg cgdx9
 
 #begin lib_target
-  #define TARGET p3dxgsg9
+  #define TARGET dxgsg9
   #define LOCAL_LIBS \
-    p3gsgbase p3gobj p3display p3windisplay \
-    p3putil p3linmath p3mathutil p3pnmimage p3event
+    gsgbase gobj display windisplay \
+    putil linmath mathutil pnmimage event
 
   #define BUILDING_DLL BUILDING_PANDADX
 

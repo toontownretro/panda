@@ -1,14 +1,14 @@
 #define BUILD_DIRECTORY $[HAVE_VRPN]
 
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m
 
 #define BUILDING_DLL BUILDING_VRPN
 
 #begin lib_target
-  #define TARGET p3vrpn
+  #define TARGET vrpn
   #define LOCAL_LIBS \
-    p3device p3dgraph
+    device dgraph
   #define USE_PACKAGES vrpn
 
   #define SOURCES \

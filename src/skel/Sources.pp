@@ -1,16 +1,16 @@
 // Don't build it, this is just an example.
 #define BUILD_DIRECTORY
 
-#define OTHER_LIBS p3interrogatedb \
-                   p3dtoolutil:c p3dtoolbase:c p3dtool:m p3prc
+#define OTHER_LIBS interrogatedb \
+                   dtoolutil:c dtoolbase:c dtool:m prc
 
 #define USE_PACKAGES
 #define BUILDING_DLL BUILDING_PANDASKEL
 
 #begin lib_target
-  #define TARGET p3skel
+  #define TARGET skel
   #define LOCAL_LIBS \
-    p3display p3text p3pgraph p3gobj p3linmath p3putil
+    display text pgraph gobj linmath putil
 
   #define SOURCES \
     config_skel.h \

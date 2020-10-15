@@ -1,6 +1,6 @@
 #begin lib_target
-  #define TARGET p3keyvalues
-  #define LOCAL_LIBS p3linmath p3express p3putil
+  #define TARGET keyvalues
+  #define LOCAL_LIBS linmath express putil
 
   #define SOURCES \
     config_keyvalues.h \
