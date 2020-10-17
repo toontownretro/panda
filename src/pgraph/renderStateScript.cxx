@@ -235,22 +235,55 @@ is_true_string(const std::string &value) {
 }
 
 /**
- * Parses a "texture" block nested in the state block.  Each key-value pair is
- * a texture stage name followed by the texture filename or internal texture
- * name.
+ * Parses a "texture" block and applies an appropriate TextureAttrib onto the
+ * state.  For multiple "texture" blocks, this adds new TextureStages onto the
+ * existing TextureAttrib.
  */
 void RenderStateScript::
 parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
-  // Each key-value pair is a texture stage name and texture path or internal
-  // texture name.
+  CPT(RenderAttrib) texattr = state->get_attrib(TextureAttrib::get_class_slot());
+  if (!texattr) {
+    // We don't already have a TextureAttrib; make one.
+    texattr = TextureAttrib::make();
+  }
 
-  CPT(RenderAttrib) texattr = TextureAttrib::make();
+  Filename filename;
+  Filename alpha_filename;
+  std::string stage_name;
+  bool cubemap = false;
 
   for (size_t i = 0; i < block->get_num_keys(); i++) {
-    PT(TextureStage) stage = new TextureStage(block->get_name());
-    PT(Texture) tex = TexturePool::load_texture(block->get_value(i));
-    texattr = DCAST(TextureAttrib, texattr)->add_on_stage(stage, tex);
+    const std::string &key = block->get_key(i);
+    const std::string &value = block->get_value(i);
+
+    if (key == "stage") {
+      stage_name = value;
+
+    } else if (key == "filename") {
+      filename = value;
+
+    } else if (key == "alpha_filename") {
+      alpha_filename = value;
+
+    } else if (key == "cubemap") {
+      cubemap = parse_bool_string(value);
+    }
   }
+
+  PT(TextureStage) stage = new TextureStage(stage_name);
+
+  PT(Texture) tex;
+  if (!filename.empty()) {
+    if (cubemap) {
+      tex = TexturePool::load_cube_map(filename);
+    } else if (!alpha_filename.empty()) {
+      tex = TexturePool::load_texture(filename, alpha_filename);
+    } else {
+      tex = TexturePool::load_texture(filename);
+    }
+  }
+
+  texattr = DCAST(TextureAttrib, texattr)->add_on_stage(stage, tex);
 
   state = state->set_attrib(texattr);
 }
@@ -394,6 +427,17 @@ parse_render_mode_block(CKeyValues *block, CPT(RenderState) &state) {
   state = state->set_attrib(RenderModeAttrib::make(mode, thickness,
                                                    perspective,
                                                    wireframe_color));
+}
+
+/**
+ * Parses a "color_blend" block and applies an appropriate ColorBlendAttrib
+ * onto the state.
+ */
+void RenderStateScript::
+parse_color_blend_block(CKeyValues *block, CPT(RenderState) &state) {
+  ColorBlendAttrib::Operand a = ColorBlendAttrib::O_fbuffer_color;
+  ColorBlendAttrib::Operand b = ColorBlendAttrib::O_incoming_color;
+  //ColorBlendAttrib::Mode;
 }
 
 /**

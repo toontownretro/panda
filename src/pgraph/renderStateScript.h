@@ -43,6 +43,7 @@ private:
   static void parse_alpha_test_block(CKeyValues *block, CPT(RenderState) &state);
   static void parse_shader_block(CKeyValues *block, CPT(RenderState) &state);
   static void parse_render_mode_block(CKeyValues *block, CPT(RenderState) &state);
+  static void parse_color_blend_block(CKeyValues *block, CPT(RenderState) &state);
   static void parse_color_write(const std::string &value, CPT(RenderState) &state);
 
   // Generated RenderState from the script
