@@ -28,7 +28,7 @@
 #endif // BUILDING_PANDA_SHADER
 
 ConfigureDecl(config_shader, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
-NotifyCategoryDecl(shader, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
+NotifyCategoryDecl(shadermgr, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
 
 extern EXPCL_PANDA_SHADER ConfigVariableList &get_shader_libraries();
 

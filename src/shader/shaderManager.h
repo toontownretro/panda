@@ -15,6 +15,12 @@
 #define SHADERMANAGER_H
 
 #include "config_shader.h"
+#include "pmap.h"
+#include "geomVertexAnimationSpec.h"
+#include "renderAttrib.h"
+
+class ShaderBase;
+class RenderState;
 
 /**
  *
@@ -26,8 +32,20 @@ PUBLISHED:
 public:
   void load_shader_libraries();
 
+  void register_shader(ShaderBase *shader);
+
+  CPT(RenderAttrib) generate_shader(const RenderState *state,
+                                    const GeomVertexAnimationSpec &animation_spec);
+
+  INLINE ShaderBase *get_shader(const std::string &name) const;
+
 private:
+  typedef pmap<std::string, ShaderBase *> ShaderRegistry;
+  ShaderRegistry _shaders;
+
   static ShaderManager *_global_ptr;
 };
+
+#include "shaderManager.I"
 
 #endif // SHADERMANAGER_H

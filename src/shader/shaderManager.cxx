@@ -14,6 +14,9 @@
 #include "shaderManager.h"
 #include "config_putil.h"
 #include "load_dso.h"
+#include "shaderBase.h"
+#include "shaderParamAttrib.h"
+#include "renderState.h"
 
 typedef void (*ShaderLibInit)();
 
@@ -42,12 +45,12 @@ load_shader_libraries() {
     Filename lib_filename = Filename::dso_filename("lib" + lib_name + ".so");
     lib_filename.to_os_specific();
 
-    shader_cat.info()
+    shadermgr_cat.info()
       << "Loading shader library " << lib_filename.get_fullpath() << "\n";
 
     void *handle = load_dso(get_plugin_path().get_value(), lib_filename);
     if (!handle) {
-      shader_cat.warning()
+      shadermgr_cat.warning()
         << "Unable to load shader library " << lib_filename.get_fullpath()
         << " on plugin path " << get_plugin_path()
         << "\n";
@@ -61,7 +64,7 @@ load_shader_libraries() {
       void *symbol = get_dso_symbol(handle, "init_lib" + lib_name);
 
       if (!symbol) {
-        shader_cat.warning()
+        shadermgr_cat.warning()
           << "Shader library " << lib_filename.get_fullpath() << " does not "
           << "define the initialization function: init_lib" << lib_name << "()\n";
         unload_dso(handle);
@@ -73,5 +76,33 @@ load_shader_libraries() {
         (*init_func)();
       }
     }
+  }
+}
+
+/**
+ * Registers the shader.  The shader can now be invoked by RenderStates that
+ * want to use it.
+ */
+void ShaderManager::
+register_shader(ShaderBase *shader) {
+  _shaders[shader->get_name()] = shader;
+}
+
+/**
+ * Generates a shader for a given RenderState.  Invokes the shader instance
+ * requested by name in the state.
+ */
+CPT(RenderAttrib) ShaderManager::
+generate_shader(const RenderState *state,
+                const GeomVertexAnimationSpec &anim_spec) {
+  // First figure out what shader the state would like to use.
+  const ShaderParamAttrib *spa;
+  state->get_attrib_def(spa);
+
+  ShaderBase *shader = get_shader(spa->get_shader_name());
+  if (!shader) {
+    shadermgr_cat.error()
+      << "Shader `" << spa->get_shader_name() << "` not found\n";
+    return nullptr;
   }
 }

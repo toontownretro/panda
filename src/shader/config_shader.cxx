@@ -18,6 +18,8 @@ ConfigureFn(config_shader) {
   init_libshader();
 }
 
+NotifyCategoryDef(shadermgr, "");
+
 ConfigVariableList &
 get_shader_libraries() {
   static ConfigVariableList *load_shader_library = nullptr;
