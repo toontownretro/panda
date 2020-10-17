@@ -44,7 +44,7 @@ LightMutex RenderStateScript::_mutex;
 /**
  * Loads a render state script from disk and generates a RenderState.
  */
-CPT(RenderStateScript) RenderStateScript::
+CPT(RenderState) RenderStateScript::
 load(const Filename &filename) {
   // Find it in the cache
   {
@@ -68,21 +68,22 @@ load(const Filename &filename) {
   }
 
   std::string data = vfs->read_file(resolved, true);
-  CPT(RenderStateScript) script = parse(data);
-  ((RenderStateScript *)script.p())->_filename = filename;
+  CPT(RenderState) state = parse(data);
+  state->_filename = filename;
+  state->_fullpath = resolved;
 
   {
     LightMutexHolder holder(_mutex);
-    _cache[filename] = script;
+    _cache[filename] = state;
   }
 
-  return script;
+  return state;
 }
 
 /**
  * Parses the render state script data and generates a RenderState.
  */
-CPT(RenderStateScript) RenderStateScript::
+CPT(RenderState) RenderStateScript::
 parse(const std::string &data) {
   PT(CKeyValues) mat_data = CKeyValues::from_string(data);
 
@@ -200,9 +201,7 @@ parse(const std::string &data) {
     }
   }
 
-  PT(RenderStateScript) script = new RenderStateScript;
-  script->_state = state;
-  return script;
+  return state;
 }
 
 /**

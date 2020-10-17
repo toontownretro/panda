@@ -171,6 +171,7 @@ PUBLISHED:
   void clear_effect(TypeHandle type);
 
   void set_state(const RenderState *state, Thread *current_thread = Thread::get_current_thread());
+  void set_state(const Filename &filename, Thread *current_thread = Thread::get_current_thread());
   INLINE CPT(RenderState) get_state(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void clear_state(Thread *current_thread = Thread::get_current_thread());
   MAKE_PROPERTY(state, get_state, set_state);

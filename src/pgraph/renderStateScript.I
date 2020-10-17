@@ -10,27 +10,3 @@
  * @author lachbr
  * @date 2020-10-13
  */
-
-/**
- *
- */
-INLINE RenderStateScript::
-RenderStateScript() {
-  _state = nullptr;
-}
-
-/**
- * Returns the RenderState corresponding to this script.
- */
-INLINE const RenderState *RenderStateScript::
-get_state() const {
-  return _state;
-}
-
-/**
- * Returns the filename the script was loaded from.
- */
-INLINE const Filename &RenderStateScript::
-get_filename() const {
-  return _filename;
-}

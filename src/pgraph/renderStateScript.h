@@ -15,7 +15,6 @@
 #define RENDERSTATESCRIPT_H
 
 #include "config_pgraph.h"
-#include "referenceCount.h"
 #include "filename.h"
 #include "pmap.h"
 #include "renderState.h"
@@ -26,19 +25,14 @@ class CKeyValues;
 /**
  * Text file representation of a RenderState.
  */
-class EXPCL_PANDA_PGRAPH RenderStateScript : public ReferenceCount {
+class EXPCL_PANDA_PGRAPH RenderStateScript {
 PUBLISHED:
-  static CPT(RenderStateScript) load(const Filename &filename);
-  static CPT(RenderStateScript) parse(const std::string &data);
-
-  INLINE const RenderState *get_state() const;
-  MAKE_PROPERTY(state, get_state);
-
-  INLINE const Filename &get_filename() const;
-  MAKE_PROPERTY(filename, get_filename);
+  static CPT(RenderState) load(const Filename &filename);
+  static CPT(RenderState) parse(const std::string &data);
 
 private:
-  INLINE RenderStateScript();
+  RenderStateScript() = delete;
+
   static bool parse_bool_string(const std::string &value);
   static bool is_true_string(const std::string &value);
   static void parse_texture_block(CKeyValues *block, CPT(RenderState) &state);
@@ -49,11 +43,7 @@ private:
   static void parse_color_blend_block(CKeyValues *block, CPT(RenderState) &state);
   static void parse_color_write(const std::string &value, CPT(RenderState) &state);
 
-  // Generated RenderState from the script
-  CPT(RenderState) _state;
-  Filename _filename;
-
-  typedef pmap<Filename, CPT(RenderStateScript)> ScriptCache;
+  typedef pmap<Filename, CPT(RenderState)> ScriptCache;
   static ScriptCache _cache;
 
   static LightMutex _mutex;

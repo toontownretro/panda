@@ -35,6 +35,8 @@
 #include "lightMutexHolder.h"
 #include "thread.h"
 #include "renderAttribRegistry.h"
+#include "virtualFileSystem.h"
+#include "renderStateScript.h"
 
 using std::ostream;
 
@@ -1863,24 +1865,75 @@ register_with_read_factory() {
  */
 void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  TypedWritable::write_datagram(manager, dg);
+  if (!_filename.empty()) {
+    // If the state has a valid Filename, it was loaded from a script on disk,
+    // and we should just write the path to the script on disk instead of
+    // encoding the actual state.
+    BamWriter::BamTextureMode file_texture_mode = manager->get_file_texture_mode();
 
-  int num_attribs = _filled_slots.get_num_on_bits();
-  nassertv(num_attribs == (int)(uint16_t)num_attribs);
-  dg.add_uint16(num_attribs);
+    bool has_bam_dir = !manager->get_filename().empty();
+    Filename bam_dir = manager->get_filename().get_dirname();
+    Filename filename = _filename;
 
-  // **** We should smarten up the writing of the override number--most of the
-  // time these will all be zero.
-  SlotMask mask = _filled_slots;
-  int slot = mask.get_lowest_on_bit();
-  while (slot >= 0) {
-    const Attribute &attrib = _attributes[slot];
-    nassertv(attrib._attrib != nullptr);
-    manager->write_pointer(dg, attrib._attrib);
-    dg.add_int32(attrib._override);
+    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
-    mask.clear_bit(slot);
-    slot = mask.get_lowest_on_bit();
+    switch (file_texture_mode) {
+    case BamWriter::BTM_unchanged:
+    case BamWriter::BTM_rawdata:
+      break;
+
+    case BamWriter::BTM_fullpath:
+      filename = _fullpath;
+      break;
+
+    case BamWriter::BTM_relative:
+      filename = _fullpath;
+      bam_dir.make_absolute(vfs->get_cwd());
+      if (!has_bam_dir || !filename.make_relative_to(bam_dir, true)) {
+        filename.find_on_searchpath(get_model_path());
+      }
+      if (pgraph_cat.is_debug()) {
+        pgraph_cat.debug()
+          << "RenderState script " << _fullpath
+          << " found as " << filename << "\n";
+      }
+      break;
+
+    case BamWriter::BTM_basename:
+      filename = _fullpath.get_basename();
+      break;
+
+    default:
+      pgraph_cat.error()
+        << "Unsupported bam-texture-mode: " << (int)file_texture_mode << "\n";
+    }
+
+    dg.add_uint8(1);
+    dg.add_string(filename.get_fullpath());
+
+  } else {
+    dg.add_uint8(0);
+
+    // Encode the actual state data.
+    TypedWritable::write_datagram(manager, dg);
+
+    int num_attribs = _filled_slots.get_num_on_bits();
+    nassertv(num_attribs == (int)(uint16_t)num_attribs);
+    dg.add_uint16(num_attribs);
+
+    // **** We should smarten up the writing of the override number--most of the
+    // time these will all be zero.
+    SlotMask mask = _filled_slots;
+    int slot = mask.get_lowest_on_bit();
+    while (slot >= 0) {
+      const Attribute &attrib = _attributes[slot];
+      nassertv(attrib._attrib != nullptr);
+      manager->write_pointer(dg, attrib._attrib);
+      dg.add_int32(attrib._override);
+
+      mask.clear_bit(slot);
+      slot = mask.get_lowest_on_bit();
+    }
   }
 }
 
@@ -1925,9 +1978,16 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 TypedWritable *RenderState::
 change_this(TypedWritable *old_ptr, BamReader *manager) {
-  // First, uniquify the pointer.
   RenderState *state = DCAST(RenderState, old_ptr);
-  CPT(RenderState) pointer = return_unique(state);
+
+  CPT(RenderState) pointer;
+  if (state->_read_script_state) {
+    // Change ourselves to the state loaded from the script on disk.
+    pointer = state->_read_script_state;
+  } else {
+    // Uniquify the pointer.
+    pointer = return_unique(state);
+  }
 
   // But now we have a problem, since we have to hold the reference count and
   // there's no way to return a TypedWritable while still holding the
@@ -1985,15 +2045,25 @@ make_from_bam(const FactoryParams &params) {
  */
 void RenderState::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  TypedWritable::fillin(scan, manager);
+  bool script = (bool)scan.get_uint8();
 
-  int num_attribs = scan.get_uint16();
-  _read_overrides = new vector_int;
-  (*_read_overrides).reserve(num_attribs);
+  if (script) {
+    // Only the filename to the script was encoded.
+    Filename filename = scan.get_string();
+    _read_script_state = RenderStateScript::load(filename);
 
-  for (int i = 0; i < num_attribs; ++i) {
-    manager->read_pointer(scan);
-    int override = scan.get_int32();
-    (*_read_overrides).push_back(override);
+  } else {
+    // The actual state data was encoded.
+    TypedWritable::fillin(scan, manager);
+
+    int num_attribs = scan.get_uint16();
+    _read_overrides = new vector_int;
+    (*_read_overrides).reserve(num_attribs);
+
+    for (int i = 0; i < num_attribs; ++i) {
+      manager->read_pointer(scan);
+      int override = scan.get_int32();
+      (*_read_overrides).push_back(override);
+    }
   }
 }

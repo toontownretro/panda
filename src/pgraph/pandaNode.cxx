@@ -27,6 +27,7 @@
 #include "config_mathutil.h"
 #include "lightReMutexHolder.h"
 #include "graphicsStateGuardianBase.h"
+#include "renderStateScript.h"
 
 using std::ostream;
 using std::ostringstream;
@@ -1062,6 +1063,23 @@ set_state(const RenderState *state, Thread *current_thread) {
     mark_bounds_stale(current_thread);
     state_changed();
     mark_bam_modified();
+  }
+}
+
+/**
+ * Sets the complete RenderState that will be applied to all nodes at this
+ * level and below.  (The actual state that will be applied to lower nodes is
+ * based on the composition of RenderStates from above this node as well).
+ * This completely replaces whatever has been set on this node via repeated
+ * calls to set_attrib().
+ *
+ * This flavor sets the state by loading a RenderState description from disk.
+ */
+void PandaNode::
+set_state(const Filename &filename, Thread *current_thread) {
+  CPT(RenderState) state = RenderStateScript::load(filename);
+  if (state) {
+    set_state(state, current_thread);
   }
 }
 

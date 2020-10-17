@@ -131,6 +131,9 @@ PUBLISHED:
   EXTENSION(PyObject *get_composition_cache() const);
   EXTENSION(PyObject *get_invert_composition_cache() const);
 
+  INLINE const Filename &get_filename() const;
+  MAKE_PROPERTY(filename, get_filename);
+
   void output(std::ostream &out) const;
   void write(std::ostream &out, int indent_level) const;
 
@@ -230,6 +233,11 @@ public:
   // include-file dependency problem.  Aaargh.
   mutable CPT(RenderAttrib) _generated_shader;
   mutable UpdateSeq _generated_shader_seq;
+
+  // The filename that the state came from, if it was loaded via a script on
+  // disk.
+  mutable Filename _filename;
+  mutable Filename _fullpath;
 
 private:
   // This mutex protects _states.  It also protects any modification to the
@@ -337,6 +345,8 @@ private:
   unsigned int _flags;
 
   vector_int *_read_overrides;  // Only used during bam reading.
+
+  CPT(RenderState) _read_script_state; // Only used during bam reading.
 
   // This mutex protects _flags, and all of the above computed values.
   LightMutex _lock;
