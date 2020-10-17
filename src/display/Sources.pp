@@ -6,7 +6,7 @@
 #begin lib_target
   #define TARGET display
   #define LOCAL_LIBS \
-    cull device pgraphnodes
+    cull device pgraphnodes shader
 
   #define BUILDING_DLL BUILDING_PANDA_DISPLAY
 

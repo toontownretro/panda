@@ -49,7 +49,6 @@
 #include "shaderAttrib.h"
 #include "texGenAttrib.h"
 #include "textureAttrib.h"
-#include "shaderGenerator.h"
 
 class DrawableRegion;
 class GraphicsEngine;
@@ -106,10 +105,6 @@ PUBLISHED:
   INLINE void set_loader(Loader *loader);
   INLINE Loader *get_loader() const;
   MAKE_PROPERTY(loader, get_loader, set_loader);
-
-  INLINE void set_shader_generator(ShaderGenerator *shader_generator);
-  INLINE ShaderGenerator *get_shader_generator() const;
-  MAKE_PROPERTY(shader_generator, get_shader_generator, set_shader_generator);
 
   INLINE GraphicsPipe *get_pipe() const;
   GraphicsEngine *get_engine() const;
@@ -653,8 +648,6 @@ protected:
 
   PN_stdfloat _gamma;
   Texture::QualityLevel _texture_quality_override;
-
-  PT(ShaderGenerator) _shader_generator;
 
 #ifndef NDEBUG
   PT(Texture) _flash_texture;

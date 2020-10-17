@@ -63,7 +63,6 @@
 #include "shadeModelAttrib.h"
 #include "stencilAttrib.h"
 #include "graphicsEngine.h"
-#include "shaderGenerator.h"
 #include "samplerState.h"
 #include "displayInformation.h"
 

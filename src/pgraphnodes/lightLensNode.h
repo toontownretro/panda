@@ -22,7 +22,6 @@
 #include "graphicsOutputBase.h"
 #include "atomicAdjust.h"
 
-class ShaderGenerator;
 class GraphicsStateGuardian;
 
 /**

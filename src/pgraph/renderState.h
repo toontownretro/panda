@@ -374,7 +374,6 @@ private:
   friend class GraphicsStateGuardian;
   friend class RenderAttribRegistry;
   friend class Extension<RenderState>;
-  friend class ShaderGenerator;
   friend class StateMunger;
 };
 

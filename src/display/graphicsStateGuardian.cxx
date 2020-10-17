@@ -51,12 +51,12 @@
 #include "depthWriteAttrib.h"
 #include "lightAttrib.h"
 #include "texGenAttrib.h"
-#include "shaderGenerator.h"
 #include "lightLensNode.h"
 #include "colorAttrib.h"
 #include "colorScaleAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "fogAttrib.h"
+#include "shaderManager.h"
 #include "config_pstatclient.h"
 
 #include <limits.h>
@@ -3553,12 +3553,10 @@ ensure_generated_shader(const RenderState *state) {
   state->get_attrib_def(shader_attrib);
 
   if (shader_attrib->auto_shader()) {
-    if (_shader_generator == nullptr) {
-      if (!_supports_basic_shaders) {
-        return;
-      }
-      _shader_generator = new ShaderGenerator(this);
+    if (!_supports_basic_shaders) {
+      return;
     }
+
     if (state->_generated_shader == nullptr ||
         state->_generated_shader_seq != _generated_shader_seq) {
       GeomVertexAnimationSpec spec;
@@ -3571,8 +3569,10 @@ ensure_generated_shader(const RenderState *state) {
         spec.set_hardware(4, true);
       }
 
+      ShaderManager *shader_mgr = ShaderManager::get_global_ptr();
+
       // Cache the generated ShaderAttrib on the shader state.
-      state->_generated_shader = _shader_generator->synthesize_shader(state, spec);
+      state->_generated_shader = shader_mgr->generate_shader(state, spec);
       state->_generated_shader_seq = _generated_shader_seq;
     }
   }

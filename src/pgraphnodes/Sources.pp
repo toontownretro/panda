@@ -25,7 +25,6 @@
     sceneGraphAnalyzer.h sceneGraphAnalyzer.I \
     selectiveChildNode.h selectiveChildNode.I \
     sequenceNode.h sequenceNode.I \
-    shaderGenerator.h shaderGenerator.I \
     sphereLight.h sphereLight.I \
     spotlight.h spotlight.I \
     switchNode.h switchNode.I \
@@ -47,7 +46,6 @@
     sceneGraphAnalyzer.cxx \
     selectiveChildNode.cxx \
     sequenceNode.cxx \
-    shaderGenerator.cxx \
     sphereLight.cxx \
     spotlight.cxx \
     switchNode.cxx \
@@ -69,7 +67,6 @@
     sceneGraphAnalyzer.h sceneGraphAnalyzer.I \
     selectiveChildNode.h selectiveChildNode.I \
     sequenceNode.h sequenceNode.I \
-    shaderGenerator.h shaderGenerator.I \
     sphereLight.h sphereLight.I \
     spotlight.h spotlight.I \
     switchNode.h switchNode.I \

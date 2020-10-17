@@ -29,7 +29,6 @@
 #include "rectangleLight.h"
 #include "selectiveChildNode.h"
 #include "sequenceNode.h"
-#include "shaderGenerator.h"
 #include "sphereLight.h"
 #include "spotlight.h"
 #include "switchNode.h"
@@ -129,7 +128,6 @@ init_libpgraphnodes() {
   RectangleLight::init_type();
   SelectiveChildNode::init_type();
   SequenceNode::init_type();
-  ShaderGenerator::init_type();
   SphereLight::init_type();
   Spotlight::init_type();
   SwitchNode::init_type();
