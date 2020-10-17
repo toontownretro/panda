@@ -2,7 +2,8 @@
                    dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
     event gsgbase gobj putil linmath \
-    downloader express pandabase pstatclient
+    downloader express pandabase pstatclient \
+    keyvalues
 
 #begin lib_target
   #define TARGET pgraph
@@ -91,6 +92,7 @@
     renderEffects.I renderEffects.h \
     renderModeAttrib.I renderModeAttrib.h \
     renderState.I renderState.h \
+    renderStateScript.I renderStateScript.h \
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
@@ -99,6 +101,7 @@
     shadeModelAttrib.I shadeModelAttrib.h \
     shaderAttrib.I shaderAttrib.h \
     shaderInput.I shaderInput.h \
+    shaderParamAttrib.I shaderParamAttrib.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
     stateMunger.I stateMunger.h \
@@ -189,6 +192,7 @@
     renderEffects.cxx \
     renderModeAttrib.cxx \
     renderState.cxx \
+    renderStateScript.cxx \
     rescaleNormalAttrib.cxx \
     sceneGraphReducer.cxx \
     sceneSetup.cxx \
@@ -197,6 +201,7 @@
     shadeModelAttrib.cxx \
     shaderAttrib.cxx \
     shaderInput.cxx \
+    shaderParamAttrib.cxx \
     shaderPool.cxx \
     showBoundsEffect.cxx \
     stateMunger.cxx \
@@ -287,6 +292,7 @@
     renderEffects.I renderEffects.h \
     renderModeAttrib.I renderModeAttrib.h \
     renderState.I renderState.h \
+    renderStateScript.I renderStateScript.h \
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \

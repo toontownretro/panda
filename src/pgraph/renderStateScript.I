@@ -26,3 +26,11 @@ INLINE const RenderState *RenderStateScript::
 get_state() const {
   return _state;
 }
+
+/**
+ * Returns the filename the script was loaded from.
+ */
+INLINE const Filename &RenderStateScript::
+get_filename() const {
+  return _filename;
+}

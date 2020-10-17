@@ -26,25 +26,43 @@ shader {
   selfillumtint "1.0 0.75 0.5"
 }
 
-// Specify the textures that should be used.  This is under a block to support
-// multitexture pipelines.
+// Specify the textures that should be used.  Define a new "texture" block for
+// each texture you need.
+
 texture {
-  // <texture type> <filename/internal texture name>
+  // The name of the stage or type of the texture.  In this example, it is the
+  // albedo map.
+  stage albedo
 
-  albedo "phase_3/maps/avatar_head"
+  // The filename to the texture.
+  filename "phase_3/maps/avatar_head.jpg"
 
+  // The filename to the alpha texture, if you have the alpha channel in a
+  // separate image.
+  alpha_filename "phase_3/maps/avatar_head_a.rgb"
+}
+
+texture {
   // ARME is a texture that controls the appearance of the surface under
   // lighting.  Each channel is a different parameter in the lighting equation.
   // Red channel - ambient occlusion
   // Green channel - roughness
   // Blue channel - metalness
   // Alpha channel - emission
-  arme "phase_3/maps/avatar_head_arme"
+  stage arme
+  filename "phase_3/maps/avatar_head_arme.jpg"
+}
 
-  // This texture is not a file, but the name of a texture that is internal to
-  // the engine.  In this example, it is the texture that contains the
-  // framebuffer output.
-  blurColor "_rt_FullscreenFB"
+texture {
+  stage reflection
+  // You can also specify the name of an engine/application generated texture
+  // to use, rather than loading a texture from disk.
+  name "_rtt_reflection"
+}
+
+texture {
+  stage refraction
+  name "_rtt_refraction"
 }
 
 // Enable or disable transparency.  There are many different transparency modes:

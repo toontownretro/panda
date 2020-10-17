@@ -39,7 +39,6 @@
 #include "textureStage.h"
 
 RenderStateScript::ScriptCache RenderStateScript::_cache;
-RenderStateScript::DataCache RenderStateScript::_data_cache;
 LightMutex RenderStateScript::_mutex;
 
 /**
@@ -47,32 +46,34 @@ LightMutex RenderStateScript::_mutex;
  */
 CPT(RenderStateScript) RenderStateScript::
 load(const Filename &filename) {
+  // Find it in the cache
+  {
+    LightMutexHolder holder(_mutex);
+    auto itr = _cache.find(filename);
+    if (itr != _cache.end()) {
+      return (*itr).second;
+    }
+  }
+
+  // Not in the cache, read from disk and generate RenderState.
+
   Filename resolved = filename;
 
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->resolve_filename(resolved, get_model_path().get_value(), ".mat")) {
+  if (!vfs->resolve_filename(resolved, get_model_path().get_value(), ".pmat")) {
     pgraph_cat.error()
       << "Couldn't find render state script " << filename.get_fullpath()
       << " on model path " << get_model_path().get_value() << "\n";
     return nullptr;
   }
 
-  // Find it in the cache
-  {
-    LightMutexHolder holder(_mutex);
-    auto itr = _cache.find(resolved);
-    if (itr != _cache.end()) {
-      return (*itr).second;
-    }
-  }
-
-  // Not in the cache, generate the RenderState
   std::string data = vfs->read_file(resolved, true);
   CPT(RenderStateScript) script = parse(data);
+  ((RenderStateScript *)script.p())->_filename = filename;
 
   {
     LightMutexHolder holder(_mutex);
-    _cache[resolved] = script;
+    _cache[filename] = script;
   }
 
   return script;
@@ -83,13 +84,6 @@ load(const Filename &filename) {
  */
 CPT(RenderStateScript) RenderStateScript::
 parse(const std::string &data) {
-  LightMutexHolder holder(_mutex);
-
-  auto itr = _data_cache.find(data);
-  if (itr != _data_cache.end()) {
-    return (*itr).second;
-  }
-
   PT(CKeyValues) mat_data = CKeyValues::from_string(data);
 
   CPT(RenderState) state = RenderState::make_empty();
@@ -205,6 +199,10 @@ parse(const std::string &data) {
       parse_render_mode_block(child, state);
     }
   }
+
+  PT(RenderStateScript) script = new RenderStateScript;
+  script->_state = state;
+  return script;
 }
 
 /**
@@ -250,6 +248,7 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
   Filename filename;
   Filename alpha_filename;
   std::string stage_name;
+  std::string tex_name;
   bool cubemap = false;
 
   for (size_t i = 0; i < block->get_num_keys(); i++) {
@@ -267,6 +266,9 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
 
     } else if (key == "cubemap") {
       cubemap = parse_bool_string(value);
+
+    } else if (key == "name") {
+      tex_name = value;
     }
   }
 
@@ -274,6 +276,7 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
 
   PT(Texture) tex;
   if (!filename.empty()) {
+    // Load the texture up from disk.
     if (cubemap) {
       tex = TexturePool::load_cube_map(filename);
     } else if (!alpha_filename.empty()) {
@@ -281,6 +284,9 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
     } else {
       tex = TexturePool::load_texture(filename);
     }
+  } else if (!tex_name.empty()) {
+    // We would like to use an engine/application generated texture.
+    tex = TexturePool::find_engine_texture(tex_name);
   }
 
   texattr = DCAST(TextureAttrib, texattr)->add_on_stage(stage, tex);

@@ -34,6 +34,9 @@ PUBLISHED:
   INLINE const RenderState *get_state() const;
   MAKE_PROPERTY(state, get_state);
 
+  INLINE const Filename &get_filename() const;
+  MAKE_PROPERTY(filename, get_filename);
+
 private:
   INLINE RenderStateScript();
   static bool parse_bool_string(const std::string &value);
@@ -48,11 +51,10 @@ private:
 
   // Generated RenderState from the script
   CPT(RenderState) _state;
+  Filename _filename;
 
   typedef pmap<Filename, CPT(RenderStateScript)> ScriptCache;
-  typedef pmap<std::string, CPT(RenderStateScript)> DataCache;
   static ScriptCache _cache;
-  static DataCache _data_cache;
 
   static LightMutex _mutex;
 };
