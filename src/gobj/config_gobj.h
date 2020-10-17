@@ -33,6 +33,7 @@ extern EXPCL_PANDA_GOBJ ConfigVariableInt max_texture_dimension;
 extern EXPCL_PANDA_GOBJ ConfigVariableDouble texture_scale;
 extern EXPCL_PANDA_GOBJ ConfigVariableInt texture_scale_limit;
 extern EXPCL_PANDA_GOBJ ConfigVariableList exclude_texture_scale;
+extern EXPCL_PANDA_GOBJ ConfigVariableString default_texture_extension;
 
 
 extern EXPCL_PANDA_GOBJ ConfigVariableBool keep_texture_ram;

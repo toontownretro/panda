@@ -1107,6 +1107,61 @@ ns_make_texture(const string &extension) const {
 }
 
 /**
+ * Adds the indicated texture to the pool of engine textures.  The texture will
+ * be able to be looked up by name in future application code.  The texture
+ * must have a non-empty name.
+ */
+void TexturePool::
+ns_add_engine_texture(Texture *texture) {
+  if (texture->get_name().empty()) {
+    return;
+  }
+
+  MutexHolder holder(_lock);
+  _engine_textures[texture->get_name()] = texture;
+}
+
+/**
+ * Removes the indicated texture from the pool of engine textures.  The texture
+ * will no longer be able to be looked up by name, and may be freed if there
+ * are no more references to the texture.
+ */
+void TexturePool::
+ns_release_engine_texture(Texture *texture) {
+  MutexHolder holder(_lock);
+  EngineTextures::iterator itr = _engine_textures.find(texture->get_name());
+  if (itr != _engine_textures.end()) {
+    _engine_textures.erase(itr);
+  }
+}
+
+/**
+ * Releases all engine textures from the pool and restores the pool to the
+ * empty state.
+ */
+void TexturePool::
+ns_release_all_engine_textures() {
+  MutexHolder holder(_lock);
+  _engine_textures.clear();
+}
+
+/**
+ * Returns the engine texture in the pool that matches the indicated name, or
+ * nullptr if no texture matches the indicated name.
+ */
+Texture *TexturePool::
+ns_find_engine_texture(const std::string &name) const {
+  MutexHolder holder(_lock);
+
+  EngineTextures::const_iterator itr = _engine_textures.find(name);
+  if (itr != _engine_textures.end()) {
+    return (*itr).second;
+  }
+
+  return nullptr;
+}
+
+/**
  * Searches for the indicated filename along the model path.  If the filename
  * was previously searched for, doesn't search again, as an optimization.
  * Assumes _lock is held.
@@ -1131,7 +1186,8 @@ resolve_filename(Filename &new_filename, const Filename &orig_filename,
   }
 
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  vfs->resolve_filename(new_filename, get_model_path());
+  vfs->resolve_filename(new_filename, get_model_path(),
+                        default_texture_extension.get_value());
 
   _relpath_lookup[orig_filename] = new_filename;
 }

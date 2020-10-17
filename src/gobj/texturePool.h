@@ -66,6 +66,11 @@ PUBLISHED:
   INLINE static void release_all_textures();
   INLINE static void rehash();
 
+  INLINE static void add_engine_texture(Texture *texture);
+  INLINE static void release_engine_texture(Texture *texture);
+  INLINE static void release_all_engine_textures();
+  INLINE static Texture *find_engine_texture(const std::string &name);
+
   INLINE static int garbage_collect();
 
   INLINE static void list_contents(std::ostream &out);
@@ -140,6 +145,11 @@ private:
   TextureCollection ns_find_all_textures(const std::string &name) const;
   PT(Texture) ns_make_texture(const std::string &extension) const;
 
+  void ns_add_engine_texture(Texture *texture);
+  void ns_release_engine_texture(Texture *texture);
+  void ns_release_all_engine_textures();
+  Texture *ns_find_engine_texture(const std::string &name) const;
+
   void resolve_filename(Filename &new_filename, const Filename &orig_filename,
                         bool read_mipmaps, const LoaderOptions &options);
 
@@ -183,6 +193,12 @@ private:
   Textures _textures;
   typedef pmap<Filename, Filename> RelpathLookup;
   RelpathLookup _relpath_lookup;
+
+  // Textures that are created in the application instead of loaded from disk.
+  // They can be stored here so they can be looked up by name in render state
+  // scripts and such.
+  typedef pmap<std::string, PT(Texture)> EngineTextures;
+  EngineTextures _engine_textures;
 
   Filename _fake_texture_image;
 

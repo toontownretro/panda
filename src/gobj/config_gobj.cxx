@@ -111,6 +111,12 @@ ConfigVariableList exclude_texture_scale
           "filenames that match one of these patterns will not be affected "
           "by max-texture-dimension or texture-scale."));
 
+ConfigVariableString default_texture_extension
+("default-texture-extension",
+  PRC_DESC("This specifies the filename extension (with leading dot) that "
+           "should be assumed if an attempt is made to load a texture that "
+           "has no extension."));
+
 ConfigVariableBool keep_texture_ram
 ("keep-texture-ram", false,
  PRC_DESC("Set this to true to retain the ram image for each texture after it "

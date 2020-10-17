@@ -187,6 +187,44 @@ rehash() {
 }
 
 /**
+ * Adds the indicated texture to the pool of engine textures.  The texture will
+ * be able to be looked up by name in future application code.  The texture
+ * must have a non-empty name.
+ */
+INLINE void TexturePool::
+add_engine_texture(Texture *texture) {
+  get_global_ptr()->ns_add_engine_texture(texture);
+}
+
+/**
+ * Removes the indicated texture from the pool of engine textures.  The texture
+ * will no longer be able to be looked up by name, and may be freed if there
+ * are no more references to the texture.
+ */
+INLINE void TexturePool::
+release_engine_texture(Texture *texture) {
+  get_global_ptr()->ns_release_engine_texture(texture);
+}
+
+/**
+ * Releases all engine textures from the pool and restores the pool to the
+ * empty state.
+ */
+INLINE void TexturePool::
+release_all_engine_textures() {
+  get_global_ptr()->ns_release_all_engine_textures();
+}
+
+/**
+ * Returns the engine texture in the pool that matches the indicated name, or
+ * nullptr if no texture matches the indicated name.
+ */
+INLINE Texture *TexturePool::
+find_engine_texture(const std::string &name) {
+  return get_global_ptr()->ns_find_engine_texture(name);
+}
+
+/**
  * Releases only those textures in the pool that have a reference count of
  * exactly 1; i.e.  only those textures that are not being used outside of the
  * pool.  Returns the number of textures released.
