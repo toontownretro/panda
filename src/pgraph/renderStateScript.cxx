@@ -67,6 +67,9 @@ load(const Filename &filename) {
     return nullptr;
   }
 
+  pgraph_cat.info()
+    << "Loading render state script " << resolved.get_fullpath() << "\n";
+
   std::string data = vfs->read_file(resolved, true);
   CPT(RenderState) state = parse(data);
   state->_filename = filename;

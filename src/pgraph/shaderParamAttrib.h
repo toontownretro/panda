@@ -41,6 +41,9 @@ PUBLISHED:
 
   INLINE const std::string &get_shader_name() const;
 
+public:
+  virtual void output(std::ostream &out) const;
+
 protected:
   virtual int compare_to_impl(const RenderAttrib *other) const;
   virtual size_t get_hash_impl() const;

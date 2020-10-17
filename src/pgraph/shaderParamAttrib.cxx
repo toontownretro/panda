@@ -17,6 +17,19 @@ TypeHandle ShaderParamAttrib::_type_handle;
 int ShaderParamAttrib::_attrib_slot;
 
 /**
+ *
+ */
+void ShaderParamAttrib::
+output(std::ostream &out) const {
+  out << get_type() << ":";
+  out << get_shader_name();
+  for (size_t i = 0; i < _params.size(); i++) {
+    out << " ";
+    out << _params.get_key(i) << ":" << _params.get_data(i);
+  }
+}
+
+/**
  * Intended to be overridden by derived ShaderAttrib types to return a unique
  * number indicating whether this ShaderAttrib is equivalent to the other one.
  *
