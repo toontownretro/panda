@@ -35,7 +35,8 @@
 #include "pStatCollector.h"
 #include "epvector.h"
 #include "asyncFuture.h"
-#include "bamCacheRecord.h"
+#include "shaderModule.h"
+#include "copyOnWritePointer.h"
 
 #ifdef HAVE_CG
 // I don't want to include the Cg header file into panda as a whole.  Instead,
@@ -45,11 +46,18 @@ typedef struct _CGprogram   *CGprogram;
 typedef struct _CGparameter *CGparameter;
 #endif
 
+class BamCacheRecord;
+class ShaderModuleGlsl;
+class ShaderCompiler;
+
 /**
 
  */
 class EXPCL_PANDA_GOBJ Shader : public TypedWritableReferenceCount {
 PUBLISHED:
+  using Stage = ShaderModule::Stage;
+  using ScalarType = ShaderType::ScalarType;
+
   enum ShaderLanguage {
     SL_none,
     SL_Cg,
@@ -105,9 +113,14 @@ PUBLISHED:
   INLINE const std::string &get_text(ShaderType type = ST_none) const;
   INLINE bool get_error_flag() const;
   INLINE ShaderLanguage get_language() const;
+  INLINE int get_used_capabilities() const;
 
   INLINE bool has_fullpath() const;
   INLINE const Filename &get_fullpath() const;
+
+  INLINE bool has_stage(Stage stage) const;
+  INLINE CPT(ShaderModule) get_module(Stage stage) const;
+  INLINE PT(ShaderModule) modify_module(Stage stage);
 
   INLINE bool get_cache_compiled_shader() const;
   INLINE void set_cache_compiled_shader(bool flag);
@@ -232,54 +245,6 @@ public:
     STO_material_texture,
   };
 
-  enum ShaderArgClass {
-    SAC_scalar,
-    SAC_vector,
-    SAC_matrix,
-    SAC_sampler,
-    SAC_array,
-    SAC_unknown,
-  };
-
-  enum ShaderArgType {
-    SAT_scalar,
-    SAT_vec1,
-    SAT_vec2,
-    SAT_vec3,
-    SAT_vec4,
-    SAT_mat1x1,
-    SAT_mat1x2,
-    SAT_mat1x3,
-    SAT_mat1x4,
-    SAT_mat2x1,
-    SAT_mat2x2,
-    SAT_mat2x3,
-    SAT_mat2x4,
-    SAT_mat3x1,
-    SAT_mat3x2,
-    SAT_mat3x3,
-    SAT_mat3x4,
-    SAT_mat4x1,
-    SAT_mat4x2,
-    SAT_mat4x3,
-    SAT_mat4x4,
-    SAT_sampler1d,
-    SAT_sampler2d,
-    SAT_sampler3d,
-    SAT_sampler2d_array,
-    SAT_sampler_cube,
-    SAT_sampler_buffer,
-    SAT_sampler_cube_array,
-    SAT_unknown
-};
-
-  enum ShaderArgDir {
-    SAD_in,
-    SAD_out,
-    SAD_inout,
-    SAD_unknown,
-  };
-
   enum ShaderMatPiece {
     SMP_whole,
     SMP_transpose,
@@ -331,29 +296,19 @@ public:
     SMF_first,
   };
 
-  struct ShaderArgId {
-    std::string     _name;
-    ShaderType _type;
-    int        _seqno;
+  struct Parameter {
+    CPT_InternalName _name;
+    const ::ShaderType *_type = nullptr;
+    int _location = -1;
+    int _stage_mask = 0;
   };
 
   enum ShaderPtrType {
-    SPT_float,
-    SPT_double,
-    SPT_int,
-    SPT_uint,
-    SPT_unknown
-  };
-
-  struct ShaderArgInfo {
-    ShaderArgId       _id;
-    ShaderArgClass    _class;
-    ShaderArgClass    _subclass;
-    ShaderArgType     _type;
-    ShaderArgDir      _direction;
-    bool              _varying;
-    ShaderPtrType     _numeric_type;
-    NotifyCategory   *_cat;
+    SPT_float = ScalarType::ST_float,
+    SPT_double = ScalarType::ST_double,
+    SPT_int = ScalarType::ST_int,
+    SPT_uint = ScalarType::ST_uint,
+    SPT_unknown = ScalarType::ST_unknown,
   };
 
   // Container structure for data of parameters ShaderPtrSpec.
@@ -363,7 +318,7 @@ public:
 
   public:
     void *_ptr;
-    ShaderPtrType _type;
+    ScalarType _type;
     bool _updated;
     size_t _size; //number of elements vec3[4]=12
 
@@ -412,7 +367,7 @@ public:
    */
   struct ShaderMatPart {
     ShaderMatInput _part;
-    PT(InternalName) _arg;
+    CPT(InternalName) _arg;
     int _count = 1;
     int _dep = SSD_NONE;
   };
@@ -422,10 +377,10 @@ public:
    */
   struct ShaderMatSpec {
     size_t _cache_offset[2];
-    ShaderArgId       _id;
+    Parameter         _id;
     ShaderMatFunc     _func;
     ShaderMatInput    _part[2];
-    PT(InternalName)  _arg[2];
+    CPT(InternalName) _arg[2];
     LMatrix4          _value;
     int               _dep = SSD_NONE;
     int               _index = 0;
@@ -433,29 +388,34 @@ public:
   };
 
   struct ShaderTexSpec {
-    ShaderArgId       _id;
-    PT(InternalName)  _name;
+    Parameter         _id;
+    CPT(InternalName) _name;
     ShaderTexInput    _part;
     int               _stage;
     int               _desired_type;
     PT(InternalName)  _suffix;
   };
 
+  struct ShaderImgSpec {
+    Parameter         _id;
+    CPT(InternalName) _name;
+    int               _desired_type;
+    bool              _writable;
+  };
+
   struct ShaderVarSpec {
-    ShaderArgId       _id;
+    Parameter         _id;
     PT(InternalName)  _name;
     int               _append_uv;
     int               _elements;
-    ShaderPtrType     _numeric_type;
+    ScalarType        _scalar_type;
   };
 
   struct ShaderPtrSpec {
-    ShaderArgId       _id;
-    int               _dim[3]; //n_elements,rows,cols
-    int               _dep[2];
-    PT(InternalName)  _arg;
-    ShaderArgInfo     _info;
-    ShaderPtrType     _type;
+    Parameter         _id;
+    uint32_t          _dim[3]; //n_elements,rows,cols
+    CPT(InternalName) _arg;
+    ScalarType        _type;
   };
 
   class EXPCL_PANDA_GOBJ ShaderCaps {
@@ -505,43 +465,21 @@ public:
     std::string _compute;
   };
 
-public:
-  // These routines help split the shader into sections, for those shader
-  // implementations that need to do so.  Don't use them when you use separate
-  // shader programs.
-  void parse_init();
-  void parse_line(std::string &result, bool rt, bool lt);
-  void parse_upto(std::string &result, std::string pattern, bool include);
-  void parse_rest(std::string &result);
-  bool parse_eof();
-
-  void cp_report_error(ShaderArgInfo &arg, const std::string &msg);
-  bool cp_errchk_parameter_words(ShaderArgInfo &arg, int len);
-  bool cp_errchk_parameter_in(ShaderArgInfo &arg);
-  bool cp_errchk_parameter_ptr(ShaderArgInfo &p);
-  bool cp_errchk_parameter_varying(ShaderArgInfo &arg);
-  bool cp_errchk_parameter_uniform(ShaderArgInfo &arg);
-  bool cp_errchk_parameter_float(ShaderArgInfo &arg, int lo, int hi);
-  bool cp_errchk_parameter_sampler(ShaderArgInfo &arg);
-  bool cp_parse_eol(ShaderArgInfo &arg,
-                    vector_string &pieces, int &next);
-  bool cp_parse_delimiter(ShaderArgInfo &arg,
-                          vector_string &pieces, int &next);
-  std::string cp_parse_non_delimiter(vector_string &pieces, int &next);
-  bool cp_parse_coord_sys(ShaderArgInfo &arg,
-                          vector_string &pieces, int &next,
-                          ShaderMatSpec &spec, bool fromflag);
+protected:
+  bool report_parameter_error(const InternalName *name, const ::ShaderType *type, const char *msg);
+  bool expect_num_words(const InternalName *name, const ::ShaderType *type, size_t len);
+  bool expect_float_vector(const InternalName *name, const ::ShaderType *type, int lo, int hi);
+  bool expect_float_matrix(const InternalName *name, const ::ShaderType *type, int lo, int hi);
+  bool expect_coordinate_system(const InternalName *name, const ::ShaderType *type,
+                                vector_string &pieces, int &next,
+                                ShaderMatSpec &spec, bool fromflag);
   int cp_dependency(ShaderMatInput inp);
+
+public:
   void cp_add_mat_spec(ShaderMatSpec &spec);
   size_t cp_get_mat_cache_size() const;
 
-#ifdef HAVE_CG
-  void cg_recurse_parameters(CGparameter parameter,
-                          const ShaderType &type,
-                          bool &success);
-#endif
-
-  bool compile_parameter(ShaderArgInfo &p, int *arg_dim);
+  bool compile_parameter(Parameter &p);
 
   void clear_parameters();
 
@@ -555,9 +493,8 @@ public:
 
 private:
 #ifdef HAVE_CG
-  ShaderArgClass cg_parameter_class(CGparameter p);
-  ShaderArgType cg_parameter_type(CGparameter p);
-  ShaderArgDir cg_parameter_dir(CGparameter p);
+  ScalarType cg_scalar_type(int type);
+  const ::ShaderType *cg_parameter_type(CGparameter p);
 
   CGprogram cg_compile_entry_point(const char *entry, const ShaderCaps &caps,
                                    CGcontext context, ShaderType type);
@@ -569,11 +506,6 @@ private:
   void cg_release_resources();
   void cg_report_errors();
 
-  // Determines the appropriate cg profile settings and stores them in the
-  // active shader caps based on any profile settings stored in the shader's
-  // header
-  void cg_get_profile_from_header(ShaderCaps &caps);
-
   ShaderCaps _cg_last_caps;
   static CGcontext  _cg_context;
   CGprogram  _cg_vprogram;
@@ -583,8 +515,6 @@ private:
   int _cg_vprofile;
   int _cg_fprofile;
   int _cg_gprofile;
-
-  CGprogram cg_program_from_shadertype(ShaderType type);
 
 public:
   bool cg_compile_for(const ShaderCaps &caps, CGcontext context,
@@ -596,13 +526,20 @@ public:
   pvector<ShaderPtrSpec> _ptr_spec;
   epvector<ShaderMatSpec> _mat_spec;
   pvector<ShaderTexSpec> _tex_spec;
+  pvector<ShaderImgSpec> _img_spec;
   pvector<ShaderVarSpec> _var_spec;
   pvector<ShaderMatPart> _mat_parts;
   int _mat_deps = 0;
   int _mat_cache_size = 0;
+  int _frame_number_loc = -1;
 
   bool _error_flag;
   ShaderFile _text;
+
+  typedef pvector<COWPT(ShaderModule)> Modules;
+  Modules _modules;
+  uint32_t _module_mask = 0;
+  int _used_caps = 0;
 
 protected:
   ShaderFile _filename;
@@ -612,14 +549,7 @@ protected:
   ShaderLanguage _language;
 
   typedef pvector<Filename> Filenames;
-  Filenames _included_files;
 
-  // Stores full paths, and includes the fullpaths of the shaders themselves
-  // as well as the includes.
-  Filenames _source_files;
-  time_t _last_modified;
-
-  PT(BamCacheRecord) _record;
   bool _cache_compiled_shader;
   unsigned int _compiled_format;
   std::string _compiled_binary;
@@ -648,24 +578,20 @@ private:
 
   bool read(const ShaderFile &sfile, BamCacheRecord *record = nullptr);
   bool load(const ShaderFile &sbody, BamCacheRecord *record = nullptr);
-  bool do_read_source(std::string &into, const Filename &fn, BamCacheRecord *record);
-  bool do_load_source(std::string &into, const std::string &source, BamCacheRecord *record);
-  bool r_preprocess_include(std::ostream &out, const Filename &fn,
-                            const Filename &source_dir,
-                            std::set<Filename> &open_files,
-                            BamCacheRecord *record, int depth);
-  bool r_preprocess_source(std::ostream &out, std::istream &in,
-                           const Filename &fn, const Filename &full_fn,
-                           std::set<Filename> &open_files,
-                           BamCacheRecord *record,
-                           int fileno = 0, int depth = 0);
-
-  bool check_modified() const;
+  bool do_read_source(ShaderModule::Stage stage, const Filename &fn, BamCacheRecord *record);
+  bool do_read_source(ShaderModule::Stage stage, std::istream &in,
+                      const Filename &source_filename, BamCacheRecord *record);
+  bool do_load_source(ShaderModule::Stage stage, const std::string &source, BamCacheRecord *record);
 
 public:
-  ~Shader();
+  bool link();
+  bool bind_vertex_input(const InternalName *name, const ::ShaderType *type, int location);
+  bool bind_parameter(const Parameter &parameter);
 
-  Filename get_filename_from_index(int index, ShaderType type) const;
+  bool check_modified() const;
+  ShaderCompiler *get_compiler(ShaderLanguage lang) const;
+
+  ~Shader();
 
 public:
   static void register_with_read_factory();
