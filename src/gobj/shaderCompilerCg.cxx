@@ -12,7 +12,7 @@
  */
 
 #include "shaderCompilerCg.h"
-#include "config_shaderpipeline.h"
+#include "config_gobj.h"
 
 #ifdef HAVE_CG
 #include <Cg/cg.h>

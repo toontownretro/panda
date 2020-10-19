@@ -69,6 +69,14 @@
 #include "indexBufferContext.h"
 #include "internalName.h"
 
+#include "shaderCompilerRegistry.h"
+#include "shaderCompilerGlslang.h"
+#include "shaderCompilerGlslPreProc.h"
+#include "shaderCompilerCg.h"
+
+#include "shaderModuleGlsl.h"
+#include "shaderModuleSpirV.h"
+
 #include "dconfig.h"
 #include "string_utils.h"
 
@@ -79,6 +87,7 @@
 Configure(config_gobj);
 NotifyCategoryDef(gobj, "");
 NotifyCategoryDef(shader, "");
+NotifyCategoryDef(shaderpipeline, "");
 
 ConfigVariableInt max_texture_dimension
 ("max-texture-dimension", -1,
@@ -615,6 +624,15 @@ ConfigureFn(config_gobj) {
   VertexDataPage::init_type();
   VertexTransform::init_type();
   VideoTexture::init_type();
+
+  ShaderCompilerGlslang::init_type();
+  ShaderModuleSpirV::init_type();
+  ShaderModuleGlsl::init_type();
+
+  ShaderCompilerRegistry *reg = ShaderCompilerRegistry::get_global_ptr();
+  reg->register_compiler(new ShaderCompilerGlslang());
+  reg->register_compiler(new ShaderCompilerGlslPreProc());
+  //reg->register_compiler(new ShaderCompilerCg());
 
   // Registration of writeable object's creation functions with BamReader's
   // factory

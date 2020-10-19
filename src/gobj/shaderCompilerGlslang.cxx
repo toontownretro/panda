@@ -12,7 +12,7 @@
  */
 
 #include "shaderCompilerGlslang.h"
-#include "config_shaderpipeline.h"
+#include "config_gobj.h"
 #include "virtualFile.h"
 #include "shaderCompilerGlslPreProc.h"
 

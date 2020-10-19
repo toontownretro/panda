@@ -1,7 +1,7 @@
 #define OTHER_LIBS interrogatedb \
                    dtoolutil:c dtoolbase:c dtool:m prc
 //#define OSX_SYS_LIBS mx
-#define USE_PACKAGES zlib cg squish
+#define USE_PACKAGES zlib cg squish glslang spirv_tools
 
 #begin lib_target
   #define TARGET gobj
@@ -16,6 +16,7 @@
     bufferContext.I bufferContext.h \
     bufferContextChain.I bufferContextChain.h \
     bufferResidencyTracker.I bufferResidencyTracker.h \
+    cg_preamble.cxx \
     config_gobj.h \
     geom.h geom.I \
     geomContext.I geomContext.h \
@@ -60,10 +61,20 @@
     savedContext.I savedContext.h \
     shader.I shader.h \
     shaderBuffer.h shaderBuffer.I \
+    shaderCompiler.h \
+    shaderCompilerCg.h \
+    shaderCompilerGlslang.h \
+    shaderCompilerGlslPreProc.h \
+    shaderCompilerRegistry.h \
     shaderContext.h shaderContext.I \
+    shaderModule.h shaderModule.I \
+    shaderModuleGlsl.h shaderModule.I \
+    shaderModuleSpirV.h shaderModuleSpirV.I \
+    shaderType.h shaderType.I \
     simpleAllocator.h simpleAllocator.I \
     simpleLru.h simpleLru.I \
     sliderTable.I sliderTable.h \
+    spirv.hpp \
     texture.I texture.h \
     textureCollection.I textureCollection.h \
     textureContext.I textureContext.h \
@@ -139,7 +150,16 @@
     savedContext.cxx \
     shader.cxx \
     shaderBuffer.cxx \
+    shaderCompiler.cxx \
+    shaderCompilerCg.cxx \
+    shaderCompilerGlslang.cxx \
+    shaderCompilerGlslPreProc.cxx \
+    shaderCompilerRegistry.cxx \
     shaderContext.cxx \
+    shaderModule.cxx \
+    shaderModuleGlsl.cxx \
+    shaderModuleSpirV.cxx \
+    shaderType.cxx \
     simpleAllocator.cxx \
     simpleLru.cxx \
     sliderTable.cxx \
@@ -219,11 +239,21 @@
     samplerState.I samplerState.h \
     savedContext.I savedContext.h \
     shader.I shader.h \
-    shaderBuffer.I shaderBuffer.h \
+    shaderBuffer.h shaderBuffer.I \
+    shaderCompiler.h \
+    shaderCompilerCg.h \
+    shaderCompilerGlslang.h \
+    shaderCompilerGlslPreProc.h \
+    shaderCompilerRegistry.h \
     shaderContext.h shaderContext.I \
+    shaderModule.h shaderModule.I \
+    shaderModuleGlsl.h shaderModule.I \
+    shaderModuleSpirV.h shaderModuleSpirV.I \
+    shaderType.h shaderType.I \
     simpleAllocator.h simpleAllocator.I \
     simpleLru.h simpleLru.I \
     sliderTable.I sliderTable.h \
+    spirv.hpp \
     texture.I texture.h \
     textureCollection.I textureCollection.h \
     textureContext.I textureContext.h \
@@ -266,3 +296,5 @@
     pythonTexturePoolFilter.h
 
 #end lib_target
+
+#concatcxx $[PATH]/cg_preamble.cxx, cg_preamble, $[PATH]/cg_preamble.hlsl

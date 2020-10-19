@@ -66,7 +66,7 @@ PUBLISHED:
     SL_SPIR_V,
   };
 
-  enum ShaderType {
+  enum ShaderStageType {
     ST_none = 0,
     ST_vertex,
     ST_fragment,
@@ -108,9 +108,9 @@ PUBLISHED:
                          std::string tess_evaluation = "");
   static PT(Shader) make_compute(ShaderLanguage lang, std::string body);
 
-  INLINE Filename get_filename(ShaderType type = ST_none) const;
-  INLINE void set_filename(ShaderType type, const Filename &filename);
-  INLINE const std::string &get_text(ShaderType type = ST_none) const;
+  INLINE Filename get_filename(ShaderStageType type = ST_none) const;
+  INLINE void set_filename(ShaderStageType type, const Filename &filename);
+  INLINE const std::string &get_text(ShaderStageType type = ST_none) const;
   INLINE bool get_error_flag() const;
   INLINE ShaderLanguage get_language() const;
   INLINE int get_used_capabilities() const;
@@ -497,9 +497,9 @@ private:
   const ::ShaderType *cg_parameter_type(CGparameter p);
 
   CGprogram cg_compile_entry_point(const char *entry, const ShaderCaps &caps,
-                                   CGcontext context, ShaderType type);
+                                   CGcontext context, ShaderStageType type);
 
-  bool cg_analyze_entry_point(CGprogram prog, ShaderType type);
+  bool cg_analyze_entry_point(CGprogram prog, ShaderStageType type);
 
   bool cg_analyze_shader(const ShaderCaps &caps);
   bool cg_compile_shader(const ShaderCaps &caps, CGcontext context);

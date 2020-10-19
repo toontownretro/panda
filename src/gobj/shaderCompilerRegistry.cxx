@@ -13,7 +13,7 @@
 
 #include "shaderCompilerRegistry.h"
 #include "shaderCompiler.h"
-#include "config_shaderpipeline.h"
+#include "config_gobj.h"
 #include "config_putil.h"
 
 #include "load_dso.h"

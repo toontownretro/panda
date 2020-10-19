@@ -19,7 +19,7 @@
 /**
  * ShaderModule that contains raw, preprocessed GLSL code
  */
-class EXPCL_PANDA_SHADERPIPELINE ShaderModuleGlsl final : public ShaderModule {
+class EXPCL_PANDA_GOBJ ShaderModuleGlsl final : public ShaderModule {
 public:
   ShaderModuleGlsl(Stage stage);
   virtual ~ShaderModuleGlsl();
@@ -32,7 +32,7 @@ public:
   Filename get_filename_from_index(int index) const;
 
 protected:
-  Shader::ShaderType _shader_type;
+  Shader::ShaderStageType _shader_type;
   std::string _raw_source;
 
   typedef pvector<Filename> Filenames;

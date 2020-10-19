@@ -13,7 +13,7 @@
 
 #include "shaderCompilerGlslPreProc.h"
 #include "shaderModuleGlsl.h"
-#include "config_shaderpipeline.h"
+#include "config_gobj.h"
 
 #include "dcast.h"
 

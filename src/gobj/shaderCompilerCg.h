@@ -22,7 +22,7 @@
 /**
  * This defines the compiler interface to read Cg shaders
  */
-class EXPCL_PANDA_SHADERPIPELINE ShaderCompilerCg : public ShaderCompiler {
+class EXPCL_PANDA_GOBJ ShaderCompilerCg : public ShaderCompiler {
 public:
   ShaderCompilerCg();
 

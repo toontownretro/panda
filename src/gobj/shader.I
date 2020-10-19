@@ -17,7 +17,7 @@
  * Return the Shader's filename for the given shader type.
  */
 INLINE Filename Shader::
-get_filename(ShaderType type) const {
+get_filename(ShaderStageType type) const {
   if (_filename._separate && type != ST_none) {
     switch (type) {
       case ST_vertex:
@@ -55,7 +55,7 @@ get_filename(ShaderType type) const {
  * associating a shader created with Shader.make with a name for diagnostics.
  */
 INLINE void Shader::
-set_filename(ShaderType type, const Filename &filename) {
+set_filename(ShaderStageType type, const Filename &filename) {
   _filename._separate = true;
   switch (type) {
   case ST_vertex:
@@ -88,7 +88,7 @@ set_filename(ShaderType type, const Filename &filename) {
  * @deprecated
  */
 INLINE const std::string &Shader::
-get_text(ShaderType type) const {
+get_text(ShaderStageType type) const {
   if (_text._separate) {
     nassertr(type != ST_none || !_text._shared.empty(), _text._shared);
     switch (type) {

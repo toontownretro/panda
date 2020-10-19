@@ -23,7 +23,7 @@ class ShaderModuleGlsl;
 /**
  * This defines the compiler interface to read GLSL files and pre-process them
  */
-class EXPCL_PANDA_SHADERPIPELINE ShaderCompilerGlslPreProc : public ShaderCompiler {
+class EXPCL_PANDA_GOBJ ShaderCompilerGlslPreProc : public ShaderCompiler {
 public:
   ShaderCompilerGlslPreProc();
 

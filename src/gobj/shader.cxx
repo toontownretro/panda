@@ -709,7 +709,7 @@ cg_release_resources() {
  */
 CGprogram Shader::
 cg_compile_entry_point(const char *entry, const ShaderCaps &caps,
-                       CGcontext context, ShaderType type) {
+                       CGcontext context, ShaderStageType type) {
   CGprogram prog;
   CGerror err;
   const char *compiler_args[100];
@@ -986,7 +986,7 @@ cg_compile_shader(const ShaderCaps &caps, CGcontext context) {
  *
  */
 bool Shader::
-cg_analyze_entry_point(CGprogram prog, ShaderType type) {
+cg_analyze_entry_point(CGprogram prog, ShaderStageType type) {
   bool success = true;
 
   CGparameter parameter = cgGetFirstParameter(prog, CG_PROGRAM);

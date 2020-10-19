@@ -23,7 +23,7 @@
  * ShaderCompiler implementation that uses the libglslang library to compile
  * GLSL shaders to SPIR-V.
  */
-class EXPCL_PANDA_SHADERPIPELINE ShaderCompilerGlslang : public ShaderCompiler {
+class EXPCL_PANDA_GOBJ ShaderCompilerGlslang : public ShaderCompiler {
 public:
   ShaderCompilerGlslang();
 

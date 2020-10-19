@@ -24,7 +24,7 @@ class ShaderType;
  * the parameter definitions from the bytecode, assign appropriate locations,
  * link the module to a previous stage, and strip debug information as needed.
  */
-class EXPCL_PANDA_SHADERPIPELINE ShaderModuleSpirV final : public ShaderModule {
+class EXPCL_PANDA_GOBJ ShaderModuleSpirV final : public ShaderModule {
 public:
   ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words);
   virtual ~ShaderModuleSpirV();

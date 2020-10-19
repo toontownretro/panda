@@ -27,6 +27,7 @@
 
 NotifyCategoryDecl(gobj, EXPCL_PANDA_GOBJ, EXPTP_PANDA_GOBJ);
 NotifyCategoryDecl(shader, EXPCL_PANDA_GOBJ, EXPTP_PANDA_GOBJ);
+NotifyCategoryDecl(shaderpipeline, EXPCL_PANDA_GOBJ, EXPTP_PANDA_GOBJ);
 
 // Configure variables for gobj package.
 extern EXPCL_PANDA_GOBJ ConfigVariableInt max_texture_dimension;
