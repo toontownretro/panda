@@ -17,4 +17,218 @@
 INLINE ShaderBase::
 ShaderBase(const std::string &name) :
   Namable(name) {
+  _inputs.reserve(32);
+  _language = Shader::SL_none;
+  _stage_flags = SF_none;
+  _flags = 0;
+}
+
+/**
+ * Sets the filename of the vertex shader.
+ */
+INLINE void ShaderBase::
+set_vertex_shader(const Filename &filename) {
+  _stages[S_vertex].set_source_filename(filename);
+  _stage_flags |= SF_vertex;
+}
+
+/**
+ * Sets the source code of the vertex shader.
+ */
+INLINE void ShaderBase::
+set_vertex_shader_source(const std::string &source) {
+  _stages[S_vertex].set_source_raw(source);
+  _stage_flags |= SF_vertex;
+}
+
+/**
+ * Adds a #define for the vertex shader.
+ */
+INLINE void ShaderBase::
+set_vertex_shader_define(const std::string &name, const std::string &value) {
+  _stages[S_vertex].set_define(name, value);
+}
+
+/**
+ * Sets the filename of the pixel shader.
+ */
+INLINE void ShaderBase::
+set_pixel_shader(const Filename &filename) {
+  _stages[S_pixel].set_source_filename(filename);
+  _stage_flags |= SF_pixel;
+}
+
+/**
+ * Sets the source code of the pixel shader.
+ */
+INLINE void ShaderBase::
+set_pixel_shader_source(const std::string &source) {
+  _stages[S_pixel].set_source_raw(source);
+  _stage_flags |= SF_pixel;
+}
+
+/**
+ * Sets a #define for the pixel shader.
+ */
+INLINE void ShaderBase::
+set_pixel_shader_define(const std::string &name, const std::string &value) {
+  _stages[S_pixel].set_define(name, value);
+}
+
+/**
+ * Sets the filename of the geometry shader.
+ */
+INLINE void ShaderBase::
+set_geometry_shader(const Filename &filename) {
+  _stages[S_geometry].set_source_filename(filename);
+  _stage_flags |= SF_geometry;
+}
+
+/**
+ * Sets the source code of the geometry shader.
+ */
+INLINE void ShaderBase::
+set_geometry_shader_source(const std::string &source) {
+  _stages[S_geometry].set_source_raw(source);
+  _stage_flags |= SF_geometry;
+}
+
+/**
+ * Sets a #define for the geometry shader.
+ */
+INLINE void ShaderBase::
+set_geometry_shader_define(const std::string &name, const std::string &value) {
+  _stages[S_geometry].set_define(name, value);
+}
+
+/**
+ * Sets the filename of the tessellation shader.
+ */
+INLINE void ShaderBase::
+set_tess_shader(const Filename &filename) {
+  _stages[S_tess].set_source_filename(filename);
+  _stage_flags |= SF_tess;
+}
+
+/**
+ * Sets the source code of the tessellation shader.
+ */
+INLINE void ShaderBase::
+set_tess_shader_source(const std::string &source) {
+  _stages[S_tess].set_source_raw(source);
+  _stage_flags |= SF_tess;
+}
+
+/**
+ * Sets a #define for the tessellation shader.
+ */
+INLINE void ShaderBase::
+set_tess_shader_define(const std::string &name, const std::string &value) {
+  _stages[S_tess].set_define(name, value);
+}
+
+/**
+ * Sets the filename of the tessellation evaluation shader.
+ */
+INLINE void ShaderBase::
+set_tess_eval_shader(const Filename &filename) {
+  _stages[S_tess_eval].set_source_filename(filename);
+  _stage_flags |= SF_tess_eval;
+}
+
+/**
+ * Sets the source code of the tessellation evaluation shader.
+ */
+INLINE void ShaderBase::
+set_tess_eval_shader_source(const std::string &source) {
+  _stages[S_tess_eval].set_source_raw(source);
+  _stage_flags |= SF_tess_eval;
+}
+
+/**
+ * Sets a #define for the tessellation evaluation shader.
+ */
+INLINE void ShaderBase::
+set_tess_eval_shader_define(const std::string &name, const std::string &value) {
+  _stages[S_tess_eval].set_define(name, value);
+}
+
+/**
+ * Returns the ShaderStage for the given stage type.
+ */
+INLINE ShaderStage &ShaderBase::
+get_stage(ShaderBase::Stage stage) {
+  return _stages[stage];
+}
+
+/**
+ * Returns whether or not this shader contains the stage of the indicated type.
+ */
+INLINE bool ShaderBase::
+has_stage(StageFlags flags) const {
+  return (_stage_flags & flags) != 0;
+}
+
+/**
+ * Sets a uniform input on the shader.
+ */
+INLINE void ShaderBase::
+set_input(const ShaderInput &input) {
+  _inputs.push_back(input);
+}
+
+/**
+ * Sets a uniform input on the shader.
+ */
+INLINE void ShaderBase::
+set_input(ShaderInput &&input) {
+  _inputs.push_back(std::move(input));
+}
+
+/**
+ * Returns the number of uniform inputs.
+ */
+INLINE size_t ShaderBase::
+get_num_inputs() const {
+  return _inputs.size();
+}
+
+/**
+ * Returns the list of uniform inputs.
+ */
+INLINE const pvector<ShaderInput> &ShaderBase::
+get_inputs() const {
+  return _inputs;
+}
+
+/**
+ * Sets the shader flags.
+ */
+INLINE void ShaderBase::
+set_flags(int flags) {
+  _flags |= flags;
+}
+
+/**
+ * Returns the shader flags.
+ */
+INLINE int ShaderBase::
+get_flags() const {
+  return _flags;
+}
+
+/**
+ * Sets the language of the shader.
+ */
+INLINE void ShaderBase::
+set_language(Shader::ShaderLanguage language) {
+  _language = language;
+}
+
+/**
+ * Returns the language of the shader.
+ */
+INLINE Shader::ShaderLanguage ShaderBase::
+get_language() const {
+  return _language;
 }

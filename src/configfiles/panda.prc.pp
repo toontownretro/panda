@@ -28,16 +28,16 @@ aux-display pandadx9
 aux-display pandagl
 #endif
 #if $[HAVE_TINYDISPLAY]
-aux-display p3tinydisplay
+aux-display tinydisplay
 #endif
 
 # Define an appropriate default audio library.
 #if $[HAVE_RAD_MSS]
-audio-library-name p3miles_audio
+audio-library-name miles_audio
 #elif $[HAVE_FMODEX]
-audio-library-name p3fmod_audio
+audio-library-name fmod_audio
 #elif $[HAVE_OPENAL]
-audio-library-name p3openal_audio
+audio-library-name openal_audio
 #endif
 
 
@@ -64,8 +64,8 @@ load-file-type egg pandaegg
 # The * is a special catch-all extension that is consulted unless a
 # loader has been defined with an explicit extension.
 
-load-audio-type * p3ffmpeg
-load-video-type * p3ffmpeg
+load-audio-type * ffmpeg
+load-video-type * ffmpeg
 
 
 # The following lines define some handy object types to use within the

@@ -106,6 +106,14 @@ has_shader_input(CPT_InternalName id) const {
 }
 
 /**
+ * Returns the number of ShaderInputs.
+ */
+INLINE size_t ShaderAttrib::
+get_num_shader_inputs() const {
+  return _inputs.size();
+}
+
+/**
  *
  */
 INLINE CPT(RenderAttrib) ShaderAttrib::

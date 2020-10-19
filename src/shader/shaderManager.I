@@ -17,9 +17,9 @@
  */
 INLINE ShaderBase *ShaderManager::
 get_shader(const std::string &name) const {
-  auto itr = _shaders.find(name);
-  if (itr != _shaders.end()) {
-    return (*itr).second;
+  ShaderRegistry::const_iterator it = _shaders.find(name);
+  if (it != _shaders.end()) {
+    return (*it).second;
   }
 
   return nullptr;

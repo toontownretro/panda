@@ -223,6 +223,22 @@ set_shader_input(ShaderInput &&input) const {
 }
 
 /**
+ * Returns a new ShaderAttrib with the ShaderInputs copied in from the other
+ * ShaderAttrib.
+ */
+CPT(RenderAttrib) ShaderAttrib::
+copy_shader_inputs_from(const ShaderAttrib *other) const {
+  ShaderAttrib *result = new ShaderAttrib(*this);
+
+  Inputs::const_iterator i = other->_inputs.begin();
+  for (; i != other->_inputs.end(); i++) {
+    result->_inputs[i->first] = i->second;
+  }
+
+  return return_new(result);
+}
+
+/**
  * Returns a new ShaderAttrib with the given shader inputs set.  This is a
  * more efficient way to set multiple shader inputs than calling
  * set_shader_input multiple times.

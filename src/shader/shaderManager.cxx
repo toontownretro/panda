@@ -14,8 +14,12 @@
 #include "shaderManager.h"
 #include "config_putil.h"
 #include "load_dso.h"
+#include "shader.h"
 #include "shaderBase.h"
 #include "shaderParamAttrib.h"
+#include "shaderAttrib.h"
+#include "shaderInput.h"
+#include "pvector.h"
 #include "renderState.h"
 
 typedef void (*ShaderLibInit)();
@@ -93,7 +97,8 @@ register_shader(ShaderBase *shader) {
  * requested by name in the state.
  */
 CPT(RenderAttrib) ShaderManager::
-generate_shader(const RenderState *state,
+generate_shader(GraphicsStateGuardianBase *gsg,
+                const RenderState *state,
                 const GeomVertexAnimationSpec &anim_spec) {
   // First figure out what shader the state would like to use.
   const ShaderParamAttrib *spa;
@@ -103,6 +108,41 @@ generate_shader(const RenderState *state,
   if (!shader) {
     shadermgr_cat.error()
       << "Shader `" << spa->get_shader_name() << "` not found\n";
-    return nullptr;
+    return ShaderAttrib::make();
   }
+
+  shader->generate_shader(gsg, state, spa, anim_spec);
+
+  PT(Shader) shader_obj = Shader::make(
+    shader->get_language(),
+    shader->get_stage(ShaderBase::S_vertex).get_final_source(),
+    shader->get_stage(ShaderBase::S_pixel).get_final_source(),
+    shader->get_stage(ShaderBase::S_geometry).get_final_source(),
+    shader->get_stage(ShaderBase::S_tess).get_final_source(),
+    shader->get_stage(ShaderBase::S_tess_eval).get_final_source());
+
+  CPT(RenderAttrib) generated_attr = ShaderAttrib::make(shader_obj);
+
+  if (shader->get_num_inputs() > (size_t)0) {
+    generated_attr = DCAST(ShaderAttrib, generated_attr)
+      ->set_shader_inputs(shader->get_inputs());
+  }
+
+  if (shader->get_flags() != 0) {
+    generated_attr = DCAST(ShaderAttrib, generated_attr)
+      ->set_flag(shader->get_flags(), true);
+  }
+
+  // Apply inputs from the ShaderAttrib stored directly on the state to our
+  // generated ShaderAttrib.
+  const ShaderAttrib *shattr;
+  state->get_attrib_def(shattr);
+  if (shattr->get_num_shader_inputs() > (size_t)0) {
+    generated_attr = DCAST(ShaderAttrib, generated_attr)->copy_shader_inputs_from(shattr);
+  }
+
+  // Reset the shader for next time.
+  shader->reset();
+
+  return generated_attr;
 }

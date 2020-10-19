@@ -12,6 +12,9 @@
  */
 
 #include "config_shader.h"
+#include "shaderBase.h"
+#include "shaderManager.h"
+#include "defaultShader.h"
 
 ConfigureDef(config_shader);
 ConfigureFn(config_shader) {
@@ -40,4 +43,9 @@ init_libshader() {
   }
 
   initialized = true;
+
+  ShaderBase::init_type();
+  ShaderManager::get_global_ptr()->load_shader_libraries();
+
+  DefaultShader::init_type();
 }

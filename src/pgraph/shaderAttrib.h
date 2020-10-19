@@ -74,6 +74,8 @@ PUBLISHED:
   CPT(RenderAttrib) set_shader_input(const ShaderInput &input) const;
   CPT(RenderAttrib) set_shader_input(ShaderInput &&input) const;
 
+  CPT(RenderAttrib) copy_shader_inputs_from(const ShaderAttrib *other) const;
+
 public:
   INLINE CPT(RenderAttrib) set_shader_input(CPT_InternalName id, Texture *tex,       int priority=0) const;
   INLINE CPT(RenderAttrib) set_shader_input(CPT_InternalName id, const NodePath &np, int priority=0) const;
@@ -91,7 +93,7 @@ public:
   INLINE CPT(RenderAttrib) set_shader_input(CPT_InternalName id, const LMatrix3 &v, int priority=0) const;
   INLINE CPT(RenderAttrib) set_shader_input(CPT_InternalName id, double n1=0, double n2=0, double n3=0, double n4=1,
                                             int priority=0) const;
-                                            
+
   CPT(RenderAttrib) set_shader_inputs(const pvector<ShaderInput> &inputs) const;
 
 PUBLISHED:
@@ -114,6 +116,7 @@ PUBLISHED:
   const Shader *get_shader() const;
   const ShaderInput &get_shader_input(const InternalName *id) const;
   const ShaderInput &get_shader_input(const std::string &id) const;
+  INLINE size_t get_num_shader_inputs() const;
 
   NodePath get_shader_input_nodepath(const InternalName *id) const;
   LVecBase4 get_shader_input_vector(InternalName *id) const;

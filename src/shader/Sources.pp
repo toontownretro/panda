@@ -1,6 +1,6 @@
 #begin lib_target
   #define TARGET shader
-  #define LOCAL_LIBS pgraph putil
+  #define LOCAL_LIBS pgraph putil gsgbase
   #define OTHER_LIBS prc \
     dtool:m dtoolutil:c dtoolbase:c
 
@@ -8,16 +8,22 @@
 
   #define SOURCES \
     config_shader.h \
-    shaderBase.h shaderBase.I \
-    shaderManager.h shaderManager.I
+    defaultShader.h defaultShader.I \
+    shaderBase.h shaderBase.I shaderBase.T \
+    shaderManager.h shaderManager.I \
+    shaderSource.h shaderSource.I \
+    shaderStage.h shaderStage.I shaderStage.T
 
   #define INSTALL_HEADERS \
     $[SOURCES]
 
   #define COMPOSITE_SOURCES \
     config_shader.cxx \
+    defaultShader.cxx \
     shaderBase.cxx \
-    shaderManager.cxx
+    shaderManager.cxx \
+    shaderSource.cxx \
+    shaderStage.cxx
 
   #define IGATESCAN all
 

@@ -21,9 +21,11 @@
 
 class ShaderBase;
 class RenderState;
+class GraphicsStateGuardianBase;
 
 /**
- *
+ * This class is responsible for the registry of available shaders and calling
+ * upon a shader to generate a shader for a given RenderState.
  */
 class EXPCL_PANDA_SHADER ShaderManager {
 PUBLISHED:
@@ -34,13 +36,14 @@ public:
 
   void register_shader(ShaderBase *shader);
 
-  CPT(RenderAttrib) generate_shader(const RenderState *state,
+  CPT(RenderAttrib) generate_shader(GraphicsStateGuardianBase *gsg,
+                                    const RenderState *state,
                                     const GeomVertexAnimationSpec &animation_spec);
 
   INLINE ShaderBase *get_shader(const std::string &name) const;
 
 private:
-  typedef pmap<std::string, ShaderBase *> ShaderRegistry;
+  typedef phash_map<std::string, ShaderBase *, string_hash> ShaderRegistry;
   ShaderRegistry _shaders;
 
   static ShaderManager *_global_ptr;

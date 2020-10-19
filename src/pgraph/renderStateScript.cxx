@@ -64,7 +64,7 @@ load(const Filename &filename) {
     pgraph_cat.error()
       << "Couldn't find render state script " << filename.get_fullpath()
       << " on model path " << get_model_path().get_value() << "\n";
-    return nullptr;
+    return RenderState::make_empty();
   }
 
   pgraph_cat.info()

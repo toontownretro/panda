@@ -17,6 +17,20 @@
 TypeHandle ShaderBase::_type_handle;
 
 /**
+ * Resets the shader to a clean slate, ready for the state that needs a shader.
+ */
+void ShaderBase::
+reset() {
+  _language = Shader::SL_none;
+  _flags = 0;
+  _inputs.clear();
+  _stage_flags = SF_none;
+  for (int i = 0; i < S_COUNT; i++) {
+    _stages[i].reset();
+  }
+}
+
+/**
  * Registers a shader instance with the shader manager.
  */
 void ShaderBase::

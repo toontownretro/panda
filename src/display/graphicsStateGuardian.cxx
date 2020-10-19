@@ -3548,7 +3548,6 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
  */
 void GraphicsStateGuardian::
 ensure_generated_shader(const RenderState *state) {
-#ifdef HAVE_CG
   const ShaderAttrib *shader_attrib;
   state->get_attrib_def(shader_attrib);
 
@@ -3572,11 +3571,10 @@ ensure_generated_shader(const RenderState *state) {
       ShaderManager *shader_mgr = ShaderManager::get_global_ptr();
 
       // Cache the generated ShaderAttrib on the shader state.
-      state->_generated_shader = shader_mgr->generate_shader(state, spec);
+      state->_generated_shader = shader_mgr->generate_shader(this, state, spec);
       state->_generated_shader_seq = _generated_shader_seq;
     }
   }
-#endif
 }
 
 /**

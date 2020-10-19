@@ -13,10 +13,10 @@ win-size 800 600
 # particular display type with the load-display directive.
 
 aux-display pandagl
-aux-display p3tinydisplay
+aux-display tinydisplay
 
 # Define an appropriate default audio library.
-audio-library-name p3openal_audio
+audio-library-name openal_audio
 
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files
@@ -40,8 +40,8 @@ load-file-type egg pandaegg
 # The * is a special catch-all extension that is consulted unless a
 # loader has been defined with an explicit extension.
 
-load-audio-type * p3ffmpeg
-load-video-type * p3ffmpeg
+load-audio-type * ffmpeg
+load-video-type * ffmpeg
 
 # The following lines define some handy object types to use within the
 # egg syntax.  This remaps <ObjectType> { name } into whatever egg

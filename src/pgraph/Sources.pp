@@ -301,6 +301,7 @@
     shadeModelAttrib.I shadeModelAttrib.h \
     shaderAttrib.I shaderAttrib.h \
     shaderInput.I shaderInput.h \
+    shaderParamAttrib.I shaderParamAttrib.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
     stateMunger.I stateMunger.h \
