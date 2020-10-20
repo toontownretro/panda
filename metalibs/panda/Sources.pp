@@ -12,9 +12,8 @@
   event gobj grutil gsgbase linmath mathutil \
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
-  nativenet net \
-  audio \
-  pnmtext steamnet keyvalues shader postprocess
+  nativenet net audio pnmtext steamnet keyvalues shader \
+  postprocess ssemath raytrace
 
 #define LOCAL_LIBS \
   downloader express pandabase

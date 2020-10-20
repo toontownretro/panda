@@ -13,6 +13,50 @@
  * Miscellaneous math utility functions.
  */
 
+INLINE vec_t
+VectorNormalize(vec3_t v)
+{
+  double length;
+
+  length = DotProduct(v, v);
+  length = sqrt(length);
+  if (length < NORMAL_EPSILON) {
+    VectorClear(v);
+    return 0.0;
+  }
+
+  v[0] /= length;
+  v[1] /= length;
+  v[2] /= length;
+
+  return length;
+}
+
+INLINE bool
+VectorCompare(const float *v1, const float *v2)
+{
+  int i;
+
+  for (i = 0; i < 3; i++) {
+    if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON) {
+      return false;
+    }
+  }
+  return true;
+}
+
+INLINE bool
+VectorCompareD(const double *v1, const double *v2) {
+  int i;
+
+  for (i = 0; i < 3; i++) {
+    if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON) {
+      return false;
+    }
+  }
+  return true;
+}
+
 INLINE void
 swap_floats(float &a, float &b) {
   float temp = b;

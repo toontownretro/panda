@@ -15,6 +15,46 @@
 
 #include "mathutil_misc.h"
 
+void
+GetBumpNormals( const LVector3 &svec, const LVector3 &tvec, const LVector3 &face_normal,
+                const LVector3 &phong_normal, LVector3 *bump_vecs )
+{
+        LVector3 tmp_normal;
+        bool left_handed = false;
+        int i;
+
+        nassertv( NUM_BUMP_VECTS == 3 );
+
+        // left handed or right handed?
+        tmp_normal = svec.cross( tvec );
+        if ( face_normal.dot( tmp_normal ) < 0.0 )
+        {
+                left_handed = true;
+        }
+
+        // build a basis for the face around the phong normal
+        LMatrix3 smooth_basis;
+        smooth_basis.set_row( 1, phong_normal.cross( svec ).normalized() );
+        smooth_basis.set_row( 0, smooth_basis.get_row( 1 ).cross( phong_normal ).normalized() );
+        smooth_basis.set_row( 2, phong_normal );
+
+        //std::cout << smooth_basis;
+
+        if ( left_handed )
+        {
+                smooth_basis.set_row( 1, -smooth_basis.get_row( 1 ) );
+        }
+        //std::cout << std::endl;
+
+        //std::cout << smooth_basis << std::endl;
+
+        // move the g_localbumpbasis into world space to create bump_vecs
+        for ( i = 0; i < 3; i++ )
+        {
+                bump_vecs[i] = smooth_basis.xform_vec_general( g_localbumpbasis[i] ).normalized();
+        }
+}
+
 // solves for "a, b, c" where "a x^2 + b x + c = y", return true if solution exists
 bool
 solve_inverse_quadratic(float x1, float y1, float x2, float y2, float x3,
