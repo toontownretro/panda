@@ -114,7 +114,7 @@ init_libtinydisplay() {
  * by this module.
  */
 int
-get_pipe_type_p3tinydisplay() {
+get_pipe_type_tinydisplay() {
 
 #ifdef _WIN32
   return TinyWinGraphicsPipe::get_class_type().get_index();
