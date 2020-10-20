@@ -23,7 +23,7 @@
 NotifyCategoryDecl(tinydisplay, EXPCL_TINYDISPLAY, EXPTP_TINYDISPLAY);
 
 extern EXPCL_TINYDISPLAY void init_libtinydisplay();
-extern "C" EXPCL_TINYDISPLAY int get_pipe_type_p3tinydisplay();
+extern "C" EXPCL_TINYDISPLAY int get_pipe_type_tinydisplay();
 
 extern ConfigVariableInt td_texture_ram;
 extern ConfigVariableBool td_ignore_mipmaps;
