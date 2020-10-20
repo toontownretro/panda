@@ -16,7 +16,9 @@
     boundingBox.I boundingBox.h \
     boundingPlane.I boundingPlane.h \
     boundingSphere.I boundingSphere.h  \
-    boundingVolume.I boundingVolume.h config_mathutil.h  \
+    boundingVolume.I boundingVolume.h \
+    colorRGBExp32.I colorRGBExp32.h \
+    config_mathutil.h  \
     fftCompressor.h finiteBoundingVolume.h frustum.h  \
     frustum_src.I frustum_src.h geometricBoundingVolume.I \
     geometricBoundingVolume.h \
@@ -25,6 +27,7 @@
     look_at.h look_at_src.I \
     look_at_src.h \
     linmath_events.h \
+    mathutil_misc.I mathutil_misc.T mathutil_misc.h \
     mersenne.h \
     omniBoundingVolume.I  \
     omniBoundingVolume.h \
@@ -48,11 +51,15 @@
     boundingBox.cxx \
     boundingPlane.cxx \
     boundingSphere.cxx  \
-    boundingVolume.cxx config_mathutil.cxx fftCompressor.cxx  \
+    boundingVolume.cxx \
+    colorRGBExp32.cxx \
+    config_mathutil.cxx \
+    fftCompressor.cxx  \
     finiteBoundingVolume.cxx geometricBoundingVolume.cxx  \
     intersectionBoundingVolume.cxx \
     look_at.cxx \
     linmath_events.cxx \
+    mathutil_misc.cxx \
     mersenne.cxx \
     omniBoundingVolume.cxx \
     parabola.cxx \

@@ -14,7 +14,7 @@
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
   nativenet net \
   audio \
-  pnmtext steamnet keyvalues shader
+  pnmtext steamnet keyvalues shader postprocess
 
 #define LOCAL_LIBS \
   downloader express pandabase

@@ -7,6 +7,7 @@
     downloader dxml event express gobj grutil gsgbase linmath \
     mathutil movies parametrics pgraph pgraphnodes pgui \
     pipeline pnmimage pstatclient putil recorder text tform \
-    prc nativenet net audio pnmtext steamnet keyvalues shader
+    prc nativenet net audio pnmtext steamnet keyvalues shader \
+    postprocess
   #define LOCAL_LIBS panda
 #end python_module_target
