@@ -284,6 +284,7 @@ PUBLISHED:
   // Aggregate transform and state information.
   const RenderState *get_state(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_state(const RenderState *state, Thread *current_thread = Thread::get_current_thread());
+  INLINE void set_state(const Filename &filename, Thread *current_thread = Thread::get_current_thread());
   CPT(RenderState) get_state(const NodePath &other, Thread *current_thread = Thread::get_current_thread()) const;
   void set_state(const NodePath &other, const RenderState *state, Thread *current_thread = Thread::get_current_thread());
   INLINE CPT(RenderState) get_net_state(Thread *current_thread = Thread::get_current_thread()) const;
