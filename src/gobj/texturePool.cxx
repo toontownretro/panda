@@ -1185,9 +1185,12 @@ resolve_filename(Filename &new_filename, const Filename &orig_filename,
     new_filename.set_pattern(true);
   }
 
+  if (new_filename.get_extension().empty()) {
+    new_filename = new_filename.get_fullpath() + default_texture_extension.get_value();
+  }
+
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  vfs->resolve_filename(new_filename, get_model_path(),
-                        default_texture_extension.get_value());
+  vfs->resolve_filename(new_filename, get_model_path());
 
   _relpath_lookup[orig_filename] = new_filename;
 }
