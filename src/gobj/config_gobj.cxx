@@ -123,7 +123,7 @@ ConfigVariableList exclude_texture_scale
           "by max-texture-dimension or texture-scale."));
 
 ConfigVariableString default_texture_extension
-("default-texture-extension",
+("default-texture-extension", ".txo",
   PRC_DESC("This specifies the filename extension (with leading dot) that "
            "should be assumed if an attempt is made to load a texture that "
            "has no extension."));
