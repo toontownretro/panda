@@ -70,6 +70,7 @@ load(const Filename &filename, const DSearchPath &search_path) {
     << "Loading render state script " << resolved.get_fullpath() << "\n";
 
   std::string data = vfs->read_file(resolved, true);
+
   // Append this script's directory to the search path for #includes.
   DSearchPath my_search_path = search_path;
   my_search_path.append_directory(resolved.get_dirname());
