@@ -19,6 +19,8 @@
 #include "pmap.h"
 #include "renderState.h"
 #include "lightMutex.h"
+#include "config_putil.h"
+#include "dSearchPath.h"
 
 class CKeyValues;
 
@@ -27,8 +29,10 @@ class CKeyValues;
  */
 class EXPCL_PANDA_PGRAPH RenderStateScript {
 PUBLISHED:
-  static CPT(RenderState) load(const Filename &filename);
-  static CPT(RenderState) parse(const std::string &data);
+  static CPT(RenderState) load(const Filename &filename,
+                               const DSearchPath &search_path = get_model_path());
+  static CPT(RenderState) parse(const std::string &data,
+                                const DSearchPath &search_path = get_model_path());
 
 private:
   RenderStateScript() = delete;

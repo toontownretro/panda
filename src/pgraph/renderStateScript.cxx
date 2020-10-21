@@ -13,7 +13,6 @@
 
 #include "renderStateScript.h"
 #include "lightMutexHolder.h"
-#include "config_putil.h"
 #include "virtualFileSystem.h"
 #include "keyValues.h"
 
@@ -45,7 +44,7 @@ LightMutex RenderStateScript::_mutex;
  * Loads a render state script from disk and generates a RenderState.
  */
 CPT(RenderState) RenderStateScript::
-load(const Filename &filename) {
+load(const Filename &filename, const DSearchPath &search_path) {
   // Find it in the cache
   {
     LightMutexHolder holder(_mutex);
@@ -60,10 +59,10 @@ load(const Filename &filename) {
   Filename resolved = filename;
 
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->resolve_filename(resolved, get_model_path().get_value(), ".pmat")) {
+  if (!vfs->resolve_filename(resolved, search_path, ".pmat")) {
     pgraph_cat.error()
       << "Couldn't find render state script " << filename.get_fullpath()
-      << " on model path " << get_model_path().get_value() << "\n";
+      << " on search path " << search_path << "\n";
     return RenderState::make_empty();
   }
 
@@ -71,7 +70,10 @@ load(const Filename &filename) {
     << "Loading render state script " << resolved.get_fullpath() << "\n";
 
   std::string data = vfs->read_file(resolved, true);
-  CPT(RenderState) state = parse(data);
+  // Append this script's directory to the search path for #includes.
+  DSearchPath my_search_path = search_path;
+  my_search_path.append_directory(resolved.get_dirname());
+  CPT(RenderState) state = parse(data, my_search_path);
   state->_filename = filename;
   state->_fullpath = resolved;
 
@@ -87,7 +89,7 @@ load(const Filename &filename) {
  * Parses the render state script data and generates a RenderState.
  */
 CPT(RenderState) RenderStateScript::
-parse(const std::string &data) {
+parse(const std::string &data, const DSearchPath &search_path) {
   PT(CKeyValues) mat_data = CKeyValues::from_string(data);
 
   CPT(RenderState) state = RenderState::make_empty();
@@ -179,6 +181,12 @@ parse(const std::string &data) {
         state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none));
       }
 
+    } else if (key == "#include") {
+      // We want to include another state script.
+      // We will compose our state with the included state.
+      Filename include_filename = Filename::from_os_specific(value);
+      CPT(RenderState) include_state = RenderStateScript::load(include_filename, search_path);
+      state = state->compose(include_state);
     }
   }
 
