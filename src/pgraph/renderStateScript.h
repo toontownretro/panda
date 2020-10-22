@@ -21,6 +21,7 @@
 #include "lightMutex.h"
 #include "config_putil.h"
 #include "dSearchPath.h"
+#include "bamEnums.h"
 
 class CKeyValues;
 
@@ -33,6 +34,8 @@ PUBLISHED:
                                const DSearchPath &search_path = get_model_path());
   static CPT(RenderState) parse(const std::string &data,
                                 const DSearchPath &search_path = get_model_path());
+  static void write(const RenderState *state, const Filename &filename,
+                    BamEnums::BamTextureMode mode = BamEnums::BTM_unchanged);
 
 private:
   RenderStateScript() = delete;

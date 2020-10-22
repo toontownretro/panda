@@ -97,10 +97,10 @@ PUBLISHED:
   EXTENSION(PyObject *as_float_tuple_list(const std::string &str));
 
 	template<class T>
-	static std::string to_string(T v);
+	INLINE static std::string to_string(T v);
 
 	template<class T>
-	static std::string to_string(const pvector<T> &v);
+	INLINE static std::string to_string(const pvector<T> &v);
 
 	static std::string to_string(const LVecBase3f &v);
 	static std::string to_string(const LVecBase4f &v);
@@ -216,4 +216,21 @@ INLINE const std::string &CKeyValues::get_value(size_t n) const {
 
 INLINE const Filename &CKeyValues::get_filename() const {
 	return _filename;
+}
+
+template <class T>
+INLINE std::string CKeyValues::
+to_string(T v) {
+  return std::to_string(v);
+}
+
+template <class T>
+INLINE std::string CKeyValues::
+to_string(const pvector<T> &v) {
+  std::string res = "";
+  for (size_t i = 0; i < v.size(); i++) {
+    res += to_string(v[i]);
+  }
+
+  return res;
 }

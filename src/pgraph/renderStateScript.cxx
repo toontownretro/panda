@@ -217,6 +217,217 @@ parse(const std::string &data, const DSearchPath &search_path) {
 }
 
 /**
+ * Write the indicated RenderState to script file on disk.
+ */
+void RenderStateScript::
+write(const RenderState *state, const Filename &filename,
+      BamEnums::BamTextureMode mode) {
+  PT(CKeyValues) script = new CKeyValues;
+
+  const ColorAttrib *ca;
+  if (state->get_attrib(ca)) {
+    script->set_key_value("color", CKeyValues::to_string(ca->get_color()));
+  }
+
+  const ColorScaleAttrib *csa;
+  if (state->get_attrib(csa)) {
+    script->set_key_value("color_scale", CKeyValues::to_string(csa->get_scale()));
+  }
+
+  const DepthWriteAttrib *dwa;
+  if (state->get_attrib(dwa)) {
+    DepthWriteAttrib::Mode mode = dwa->get_mode();
+    script->set_key_value("z_write", mode == DepthWriteAttrib::M_on ? "1" : "0");
+  }
+
+  const DepthTestAttrib *dta;
+  if (state->get_attrib(dta)) {
+    DepthTestAttrib::PandaCompareFunc mode = dta->get_mode();
+    script->set_key_value("z_test", mode != DepthTestAttrib::M_none ? "1" : "0");
+  }
+
+  const DepthOffsetAttrib *doa;
+  if (state->get_attrib(doa)) {
+    script->set_key_value("z_offset", CKeyValues::to_string(doa->get_offset()));
+  }
+
+  const FogAttrib *fa;
+  if (state->get_attrib(fa) && fa->is_off()) {
+    script->set_key_value("no_fog", "1");
+  }
+
+  const LightAttrib *la;
+  if (state->get_attrib(la) && la->has_all_off()) {
+    script->set_key_value("no_light", "1");
+  }
+
+  const TransparencyAttrib *ta;
+  if (state->get_attrib(ta)) {
+    switch (ta->get_mode()) {
+    case TransparencyAttrib::M_none:
+      script->set_key_value("transparency", "off");
+      break;
+    case TransparencyAttrib::M_alpha:
+    default:
+      script->set_key_value("transparency", "alpha");
+      break;
+    case TransparencyAttrib::M_premultiplied_alpha:
+      script->set_key_value("transparency", "premultiplied_alpha");
+      break;
+    case TransparencyAttrib::M_multisample:
+      script->set_key_value("transparency", "multisample");
+      break;
+    case TransparencyAttrib::M_multisample_mask:
+      script->set_key_value("transparency", "multisample_mask");
+      break;
+    case TransparencyAttrib::M_binary:
+      script->set_key_value("transparency", "binary");
+      break;
+    case TransparencyAttrib::M_dual:
+      script->set_key_value("transparency", "dual");
+      break;
+    }
+  }
+
+  const ColorWriteAttrib *cwa;
+  if (state->get_attrib(cwa)) {
+    unsigned int channels = cwa->get_channels();
+    if (channels == ColorWriteAttrib::C_off) {
+      script->set_key_value("color_write", "off");
+    } else if (channels == ColorWriteAttrib::C_all) {
+      script->set_key_value("color_write", "all");
+    } else {
+      std::string channels_str;
+      if (channels | ColorWriteAttrib::C_red) {
+        channels_str += 'r';
+      }
+      if (channels | ColorWriteAttrib::C_green) {
+        channels_str += 'g';
+      }
+      if (channels | ColorWriteAttrib::C_blue) {
+        channels_str += 'b';
+      }
+      if (channels | ColorWriteAttrib::C_alpha) {
+        channels_str += 'a';
+      }
+      script->set_key_value("color_write", channels_str);
+    }
+  }
+
+  const CullFaceAttrib *cfa;
+  if (state->get_attrib(cfa)) {
+    CullFaceAttrib::Mode mode = cfa->get_effective_mode();
+    switch (mode) {
+    case CullFaceAttrib::M_cull_none:
+      script->set_key_value("cull", "none");
+      break;
+    case CullFaceAttrib::M_cull_clockwise:
+    default:
+      script->set_key_value("cull", "cw");
+      break;
+    case CullFaceAttrib::M_cull_counter_clockwise:
+      script->set_key_value("cull", "ccw");
+      break;
+    }
+  }
+
+  const TextureAttrib *tex_attr;
+  if (state->get_attrib(tex_attr)) {
+    for (int i = 0; i < tex_attr->get_num_on_stages(); i++) {
+      TextureStage *stage = tex_attr->get_on_stage(i);
+      PT(CKeyValues) tex_block = new CKeyValues("texture", script);
+      tex_block->set_key_value("stage", stage->get_name());
+      Texture *tex = tex_attr->get_on_texture(stage);
+      if (tex) {
+        if (!tex->get_filename().empty()) {
+          tex_block->set_key_value("filename", tex->get_filename().get_fullpath());
+          if (!tex->get_alpha_filename().empty()) {
+            tex_block->set_key_value("alpha_filename", tex->get_alpha_filename().get_fullpath());
+          }
+        } else {
+          tex_block->set_key_value("name", tex->get_name());
+        }
+      }
+    }
+  }
+
+  const CullBinAttrib *cba;
+  if (state->get_attrib(cba)) {
+    PT(CKeyValues) cba_block = new CKeyValues("bin", script);
+    cba_block->set_key_value("name", cba->get_bin_name());
+    cba_block->set_key_value("sort", CKeyValues::to_string(cba->get_draw_order()));
+  }
+
+  const AlphaTestAttrib *ata;
+  if (state->get_attrib(ata)) {
+    PT(CKeyValues) ata_block = new CKeyValues("alpha_test", script);
+    ata_block->set_key_value("reference", CKeyValues::to_string(ata->get_reference_alpha()));
+    switch (ata->get_mode()) {
+    case AlphaTestAttrib::M_never:
+      ata_block->set_key_value("compare", "never");
+      break;
+    case AlphaTestAttrib::M_less:
+      ata_block->set_key_value("compare", "less");
+      break;
+    case AlphaTestAttrib::M_equal:
+      ata_block->set_key_value("compare", "equal");
+      break;
+    case AlphaTestAttrib::M_less_equal:
+    default:
+      ata_block->set_key_value("compare", "less_equal");
+      break;
+    case AlphaTestAttrib::M_greater:
+      ata_block->set_key_value("compare", "greater");
+      break;
+    case AlphaTestAttrib::M_greater_equal:
+      ata_block->set_key_value("compare", "greater_equal");
+      break;
+    case AlphaTestAttrib::M_always:
+      ata_block->set_key_value("compare", "always");
+    }
+  }
+
+  const ShaderParamAttrib *spa;
+  if (state->get_attrib(spa)) {
+    PT(CKeyValues) spa_block = new CKeyValues("shader", script);
+    spa_block->set_key_value("name", spa->get_shader_name());
+    for (int i = 0; spa->get_num_params(); i++) {
+      spa_block->set_key_value(spa->get_param_key(i), spa->get_param_value(i));
+    }
+  }
+
+  const RenderModeAttrib *rma;
+  if (state->get_attrib(rma)) {
+    PT(CKeyValues) rma_block = new CKeyValues("render_mode", script);
+    RenderModeAttrib::Mode mode = rma->get_mode();
+    switch (mode) {
+    case RenderModeAttrib::M_filled:
+      rma_block->set_key_value("mode", "filled");
+      break;
+    case RenderModeAttrib::M_wireframe:
+      rma_block->set_key_value("mode", "wireframe");
+      break;
+    case RenderModeAttrib::M_filled_wireframe:
+      rma_block->set_key_value("mode", "filled_wireframe");
+      break;
+    case RenderModeAttrib::M_filled_flat:
+      rma_block->set_key_value("mode", "filled_flat");
+      break;
+    case RenderModeAttrib::M_point:
+      rma_block->set_key_value("mode", "point");
+    }
+
+    rma_block->set_key_value("perspective", CKeyValues::to_string(rma->get_perspective()));
+    rma_block->set_key_value("wireframe_color", CKeyValues::to_string(rma->get_wireframe_color()));
+    rma_block->set_key_value("thickness", CKeyValues::to_string(rma->get_thickness()));
+  }
+
+  pgraph_cat.info()
+    << "Writing render state script " << filename.get_fullpath() << "\n";
+  script->write(filename, 2);
+}
+
+/**
  * Parses a string and returns a boolean value based on the contents of the
  * string.  "0", "off", "no", "false", and "none" returns false, anything else
  * returns true.

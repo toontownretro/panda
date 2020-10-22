@@ -572,23 +572,6 @@ to_4f(const std::string &str) {
   return lvec;
 }
 
-template <class T>
-std::string CKeyValues::
-to_string(T v) {
-  return std::to_string(v);
-}
-
-template <class T>
-std::string CKeyValues::
-to_string(const pvector<T> &v) {
-  std::string res = "";
-  for (size_t i = 0; i < v.size(); i++) {
-    res += to_string(v[i]);
-  }
-
-  return res;
-}
-
 std::string CKeyValues::
 to_string(const LVecBase2f &v) {
   std::ostringstream ss;
@@ -633,9 +616,7 @@ void CKeyValues::
 do_write(std::ostringstream &out, int indent, int &curr_indent) {
   bool is_root = _name == root_block_name;
 
-  // Don't write a block or keyvalues if we're the root.
-  // The keyvalues format can have multiple root level blocks,
-  // but can't have keyvalues outside of a block.
+  // Don't write a block if we're the root; the root block is implicit.
   if (!is_root) {
     // Open the block
     do_indent(out, curr_indent);
@@ -643,17 +624,17 @@ do_write(std::ostringstream &out, int indent, int &curr_indent) {
     do_indent(out, curr_indent);
     out << "{\n";
     curr_indent += indent;
+  }
 
-    // Write out keyvalues
-    for (size_t i = 0; i < _keyvalues.size(); i++) {
-      do_indent(out, curr_indent);
-      out << "\"" << get_key(i) << "\"" << " " << "\"" << get_value(i) << "\"\n";
-    }
+  // Write out keyvalues
+  for (size_t i = 0; i < _keyvalues.size(); i++) {
+    do_indent(out, curr_indent);
+    out << "\"" << get_key(i) << "\"" << " " << "\"" << get_value(i) << "\"\n";
+  }
 
-    // Only put a line break after the keyvalues if we have child blocks.
-    if (_children.size() != 0) {
-      out << "\n";
-    }
+  // Only put a line break after the keyvalues if we have child blocks.
+  if (_children.size() != 0) {
+    out << "\n";
   }
 
   // Now write the child blocks
