@@ -4,7 +4,7 @@
 #define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET bullet
+  #define TARGET pandabullet
   #define LOCAL_LIBS pgraph linmath grutil collide
   #define USE_PACKAGES bullet
 

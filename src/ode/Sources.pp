@@ -5,7 +5,7 @@
                    dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin lib_target
-  #define TARGET ode
+  #define TARGET pandaode
   #define LOCAL_LIBS \
     pgraph physics
 
