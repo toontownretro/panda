@@ -1865,7 +1865,7 @@ register_with_read_factory() {
  */
 void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  if (!_filename.empty()) {
+  if (!_filename.empty() && manager->get_file_minor_ver() >= 46) {
     // If the state has a valid Filename, it was loaded from a script on disk,
     // and we should just write the path to the script on disk instead of
     // encoding the actual state.
@@ -1912,7 +1912,11 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     dg.add_string(filename.get_fullpath());
 
   } else {
-    dg.add_uint8(0);
+    // This indicates we are serializing the RenderState guts instead of
+    // referencing a script file.
+    if (manager->get_file_minor_ver() >= 46) {
+      dg.add_uint8(0);
+    }
 
     // Encode the actual state data.
     TypedWritable::write_datagram(manager, dg);
@@ -2045,7 +2049,10 @@ make_from_bam(const FactoryParams &params) {
  */
 void RenderState::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  bool script = (bool)scan.get_uint8();
+  bool script = false;
+  if (manager->get_file_minor_ver() >= 46) {
+    script = (bool)scan.get_uint8();
+  }
 
   if (script) {
     // Only the filename to the script was encoded.
