@@ -1,4 +1,4 @@
-#define LOCAL_LIBS express pandabase
+#define LOCAL_LIBS express pandabase downloader
 
 #define OTHER_LIBS \
     interrogatedb \

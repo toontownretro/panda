@@ -8,7 +8,7 @@
 #begin lib_target
   #define TARGET egg
   #define LOCAL_LIBS \
-    mathutil linmath putil
+    mathutil linmath putil gobj
 
   #define BUILDING_DLL BUILDING_PANDA_EGG
 

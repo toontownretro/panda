@@ -34,7 +34,7 @@ aux-display tinydisplay
 # Define an appropriate default audio library.
 #if $[HAVE_RAD_MSS]
 audio-library-name miles_audio
-#elif $[HAVE_FMODEX]
+#elif $[HAVE_FMOD]
 audio-library-name fmod_audio
 #elif $[HAVE_OPENAL]
 audio-library-name openal_audio
