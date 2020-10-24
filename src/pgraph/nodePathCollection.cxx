@@ -161,6 +161,14 @@ reserve(size_t num) {
 }
 
 /**
+ * Reverses the list of NodePaths in the collection.
+ */
+void NodePathCollection::
+reverse() {
+  std::reverse(_node_paths.begin(), _node_paths.end());
+}
+
+/**
  * Returns true if there are no NodePaths in the collection, false otherwise.
  */
 bool NodePathCollection::

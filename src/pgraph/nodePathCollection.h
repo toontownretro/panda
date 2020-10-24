@@ -40,6 +40,7 @@ PUBLISHED:
   bool has_path(const NodePath &path) const;
   void clear();
   void reserve(size_t num);
+  void reverse();
 
   bool is_empty() const;
   int get_num_paths() const;
