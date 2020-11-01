@@ -40,6 +40,13 @@ audio-library-name fmod_audio
 audio-library-name openal_audio
 #endif
 
+# OpenGL renderer configurations.
+gl-coordiate-system default
+gl-version 3 2
+gl-compile-and-execute 1
+gl-force-depth-stencil 0
+gl-force-fbo-color 0
+
 
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files

@@ -39,11 +39,6 @@ public:
                                    const LMatrix4 &to_object_space);
 
 PUBLISHED:
-  INLINE const LColor &get_specular_color() const final;
-  INLINE void set_specular_color(const LColor &color);
-  INLINE void clear_specular_color();
-  MAKE_PROPERTY(specular_color, get_specular_color, set_specular_color);
-
   INLINE const LPoint3 &get_point() const;
   INLINE void set_point(const LPoint3 &point);
   MAKE_PROPERTY(point, get_point, set_point);
@@ -71,7 +66,6 @@ private:
       return DirectionalLight::get_class_type();
     }
 
-    LColor _specular_color;
     LPoint3 _point;
     LVector3 _direction;
   };

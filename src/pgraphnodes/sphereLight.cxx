@@ -53,6 +53,7 @@ SphereLight::
 SphereLight(const std::string &name) :
   PointLight(name)
 {
+  _light_type = Light::LT_sphere;
 }
 
 /**

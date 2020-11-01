@@ -34,8 +34,6 @@ PUBLISHED:
   explicit LightLensNode(const std::string &name, Lens *lens = new PerspectiveLens());
   virtual ~LightLensNode();
 
-  INLINE bool has_specular_color() const;
-
   INLINE bool is_shadow_caster() const;
   void set_shadow_caster(bool caster);
   void set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize, int sort = -10);
@@ -44,6 +42,25 @@ PUBLISHED:
 
   INLINE LVecBase2i get_shadow_buffer_size() const;
   INLINE void set_shadow_buffer_size(const LVecBase2i &size);
+
+  INLINE PN_stdfloat get_depth_bias() const;
+  INLINE void set_depth_bias(PN_stdfloat bias);
+  MAKE_PROPERTY(depth_bias, get_depth_bias, set_depth_bias);
+
+  INLINE PN_stdfloat get_normal_offset_scale() const;
+  INLINE void set_normal_offset_scale(PN_stdfloat scale);
+  MAKE_PROPERTY(normal_offset_scale, get_normal_offset_scale, set_normal_offset_scale);
+
+  INLINE PN_stdfloat get_softness_factor() const;
+  INLINE void set_softness_factor(PN_stdfloat factor);
+  MAKE_PROPERTY(softness_factor, get_softness_factor, set_softness_factor);
+
+  INLINE bool get_normal_offset_uv_space() const;
+  INLINE void set_normal_offset_uv_space(bool flag);
+  MAKE_PROPERTY(normal_offset_uv_space, get_normal_offset_uv_space, set_normal_offset_uv_space);
+
+  INLINE Texture *get_shadow_map() const;
+  MAKE_PROPERTY(shadow_map, get_shadow_map);
 
   INLINE GraphicsOutputBase *get_shadow_buffer(GraphicsStateGuardianBase *gsg);
 
@@ -58,12 +75,17 @@ protected:
   LightLensNode(const LightLensNode &copy);
   void clear_shadow_buffers();
   virtual void setup_shadow_map();
+  void set_light_state();
 
   LVecBase2i _sb_size;
   bool _shadow_caster;
-  bool _has_specular_color;
   int _sb_sort;
   mutable bool _used_by_auto_shader = false;
+
+  PN_stdfloat _depth_bias;
+  PN_stdfloat _normal_offset_scale;
+  PN_stdfloat _softness_factor;
+  bool _normal_offset_uv_space;
 
   PT(Texture) _shadow_map;
 

@@ -51,7 +51,8 @@ Light(const Light &copy) :
   _priority(copy._priority),
   _has_color_temperature(copy._has_color_temperature),
   _color_temperature(copy._color_temperature),
-  _cycler(copy._cycler)
+  _cycler(copy._cycler),
+  _light_type(copy._light_type)
 {
 }
 
@@ -123,6 +124,14 @@ set_priority(int priority) {
 INLINE int Light::
 get_priority() const {
   return _priority;
+}
+
+/**
+ * Returns the light type ID.
+ */
+INLINE Light::LightType Light::
+get_light_type() const {
+  return _light_type;
 }
 
 /**

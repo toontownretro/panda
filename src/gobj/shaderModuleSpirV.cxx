@@ -103,7 +103,9 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words) :
       _used_caps |= C_double;
     }
 
-    if (def._dtype == DT_variable && def._builtin == spv::BuiltInMax) {
+    if (def._dtype == DT_variable && def._builtin == spv::BuiltInMax &&
+        // HACK: For some reason the gl_in block is not marked as built-in.
+        def._name != "gl_in") {
       Variable var;
       var.type = def._type;
       var.name = InternalName::make(def._name);

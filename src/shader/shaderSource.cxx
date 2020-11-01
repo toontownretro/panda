@@ -16,6 +16,7 @@
 #include "config_putil.h"
 
 ShaderSource::SourceCache ShaderSource::_cache;
+ShaderSource::RawSourceCache ShaderSource::_raw_cache;
 
 /**
  * Returns a ShaderSource object containing the raw source code of the shader
@@ -49,6 +50,25 @@ from_filename(const Filename &filename) {
   src->_after_defines = src->_source.substr(end_of_first_line);
 
   _cache[filename] = src;
+
+  return src;
+}
+
+/**
+ * Returns a new ShaderSource object from the raw source code.
+ */
+INLINE CPT(ShaderSource) ShaderSource::
+from_raw(const std::string &source) {
+  RawSourceCache::const_iterator it = _raw_cache.find(source);
+  if (it != _raw_cache.end()) {
+    return (*it).second;
+  }
+
+  PT(ShaderSource) src = new ShaderSource;
+  src->_source = source;
+  src->_format = SF_raw;
+
+  _raw_cache[source] = src;
 
   return src;
 }

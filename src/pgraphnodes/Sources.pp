@@ -12,6 +12,7 @@
   #define SOURCES \
     ambientLight.h ambientLight.I \
     callbackNode.h callbackNode.I \
+    cascadeLight.h cascadeLight.I \
     computeNode.h computeNode.I \
     config_pgraphnodes.h \
     directionalLight.h directionalLight.I \
@@ -33,6 +34,7 @@
   #define COMPOSITE_SOURCES \
     ambientLight.cxx \
     callbackNode.cxx \
+    cascadeLight.cxx \
     computeNode.cxx \
     config_pgraphnodes.cxx \
     directionalLight.cxx \
@@ -54,6 +56,7 @@
   #define INSTALL_HEADERS \
     ambientLight.h ambientLight.I \
     callbackNode.h callbackNode.I \
+    cascadeLight.h cascadeLight.I \
     computeNode.h computeNode.I \
     config_pgraphnodes.h \
     directionalLight.h directionalLight.I \

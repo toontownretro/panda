@@ -52,14 +52,3 @@ INLINE ShaderSource::SourceFormat ShaderSource::
 get_format() const {
   return _format;
 }
-
-/**
- * Returns a new ShaderSource object from the raw source code.
- */
-INLINE CPT(ShaderSource) ShaderSource::
-from_raw(const std::string &source) {
-  PT(ShaderSource) src = new ShaderSource;
-  src->_source = source;
-  src->_format = SF_raw;
-  return src;
-}

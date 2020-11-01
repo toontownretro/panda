@@ -12,15 +12,6 @@
  */
 
 /**
- * Returns true if this light defines a specular color, false if the specular
- * color is derived automatically from the light color.
- */
-INLINE bool LightLensNode::
-has_specular_color() const {
-  return _has_specular_color;
-}
-
-/**
  * Returns whether this light is configured to cast shadows or not.
  */
 INLINE bool LightLensNode::
@@ -54,6 +45,84 @@ set_shadow_buffer_size(const LVecBase2i &size) {
     _sb_size = size;
     setup_shadow_map();
   }
+}
+
+/**
+ * Returns the offset that will be applied to depth values from the shadow map
+ * when doing the depth comparison.
+ */
+INLINE PN_stdfloat LightLensNode::
+get_depth_bias() const {
+  return _depth_bias;
+}
+
+/**
+ * Sets the offset that will be applied to depth values from the shadow map
+ * when doing the depth comparison.
+ */
+INLINE void LightLensNode::
+set_depth_bias(PN_stdfloat bias) {
+  _depth_bias = bias;
+}
+
+/**
+ * Returns how much vertex normals will affect the shadow map projection
+ * offset.
+ */
+INLINE PN_stdfloat LightLensNode::
+get_normal_offset_scale() const {
+  return _normal_offset_scale;
+}
+
+/**
+ * Sets how much vertex normals will affect the shadow map projection
+ * offset.
+ */
+INLINE void LightLensNode::
+set_normal_offset_scale(PN_stdfloat scale) {
+  _normal_offset_scale = scale;
+}
+
+/**
+ * Returns the softness factor of the shadows.
+ */
+INLINE PN_stdfloat LightLensNode::
+get_softness_factor() const {
+  return _softness_factor;
+}
+
+/**
+ * Sets the softness factor of the shadows.
+ */
+INLINE void LightLensNode::
+set_softness_factor(PN_stdfloat factor) {
+  _softness_factor = factor;
+}
+
+/**
+ * Returns whether or not shadow projection normal offsetting will be done in
+ * UV space.
+ */
+INLINE bool LightLensNode::
+get_normal_offset_uv_space() const {
+  return _normal_offset_uv_space;
+}
+
+/**
+ * Sets whether or not shadow projection normal offsetting will be done in
+ * UV space.
+ */
+INLINE void LightLensNode::
+set_normal_offset_uv_space(bool flag) {
+  _normal_offset_uv_space = flag;
+}
+
+/**
+ * Returns the shadow map texture for this light.
+ */
+INLINE Texture *LightLensNode::
+get_shadow_map() const {
+  return _shadow_map;
 }
 
 /**

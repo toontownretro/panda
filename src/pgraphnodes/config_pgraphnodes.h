@@ -40,6 +40,20 @@ extern ConfigVariableBool verify_lods;
 extern ConfigVariableInt parallax_mapping_samples;
 extern ConfigVariableDouble parallax_mapping_scale;
 
+extern ConfigVariableDouble csm_distance;
+extern ConfigVariableInt csm_num_cascades;
+extern ConfigVariableDouble csm_sun_distance;
+extern ConfigVariableDouble csm_log_factor;
+extern ConfigVariableDouble csm_border_bias;
+extern ConfigVariableBool csm_fixed_film_size;
+
+extern ConfigVariableInt shadow_buffer_sort;
+extern ConfigVariableInt shadow_map_size;
+extern ConfigVariableDouble shadow_depth_bias;
+extern ConfigVariableDouble shadow_normal_offset_scale;
+extern ConfigVariableDouble shadow_softness_factor;
+extern ConfigVariableBool shadow_normal_offset_uv_space;
+
 extern EXPCL_PANDA_PGRAPHNODES void init_libpgraphnodes();
 
 #endif

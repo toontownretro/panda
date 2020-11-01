@@ -53,6 +53,7 @@ RectangleLight::
 RectangleLight(const std::string &name) :
   LightLensNode(name)
 {
+  _light_type = Light::LT_rectangle;
 }
 
 /**

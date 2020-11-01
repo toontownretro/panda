@@ -26,6 +26,7 @@ AmbientLight::
 AmbientLight(const std::string &name) :
   LightNode(name)
 {
+  _light_type = Light::LT_ambient;
 }
 
 /**

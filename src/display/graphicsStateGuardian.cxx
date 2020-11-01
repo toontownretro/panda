@@ -23,6 +23,7 @@
 #include "indexBufferContext.h"
 #include "renderBuffer.h"
 #include "light.h"
+#include "cascadeLight.h"
 #include "planeNode.h"
 #include "throw_event.h"
 #include "clockObject.h"
@@ -1094,87 +1095,6 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, c[0], c[1], c[2], c[3]);
     return;
   }
-  case Shader::SMO_alight_x: {
-    const NodePath &np = _target_shader->get_shader_input_nodepath(name);
-    nassertv(!np.is_empty());
-    AmbientLight *lt;
-    DCAST_INTO_V(lt, np.node());
-    LColor const &c = lt->get_color();
-    into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, c[0], c[1], c[2], c[3]);
-    return;
-  }
-  case Shader::SMO_satten_x: {
-    const NodePath &np = _target_shader->get_shader_input_nodepath(name);
-    nassertv(!np.is_empty());
-    Spotlight *lt;
-    DCAST_INTO_V(lt, np.node());
-    LVecBase3 const &a = lt->get_attenuation();
-    PN_stdfloat x = lt->get_exponent();
-    into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a[0], a[1], a[2], x);
-    return;
-  }
-  case Shader::SMO_dlight_x: {
-    // The dlight matrix contains COLOR, SPECULAR, DIRECTION, PSEUDOHALFANGLE
-    const NodePath &np = _target_shader->get_shader_input_nodepath(name);
-    nassertv(!np.is_empty());
-    DirectionalLight *lt;
-    DCAST_INTO_V(lt, np.node());
-    LColor const &c = lt->get_color();
-    LColor const &s = lt->get_specular_color();
-    *into = np.get_net_transform()->get_mat() *
-            _scene_setup->get_world_transform()->get_mat();
-    LVecBase3 d = -(into[0].xform_vec(lt->get_direction()));
-    d.normalize();
-    LVecBase3 h = d + LVecBase3(0,-1,0);
-    h.normalize();
-    into[0].set(c[0], c[1], c[2], c[3],
-                s[0], s[1], s[2], c[3],
-                d[0], d[1], d[2], 0,
-                h[0], h[1], h[2], 0);
-    return;
-  }
-  case Shader::SMO_plight_x: {
-    // The plight matrix contains COLOR, SPECULAR, POINT, ATTENUATION
-    const NodePath &np = _target_shader->get_shader_input_nodepath(name);
-    nassertv(!np.is_empty());
-    PointLight *lt;
-    DCAST_INTO_V(lt, np.node());
-    LColor const &c = lt->get_color();
-    LColor const &s = lt->get_specular_color();
-    into[0] = np.get_net_transform()->get_mat() *
-              _scene_setup->get_world_transform()->get_mat();
-    LVecBase3 p = (into[0].xform_point(lt->get_point()));
-    LVecBase3 a = lt->get_attenuation();
-    Lens *lens = lt->get_lens(0);
-    PN_stdfloat lnear = lens->get_near();
-    PN_stdfloat lfar = lens->get_far();
-    into[0].set(c[0], c[1], c[2], c[3],
-                s[0], s[1], s[2], s[3],
-                p[0], p[1], p[2], lnear,
-                a[0], a[1], a[2], lfar);
-    return;
-  }
-  case Shader::SMO_slight_x: {
-    // The slight matrix contains COLOR, SPECULAR, POINT, DIRECTION
-    const NodePath &np = _target_shader->get_shader_input_nodepath(name);
-    nassertv(!np.is_empty());
-    Spotlight *lt;
-    DCAST_INTO_V(lt, np.node());
-    Lens *lens = lt->get_lens();
-    nassertv(lens != nullptr);
-    LColor const &c = lt->get_color();
-    LColor const &s = lt->get_specular_color();
-    PN_stdfloat cutoff = ccos(deg_2_rad(lens->get_hfov() * 0.5f));
-    into[0] = np.get_net_transform()->get_mat() *
-              _scene_setup->get_world_transform()->get_mat();
-    LVecBase3 p = into[0].xform_point(lens->get_nodal_point());
-    LVecBase3 d = -(into[0].xform_vec(lens->get_view_vector()));
-    into[0].set(c[0], c[1], c[2], c[3],
-                s[0], s[1], s[2], s[3],
-                p[0], p[1], p[2], 0,
-                d[0], d[1], d[2], cutoff);
-    return;
-  }
   case Shader::SMO_light_ambient: {
     LColor cur_ambient_light(0.0f, 0.0f, 0.0f, 0.0f);
     const LightAttrib *target_light = (const LightAttrib *)
@@ -1186,6 +1106,164 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       into[0].set_row(3, LVecBase4(1, 1, 1, 1));
     } else {
       into[0].set_row(3, target_light->get_ambient_contribution());
+    }
+    return;
+  }
+  case Shader::SMO_light_source_i: {
+    // Contains color, direction, position, spotParams
+    const LightAttrib *target_light;
+    _target_rs->get_attrib_def(target_light);
+
+    // We don't count ambient lights, which would be pretty silly to handle
+    // via this mechanism.
+    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
+
+    size_t i = 0;
+    for (; i < num_lights; ++i) {
+      NodePath np = target_light->get_on_light(i);
+      nassertv(!np.is_empty());
+      PandaNode *node = np.node();
+      Light *light = node->as_light();
+      nassertv(light != nullptr);
+
+      bool is_spot = node->is_of_type(Spotlight::get_class_type());
+      bool is_directional = node->is_of_type(DirectionalLight::get_class_type());
+
+      // First the color, light type code in w
+      const LColor &c = light->get_color();
+      PN_stdfloat w = (is_directional) ? 1.0f : 0.0f;
+      into[i].set_row(0, LVecBase4(c.get_xyz(), w));
+
+      CPT(TransformState) ts = get_cs_transform()->compose(np.get_net_transform());
+      const LMatrix4 &transform = ts->get_mat();
+
+      // Next the direction, light type code in w
+      w = (is_spot) ? 1.0f : 0.0f;
+      LVecBase3 dir;
+      if (is_spot) {
+        Spotlight *slight = DCAST(Spotlight, node);
+        dir = transform.xform_vec(slight->get_lens()->get_view_vector());
+        into[i].set_row(1, LVecBase4(dir, w));
+
+      } else if (is_directional) {
+        DirectionalLight *dlight = DCAST(DirectionalLight, node);
+        dir = transform.xform_vec(dlight->get_direction());
+
+      } else {
+        dir.set(0, 1, 0);
+      }
+      into[i].set_row(1, LVecBase4(dir, w));
+
+      // Next the position
+      into[i].set_row(2, LVecBase4(ts->get_pos(), 1.0f));
+
+      // Finally the spotlight parameters (exponent, stopdot, stopdot2, oodot)
+      if (is_spot) {
+        Spotlight *slight = DCAST(Spotlight, node);
+        PN_stdfloat stopdot = std::cos(deg_2_rad(slight->get_inner_cone()) * 0.5f);
+        PN_stdfloat stopdot2 = std::cos(deg_2_rad(slight->get_outer_cone()) * 0.5f);
+        PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
+        into[i].set_row(3, LVecBase4(slight->get_exponent(), stopdot, stopdot2, oodot));
+      } else {
+        into[i].set_row(3, LVecBase4(0, 1, 1, 1));
+      }
+    }
+
+    for (; i < count; i++) {
+      into[i].fill(0);
+    }
+
+    return;
+  }
+  case Shader::SMO_light_source2_i: {
+    const LightAttrib *target_light;
+    _target_rs->get_attrib_def(target_light);
+
+    // We don't count ambient lights, which would be pretty silly to handle
+    // via this mechanism.
+    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
+
+    size_t i = 0;
+    for (; i < num_lights; ++i) {
+      NodePath np = target_light->get_on_light(i);
+      nassertv(!np.is_empty());
+      PandaNode *node = np.node();
+      Light *light = node->as_light();
+      nassertv(light != nullptr);
+
+      const LVecBase3 &atten = light->get_attenuation();
+
+      into[i].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, atten[0], atten[1], atten[2], 0);
+    }
+
+    for (; i < count; i++) {
+      into[i].fill(0);
+    }
+
+    return;
+  }
+  case Shader::SMO_cascade_light_mvps_i: {
+    const LightAttrib *target_light;
+    _target_rs->get_attrib_def(target_light);
+
+    // We don't count ambient lights, which would be pretty silly to handle
+    // via this mechanism.
+    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
+
+    size_t i = 0;
+    for (; i < num_lights; ++i) {
+      NodePath light = target_light->get_on_light(i);
+      if (light.is_empty()) {
+        continue;
+      }
+
+      if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+        continue;
+      }
+
+      CascadeLight *clight = DCAST(CascadeLight, light.node());
+
+      int k = 0;
+      for (; k < clight->get_num_cascades(); k++) {
+        into[k] = clight->get_cascade_mvp(k);
+      }
+
+      for (; k < count; k++) {
+        into[k] = LMatrix4::ident_mat();
+      }
+    }
+    return;
+  }
+  case Shader::SMO_cascade_light_near_far_i: {
+    const LightAttrib *target_light;
+    _target_rs->get_attrib_def(target_light);
+
+    // We don't count ambient lights, which would be pretty silly to handle
+    // via this mechanism.
+    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
+
+    size_t i = 0;
+    for (; i < num_lights; ++i) {
+      NodePath light = target_light->get_on_light(i);
+      if (light.is_empty()) {
+        continue;
+      }
+
+      if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+        continue;
+      }
+
+      CascadeLight *clight = DCAST(CascadeLight, light.node());
+
+      int k = 0;
+      for (; k < clight->get_num_cascades(); k++) {
+        LVecBase2 near_far = clight->get_cascade_near_far(k);
+        into[k].set_row(0, LVecBase4(near_far[0], near_far[1], 0.0f, 0.0f));
+      }
+
+      for (; k < count; k++) {
+        into[k].set_row(0, LVecBase4(0));
+      }
     }
     return;
   }
@@ -1529,100 +1607,6 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     fetch_specified_member(np, name->get_basename(), into[0]);
     return;
   }
-  case Shader::SMO_light_source_i_attrib: {
-    const LightAttrib *target_light;
-    _target_rs->get_attrib_def(target_light);
-
-    // We don't count ambient lights, which would be pretty silly to handle
-    // via this mechanism.
-    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
-
-    size_t i = 0;
-    for (i = 0; i < num_lights; ++i) {
-      NodePath light = target_light->get_on_light(i);
-      nassertv(!light.is_empty());
-      fetch_specified_member(light, name, into[i]);
-    }
-    // Apply the default OpenGL lights otherwise.
-    // Special exception for light 0, which defaults to white.
-    if (i == 0) {
-      into[0] = LMatrix4::ones_mat();
-      ++i;
-    }
-    for (; i < (size_t)count; ++i) {
-      fetch_specified_member(NodePath(), name, into[i]);
-    }
-    return;
-  }
-  case Shader::SMO_light_source_i_packed: {
-    // The light matrix contains COLOR, ATTENUATION, POSITION, VIEWVECTOR
-    const LightAttrib *target_light;
-    _target_rs->get_attrib_def(target_light);
-
-    // We don't count ambient lights, which would be pretty silly to handle
-    // via this mechanism.
-    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
-
-    size_t i = 0;
-    for (i = 0; i < num_lights; ++i) {
-      NodePath np = target_light->get_on_light(i);
-      nassertv(!np.is_empty());
-      PandaNode *node = np.node();
-      Light *light = node->as_light();
-      nassertv(light != nullptr);
-      into[i].set_row(0, light->get_color());
-      into[i].set_row(1, light->get_attenuation());
-
-      LMatrix4 mat = np.get_net_transform()->get_mat() *
-        _scene_setup->get_world_transform()->get_mat();
-
-      if (node->is_of_type(DirectionalLight::get_class_type())) {
-        LVecBase3 d = mat.xform_vec(((const DirectionalLight *)node)->get_direction());
-        d.normalize();
-        into[i].set_row(2, LVecBase4(d, 0));
-        into[i].set_row(3, LVecBase4(-d, 0));
-
-      } else if (node->is_of_type(LightLensNode::get_class_type())) {
-        const Lens *lens = ((const LightLensNode *)node)->get_lens();
-
-        LPoint3 p = mat.xform_point(lens->get_nodal_point());
-        into[i].set_row(3, LVecBase4(p));
-
-        // For shadowed point light we need to store near/far.
-        // For spotlight we need to store cutoff angle.
-        if (node->is_of_type(Spotlight::get_class_type())) {
-          PN_stdfloat cutoff = ccos(deg_2_rad(lens->get_hfov() * 0.5f));
-          LVecBase3 d = -(mat.xform_vec(lens->get_view_vector()));
-          into[i].set_cell(1, 3, ((const Spotlight *)node)->get_exponent());
-          into[i].set_row(2, LVecBase4(d, cutoff));
-
-        } else if (node->is_of_type(PointLight::get_class_type())) {
-          into[i].set_cell(1, 3, lens->get_far());
-          into[i].set_cell(3, 3, lens->get_near());
-
-          if (node->is_of_type(SphereLight::get_class_type())) {
-            into[i].set_cell(2, 3, ((const SphereLight *)node)->get_radius());
-          }
-        }
-      }
-    }
-    // Apply the default OpenGL lights otherwise.
-    // Special exception for light 0, which defaults to white.
-    if (i == 0) {
-      into[0].set(1, 1, 1, 1,
-                  1, 0, 0, 0,
-                  0, 0, 0, 0,
-                  0, 0, 0, 0);
-      ++i;
-    }
-    for (; i < (size_t)count; ++i) {
-      into[i].set(0, 0, 0, 0,
-                  1, 0, 0, 0,
-                  0, 0, 0, 0,
-                  0, 0, 0, 0);
-    }
-    return;
-  }
   default:
     nassertv(false /*should never get here*/);
     return;
@@ -1638,18 +1622,10 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
   // This system is not ideal.  It will be improved in the future.
   static const CPT_InternalName IN_color("color");
   static const CPT_InternalName IN_ambient("ambient");
-  static const CPT_InternalName IN_diffuse("diffuse");
-  static const CPT_InternalName IN_specular("specular");
+  static const CPT_InternalName IN_direction("direction");
   static const CPT_InternalName IN_position("position");
-  static const CPT_InternalName IN_halfVector("halfVector");
-  static const CPT_InternalName IN_spotDirection("spotDirection");
-  static const CPT_InternalName IN_spotCutoff("spotCutoff");
-  static const CPT_InternalName IN_spotCosCutoff("spotCosCutoff");
-  static const CPT_InternalName IN_spotExponent("spotExponent");
+  static const CPT_InternalName IN_spotParams("spotParams");
   static const CPT_InternalName IN_attenuation("attenuation");
-  static const CPT_InternalName IN_constantAttenuation("constantAttenuation");
-  static const CPT_InternalName IN_linearAttenuation("linearAttenuation");
-  static const CPT_InternalName IN_quadraticAttenuation("quadraticAttenuation");
   static const CPT_InternalName IN_shadowViewMatrix("shadowViewMatrix");
 
   PandaNode *node = nullptr;
@@ -1665,7 +1641,8 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
     Light *light = node->as_light();
     nassertv(light != nullptr);
     LColor c = light->get_color();
-    t.set_row(3, c);
+    PN_stdfloat w = (node->is_of_type(DirectionalLight::get_class_type())) ? 1.0f : 0.0f;
+    t.set_row(3, LVecBase4(c.get_xyz(), w));
 
   } else if (attrib == IN_ambient) {
     if (node == nullptr) {
@@ -1682,43 +1659,38 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       t.set_row(3, LColor(0.0f, 0.0f, 0.0f, 1.0f));
     }
 
-  } else if (attrib == IN_diffuse) {
-    if (node == nullptr) {
-      t = LMatrix4::ident_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-    if (node->is_ambient_light()) {
-      // Ambient light has no diffuse color.
-      t.set_row(3, LColor(0.0f, 0.0f, 0.0f, 1.0f));
-    } else {
-      LColor c = light->get_color();
-      t.set_row(3, c);
-    }
-
-  } else if (attrib == IN_specular) {
-    if (node == nullptr) {
-      t = LMatrix4::ident_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-    t.set_row(3, light->get_specular_color());
-
   } else if (attrib == IN_position) {
     if (np.is_empty()) {
       t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0);
     } else if (node->is_ambient_light()) {
       // Ambient light has no position.
       t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    } else {
+      LightLensNode *light;
+      DCAST_INTO_V(light, node);
+      Lens *lens = light->get_lens();
+      nassertv(lens != nullptr);
+
+      CPT(TransformState) transform =
+        np.get_transform(_scene_setup->get_scene_root().get_parent());
+
+      const LMatrix4 &light_mat = transform->get_mat();
+      LPoint3 pos = lens->get_nodal_point() * light_mat;
+      t = LMatrix4::translate_mat(pos);
+    }
+
+  } else if (attrib == IN_direction) {
+    if (node == nullptr) {
+      t.set_row(3, LVector3(0.0f, 0.0f, -1.0f));
+    } else if (node->is_ambient_light()) {
+      // Ambient light has no spot direction.
+      t.set_row(3, LVector3(0.0f, 0.0f, 0.0f));
     } else if (node->is_of_type(DirectionalLight::get_class_type())) {
       DirectionalLight *light;
       DCAST_INTO_V(light, node);
 
       CPT(TransformState) transform = np.get_transform(_scene_setup->get_scene_root().get_parent());
       LVector3 dir = -(light->get_direction() * transform->get_mat());
-      dir *= _scene_setup->get_cs_world_transform()->get_mat();
       t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dir[0], dir[1], dir[2], 0);
     } else {
       LightLensNode *light;
@@ -1727,109 +1699,28 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       nassertv(lens != nullptr);
 
       CPT(TransformState) transform =
-        _scene_setup->get_cs_world_transform()->compose(
-          np.get_transform(_scene_setup->get_scene_root().get_parent()));
-
-      const LMatrix4 &light_mat = transform->get_mat();
-      LPoint3 pos = lens->get_nodal_point() * light_mat;
-      t = LMatrix4::translate_mat(pos);
-    }
-
-  } else if (attrib == IN_halfVector) {
-    if (np.is_empty()) {
-      t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0);
-    } else if (node->is_ambient_light()) {
-      // Ambient light has no half-vector.
-      t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    } else if (node->is_of_type(DirectionalLight::get_class_type())) {
-      DirectionalLight *light;
-      DCAST_INTO_V(light, node);
-
-      CPT(TransformState) transform = np.get_transform(_scene_setup->get_scene_root().get_parent());
-      LVector3 dir = -(light->get_direction() * transform->get_mat());
-      dir *= _scene_setup->get_cs_world_transform()->get_mat();
-      dir.normalize();
-      dir += LVector3(0, 0, 1);
-      dir.normalize();
-      t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dir[0], dir[1], dir[2], 1);
-    } else {
-      LightLensNode *light;
-      DCAST_INTO_V(light, node);
-      Lens *lens = light->get_lens();
-      nassertv(lens != nullptr);
-
-      CPT(TransformState) transform =
-        _scene_setup->get_cs_world_transform()->compose(
-          np.get_transform(_scene_setup->get_scene_root().get_parent()));
-
-      const LMatrix4 &light_mat = transform->get_mat();
-      LPoint3 pos = lens->get_nodal_point() * light_mat;
-      pos.normalize();
-      pos += LVector3(0, 0, 1);
-      pos.normalize();
-      t.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, pos[0],pos[1],pos[2], 1);
-    }
-
-  } else if (attrib == IN_spotDirection) {
-    if (node == nullptr) {
-      t.set_row(3, LVector3(0.0f, 0.0f, -1.0f));
-    } else if (node->is_ambient_light()) {
-      // Ambient light has no spot direction.
-      t.set_row(3, LVector3(0.0f, 0.0f, 0.0f));
-    } else {
-      LightLensNode *light;
-      DCAST_INTO_V(light, node);
-      Lens *lens = light->get_lens();
-      nassertv(lens != nullptr);
-
-      CPT(TransformState) transform =
-        _scene_setup->get_cs_world_transform()->compose(
-          np.get_transform(_scene_setup->get_scene_root().get_parent()));
+        np.get_transform(_scene_setup->get_scene_root().get_parent());
 
       const LMatrix4 &light_mat = transform->get_mat();
       LVector3 dir = lens->get_view_vector() * light_mat;
+      PN_stdfloat w = (light->is_of_type(Spotlight::get_class_type())) ? 1.0f : 0.0f;
       t.set_row(3, dir);
     }
 
-  } else if (attrib == IN_spotCutoff) {
+  } else if (attrib == IN_spotParams) {
     if (node != nullptr &&
         node->is_of_type(Spotlight::get_class_type())) {
-      LightLensNode *light;
+      Spotlight *light;
       DCAST_INTO_V(light, node);
-      Lens *lens = light->get_lens();
-      nassertv(lens != nullptr);
 
-      float cutoff = lens->get_hfov() * 0.5f;
-      t.set_row(3, LVecBase4(cutoff));
+      PN_stdfloat stopdot = ccos(deg_2_rad(light->get_outer_cone() * 0.5f));
+      PN_stdfloat stopdot2 = ccos(deg_2_rad(light->get_inner_cone() * 0.5f));
+      PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
+      t.set_row(3, LVecBase4(light->get_exponent(), stopdot, stopdot2, oodot));
     } else {
       // Other lights have no cut-off.
-      t.set_row(3, LVecBase4(180));
+      t.set_row(3, LVecBase4(0, 1, 1, 1));
     }
-
-  } else if (attrib == IN_spotCosCutoff) {
-    if (node != nullptr &&
-        node->is_of_type(Spotlight::get_class_type())) {
-      LightLensNode *light;
-      DCAST_INTO_V(light, node);
-      Lens *lens = light->get_lens();
-      nassertv(lens != nullptr);
-
-      float cutoff = lens->get_hfov() * 0.5f;
-      t.set_row(3, LVecBase4(ccos(deg_2_rad(cutoff))));
-    } else {
-      // Other lights have no cut-off.
-      t.set_row(3, LVecBase4(-1));
-    }
-
-  } else if (attrib == IN_spotExponent) {
-    if (node == nullptr) {
-      t = LMatrix4::zeros_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-
-    t.set_row(3, LVecBase4(light->get_exponent()));
 
   } else if (attrib == IN_attenuation) {
     if (node != nullptr) {
@@ -1840,36 +1731,6 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
     } else {
       t.set_row(3, LVecBase4(1, 0, 0, 0));
     }
-
-  } else if (attrib == IN_constantAttenuation) {
-    if (node == nullptr) {
-      t = LMatrix4::ones_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-
-    t.set_row(3, LVecBase4(light->get_attenuation()[0]));
-
-  } else if (attrib == IN_linearAttenuation) {
-    if (node == nullptr) {
-      t = LMatrix4::zeros_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-
-    t.set_row(3, LVecBase4(light->get_attenuation()[1]));
-
-  } else if (attrib == IN_quadraticAttenuation) {
-    if (node == nullptr) {
-      t = LMatrix4::zeros_mat();
-      return;
-    }
-    Light *light = node->as_light();
-    nassertv(light != nullptr);
-
-    t.set_row(3, LVecBase4(light->get_attenuation()[2]));
 
   } else if (attrib == IN_shadowViewMatrix) {
     static const LMatrix4 biasmat(0.5f, 0.0f, 0.0f, 0.0f,
@@ -1998,6 +1859,39 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
       } else {
         // There is no such light assigned.  Bind a dummy shadow map.
         PT(Texture) tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
+        if (tex != nullptr) {
+          sampler = tex->get_default_sampler();
+        }
+        return tex;
+      }
+    }
+    break;
+
+  case Shader::STO_cascade_light_shadow_map:
+    {
+      const LightAttrib *target_light;
+      _target_rs->get_attrib_def(target_light);
+
+      // We expect there to only be one cascaded directional light.
+      size_t num_lights = target_light->get_num_non_ambient_lights();
+      for (size_t i = 0; i < num_lights; i++) {
+        NodePath light = target_light->get_on_light(i);
+        if (light.is_empty()) {
+          continue;
+        }
+
+        if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+          continue;
+        }
+
+        PT(Texture) tex;
+        LightLensNode *lln = DCAST(LightLensNode, light.node());
+        if (lln != nullptr && lln->_shadow_caster) {
+          tex = get_shadow_map(light);
+        } else {
+          tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
+        }
+
         if (tex != nullptr) {
           sampler = tex->get_default_sampler();
         }
@@ -3416,6 +3310,7 @@ PT(Texture) GraphicsStateGuardian::
 get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   PandaNode *node = light_np.node();
   bool is_point = node->is_of_type(PointLight::get_class_type());
+  bool is_cascade = node->is_of_type(CascadeLight::get_class_type());
   nassertr(node->is_of_type(DirectionalLight::get_class_type()) ||
            node->is_of_type(Spotlight::get_class_type()) ||
            is_point, nullptr);
@@ -3424,8 +3319,12 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   if (light == nullptr || !light->_shadow_caster) {
     // This light does not have a shadow caster.  Return a dummy shadow map
     // that is filled with a depth value of 1.
-    if (node->is_of_type(PointLight::get_class_type())) {
+    if (is_cascade) {
+      return get_dummy_shadow_map(Texture::TT_2d_texture_array);
+
+    } else if (is_point) {
       return get_dummy_shadow_map(Texture::TT_cube_map);
+
     } else {
       return get_dummy_shadow_map(Texture::TT_2d_texture);
     }
@@ -3464,11 +3363,13 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
       dr->set_lens_index(i);
       dr->set_target_tex_page(i);
       dr->set_camera(light_np);
+      dr->disable_clears();
       dr->set_clear_depth_active(true);
     }
   } else {
     PT(DisplayRegion) dr = sbuffer->make_mono_display_region(0, 1, 0, 1);
     dr->set_camera(light_np);
+    dr->disable_clears();
     dr->set_clear_depth_active(true);
   }
 
@@ -3482,7 +3383,7 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
  */
 PT(Texture) GraphicsStateGuardian::
 get_dummy_shadow_map(Texture::TextureType texture_type) const {
-  if (texture_type != Texture::TT_cube_map) {
+  if (texture_type == Texture::TT_2d_texture) {
     static PT(Texture) dummy_2d;
     if (dummy_2d == nullptr) {
       dummy_2d = new Texture("dummy-shadow-2d");
@@ -3498,7 +3399,16 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
       }
     }
     return dummy_2d;
-  } else {
+  } else if (texture_type == Texture::TT_2d_texture_array) {
+    static PT(Texture) dummy_2d_array;
+    if (dummy_2d_array == nullptr) {
+      dummy_2d_array = new Texture("dummy-shadow-2d-array");
+      dummy_2d_array->setup_2d_texture_array(1, 1, 1, Texture::T_unsigned_byte, Texture::F_depth_component);
+      dummy_2d_array->set_clear_color(1);
+      dummy_2d_array->set_minfilter(SamplerState::FT_linear);
+      dummy_2d_array->set_magfilter(SamplerState::FT_linear);
+    }
+  } else if (texture_type == Texture::TT_cube_map) {
     static PT(Texture) dummy_cube;
     if (dummy_cube == nullptr) {
       dummy_cube = new Texture("dummy-shadow-cube");
@@ -3510,6 +3420,8 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
     }
     return dummy_cube;
   }
+
+  return nullptr;
 }
 
 /**
@@ -3519,15 +3431,33 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
 GraphicsOutput *GraphicsStateGuardian::
 make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   bool is_point = light->is_of_type(PointLight::get_class_type());
+  bool is_cascade = light->is_of_type(CascadeLight::get_class_type());
 
   // Determine the properties for creating the depth buffer.
   FrameBufferProperties fbp;
+  fbp.clear();
   fbp.set_depth_bits(shadow_depth_bits);
+  fbp.set_back_buffers(0);
+  fbp.set_force_hardware(true);
+  fbp.set_multisamples(0);
+  fbp.set_color_bits(0);
+  fbp.set_alpha_bits(0);
+  fbp.set_stencil_bits(0);
+  fbp.set_float_color(false);
+  fbp.set_float_depth(true);
+  fbp.set_stereo(false);
+  fbp.set_accum_bits(0);
+  fbp.set_aux_float(0);
+  fbp.set_aux_rgba(0);
+  fbp.set_aux_hrgba(0);
+  fbp.set_coverage_samples(0);
 
   WindowProperties props = WindowProperties::size(light->_sb_size);
   int flags = GraphicsPipe::BF_refuse_window;
   if (is_point) {
     flags |= GraphicsPipe::BF_size_square;
+  } else if (is_cascade) {
+    flags |= GraphicsPipe::BF_can_bind_layered;
   }
 
   // Create the buffer.  This is a bit tricky because make_output() can only
@@ -3535,9 +3465,16 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   // pipe can precertify the buffer, which it can in most cases.
   GraphicsOutput *sbuffer = get_engine()->make_output(get_pipe(),
     light->get_name(), light->_sb_sort, fbp, props, flags, this, host);
+  sbuffer->disable_clears();
 
   if (sbuffer != nullptr) {
-    sbuffer->add_render_texture(tex, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_depth);
+    GraphicsOutput::RenderTextureMode rtm;
+    if (is_cascade) {
+      rtm = GraphicsOutput::RTM_bind_layered;
+    } else {
+      rtm = GraphicsOutput::RTM_bind_or_copy;
+    }
+    sbuffer->add_render_texture(tex, rtm, GraphicsOutput::RTP_depth);
   }
   return sbuffer;
 }
@@ -3562,9 +3499,7 @@ ensure_generated_shader(const RenderState *state) {
 
       // Currently we overload this flag to request vertex animation for the
       // shader generator.
-      const ShaderAttrib *sattr;
-      state->get_attrib_def(sattr);
-      if (sattr->get_flag(ShaderAttrib::F_hardware_skinning)) {
+      if (shader_attrib->get_flag(ShaderAttrib::F_hardware_skinning)) {
         spec.set_hardware(4, true);
       }
 

@@ -1797,11 +1797,11 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
     // It's a brand new light.  Define it.
     memset(gl_light, 0, sizeof(GLLight));
 
-    const LColor &specular = light_obj->get_specular_color();
-    gl_light->specular.v[0] = specular[0];
-    gl_light->specular.v[1] = specular[1];
-    gl_light->specular.v[2] = specular[2];
-    gl_light->specular.v[3] = specular[3];
+    //const LColor &specular = light_obj->get_specular_color();
+    //gl_light->specular.v[0] = specular[0];
+    //gl_light->specular.v[1] = specular[1];
+    //gl_light->specular.v[2] = specular[2];
+    //gl_light->specular.v[3] = specular[3];
 
     // Position needs to specify x, y, z, and w w == 1 implies non-infinite
     // position
@@ -1849,11 +1849,11 @@ bind_light(DirectionalLight *light_obj, const NodePath &light, int light_id) {
     // It's a brand new light.  Define it.
     memset(gl_light, 0, sizeof(GLLight));
 
-    const LColor &specular = light_obj->get_specular_color();
-    gl_light->specular.v[0] = specular[0];
-    gl_light->specular.v[1] = specular[1];
-    gl_light->specular.v[2] = specular[2];
-    gl_light->specular.v[3] = specular[3];
+    //const LColor &specular = light_obj->get_specular_color();
+    //gl_light->specular.v[0] = specular[0];
+    //gl_light->specular.v[1] = specular[1];
+    //gl_light->specular.v[2] = specular[2];
+    //gl_light->specular.v[3] = specular[3];
 
     // Position needs to specify x, y, z, and w w == 0 implies light is at
     // infinity
@@ -1908,11 +1908,11 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
     // It's a brand new light.  Define it.
     memset(gl_light, 0, sizeof(GLLight));
 
-    const LColor &specular = light_obj->get_specular_color();
-    gl_light->specular.v[0] = specular[0];
-    gl_light->specular.v[1] = specular[1];
-    gl_light->specular.v[2] = specular[2];
-    gl_light->specular.v[3] = specular[3];
+    //const LColor &specular = light_obj->get_specular_color();
+    //gl_light->specular.v[0] = specular[0];
+    //gl_light->specular.v[1] = specular[1];
+    //gl_light->specular.v[2] = specular[2];
+    //gl_light->specular.v[3] = specular[3];
 
     Lens *lens = light_obj->get_lens();
     nassertv(lens != nullptr);

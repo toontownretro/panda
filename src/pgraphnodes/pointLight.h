@@ -39,10 +39,6 @@ public:
                                    const LMatrix4 &to_object_space);
 
 PUBLISHED:
-  INLINE const LColor &get_specular_color() const final;
-  INLINE void set_specular_color(const LColor &color);
-  INLINE void clear_specular_color();
-  MAKE_PROPERTY(specular_color, get_specular_color, set_specular_color);
 
   INLINE const LVecBase3 &get_attenuation() const final;
   INLINE void set_attenuation(const LVecBase3 &attenuation);
@@ -77,7 +73,6 @@ private:
       return PointLight::get_class_type();
     }
 
-    LColor _specular_color;
     LVecBase3 _attenuation;
     PN_stdfloat _max_distance;
     LPoint3 _point;

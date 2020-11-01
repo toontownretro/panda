@@ -45,6 +45,7 @@ PUBLISHED:
   INLINE void set_lens(Lens *lens);
   void set_lens(int index, Lens *lens);
   INLINE Lens *get_lens(int index = 0) const;
+  INLINE int get_num_lenses() const;
 
   bool set_lens_active(int index, bool active);
   INLINE bool get_lens_active(int index) const;

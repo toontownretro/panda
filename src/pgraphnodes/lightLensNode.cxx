@@ -11,6 +11,7 @@
  * @date 2002-03-26
  */
 
+#include "config_pgraphnodes.h"
 #include "lightLensNode.h"
 #include "bamWriter.h"
 #include "bamReader.h"
@@ -19,6 +20,15 @@
 #include "renderState.h"
 #include "cullFaceAttrib.h"
 #include "colorWriteAttrib.h"
+#include "cullBinAttrib.h"
+#include "colorBlendAttrib.h"
+#include "antialiasAttrib.h"
+#include "colorAttrib.h"
+#include "colorScaleAttrib.h"
+#include "materialAttrib.h"
+#include "fogAttrib.h"
+#include "shaderParamAttrib.h"
+#include "lightAttrib.h"
 #include "graphicsStateGuardianBase.h"
 
 TypeHandle LightLensNode::_type_handle;
@@ -29,18 +39,44 @@ TypeHandle LightLensNode::_type_handle;
 LightLensNode::
 LightLensNode(const std::string &name, Lens *lens) :
   Camera(name, lens),
-  _has_specular_color(false),
   _attrib_count(0),
   _used_by_auto_shader(false)
 {
   set_active(false);
   _shadow_caster = false;
-  _sb_size.set(512, 512);
-  _sb_sort = -10;
-  // set_initial_state(RenderState::make(ShaderAttrib::make_off(), 1000));
-  // Backface culling helps eliminating artifacts.
-  set_initial_state(RenderState::make(CullFaceAttrib::make_reverse(),
-                    ColorWriteAttrib::make(ColorWriteAttrib::C_off)));
+
+  if (shadow_map_size.get_num_words() == 1) {
+    _sb_size.set(shadow_map_size[0], shadow_map_size[0]);
+  } else if (shadow_map_size.get_num_words() >= 2) {
+    _sb_size.set(shadow_map_size[0], shadow_map_size[1]);
+  } else {
+    _sb_size.set(512, 512);
+  }
+
+  _sb_sort = shadow_buffer_sort;
+
+  _depth_bias = shadow_depth_bias;
+  _normal_offset_scale = shadow_normal_offset_scale;
+  _softness_factor = shadow_softness_factor;
+  _normal_offset_uv_space = shadow_normal_offset_uv_space;
+
+  // Turn off lots of state that we don't need in the shadow render pass.
+  // This helps speed up the pass because there will be fewer state changes.
+  CPT(RenderState) state = RenderState::make_empty();
+  state = state->set_attrib(AntialiasAttrib::make(AntialiasAttrib::M_off), 100);
+  state = state->set_attrib(ColorAttrib::make_off(), 100);
+  state = state->set_attrib(ColorBlendAttrib::make_off(), 100);
+  state = state->set_attrib(ColorScaleAttrib::make_off(), 100);
+  state = state->set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off), 100);
+  state = state->set_attrib(CullBinAttrib::make_default(), 100);
+  // Backface culling helps eliminate artifacts.
+  state = state->set_attrib(CullFaceAttrib::make_reverse(), 100);
+  state = state->set_attrib(FogAttrib::make_off(), 100);
+  state = state->set_attrib(MaterialAttrib::make_off(), 100);
+  // Render it using the depth-only shader.
+  state = state->set_attrib(ShaderParamAttrib::make("Depth"), 100);
+
+  set_initial_state(state);
 }
 
 /**
@@ -66,7 +102,6 @@ LightLensNode(const LightLensNode &copy) :
   _shadow_caster(copy._shadow_caster),
   _sb_size(copy._sb_size),
   _sb_sort(-10),
-  _has_specular_color(copy._has_specular_color),
   _attrib_count(0),
   _used_by_auto_shader(false)
 {
@@ -94,6 +129,7 @@ set_shadow_caster(bool caster) {
   set_active(caster);
   if (caster) {
     setup_shadow_map();
+    set_light_state();
   }
 }
 
@@ -125,6 +161,7 @@ set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize, int buffer_so
   set_active(caster);
   if (caster) {
     setup_shadow_map();
+    set_light_state();
   }
 }
 
@@ -170,6 +207,19 @@ setup_shadow_map() {
   _shadow_map->set_border_color(LColor(1));
   _shadow_map->set_minfilter(SamplerState::FT_shadow);
   _shadow_map->set_magfilter(SamplerState::FT_shadow);
+}
+
+/**
+ * Ensures that the camera's initial state includes the light.
+ */
+void LightLensNode::
+set_light_state() {
+  // Make sure the shader knows the light that we are rendering shadows for.
+  CPT(RenderState) state = get_initial_state();
+  CPT(RenderAttrib) light_attr = LightAttrib::make();
+  light_attr = DCAST(LightAttrib, light_attr)->add_on_light(NodePath(this));
+  state = state->set_attrib(light_attr, 100);
+  set_initial_state(state);
 }
 
 /**

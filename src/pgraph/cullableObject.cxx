@@ -154,7 +154,8 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     // flag on the state so that the shader generator will do this.  We should
     // probably find a cleaner way to do this.
     const ShaderAttrib *sattr;
-    if (_state->get_attrib(sattr) && sattr->auto_shader()) {
+    _state->get_attrib_def(sattr);
+    if (sattr->auto_shader()) {
       GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
       if (data_reader.get_format()->get_animation().get_animation_type() == Geom::AT_hardware) {
         static CPT(RenderState) state = RenderState::make(

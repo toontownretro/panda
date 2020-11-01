@@ -22,6 +22,7 @@
 #include "pvector.h"
 #include "shaderInput.h"
 #include "shader.h"
+#include "pmap.h"
 
 class GraphicsStateGuardianBase;
 class RenderState;
@@ -51,6 +52,31 @@ public:
     SF_tess_eval = 16,
   };
 
+  class ShaderSetup {
+  public:
+    BitMask32 _stage_flags;
+    ShaderStage _stages[S_COUNT];
+
+    int _flags;
+    pvector<ShaderInput> _inputs;
+
+    int _instance_count;
+
+    Shader::ShaderLanguage _language;
+
+    INLINE ShaderSetup();
+    INLINE ShaderSetup(const ShaderSetup &other);
+
+    INLINE void clear();
+    INLINE size_t get_hash() const;
+
+    INLINE bool operator < (const ShaderSetup &other) const;
+    INLINE bool operator == (const ShaderSetup &other) const;
+    bool operator != (const ShaderSetup &other) const {
+      return !operator ==(other);
+    }
+  };
+
   INLINE size_t get_num_inputs() const;
   INLINE const pvector<ShaderInput> &get_inputs() const;
 
@@ -59,9 +85,11 @@ public:
 
   INLINE int get_flags() const;
 
+  INLINE int get_instance_count() const;
+
   INLINE Shader::ShaderLanguage get_language() const;
 
-  virtual void reset();
+  INLINE void reset();
 
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
@@ -72,6 +100,13 @@ protected:
   INLINE ShaderBase(const std::string &name);
 
   static void register_shader(ShaderBase *shader);
+
+  bool add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec);
+  bool add_fog(const RenderState *state);
+  bool add_clip_planes(const RenderState *state);
+  bool add_alpha_test(const RenderState *state);
+  bool add_csm(const RenderState *state);
+  bool add_transparency(const RenderState *state);
 
   INLINE void set_vertex_shader(const Filename &filename);
   INLINE void set_vertex_shader_source(const std::string &source);
@@ -114,16 +149,18 @@ protected:
 
   INLINE void set_flags(int flags);
 
+  INLINE void set_instance_count(int count);
+
   INLINE void set_language(Shader::ShaderLanguage language);
 
 protected:
-  int _stage_flags;
-  ShaderStage _stages[S_COUNT];
+  ShaderSetup _setup;
 
-  int _flags;
-  pvector<ShaderInput> _inputs;
+private:
+  typedef pmap<ShaderSetup, CPT(RenderAttrib)> SetupCache;
+  SetupCache _cache;
 
-  Shader::ShaderLanguage _language;
+  friend class ShaderManager;
 
 public:
   static TypeHandle get_class_type() {

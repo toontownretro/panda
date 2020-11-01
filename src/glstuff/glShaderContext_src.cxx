@@ -753,7 +753,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         }
         return;
       }
-      else if (matrix_name.size() > 15 &&
+      /*else if (matrix_name.size() > 15 &&
                  matrix_name.substr(0, 12) == "LightSource[" &&
                  sscanf(matrix_name.c_str(), "LightSource[%d].%s", &bind._index, name_buffer) == 2) {
         // A matrix member of a p3d_LightSource struct.
@@ -791,7 +791,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
           return;
         }
 
-      } else {
+      } */else {
         GLCAT.error() << "Unrecognized uniform matrix name '" << matrix_name << "'!\n";
         return;
       }
@@ -1105,31 +1105,28 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
           bind._id = param;
           bind._func = Shader::SMF_first;
           bind._index = index;
-          bind._part[0] = Shader::SMO_light_source_i_attrib;
-          bind._arg[0] = InternalName::make(member_name);
+          bind._arg[0] = nullptr;
           bind._part[1] = Shader::SMO_identity;
           bind._arg[1] = nullptr;
 
-          switch (param_type) {
-          case GL_FLOAT:
-            bind._piece = Shader::SMP_row3x1;
-            break;
-
-          case GL_FLOAT_VEC2:
-            bind._piece = Shader::SMP_row3x2;
-            break;
-
-          case GL_FLOAT_VEC3:
-            bind._piece = Shader::SMP_row3x3;
-            break;
-
-          case GL_FLOAT_VEC4:
+          if (member_name == "color") {
+            bind._part[0] = Shader::SMO_light_source_i;
+            bind._piece = Shader::SMP_row0;
+          } else if (member_name == "direction") {
+            bind._part[0] = Shader::SMO_light_source_i;
+            bind._piece = Shader::SMP_row1;
+          } else if (member_name == "position") {
+            bind._part[0] = Shader::SMO_light_source_i;
+            bind._piece = Shader::SMP_row2;
+          } else if (member_name == "spotParams") {
+            bind._part[0] = Shader::SMO_light_source_i;
             bind._piece = Shader::SMP_row3;
-            break;
-
-          default:
+          } else if (member_name == "attenuation") {
+            bind._part[0] = Shader::SMO_light_source2_i;
+            bind._piece = Shader::SMP_row3x3;
+          } else {
             GLCAT.error()
-              << "p3d_LightSource[]." << member_name << " should be float or vec\n";
+              << "p3d_LightSource[]." << member_name << ": invalid light source parameter\n";
             return;
           }
           _shader->cp_add_mat_spec(bind);
@@ -1155,6 +1152,59 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       }
       _slider_table_index = p;
       _slider_table_size = param_size;
+      return;
+    }
+    if (noprefix == "CascadeMVPs") {
+      if (param_type != GL_FLOAT_MAT4) {
+        GLCAT.error()
+          << "p3d_CascadeMVPs should be uniform mat4[]\n";
+          return;
+      }
+      Shader::ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = Shader::SMP_whole;
+      bind._func = Shader::SMF_first;
+      bind._part[0] = Shader::SMO_cascade_light_mvps_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = Shader::SMO_identity;
+      bind._arg[1] = nullptr;
+      for (bind._index = 0; bind._index < param_size; ++bind._index) {
+        bind._id._location = p + bind._index;
+        _shader->cp_add_mat_spec(bind);
+      }
+      return;
+    }
+    if (noprefix == "CascadeNearFar") {
+      if (param_type != GL_FLOAT_VEC2) {
+        GLCAT.error()
+          << "p3d_CascadeNearFar should be uniform vec2[]\n";
+          return;
+      }
+      Shader::ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = Shader::SMP_row0;
+      bind._func = Shader::SMF_first;
+      bind._part[0] = Shader::SMO_cascade_light_near_far_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = Shader::SMO_identity;
+      bind._arg[1] = nullptr;
+      for (bind._index = 0; bind._index < param_size; ++bind._index) {
+        bind._id._location = p + bind._index;
+        _shader->cp_add_mat_spec(bind);
+      }
+      return;
+    }
+    if (noprefix == "CascadeShadowMap") {
+      Shader::ShaderTexSpec bind;
+      bind._id = param;
+      bind._part = Shader::STO_cascade_light_shadow_map;
+      bind._name = 0;
+      bind._desired_type = Texture::TT_2d_texture_array;
+      bind._stage = 0;
+      if (get_sampler_texture_type(bind._desired_type, param_type)) {
+        _glgsg->_glUniform1i(p, _shader->_tex_spec.size());
+        _shader->_tex_spec.push_back(bind);
+      }
       return;
     }
     if (noprefix == "TexAlphaOnly") {
@@ -2269,6 +2319,11 @@ issue_parameters(int altered) {
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
         continue;
+      }
+
+      if (GLCAT.is_debug()) {
+        GLCAT.debug()
+          << "Setting uniform for matrix at location " << p << " : " << spec._id._name->get_name() << "\n";
       }
 
       switch (spec._piece) {

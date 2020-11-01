@@ -20,16 +20,17 @@ INLINE ShaderAttrib::
 ShaderAttrib() :
   _shader(nullptr),
   _shader_priority(0),
-  _auto_shader(false),
-  _has_shader(false),
+  // As of 10/30/2020, auto-shader is on by default.
+  _auto_shader(true),
+  _has_shader(true),
   _flags(0),
   _has_flags(0),
   _instance_count(0),
-  _auto_normal_on(false),
-  _auto_glow_on(false),
-  _auto_gloss_on(false),
-  _auto_ramp_on(false),
-  _auto_shadow_on(false)
+  _auto_normal_on(true),
+  _auto_glow_on(true),
+  _auto_gloss_on(true),
+  _auto_ramp_on(true),
+  _auto_shadow_on(true)
 {
 }
 

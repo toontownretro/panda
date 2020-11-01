@@ -146,11 +146,6 @@ public:
     SMO_attr_color,
     SMO_attr_colorscale,
 
-    SMO_alight_x,
-    SMO_dlight_x,
-    SMO_plight_x,
-    SMO_slight_x,
-    SMO_satten_x,
     SMO_texmat_i,
     SMO_plane_x,
     SMO_clipplane_x,
@@ -195,13 +190,6 @@ public:
     SMO_mat_constant_x_attrib,
     SMO_vec_constant_x_attrib,
 
-    SMO_light_ambient,
-    SMO_light_source_i_attrib,
-
-    SMO_light_product_i_ambient,
-    SMO_light_product_i_diffuse,
-    SMO_light_product_i_specular,
-
     // SMO_clipplane_x is world coords, GLSL needs eye coords
     SMO_apiview_clipplane_i,
 
@@ -221,7 +209,17 @@ public:
     SMO_transform_i,
     SMO_slider_i,
 
-    SMO_light_source_i_packed,
+    // Constant ambient
+    SMO_light_ambient,
+
+    // Parameters of a light source
+    SMO_light_source_i,
+    SMO_light_source2_i,
+
+    // Cascaded shadow map projection matrices
+    SMO_cascade_light_mvps_i,
+    // Cascaded shadow map cascade near/far points
+    SMO_cascade_light_near_far_i,
 
     // Texture scale component of texture matrix.
     SMO_texscale_i,
@@ -240,6 +238,8 @@ public:
 
     STO_stage_i,
     STO_light_i_shadow_map,
+
+    STO_cascade_light_shadow_map,
 
     // Textures for materials that need to be sampled in the shader.
     STO_material_texture,

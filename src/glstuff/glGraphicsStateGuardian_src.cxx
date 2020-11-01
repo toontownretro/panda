@@ -32,6 +32,7 @@
 #include "directionalLight.h"
 #include "pointLight.h"
 #include "spotlight.h"
+#include "cascadeLight.h"
 #include "planeNode.h"
 #include "fog.h"
 #include "clockObject.h"
@@ -8358,7 +8359,7 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
   static const LColor black(0.0f, 0.0f, 0.0f, 1.0f);
   call_glLightfv(id, GL_AMBIENT, black);
   call_glLightfv(id, GL_DIFFUSE, get_light_color(light_obj));
-  call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
+  //call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
 
   // Position needs to specify x, y, z, and w w == 1 implies non-infinite
   // position
@@ -8413,7 +8414,7 @@ bind_light(DirectionalLight *light_obj, const NodePath &light, int light_id) {
   static const LColor black(0.0f, 0.0f, 0.0f, 1.0f);
   call_glLightfv(id, GL_AMBIENT, black);
   call_glLightfv(id, GL_DIFFUSE, get_light_color(light_obj));
-  call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
+  //call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
 
   // Position needs to specify x, y, z, and w.  w == 0 implies light is at
   // infinity
@@ -8460,7 +8461,7 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
   static const LColor black(0.0f, 0.0f, 0.0f, 1.0f);
   call_glLightfv(id, GL_AMBIENT, black);
   call_glLightfv(id, GL_DIFFUSE, get_light_color(light_obj));
-  call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
+  //call_glLightfv(id, GL_SPECULAR, light_obj->get_specular_color());
 
   // Position needs to specify x, y, z, and w w == 1 implies non-infinite
   // position
@@ -8498,15 +8499,33 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   }
 
   bool is_point = light->is_of_type(PointLight::get_class_type());
+  bool is_cascade = light->is_of_type(CascadeLight::get_class_type());
 
   // Determine the properties for creating the depth buffer.
   FrameBufferProperties fbp;
+  fbp.clear();
   fbp.set_depth_bits(shadow_depth_bits);
+  fbp.set_back_buffers(0);
+  fbp.set_force_hardware(true);
+  fbp.set_multisamples(0);
+  fbp.set_color_bits(0);
+  fbp.set_alpha_bits(0);
+  fbp.set_stencil_bits(0);
+  fbp.set_float_color(false);
+  fbp.set_float_depth(true);
+  fbp.set_stereo(false);
+  fbp.set_accum_bits(0);
+  fbp.set_aux_float(0);
+  fbp.set_aux_rgba(0);
+  fbp.set_aux_hrgba(0);
+  fbp.set_coverage_samples(0);
 
   WindowProperties props = WindowProperties::size(light->get_shadow_buffer_size());
   int flags = GraphicsPipe::BF_refuse_window;
   if (is_point) {
     flags |= GraphicsPipe::BF_size_square;
+  } else if (is_cascade) {
+    flags |= GraphicsPipe::BF_can_bind_layered;
   }
 
   if (host != nullptr) {
@@ -8514,7 +8533,14 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   }
 
   CLP(GraphicsBuffer) *sbuffer = new CLP(GraphicsBuffer)(get_engine(), get_pipe(), light->get_name(), fbp, props, flags, this, host);
-  sbuffer->add_render_texture(tex, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_depth);
+  sbuffer->disable_clears();
+  GraphicsOutput::RenderTextureMode rtm;
+  if (is_cascade) {
+    rtm = GraphicsOutput::RTM_bind_layered;
+  } else {
+    rtm = GraphicsOutput::RTM_bind_or_copy;
+  }
+  sbuffer->add_render_texture(tex, rtm, GraphicsOutput::RTP_depth);
   get_engine()->add_window(sbuffer, light->get_shadow_buffer_sort());
   return sbuffer;
 }

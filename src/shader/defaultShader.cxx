@@ -12,6 +12,9 @@
  */
 
 #include "defaultShader.h"
+#include "shaderAttrib.h"
+#include "alphaTestAttrib.h"
+#include "renderState.h"
 #include "luse.h"
 
 TypeHandle DefaultShader::_type_handle;
@@ -45,6 +48,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_vertex_shader_source(vss.str());
 
+  const AlphaTestAttrib *alpha_test;
+	state->get_attrib_def(alpha_test);
+  bool do_alpha_test = (alpha_test->get_mode() != RenderAttrib::M_none &&
+		                    alpha_test->get_mode() != RenderAttrib::M_always);
+
   std::ostringstream pss;
   pss <<
     "#version 330\n"
@@ -57,11 +65,15 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     "void main() {\n"
     "  p3d_FragColor = texture(p3d_Texture0, l_texcoord);\n"
     "  p3d_FragColor += p3d_TexAlphaOnly;\n"
-    "  p3d_FragColor *= l_color;\n"
-    //"  p3d_FragColor *= bruh;\n"
-    "}\n";
+    "  p3d_FragColor *= l_color;\n";
+  if (do_alpha_test) {
+    pss << "  if (p3d_FragColor.a < 0.5) discard;\n";
+  }
+  pss << "}\n";
 
   set_pixel_shader_source(pss.str());
+
+  set_flags(ShaderAttrib::F_subsume_alpha_test);
 
   //set_input(ShaderInput("bruh", LVector4(0, 0, 1, 1)));
 }

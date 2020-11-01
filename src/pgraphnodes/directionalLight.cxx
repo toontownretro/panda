@@ -35,7 +35,6 @@ make_copy() const {
  */
 void DirectionalLight::CData::
 write_datagram(BamWriter *, Datagram &dg) const {
-  _specular_color.write_datagram(dg);
   _point.write_datagram(dg);
   _direction.write_datagram(dg);
 }
@@ -46,7 +45,6 @@ write_datagram(BamWriter *, Datagram &dg) const {
  */
 void DirectionalLight::CData::
 fillin(DatagramIterator &scan, BamReader *) {
-  _specular_color.read_datagram(scan);
   _point.read_datagram(scan);
   _direction.read_datagram(scan);
 }
@@ -57,6 +55,7 @@ fillin(DatagramIterator &scan, BamReader *) {
 DirectionalLight::
 DirectionalLight(const std::string &name) :
   LightLensNode(name, new OrthographicLens()) {
+  _light_type = Light::LT_directional;
   _lenses[0]._lens->set_interocular_distance(0);
 }
 
@@ -102,10 +101,6 @@ write(std::ostream &out, int indent_level) const {
   indent(out, indent_level) << *this << ":\n";
   indent(out, indent_level + 2)
     << "color " << get_color() << "\n";
-  if (_has_specular_color) {
-    indent(out, indent_level + 2)
-      << "specular color " << get_specular_color() << "\n";
-  }
   indent(out, indent_level + 2)
     << "direction " << get_direction() << "\n";
 }
@@ -165,9 +160,6 @@ register_with_read_factory() {
 void DirectionalLight::
 write_datagram(BamWriter *manager, Datagram &dg) {
   LightLensNode::write_datagram(manager, dg);
-  if (manager->get_file_minor_ver() >= 39) {
-    dg.add_bool(_has_specular_color);
-  }
   manager->write_cdata(dg, _cycler);
 }
 
@@ -195,12 +187,6 @@ make_from_bam(const FactoryParams &params) {
 void DirectionalLight::
 fillin(DatagramIterator &scan, BamReader *manager) {
   LightLensNode::fillin(scan, manager);
-
-  if (manager->get_file_minor_ver() >= 39) {
-    _has_specular_color = scan.get_bool();
-  } else {
-    _has_specular_color = true;
-  }
 
   manager->read_cdata(scan, _cycler);
 }

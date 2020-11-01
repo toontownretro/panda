@@ -24,12 +24,13 @@
 #include "pStatCollector.h"
 #include "pStatTimer.h"
 
-static PStatCollector generate_collector("Cull:ShaderManager:GenerateShader");
-static PStatCollector find_shader_collector("Cull:ShaderManager:GenerateShader:FindShader");
-static PStatCollector synthesize_source_collector("Cull:ShaderManager:GenerateShader:SynthesizeSource");
-static PStatCollector make_shader_collector("Cull:ShaderManager:GenerateShader:MakeShaderObject");
-static PStatCollector make_attrib_collector("Cull:ShaderManager:GenerateShader:MakeShaderAttrib");
-static PStatCollector reset_collector("Cull:ShaderManager:GenerateShader:ResetShader");
+static PStatCollector generate_collector("*:Munge:GenerateShader");
+static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
+static PStatCollector synthesize_source_collector("*:Munge:GenerateShader:SetupShader");
+static PStatCollector make_shader_collector("*:Munge:GenerateShader:MakeShaderObject");
+static PStatCollector make_attrib_collector("*:Munge:GenerateShader:MakeShaderAttrib");
+static PStatCollector reset_collector("*:Munge:GenerateShader:ResetShader");
+static PStatCollector cache_collector("*:Munge:GenerateShader:CacheLookup");
 
 typedef void (*ShaderLibInit)();
 
@@ -140,38 +141,68 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   shader->generate_shader(gsg, state, spa, anim_spec);
   synthesize_source_collector.stop();
 
-  make_shader_collector.start();
-  PT(Shader) shader_obj = Shader::make(
-    shader->get_language(),
-    shader->get_stage(ShaderBase::S_vertex).get_final_source(),
-    shader->get_stage(ShaderBase::S_pixel).get_final_source(),
-    shader->get_stage(ShaderBase::S_geometry).get_final_source(),
-    shader->get_stage(ShaderBase::S_tess).get_final_source(),
-    shader->get_stage(ShaderBase::S_tess_eval).get_final_source());
+  CPT(RenderAttrib) generated_attr;
 
-  make_shader_collector.stop();
+  cache_collector.start();
+  // Now see if we've already created a shader with the same setup.
+  ShaderBase::SetupCache::const_iterator it = shader->_cache.find(shader->_setup);
+  cache_collector.stop();
+  if (it != shader->_cache.end()) {
+    // We have!  Just use that.
+    generated_attr = (*it).second;
+
+  } else {
+    make_shader_collector.start();
+    PT(Shader) shader_obj = Shader::make(
+      shader->get_language(),
+      shader->get_stage(ShaderBase::S_vertex).get_final_source(),
+      shader->get_stage(ShaderBase::S_pixel).get_final_source(),
+      shader->get_stage(ShaderBase::S_geometry).get_final_source(),
+      shader->get_stage(ShaderBase::S_tess).get_final_source(),
+      shader->get_stage(ShaderBase::S_tess_eval).get_final_source());
+
+    make_shader_collector.stop();
+
+    make_attrib_collector.start();
+
+    generated_attr = ShaderAttrib::make(shader_obj);
+
+    if (shader->get_num_inputs() > (size_t)0) {
+      if (shadermgr_cat.is_debug()) {
+        shadermgr_cat.debug()
+          << "Applying shader inputs\n";
+      }
+      generated_attr = DCAST(ShaderAttrib, generated_attr)
+        ->set_shader_inputs(shader->get_inputs());
+    }
+
+    if (shader->get_flags() != 0) {
+      if (shadermgr_cat.is_debug()) {
+        shadermgr_cat.debug()
+          << "Setting shader flags\n";
+      }
+      generated_attr = DCAST(ShaderAttrib, generated_attr)
+        ->set_flag(shader->get_flags(), true);
+    }
+
+    if (shader->get_instance_count() > 0) {
+      if (shadermgr_cat.is_debug()) {
+        shadermgr_cat.debug()
+          << "Setting shader instance count to "
+          << shader->get_instance_count() << "\n";
+      }
+      generated_attr = DCAST(ShaderAttrib, generated_attr)
+        ->set_instance_count(shader->get_instance_count());
+    }
+
+    make_attrib_collector.stop();
+
+    // Throw it in the cache.
+    shader->_cache.insert(
+      ShaderBase::SetupCache::value_type(shader->_setup, generated_attr));
+  }
 
   make_attrib_collector.start();
-
-  CPT(RenderAttrib) generated_attr = ShaderAttrib::make(shader_obj);
-
-  if (shader->get_num_inputs() > (size_t)0) {
-    if (shadermgr_cat.is_debug()) {
-      shadermgr_cat.debug()
-        << "Applying shader inputs\n";
-    }
-    generated_attr = DCAST(ShaderAttrib, generated_attr)
-      ->set_shader_inputs(shader->get_inputs());
-  }
-
-  if (shader->get_flags() != 0) {
-    if (shadermgr_cat.is_debug()) {
-      shadermgr_cat.debug()
-        << "Setting shader flags\n";
-    }
-    generated_attr = DCAST(ShaderAttrib, generated_attr)
-      ->set_flag(shader->get_flags(), true);
-  }
 
   // Apply inputs from the ShaderAttrib stored directly on the state to our
   // generated ShaderAttrib.

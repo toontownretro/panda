@@ -12,6 +12,24 @@
  */
 
 /**
+ *
+ */
+INLINE ShaderStage::
+ShaderStage() {
+  _has_defines_str = false;
+}
+
+/**
+ *
+ */
+INLINE void ShaderStage::
+operator =(const ShaderStage &copy) {
+  _source = copy._source;
+  _defines_str = copy._defines_str;
+  _has_defines_str = copy._has_defines_str;
+}
+
+/**
  * Resets the ShaderStage to a clean slate, ready for the shader that needs to
  * be generated.
  */
@@ -19,6 +37,7 @@ INLINE void ShaderStage::
 reset() {
   _source = nullptr;
   _defines = std::ostringstream();
+  _has_defines_str = false;
 }
 
 /**
@@ -28,6 +47,7 @@ INLINE void ShaderStage::
 set_source_filename(const Filename &filename) {
   _source = ShaderSource::from_filename(filename);
   _defines = std::ostringstream();
+  _has_defines_str = false;
 }
 
 /**
@@ -44,7 +64,7 @@ set_source_raw(const std::string &source) {
  * the #defines inserted.
  */
 INLINE std::string ShaderStage::
-get_final_source() const {
+get_final_source() {
   if (!_source) {
     return "";
   }
@@ -57,7 +77,7 @@ get_final_source() const {
   {
     std::ostringstream ss;
     ss << _source->get_before_defines() << "\n";
-    ss << _defines.str();
+    ss << get_defines_str();
     ss << _source->get_after_defines();
     return ss.str();
   }
@@ -73,4 +93,61 @@ get_final_source() const {
 INLINE void ShaderStage::
 set_define(const std::string &name, const std::string &value) {
   set_define<std::string>(name, value);
+}
+
+/**
+ * Returns a string representing the #defines that should be inserted into the
+ * shader code.
+ */
+INLINE const std::string &ShaderStage::
+get_defines_str() const {
+  ShaderStage *nc_this = (ShaderStage *)this;
+  if (!_has_defines_str) {
+    nc_this->_defines_str = _defines.str();
+    nc_this->_has_defines_str = true;
+  }
+
+  return _defines_str;
+}
+
+/**
+ * Adds the hash of the shader stage onto the running hash.
+ */
+INLINE size_t ShaderStage::
+add_hash(size_t hash) const {
+  hash = pointer_hash::add_hash(hash, _source.p());
+  hash = string_hash::add_hash(hash, get_defines_str());
+  return hash;
+}
+
+/**
+ *
+ */
+INLINE bool ShaderStage::
+operator < (const ShaderStage &other) const {
+  if (_source != other._source) {
+    return (_source < other._source);
+  }
+
+  if (get_defines_str() != other.get_defines_str()) {
+    return (get_defines_str() < other.get_defines_str());
+  }
+
+  return false;
+}
+
+/**
+ *
+ */
+INLINE bool ShaderStage::
+operator == (const ShaderStage &other) const {
+  if (_source != other._source) {
+    return false;
+  }
+
+  if (get_defines_str() != other.get_defines_str()) {
+    return false;
+  }
+
+  return true;
 }

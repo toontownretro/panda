@@ -39,7 +39,7 @@ public:
   INLINE SourceFormat get_format() const;
 
   static CPT(ShaderSource) from_filename(const Filename &filename);
-  INLINE static CPT(ShaderSource) from_raw(const std::string &source);
+  static CPT(ShaderSource) from_raw(const std::string &source);
 
 private:
   INLINE ShaderSource();
@@ -49,8 +49,10 @@ private:
   std::string _after_defines;
   SourceFormat _format;
 
-  typedef phash_map<Filename, CPT(ShaderSource)> SourceCache;
+  typedef phash_map<Filename, CPT(ShaderSource), string_hash> SourceCache;
+  typedef phash_map<std::string, CPT(ShaderSource), string_hash> RawSourceCache;
   static SourceCache _cache;
+  static RawSourceCache _raw_cache;
 };
 
 #include "shaderSource.I"

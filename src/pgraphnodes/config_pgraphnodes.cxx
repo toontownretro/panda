@@ -17,6 +17,7 @@
 #include "callbackData.h"
 #include "callbackNode.h"
 #include "callbackObject.h"
+#include "cascadeLight.h"
 #include "computeNode.h"
 #include "directionalLight.h"
 #include "fadeLodNode.h"
@@ -98,6 +99,72 @@ ConfigVariableDouble parallax_mapping_scale
           "how much influence the height values have on the texture "
           "coordinates."));
 
+ConfigVariableDouble csm_distance
+("csm-distance", 100.0,
+ PRC_DESC("Sets the default maximum distance that cascaded shadows are "
+          "rendered.  After this distance, no shadows will be rendered."));
+
+ConfigVariableInt csm_num_cascades
+("csm-num-cascades", 4,
+ PRC_DESC("Sets the default number of cascades that will be used to render "
+          "shadows for a CascadeLight."));
+
+ConfigVariableDouble csm_sun_distance
+("csm-sun-distance", 500.0,
+ PRC_DESC("Sets the default distance the cascaded shadow render camera will "
+          "have from the origin of the light.  A higher value will render "
+          "shadows for further away objects, but will have decreased "
+          "precision."));
+
+ConfigVariableDouble csm_log_factor
+("csm-log-factor", 1.0,
+ PRC_DESC("Sets the default logarithmic factor used to determine the size of "
+          "each cascade."));
+
+ConfigVariableDouble csm_border_bias
+("csm-border-bias", 0.0,
+ PRC_DESC("Sets the default border bias for each cascade.  This increases "
+          "each cascade frustum by multiplying it by (1 + bias), and helps "
+          "reduce artifacts at the borders of the cascades."));
+
+ConfigVariableBool csm_fixed_film_size
+("csm-fixed-film-size", false,
+ PRC_DESC("This controls if a fixed cascade film size should be used by "
+          "default.  This will cause the light to cache the current film size,"
+          " and only change it in case it gets too small.  This provides less "
+          "flickering when moving because the film size will remain roughly "
+          "consistent.  If you turn this on, you should clear the cache every "
+          "now and again to reduce memory bloat."));
+
+ConfigVariableInt shadow_buffer_sort
+("shadow-buffer-sort", -10,
+ PRC_DESC("The default sort value for all shadow buffers."));
+
+ConfigVariableInt shadow_map_size
+("shadow-map-size", "512 512",
+ PRC_DESC("The default size of all shadow depth maps."));
+
+ConfigVariableDouble shadow_depth_bias
+("shadow-depth-bias", 0.0001,
+ PRC_DESC("This controls how much of an offset is applied by default to shadow "
+          "depth map values when performing the shadow map comparison.  This "
+          "can help reduce shadow acne."));
+
+ConfigVariableDouble shadow_normal_offset_scale
+("shadow-normal-offset-scale", 3.0,
+ PRC_DESC("This controls by default how much normal offset should be applied "
+          "to shadow map projection matrices.  This is part of a solution to "
+          "reduce shadow acne and peter-panning."));
+
+ConfigVariableDouble shadow_softness_factor
+("shadow-softness-factor", 2.0,
+ PRC_DESC("This controls the default softness of shadows.  A higher value "
+          "results in softer shadows."));
+
+ConfigVariableBool shadow_normal_offset_uv_space
+("shadow-normal-offset-uv-space", true,
+ PRC_DESC("Enables or disables UV space shadow normal offset by default."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -116,6 +183,7 @@ init_libpgraphnodes() {
   CallbackData::init_type();
   CallbackNode::init_type();
   CallbackObject::init_type();
+  CascadeLight::init_type();
   ComputeNode::init_type();
   DirectionalLight::init_type();
   FadeLODNode::init_type();

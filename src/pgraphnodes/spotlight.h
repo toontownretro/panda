@@ -50,11 +50,6 @@ PUBLISHED:
   INLINE void set_exponent(PN_stdfloat exponent);
   MAKE_PROPERTY(exponent, get_exponent, set_exponent);
 
-  INLINE const LColor &get_specular_color() const final;
-  INLINE void set_specular_color(const LColor &color);
-  INLINE void clear_specular_color();
-  MAKE_PROPERTY(specular_color, get_specular_color, set_specular_color);
-
   INLINE const LVecBase3 &get_attenuation() const final;
   INLINE void set_attenuation(const LVecBase3 &attenuation);
   MAKE_PROPERTY(attenuation, get_attenuation, set_attenuation);
@@ -62,6 +57,14 @@ PUBLISHED:
   INLINE PN_stdfloat get_max_distance() const;
   INLINE void set_max_distance(PN_stdfloat max_distance);
   MAKE_PROPERTY(max_distance, get_max_distance, set_max_distance);
+
+  INLINE PN_stdfloat get_outer_cone() const;
+  INLINE void set_outer_cone(PN_stdfloat angle);
+  MAKE_PROPERTY(outer_cone, get_outer_cone, set_outer_cone);
+
+  INLINE PN_stdfloat get_inner_cone() const;
+  INLINE void set_inner_cone(PN_stdfloat angle);
+  MAKE_PROPERTY(inner_cone, get_inner_cone, set_inner_cone);
 
   virtual int get_class_priority() const;
 
@@ -92,7 +95,7 @@ private:
     }
 
     PN_stdfloat _exponent;
-    LColor _specular_color;
+    PN_stdfloat _inner_cone;
     LVecBase3 _attenuation;
     PN_stdfloat _max_distance;
   };

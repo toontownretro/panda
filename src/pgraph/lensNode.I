@@ -54,6 +54,14 @@ get_lens(int index) const {
 }
 
 /**
+ * Returns the number of Lenses associated with this LensNode.
+ */
+INLINE int LensNode::
+get_num_lenses() const {
+  return (int)_lenses.size();
+}
+
+/**
  * Returns the active flag for the nth lens.
  */
 INLINE bool LensNode::

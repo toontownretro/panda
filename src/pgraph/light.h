@@ -37,6 +37,15 @@ class GraphicsStateGuardianBase;
  */
 class EXPCL_PANDA_PGRAPH Light {
 PUBLISHED:
+  enum LightType {
+    LT_ambient,
+    LT_point,
+    LT_spot,
+    LT_directional,
+    LT_sphere,
+    LT_rectangle,
+  };
+
   INLINE Light();
   INLINE Light(const Light &copy);
   virtual ~Light();
@@ -55,13 +64,15 @@ PUBLISHED:
                                    set_color_temperature);
 
   virtual PN_stdfloat get_exponent() const;
-  virtual const LColor &get_specular_color() const;
   virtual const LVecBase3 &get_attenuation() const;
 
   INLINE void set_priority(int priority);
   INLINE int get_priority() const;
   virtual int get_class_priority() const=0;
   MAKE_PROPERTY(priority, get_priority, set_priority);
+
+  INLINE LightType get_light_type() const;
+  MAKE_PROPERTY(light_type, get_light_type);
 
 public:
   virtual void attrib_ref();
@@ -95,6 +106,8 @@ protected:
     CP_spot_priority,
     CP_area_priority,
   };
+
+  LightType _light_type;
 
 private:
   // The priority is not cycled, because there's no real reason to do so, and
