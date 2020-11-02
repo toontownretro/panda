@@ -28,8 +28,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 const ShaderParamAttrib *params,
                 const GeomVertexAnimationSpec &anim_spec) {
 
-  std::cout << "Generating csm depth shader\n";
-
   set_language(Shader::SL_GLSL);
 
   set_vertex_shader("shaders/csmdepth.vert.glsl");
@@ -38,6 +36,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   // Do we have transparency?
   add_transparency(state);
+  add_alpha_test(state);
 
   // Hardware skinning?
   add_hardware_skinning(anim_spec);

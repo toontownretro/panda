@@ -137,7 +137,7 @@ ConfigVariableBool csm_fixed_film_size
           "now and again to reduce memory bloat."));
 
 ConfigVariableInt shadow_buffer_sort
-("shadow-buffer-sort", -10,
+("shadow-buffer-sort", -1000,
  PRC_DESC("The default sort value for all shadow buffers."));
 
 ConfigVariableInt shadow_map_size

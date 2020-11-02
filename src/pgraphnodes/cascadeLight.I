@@ -25,6 +25,12 @@ get_scene_camera() const {
 INLINE void CascadeLight::
 set_scene_camera(const NodePath &camera) {
   _scene_camera = camera;
+  // We need to use the scene camera as the reference point for computing LOD
+  // distances when rendering to the shadow maps.  By default, the light node
+  // itself is used as the reference point.  This would cause incorrect LODs
+  // because it is the cascades themselves that follow the scene camera, the
+  // light remains stationary.
+  set_lod_center(camera);
 }
 
 /**
