@@ -79,6 +79,7 @@
 #include "scissorEffect.h"
 #include "shadeModelAttrib.h"
 #include "shaderAttrib.h"
+#include "shaderParamAttrib.h"
 #include "shader.h"
 #include "showBoundsEffect.h"
 #include "stencilAttrib.h"
@@ -453,6 +454,7 @@ init_libpgraph() {
   ScissorEffect::init_type();
   ShadeModelAttrib::init_type();
   ShaderAttrib::init_type();
+  ShaderParamAttrib::init_type();
   ShowBoundsEffect::init_type();
   StateMunger::init_type();
   StencilAttrib::init_type();
