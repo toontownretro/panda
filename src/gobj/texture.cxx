@@ -5775,6 +5775,7 @@ do_compress_ram_image(CData *cdata, Texture::CompressionMode compression,
     switch (cdata->_format) {
     case Texture::F_rgbm:
     case Texture::F_rgb:
+    case Texture::F_srgb:
     case Texture::F_rgb5:
     case Texture::F_rgba5:
     case Texture::F_rgb8:
@@ -5807,6 +5808,7 @@ do_compress_ram_image(CData *cdata, Texture::CompressionMode compression,
       break;
 
     case Texture::F_rgba:
+    case Texture::F_srgb_alpha:
     case Texture::F_rgba8:
     case Texture::F_rgba12:
     case Texture::F_rgba16:
