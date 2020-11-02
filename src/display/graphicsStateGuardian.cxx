@@ -1134,7 +1134,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       PN_stdfloat w = (is_directional) ? 1.0f : 0.0f;
       into[i].set_row(0, LVecBase4(c.get_xyz(), w));
 
-      CPT(TransformState) ts = get_cs_transform()->compose(np.get_net_transform());
+      CPT(TransformState) ts = np.get_net_transform();
       const LMatrix4 &transform = ts->get_mat();
 
       // Next the direction, light type code in w
@@ -1147,7 +1147,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
       } else if (is_directional) {
         DirectionalLight *dlight = DCAST(DirectionalLight, node);
-        dir = transform.xform_vec(dlight->get_direction());
+        dir = transform.xform_vec(-dlight->get_direction());
 
       } else {
         dir.set(0, 1, 0);
