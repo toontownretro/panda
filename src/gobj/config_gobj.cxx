@@ -72,7 +72,6 @@
 #include "shaderCompilerRegistry.h"
 #include "shaderCompilerGlslang.h"
 #include "shaderCompilerGlslPreProc.h"
-#include "shaderCompilerCg.h"
 
 #include "shaderModuleGlsl.h"
 #include "shaderModuleSpirV.h"
@@ -528,22 +527,6 @@ ConfigVariableBool stereo_lens_old_convergence
           "old, incorrect behavior, this may be set to 'true' to switch "
           "back to the old calculation."));
 
-ConfigVariableBool basic_shaders_only
-("basic-shaders-only", false,
- PRC_DESC("Set this to true if you aren't interested in shader model three "
-          "and beyond.  Setting this flag will cause panda to disable "
-          "bleeding-edge shader functionality which tends to be unreliable "
-          "or broken.  At some point, when functionality that is currently "
-          "flaky becomes reliable, we may expand the definition of what "
-          "constitutes 'basic' shaders."));
-
-ConfigVariableString cg_glsl_version
-("cg-glsl-version", "",
- PRC_DESC("If this is set, it forces the Cg compiler to generate GLSL "
-          "code conforming to the given GLSL version when using the "
-          "glslv, glslf or glslg profiles.  Use this when you are having "
-          "problems with these profiles.  Example values are 120 or 150."));
-
 ConfigVariableBool glsl_preprocess
 ("glsl-preprocess", true,
  PRC_DESC("If this is enabled, Panda looks for lines starting with "
@@ -632,7 +615,6 @@ ConfigureFn(config_gobj) {
   ShaderCompilerRegistry *reg = ShaderCompilerRegistry::get_global_ptr();
   reg->register_compiler(new ShaderCompilerGlslang());
   reg->register_compiler(new ShaderCompilerGlslPreProc());
-  //reg->register_compiler(new ShaderCompilerCg());
 
   // Registration of writeable object's creation functions with BamReader's
   // factory

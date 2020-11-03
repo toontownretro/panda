@@ -348,15 +348,6 @@ get_supported_geom_rendering() const {
 }
 
 /**
- * Returns true if this particular GSG supports the specified Cg Shader
- * Profile.
- */
-bool GraphicsStateGuardian::
-get_supports_cg_profile(const string &name) const {
-  return false;
-}
-
-/**
  * Changes the coordinate system in effect on this particular gsg.  This is
  * also called the "external" coordinate system, since it is the coordinate
  * system used by the scene graph, external to to GSG.
@@ -3414,9 +3405,13 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
       dummy_cube = new Texture("dummy-shadow-cube");
       dummy_cube->setup_cube_map(1, Texture::T_unsigned_byte, Texture::F_depth_component);
       dummy_cube->set_clear_color(1);
-      // Note: cube map shadow filtering doesn't seem to work in Cg.
-      dummy_cube->set_minfilter(SamplerState::FT_linear);
-      dummy_cube->set_magfilter(SamplerState::FT_linear);
+      if (get_supports_shadow_filter()) {
+        dummy_cube->set_minfilter(SamplerState::FT_shadow);
+        dummy_cube->set_magfilter(SamplerState::FT_shadow);
+      } else {
+        dummy_cube->set_minfilter(SamplerState::FT_linear);
+        dummy_cube->set_magfilter(SamplerState::FT_linear);
+      }
     }
     return dummy_cube;
   }
