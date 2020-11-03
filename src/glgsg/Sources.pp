@@ -1,7 +1,7 @@
 #define BUILD_DIRECTORY $[HAVE_GL]
 #define OTHER_LIBS interrogatedb \
                    dtoolutil:c dtoolbase:c dtool:m prc
-#define USE_PACKAGES gl cg cggl spirv_cross
+#define USE_PACKAGES gl spirv_cross
 #begin lib_target
   #define TARGET glgsg
   #define LOCAL_LIBS \

@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_WGL]
 
-#define USE_PACKAGES gl cg
+#define USE_PACKAGES gl
 
 
 #define OTHER_LIBS interrogatedb \

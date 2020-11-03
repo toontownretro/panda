@@ -3,7 +3,7 @@
 #define OTHER_LIBS \
    dtoolutil:c dtoolbase:c dtool:m
 
-#define USE_PACKAGES dx9 cg cgdx9
+#define USE_PACKAGES dx9
 
 #begin lib_target
   #define TARGET dxgsg9

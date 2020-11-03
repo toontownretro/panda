@@ -1,7 +1,7 @@
 #define OTHER_LIBS interrogatedb prc \
                    dtoolutil:c dtoolbase:c dtool:m
 
-#define USE_PACKAGES cg freetype
+#define USE_PACKAGES freetype
 
 #define LOCAL_LIBS \
     framework putil collide pgraph chan text \

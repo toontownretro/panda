@@ -1,7 +1,7 @@
 #define OTHER_LIBS interrogatedb \
                    dtoolutil:c dtoolbase:c dtool:m prc
 //#define OSX_SYS_LIBS mx
-#define USE_PACKAGES zlib cg squish glslang spirv_tools
+#define USE_PACKAGES zlib squish glslang spirv_tools
 
 #begin lib_target
   #define TARGET gobj
@@ -62,7 +62,6 @@
     shader.I shader.h \
     shaderBuffer.h shaderBuffer.I \
     shaderCompiler.h \
-    shaderCompilerCg.h \
     shaderCompilerGlslang.h \
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \
@@ -151,7 +150,6 @@
     shader.cxx \
     shaderBuffer.cxx \
     shaderCompiler.cxx \
-    shaderCompilerCg.cxx \
     shaderCompilerGlslang.cxx \
     shaderCompilerGlslPreProc.cxx \
     shaderCompilerRegistry.cxx \
@@ -241,7 +239,6 @@
     shader.I shader.h \
     shaderBuffer.h shaderBuffer.I \
     shaderCompiler.h \
-    shaderCompilerCg.h \
     shaderCompilerGlslang.h \
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \
