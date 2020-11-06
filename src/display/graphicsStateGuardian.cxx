@@ -57,7 +57,7 @@
 #include "colorScaleAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "fogAttrib.h"
-#include "shaderManager.h"
+#include "shaderManagerBase.h"
 #include "config_pstatclient.h"
 
 #include <limits.h>
@@ -3498,7 +3498,9 @@ ensure_generated_shader(const RenderState *state) {
         spec.set_hardware(4, true);
       }
 
-      ShaderManager *shader_mgr = ShaderManager::get_global_ptr();
+      ShaderManagerBase *shader_mgr = ShaderManagerBase
+        ::get_global_shader_manager();
+      nassertv(shader_mgr != nullptr);
 
       // Cache the generated ShaderAttrib on the shader state.
       state->_generated_shader = shader_mgr->generate_shader(this, state, spec);

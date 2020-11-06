@@ -11,17 +11,20 @@
   #define SOURCES \
     config_gsgbase.h \
     graphicsOutputBase.I graphicsOutputBase.h \
-    graphicsStateGuardianBase.h
+    graphicsStateGuardianBase.h \
+    shaderManagerBase.I shaderManagerBase.h
 
   #define COMPOSITE_SOURCES \
     config_gsgbase.cxx \
     graphicsOutputBase.cxx \
-    graphicsStateGuardianBase.cxx
+    graphicsStateGuardianBase.cxx \
+    shaderManagerBase.cxx
 
   #define INSTALL_HEADERS \
     config_gsgbase.h \
     graphicsOutputBase.I graphicsOutputBase.h \
-    graphicsStateGuardianBase.h
+    graphicsStateGuardianBase.h \
+    shaderManagerBase.I shaderManagerBase.h
 
   #define IGATESCAN all
 

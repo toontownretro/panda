@@ -12,6 +12,54 @@
  */
 
 /**
+ *
+ */
+INLINE ShaderManager::
+ShaderManager() {
+  _quality = shader_quality;
+}
+
+/**
+ * Sets the quality level for all shaders.  This is only a suggestion, it may
+ * have no meaning to certain shaders.  It is up to the shader implementation
+ * to respect the chosen quality level.
+ *
+ * Changing this value forces all shaders to be regenerated.
+ */
+INLINE void ShaderManager::
+set_shader_quality(ShaderManager::ShaderQuality quality) {
+  if (quality != _quality) {
+    // The quality level changed.  Force all shaders to regenerate.
+    _quality = quality;
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
+}
+
+/**
+ * Returns the quality level for all shaders.  This is only a suggestion, it
+ * may have no meaning to certain shaders.  It is up to the shader
+ * implementation to respect the chosen quality level.
+ */
+INLINE ShaderManager::ShaderQuality ShaderManager::
+get_shader_quality() const {
+  return _quality;
+}
+
+/**
+ * Returns the global ShaderManager object.
+ */
+INLINE ShaderManager *ShaderManager::
+get_global_ptr() {
+  if (!_global_ptr) {
+    _global_ptr = new ShaderManager;
+    // So GraphicsStateGuardian can pick us up, who relies on the interface
+    // class.  Aargh.
+    ShaderManagerBase::set_global_shader_manager(_global_ptr);
+  }
+  return _global_ptr;
+}
+
+/**
  * Returns the shader instance by name, or nullptr if no shader exists with
  * that name.
  */

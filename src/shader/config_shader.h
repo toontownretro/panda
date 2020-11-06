@@ -18,19 +18,16 @@
 #include "dconfig.h"
 #include "notifyCategoryProxy.h"
 #include "configVariableList.h"
-
-#ifdef BUILDING_PANDA_SHADER
-#define EXPCL_PANDA_SHADER EXPORT_CLASS
-#define EXPTP_PANDA_SHADER EXPORT_TEMPL
-#else
-#define EXPCL_PANDA_SHADER IMPORT_CLASS
-#define EXPTP_PANDA_SHADER IMPORT_TEMPL
-#endif // BUILDING_PANDA_SHADER
+#include "configVariableEnum.h"
+#include "shaderEnums.h"
 
 ConfigureDecl(config_shader, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
 NotifyCategoryDecl(shadermgr, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
 
 extern EXPCL_PANDA_SHADER ConfigVariableList &get_shader_libraries();
+
+extern EXPCL_PANDA_SHADER ConfigVariableEnum<ShaderEnums::ShaderQuality>
+shader_quality;
 
 extern EXPCL_PANDA_SHADER void init_libshader();
 

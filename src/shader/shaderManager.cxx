@@ -37,17 +37,6 @@ typedef void (*ShaderLibInit)();
 ShaderManager *ShaderManager::_global_ptr = nullptr;
 
 /**
- * Returns the global ShaderManager object.
- */
-ShaderManager *ShaderManager::
-get_global_ptr() {
-  if (!_global_ptr) {
-    _global_ptr = new ShaderManager;
-  }
-  return _global_ptr;
-}
-
-/**
  * Loads the shader plugin libraries specified in PRC file.
  */
 void ShaderManager::

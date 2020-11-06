@@ -37,6 +37,12 @@ get_shader_libraries() {
   return *load_shader_library;
 }
 
+ConfigVariableEnum<ShaderEnums::ShaderQuality> shader_quality
+("shader-quality", "high",
+ PRC_DESC("Sets the default quality level for all shaders.  This may not have "
+          "any meaning to certain shaders.  It is up to the shader "
+          "implementation to respect the chosen quality level."));
+
 void
 init_libshader() {
   static bool initialized = false;
