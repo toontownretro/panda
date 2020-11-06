@@ -70,7 +70,7 @@ LightLensNode(const std::string &name, Lens *lens) :
   state = state->set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off), 100);
   state = state->set_attrib(CullBinAttrib::make_default(), 100);
   // Backface culling helps eliminate artifacts.
-  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none), 100);
+  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_counter_clockwise), 100);
   state = state->set_attrib(FogAttrib::make_off(), 100);
   state = state->set_attrib(MaterialAttrib::make_off(), 100);
   // Render it using the depth-only shader.
@@ -131,6 +131,18 @@ set_shadow_caster(bool caster) {
     setup_shadow_map();
     set_light_state();
   }
+}
+
+/**
+ * Sets the flag indicating whether this light should cast shadows or not.
+ * The xsize and ysize parameters specify the size of the shadow buffer that
+ * will be set up.  This flavor uses the sort value already set on the light,
+ * which will be the default value specified by the shadow-buffer-sort PRC
+ * variable if you have not already set a new sort value on the light.
+ */
+void LightLensNode::
+set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize) {
+  set_shadow_caster(caster, buffer_xsize, buffer_ysize, _sb_sort);
 }
 
 /**

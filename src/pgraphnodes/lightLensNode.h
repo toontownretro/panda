@@ -36,7 +36,8 @@ PUBLISHED:
 
   INLINE bool is_shadow_caster() const;
   void set_shadow_caster(bool caster);
-  void set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize, int sort = -10);
+  void set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize);
+  void set_shadow_caster(bool caster, int buffer_xsize, int buffer_ysize, int sort);
 
   INLINE int get_shadow_buffer_sort() const;
 
