@@ -249,7 +249,7 @@ ShaderInput(CPT_InternalName name, const PTA_LVecBase2d &ptr, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase4d &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector(LCAST(PN_stdfloat, vec))
@@ -262,7 +262,7 @@ ShaderInput(CPT_InternalName name, const LVecBase4d &vec, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase3d &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector(vec.get_x(), vec.get_y(), vec.get_z(), 0.0)
@@ -275,7 +275,7 @@ ShaderInput(CPT_InternalName name, const LVecBase3d &vec, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase2d &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector(vec.get_x(), vec.get_y(), 0.0, 0.0)
@@ -384,7 +384,7 @@ ShaderInput(CPT_InternalName name, const PTA_LVecBase2i &ptr, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase4i &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector((int)vec.get_x(), (int)vec.get_y(), (int)vec.get_z(), (int)vec.get_w())
@@ -397,7 +397,7 @@ ShaderInput(CPT_InternalName name, const LVecBase4i &vec, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase3i &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector((int)vec.get_x(), (int)vec.get_y(), (int)vec.get_z(), 0.0)
@@ -410,7 +410,7 @@ ShaderInput(CPT_InternalName name, const LVecBase3i &vec, int priority) :
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LVecBase2i &vec, int priority) :
   _name(std::move(name)),
-  _type(M_numeric),
+  _type(M_vector),
   _priority(priority),
   _stored_ptr(vec),
   _stored_vector((int)vec.get_x(), (int)vec.get_y(), 0.0, 0.0)
