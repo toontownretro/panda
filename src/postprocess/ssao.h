@@ -29,6 +29,9 @@ PUBLISHED:
 	SSAO_Effect( PostProcess *pp, Mode mode );
 
 	virtual Texture *get_final_texture();
+
+private:
+	PT(Texture) _final_texture;
 };
 
 #endif // SSAO_H
