@@ -137,6 +137,11 @@ add_csm(const RenderState *state) {
 
     CascadeLight *clight = DCAST(CascadeLight, np.node());
 
+    if (!clight->is_shadow_caster()) {
+      // Not casting shadows, though.
+      continue;
+    }
+
     PN_stdfloat texel_size = 1.0 / clight->get_shadow_buffer_size()[0];
 
     set_vertex_shader_define("HAS_SHADOW_SUNLIGHT");

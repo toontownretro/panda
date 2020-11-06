@@ -11,6 +11,7 @@
     csmDepthShader.h csmDepthShader.I \
     defaultShader.h defaultShader.I \
     shaderBase.h shaderBase.I shaderBase.T \
+    shaderEnums.h \
     shaderManager.h shaderManager.I \
     shaderSource.h shaderSource.I \
     shaderStage.h shaderStage.I shaderStage.T \
@@ -24,6 +25,7 @@
     csmDepthShader.cxx \
     defaultShader.cxx \
     shaderBase.cxx \
+    shaderEnums.cxx \
     shaderManager.cxx \
     shaderSource.cxx \
     shaderStage.cxx \
