@@ -274,7 +274,7 @@ get_languages() const {
  */
 PT(ShaderModule) ShaderCompilerGlslang::
 compile_now(ShaderModule::Stage stage, std::istream &in,
-            const std::string &filename, BamCacheRecord *record) const {
+            const Filename &fullpath, BamCacheRecord *record) const {
 
   vector_uchar code;
   if (!VirtualFile::simple_read_file(&in, code)) {
@@ -290,8 +290,22 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
   }
   else {
     pset<Filename> once_files;
-    if (!preprocess_glsl(code, glsl_version, filename, once_files, record)) {
+    if (!preprocess_glsl(code, glsl_version, fullpath, once_files, record)) {
       return nullptr;
+    }
+  }
+
+  // Create a name that's easier to read in error messages.
+  std::string filename;
+  if (fullpath.empty()) {
+    filename = "created-shader";
+  } else {
+    Filename fullpath_rel = fullpath;
+    if (fullpath_rel.make_relative_to(ExecutionEnvironment::get_environment_variable("MAIN_DIR")) &&
+        fullpath_rel.length() < fullpath.length()) {
+      filename = fullpath_rel;
+    } else {
+      filename = fullpath;
     }
   }
 
@@ -299,19 +313,19 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
     if (glsl_version != 100 && glsl_version != 110 && glsl_version != 120 &&
         glsl_version != 130 && glsl_version != 140 && glsl_version != 300) {
       shader_cat.error()
-        << "Invalid GLSL version " << glsl_version << ".\n";
+        << filename << " uses invalid GLSL version " << glsl_version << ".\n";
       return nullptr;
     }
 
     shader_cat.warning()
-      << "Support for GLSL " << glsl_version << " is deprecated.  Some "
-         "features may not work.  Minimum supported version is GLSL 330.\n";
+      << filename << " uses deprecated GLSL version " << glsl_version
+      << ".  Some features may not work.  Minimum supported version is 330.\n";
 
     // Fall back to GlslPreProc handler.  Cleaner way to do this?
     static ShaderCompilerGlslPreProc preprocessor;
 
     std::istringstream stream(std::string((const char *)&code[0], code.size()));
-    return preprocessor.compile_now(stage, stream, filename, record);
+    return preprocessor.compile_now(stage, stream, fullpath, record);
   }
 
   static bool is_initialized = false;
@@ -351,7 +365,7 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 
   const char *string = (const char *)code.data();
   const int length = (int)code.size();
-  const char *fname = filename.c_str();
+  const char *fname = fullpath.c_str();
   shader.setStringsWithLengthsAndNames(&string, &length, &fname, 1);
   shader.setEntryPoint("main");
 
@@ -448,6 +462,10 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 
   // Special validation for features in GLSL 330 that are not in GLSL 150.
   if (glsl_version == 150 && !postprocess_glsl150(stream)) {
+    return nullptr;
+  }
+
+  if (is_cg && !postprocess_cg(stream)) {
     return nullptr;
   }
 
@@ -807,6 +825,32 @@ postprocess_glsl150(ShaderModuleSpirV::InstructionStream &stream) {
         << "floatBitsToInt, floatBitsToUint, intBitsToFloat, uintBitsToFloat"
            " require #version 330 or #extension GL_ARB_shader_bit_encoding.\n";
       return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Does any postprocessing needed for Cg.
+ */
+bool ShaderCompilerGlslang::
+postprocess_cg(ShaderModuleSpirV::InstructionStream &stream) {
+  pset<uint32_t> glsl_imports;
+
+  for (ShaderModuleSpirV::Instruction op : stream) {
+    if (op.opcode == spv::OpExtInstImport) {
+      if (strcmp((const char*)&op.args[1], "GLSL.std.450") == 0) {
+        glsl_imports.insert(op.args[0]);
+      }
+    }
+    else if (op.opcode == spv::OpExtInst) {
+      // glslang maps round() to roundEven(), which is correct for SM 4.0+ but
+      // not supported on pre-DX10 hardware, and Cg made no guarantee of
+      // round-to-even behavior to begin with, so we switch it back to round().
+      if (glsl_imports.count(op.args[2]) && op.args[3] == 2) {
+        op.args[3] = 1;
+      }
     }
   }
 

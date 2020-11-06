@@ -30,7 +30,7 @@ public:
   virtual std::string get_name() const override;
   virtual ShaderLanguages get_languages() const override;
   virtual PT(ShaderModule) compile_now(Stage stage, std::istream &in,
-                                       const std::string &filename = "created-shader",
+                                       const Filename &fullpath,
                                        BamCacheRecord *record = nullptr) const override;
 
 private:
@@ -40,6 +40,7 @@ private:
                               pset<Filename> &once_files,
                               BamCacheRecord *record = nullptr);
   static bool postprocess_glsl150(ShaderModuleSpirV::InstructionStream &stream);
+  static bool postprocess_cg(ShaderModuleSpirV::InstructionStream &stream);
 
 public:
   static TypeHandle get_class_type() {
