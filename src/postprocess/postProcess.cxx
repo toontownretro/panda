@@ -50,12 +50,14 @@ void PostProcess::startup( GraphicsOutput *output )
 
 /**
  * Adds this camera to the postprocessing pipeline.
- * The scene rendered by this camera will be postprocessed.
+ * The scene rendered by the indicated lens of the camera will be
+ * postprocessed.
  */
-void PostProcess::add_camera( const NodePath &camera, int sort )
+void PostProcess::add_camera( const NodePath &camera, int lens, int sort )
 {
 	PT( camerainfo_t ) info = new camerainfo_t;
 	info->camera = camera;
+	info->lens = lens;
 	info->original_state = DCAST( Camera, camera.node() )->get_initial_state();
 	info->state = info->original_state;
 
@@ -63,7 +65,7 @@ void PostProcess::add_camera( const NodePath &camera, int sort )
 	for ( int i = 0; i < _output->get_num_display_regions(); i++ )
 	{
 		DisplayRegion *r = _output->get_display_region( i );
-		if ( r->get_camera() == camera )
+		if ( r->get_camera() == camera && r->get_lens_index() == lens )
 		{
 			region = r;
 			break;
@@ -89,12 +91,13 @@ void PostProcess::add_camera( const NodePath &camera, int sort )
  * Removes a camera that was once being used for postprocessing.
  * You should probably call this before removing your camera from the scene graph.
  */
-void PostProcess::remove_camera( const NodePath &camera )
+void PostProcess::remove_camera( const NodePath &camera, int lens )
 {
 	PT( camerainfo_t ) info = nullptr;
 	for ( size_t i = 0; i < _camera_info.size(); i++ )
 	{
-		if ( _camera_info[i]->camera == camera )
+		if ( _camera_info[i]->camera == camera &&
+				 _camera_info[i]->lens == lens )
 		{
 			info = _camera_info[i];
 			break;

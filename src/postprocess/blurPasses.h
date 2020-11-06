@@ -25,6 +25,7 @@ public:
 		_blur_input( blur_input )
 	{
 		set_div_size( true, 4 );
+		_fbprops.set_alpha_bits(0);
 	}
 
 	virtual void setup()
@@ -86,6 +87,7 @@ public:
 		_scale_factor( scale_factor )
 	{
 		set_div_size( true, 4 );
+		_fbprops.set_alpha_bits(0);
 	}
 
 	virtual void setup()

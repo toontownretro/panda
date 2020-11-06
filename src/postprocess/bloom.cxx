@@ -35,6 +35,7 @@ public:
 	{
 		// Downsample by 4
 		set_div_size( true, 4 );
+		_fbprops.set_alpha_bits(0);
 	}
 
 	virtual void setup()

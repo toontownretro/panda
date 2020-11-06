@@ -30,6 +30,9 @@ PUBLISHED:
 	virtual bool setup_buffer();
 	virtual void add_aux_output( int n );
 
+	LColor get_aux_clear_value(int n) const;
+	bool needs_aux_clear(int n) const;
+
 	void setup_scene_camera( int i, int sort = 0 );
 
 	void set_camera_state( const RenderState *state );

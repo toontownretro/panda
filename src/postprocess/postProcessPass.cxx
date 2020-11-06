@@ -18,6 +18,9 @@
 #include "cardMaker.h"
 #include "orthographicLens.h"
 #include "omniBoundingVolume.h"
+#include "renderState.h"
+#include "depthWriteAttrib.h"
+#include "depthTestAttrib.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // PostProcessPass
@@ -31,16 +34,18 @@ FrameBufferProperties PostProcessPass::get_default_fbprops()
 	{
 		_default_fbprops = new FrameBufferProperties;
 		_default_fbprops->clear();
-		_default_fbprops->set_srgb_color( true );
-		_default_fbprops->set_back_buffers( 0 );
-		_default_fbprops->set_multisamples( 0 );
-		_default_fbprops->set_accum_bits( 0 );
-		_default_fbprops->set_aux_float( 0 );
-		_default_fbprops->set_aux_rgba( 0 );
-		_default_fbprops->set_aux_hrgba( 0 );
-		_default_fbprops->set_coverage_samples( 0 );
-		_default_fbprops->set_rgb_color( true );
-		_default_fbprops->set_rgba_bits( 8, 8, 8, 0 );
+		_default_fbprops->set_srgb_color(false);
+		_default_fbprops->set_float_depth(false);
+		_default_fbprops->set_depth_bits(0);
+		_default_fbprops->set_back_buffers(0);
+		_default_fbprops->set_multisamples(0);
+		_default_fbprops->set_accum_bits(0);
+		_default_fbprops->set_aux_float(0);
+		_default_fbprops->set_aux_rgba(0);
+		_default_fbprops->set_aux_hrgba(0);
+		_default_fbprops->set_coverage_samples(0);
+		_default_fbprops->set_rgb_color(true);
+		_default_fbprops->set_float_color(true);
 	}
 
 	return *_default_fbprops;
@@ -74,6 +79,11 @@ LVector2i PostProcessPass::get_back_buffer_dimensions() const
 	return _pp->get_output()->get_size();
 }
 
+Lens *PostProcessPass::
+get_scene_lens() const {
+	return DCAST(Camera, _pp->get_camera(0).node())->get_lens();
+}
+
 LVector2i PostProcessPass::get_corrected_size( const LVector2i &size )
 {
 	if ( _force_size )
@@ -98,7 +108,7 @@ void PostProcessPass::add_color_output()
 	nassertv( _buffer != nullptr );
 	if ( !_color_texture )
 	{
-		_color_texture = make_texture( Texture::F_srgb, "color" );
+		_color_texture = make_texture( Texture::F_rgb16, "color" );
 		_buffer->add_render_texture( _color_texture, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_color );
 	}
 }
@@ -129,7 +139,7 @@ void PostProcessPass::add_aux_output( int n )
 PT( Texture ) PostProcessPass::make_texture( Texture::Format format, const std::string &suffix )
 {
 	PT( Texture ) tex = new Texture( get_name() + "-" + suffix );
-	tex->set_format( format );
+	//tex->set_format( format );
 	tex->set_wrap_u( SamplerState::WM_clamp );
 	tex->set_wrap_v( SamplerState::WM_clamp );
 	tex->set_anisotropic_degree( 1 );
@@ -154,13 +164,12 @@ bool PostProcessPass::setup_buffer()
 	}
 
 	PT( GraphicsOutput ) output = window->get_engine()->make_output(
-		window->get_pipe(), get_name(), -1,
+		window->get_pipe(), get_name(), _pp->next_sort(),
 		fbprops, winprops, flags, window->get_gsg(),
 		window );
 	nassertr( output != nullptr, false );
 
 	_buffer = DCAST( GraphicsBuffer, output );
-	_buffer->set_sort( _pp->next_sort() );
 	_buffer->disable_clears();
 
 	return true;
@@ -185,6 +194,12 @@ void PostProcessPass::setup_camera()
 	PT( Camera ) cam = new Camera( get_name() + "-camera" );
 	cam->set_bounds( new OmniBoundingVolume );
 	cam->set_lens( lens );
+
+	// Disable z-testing and z-writing, we only render a single 2D quad.
+	CPT(RenderState) state = RenderState::make(
+		DepthTestAttrib::make(DepthTestAttrib::M_none),
+		DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+	cam->set_initial_state(state);
 
 	_camera = cam;
 	_camera_np = _quad_np.attach_new_node( cam );

@@ -25,7 +25,6 @@
     csmDepthShader.cxx \
     defaultShader.cxx \
     shaderBase.cxx \
-    shaderEnums.cxx \
     shaderManager.cxx \
     shaderSource.cxx \
     shaderStage.cxx \

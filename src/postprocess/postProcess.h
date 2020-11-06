@@ -56,9 +56,11 @@ public:
 			original_state = nullptr;
 			state = nullptr;
 			new_region = nullptr;
+			lens = 0;
 		}
 
 		NodePath camera;
+		int lens;
 		CPT( RenderState ) original_state;
 		CPT( RenderState ) state;
 		ClearInfoArray region_clears;
@@ -80,8 +82,8 @@ PUBLISHED:
 
 	void startup( GraphicsOutput *output );
 
-	void add_camera( const NodePath &camera, int sort = 0 );
-	void remove_camera( const NodePath &camera );
+	void add_camera( const NodePath &camera, int lens, int sort = 0 );
+	void remove_camera( const NodePath &camera, int lens = -1 );
 
 	INLINE void add_effect( PostProcessEffect *effect )
 	{
@@ -122,6 +124,11 @@ PUBLISHED:
 	INLINE NodePath get_camera( int n ) const
 	{
 		return _camera_info[n]->camera;
+	}
+
+	INLINE int get_camera_lens(int n) const
+	{
+		return _camera_info[n]->lens;
 	}
 
 	INLINE int next_sort()

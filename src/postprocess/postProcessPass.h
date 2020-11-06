@@ -47,6 +47,7 @@ PUBLISHED:
 	}
 
 	LVector2i get_back_buffer_dimensions() const;
+	Lens *get_scene_lens() const;
 
 	INLINE NodePath get_camera() const
 	{
