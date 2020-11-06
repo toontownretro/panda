@@ -52,19 +52,6 @@ PUBLISHED:
 
 	virtual void update();
 
-	INLINE void set_exposure_output( PTA_float output )
-	{
-		_exposure_output = output;
-	}
-
-	/**
-	 * Returns the calculated exposure adjustment.
-	 */
-	INLINE float get_exposure() const
-	{
-		return _exposure;
-	}
-
 public:
 	void draw( CallbackData *data );
 
@@ -80,7 +67,6 @@ private:
 
 	// Calculated exposure level based on histogram
 	float _exposure;
-	PTA_float _exposure_output;
 
 	int _current_bucket;
 	hdrbucket_t _buckets[HDR_NUM_BUCKETS];

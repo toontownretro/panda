@@ -28,16 +28,30 @@
 #include "graphicsStateGuardian.h"
 #include "geomDrawCallbackData.h"
 
-static ConfigVariableDouble hdr_percent_bright_pixels( "hdr-percent-bright-pixels", 2.0 );
-static ConfigVariableDouble hdr_min_avg_lum( "hdr-min-avg-lum", 3.0 );
-static ConfigVariableDouble hdr_percent_target( "hdr-percent-target", 60.0 );
-static ConfigVariableDouble hdr_tonemap_scale( "hdr-tonemap-scale", 1.0 );
-static ConfigVariableDouble hdr_exposure_min( "hdr-exposure-min", 0.5 );
-static ConfigVariableDouble hdr_exposure_max( "hdr-exposure-max", 2.0 );
-static ConfigVariableDouble hdr_adaption_rate_dark( "hdr-adaption-rate-dark", 0.6 );
-static ConfigVariableDouble hdr_adaption_rate_bright( "hdr-adaption-rate-bright", 0.6 );
+static ConfigVariableDouble hdr_percent_bright_pixels
+("hdr-percent-bright-pixels", 2.0);
+static ConfigVariableDouble hdr_min_avg_lum
+("hdr-min-avg-lum", 3.0);
+static ConfigVariableDouble hdr_percent_target
+("hdr-percent-target", 60.0);
+static ConfigVariableDouble hdr_tonemap_scale
+("hdr-tonemap-scale", 1.0);
+static ConfigVariableDouble hdr_exposure_min
+("hdr-exposure-min", 0.5);
+static ConfigVariableDouble hdr_exposure_max
+("hdr-exposure-max", 2.0);
+static ConfigVariableDouble hdr_manual_tonemap_rate
+("hdr-manual-tonemap-rate", 1.0);
+static ConfigVariableDouble hdr_accelerate_adjust_exposure_down
+("hdr-accelerate-adjust-exposure-down", 3.0);
+ConfigVariableBool hdr_auto_exposure
+("hdr-auto-exposure", true);
 
-ConfigVariableBool hdr_auto_exposure( "hdr-auto-exposure", true );
+static constexpr int moving_average_size = 10;
+static float moving_average_tone_map_scale[moving_average_size] = {
+	1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+};
+static int in_average = 0;
 
 class HDRCallbackObject : public CallbackObject
 {
@@ -65,13 +79,17 @@ HDRPass::HDRPass( PostProcess *pp ) :
 	_hdr_quad_geom( nullptr ),
 	_hdr_geom_state( nullptr ),
 	_current_bucket( 0 ),
-	_exposure( 0.0f ),
 	_luminance_min_max( PTA_stdfloat::empty_array( 2 ) ),
-	_exposure_output( PTA_float::empty_array( 1 ) )
+	_exposure(1.0f)
 {
 	// Look at a shrunk-down version of the framebuffer to reduce overhead
 	// of the luminance_compare shader, which does a branch and discard.
 	set_forced_size( true, ( 128, 128 ) );
+
+	// We aren't actually outputting anything.
+	_fbprops.set_rgb_color(false);
+	_fbprops.set_float_color(false);
+	_fbprops.set_rgba_bits(0, 0, 0, 0);
 
 	_luminance_min_max[0] = 0.0f;
 	_luminance_min_max[1] = 0.0f;
@@ -161,14 +179,14 @@ void HDRPass::update()
 {
 	PostProcessPass::update();
 
-	if ( !hdr_auto_exposure )
+	if ( !hdr_auto_exposure ) {
 		return;
+	}
 
 	ClockObject *global_clock = ClockObject::get_global_clock();
 
 	int total_pixels = 0;
-	for ( int i = 0; i < HDR_NUM_BUCKETS; i++ )
-	{
+	for ( int i = 0; i < HDR_NUM_BUCKETS; i++ ) {
 		total_pixels += _buckets[i].pixels;
 	}
 
@@ -176,8 +194,7 @@ void HDRPass::update()
 		find_location_of_percent_bright_pixels(
 			hdr_percent_bright_pixels, hdr_percent_target, total_pixels );
 
-	if ( percent_location_of_target < 0.0f )
-	{
+	if ( percent_location_of_target < 0.0f ) {
 		// This is the return error code.
 		// Pretend we're at the target.
 		percent_location_of_target = hdr_percent_target / 100.0f;
@@ -192,36 +209,73 @@ void HDRPass::update()
 	// Compute secondary target scalar
 	float avg_lum_location = find_location_of_percent_bright_pixels(
 		50.0f, -1.0f, total_pixels );
-	if ( avg_lum_location > 0.0f )
-	{
+	if ( avg_lum_location > 0.0f ) {
 		float target_scalar_2 = ( hdr_min_avg_lum / 100.0f ) / avg_lum_location;
 
 		// Only override if it's trying to brighten the image more than the primary algorithm
-		if ( target_scalar_2 > target_scalar )
-		{
+		if ( target_scalar_2 > target_scalar ) {
 			target_scalar = target_scalar_2;
 		}
 	}
 
 	target_scalar = std::max( 0.001f, target_scalar );
 
-	float exposure = target_scalar * (float)hdr_tonemap_scale;
-	exposure = clamp<float>( exposure, hdr_exposure_min, hdr_exposure_max );
-
-	float adaption_rate = hdr_adaption_rate_bright;
-	if ( _exposure < exposure )
-	{
-		adaption_rate = hdr_adaption_rate_dark;
+	if (in_average < moving_average_size) {
+		moving_average_tone_map_scale[in_average++] = target_scalar;
+	} else {
+		// Scroll, losing oldest
+		for (int i = 0; i < moving_average_size - 1; i++) {
+			moving_average_tone_map_scale[i] = moving_average_tone_map_scale[i + 1];
+		}
+		moving_average_tone_map_scale[moving_average_size - 1] = target_scalar;
 	}
 
-	float adjustment = clamp( (float)global_clock->get_dt() * adaption_rate, 0.0f, 1.0f );
-	float new_exposure = flerp( _exposure, exposure, adjustment );
-	new_exposure = std::max( new_exposure, 0.0f );
+	// Now, use the average of the last tonemap calculations as our goal scale.
+	float goal_scale = 0.0f;
+	if (in_average == moving_average_size) {
+		float sum_weights = 0.0f;
+		int sample_point = moving_average_size / 2;
 
-	_exposure = new_exposure;
-	_exposure_output[0] = _exposure;
+		for (int i = 0; i < moving_average_size; i++) {
+			float weight = std::abs(i - sample_point) / sample_point;
+			sum_weights += weight;
+			goal_scale += weight * moving_average_tone_map_scale[i];
+		}
 
-	//std::cout << "HDR buffer size: " << _buffer->get_x_size() << "x" << _buffer->get_y_size() << std::endl;
+		goal_scale /= sum_weights;
+		goal_scale = std::min((float)hdr_exposure_max,
+			std::max((float)hdr_exposure_min, goal_scale));
+	}
+
+	float elapsed_time = (float)global_clock->get_dt();
+	float rate = hdr_manual_tonemap_rate.get_value() * 2;
+
+	if (rate == 0.0f) {
+		// Zero indicates intantaneous tonemap scaling
+		_exposure = goal_scale;
+	} else {
+		if (goal_scale < _exposure) {
+			float acc_exposure_adjust = hdr_accelerate_adjust_exposure_down.get_value();
+			// Adjust at up to 4x rate when over-exposed.
+			rate = std::min(acc_exposure_adjust * rate,
+				flerp(rate, acc_exposure_adjust * rate, 0.0f, 1.5f,
+					_exposure - goal_scale));
+		}
+
+		float rate_x_time = rate * elapsed_time;
+		// Limit the rate based on the number of bins to help reduce the exposure
+		// scalar "riding the wave" of the histogram re-building.
+		rate_x_time = std::min(rate_x_time, (1.0f / HDR_NUM_BUCKETS) * 0.25f);
+
+		float alpha = std::max(0.0f, std::min(1.0f, rate_x_time));
+
+		_exposure = (goal_scale * alpha) + (_exposure * (1.0f - alpha));
+	}
+
+	// Apply the exposure scale to the lens that renders our final screen quad.
+	NodePath camera_np = _pp->get_scene_pass()->get_camera();
+	Camera *camera = DCAST(Camera, camera_np.node());
+	camera->get_lens()->set_exposure_scale(_exposure);
 }
 
 void HDRPass::setup_quad()
@@ -263,8 +317,9 @@ void HDRPass::draw( CallbackData *data )
 	CullableObject *obj = geom_cbdata->get_object();
 
 	_current_bucket++;
-	if ( _current_bucket >= HDR_NUM_BUCKETS )
+	if ( _current_bucket >= HDR_NUM_BUCKETS ) {
 		_current_bucket = 0;
+	}
 	hdrbucket_t *bucket = &_buckets[_current_bucket];
 
 	if ( bucket->ctx )
@@ -286,7 +341,13 @@ void HDRPass::draw( CallbackData *data )
 
 	// Adjust the bucket ranges for the shader.
 	_luminance_min_max[0] = bucket->luminance_min;
-	_luminance_min_max[1] = bucket->luminance_max;
+	if (_current_bucket == (HDR_NUM_BUCKETS - 1)) {
+		// If we're in the highest luminance bucket, give the shader a higher max
+		// luminance so we can catch pixels that are brighter than 1.
+		_luminance_min_max[1] = 10000.0f;
+	} else {
+		_luminance_min_max[1] = bucket->luminance_max;
+	}
 
 	gsg->set_state_and_transform( _hdr_geom_state, obj->_internal_transform );
 
