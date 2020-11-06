@@ -45,6 +45,21 @@ make(int outputs) {
 }
 
 /**
+ * Constructs an AuxBitplaneAttrib that "disables" the indicated auxiliary
+ * bitplanes.  It doesn't actually turn off writing to that bitplane if it
+ * composes with another AuxBitplaneAttrib that turns it on, it just instructs
+ * the shader to write "off" values into the bitplane.  For instance, disabling
+ * the bloom bitplane instructs the shader to write blackness into the bloom
+ * bitplane, so the geometry is not bloomed.
+ */
+CPT(RenderAttrib) AuxBitplaneAttrib::
+make_disable(int outputs) {
+  AuxBitplaneAttrib *attrib = new AuxBitplaneAttrib(0);
+  attrib->_disable_outputs = outputs;
+  return return_new(attrib);
+}
+
+/**
  * Returns a RenderAttrib that corresponds to whatever the standard default
  * properties for render attributes of this type ought to be.
  */
@@ -77,10 +92,14 @@ int AuxBitplaneAttrib::
 compare_to_impl(const RenderAttrib *other) const {
   const AuxBitplaneAttrib *ta = (const AuxBitplaneAttrib *)other;
 
-  int compare_result = _outputs - ta->_outputs;
-  if (compare_result != 0) {
-    return compare_result;
+  if (_outputs != ta->_outputs) {
+    return (_outputs < ta->_outputs) ? -1 : 1;
   }
+
+  if (_disable_outputs != ta->_disable_outputs) {
+    return (_disable_outputs < ta->_disable_outputs) ? -1 : 1;
+  }
+
   return 0;
 }
 
@@ -94,7 +113,31 @@ size_t AuxBitplaneAttrib::
 get_hash_impl() const {
   size_t hash = 0;
   hash = int_hash::add_hash(hash, _outputs);
+  hash = int_hash::add_hash(hash, _disable_outputs);
   return hash;
+}
+
+/**
+ * Intended to be overridden by derived RenderAttrib types to specify how two
+ * consecutive RenderAttrib objects of the same type interact.
+ *
+ * This should return the result of applying the other RenderAttrib to a node
+ * in the scene graph below this RenderAttrib, which was already applied.  In
+ * most cases, the result is the same as the other RenderAttrib (that is, a
+ * subsequent RenderAttrib completely replaces the preceding one).  On the
+ * other hand, some kinds of RenderAttrib (for instance, ColorTransformAttrib)
+ * might combine in meaningful ways.
+ */
+CPT(RenderAttrib) AuxBitplaneAttrib::
+compose_impl(const RenderAttrib *other) const {
+  const AuxBitplaneAttrib *ta = (const AuxBitplaneAttrib *)other;
+
+  int outputs = _outputs | ta->_outputs;
+  int disable_outputs = _disable_outputs | ta->_disable_outputs;
+
+  AuxBitplaneAttrib *attrib = new AuxBitplaneAttrib(outputs);
+  attrib->_disable_outputs = disable_outputs;
+  return return_new(attrib);
 }
 
 /**

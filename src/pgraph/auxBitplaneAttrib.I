@@ -16,7 +16,8 @@
  */
 INLINE AuxBitplaneAttrib::
 AuxBitplaneAttrib(int outputs) :
-  _outputs(outputs)
+  _outputs(outputs),
+  _disable_outputs(0)
 {
 }
 
@@ -26,4 +27,12 @@ AuxBitplaneAttrib(int outputs) :
 INLINE int AuxBitplaneAttrib::
 get_outputs() const {
   return _outputs;
+}
+
+/**
+ * Returns the disabled AuxBitplaneAttrib output bits.
+ */
+INLINE int AuxBitplaneAttrib::
+get_disable_outputs() const {
+  return _disable_outputs;
 }

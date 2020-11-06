@@ -59,9 +59,11 @@ PUBLISHED:
   };
   static CPT(RenderAttrib) make();
   static CPT(RenderAttrib) make(int outputs);
+  static CPT(RenderAttrib) make_disable(int outputs);
   static CPT(RenderAttrib) make_default();
 
   INLINE int get_outputs() const;
+  INLINE int get_disable_outputs() const;
 
 PUBLISHED:
   MAKE_PROPERTY(outputs, get_outputs);
@@ -72,9 +74,11 @@ public:
 protected:
   virtual int compare_to_impl(const RenderAttrib *other) const;
   virtual size_t get_hash_impl() const;
+  virtual CPT(RenderAttrib) compose_impl(const RenderAttrib *other) const;
 
 private:
   int _outputs;
+  int _disable_outputs;
 
   static CPT(RenderAttrib) _default;
 
