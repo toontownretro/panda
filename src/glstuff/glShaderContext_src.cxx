@@ -155,10 +155,10 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
 
     // Temporary hacks until array inputs are integrated into the rest of
     // the shader input system.
-    //_transform_table_index = _shader->_transform_table_index;
-    //_transform_table_size = _shader->_transform_table_size;
-    //_slider_table_index = _shader->_slider_table_index;
-    //_slider_table_size = _shader->_slider_table_size;
+    _transform_table_index = _shader->_transform_table_index;
+    _transform_table_size = _shader->_transform_table_size;
+    _slider_table_index = _shader->_slider_table_index;
+    _slider_table_size = _shader->_slider_table_size;
 
     if (_transform_table_size > 0 && _transform_table_index == -1) {
       _transform_table_index = _glgsg->_glGetUniformLocation(_glsl_program, "p3d_TransformTable");
@@ -1178,7 +1178,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       if (param_type != GL_FLOAT_VEC2) {
         GLCAT.error()
           << "p3d_CascadeNearFar should be uniform vec2[]\n";
-          return;
+        return;
       }
       Shader::ShaderMatSpec bind;
       bind._id = param;
@@ -1205,6 +1205,26 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         _glgsg->_glUniform1i(p, _shader->_tex_spec.size());
         _shader->_tex_spec.push_back(bind);
       }
+      return;
+    }
+    if (noprefix == "ExposureScale") {
+      if (param_type != GL_FLOAT) {
+        GLCAT.error()
+          << "p3d_ExposureScale should be a uniform float\n";
+        return;
+      }
+
+      Shader::ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = Shader::SMF_first;
+      bind._part[0] = Shader::SMO_lens_exposure_scale;
+      bind._arg[0] = nullptr;
+      bind._part[1] = Shader::SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._piece = Shader::SMP_row3x1;
+
+      _shader->cp_add_mat_spec(bind);
+
       return;
     }
     if (noprefix == "TexAlphaOnly") {

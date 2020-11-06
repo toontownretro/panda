@@ -56,7 +56,11 @@ Shader(ShaderLanguage lang) :
   _loaded(false),
   _language(lang),
   _mat_deps(0),
-  _cache_compiled_shader(false)
+  _cache_compiled_shader(false),
+  _transform_table_index(-1),
+  _transform_table_size(0),
+  _slider_table_index(-1),
+  _slider_table_size(0)
 {
 }
 
@@ -338,7 +342,8 @@ cp_dependency(ShaderMatInput inp) {
     dep |= SSD_light | SSD_frame;
   }
   if (inp == SMO_mat_constant_x_attrib ||
-      inp == SMO_vec_constant_x_attrib) {
+      inp == SMO_vec_constant_x_attrib ||
+      inp == SMO_lens_exposure_scale) {
     // Some light attribs (eg. position) need to be transformed to view space.
     dep |= SSD_view_transform;
   }
@@ -353,7 +358,8 @@ cp_dependency(ShaderMatInput inp) {
       (inp == SMO_pixel_size) ||
       (inp == SMO_frame_number) ||
       (inp == SMO_frame_time) ||
-      (inp == SMO_frame_delta)) {
+      (inp == SMO_frame_delta) ||
+      (inp == SMO_lens_exposure_scale)) {
     dep |= SSD_frame;
   }
   if ((inp == SMO_clip_to_view) ||
@@ -999,7 +1005,13 @@ bind_vertex_input(const InternalName *name, const ::ShaderType *type, int locati
 
   //FIXME: other types, matrices
   bind._elements = 1;
-  bind._scalar_type = ScalarType::ST_float;
+
+  const ::ShaderType::Vector *vec_type = type->as_vector();
+  if (vec_type) {
+    bind._scalar_type = vec_type->get_scalar_type();
+  } else {
+    bind._scalar_type = ScalarType::ST_float;
+  }
 
   if (shader_cat.is_debug()) {
     shader_cat.debug()
@@ -1541,6 +1553,82 @@ bind_parameter(const Parameter &param) {
       return true;
     }
 
+    if (pieces[1] == "Fog") {
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+
+      const ::ShaderType::Struct *struct_type = type->as_struct();
+      if (struct_type == nullptr) {
+        return report_parameter_error(name, type, "expected struct");
+      }
+
+      bool success = true;
+      for (size_t i = 0; i < struct_type->get_num_members(); ++i) {
+        const ::ShaderType::Struct::Member &member = struct_type->get_member(i);
+
+        CPT(InternalName) fqname = ((InternalName *)name.p())->append(member.name);
+        bind._id._location = param._location + i;
+        bind._id._name = fqname->get_name();
+        bind._id._type = member.type;
+
+        if (member.name == "color") {
+          if (expect_float_vector(fqname, member.type, 3, 4)) {
+            bind._part[0] = SMO_attr_fogcolor;
+
+            if (member.type->as_vector()->get_num_components() == 3) {
+              bind._piece = SMP_row3x3;
+            } else if (member.type->as_vector()->get_num_components() == 4) {
+              bind._piece = SMP_row3;
+            }
+
+            cp_add_mat_spec(bind);
+            continue;
+          }
+        } else if (member.name == "density") {
+          if (expect_float_vector(fqname, member.type, 1, 1)) {
+            bind._part[0] = SMO_attr_fog;
+            bind._piece = SMP_row3x1;
+
+            cp_add_mat_spec(bind);
+            continue;
+          }
+        } else if (member.name == "start") {
+          if (expect_float_vector(fqname, member.type, 1, 1)) {
+            bind._part[0] = SMO_attr_fog;
+            bind._piece = SMP_cell13;
+
+            cp_add_mat_spec(bind);
+            continue;
+          }
+        } else if (member.name == "end") {
+          if (expect_float_vector(fqname, member.type, 1, 1)) {
+            bind._part[0] = SMO_attr_fog;
+            bind._piece = SMP_cell14;
+
+            cp_add_mat_spec(bind);
+            continue;
+          }
+        } else if (member.name == "scale") {
+          if (expect_float_vector(fqname, member.type, 1, 1)) {
+            bind._part[0] = SMO_attr_fog;
+            bind._piece = SMP_cell15;
+
+            cp_add_mat_spec(bind);
+            continue;
+          }
+        } else {
+          report_parameter_error(fqname, member.type, "unrecognized fog attribute");
+        }
+        success = false;
+      }
+
+      return success;
+    }
+
     if (pieces[1] == "CascadeMVPs") {
       ShaderMatSpec bind;
       bind._id = param;
@@ -1612,6 +1700,69 @@ bind_parameter(const Parameter &param) {
       bind._desired_type = Texture::TT_2d_texture_array;
       bind._stage = 0;
       _tex_spec.push_back(bind);
+      return true;
+    }
+
+    if (pieces[1] == "ExposureScale") {
+      if (!expect_float_vector(name, type, 1, 1)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_lens_exposure_scale;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._piece = SMP_row3x1;
+
+      cp_add_mat_spec(bind);
+
+      return true;
+    }
+
+    if (pieces[1] == "TransformTable") {
+      const ::ShaderType::Array *array_type = type->as_array();
+      if (array_type == nullptr) {
+        return report_parameter_error(name, type, "expected array of mat4");
+      }
+
+      const ::ShaderType::Matrix *mat_type = array_type->get_element_type()->as_matrix();
+      if (mat_type == nullptr) {
+        return report_parameter_error(name, type, "expected array of mat4");
+      }
+
+      if (!expect_float_matrix(name, mat_type, 4, 4)) {
+        return false;
+      }
+
+      _transform_table_index = param._location;
+      _transform_table_size = array_type->get_num_elements();
+
+      // The actual binding is currently handled by GLShaderContext.
+      return true;
+    }
+
+    if (pieces[1] == "SliderTable") {
+      const ::ShaderType::Array *array_type = type->as_array();
+      if (array_type == nullptr) {
+        return report_parameter_error(name, type, "expected array of float");
+      }
+
+      const ::ShaderType::Scalar *scalar_type = array_type->get_element_type()->as_scalar();
+      if (scalar_type == nullptr) {
+        return report_parameter_error(name, type, "expected array of float");
+      }
+
+      if (scalar_type->get_scalar_type() != ::ShaderType::ST_float) {
+        return report_parameter_error(name, type, "expected array of float");
+      }
+
+      _slider_table_index = param._location;
+      _slider_table_size = array_type->get_num_elements();
+
+      // The actual binding is currently handled by GLShaderContext.
       return true;
     }
 

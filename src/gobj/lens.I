@@ -555,6 +555,26 @@ get_custom_film_mat() const {
 }
 
 /**
+ * Sets a linear scale on the exposure of the lens.  The scene rendered by the
+ * lens will be brighter or darker depending on this value.
+ */
+INLINE void Lens::
+set_exposure_scale(PN_stdfloat scale) {
+  CDWriter cdata(_cycler);
+  cdata->_exposure_scale = scale;
+}
+
+/**
+ * Returns the linear exposure scale of the lens.  The scene rendering by the
+ * lens will be brighter or darker depending on this value.
+ */
+INLINE PN_stdfloat Lens::
+get_exposure_scale() const {
+  CDReader cdata(_cycler);
+  return cdata->_exposure_scale;
+}
+
+/**
  * Returns the complete transformation matrix from a 3-d point in space to a
  * point on the film, if such a matrix exists, or the identity matrix if the
  * lens is nonlinear.

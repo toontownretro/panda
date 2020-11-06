@@ -1906,6 +1906,8 @@ CData(const Lens::CData &copy) {
   _fov_seq = copy._fov_seq;
   _film_size_seq = copy._film_size_seq;
 
+  _exposure_scale = copy._exposure_scale;
+
   _geom_data = copy._geom_data;
 }
 
@@ -2046,4 +2048,6 @@ clear() {
   _film_size_seq = 0;
   _focal_length_seq = 1;
   _fov_seq = 2;
+
+  _exposure_scale = 1.0f;
 }

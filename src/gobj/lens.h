@@ -149,6 +149,10 @@ PUBLISHED:
   INLINE const LMatrix4 &get_custom_film_mat() const;
   void clear_custom_film_mat();
 
+  INLINE void set_exposure_scale(PN_stdfloat scale);
+  INLINE PN_stdfloat get_exposure_scale() const;
+  MAKE_PROPERTY(exposure_scale, get_exposure_scale, set_exposure_scale);
+
   // These flags are passed in as the last parameter to control the behavior
   // of set_frustum_from_corners().  See the documentation for that method for
   // an explanation of each flag.
@@ -355,6 +359,8 @@ protected:
     // need to remember the order in which the user has specified these three
     // parameters.  A bit of a mess.
     char _focal_length_seq, _fov_seq, _film_size_seq;
+
+    PN_stdfloat _exposure_scale;
 
     PT(GeomVertexData) _geom_data;
 

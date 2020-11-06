@@ -8469,7 +8469,7 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   fbp.set_alpha_bits(0);
   fbp.set_stencil_bits(0);
   fbp.set_float_color(false);
-  fbp.set_float_depth(true);
+  fbp.set_float_depth(false);
   fbp.set_stereo(false);
   fbp.set_accum_bits(0);
   fbp.set_aux_float(0);
