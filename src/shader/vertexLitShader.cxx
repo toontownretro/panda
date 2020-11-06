@@ -14,6 +14,7 @@
 #include "vertexLitShader.h"
 #include "lightAttrib.h"
 #include "renderState.h"
+#include "postProcessDefines.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -37,8 +38,15 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   bool need_world_vec = true;
   bool need_eye_position = false;
 
+  add_shader_quality();
   add_transparency(state);
   add_alpha_test(state);
+  add_hdr(state);
+
+  int aux = add_aux_attachments(state);
+  if ((aux & AUXTEXTUREBITS_NORMAL) != 0) {
+    need_world_normal = true;
+  }
 
   // Break out the lights by type.
   const LightAttrib *la;

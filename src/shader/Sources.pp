@@ -1,6 +1,6 @@
 #begin lib_target
   #define TARGET shader
-  #define LOCAL_LIBS pgraph putil gsgbase pgraphnodes
+  #define LOCAL_LIBS pgraph putil gsgbase pgraphnodes postprocess
   #define OTHER_LIBS prc \
     dtool:m dtoolutil:c dtoolbase:c
 
@@ -25,6 +25,7 @@
     csmDepthShader.cxx \
     defaultShader.cxx \
     shaderBase.cxx \
+    shaderEnums.cxx \
     shaderManager.cxx \
     shaderSource.cxx \
     shaderStage.cxx \

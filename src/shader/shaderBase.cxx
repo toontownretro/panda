@@ -19,9 +19,13 @@
 #include "alphaTestAttrib.h"
 #include "shaderAttrib.h"
 #include "lightAttrib.h"
+#include "lightRampAttrib.h"
+#include "auxBitplaneAttrib.h"
 #include "cascadeLight.h"
 #include "transparencyAttrib.h"
 #include "geomVertexAnimationSpec.h"
+#include "postProcessDefines.h"
+#include "depthWriteAttrib.h"
 
 TypeHandle ShaderBase::_type_handle;
 
@@ -180,4 +184,77 @@ add_transparency(const RenderState *state) {
   }
 
   return false;
+}
+
+/**
+ * Sets up appropriate #defines to enable HDR and exposure scaling.
+ */
+bool ShaderBase::
+add_hdr(const RenderState *state) {
+  const LightRampAttrib *lra;
+  state->get_attrib_def(lra);
+
+  if (lra->get_mode() >= LightRampAttrib::LRT_hdr0) {
+    set_pixel_shader_define("HDR");
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Sets up appropriate #defines to enable auxiliary color attachment outputs
+ * for postprocessing passes.
+ */
+int ShaderBase::
+add_aux_attachments(const RenderState *state) {
+  const AuxBitplaneAttrib *aba;
+  state->get_attrib_def(aba);
+
+  // It might be a better idea to return the bits instead of whether any are
+  // turned on.
+
+  int outputs = aba->get_outputs();
+
+  if ((outputs & AUXTEXTUREBITS_NORMAL) != 0) {
+    set_pixel_shader_define("NEED_AUX_NORMAL");
+  }
+
+  if ((outputs & AUXTEXTUREBITS_ARME) != 0) {
+    set_pixel_shader_define("NEED_AUX_ARME");
+  }
+
+  if ((outputs & AUXTEXTUREBITS_BLOOM) != 0) {
+    set_pixel_shader_define("NEED_AUX_BLOOM");
+  }
+
+  // Check what we should write "off" values for.
+
+  if ((aba->get_disable_outputs() & AUXTEXTUREBITS_BLOOM) != 0) {
+    set_pixel_shader_define("NO_BLOOM");
+  }
+
+  return outputs;
+}
+
+/**
+ * Sets up a #define of the current shader quality for all indicated stages.
+ */
+void ShaderBase::
+add_shader_quality(ShaderBase::StageFlags stages) {
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
+
+  BitMask32 add_mask(stages);
+  BitMask32 stage_mask(_setup._stage_flags);
+
+  int index = stage_mask.get_lowest_on_bit();
+  while (index >= 0) {
+    if (add_mask.get_bit(index)) {
+      _setup._stages[index].set_define("SHADER_QUALITY",
+        mgr->get_shader_quality());
+    }
+
+    stage_mask.clear_bit(index);
+    index = stage_mask.get_lowest_on_bit();
+  }
 }

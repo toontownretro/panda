@@ -50,6 +50,8 @@ public:
     SF_geometry = 4,
     SF_tess = 8,
     SF_tess_eval = 16,
+
+    SF_all = (SF_vertex | SF_pixel | SF_geometry | SF_tess | SF_tess_eval),
   };
 
   class ShaderSetup {
@@ -107,6 +109,9 @@ protected:
   bool add_alpha_test(const RenderState *state);
   bool add_csm(const RenderState *state);
   bool add_transparency(const RenderState *state);
+  bool add_hdr(const RenderState *state);
+  int add_aux_attachments(const RenderState *state);
+  void add_shader_quality(StageFlags stages = SF_all);
 
   INLINE void set_vertex_shader(const Filename &filename);
   INLINE void set_vertex_shader_source(const std::string &source);
