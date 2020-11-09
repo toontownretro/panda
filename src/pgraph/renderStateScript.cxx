@@ -580,7 +580,12 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
     }
   }
 
-  PT(TextureStage) stage = new TextureStage(stage_name);
+  PT(TextureStage) stage;
+  if (stage_name.empty()) {
+    stage = TextureStage::get_default();
+  } else {
+    stage = new TextureStage(stage_name);
+  }
 
   PT(Texture) tex;
   if (!filename.empty()) {
