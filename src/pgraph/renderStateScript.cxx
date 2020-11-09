@@ -547,16 +547,14 @@ is_true_string(const std::string &value) {
  */
 void RenderStateScript::
 parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
-  CPT(RenderAttrib) texattr = state->get_attrib(TextureAttrib::get_class_slot());
-  if (!texattr) {
-    // We don't already have a TextureAttrib; make one.
-    texattr = TextureAttrib::make();
-  }
-
   Filename filename;
   Filename alpha_filename;
   std::string stage_name;
   std::string tex_name;
+  LPoint3 pos(0, 0, 0);
+  LVector3 hpr(0, 0, 0);
+  LVector3 scale(1, 1, 1);
+  bool got_transform = false;
   bool cubemap = false;
 
   for (size_t i = 0; i < block->get_num_keys(); i++) {
@@ -577,6 +575,18 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
 
     } else if (key == "name") {
       tex_name = value;
+
+    } else if (key == "pos") {
+      pos = CKeyValues::to_3f(value);
+      got_transform = true;
+
+    } else if (key == "hpr") {
+      hpr = CKeyValues::to_3f(value);
+      got_transform = true;
+
+    } else if (key == "scale") {
+      scale = CKeyValues::to_3f(value);
+      got_transform = true;
     }
   }
 
@@ -602,9 +612,22 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
     tex = TexturePool::find_engine_texture(tex_name);
   }
 
+  // Create a new RenderState that contains just our texture-related
+  // attributes.  We will compose the running state with this state, combining
+  // any existing TextureAttribs or TexMatrixAttribs.
+  CPT(RenderState) tex_state = RenderState::make_empty();
+  CPT(RenderAttrib) texattr = TextureAttrib::make();
   texattr = DCAST(TextureAttrib, texattr)->add_on_stage(stage, tex);
+  tex_state = tex_state->set_attrib(texattr);
 
-  state = state->set_attrib(texattr);
+  if (got_transform) {
+    CPT(TransformState) ts = TransformState::make_pos_hpr_scale(pos, hpr, scale);
+    CPT(RenderAttrib) tma = TexMatrixAttrib::make(stage, ts);
+    tex_state = tex_state->set_attrib(tma);
+  }
+
+  // Compose the running state with our texture state.
+  state = state->compose(tex_state);
 }
 
 /**
