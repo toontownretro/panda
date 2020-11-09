@@ -41,6 +41,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // Hardware skinning?
   add_hardware_skinning(anim_spec);
 
+  // How about clip planes?
+  add_clip_planes(state);
+
   // Find the number of cascades
   const LightAttrib *lattr;
   state->get_attrib_def(lattr);

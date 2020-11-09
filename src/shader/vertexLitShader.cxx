@@ -67,7 +67,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   if (add_clip_planes(state)) {
-    need_eye_position = true;
+    need_world_position = true;
   }
 
   if (add_fog(state)) {
