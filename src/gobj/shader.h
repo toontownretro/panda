@@ -188,6 +188,8 @@ public:
 
     // SMO_clipplane_x is world coords, GLSL needs eye coords
     SMO_apiview_clipplane_i,
+    // Also an optional world space clip plane.
+    SMO_clipplane_i,
 
     SMO_model_to_apiview,
     SMO_apiview_to_model,

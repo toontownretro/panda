@@ -348,7 +348,8 @@ cp_dependency(ShaderMatInput inp) {
     dep |= SSD_view_transform;
   }
   if ((inp == SMO_clipplane_x) ||
-      (inp == SMO_apiview_clipplane_i)) {
+      (inp == SMO_apiview_clipplane_i) ||
+      (inp == SMO_clipplane_i)) {
     dep |= SSD_clip_planes;
   }
   if (inp == SMO_texmat_i || inp == SMO_inv_texmat_i || inp == SMO_texscale_i) {
@@ -463,6 +464,7 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
           spec._part[i] == SMO_cascade_light_mvps_i ||
           spec._part[i] == SMO_cascade_light_near_far_i ||
           spec._part[i] == SMO_apiview_clipplane_i ||
+          spec._part[i] == SMO_clipplane_i ||
           spec._part[i] == SMO_tex_is_alpha_i ||
           spec._part[i] == SMO_transform_i ||
           spec._part[i] == SMO_slider_i ||
@@ -1460,6 +1462,29 @@ bind_parameter(const Parameter &param) {
       }
       return true;
     }
+    if (pieces[1] == "WorldClipPlane") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+      if (!expect_float_vector(name, element_type, 4, 4)) {
+        return false;
+      }
+      Shader::ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = Shader::SMP_row3;
+      bind._func = Shader::SMF_first;
+      bind._part[0] = Shader::SMO_clipplane_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = Shader::SMO_identity;
+      bind._arg[1] = nullptr;
+
+      for (uint32_t i = 0; i < num_elements; ++i) {
+        bind._index = i;
+        cp_add_mat_spec(bind);
+        ++bind._id._location;
+      }
+      return true;
+    }
     if (pieces[1] == "TexAlphaOnly") {
       ShaderMatSpec bind;
       bind._id = param;
@@ -1671,6 +1696,14 @@ bind_parameter(const Parameter &param) {
     }
 
     if (pieces[1] == "CascadeMVPs") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+
+      if (!expect_float_matrix(name, element_type, 4, 4)) {
+        return false;
+      }
+
       ShaderMatSpec bind;
       bind._id = param;
       bind._func = SMF_first;
@@ -1680,21 +1713,12 @@ bind_parameter(const Parameter &param) {
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
 
-      const ::ShaderType::Array *array_type = type->as_array();
-      if (array_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of mat4");
-      }
+      std::cout << name->get_name() << " has " << num_elements << " elements?\n";
 
-      const ::ShaderType::Matrix *matrix_type = array_type->get_element_type()->as_matrix();
-      if (matrix_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of mat4");
-      }
-
-      int location = param._location;
-
-      for (bind._index = 0; bind._index < (int)array_type->get_num_elements(); ++bind._index) {
-        bind._id._location = location++;
+      for (uint32_t i = 0; i < num_elements; ++i) {
+        bind._index = i;
         cp_add_mat_spec(bind);
+        ++bind._id._location;
       }
 
       return true;

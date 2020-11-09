@@ -1408,6 +1408,34 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     }
     return;
   }
+  case Shader::SMO_clipplane_i: {
+    const ClipPlaneAttrib *cpa;
+    _target_rs->get_attrib_def(cpa);
+
+    int num_planes = std::min(count, (int)cpa->get_num_on_planes());
+    int i = 0;
+    for (; i < num_planes; ++i) {
+      const NodePath &np = cpa->get_on_plane(i);
+      nassertv(!np.is_empty());
+      const PlaneNode *plane_node;
+      DCAST_INTO_V(plane_node, np.node());
+
+      // Transform plane to world space
+      CPT(TransformState) transform = np.get_net_transform();
+      if (transform->is_identity()) {
+        into[i].set_row(3, plane_node->get_plane());
+      } else {
+        LPlane xformed_plane = plane_node->get_plane() * transform->get_mat();
+        into[i].set_row(3, xformed_plane);
+      }
+    }
+
+    for (; i < count; ++i) {
+      // Fill the remainder with zeroes.
+      into[i] = LMatrix4::zeros_mat();
+    }
+    return;
+  }
   case Shader::SMO_mat_constant_x: {
     _target_shader->get_shader_input_matrix(name, into[0]);
     return;
