@@ -17,7 +17,8 @@
 
 #include "config_keyvalues.h"
 
-#include "referenceCount.h"
+#include "typedWritableReferenceCount.h"
+#include "factoryParams.h"
 #include "pointerTo.h"
 #include "simpleHashMap.h"
 #include "luse.h"
@@ -33,7 +34,7 @@ static const std::string not_found = "not found";
  * Represents a single block from a key-values file.
  * Has a list of string key-value pairs, and can have a list of child blocks.
  */
-class EXPCL_VIF CKeyValues : public ReferenceCount {
+class EXPCL_VIF CKeyValues : public TypedWritableReferenceCount {
 PUBLISHED:
 	class Pair {
 	PUBLISHED:
@@ -112,6 +113,33 @@ private:
 	std::string _name;
 	pvector<Pair> _keyvalues;
 	pvector<PT(CKeyValues)> _children;
+
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+	virtual int complete_pointers(TypedWritable **p_list,
+                                BamReader *manager);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    TypedWritableReferenceCount::init_type();
+    register_type(_type_handle, "CKeyValues",
+                  TypedWritableReferenceCount::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 INLINE CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {

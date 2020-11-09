@@ -374,6 +374,14 @@ ConfigVariableBool allow_live_flatten
           "only has an effect when Panda is not compiled for a release "
           "build."));
 
+ConfigVariableString default_render_state_script_extension
+("default-render-state-script-extension", "",
+ PRC_DESC("This specifies the filename extension (with leading dot) that "
+          "should be assumed if an attempt is made to load a render state "
+          "script filename that has no extension.  Note that the extension "
+          "is analyzed to determine if the script is binary or text. (.mat "
+          "for text, .pmat for binary)"));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be

@@ -20,6 +20,11 @@
 #include "keyValues.h"
 
 #include "virtualFileSystem.h"
+#include "bamReader.h"
+#include "bamWriter.h"
+#include "datagram.h"
+
+TypeHandle CKeyValues::_type_handle;
 
 NotifyCategoryDeclNoExport(keyvalues) NotifyCategoryDef(keyvalues, "")
 
@@ -381,9 +386,12 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
   }
 }
 
+/**
+ * Loads a raw text KeyValues definition from the indicated filename and
+ * returns a new CKeyValues object representing the root of the KeyValues tree.
+ */
 PT(CKeyValues)
-CKeyValues::load(const Filename &filename)
-{
+CKeyValues::load(const Filename &filename) {
   if (filename.empty()) {
     return nullptr;
   }
@@ -407,8 +415,7 @@ CKeyValues::load(const Filename &filename)
     load_filename = filename;
   }
 
-  if (load_filename.empty())
-  {
+  if (load_filename.empty()) {
     keyvalues_cat.error() << "Unable to find `" << filename.get_fullpath()
                           << "`\n";
     return nullptr;
@@ -422,6 +429,10 @@ CKeyValues::load(const Filename &filename)
   return kv;
 }
 
+/**
+ * Parses the indicated string and returns a new CKeyValues object
+ * representing the root of the KeyValues tree.
+ */
 PT(CKeyValues) CKeyValues::
 from_string(const std::string &buffer) {
   CKeyValuesTokenizer tokenizer(buffer);
@@ -654,4 +665,114 @@ do_write(std::ostringstream &out, int indent, int &curr_indent) {
     do_indent(out, curr_indent);
     out << "}\n";
   }
+}
+
+/**
+ * Tells the BamReader how to create objects of type CKeyValues.
+ */
+void CKeyValues::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void CKeyValues::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  TypedWritableReferenceCount::write_datagram(manager, dg);
+
+  // Only write the parent if the parent has already been written to the file.
+  // This allows for subtrees to be written to a binary.
+  if (manager->has_object(_parent)) {
+    manager->write_pointer(dg, _parent);
+  } else {
+    manager->write_pointer(dg, nullptr);
+  }
+
+  dg.add_string(_name);
+
+  dg.add_uint16(_keyvalues.size());
+  for (size_t i = 0; i < _keyvalues.size(); i++) {
+    const Pair &pair = _keyvalues[i];
+    dg.add_string(pair.key);
+    dg.add_string(pair.value);
+  }
+
+  dg.add_uint8(_children.size());
+  for (size_t i = 0; i < _children.size(); i++) {
+    manager->write_pointer(dg, _children[i]);
+  }
+}
+
+/**
+ * Called after the object is otherwise completely read from a Bam file, this
+ * function's job is to store the pointers that were retrieved from the Bam
+ * file for each pointer object written.  The return value is the number of
+ * pointers processed from the list.
+ */
+int CKeyValues::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int index = TypedWritableReferenceCount::complete_pointers(p_list, manager);
+
+  if (p_list[index] != nullptr) {
+    CKeyValues *parent;
+    DCAST_INTO_R(parent, p_list[index], index);
+    _parent = parent;
+  }
+  index++;
+
+  for (size_t i = 0; i < _children.size(); i++) {
+    if (p_list[index] != nullptr) {
+      CKeyValues *child;
+      DCAST_INTO_R(child, p_list[index], index);
+      _children[i] = child;
+    }
+    index++;
+  }
+
+  return index;
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type CKeyValues is encountered in the Bam file.  It should create the
+ * CKeyValues and extract its information from the file.
+ */
+TypedWritable *CKeyValues::
+make_from_bam(const FactoryParams &params) {
+  CKeyValues *kv = new CKeyValues;
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+  kv->fillin(scan, manager);
+
+  return kv;
+}
+
+/**
+ * This internal function is called by make_from_bam to read in all of the
+ * relevant data from the BamFile for the new CKeyValues.
+ */
+void CKeyValues::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  TypedWritableReferenceCount::fillin(scan, manager);
+
+  manager->read_pointer(scan);
+
+  _name = scan.get_string();
+
+  size_t num_pairs = scan.get_uint16();
+  _keyvalues.resize(num_pairs);
+  for (size_t i = 0; i < num_pairs; i++) {
+    Pair &pair = _keyvalues[i];
+    pair.key = scan.get_string();
+    pair.value = scan.get_string();
+  }
+
+  int num_children = scan.get_uint8();
+  _children.resize(num_children);
+  manager->read_pointers(scan, num_children);
 }

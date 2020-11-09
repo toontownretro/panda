@@ -37,6 +37,9 @@ PUBLISHED:
   static void write(const RenderState *state, const Filename &filename,
                     BamEnums::BamTextureMode mode = BamEnums::BTM_unchanged);
 
+  INLINE static std::string get_extension();
+  INLINE static std::string get_binary_extension();
+
 private:
   RenderStateScript() = delete;
 

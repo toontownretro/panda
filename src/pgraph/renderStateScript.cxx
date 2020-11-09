@@ -15,6 +15,7 @@
 #include "lightMutexHolder.h"
 #include "virtualFileSystem.h"
 #include "keyValues.h"
+#include "bamFile.h"
 
 // These are the attribs that can be set through the scripts.
 #include "colorAttrib.h"
@@ -57,24 +58,69 @@ load(const Filename &filename, const DSearchPath &search_path) {
   // Not in the cache, read from disk and generate RenderState.
 
   Filename resolved = filename;
+  if (resolved.get_extension().empty()) {
+    resolved = resolved.get_fullpath() +
+      default_render_state_script_extension.get_value();
+  }
 
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->resolve_filename(resolved, search_path, ".pmat")) {
+  if (!vfs->resolve_filename(resolved, search_path)) {
     pgraph_cat.error()
       << "Couldn't find render state script " << filename.get_fullpath()
       << " on search path " << search_path << "\n";
     return RenderState::make_empty();
   }
 
-  pgraph_cat.info()
-    << "Loading render state script " << resolved.get_fullpath() << "\n";
+  CPT(RenderState) state;
 
-  std::string data = vfs->read_file(resolved, true);
+  if (resolved.get_extension() == get_binary_extension()) {
+    // This is a binary render state script, load up the bam file.
 
-  // Append this script's directory to the search path for #includes.
-  DSearchPath my_search_path = search_path;
-  my_search_path.append_directory(resolved.get_dirname());
-  CPT(RenderState) state = parse(data, my_search_path);
+    pgraph_cat.info()
+      << "Loading binary render state script " << resolved.get_fullpath()
+      << "\n";
+
+    BamFile bam;
+    if (!bam.open_read(resolved)) {
+      pgraph_cat.error()
+        << "Couldn't open binary render state script "
+        << resolved.get_fullpath() << "\n";
+      return nullptr;
+    }
+
+    TypedWritable *obj = bam.read_object();
+    if (obj == nullptr || !bam.resolve()) {
+      pgraph_cat.error()
+        << "Couldn't read binary render state script "
+        << resolved.get_fullpath() << "\n";
+      bam.close();
+      return nullptr;
+    }
+
+    if (!obj->is_of_type(RenderState::get_class_type())) {
+      pgraph_cat.error()
+        << resolved.get_fullpath() << " is not a valid binary render state "
+        << "script.\n";
+      bam.close();
+      return nullptr;
+    }
+
+    state = DCAST(RenderState, obj);
+    bam.close();
+
+  } else {
+    pgraph_cat.info()
+      << "Loading render state script " << resolved.get_fullpath() << "\n";
+
+    // This is a text render state script, parse the keyvalues.
+    std::string data = vfs->read_file(resolved, true);
+
+    // Append this script's directory to the search path for #includes.
+    DSearchPath my_search_path = search_path;
+    my_search_path.append_directory(resolved.get_dirname());
+    state = parse(data, my_search_path);
+  }
+
   state->_filename = filename;
   state->_fullpath = resolved;
 
@@ -217,11 +263,51 @@ parse(const std::string &data, const DSearchPath &search_path) {
 }
 
 /**
- * Write the indicated RenderState to script file on disk.
+ * Write the indicated RenderState to a script file on disk.
  */
 void RenderStateScript::
 write(const RenderState *state, const Filename &filename,
       BamEnums::BamTextureMode mode) {
+  Filename write_filename = filename;
+  if (write_filename.get_extension().empty()) {
+    write_filename = write_filename.get_fullpath() +
+      default_render_state_script_extension.get_value();
+  }
+
+  if (write_filename.get_extension() == get_binary_extension()) {
+    // If they want to write a binary render state script, just serialize the
+    // actual RenderState object.
+
+    // We need to clear the existing filename associated with the RenderState
+    // so the actual RenderState guts are written, and not just a filename
+    // reference.
+    state->_filename = "";
+    state->_fullpath = "";
+
+    BamFile bam;
+    if (!bam.open_write(write_filename)) {
+      pgraph_cat.error()
+        << "Couldn't open " << write_filename.get_fullpath() << " to write a render "
+        << "state script.\n";
+      return;
+    }
+
+    if (!bam.write_object(state)) {
+      pgraph_cat.error()
+        << "Couldn't write render state script to " << write_filename.get_fullpath()
+        << ".\n";
+    }
+
+    // Set the filename we just wrote to on the RenderState so if we write a
+    // model file that uses this state, it will reference the filename.
+    state->_filename = write_filename;
+
+    bam.close();
+    return;
+  }
+
+  // We are writing a raw text render state script.
+
   PT(CKeyValues) script = new CKeyValues;
 
   const ColorAttrib *ca;
@@ -423,8 +509,8 @@ write(const RenderState *state, const Filename &filename,
   }
 
   pgraph_cat.info()
-    << "Writing render state script " << filename.get_fullpath() << "\n";
-  script->write(filename, 2);
+    << "Writing render state script " << write_filename.get_fullpath() << "\n";
+  script->write(write_filename, 2);
 }
 
 /**

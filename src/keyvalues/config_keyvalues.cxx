@@ -1,5 +1,6 @@
 #include "config_keyvalues.h"
 #include "dconfig.h"
+#include "keyValues.h"
 
 Configure(config_keyvalues)
 
@@ -15,4 +16,7 @@ init_libkeyvalues() {
   }
 
   initialized = true;
+
+  CKeyValues::init_type();
+  CKeyValues::register_with_read_factory();
 }
