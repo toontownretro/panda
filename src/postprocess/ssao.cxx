@@ -22,22 +22,18 @@
 #include "randomizer.h"
 #include "configVariableDouble.h"
 
-static ConfigVariableDouble hbao_sample_radius("hbao-sample-radius", 255.0);
-static ConfigVariableDouble hbao_tangent_bias("hbao-tangent-bias", 0.65);
-//static ConfigVariableDouble hbao_max_sample_distance("hbao-max-sample-distance", 11.5);
+static ConfigVariableDouble hbao_falloff("hbao-falloff", 0.5);
+static ConfigVariableDouble hbao_max_sample_distance("hbao-max-sample-distance", 0.5);
+static ConfigVariableDouble hbao_sample_radius("hbao-sample-radius", 0.5);
+static ConfigVariableDouble hbao_angle_bias("hbao-angle-bias", 0.65);
 static ConfigVariableDouble hbao_strength("hbao-strength", 1.6);
 static ConfigVariableDouble hbao_num_angles("hbao-num-angles", 4);
 static ConfigVariableDouble hbao_num_ray_steps("hbao-num-ray-steps", 3);
-static ConfigVariableDouble hbao_noise_scale("hbao-noise-scale", 1);
-static ConfigVariableInt hbao_noise_size("hbao-noise-size", 64);
-
-static ConfigVariableDouble alchemy_max_distance("alchemy-max-distance", 4.75);
-static ConfigVariableDouble alchemy_sample_radius("alchemy-sample-radius", 210.0);
+static ConfigVariableInt hbao_noise_size("hbao-noise-size", 4);
 
 static ConfigVariableDouble ao_blur_normal_factor("ao-blur-normal-factor", 1.2);
 static ConfigVariableDouble ao_blur_depth_factor("ao-blur-depth-factor", 0.9);
-static ConfigVariableInt ao_clip_length("ao-clip-length", 2);
-static ConfigVariableDouble ao_z_bias("ao-z-bias", 0.1);
+//static ConfigVariableDouble ao_z_bias("ao-z-bias", 0.1);
 
 //static ConfigVariableInt ao_quality("ao-quality", 3);
 
@@ -156,18 +152,17 @@ public:
 	{
 		Randomizer random;
 
-		PNMImage image( res, res, 4 );
+		PNMImage image( res, res, 3 );
 
 		for ( int y = 0; y < res; y++ )
 		{
 			for ( int x = 0; x < res; x++ )
 			{
-				LColorf rgba( random.random_real( 1.0 ),
-					      random.random_real( 1.0 ),
-					      random.random_real( 1.0 ),
-					      random.random_real( 1.0 ) );
+				float val = random.random_real(1.0);
+				LRGBColorf rgb(std::cos(val), std::sin(val),
+					      			 random.random_real(1.0));
 
-				image.set_xel_a( x, y, rgba );
+				image.set_xel(x, y, rgb);
 			}
 		}
 
@@ -197,86 +192,23 @@ public:
 		quad.set_shader_input("noiseSampler", _noise_texture);
 
 		update_dynamic_inputs();
-		/*
-		float r = (float)r_hbao_radius;
-		float r2 = r * r;
-		float inv_r2 = -1.0f / r2;
-		get_quad().set_shader_input("AOStrength_R_R2_NegInvR2",
-			LVector4f(r_hbao_strength.get_value(), r, r2, inv_r2));
-
-		get_quad().set_shader_input("NumDirections_Samples",
-			LVector2i(r_hbao_dirs.get_value(), r_hbao_samples.get_value()));
-
-		get_quad().set_shader_input("depthSampler", _pp->get_scene_depth_texture());
-		get_quad().set_shader_input("noiseSampler", _noise_texture);
-
-		update_dynamic_inputs();
-		*/
 	}
 
 	void update_dynamic_inputs()
 	{
 		NodePath quad = get_quad();
 
-		//LVector2i dim = get_back_buffer_dimensions();
-		//quad.set_shader_input("WindowSize", dim);
+		LVector2i dim = get_back_buffer_dimensions();
 
-		Lens *lens = get_scene_lens();
-		//quad.set_shader_input("NearFar", LVector2(lens->get_near(), lens->get_far()));
+		float noise_size = hbao_noise_size.get_value();
 
-		//quad.set_shader_input("SampleRadius_MaxDistance_AOStrength_ClipLength",
-		//	LVector4(alchemy_sample_radius.get_value(), alchemy_max_distance.get_value(),
-		//					 hbao_strength.get_value(), ao_clip_length.get_value()));
-
-		//quad.set_shader_input("ZBias_ClipLength", LVector2(ao_z_bias.get_value(), ao_clip_length.get_value()));
-
-#if 1 // HBAO
-
-		quad.set_shader_input("FOV_SampleRadius_AngleBias_Intensity",
-			LVector4(deg_2_rad(lens->get_fov()[0]), hbao_sample_radius.get_value(),
-							 hbao_tangent_bias.get_value(), hbao_strength.get_value()));
+		quad.set_shader_input("FallOff_SampleRadius_AngleBias_Intensity",
+			LVector4(hbao_falloff.get_value(), hbao_sample_radius.get_value(),
+							 hbao_angle_bias.get_value(), hbao_strength.get_value()));
 		quad.set_shader_input("SampleDirections_SampleSteps_NoiseScale",
 			LVector4(hbao_num_angles.get_value(), hbao_num_ray_steps.get_value(),
-							 hbao_noise_scale.get_value(), hbao_noise_scale.get_value()));
-
-
-		//quad.set_shader_input("SampleRadius_TangentBias_MaxSampleDistance_AOStrength",
-		//	LVector4(hbao_sample_radius.get_value(), hbao_tangent_bias.get_value(),
-		//					 hbao_max_sample_distance.get_value(), hbao_strength.get_value()));
-
-		//quad.set_shader_input("NumAngles_NumRaySteps",
-		//	LVector2i(hbao_num_angles.get_value(), hbao_num_ray_steps.get_value()));
-#endif
-
-#if 0
-		LVector2i dim = get_back_buffer_dimensions();
-		get_quad().set_shader_input("AORes_Inv",
-			LVector4f(dim[0], dim[1], 1.0f / dim[0], 1.0f / dim[1]));
-
-		float noise_res = (float)r_hbao_noise_res;
-		get_quad().set_shader_input("NoiseScale_MaxRadiusPixels",
-			LVector3f(dim[0] / noise_res, dim[1] / noise_res,
-							  r_hbao_max_radius_pixels.get_value()));
-
-		Lens *lens = get_scene_lens();
-		float focal_length = lens->get_focal_length();
-		float focal_length_y = focal_length / lens->get_aspect_ratio();
-		float inv_focal_length = 1.0f / focal_length;
-		float inv_focal_length_y = 1.0f / focal_length_y;
-		float near = lens->get_near();
-		float far = 300.0f;
-
-		float denom = 2.0f * near * far;
-		get_quad().set_shader_input("FocalLen_LinMAD",
-			LVector4f(focal_length, focal_length_y,
-								(near - far) / denom,
-								(near + far) / denom));
-
-		get_quad().set_shader_input("UVToViewA_B",
-			LVector4f(-2.0f * inv_focal_length, -2.0f * inv_focal_length_y,
-								1.0f * inv_focal_length, 1.0f * inv_focal_length_y));
-#endif
-
+							 dim[0] / noise_size, dim[1] / noise_size));
+		quad.set_shader_input("MaxSampleDistance", LVector2(hbao_max_sample_distance.get_value()));
 	}
 
 	virtual void update()
@@ -322,7 +254,7 @@ SSAO_Effect::SSAO_Effect( PostProcess *pp, Mode mode ) :
 	// Separable gaussian blur
 	//
 
-	const int blur_passes = 5;
+	const int blur_passes = 3;
 
 	_final_texture = ao_output;
 
