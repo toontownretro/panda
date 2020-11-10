@@ -452,6 +452,12 @@ write(const RenderState *state, const Filename &filename,
         }
       }
 
+      // If the stage has a specific texcoord name assigned, write that out.
+      std::string texcoord_name = stage->get_texcoord_name()->get_name();
+      if (texcoord_name.empty()) {
+        tex_block->set_key_value("texcoord", texcoord_name);
+      }
+
       // Write out texture transform if we have it.
       CPT(TransformState) ts = tma->get_transform(stage);
       if (!ts->is_identity()) {
@@ -587,6 +593,7 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
   Filename filename;
   Filename alpha_filename;
   std::string stage_name;
+  std::string texcoord_name;
   std::string tex_name;
   LPoint3 pos(0, 0, 0);
   LVector3 hpr(0, 0, 0);
@@ -600,6 +607,9 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
 
     if (key == "stage") {
       stage_name = value;
+
+    } else if (key == "texcoord") {
+      texcoord_name = value;
 
     } else if (key == "filename") {
       filename = value;
@@ -632,6 +642,11 @@ parse_texture_block(CKeyValues *block, CPT(RenderState) &state) {
     stage = TextureStage::get_default();
   } else {
     stage = new TextureStage(stage_name);
+  }
+
+  if (!texcoord_name.empty()) {
+    // They asked for a specific texcoord name to assign to the texture.
+    stage->set_texcoord_name(texcoord_name);
   }
 
   PT(Texture) tex;
