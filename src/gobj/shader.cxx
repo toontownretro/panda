@@ -383,6 +383,9 @@ cp_dependency(ShaderMatInput inp) {
  */
 void Shader::
 cp_add_mat_spec(ShaderMatSpec &spec) {
+  // We currently expect each ShaderMatSpec to map to one location.
+  nassertv(spec._id._type->get_num_parameter_locations() == 1);
+
   // If we're composing with identity, simplify.
 
   if (spec._func == SMF_first) {
@@ -1446,6 +1449,7 @@ bind_parameter(const Parameter &param) {
       }
       Shader::ShaderMatSpec bind;
       bind._id = param;
+      bind._id._type = element_type;
       bind._piece = Shader::SMP_row3;
       bind._func = Shader::SMF_first;
       bind._part[0] = Shader::SMO_apiview_clipplane_i;
@@ -1584,6 +1588,8 @@ bind_parameter(const Parameter &param) {
 
         ShaderMatSpec bind;
         bind._id = param;
+        bind._id._name = fqname;
+        bind._id._type = member.type;
         bind._func = SMF_first;
         bind._part[0] = SMO_light_ambient;
         bind._arg[0] = nullptr;
@@ -1626,6 +1632,7 @@ bind_parameter(const Parameter &param) {
           ShaderTexSpec bind;
           bind._id = param;
           bind._id._name = fqname;
+          bind._id._type = member.type;
           bind._id._location = location++;
           bind._part = STO_light_i_shadow_map;
           bind._desired_type = Texture::TT_2d_texture;
@@ -1637,6 +1644,7 @@ bind_parameter(const Parameter &param) {
           ShaderMatSpec bind;
           bind._id = param;
           bind._id._name = fqname;
+          bind._id._type = member.type;
           bind._id._location = location++;
           bind._func = SMF_first;
           bind._arg[0] = nullptr;
@@ -2429,6 +2437,8 @@ bind_parameter(const Parameter &param) {
         // We can't know yet, so we always have to handle it specially.
         ShaderMatSpec bind;
         bind._id = param;
+        bind._id._name = fqname;
+        bind._id._type = member.type;
         bind._id._location = location;
         bind._func = SMF_first;
         if (dim[1] == 4) {

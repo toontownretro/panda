@@ -87,7 +87,7 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
         GLint location = values[0];
         if (location >= 0) {
           GLint array_size = values[1];
-          for (GLint i = 0; i < array_size; ++i) {
+          while (array_size--) {
             set_uniform_location(location, location);
             ++location;
           }
