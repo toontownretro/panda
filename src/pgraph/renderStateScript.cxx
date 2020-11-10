@@ -434,6 +434,8 @@ write(const RenderState *state, const Filename &filename,
 
   const TextureAttrib *tex_attr;
   if (state->get_attrib(tex_attr)) {
+    const TexMatrixAttrib *tma;
+    state->get_attrib_def(tma);
     for (int i = 0; i < tex_attr->get_num_on_stages(); i++) {
       TextureStage *stage = tex_attr->get_on_stage(i);
       PT(CKeyValues) tex_block = new CKeyValues("texture", script);
@@ -447,6 +449,26 @@ write(const RenderState *state, const Filename &filename,
           }
         } else {
           tex_block->set_key_value("name", tex->get_name());
+        }
+      }
+
+      // Write out texture transform if we have it.
+      CPT(TransformState) ts = tma->get_transform(stage);
+      if (!ts->is_identity()) {
+        const LPoint3 &pos = ts->get_pos();
+        const LVector3 &hpr = ts->get_hpr();
+        const LVector3 &scale = ts->get_scale();
+
+        if (pos != LPoint3(0)) {
+          tex_block->set_key_value("pos", CKeyValues::to_string(pos));
+        }
+
+        if (hpr != LVector3(0)) {
+          tex_block->set_key_value("hpr", CKeyValues::to_string(hpr));
+        }
+
+        if (scale != LVector3(1)) {
+          tex_block->set_key_value("scale", CKeyValues::to_string(scale));
         }
       }
     }
