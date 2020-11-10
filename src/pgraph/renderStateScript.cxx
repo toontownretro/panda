@@ -454,7 +454,7 @@ write(const RenderState *state, const Filename &filename,
 
       // If the stage has a specific texcoord name assigned, write that out.
       std::string texcoord_name = stage->get_texcoord_name()->get_name();
-      if (texcoord_name.empty()) {
+      if (!texcoord_name.empty()) {
         tex_block->set_key_value("texcoord", texcoord_name);
       }
 
