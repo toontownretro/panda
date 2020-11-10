@@ -1244,40 +1244,38 @@ bind_parameter(const Parameter &param) {
           bind._part[1] = SMO_view_to_apiclip;
         }
       }
-      else if (matrix_name == "TextureMatrix") {
-        // We may support 2-D texmats later, but let's make sure that people
-        // don't think they can just use a mat3 to get the 2-D version.
-        if (!expect_float_matrix(name, type, 4, 4)) {
-          return false;
-        }
-
-        bind._func = SMF_first;
-        bind._part[0] = inverse ? SMO_inv_texmat_i
-                                : SMO_texmat_i;
-        bind._part[1] = SMO_identity;
-
-        // Add it once for each index.
-//        for (bind._index = 0; bind._index < param_size; ++bind._index) {
-//          // It was discovered in #846, that GLSL 4.10 and lower don't seem to
-//          // guarantee that matrices occupy successive locations, and on macOS
-//          // they indeed occupy four locations per element.
-//          // As a big fat hack, we multiply by four on macOS, because this is
-//          // hard to fix on the 1.10 branch.  We'll have a proper fix on the
-//          // master branch.
-//#ifdef __APPLE__
-//          bind._id._location = p + bind._index * 4;
-//#else
-//          bind._id._location = p + bind._index;
-//#endif
-//          cp_add_mat_spec(bind);
-//        }
-        return true;
-      }
       else {
         return report_parameter_error(name, type, "unrecognized matrix name");
       }
 
       cp_add_mat_spec(bind);
+      return true;
+    }
+    if (pieces[1] == "TextureTransform") {
+      const ::ShaderType *array_type;
+      uint32_t num_elements;
+      type->unwrap_array(array_type, num_elements);
+      // We may support 2-D texmats later, but let's make sure that people
+      // don't think they can just use a mat3 to get the 2-D version.
+      if (!expect_float_matrix(name, array_type, 4, 4)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._piece = SMP_whole;
+      bind._part[0] = SMO_texmat_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+
+      // Add it once for each index.
+      for (uint32_t i = 0; i < num_elements; ++i) {
+        bind._index = i;
+        cp_add_mat_spec(bind);
+        ++bind._id._location;
+      }
       return true;
     }
     if (pieces[1].compare(0, 7, "Texture") == 0) {
