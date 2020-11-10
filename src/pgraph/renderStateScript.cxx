@@ -153,6 +153,21 @@ parse(const std::string &data, const DSearchPath &search_path) {
     } else if (key == "color_scale") {
       state = state->set_attrib(ColorScaleAttrib::make(CKeyValues::to_4f(value)));
 
+    } else if (key == "alpha_scale") {
+      const ColorScaleAttrib *csa;
+      state->get_attrib(csa);
+
+      float scale = atof(value.c_str());
+
+      if (csa == nullptr) {
+        state = state->set_attrib(ColorScaleAttrib::make(
+          LVecBase4(1.0f, 1.0f, 1.0f, scale)));
+      } else {
+        const LVecBase4 &curr_scale = csa->get_scale();
+        state = state->set_attrib(csa->set_scale(
+          LVecBase4(curr_scale[0], curr_scale[1], curr_scale[2], scale)));
+      }
+
     } else if (key == "z_write") {
       bool write = parse_bool_string(value);
       state = state->set_attrib(DepthWriteAttrib::make(write ? DepthWriteAttrib::M_on : DepthWriteAttrib::M_off));
