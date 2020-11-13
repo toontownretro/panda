@@ -15,6 +15,8 @@
 #include "renderState.h"
 #include "transparencyAttrib.h"
 #include "lightAttrib.h"
+#include "textureAttrib.h"
+#include "textureStage.h"
 #include "cascadeLight.h"
 
 TypeHandle CSMDepthShader::_type_handle;
@@ -43,6 +45,17 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   // How about clip planes?
   add_clip_planes(state);
+
+  const TextureAttrib *ta;
+  state->get_attrib_def(ta);
+  for (int i = 0; i < ta->get_num_on_stages(); i++) {
+    TextureStage *stage = ta->get_on_stage(i);
+    if (stage == TextureStage::get_default() ||
+        stage->get_name() == "albedo") {
+      set_pixel_shader_define("BASETEXTURE");
+      set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+    }
+  }
 
   // Find the number of cascades
   const LightAttrib *lattr;

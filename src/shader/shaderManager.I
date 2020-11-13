@@ -16,7 +16,7 @@
  */
 INLINE ShaderManager::
 ShaderManager() {
-  _quality = shader_quality;
+  _quality = config_get_shader_quality();
 }
 
 /**

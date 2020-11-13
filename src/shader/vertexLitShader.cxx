@@ -14,6 +14,8 @@
 #include "vertexLitShader.h"
 #include "lightAttrib.h"
 #include "renderState.h"
+#include "textureAttrib.h"
+#include "textureStage.h"
 #include "postProcessDefines.h"
 
 TypeHandle VertexLitShader::_type_handle;
@@ -60,6 +62,30 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_pixel_shader_define("NUM_LIGHTS", num_lights);
     set_vertex_shader_define("NUM_LIGHTS", num_lights);
   }
+
+  // Find the textures in use.
+  const TextureAttrib *ta;
+  state->get_attrib_def(ta);
+  int num_stages = ta->get_num_on_stages();
+  for (int i = 0; i < num_stages; i++) {
+    TextureStage *stage = ta->get_on_stage(i);
+    const std::string &stage_name = stage->get_name();
+
+    if (stage == TextureStage::get_default() ||
+        stage_name == "albedo") {
+      set_pixel_shader_define("BASETEXTURE");
+      set_vertex_shader_define("BASETEXTURE_INDEX", i);
+      set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+
+    } else if (stage_name == "reflection") {
+      set_pixel_shader_define("PLANAR_REFLECTION");
+      set_vertex_shader_define("PLANAR_REFLECTION");
+      set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
+
+    }
+  }
+
+  set_vertex_shader_define("NUM_TEXTURES", num_stages);
 
   if (add_csm(state)) {
     need_world_normal = true;

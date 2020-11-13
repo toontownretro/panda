@@ -251,7 +251,7 @@ add_shader_quality(ShaderBase::StageFlags stages) {
   while (index >= 0) {
     if (add_mask.get_bit(index)) {
       _setup._stages[index].set_define("SHADER_QUALITY",
-        mgr->get_shader_quality());
+        (int)mgr->get_shader_quality());
     }
 
     stage_mask.clear_bit(index);

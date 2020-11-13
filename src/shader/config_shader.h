@@ -26,8 +26,8 @@ NotifyCategoryDecl(shadermgr, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
 
 extern EXPCL_PANDA_SHADER ConfigVariableList &get_shader_libraries();
 
-extern EXPCL_PANDA_SHADER ConfigVariableEnum<ShaderEnums::ShaderQuality>
-shader_quality;
+extern EXPCL_PANDA_SHADER ConfigVariableEnum<ShaderEnums::ShaderQuality> &
+config_get_shader_quality();
 
 extern EXPCL_PANDA_SHADER void init_libshader();
 
