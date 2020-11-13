@@ -68,7 +68,7 @@
     threadPriority.h
 
   #define SOURCES \
-    $[HEADERS]
+    $[HEADERS] \
     contextSwitch.c
 
   #define COMPOSITE_SOURCES  \
