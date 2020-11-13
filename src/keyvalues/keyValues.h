@@ -249,7 +249,7 @@ INLINE const Filename &CKeyValues::get_filename() const {
 template <class T>
 INLINE std::string CKeyValues::
 to_string(T v) {
-  return std::to_string(v);
+  return to_string(v);
 }
 
 template <class T>
