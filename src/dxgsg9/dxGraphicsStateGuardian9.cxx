@@ -394,7 +394,7 @@ extract_texture_data(Texture *tex) {
  */
 ShaderContext *DXGraphicsStateGuardian9::
 prepare_shader(Shader *se) {
-  nassertr(supports_basic_shaders(), nullptr);
+  nassertr(get_supports_basic_shaders(), nullptr);
 
   PStatTimer timer(_prepare_shader_pcollector);
   return new DXShaderContext9(se, this);
@@ -2285,6 +2285,7 @@ reset() {
     _supported_shader_caps = ShaderModule::C_basic_shader
                            | ShaderModule::C_vertex_texture
                            | ShaderModule::C_sampler_shadow
+                           | ShaderModule::C_matrix_non_square
                            | ShaderModule::C_integer
                            | ShaderModule::C_texture_lod;
   }

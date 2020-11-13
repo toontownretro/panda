@@ -147,10 +147,11 @@ expect_float_matrix(const InternalName *name, const ::ShaderType *type, int lo, 
     num_columns = matrix->get_num_columns();
     scalar_type = matrix->get_scalar_type();
   }
-  if (scalar_type != ScalarType::ST_float || num_rows != num_columns ||
-      (int)num_rows < lo || (int)num_rows > hi) {
+  if ((scalar_type != ScalarType::ST_float && scalar_type != ScalarType::ST_double) ||
+      (int)num_rows < lo || (int)num_rows > hi ||
+      (int)num_columns < lo || (int)num_columns > hi) {
 
-    std::string msg = "expected square floating-point matrix of ";
+    std::string msg = "expected floating-point matrix of ";
     if (lo < hi) {
       msg += "at least ";
     }
@@ -450,6 +451,10 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
     case SMP_transpose: spec._piece = SMP_whole; break;
     case SMP_upper3x3: spec._piece = SMP_transpose3x3; break;
     case SMP_transpose3x3: spec._piece = SMP_upper3x3; break;
+    case SMP_upper3x4: spec._piece = SMP_transpose3x4; break;
+    case SMP_transpose3x4: spec._piece = SMP_upper3x4; break;
+    case SMP_upper4x3: spec._piece = SMP_transpose4x3; break;
+    case SMP_transpose4x3: spec._piece = SMP_upper4x3; break;
     default: break;
     }
   }
@@ -947,14 +952,8 @@ link() {
         int num_locations = var.type->get_num_parameter_locations();
         if (used_locations.has_any_of(var.get_location(), num_locations)) {
           // This location is already used.  Find another free location.
-          int location = used_locations.get_lowest_off_bit();
-          while (num_locations > 1 && used_locations.has_any_of(location, num_locations)) {
-            // This free space isn't big enough to fit all the needed locations.
-            int next_bit = used_locations.get_next_higher_different_bit(location);
-            nassertr(next_bit > location, false);
-            location = used_locations.get_next_higher_different_bit(next_bit);
-            nassertr(location > next_bit, false);
-          }
+          int location = used_locations.find_off_range(num_locations);
+          nassertr(location >= 0, false);
           used_locations.set_range(location, num_locations);
           remap[var.get_location()] = location;
           it->second._location = location;
@@ -1008,15 +1007,13 @@ bind_vertex_input(const InternalName *name, const ::ShaderType *type, int locati
   bind._name = nullptr;
   bind._append_uv = -1;
 
-  //FIXME: other types, matrices
-  bind._elements = 1;
-
-  const ::ShaderType::Vector *vec_type = type->as_vector();
-  if (vec_type) {
-    bind._scalar_type = vec_type->get_scalar_type();
-  } else {
-    bind._scalar_type = ScalarType::ST_float;
+  //FIXME: matrices
+  uint32_t dim[3];
+  if (!type->as_scalar_type(bind._scalar_type, dim[0], dim[1], dim[2])) {
+    shader_cat.error()
+      << "Unrecognized type " << *type << " for vertex input " << *name << "\n";
   }
+  bind._elements = dim[0];
 
   if (shader_cat.is_debug()) {
     shader_cat.debug()
@@ -1182,11 +1179,19 @@ bind_parameter(const Parameter &param) {
         return false;
       }
 
-      if (type->as_matrix()->get_num_rows() >= 4) {
-        bind._piece = transpose ? SMP_transpose : SMP_whole;
+      const ::ShaderType::Matrix *matrix = type->as_matrix();
+      if (matrix->get_num_rows() >= 4) {
+        if (matrix->get_num_columns() >= 4) {
+          bind._piece = transpose ? SMP_transpose : SMP_whole;
+        } else {
+          bind._piece = transpose ? SMP_transpose4x3 : SMP_upper4x3;
+        }
+      } else if (matrix->get_num_columns() >= 4) {
+        bind._piece = transpose ? SMP_transpose3x4 : SMP_upper3x4;
       } else {
         bind._piece = transpose ? SMP_upper3x3 : SMP_transpose3x3;
       }
+      bind._scalar_type = matrix->get_scalar_type();
 
       if (matrix_name == "ModelViewProjectionMatrix") {
         if (inverse) {
@@ -1272,6 +1277,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
+      bind._scalar_type = array_type->as_matrix()->get_scalar_type();
 
       // Add it once for each index.
       for (uint32_t i = 0; i < num_elements; ++i) {
@@ -1969,17 +1975,41 @@ bind_parameter(const Parameter &param) {
     bind._id = param;
     bind._func = SMF_compose;
 
-    if (pieces[0] == "trans" || pieces[0] == "tpose") {
+    if (pieces[0] == "trans") {
       if (!expect_float_matrix(name, type, 3, 4)) {
         return false;
       }
       const ::ShaderType::Matrix *matrix = type->as_matrix();
-      if (matrix->get_num_rows() == 4) {
-        bind._piece = (pieces[0][1] == 'p') ? SMP_transpose : SMP_whole;
+      if (matrix->get_num_rows() >= 4) {
+        if (matrix->get_num_columns() >= 4) {
+          bind._piece = SMP_whole;
+        } else {
+          bind._piece = SMP_upper4x3;
+        }
+      } else if (matrix->get_num_columns() >= 4) {
+        bind._piece = SMP_upper3x4;
+      } else {
+        bind._piece = SMP_upper3x3;
       }
-      else {
-        bind._piece = (pieces[0][1] == 'p') ? SMP_transpose3x3 : SMP_upper3x3;
+      bind._scalar_type = matrix->get_scalar_type();
+    }
+    else if (pieces[0] == "tpose") {
+      if (!expect_float_matrix(name, type, 3, 4)) {
+        return false;
       }
+      const ::ShaderType::Matrix *matrix = type->as_matrix();
+      if (matrix->get_num_rows() >= 4) {
+        if (matrix->get_num_columns() >= 4) {
+          bind._piece = SMP_transpose;
+        } else {
+          bind._piece = SMP_transpose4x3;
+        }
+      } else if (matrix->get_num_columns() >= 4) {
+        bind._piece = SMP_transpose3x4;
+      } else {
+        bind._piece = SMP_transpose3x3;
+      }
+      bind._scalar_type = matrix->get_scalar_type();
     }
     else if (pieces[0] == "row3") {
       // We can exceptionally support row3 to have any number of components.
@@ -1999,6 +2029,7 @@ bind_parameter(const Parameter &param) {
       else {
         bind._piece = SMP_row3;
       }
+      bind._scalar_type = vector->get_scalar_type();
     }
     else {
       if (!expect_float_vector(name, type, 4, 4)) {
@@ -2013,6 +2044,7 @@ bind_parameter(const Parameter &param) {
       else {
         nassertr(false, false);
       }
+      bind._scalar_type = type->as_vector()->get_scalar_type();
     }
 
     int next = 1;
@@ -2072,6 +2104,7 @@ bind_parameter(const Parameter &param) {
         bind._arg[0] = nullptr;
         bind._part[1] = SMO_identity;
         bind._arg[1] = nullptr;
+        bind._scalar_type = type->as_matrix()->get_scalar_type();
       }
       else if (pieces[1] == "color") {
         if (!expect_float_vector(name, type, 3, 4)) {
@@ -2150,6 +2183,7 @@ bind_parameter(const Parameter &param) {
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._index = atoi(pieces[1].c_str());
+      bind._scalar_type = type->as_matrix()->get_scalar_type();
 
       cp_add_mat_spec(bind);
       return true;
@@ -2398,6 +2432,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = name;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
+      bind._scalar_type = matrix->get_scalar_type();
       cp_add_mat_spec(bind);
       return true;
     }
@@ -2410,6 +2445,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = name;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
+      bind._scalar_type = matrix->get_scalar_type();
       cp_add_mat_spec(bind);
       return true;
     }
@@ -2430,7 +2466,7 @@ bind_parameter(const Parameter &param) {
       uint32_t dim[3];
       if (_language == SL_GLSL &&
           member.type->as_scalar_type(scalar_type, dim[0], dim[1], dim[2]) &&
-          scalar_type == ScalarType::ST_float &&
+          (scalar_type == ScalarType::ST_float || scalar_type == ScalarType::ST_double) &&
           dim[0] == 1) {
         // It might be something like an attribute of a shader input, like a
         // light parameter.  It might also just be a custom struct parameter.
@@ -2440,16 +2476,12 @@ bind_parameter(const Parameter &param) {
         bind._id._name = fqname;
         bind._id._type = member.type;
         bind._id._location = location;
+        bind._scalar_type = scalar_type;
         bind._func = SMF_first;
-        if (dim[1] == 4) {
-          bind._piece = SMP_whole;
-          bind._part[0] = SMO_mat_constant_x_attrib;
-        }
-        else if (dim[1] == 3) {
+        if (dim[1] == 3) {
           bind._piece = SMP_upper3x3;
           bind._part[0] = SMO_mat_constant_x_attrib;
-        }
-        else {
+        } else {
           bind._part[0] = SMO_vec_constant_x_attrib;
           if (dim[2] == 1) {
             bind._piece = SMP_row3x1;
