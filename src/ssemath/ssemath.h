@@ -108,7 +108,7 @@ struct ALIGN_16BYTE intx4
                        m_i32[2] == other.m_i32[2] &&
                        m_i32[3] == other.m_i32[3];
         }
-} ALIGN_16BYTE_POST;
+};
 
 #if defined(_DEBUG) && defined(_X360)
 INLINE void TestVPUFlags()
