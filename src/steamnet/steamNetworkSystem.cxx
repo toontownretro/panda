@@ -15,6 +15,10 @@
 #include "steamNetworkMessage.h"
 #include "steamNetworkConnectionInfo.h"
 
+#ifndef CPPPARSER
+#include "steam/isteamnetworkingutils.h"
+#endif
+
 SteamNetworkSystem *SteamNetworkSystem::_global_ptr = nullptr;
 
 static SteamNetworkSystem *_callback_instance = nullptr;
@@ -52,7 +56,9 @@ SteamNetworkConnectionHandle SteamNetworkSystem::
 connect_by_IP_address(const NetAddress &addr) {
   SteamNetworkingIPAddr steam_addr;
   steam_addr.Clear();
-  steam_addr.ParseString(addr.get_addr().get_ip_port().c_str());
+  
+  SteamNetworkingIPAddr_ParseString(
+    &steam_addr, addr.get_addr().get_ip_port().c_str());
 
   SteamNetworkingConfigValue_t opt;
   opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
@@ -81,7 +87,7 @@ get_connection_info(SteamNetworkConnectionHandle conn, SteamNetworkConnectionInf
 
   NetAddress addr;
   char pBuf[100];
-  s_info.m_addrRemote.ToString(pBuf, 100, false);
+  SteamNetworkingIPAddr_ToString(&s_info.m_addrRemote, pBuf, 100, false);
   if (!addr.set_host(pBuf, s_info.m_addrRemote.m_port)) {
     steamnet_cat.error()
       << "Unable to set host on NetAddress in get_connection_info()\n";
