@@ -31,7 +31,7 @@ class SteamNetworkMessage;
 /**
  * Main interface to the SteamNetworkingSockets implementation.
  */
-class SteamNetworkSystem : public SteamNetworkEnums, public ISteamNetworkingSocketsCallbacks {
+class SteamNetworkSystem : public SteamNetworkEnums {
 PUBLISHED:
   SteamNetworkSystem();
   ~SteamNetworkSystem();
@@ -54,8 +54,8 @@ PUBLISHED:
   INLINE PT(SteamNetworkEvent) get_next_event();
 
 public:
-  virtual void OnSteamNetConnectionStatusChanged(
-    SteamNetConnectionStatusChangedCallback_t *pCallback) override;
+  static void OnSteamNetConnectionStatusChanged(
+    SteamNetConnectionStatusChangedCallback_t *callback);
 
 PUBLISHED:
   INLINE static SteamNetworkSystem *get_global_ptr();

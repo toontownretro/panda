@@ -17,6 +17,8 @@
 
 SteamNetworkSystem *SteamNetworkSystem::_global_ptr = nullptr;
 
+static SteamNetworkSystem *_callback_instance = nullptr;
+
 /**
  *
  */
@@ -51,7 +53,12 @@ connect_by_IP_address(const NetAddress &addr) {
   SteamNetworkingIPAddr steam_addr;
   steam_addr.Clear();
   steam_addr.ParseString(addr.get_addr().get_ip_port().c_str());
-  SteamNetworkConnectionHandle handle = _interface->ConnectByIPAddress(steam_addr, 0, nullptr);
+
+  SteamNetworkingConfigValue_t opt;
+  opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+             (void *)OnSteamNetConnectionStatusChanged);
+
+  SteamNetworkConnectionHandle handle = _interface->ConnectByIPAddress(steam_addr, 0, &opt);
   _client_connection = handle;
   _is_client = true;
 
@@ -120,7 +127,8 @@ close_connection(SteamNetworkConnectionHandle conn) {
  */
 void SteamNetworkSystem::
 run_callbacks() {
-  _interface->RunCallbacks(this);
+  _callback_instance = this;
+  _interface->RunCallbacks();
 }
 
 /**
@@ -190,7 +198,11 @@ create_listen_socket(int port) {
   steam_addr.Clear();
   steam_addr.m_port = port;
 
-  return _interface->CreateListenSocketIP(steam_addr, 0, nullptr);
+  SteamNetworkingConfigValue_t opt;
+  opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
+             (void *)OnSteamNetConnectionStatusChanged);
+
+  return _interface->CreateListenSocketIP(steam_addr, 0, &opt);
 }
 
 /**
@@ -198,9 +210,11 @@ create_listen_socket(int port) {
  */
 void SteamNetworkSystem::
 OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pCallback) {
+  nassertv(_callback_instance != nullptr);
+
   PT(SteamNetworkEvent) event = new SteamNetworkEvent(
     (SteamNetworkConnectionHandle)pCallback->m_hConn,
     (NetworkConnectionState)pCallback->m_eOldState,
     (NetworkConnectionState)pCallback->m_info.m_eState);
-  _events.push_back(event);
+  _callback_instance->_events.push_back(event);
 }

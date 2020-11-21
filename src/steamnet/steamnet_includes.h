@@ -15,10 +15,9 @@
 #define STEAMNET_INCLUDES_H
 
 #ifndef CPPPARSER
-#include <steam/steamnetworkingsockets.h>
-#include <steam/steamnetworkingtypes.h>
+#include "steam/steamnetworkingsockets.h"
+#include "steam/steamnetworkingtypes.h"
 #else
-class ISteamNetworkingSocketsCallbacks;
 class ISteamNetworkingSockets;
 #endif // CPPPARSER
 
