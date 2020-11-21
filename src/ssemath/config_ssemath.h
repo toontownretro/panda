@@ -15,14 +15,7 @@
 #define CONFIG_SSEMATH_H
 
 #include "dconfig.h"
-
-#ifdef BUILDING_PANDA_SSEMATH
-#define EXPCL_PANDA_SSEMATH EXPORT_CLASS
-#define EXPTP_PANDA_SSEMATH EXPORT_TEMPL
-#else
-#define EXPCL_PANDA_SSEMATH IMPORT_CLASS
-#define EXPTP_PANDA_SSEMATH IMPORT_TEMPL
-#endif
+#include "pandabase.h"
 
 ConfigureDecl(config_ssemath, EXPCL_PANDA_SSEMATH, EXPTP_PANDA_SSEMATH);
 

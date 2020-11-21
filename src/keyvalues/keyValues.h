@@ -34,7 +34,7 @@ static const std::string not_found = "not found";
  * Represents a single block from a key-values file.
  * Has a list of string key-value pairs, and can have a list of child blocks.
  */
-class EXPCL_VIF CKeyValues : public TypedWritableReferenceCount {
+class EXPCL_PANDA_KEYVALUES CKeyValues : public TypedWritableReferenceCount {
 PUBLISHED:
 	class Pair {
 	PUBLISHED:

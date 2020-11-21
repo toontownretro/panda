@@ -15,15 +15,8 @@
 #define CONFIG_STEAMNET_H
 
 #include "dconfig.h"
+#include "pandabase.h"
 #include "notifyCategoryProxy.h"
-
-#ifdef BUILDING_PANDA_STEAMNET
-#define EXPCL_PANDA_STEAMNET EXPORT_CLASS
-#define EXPTP_PANDA_STEAMNET EXPORT_TEMPL
-#else
-#define EXPCL_PANDA_STEAMNET IMPORT_CLASS
-#define EXPTP_PANDA_STEAMNET IMPORT_TEMPL
-#endif
 
 ConfigureDecl(config_steamnet, EXPCL_PANDA_STEAMNET, EXPTP_PANDA_STEAMNET);
 

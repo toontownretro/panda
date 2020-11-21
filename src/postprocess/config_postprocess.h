@@ -15,15 +15,8 @@
 #define CONFIG_POSTPROCESS_H
 
 #include "dconfig.h"
+#include "pandabase.h"
 #include "notifyCategoryProxy.h"
-
-#ifdef BUILDING_PANDA_POSTPROCESS
-#define EXPCL_PANDA_POSTPROCESS EXPORT_CLASS
-#define EXPTP_PANDA_POSTPROCESS EXPORT_TEMPL
-#else
-#define EXPCL_PANDA_POSTPROCESS IMPORT_CLASS
-#define EXPTP_PANDA_POSTPROCESS IMPORT_TEMPL
-#endif
 
 ConfigureDecl(config_postprocess, EXPCL_PANDA_POSTPROCESS, EXPTP_PANDA_POSTPROCESS);
 

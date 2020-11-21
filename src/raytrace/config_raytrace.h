@@ -15,16 +15,8 @@
 #define CONFIG_RAYTRACE_H
 
 #include "dconfig.h"
-#include "dtoolbase.h"
+#include "pandabase.h"
 #include "notifyCategoryProxy.h"
-
-#ifdef BUILDING_PANDA_RAYTRACE
-#define EXPCL_PANDA_RAYTRACE EXPORT_CLASS
-#define EXPTP_PANDA_RAYTRACE EXPORT_TEMPL
-#else
-#define EXPCL_PANDA_RAYTRACE IMPORT_CLASS
-#define EXPTP_PANDA_RAYTRACE IMPORT_CLASS
-#endif
 
 NotifyCategoryDecl(raytrace, EXPCL_PANDA_RAYTRACE, EXPTP_PANDA_RAYTRACE);
 
