@@ -10,7 +10,7 @@
 
   // This directory is too big to combine into a single composite
   // file--at least on Windows.
-  #define DONT_COMPOSITE $[WINDOWS_PLATFORM]
+  //#define DONT_COMPOSITE $[WINDOWS_PLATFORM]
 
   #define BUILDING_DLL BUILDING_PANDA_PGRAPH
 
