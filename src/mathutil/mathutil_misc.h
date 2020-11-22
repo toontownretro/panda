@@ -182,7 +182,7 @@ INLINE bool VectorCompareD(const double *v1, const double *v2);
 
 INLINE bool isPointFinite(const vec_t *p)
 {
-        if (finite(p[0]) && finite(p[1]) && finite(p[2]))
+        if (std::isfinite(p[0]) && std::isfinite(p[1]) && std::isfinite(p[2]))
         {
                 return true;
         }

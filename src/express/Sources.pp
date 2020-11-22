@@ -236,7 +236,7 @@
     typeHandle_ext.h
 
   #define WIN_SYS_LIBS \
-     advapi32.lib ws2_32.lib $[WIN_SYS_LIBS]
+    advapi32.lib ws2_32.lib shell32.lib user32.lib crypt32.lib $[WIN_SYS_LIBS]
 
   // These libraries and frameworks are used by dtoolutil; we redefine
   // them here so they get into the panda build system.
@@ -246,7 +246,6 @@
   #if $[ANDROID_PLATFORM]
     #define UNIX_SYS_LIBS android
   #endif
-  #define WIN_SYS_LIBS shell32.lib $[WIN_SYS_LIBS]
   #define OSX_SYS_FRAMEWORKS Foundation $[if $[not $[BUILD_IPHONE]],AppKit]
 
 #end lib_target

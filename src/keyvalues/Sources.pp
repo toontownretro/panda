@@ -2,6 +2,8 @@
   #define TARGET keyvalues
   #define LOCAL_LIBS linmath express putil
 
+  #define BUILDING_DLL BUILDING_PANDA_KEYVALUES
+
   #define SOURCES \
     config_keyvalues.h \
     keyValues.h
