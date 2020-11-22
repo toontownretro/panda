@@ -21,7 +21,7 @@
  * Floating point RGB color compressed into 4 bytes.  Implementation taken from
  * Valve's Source Engine.
  */
-class ColorRGBExp32 {
+class EXPCL_PANDA_MATHUTIL ColorRGBExp32 {
 PUBLISHED:
   INLINE ColorRGBExp32();
   INLINE ColorRGBExp32(unsigned char r, unsigned char g, unsigned char b,

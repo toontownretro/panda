@@ -31,7 +31,7 @@ class SteamNetworkMessage;
 /**
  * Main interface to the SteamNetworkingSockets implementation.
  */
-class SteamNetworkSystem : public SteamNetworkEnums {
+class EXPCL_PANDA_STEAMNET SteamNetworkSystem : public SteamNetworkEnums {
 PUBLISHED:
   SteamNetworkSystem();
   ~SteamNetworkSystem();
