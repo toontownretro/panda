@@ -1,3 +1,5 @@
+#define BUILD_DIRECTORY
+
 #begin static_lib_target
   #define TARGET tinyxml
 
