@@ -2,6 +2,7 @@
 # These are files that are generated within the source tree by the
 # ppremake system.
 Makefile
+*.proj
 pp.dep
 /built/
 Opt?-*
