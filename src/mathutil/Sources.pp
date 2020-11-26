@@ -26,7 +26,6 @@
     linmath_events.h \
     look_at.h look_at_src.I \
     look_at_src.h \
-    linmath_events.h \
     mathutil_misc.I mathutil_misc.T mathutil_misc.h \
     mersenne.h \
     omniBoundingVolume.I  \

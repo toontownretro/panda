@@ -67,7 +67,7 @@
     shaderCompilerRegistry.h \
     shaderContext.h shaderContext.I \
     shaderModule.h shaderModule.I \
-    shaderModuleGlsl.h shaderModule.I \
+    shaderModuleGlsl.h shaderModuleGlsl.I \
     shaderModuleSpirV.h shaderModuleSpirV.I \
     shaderType.h shaderType.I \
     simpleAllocator.h simpleAllocator.I \

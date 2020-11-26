@@ -19,7 +19,6 @@
 
   #define SOURCES \
     dxGraphicsStateGuardian9.cxx \
-    dxGraphicsDevice9.h \
     wdxGraphicsBuffer9.h wdxGraphicsBuffer9.I \
     wdxGraphicsPipe9.I wdxGraphicsPipe9.h \
     wdxGraphicsWindow9.I wdxGraphicsWindow9.h \
