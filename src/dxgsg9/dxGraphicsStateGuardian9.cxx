@@ -3288,8 +3288,7 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
   alight.Type =  D3DLIGHT_POINT;
   alight.Diffuse  = get_light_color(light_obj);
   alight.Ambient  =  black ;
-  LColorf color = LCAST(float, light_obj->get_specular_color());
-  alight.Specular = *(D3DCOLORVALUE *)(color.get_data());
+  alight.Specular = alight.Diffuse;
 
   // Position needs to specify x, y, z, and w w == 1 implies non-infinite
   // position
@@ -3339,8 +3338,7 @@ bind_light(DirectionalLight *light_obj, const NodePath &light, int light_id) {
 
     fdata.Type =  D3DLIGHT_DIRECTIONAL;
     fdata.Ambient  =  black ;
-    LColorf color = LCAST(float, light_obj->get_specular_color());
-    fdata.Specular = *(D3DCOLORVALUE *)(color.get_data());
+    fdata.Specular = black;
 
     fdata.Direction = *(D3DVECTOR *)dir.get_data();
 
@@ -3393,8 +3391,7 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
   alight.Type =  D3DLIGHT_SPOT;
   alight.Ambient  =  black ;
   alight.Diffuse  = get_light_color(light_obj);
-  LColorf color = LCAST(float, light_obj->get_specular_color());
-  alight.Specular = *(D3DCOLORVALUE *)(color.get_data());
+  alight.Specular = alight.Diffuse;
 
   alight.Position = *(D3DVECTOR *)pos.get_data();
 

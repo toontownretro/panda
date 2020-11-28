@@ -3,7 +3,7 @@
 #define OTHER_LIBS \
    dtoolutil:c dtoolbase:c dtool:m
 
-#define USE_PACKAGES dx9
+#define USE_PACKAGES dx9 spirv_cross spirv_tools
 
 #begin lib_target
   #define TARGET dxgsg9
