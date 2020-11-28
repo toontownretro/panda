@@ -6,6 +6,13 @@ Makefile
 pp.dep
 /built/
 Opt?-*
+*.sln
+*.vcxproj
+*.vcxproj.user
+.vs
+*.log
+x64
+Win32
 src/configfiles/20_panda.prc
 src/egg/lexer.cxx
 src/egg/parser.cxx
