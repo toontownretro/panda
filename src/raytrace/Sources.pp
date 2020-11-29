@@ -1,3 +1,5 @@
+#define BUILD_DIRECTORY
+
 #define USE_PACKAGES embree
 #define LOCAL_LIBS ssemath pgraph putil gobj
 
