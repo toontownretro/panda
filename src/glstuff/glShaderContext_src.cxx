@@ -69,6 +69,8 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
 
   // Is this a SPIR-V shader?  If so, we've already done the reflection.
   if (!_needs_reflection) {
+    _remap_uniform_locations = true;
+
     if (_needs_query_uniform_locations) {
       for (const Module &module : _modules) {
         query_uniform_locations(module._module);
@@ -212,18 +214,16 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
 
     // Temporary hacks until array inputs are integrated into the rest of
     // the shader input system.
-    _transform_table_index = _shader->_transform_table_index;
-    _transform_table_size = _shader->_transform_table_size;
-    _slider_table_index = _shader->_slider_table_index;
-    _slider_table_size = _shader->_slider_table_size;
-
-    if (_transform_table_size > 0 && _transform_table_index == -1) {
-      _transform_table_index = _glgsg->_glGetUniformLocation(_glsl_program, "p3d_TransformTable");
+    if (_shader->_transform_table_loc >= 0) {
+      _transform_table_index = get_uniform_location(_shader->_transform_table_loc);
+      _transform_table_size = _shader->_transform_table_size;
     }
-    if (_slider_table_size > 0 && _slider_table_index == -1) {
-      _slider_table_index = _glgsg->_glGetUniformLocation(_glsl_program, "p3d_SliderTable");
+    if (_shader->_slider_table_loc >= 0) {
+      _slider_table_index = get_uniform_location(_shader->_slider_table_loc);
+      _slider_table_size = _shader->_slider_table_size;
     }
   } else {
+    _remap_uniform_locations = false;
     reflect_program();
   }
 
@@ -2599,27 +2599,60 @@ issue_parameters(int altered) {
  */
 void CLP(ShaderContext)::
 update_transform_table(const TransformTable *table) {
-  LMatrix4f *matrices = (LMatrix4f *)alloca(_transform_table_size * 64);
+  size_t num_matrices = (size_t)_transform_table_size;
 
-  size_t i = 0;
-  if (table != nullptr) {
-    size_t num_transforms = min((size_t)_transform_table_size, table->get_num_transforms());
-    for (; i < num_transforms; ++i) {
+  if (!_shader->_transform_table_reduced) {
+    LMatrix4f *matrices = (LMatrix4f *)alloca(num_matrices * sizeof(LMatrix4f));
+
+    size_t i = 0;
+    if (table != nullptr) {
+      size_t num_transforms = min(num_matrices, table->get_num_transforms());
+      for (; i < num_transforms; ++i) {
 #ifdef STDFLOAT_DOUBLE
-      LMatrix4 matrix;
-      table->get_transform(i)->get_matrix(matrix);
-      matrices[i] = LCAST(float, matrix);
+        LMatrix4 matrix;
+        table->get_transform(i)->get_matrix(matrix);
+        matrices[i] = LCAST(float, matrix);
 #else
-      table->get_transform(i)->get_matrix(matrices[i]);
+        table->get_transform(i)->get_matrix(matrices[i]);
 #endif
+      }
     }
+    for (; i < num_matrices; ++i) {
+      matrices[i] = LMatrix4f::ident_mat();
+    }
+    _glgsg->_glUniformMatrix4fv(_transform_table_index, _transform_table_size,
+                                (_shader->get_language() == Shader::SL_Cg),
+                                (float *)matrices);
   }
-  for (; i < (size_t)_transform_table_size; ++i) {
-    matrices[i] = LMatrix4f::ident_mat();
-  }
+  else {
+    // Reduced 3x4 matrix, used by shader generator
+    LVecBase4f *vectors = (LVecBase4f *)alloca(_transform_table_size * sizeof(LVecBase4f) * 3);
 
-  _glgsg->_glUniformMatrix4fv(_transform_table_index, _transform_table_size,
-                              GL_FALSE, (float *)matrices);
+    size_t i = 0;
+    if (table != nullptr) {
+      size_t num_transforms = std::min(num_matrices, table->get_num_transforms());
+      for (; i < num_transforms; ++i) {
+        LMatrix4f matrix;
+#ifdef STDFLOAT_DOUBLE
+        LMatrix4d matrixd;
+        table->get_transform(i)->get_matrix(matrixd);
+        matrix = LCAST(float, matrixd);
+#else
+        table->get_transform(i)->get_matrix(matrix);
+#endif
+        vectors[i * 3 + 0] = matrix.get_col(0);
+        vectors[i * 3 + 1] = matrix.get_col(1);
+        vectors[i * 3 + 2] = matrix.get_col(2);
+      }
+    }
+    for (; i < num_matrices; ++i) {
+      vectors[i * 3 + 0].set(1, 0, 0, 0);
+      vectors[i * 3 + 1].set(0, 1, 0, 0);
+      vectors[i * 3 + 2].set(0, 0, 1, 0);
+    }
+    _glgsg->_glUniformMatrix3x4fv(_transform_table_index, _transform_table_size,
+                                  GL_FALSE, (float *)vectors);
+  }
 }
 
 /**
@@ -2813,6 +2846,22 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
 #else
           _glgsg->_glVertexAttrib4fv(p, _glgsg->_scene_graph_color.get_data());
 #endif
+        }
+        else if (name == InternalName::get_transform_index() &&
+                 _glgsg->_glVertexAttribI4ui != nullptr) {
+          _glgsg->_glVertexAttribI4ui(p, 0, 1, 2, 3);
+        }
+        else if (name == InternalName::get_instance_matrix()) {
+          const LMatrix4 &ident_mat = LMatrix4::ident_mat();
+
+          for (int i = 0; i < bind._elements; ++i) {
+#ifdef STDFLOAT_DOUBLE
+            _glgsg->_glVertexAttrib4dv(p, ident_mat.get_data() + i * 4);
+#else
+            _glgsg->_glVertexAttrib4fv(p, ident_mat.get_data() + i * 4);
+#endif
+            ++p;
+          }
         }
       }
     }
@@ -3399,10 +3448,10 @@ attach_shader(const ShaderModule *module) {
   }
 
   bool needs_compile = false;
-#ifndef OPENGLES
   if (module->is_of_type(ShaderModuleSpirV::get_class_type())) {
     ShaderModuleSpirV *spv = (ShaderModuleSpirV *)module;
 
+#ifndef OPENGLES
     if (_glgsg->_supports_spir_v) {
       // Load a SPIR-V binary.
       if (GLCAT.is_debug()) {
@@ -3456,7 +3505,9 @@ attach_shader(const ShaderModule *module) {
       }
       _glgsg->_glSpecializeShader(handle, "main", 0, nullptr, nullptr);
     }
-    else {
+    else
+#endif  // !OPENGLES
+    {
       // Compile to GLSL using SPIRV-Cross.
       if (GLCAT.is_debug()) {
         GLCAT.debug()
@@ -3565,9 +3616,8 @@ attach_shader(const ShaderModule *module) {
       _glgsg->_glShaderSource(handle, 1, &text_str, nullptr);
       needs_compile = true;
     }
-  } else
-#endif
-  if (module->is_of_type(ShaderModuleGlsl::get_class_type())) {
+  }
+  else if (module->is_of_type(ShaderModuleGlsl::get_class_type())) {
     // Legacy preprocessed GLSL.
     if (GLCAT.is_debug()) {
       GLCAT.debug()

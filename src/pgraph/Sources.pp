@@ -55,6 +55,8 @@
     geomDrawCallbackData.I geomDrawCallbackData.h \
     geomNode.I geomNode.h \
     geomTransformer.I geomTransformer.h \
+    instanceList.I instanceList.h \
+    instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
     lensNode.I lensNode.h \
     light.I light.h \
@@ -156,6 +158,8 @@
     geomDrawCallbackData.cxx \
     geomNode.cxx \
     geomTransformer.cxx \
+    instanceList.cxx \
+    instancedNode.cxx \
     internalNameCollection.cxx \
     lensNode.cxx \
     light.cxx \
@@ -255,6 +259,8 @@
     geomDrawCallbackData.I geomDrawCallbackData.h \
     geomNode.I geomNode.h \
     geomTransformer.I geomTransformer.h \
+    instanceList.I instanceList.h \
+    instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
     lensNode.I lensNode.h \
     light.I light.h \

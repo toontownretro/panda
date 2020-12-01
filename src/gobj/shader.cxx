@@ -1007,13 +1007,12 @@ bind_vertex_input(const InternalName *name, const ::ShaderType *type, int locati
   bind._name = nullptr;
   bind._append_uv = -1;
 
-  //FIXME: matrices
   uint32_t dim[3];
   if (!type->as_scalar_type(bind._scalar_type, dim[0], dim[1], dim[2])) {
     shader_cat.error()
       << "Unrecognized type " << *type << " for vertex input " << *name << "\n";
   }
-  bind._elements = dim[0];
+  bind._elements = dim[0] * dim[1];
 
   if (shader_cat.is_debug()) {
     shader_cat.debug()
@@ -1048,6 +1047,13 @@ bind_vertex_input(const InternalName *name, const ::ShaderType *type, int locati
     else if (name_str.compare(4, 13, "MultiTexCoord") == 0 && name_str.size() > 17) {
       bind._name = InternalName::get_texcoord();
       bind._append_uv = atoi(name_str.substr(17).c_str());
+    }
+    else if (name_str == "p3d_InstanceMatrix") {
+      bind._name = InternalName::get_instance_matrix();
+
+      if (dim[1] != 4 || dim[2] != 3) {
+        return report_parameter_error(name, type, "expected mat4x3");
+      }
     }
     else {
       shader_cat.error()
@@ -1706,6 +1712,37 @@ bind_parameter(const Parameter &param) {
 
       return true;
     }
+    if (pieces[1] == "TransformTable") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+
+      const ::ShaderType::Matrix *matrix = element_type->as_matrix();
+      if (matrix == nullptr ||
+          matrix->get_num_rows() != 4 ||
+          matrix->get_num_columns() != 4 ||
+          matrix->get_scalar_type() != ScalarType::ST_float) {
+        return report_parameter_error(name, type, "expected mat4[]");
+      }
+
+      _transform_table_loc = param._location;
+      _transform_table_size = num_elements;
+      _transform_table_reduced = false;
+      return true;
+    }
+    if (pieces[1] == "SliderTable") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+
+      if (element_type != ::ShaderType::float_type) {
+        return report_parameter_error(name, type, "expected float");
+      }
+
+      _slider_table_loc = param._location;
+      _slider_table_size = num_elements;
+      return true;
+    }
 
     if (pieces[1] == "CascadeMVPs") {
       const ::ShaderType *element_type;
@@ -1796,50 +1833,6 @@ bind_parameter(const Parameter &param) {
 
       cp_add_mat_spec(bind);
 
-      return true;
-    }
-
-    if (pieces[1] == "TransformTable") {
-      const ::ShaderType::Array *array_type = type->as_array();
-      if (array_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of mat4");
-      }
-
-      const ::ShaderType::Matrix *mat_type = array_type->get_element_type()->as_matrix();
-      if (mat_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of mat4");
-      }
-
-      if (!expect_float_matrix(name, mat_type, 4, 4)) {
-        return false;
-      }
-
-      _transform_table_index = param._location;
-      _transform_table_size = array_type->get_num_elements();
-
-      // The actual binding is currently handled by GLShaderContext.
-      return true;
-    }
-
-    if (pieces[1] == "SliderTable") {
-      const ::ShaderType::Array *array_type = type->as_array();
-      if (array_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of float");
-      }
-
-      const ::ShaderType::Scalar *scalar_type = array_type->get_element_type()->as_scalar();
-      if (scalar_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of float");
-      }
-
-      if (scalar_type->get_scalar_type() != ::ShaderType::ST_float) {
-        return report_parameter_error(name, type, "expected array of float");
-      }
-
-      _slider_table_index = param._location;
-      _slider_table_size = array_type->get_num_elements();
-
-      // The actual binding is currently handled by GLShaderContext.
       return true;
     }
 
@@ -2029,7 +2022,7 @@ bind_parameter(const Parameter &param) {
       else {
         bind._piece = SMP_row3;
       }
-      bind._scalar_type = vector->get_scalar_type();
+      bind._scalar_type = ScalarType::ST_float;
     }
     else {
       if (!expect_float_vector(name, type, 4, 4)) {
@@ -2388,7 +2381,33 @@ bind_parameter(const Parameter &param) {
     }
 
     if (pieces[0] == "tbl") {
-      // Handled elsewhere.
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      if (!expect_num_words(name, type, 2) ||
+          !type->unwrap_array(element_type, num_elements)) {
+        return report_parameter_error(name, type, "expected array");
+      }
+
+      if (pieces[1] == "transforms") {
+        const ::ShaderType::Matrix *matrix = element_type->as_matrix();
+        if (matrix == nullptr ||
+            matrix->get_num_rows() < 3 ||
+            matrix->get_num_columns() != 4 ||
+            matrix->get_scalar_type() != ScalarType::ST_float) {
+          return report_parameter_error(name, type, "expected float3x4[] or float4x4[]");
+        }
+
+        _transform_table_loc = param._location;
+        _transform_table_size = num_elements;
+        _transform_table_reduced = (matrix->get_num_rows() == 3);
+      }
+      else if (pieces[1] == "sliders") {
+        _slider_table_loc = param._location;
+        _slider_table_size = num_elements;
+      }
+      else {
+        return report_parameter_error(name, type, "unrecognized parameter name");
+      }
       return true;
     }
 

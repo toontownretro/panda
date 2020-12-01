@@ -15,6 +15,8 @@
 #include "string_utils.h"
 #include "shaderType.h"
 
+#include "GLSL.std.450.h"
+
 #ifndef NDEBUG
 #include <glslang/SPIRV/disassemble.h>
 #endif
@@ -47,7 +49,7 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words) :
       {
         const Definition &def = writer.get_definition(op.args[2]);
         nassertv(def._dtype == DT_ext_inst);
-        if (def._name == "GLSL.std.450" && op.args[3] == 2) {
+        if (def._name == "GLSL.std.450" && op.args[3] == GLSLstd450RoundEven) {
           // We mark the use of the GLSL roundEven() function, which requires
           // GLSL 1.30 or HLSL SM 4.0.
           _used_caps |= C_round_even;
@@ -99,6 +101,9 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words) :
     writer.flatten_struct(type_id);
   }
 
+  // Remove unused variables before assigning locations.
+  writer.remove_unused_variables();
+
   // Add in location decorations for any inputs that are missing it.
   writer.assign_locations(stage);
 
@@ -111,9 +116,12 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words) :
       _used_caps |= C_double;
     }
 
-    if (def._dtype == DT_global && !def.is_builtin() &&
-        // HACK: For some reason the gl_in block is not marked as built-in.
-        def._name != "gl_in") {
+    if (def._dtype == DT_global && !def.is_builtin()) {
+      // Ignore empty structs/arrays.
+      if (def._type->get_num_interface_locations() == 0) {
+        continue;
+      }
+
       Variable var;
       var.type = def._type;
       var.name = InternalName::make(def._name);
@@ -706,6 +714,72 @@ bind_descriptor_set(uint32_t set, const vector_int &locations) {
 }
 
 /**
+ * Removes unused variables.
+ */
+void ShaderModuleSpirV::InstructionWriter::
+remove_unused_variables() {
+  pset<uint32_t> delete_ids;
+
+  for (uint32_t id = 0; id < _instructions.get_id_bound(); ++id) {
+    Definition &def = modify_definition(id);
+
+    if ((def._dtype == DT_global || def._dtype == DT_local) && !def.is_used()) {
+      delete_ids.insert(id);
+      if (shader_cat.is_debug() && !def._name.empty()) {
+        shader_cat.debug()
+          << "Removing unused variable " << def._name << " (" << id << ")\n";
+      }
+      def.clear();
+    }
+  }
+
+  if (delete_ids.empty()) {
+    return;
+  }
+
+  InstructionIterator it = _instructions.begin();
+  while (it != _instructions.end()) {
+    Instruction op = *it;
+
+    switch (op.opcode) {
+    case spv::OpName:
+    case spv::OpMemberName:
+    case spv::OpDecorate:
+    case spv::OpMemberDecorate:
+      // Delete decorations on the variable.
+      if (op.nargs >= 1 && delete_ids.count(op.args[0])) {
+        it = _instructions.erase(it);
+        continue;
+      }
+      break;
+
+    case spv::OpVariable:
+      if (op.nargs >= 2 && delete_ids.count(op.args[1])) {
+        it = _instructions.erase(it);
+      }
+      break;
+
+    case spv::OpAccessChain:
+    case spv::OpInBoundsAccessChain:
+    case spv::OpPtrAccessChain:
+    case spv::OpCopyObject:
+    case spv::OpBitcast:
+      // Delete these uses of unused variable
+      if (delete_ids.count(op.args[2])) {
+        delete_ids.insert(op.args[1]);
+        it = _instructions.erase(it);
+      }
+      break;
+
+    default:
+      break;
+    }
+
+    ++it;
+  }
+}
+
+/**
  * Converts the members of the struct type with the given ID to regular
  * variables.  Useful for unwrapping uniform blocks.
  */
@@ -716,6 +790,9 @@ flatten_struct(uint32_t type_id) {
 
   pset<uint32_t> deleted_ids;
   pmap<uint32_t, uint32_t> deleted_access_chains;
+
+  // Collect type pointers that we have to create.
+  pvector<uint32_t> insert_type_pointers;
 
   pvector<uint32_t> member_ids(struct_type->get_num_members());
 
@@ -764,6 +841,11 @@ flatten_struct(uint32_t type_id) {
         it = _instructions.erase(it);
 
         std::string struct_var_name = std::move(_defs[struct_var_id]._name);
+        if (shader_cat.is_spam()) {
+          shader_cat.spam()
+            << "Removing variable " << struct_var_id << ": "
+            << *_defs[struct_var_id]._type << " " << struct_var_name << "\n";
+        }
         _defs[struct_var_id].clear();
 
         for (size_t mi = 0; mi < struct_type->get_num_members(); ++mi) {
@@ -799,32 +881,175 @@ flatten_struct(uint32_t type_id) {
           // Just unwrap the first index.
           op.args[2] = member_ids[index];
           it = _instructions.erase_arg(it, 3);
+
+          // We also need to change the type if it has the wrong storage class.
+          const Definition &typeptr_def = get_definition(op.args[0]);
+          nassertv(typeptr_def._dtype == DT_type_pointer);
+
+          uint32_t type_pointer_id = find_type_pointer(typeptr_def._type, spv::StorageClassUniformConstant);
+          if (type_pointer_id == 0) {
+            // Can't create the type pointer immediately, since we're no longer
+            // in the type declaration block.  We'll add it at the end.
+            type_pointer_id = _instructions.allocate_id();
+            record_type_pointer(type_pointer_id, spv::StorageClassUniformConstant, typeptr_def._type_id);
+            insert_type_pointers.push_back(type_pointer_id);
+          }
+          op.args[0] = type_pointer_id;
+
+          // Change the origin so that future loads through this access chain
+          // will be able to mark the new variable as used.
+          Definition &def = modify_definition(op.args[1]);
+          def._type_id = type_pointer_id;
+          def._origin_id = op.args[2];
         } else {
           // Delete the access chain entirely.
           deleted_access_chains[op.args[1]] = member_ids[index];
           it = _instructions.erase(it);
+
+          _defs[op.args[1]].clear();
           continue;
         }
       }
+      else if (deleted_access_chains.count(op.args[2])) {
+        // The base of this access chain is an access chain we deleted.
+        op.args[2] = deleted_access_chains[op.args[2]];
+
+        const Definition &typeptr_def = get_definition(op.args[0]);
+        nassertv(typeptr_def._dtype == DT_type_pointer);
+        uint32_t type_pointer_id = find_type_pointer(typeptr_def._type, spv::StorageClassUniformConstant);
+        if (type_pointer_id == 0) {
+          type_pointer_id = _instructions.allocate_id();
+          record_type_pointer(type_pointer_id, spv::StorageClassUniformConstant, typeptr_def._type_id);
+          insert_type_pointers.push_back(type_pointer_id);
+        }
+        op.args[0] = type_pointer_id;
+
+        Definition &def = modify_definition(op.args[1]);
+        def._type_id = type_pointer_id;
+        def._origin_id = op.args[2];
+      }
       break;
 
+    case spv::OpFunctionCall:
+      for (size_t i = 3; i < op.nargs; ++i) {
+        if (deleted_access_chains.count(op.args[i])) {
+          op.args[i] = deleted_access_chains[op.args[i]];
+        }
+        mark_used(op.args[i]);
+      }
+      break;
+
+    case spv::OpImageTexelPointer:
     case spv::OpLoad:
+    case spv::OpAtomicLoad:
+    case spv::OpAtomicExchange:
+    case spv::OpAtomicCompareExchange:
+    case spv::OpAtomicCompareExchangeWeak:
+    case spv::OpAtomicIIncrement:
+    case spv::OpAtomicIDecrement:
+    case spv::OpAtomicIAdd:
+    case spv::OpAtomicISub:
+    case spv::OpAtomicSMin:
+    case spv::OpAtomicUMin:
+    case spv::OpAtomicSMax:
+    case spv::OpAtomicUMax:
+    case spv::OpAtomicAnd:
+    case spv::OpAtomicOr:
+    case spv::OpAtomicXor:
+    case spv::OpAtomicFlagTestAndSet:
       // If this triggers, the struct is being loaded into another variable,
       // which means we can't unwrap this (for now).
       nassertv(!deleted_ids.count(op.args[2]));
 
       if (deleted_access_chains.count(op.args[2])) {
         op.args[2] = deleted_access_chains[op.args[2]];
+
+        Definition &def = modify_definition(op.args[1]);
+        def._origin_id = op.args[2];
       }
+      else if (deleted_ids.count(_defs[op.args[1]]._origin_id)) {
+        // Origin points to deleted variable, change to proper variable.
+        Definition &def = modify_definition(op.args[1]);
+        const Definition &from = get_definition(op.args[2]);
+        def._origin_id = from._origin_id;
+      }
+      mark_used(op.args[1]);
+      break;
+
+    case spv::OpStore:
+    case spv::OpAtomicStore:
+    case spv::OpAtomicFlagClear:
+      // Can't store the struct pointer itself (yet)
+      nassertv(!deleted_ids.count(op.args[0]));
+
+      if (deleted_access_chains.count(op.args[0])) {
+        op.args[0] = deleted_access_chains[op.args[0]];
+      }
+      mark_used(op.args[0]);
       break;
 
     case spv::OpCopyMemory:
     case spv::OpCopyMemorySized:
-      // Shouldn't be copying the struct directly.
+      // Shouldn't be copying into or out of the struct directly.
+      nassertv(!deleted_ids.count(op.args[0]));
       nassertv(!deleted_ids.count(op.args[1]));
 
+      if (deleted_access_chains.count(op.args[0])) {
+        op.args[0] = deleted_access_chains[op.args[0]];
+      }
       if (deleted_access_chains.count(op.args[1])) {
         op.args[1] = deleted_access_chains[op.args[1]];
+      }
+      mark_used(op.args[0]);
+      mark_used(op.args[1]);
+      break;
+
+    case spv::OpArrayLength:
+    case spv::OpConvertPtrToU:
+      nassertv(!deleted_ids.count(op.args[2]));
+
+      if (deleted_access_chains.count(op.args[2])) {
+        op.args[2] = deleted_access_chains[op.args[2]];
+      }
+      mark_used(op.args[2]);
+      break;
+
+    case spv::OpCopyObject:
+      if (deleted_ids.count(op.args[2])) {
+        // If it's just a copy of the struct pointer, delete the copy.
+        deleted_ids.insert(op.args[1]);
+        _defs[op.args[1]].clear();
+        it = _instructions.erase(it);
+        continue;
+      }
+      else if (deleted_access_chains.count(op.args[2])) {
+        op.args[2] = deleted_access_chains[op.args[2]];
+
+        // Copy the type since the storage class may have changed.
+        op.args[0] = get_definition(op.args[2])._type_id;
+
+        Definition &def = modify_definition(op.args[1]);
+        def._origin_id = op.args[2];
+        def._type_id = op.args[0];
+      }
+      break;
+
+    case spv::OpSelect:
+      mark_used(op.args[3]);
+      mark_used(op.args[4]);
+      break;
+
+    case spv::OpBitcast:
+      nassertv(!deleted_ids.count(op.args[2]));
+
+      if (deleted_access_chains.count(op.args[2])) {
+        op.args[2] = deleted_access_chains[op.args[2]];
+
+        Definition &def = modify_definition(op.args[1]);
+        def._origin_id = op.args[2];
+      }
+      if (_defs[op.args[0]]._dtype != DT_type_pointer) {
+        mark_used(op.args[1]);
       }
       break;
 
@@ -873,6 +1098,15 @@ flatten_struct(uint32_t type_id) {
       continue;
     }
 
+    ++it;
+  }
+
+  it = _instructions.begin_functions();
+
+  // Insert all the type pointers for the access chains.
+  for (uint32_t id : insert_type_pointers) {
+    it = _instructions.insert(it, spv::OpTypePointer,
+      {id, spv::StorageClassUniformConstant, _defs[id]._type_id});
     ++it;
   }
 }
@@ -1232,6 +1466,29 @@ set_variable_type(uint32_t variable_id, const ShaderType *type) {
 }
 
 /**
+ * Searches for an already-defined type pointer of the given storage class.
+ * Returns its id, or 0 if it was not found.
+ */
+uint32_t ShaderModuleSpirV::InstructionWriter::
+find_type_pointer(const ShaderType *type, spv::StorageClass storage_class) {
+  TypeMap::const_iterator tit = _type_map.find(type);
+  if (tit == _type_map.end()) {
+    return 0;
+  }
+  uint32_t type_id = tit->second;
+
+  for (uint32_t id = 0; id < _defs.size(); ++id) {
+    Definition &def = _defs[id];
+    if (def._dtype == DT_type_pointer &&
+        def._type_id == type_id &&
+        def._storage_class == storage_class) {
+      return id;
+    }
+  }
+  return 0;
+}
+
+/**
  * Defines a new variable of the given type and storage class.
  */
 uint32_t ShaderModuleSpirV::InstructionWriter::
@@ -1328,26 +1585,13 @@ r_define_variable(InstructionIterator &it, const ShaderType *type, spv::StorageC
  */
 uint32_t ShaderModuleSpirV::InstructionWriter::
 r_define_type_pointer(InstructionIterator &it, const ShaderType *type, spv::StorageClass storage_class) {
-  uint32_t type_id;
-  TypeMap::const_iterator tit = _type_map.find(type);
-  if (tit != _type_map.end()) {
-    type_id = tit->second;
-
-    // Do we already have a type pointer for this type?
-    for (uint32_t id = 0; id < _defs.size(); ++id) {
-      Definition &def = _defs[id];
-      if (def._dtype == DT_type_pointer &&
-          def._type_id == type_id &&
-          def._storage_class == storage_class) {
-        // Already defined.
-        return id;
-      }
-    }
-  } else {
-    type_id = r_define_type(it, type);
+  uint32_t type_pointer_id = find_type_pointer(type, storage_class);
+  if (type_pointer_id != 0) {
+    return type_pointer_id;
   }
 
-  uint32_t type_pointer_id = _instructions.allocate_id();
+  uint32_t type_id = r_define_type(it, type);
+  type_pointer_id = _instructions.allocate_id();
   record_type_pointer(type_pointer_id, storage_class, type_id);
 
   _instructions.insert(it, spv::OpTypePointer,
@@ -1670,6 +1914,32 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
   switch (op.opcode) {
   case spv::OpExtInstImport:
     record_ext_inst_import(op.args[0], (const char*)&op.args[1]);
+    break;
+
+  case spv::OpExtInst:
+    {
+      const Definition &def = get_definition(op.args[2]);
+      nassertv(def._dtype == DT_ext_inst);
+      if (def._name == "GLSL.std.450") {
+        // These standard functions take pointers as arguments.
+        switch (op.args[3]) {
+        case GLSLstd450Modf:
+        case GLSLstd450Frexp:
+          mark_used(op.args[5]);
+          break;
+
+        case GLSLstd450InterpolateAtCentroid:
+          mark_used(op.args[4]);
+          break;
+
+        case GLSLstd450InterpolateAtSample:
+        case GLSLstd450InterpolateAtOffset:
+          mark_used(op.args[4]);
+          mark_used(op.args[5]);
+          break;
+        }
+      }
+    }
     break;
 
   case spv::OpName:
@@ -2060,7 +2330,6 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
     }
     break;
 
-  case spv::OpCompositeInsert:
   case spv::OpArrayLength:
   case spv::OpConvertPtrToU:
     mark_used(op.args[2]);

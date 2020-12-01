@@ -1321,18 +1321,20 @@ is_in_view(const BoundingVolume *view_frustum, Thread *current_thread) const {
  * Actually draws the Geom with the indicated GSG, using the indicated vertex
  * data (which might have been pre-munged to support the GSG's needs).
  *
+ * num_instances specifies the number of times to render the geometry.
+ *
  * Returns true if all of the primitives were drawn normally, false if there
  * was a problem (for instance, some of the data was nonresident).  If force
  * is passed true, it will wait for the data to become resident if necessary.
  */
 bool Geom::
 draw(GraphicsStateGuardianBase *gsg, const GeomVertexData *vertex_data,
-     bool force, Thread *current_thread) const {
+     size_t num_instances, bool force, Thread *current_thread) const {
   GeomPipelineReader geom_reader(this, current_thread);
   GeomVertexDataPipelineReader data_reader(vertex_data, current_thread);
   data_reader.check_array_readers();
 
-  return geom_reader.draw(gsg, &data_reader, force);
+  return geom_reader.draw(gsg, &data_reader, num_instances, force);
 }
 
 /**
@@ -1870,11 +1872,12 @@ check_valid(const GeomVertexDataPipelineReader *data_reader) const {
  */
 bool GeomPipelineReader::
 draw(GraphicsStateGuardianBase *gsg,
-     const GeomVertexDataPipelineReader *data_reader, bool force) const {
+     const GeomVertexDataPipelineReader *data_reader,
+     size_t num_instances, bool force) const {
   bool all_ok;
   {
     PStatTimer timer(Geom::_draw_primitive_setup_pcollector);
-    all_ok = gsg->begin_draw_primitives(this, data_reader, force);
+    all_ok = gsg->begin_draw_primitives(this, data_reader, num_instances, force);
   }
   if (all_ok) {
     Geom::Primitives::const_iterator pi;

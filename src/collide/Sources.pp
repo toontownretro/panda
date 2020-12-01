@@ -107,4 +107,7 @@
 
   #define IGATESCAN all
 
+  #define IGATEEXT \
+    collisionPolygon_ext.h collisionPolygon_ext.cxx
+
 #end lib_target

@@ -198,6 +198,7 @@ public:
 
     void assign_locations(Stage stage);
     void bind_descriptor_set(uint32_t set, const vector_int &locations);
+    void remove_unused_variables();
 
     void flatten_struct(uint32_t type_id);
     uint32_t make_block(const ShaderType::Struct *block_type, const pvector<int> &locations,
@@ -205,6 +206,7 @@ public:
 
     void set_variable_type(uint32_t id, const ShaderType *type);
 
+    uint32_t find_type_pointer(const ShaderType *type, spv::StorageClass storage_class);
     uint32_t define_variable(const ShaderType *type, spv::StorageClass storage_class);
     uint32_t define_type_pointer(const ShaderType *type, spv::StorageClass storage_class);
     uint32_t define_type(const ShaderType *type);

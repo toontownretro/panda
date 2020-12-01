@@ -45,6 +45,7 @@
     geomVertexReader.h geomVertexReader.I \
     geomVertexRewriter.h geomVertexRewriter.I \
     geomVertexWriter.h geomVertexWriter.I \
+    GLSL.std.450.h \
     indexBufferContext.I indexBufferContext.h \
     internalName.I internalName.h \
     lens.h lens.I \

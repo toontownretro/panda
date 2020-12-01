@@ -39,6 +39,7 @@
 #include "boundingSphere.h"
 #include "config_mathutil.h"
 #include "preparedGraphicsObjects.h"
+#include "instanceList.h"
 
 
 bool allow_flatten_color = ConfigVariableBool
@@ -525,6 +526,10 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
         CullableObject *object =
           new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
+        if (data._instances != nullptr) {
+          // Draw each individual instance.
+          object->_instances = data._instances;
+        }
         trav->get_cull_handler()->record_object(object, trav);
       }
     }
@@ -543,12 +548,23 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         continue;
       }
 
+      if (data._instances != nullptr) {
+        // Draw each individual instance.  We don't bother culling each
+        // individual Geom for each instance; that is probably way too slow.
+        CullableObject *object =
+          new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
+        object->_instances = data._instances;
+        trav->get_cull_handler()->record_object(object, trav);
+        continue;
+      }
+
       // Cull the individual Geom against the view frustum.
       if (data._view_frustum != nullptr &&
           !geom->is_in_view(data._view_frustum, current_thread)) {
         // Cull this Geom.
         continue;
       }
+
       if (data._cull_planes != nullptr) {
         // Also cull the Geom against the cull planes.
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
@@ -562,7 +578,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       }
 
       CullableObject *object =
-        new CullableObject(std::move(geom), std::move(state), internal_transform);
+        new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
