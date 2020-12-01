@@ -56,11 +56,7 @@ Shader(ShaderLanguage lang) :
   _loaded(false),
   _language(lang),
   _mat_deps(0),
-  _cache_compiled_shader(false),
-  _transform_table_index(-1),
-  _transform_table_size(0),
-  _slider_table_index(-1),
-  _slider_table_size(0)
+  _cache_compiled_shader(false)
 {
 }
 

@@ -360,7 +360,7 @@ void HDRPass::draw( CallbackData *data )
 	// The shader will discard any pixels that are not within the specified luminance range.
 	// The number of pixels returned by the occlusion query is the number of pixels in that bucket/luminance range.
 	gsg->begin_occlusion_query();
-	munged_geom->draw( gsg, munged_data, true, Thread::get_current_thread() );
+	munged_geom->draw( gsg, munged_data, 1, true, Thread::get_current_thread() );
 	bucket->ctx = gsg->end_occlusion_query();
 }
 

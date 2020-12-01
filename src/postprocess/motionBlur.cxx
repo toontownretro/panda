@@ -118,7 +118,7 @@ draw(CallbackData *data) {
     munge_geom(munged_geom, munged_data, true, thread);
 
   // Draw it!
-  munged_geom->draw(gsg, munged_data, true, thread);
+  munged_geom->draw(gsg, munged_data, 1, true, thread);
 }
 
 void MotionBlur::

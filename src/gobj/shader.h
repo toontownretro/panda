@@ -496,12 +496,6 @@ public:
   uint32_t _module_mask = 0;
   int _used_caps = 0;
 
-  int _transform_table_index;
-  size_t _transform_table_size;
-
-  int _slider_table_index;
-  size_t _slider_table_size;
-
 protected:
   ShaderFile _filename;
   Filename _fullpath;
