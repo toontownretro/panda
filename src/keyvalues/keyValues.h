@@ -98,11 +98,12 @@ PUBLISHED:
   EXTENSION(PyObject *as_float_tuple_list(const std::string &str));
 
 	template<class T>
-	INLINE static std::string to_string(T v);
-
-	template<class T>
 	INLINE static std::string to_string(const pvector<T> &v);
 
+	INLINE static std::string to_string(unsigned int v);
+	INLINE static std::string to_string(int v);
+	INLINE static std::string to_string(float v);
+	INLINE static std::string to_string(double v);
 	static std::string to_string(const LVecBase3f &v);
 	static std::string to_string(const LVecBase4f &v);
 	static std::string to_string(const LVecBase2f &v);
@@ -248,12 +249,6 @@ INLINE const Filename &CKeyValues::get_filename() const {
 
 template <class T>
 INLINE std::string CKeyValues::
-to_string(T v) {
-  return to_string(v);
-}
-
-template <class T>
-INLINE std::string CKeyValues::
 to_string(const pvector<T> &v) {
   std::string res = "";
   for (size_t i = 0; i < v.size(); i++) {
@@ -261,4 +256,32 @@ to_string(const pvector<T> &v) {
   }
 
   return res;
+}
+
+INLINE std::string CKeyValues::
+to_string(unsigned int v) {
+	std::ostringstream ss;
+	ss << v;
+	return ss.str();
+}
+
+INLINE std::string CKeyValues::
+to_string(int v) {
+	std::ostringstream ss;
+	ss << v;
+	return ss.str();
+}
+
+INLINE std::string CKeyValues::
+to_string(float v) {
+	std::ostringstream ss;
+	ss << v;
+	return ss.str();
+}
+
+INLINE std::string CKeyValues::
+to_string(double v) {
+	std::ostringstream ss;
+	ss << v;
+	return ss.str();
 }
