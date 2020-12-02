@@ -11,6 +11,8 @@
 
   #define USE_PACKAGES ode
 
+  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib
+
   #define SOURCES \
     ode_includes.h config_ode.h \
     odeWorld.I odeWorld.h \
