@@ -381,7 +381,7 @@ cp_dependency(ShaderMatInput inp) {
 void Shader::
 cp_add_mat_spec(ShaderMatSpec &spec) {
   // We currently expect each ShaderMatSpec to map to one location.
-  nassertv(spec._id._type->get_num_parameter_locations() == 1);
+  //nassertv(spec._id._type->get_num_parameter_locations() == 1);
 
   // If we're composing with identity, simplify.
 
