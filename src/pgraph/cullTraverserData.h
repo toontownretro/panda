@@ -55,8 +55,6 @@ public:
                            const TransformState *net_transform,
                            const RenderState *state,
                            GeometricBoundingVolume *view_frustum);
-  INLINE CullTraverserData(const CullTraverserData &parent,
-                           PandaNode *child);
 
 PUBLISHED:
   INLINE PandaNode *node() const;

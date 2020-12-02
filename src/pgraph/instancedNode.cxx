@@ -231,7 +231,10 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       instance_data.apply_transform((*instances)[ii].get_transform());
 
       for (size_t ci = 0; ci < children.size(); ++ci) {
-        CullTraverserData child_data(instance_data, children.get_child(ci));
+        CullTraverserData child_data(instance_data, children.get_child(ci),
+                                     instance_data._net_transform,
+                                     instance_data._state,
+                                     instance_data._view_frustum);
         if (child_data.is_in_view(trav->get_camera_mask())) {
           // Yep, the instance is in view.
           culled_instances.clear_bit(ii);

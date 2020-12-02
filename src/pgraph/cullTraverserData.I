@@ -80,27 +80,6 @@ CullTraverserData(const CullTraverserData &parent,
 }
 
 /**
- * This constructor creates a CullTraverserData object that reflects the next
- * node down in the traversal.
- */
-INLINE CullTraverserData::
-CullTraverserData(const CullTraverserData &parent, PandaNode *child) :
-  _next(&parent),
-#ifdef _DEBUG
-  _start(nullptr),
-#endif
-  _node_reader(child, parent._node_reader.get_current_thread()),
-  _net_transform(parent._net_transform),
-  _state(parent._state),
-  _view_frustum(parent._view_frustum),
-  _cull_planes(parent._cull_planes),
-  _instances(parent._instances),
-  _draw_mask(parent._draw_mask),
-  _portal_depth(parent._portal_depth)
-{
-}
-
-/**
  * Returns the node traversed to so far.
  */
 INLINE PandaNode *CullTraverserData::

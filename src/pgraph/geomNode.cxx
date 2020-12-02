@@ -552,7 +552,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         // Draw each individual instance.  We don't bother culling each
         // individual Geom for each instance; that is probably way too slow.
         CullableObject *object =
-          new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
+          new CullableObject(std::move(geom), std::move(state), internal_transform);
         object->_instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
         continue;
@@ -578,7 +578,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       }
 
       CullableObject *object =
-        new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
+        new CullableObject(std::move(geom), std::move(state), internal_transform);
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
