@@ -165,6 +165,9 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
 
       ensure_generated_shader(gsg);
+      if (_state->_generated_shader != nullptr) {
+        sattr = DCAST(ShaderAttrib, _state->_generated_shader);
+      }
     } else {
       // We may need to munge the state for the fixed-function pipeline.
       StateMunger *state_munger = (StateMunger *)munger;
