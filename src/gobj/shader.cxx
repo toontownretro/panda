@@ -381,7 +381,7 @@ cp_dependency(ShaderMatInput inp) {
 void Shader::
 cp_add_mat_spec(ShaderMatSpec &spec) {
   // We currently expect each ShaderMatSpec to map to one location.
-  //nassertv(spec._id._type->get_num_parameter_locations() == 1);
+  nassertv(spec._id._type->get_num_parameter_locations() == 1);
 
   // If we're composing with identity, simplify.
 
@@ -1273,6 +1273,7 @@ bind_parameter(const Parameter &param) {
 
       ShaderMatSpec bind;
       bind._id = param;
+      bind._id._type = array_type;
       bind._func = SMF_first;
       bind._piece = SMP_whole;
       bind._part[0] = SMO_texmat_i;
@@ -1481,6 +1482,7 @@ bind_parameter(const Parameter &param) {
       }
       Shader::ShaderMatSpec bind;
       bind._id = param;
+      bind._id._type = element_type;
       bind._piece = Shader::SMP_row3;
       bind._func = Shader::SMF_first;
       bind._part[0] = Shader::SMO_clipplane_i;
@@ -1751,6 +1753,7 @@ bind_parameter(const Parameter &param) {
 
       ShaderMatSpec bind;
       bind._id = param;
+      bind._id._type = element_type;
       bind._func = SMF_first;
       bind._piece = SMP_whole;
       bind._part[0] = SMO_cascade_light_mvps_i;
