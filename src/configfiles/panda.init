@@ -1,10 +1,20 @@
 SETABS PANDA_VER 0.8
+
 MODREL ETC_PATH built/etc
+
+# Set up the CFG_PATH variable for loading .prc files.  We need a different
+# implementation for each shell type.
+
 DOCSH if ( ! $?CFG_PATH ) then
 DOCSH   setenv CFG_PATH ~
-DOCSH   setenv CFG_PATH ". ${CFG_PATH} /usr/local/etc"
+DOCSH   setenv CFG_PATH ". ${CFG_PATH} /usr/local/etc ${PLAYER}"
 DOCSH endif
+
 DOSH if [ -z "$CFG_PATH" ]; then
-DOSH   CFG_PATH=". $HOME /usr/local/etc"
+DOSH   CFG_PATH=". $HOME /usr/local/etc $PLAYER"
 DOSH   export CFG_PATH
 DOSH fi
+
+DOBAT if "%CFG_PATH%" == "" (
+DOBAT   set CFG_PATH=.;%USERPROFILE%;%USERPROFILE%\etc;%PLAYER%
+DOBAT )
