@@ -116,6 +116,7 @@
     nodeCachedReferenceCount.cxx \
     paramValue.cxx \
     pbitops.cxx \
+    pointerData.cxx \
     pta_ushort.cxx \
     simpleHashMap.cxx \
     sparseArray.cxx \

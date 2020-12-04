@@ -3,6 +3,8 @@
 #begin lib_target
   #define TARGET steamnet
 
+  #define BUILDING_DLL BUILDING_PANDA_STEAMNET
+
   #define USE_PACKAGES valve_steamnet
   #define LOCAL_LIBS express net putil
 

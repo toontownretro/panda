@@ -5,7 +5,7 @@
   #define LOCAL_LIBS \
     dgraph
 
-  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] cfgmgr32.lib
+  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] cfgmgr32.lib user32.lib
   #define OSX_SYS_FRAMEWORKS IOKit
 
   #define BUILDING_DLL BUILDING_PANDA_DEVICE

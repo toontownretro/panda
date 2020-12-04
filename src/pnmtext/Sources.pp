@@ -3,7 +3,7 @@
 #define OTHER_LIBS interrogatedb \
                    dtoolutil:c dtoolbase:c dtool:m prc
 
-#define USE_PACKAGES freetype
+#define USE_PACKAGES freetype harfbuzz
 
 #begin lib_target
 
