@@ -91,6 +91,17 @@ private:
   private:
     COWPT(InstanceList) _instances;
 
+  public:
+    static TypeHandle get_class_type() {
+      return _type_handle;
+    }
+    static void init_type() {
+      register_type(_type_handle, "InstanceNode::CData");
+    }
+
+  private:
+    static TypeHandle _type_handle;
+
     friend class InstancedNode;
   };
 

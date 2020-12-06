@@ -147,7 +147,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     trav->get_scene()->get_camera_node()->get_lod_scale();
 
   Children children = get_children();
-  int num_children = std::min(children.get_num_children(), (int)cdata->_switch_vector.size());
+  int num_children = std::min(children.get_num_children(), cdata->_switch_vector.size());
 
   if (data._instances == nullptr || cdata->_got_force_switch) {
     LPoint3 center = cdata->_center * rel_transform->get_mat();
@@ -198,7 +198,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           CullTraverserData next_data(data, child, data._net_transform,
                                       data._state, data._view_frustum);
           next_data._instances = instances;
-          trav->traverse(next_data);
+          trav->traverse_below(next_data);
         }
       }
     }

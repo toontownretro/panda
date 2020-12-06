@@ -446,6 +446,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   manager->read_cdata(scan, _cycler);
 }
 
+TypeHandle InstancedNode::CData::_type_handle;
+
 /**
  *
  */
