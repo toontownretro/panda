@@ -1,3 +1,5 @@
+ATTACH dtool
+
 SETABS PANDA_VER 0.8
 
 MODREL ETC_PATH built/etc
