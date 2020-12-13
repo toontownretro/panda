@@ -723,7 +723,7 @@ remove_unused_variables() {
   for (uint32_t id = 0; id < _instructions.get_id_bound(); ++id) {
     Definition &def = modify_definition(id);
 
-    if ((def._dtype == DT_global || def._dtype == DT_local) && !def.is_used()) {
+    if (def._dtype == DT_global && !def.is_used()) {
       delete_ids.insert(id);
       if (shader_cat.is_debug() && !def._name.empty()) {
         shader_cat.debug()
