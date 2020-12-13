@@ -27,6 +27,9 @@ PUBLISHED:
 	BloomEffect( PostProcess *pp );
 
 	virtual Texture *get_final_texture();
+
+private:
+	Texture *_final_texture;
 };
 
 #endif

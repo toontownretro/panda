@@ -57,7 +57,7 @@ MotionBlur(GraphicsOutput *output) {
   _quad = nullptr;
   _quad_state = nullptr;
   _framebuffer_texture = new Texture;
-  _framebuffer_texture->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_srgb);
+  _framebuffer_texture->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgb);
   _framebuffer_texture->set_magfilter(SamplerState::FT_linear);
   _framebuffer_texture->set_minfilter(SamplerState::FT_linear);
   _framebuffer_texture->set_wrap_u(SamplerState::WM_clamp);

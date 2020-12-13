@@ -24,7 +24,6 @@ public:
 		_ps_tap_offsets( PTA_LVecBase2f::empty_array( 3 ) ),
 		_blur_input( blur_input )
 	{
-		set_div_size( true, 4 );
 		_fbprops.set_alpha_bits(0);
 	}
 
@@ -86,7 +85,6 @@ public:
 		_blur_x( blur_x ),
 		_scale_factor( scale_factor )
 	{
-		set_div_size( true, 4 );
 		_fbprops.set_alpha_bits(0);
 	}
 

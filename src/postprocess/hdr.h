@@ -23,26 +23,42 @@
 #include "occlusionQueryContext.h"
 #include "pta_float.h"
 #include "configVariableBool.h"
+#include "pvector.h"
 
 extern EXPCL_PANDA_POSTPROCESS ConfigVariableBool hdr_auto_exposure;
 
-struct hdrbucket_t
+class hdrbucket_t
 {
+public:
 	float luminance_min;
 	float luminance_max;
 
 	int pixels;
 
-	PT( OcclusionQueryContext ) ctx;
+	PT(OcclusionQueryContext) ctx;
+
+	CPT(RenderState) state;
 };
 
-static const int HDR_NUM_BUCKETS = 16;
+extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_num_buckets;
+extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_num_ldr_buckets;
 
 class EXPCL_PANDA_POSTPROCESS HDRPass : public PostProcessPass
 {
 	DECLARE_CLASS( HDRPass, PostProcessPass );
 
 PUBLISHED:
+	enum AutoExposureMethod {
+		AEM_program_auto,
+		AEM_shutter_priority,
+		AEM_aperature_priority,
+	};
+
+	enum ExposureMethod {
+		EM_saturation_speed,
+		EM_standard_output,
+	};
+
 	HDRPass( PostProcess *pp );
 
 	virtual void setup_quad();
@@ -52,6 +68,13 @@ PUBLISHED:
 
 	virtual void update();
 
+	INLINE float get_luminance() const;
+	INLINE float get_aperature() const;
+	INLINE float get_shutter_speed() const;
+	INLINE float get_iso() const;
+	INLINE float get_max_luminance() const;
+	INLINE float get_exposure() const;
+
 public:
 	void draw( CallbackData *data );
 
@@ -60,16 +83,43 @@ private:
 		float percent_bright_pixels, float same_bin_snap,
 		int total_pixel_count );
 
-private:
-	PTA_stdfloat _luminance_min_max;
-	CPT( Geom ) _hdr_quad_geom;
-	CPT( RenderState ) _hdr_geom_state;
+	float get_average_histogram_luminance(int total_pixel_count) const;
 
-	// Calculated exposure level based on histogram
+	float compute_iso(float aperature, float shutter_speed, float iso) const;
+	float compute_ev(float aperature, float shutter_speed, float iso) const;
+	float compute_target_ev(float average_luminance) const;
+
+	void apply_aperature_priority(float focal_length, float target_ev,
+																float &aperature, float &shutter_speed,
+																float &iso);
+	void apply_shutter_priority(float focal_length, float target_ev,
+															float &aperature, float &shutter_speed,
+															float &iso);
+	void apply_program_auto(float focal_length, float target_ev,
+													float &aperature, float &shutter_speed,
+													float &iso);
+
+	float get_saturation_based_exposure(float aperature, float shutter_speed,
+	                                    float iso) const;
+	float get_standard_output_based_exposure(float aperature,
+																					 float shutter_speed,
+	                                    		 float iso, float middle_grey) const;
+
+private:
+	CPT(Geom) _quad_geom;
+
+	// Calculated luminance based on histogram
+	float _luminance;
+
+	// Camera settings.
+	float _aperature;
+	float _shutter_speed;
+	float _iso;
+	float _max_luminance;
 	float _exposure;
 
 	int _current_bucket;
-	hdrbucket_t _buckets[HDR_NUM_BUCKETS];
+	pvector<hdrbucket_t> _buckets;
 };
 
 class EXPCL_PANDA_POSTPROCESS HDREffect : public PostProcessEffect
@@ -84,5 +134,7 @@ PUBLISHED:
 		return (HDRPass *)_passes.get_data( 0 ).p();
 	}
 };
+
+#include "hdr.I"
 
 #endif // HDR_H

@@ -11,7 +11,7 @@
     blurPasses.h \
     config_postprocess.h \
     fxaa.h \
-    hdr.h \
+    hdr.h hdr.I \
     motionBlur.h \
     postProcess.h \
     postProcessDefines.h \
