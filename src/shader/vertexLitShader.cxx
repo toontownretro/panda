@@ -17,6 +17,7 @@
 #include "textureAttrib.h"
 #include "textureStage.h"
 #include "postProcessDefines.h"
+#include "shaderParamAttrib.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -61,6 +62,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_pixel_shader_define("LIGHTING");
     set_pixel_shader_define("NUM_LIGHTS", num_lights);
     set_vertex_shader_define("NUM_LIGHTS", num_lights);
+  }
+
+  // Are we self-illuminating?
+  int selfillum_idx = params->find_param("selfillum");
+  if (selfillum_idx != -1) {
+    bool selfillum = (bool)atoi(params->get_param_value(selfillum_idx).c_str());
+    if (selfillum) {
+      set_pixel_shader_define("SELFILLUM");
+      set_input(ShaderInput("selfillumTint", LVecBase3(1.0)));
+    }
   }
 
   // Find the textures in use.
