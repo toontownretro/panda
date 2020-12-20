@@ -16,6 +16,9 @@
 
 #include "shaderBase.h"
 
+/**
+ * Generates a shader that renders geometry to cascaded shadow depth maps.
+ */
 class EXPCL_PANDA_SHADER CSMDepthShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,

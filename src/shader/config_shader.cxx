@@ -15,6 +15,7 @@
 #include "shaderBase.h"
 #include "shaderManager.h"
 #include "defaultShader.h"
+#include "depthShader.h"
 #include "csmDepthShader.h"
 #include "vertexLitShader.h"
 
@@ -64,6 +65,7 @@ init_libshader() {
   ShaderManager::get_global_ptr()->load_shader_libraries();
 
   DefaultShader::init_type();
+  DepthShader::init_type();
   CSMDepthShader::init_type();
   VertexLitShader::init_type();
 }

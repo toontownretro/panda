@@ -18,6 +18,9 @@
 #include "textureStage.h"
 #include "postProcessDefines.h"
 #include "shaderParamAttrib.h"
+#include "keyValues.h"
+#include "lightLensNode.h"
+#include "light.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -51,10 +54,18 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     need_world_normal = true;
   }
 
+  bool put_shadowed_light = false;
+  bool put_shadowed_point_light = false;
+  bool put_shadowed_spotlight = false;
+
   // Break out the lights by type.
   const LightAttrib *la;
   state->get_attrib_def(la);
   size_t num_lights = la->get_num_non_ambient_lights();
+  size_t num_ambient_lights = la->get_num_on_lights() - num_lights;
+  if (num_ambient_lights != 0) {
+    set_pixel_shader_define("AMBIENT_LIGHT");
+  }
   if (num_lights > 0) {
     need_world_vec = true;
     need_world_normal = true;
@@ -62,6 +73,46 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_pixel_shader_define("LIGHTING");
     set_pixel_shader_define("NUM_LIGHTS", num_lights);
     set_vertex_shader_define("NUM_LIGHTS", num_lights);
+
+    for (size_t i = 0; i < num_lights; i++) {
+      if (put_shadowed_light && put_shadowed_point_light &&
+          put_shadowed_spotlight) {
+        break;
+      }
+
+      NodePath light = la->get_on_light(i);
+      Light *light_obj = light.node()->as_light();
+      LightLensNode *light_lens = DCAST(LightLensNode, light.node());
+      if (light_lens->is_shadow_caster() &&
+          light_obj->get_light_type() != Light::LT_directional) {
+
+        if (!put_shadowed_light) {
+          set_pixel_shader_define("HAS_SHADOWED_LIGHT");
+          set_vertex_shader_define("HAS_SHADOWED_LIGHT");
+          need_eye_position = true;
+          put_shadowed_light = true;
+        }
+
+        switch (light_obj->get_light_type()) {
+        case Light::LT_point:
+          if (!put_shadowed_point_light) {
+            set_pixel_shader_define("HAS_SHADOWED_POINT_LIGHT");
+            set_vertex_shader_define("HAS_SHADOWED_POINT_LIGHT");
+            put_shadowed_point_light = true;
+          }
+          break;
+        case Light::LT_spot:
+          if (!put_shadowed_spotlight) {
+            set_pixel_shader_define("HAS_SHADOWED_SPOTLIGHT");
+            set_vertex_shader_define("HAS_SHADOWED_SPOTLIGHT");
+            put_shadowed_spotlight = true;
+          }
+          break;
+        default:
+          break;
+        }
+      }
+    }
   }
 
   // Are we self-illuminating?
@@ -69,8 +120,17 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (selfillum_idx != -1) {
     bool selfillum = (bool)atoi(params->get_param_value(selfillum_idx).c_str());
     if (selfillum) {
+      // Selfillum is enabled.
       set_pixel_shader_define("SELFILLUM");
-      set_input(ShaderInput("selfillumTint", LVecBase3(1.0)));
+
+      // Now figure out the tint value.
+      LVecBase3 tint(1.0);
+      int tint_idx = params->find_param("selfillumtint");
+      if (tint_idx != -1) {
+        // Got an explicit tint value.
+        tint = CKeyValues::to_3f(params->get_param_value(tint_idx));
+      }
+      set_input(ShaderInput("selfillumTint", tint));
     }
   }
 
@@ -87,6 +147,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       set_pixel_shader_define("BASETEXTURE");
       set_vertex_shader_define("BASETEXTURE_INDEX", i);
       set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+
+    } else if (stage_name == "arme") {
+      set_pixel_shader_define("ARME");
+      set_input(ShaderInput("armeSampler", ta->get_on_texture(stage)));
 
     } else if (stage_name == "reflection") {
       set_pixel_shader_define("PLANAR_REFLECTION");

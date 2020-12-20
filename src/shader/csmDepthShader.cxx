@@ -44,8 +44,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   add_hardware_skinning(anim_spec);
 
   // How about clip planes?
-  add_clip_planes(state);
+  if (add_clip_planes(state)) {
+    set_vertex_shader_define("NEED_WORLD_POSITION");
+    set_geometry_shader_define("NEED_WORLD_POSITION");
+    set_pixel_shader_define("NEED_WORLD_POSITION");
+  }
 
+  // Need textures for alpha-tested shadows.
   const TextureAttrib *ta;
   state->get_attrib_def(ta);
   for (int i = 0; i < ta->get_num_on_stages(); i++) {
