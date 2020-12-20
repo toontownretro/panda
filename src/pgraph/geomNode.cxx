@@ -526,10 +526,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
         CullableObject *object =
           new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
-        if (data._instances != nullptr) {
-          // Draw each individual instance.
-          object->_instances = data._instances;
-        }
+        object->_instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
     }
@@ -564,11 +561,11 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         // Cull this Geom.
         continue;
       }
-
       if (data._cull_planes != nullptr) {
         // Also cull the Geom against the cull planes.
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
-        const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();
+        const GeometricBoundingVolume *geom_gbv =
+          geom_volume->as_geometric_bounding_volume();
         int result;
         data._cull_planes->do_cull(result, state, geom_gbv);
         if (result == BoundingVolume::IF_no_intersection) {

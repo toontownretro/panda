@@ -176,8 +176,10 @@ bool PGEntry::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
   LightReMutexHolder holder(_lock);
   PGItem::cull_callback(trav, data);
-  update_text();
-  update_cursor();
+  if (Thread::get_current_pipeline_stage() == 0) {
+    update_text();
+    update_cursor();
+  }
 
   // Now render the text.
   trav->traverse_child(data, _text_render_root.node());
@@ -259,7 +261,7 @@ press(const MouseWatcherParameter &param, bool background) {
             }
             _cursor_stale = true;
             if (overflow_mode){
-                _text_geom_stale = true;
+              _text_geom_stale = true;
             }
           }
 
@@ -275,7 +277,7 @@ press(const MouseWatcherParameter &param, bool background) {
             }
             _cursor_stale = true;
             if (overflow_mode){
-                _text_geom_stale = true;
+              _text_geom_stale = true;
             }
           }
 
@@ -285,7 +287,7 @@ press(const MouseWatcherParameter &param, bool background) {
             _cursor_position = 0;
             _cursor_stale = true;
             if (overflow_mode){
-                _text_geom_stale = true;
+              _text_geom_stale = true;
             }
             type(param);
           }
@@ -296,7 +298,7 @@ press(const MouseWatcherParameter &param, bool background) {
             _cursor_position = _text.get_num_characters();
             _cursor_stale = true;
             if (overflow_mode){
-                _text_geom_stale = true;
+              _text_geom_stale = true;
             }
             type(param);
           }
@@ -305,6 +307,17 @@ press(const MouseWatcherParameter &param, bool background) {
     }
   }
   PGItem::press(param, background);
+
+#ifdef THREADED_PIPELINE
+  if (Pipeline::get_render_pipeline()->get_num_stages() > 1) {
+    if (_text_geom_stale) {
+      update_text();
+    }
+    if (_cursor_stale) {
+      update_cursor();
+    }
+  }
+#endif
 }
 
 /**
@@ -410,6 +423,17 @@ keystroke(const MouseWatcherParameter &param, bool background) {
     }
   }
   PGItem::keystroke(param, background);
+
+#ifdef THREADED_PIPELINE
+  if (Pipeline::get_render_pipeline()->get_num_stages() > 1) {
+    if (_text_geom_stale) {
+      update_text();
+    }
+    if (_cursor_stale) {
+      update_cursor();
+    }
+  }
+#endif
 }
 
 /**
@@ -433,6 +457,17 @@ candidate(const MouseWatcherParameter &param, bool background) {
     }
   }
   PGItem::candidate(param, background);
+
+#ifdef THREADED_PIPELINE
+  if (Pipeline::get_render_pipeline()->get_num_stages() > 1) {
+    if (_text_geom_stale) {
+      update_text();
+    }
+    if (_cursor_stale) {
+      update_cursor();
+    }
+  }
+#endif
 }
 
 /**
@@ -923,4 +958,10 @@ update_state() {
   } else {
     set_state(S_inactive);
   }
+#ifdef THREADED_PIPELINE
+  if (Pipeline::get_render_pipeline()->get_num_stages() > 1) {
+    update_text();
+    update_cursor();
+  }
+#endif
 }

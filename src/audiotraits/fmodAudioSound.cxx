@@ -270,6 +270,8 @@ stop() {
       fmod_audio_errcheck("_channel->stop()", result);
     }
   }
+  _start_time = 0.0;
+  _paused = false;
 
   _manager->stopping_sound(this);
 }
@@ -839,13 +841,13 @@ set_active(bool active) {
     } else {
       // ...deactivate the sound.
       if (status() == PLAYING) {
+        PN_stdfloat time = get_time();
+        stop();
         if (get_loop_count() == 0) {
           // ...we're pausing a looping sound.
           _paused = true;
+          _start_time = time;
         }
-        // Store off the current time so we can resume from where we paused.
-        _start_time = get_time();
-        stop();
       }
     }
   }
