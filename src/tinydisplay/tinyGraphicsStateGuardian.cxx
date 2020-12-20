@@ -1823,10 +1823,9 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
     // Cutoff == 180 means uniform point light source
     gl_light->spot_cutoff = 180.0f;
 
-    const LVecBase3 &att = light_obj->get_attenuation();
-    gl_light->attenuation[0] = att[0];
-    gl_light->attenuation[1] = att[1];
-    gl_light->attenuation[2] = att[2];
+    gl_light->attenuation[0] = 0.0;
+    gl_light->attenuation[1] = 0.0;
+    gl_light->attenuation[2] = light_obj->get_falloff();
   }
 
   nassertv(gl_light->next == nullptr);
@@ -1947,10 +1946,10 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
     gl_light->spot_exponent = light_obj->get_exponent();
     gl_light->spot_cutoff = lens->get_hfov() * 0.5f;
 
-    const LVecBase3 &att = light_obj->get_attenuation();
-    gl_light->attenuation[0] = att[0];
-    gl_light->attenuation[1] = att[1];
-    gl_light->attenuation[2] = att[2];
+
+    gl_light->attenuation[0] = 0.0;
+    gl_light->attenuation[1] = 0.0;
+    gl_light->attenuation[2] = light_obj->get_falloff();
   }
 
   nassertv(gl_light->next == nullptr);

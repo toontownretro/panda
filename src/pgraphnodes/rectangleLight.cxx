@@ -34,7 +34,9 @@ make_copy() const {
  */
 void RectangleLight::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  dg.add_stdfloat(_max_distance);
+  dg.add_stdfloat(_falloff);
+  dg.add_stdfloat(_inner_radius);
+  dg.add_stdfloat(_outer_radius);
 }
 
 /**
@@ -43,7 +45,9 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
  */
 void RectangleLight::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _max_distance = scan.get_stdfloat();
+  _falloff = scan.get_stdfloat();
+  _inner_radius = scan.get_stdfloat();
+  _outer_radius = scan.get_stdfloat();
 }
 
 /**
@@ -54,6 +58,7 @@ RectangleLight(const std::string &name) :
   LightLensNode(name)
 {
   _light_type = Light::LT_rectangle;
+  _lenses[0]._lens->set_near_far(0.01, get_outer_radius());
 }
 
 /**
@@ -84,6 +89,12 @@ void RectangleLight::
 write(std::ostream &out, int indent_level) const {
   LightLensNode::write(out, indent_level);
   indent(out, indent_level) << *this << "\n";
+  indent(out, indent_level + 2)
+    << "falloff " << get_falloff() << "\n";
+  indent(out, indent_level + 2)
+    << "inner radius " << get_inner_radius() << "\n";
+  indent(out, indent_level + 2)
+    << "outer radius " << get_outer_radius() << "\n";
 }
 
 /**

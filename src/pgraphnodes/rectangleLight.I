@@ -16,7 +16,9 @@
  */
 INLINE RectangleLight::CData::
 CData() :
-  _max_distance(make_inf((PN_stdfloat)0))
+  _falloff(1.0),
+  _inner_radius(1.0),
+  _outer_radius(2.0)
 {
 }
 
@@ -25,26 +27,67 @@ CData() :
  */
 INLINE RectangleLight::CData::
 CData(const RectangleLight::CData &copy) :
-  _max_distance(copy._max_distance)
+  _falloff(copy._falloff),
+  _inner_radius(copy._inner_radius),
+  _outer_radius(copy._outer_radius)
 {
 }
 
 /**
- * Returns the maximum distance at which the light has any effect, as previously
- * specified by set_max_distance.
+ * Returns the inverse-square falloff coefficient for the light.
  */
 INLINE PN_stdfloat RectangleLight::
-get_max_distance() const {
+get_falloff() const {
   CDReader cdata(_cycler);
-  return cdata->_max_distance;
+  return cdata->_falloff;
 }
 
 /**
- * Sets the radius of the light's sphere of influence.  Beyond this distance, the
- * light may be attenuated to zero, if this is supported by the shader.
+ * Sets the inverse-square falloff coefficient for the light.
  */
 INLINE void RectangleLight::
-set_max_distance(PN_stdfloat max_distance) {
+set_falloff(PN_stdfloat falloff) {
   CDWriter cdata(_cycler);
-  cdata->_max_distance = max_distance;
+  cdata->_falloff = falloff;
+}
+
+/**
+ * Returns the inner radius of the light.  This is the area of the light that
+ * attenuates according to the inverse-square falloff coefficient.
+ */
+INLINE PN_stdfloat RectangleLight::
+get_inner_radius() const {
+  CDReader cdata(_cycler);
+  return cdata->_inner_radius;
+}
+
+/**
+ * Sets the inner radius of the light.  This is the area of the light that
+ * attenuates according to the inverse-square falloff coefficient.
+ */
+INLINE void RectangleLight::
+set_inner_radius(PN_stdfloat radius) {
+  CDWriter cdata(_cycler);
+  cdata->_inner_radius = radius;
+}
+
+/**
+ * Returns the outer radius of the light.  This is the area of the light that
+ * linearly attenuates to 0 at the edge of the sphere.
+ */
+INLINE PN_stdfloat RectangleLight::
+get_outer_radius() const {
+  CDReader cdata(_cycler);
+  return cdata->_outer_radius;
+}
+
+/**
+ * Sets the outer radius of the light.  This is the area of the light that
+ * linearly attenuates to 0 at the edge of the sphere.
+ */
+INLINE void RectangleLight::
+set_outer_radius(PN_stdfloat radius) {
+  CDWriter cdata(_cycler);
+  cdata->_outer_radius = radius;
+  get_lens()->set_far(radius);
 }

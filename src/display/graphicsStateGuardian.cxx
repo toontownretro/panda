@@ -1181,13 +1181,69 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       Light *light = node->as_light();
       nassertv(light != nullptr);
 
-      const LVecBase3 &atten = light->get_attenuation();
+      LightLensNode *light_lens;
+      DCAST_INTO_V(light_lens, node);
 
-      into[i].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, atten[0], atten[1], atten[2], 0);
+      PN_stdfloat falloff = light->get_falloff();
+      PN_stdfloat inner_radius = light->get_inner_radius();
+      PN_stdfloat outer_radius = light->get_outer_radius();
+      bool shadows = light_lens->is_shadow_caster();
+      if (light->get_light_type() == Light::LT_directional) {
+        shadows = false;
+      }
+
+      into[i].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, falloff, inner_radius, outer_radius, (float)shadows);
     }
 
     for (; i < count; i++) {
       into[i].fill(0);
+    }
+
+    return;
+  }
+  case Shader::SMO_light_source_shadow_view_matrix_i: {
+    static const LMatrix4 biasmat(0.5f, 0.0f, 0.0f, 0.0f,
+                                  0.0f, 0.5f, 0.0f, 0.0f,
+                                  0.0f, 0.0f, 0.5f, 0.0f,
+                                  0.5f, 0.5f, 0.5f, 1.0f);
+
+    const LightAttrib *target_light;
+    _target_rs->get_attrib_def(target_light);
+
+    // We don't count ambient lights, which would be pretty silly to handle
+    // via this mechanism.
+    size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
+
+    size_t i = 0;
+    for (; i < num_lights; ++i) {
+      NodePath np = target_light->get_on_light(i);
+      nassertv(!np.is_empty());
+      PandaNode *node = np.node();
+      Light *light = node->as_light();
+      nassertv(light != nullptr);
+
+      LightLensNode *lnode;
+      DCAST_INTO_V(lnode, node);
+
+      if (!lnode->is_shadow_caster() || lnode->get_light_type() == Light::LT_directional) {
+        into[i] = biasmat;
+        continue;
+      }
+      Lens *lens = lnode->get_lens();
+
+      into[i] = _inv_cs_transform->get_mat() *
+        _scene_setup->get_camera_transform()->get_mat() *
+        np.get_net_transform()->get_inverse()->get_mat() *
+        LMatrix4::convert_mat(_coordinate_system, lens->get_coordinate_system());
+
+      if (!node->is_of_type(PointLight::get_class_type())) {
+        into[i] *= lens->get_projection_mat() * biasmat;
+      }
+
+    }
+
+    for (; i < count; i++) {
+      into[i] = biasmat;
     }
 
     return;
@@ -1649,6 +1705,7 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
   static const CPT_InternalName IN_position("position");
   static const CPT_InternalName IN_spotParams("spotParams");
   static const CPT_InternalName IN_attenuation("attenuation");
+  static const CPT_InternalName IN_hasShadows("hasShadows");
   static const CPT_InternalName IN_shadowViewMatrix("shadowViewMatrix");
 
   PandaNode *node = nullptr;
@@ -1750,9 +1807,25 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       Light *light = node->as_light();
       nassertv(light != nullptr);
 
-      t.set_row(3, LVecBase4(light->get_attenuation(), 0));
+      PN_stdfloat falloff = light->get_falloff();
+      PN_stdfloat inner = light->get_inner_radius();
+      PN_stdfloat outer = light->get_outer_radius();
+      t.set_row(3, LVecBase3(falloff, inner, outer));
     } else {
-      t.set_row(3, LVecBase4(1, 0, 0, 0));
+      t.set_row(3, LVecBase3(1, 0, 0));
+    }
+
+  } else if (attrib == IN_hasShadows) {
+    if (node != nullptr) {
+      LightLensNode *light_lens;
+      DCAST_INTO_V(light_lens, node);
+      bool shadows = light_lens->is_shadow_caster();
+      if (light_lens->get_light_type() == Light::LT_directional) {
+        shadows = false;
+      }
+      t.set_cell(3, 3, (float)shadows);
+    } else {
+      t.set_cell(3, 3, 0);
     }
 
   } else if (attrib == IN_shadowViewMatrix) {
@@ -1766,8 +1839,12 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       return;
     }
 
-    LensNode *lnode;
+    LightLensNode *lnode;
     DCAST_INTO_V(lnode, node);
+    if (!lnode->is_shadow_caster() || lnode->get_light_type() == Light::LT_directional) {
+      t = biasmat;
+      return;
+    }
     Lens *lens = lnode->get_lens();
 
     t = _inv_cs_transform->get_mat() *
@@ -1869,8 +1946,13 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
         PT(Texture) tex;
         LightLensNode *lln = DCAST(LightLensNode, light.node());
-        if (lln != nullptr && lln->_shadow_caster) {
+        if (lln != nullptr && lln->_shadow_caster && lln->get_light_type() != Light::LT_directional) {
           tex = get_shadow_map(light);
+          if (tex->get_texture_type() != (Texture::TextureType)spec._desired_type) {
+            // This isn't the type we want.  Bind a dummy map shadow map with
+            // the correct type.
+            tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
+          }
         } else {
           tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
         }

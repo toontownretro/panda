@@ -64,7 +64,9 @@ PUBLISHED:
                                    set_color_temperature);
 
   virtual PN_stdfloat get_exponent() const;
-  virtual const LVecBase3 &get_attenuation() const;
+  virtual PN_stdfloat get_falloff() const;
+  virtual PN_stdfloat get_inner_radius() const;
+  virtual PN_stdfloat get_outer_radius() const;
 
   INLINE void set_priority(int priority);
   INLINE int get_priority() const;

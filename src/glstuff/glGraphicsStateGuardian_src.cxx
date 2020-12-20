@@ -8432,10 +8432,9 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
   // Cutoff == 180 means uniform point light source
   glLightf(id, GL_SPOT_CUTOFF, 180.0f);
 
-  const LVecBase3 &att = light_obj->get_attenuation();
-  glLightf(id, GL_CONSTANT_ATTENUATION, att[0]);
-  glLightf(id, GL_LINEAR_ATTENUATION, att[1]);
-  glLightf(id, GL_QUADRATIC_ATTENUATION, att[2]);
+  glLightf(id, GL_CONSTANT_ATTENUATION, 0.0);
+  glLightf(id, GL_LINEAR_ATTENUATION, 0.0);
+  glLightf(id, GL_QUADRATIC_ATTENUATION, light_obj->get_falloff());
 
   report_my_gl_errors();
 }
@@ -8532,10 +8531,9 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
   glLightf(id, GL_SPOT_EXPONENT, max(min(light_obj->get_exponent(), (PN_stdfloat)128), (PN_stdfloat)0));
   glLightf(id, GL_SPOT_CUTOFF, lens->get_hfov() * 0.5f);
 
-  const LVecBase3 &att = light_obj->get_attenuation();
-  glLightf(id, GL_CONSTANT_ATTENUATION, att[0]);
-  glLightf(id, GL_LINEAR_ATTENUATION, att[1]);
-  glLightf(id, GL_QUADRATIC_ATTENUATION, att[2]);
+  glLightf(id, GL_CONSTANT_ATTENUATION, 0.0);
+  glLightf(id, GL_LINEAR_ATTENUATION, 0.0);
+  glLightf(id, GL_QUADRATIC_ATTENUATION, light_obj->get_falloff());
 
   report_my_gl_errors();
 }

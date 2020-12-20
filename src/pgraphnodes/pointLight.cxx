@@ -35,10 +35,9 @@ make_copy() const {
  */
 void PointLight::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  _attenuation.write_datagram(dg);
-  if (manager->get_file_minor_ver() >= 41) {
-    dg.add_stdfloat(_max_distance);
-  }
+  dg.add_stdfloat(_falloff);
+  dg.add_stdfloat(_inner_radius);
+  dg.add_stdfloat(_outer_radius);
   _point.write_datagram(dg);
 }
 
@@ -48,10 +47,9 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
  */
 void PointLight::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _attenuation.read_datagram(scan);
-  if (manager->get_file_minor_ver() >= 41) {
-    _max_distance = scan.get_stdfloat();
-  }
+  _falloff = scan.get_stdfloat();
+  _inner_radius = scan.get_stdfloat();
+  _outer_radius = scan.get_stdfloat();
   _point.read_datagram(scan);
 }
 
@@ -66,26 +64,38 @@ PointLight(const std::string &name) :
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(1, 0, 0, 0, -1, 0);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(0, lens);
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(-1, 0, 0, 0, -1, 0);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(1, lens);
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(0, 1, 0, 0, 0, 1);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(2, lens);
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(0, -1, 0, 0, 0, -1);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(3, lens);
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(0, 0, 1, 0, -1, 0);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(4, lens);
   lens = new PerspectiveLens(90, 90);
   lens->set_interocular_distance(0);
   lens->set_view_vector(0, 0, -1, 0, -1, 0);
+  lens->set_near(0.01);
+  lens->set_far(get_outer_radius());
   set_lens(5, lens);
 }
 
@@ -131,12 +141,13 @@ write(std::ostream &out, int indent_level) const {
   indent(out, indent_level + 2)
     << "color " << get_color() << "\n";
   indent(out, indent_level + 2)
-    << "attenuation " << get_attenuation() << "\n";
-
-  if (!cinf(get_max_distance())) {
-    indent(out, indent_level + 2)
-      << "max distance " << get_max_distance() << "\n";
-  }
+    << "falloff " << get_falloff() << "\n";
+  indent(out, indent_level + 2)
+    << "inner radius " << get_inner_radius() << "\n";
+  indent(out, indent_level + 2)
+    << "outer radius " << get_outer_radius() << "\n";
+  indent(out, indent_level + 2)
+    << "point " << get_point() << "\n";
 }
 
 /**

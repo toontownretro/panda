@@ -3341,10 +3341,9 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
   alight.Range =  __D3DLIGHT_RANGE_MAX;
   alight.Falloff =  1.0f;
 
-  const LVecBase3 &att = light_obj->get_attenuation();
-  alight.Attenuation0 = att[0];
-  alight.Attenuation1 = att[1];
-  alight.Attenuation2 = att[2];
+  alight.Attenuation0 = 0.0;
+  alight.Attenuation1 = 0.0;
+  alight.Attenuation2 = light_obj->get_falloff();
 
   HRESULT hr = _d3d_device->SetLight(light_id, &alight);
   if (FAILED(hr)) {
@@ -3451,10 +3450,9 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
   alight.Theta =  0.0f;
   alight.Phi = deg_2_rad(fov);
 
-  const LVecBase3 &att = light_obj->get_attenuation();
-  alight.Attenuation0 = att[0];
-  alight.Attenuation1 = att[1];
-  alight.Attenuation2 = att[2];
+  alight.Attenuation0 = 0.0;
+  alight.Attenuation1 = 0.0;
+  alight.Attenuation2 = light_obj->get_falloff();
 
   HRESULT hr = _d3d_device->SetLight(light_id, &alight);
   if (FAILED(hr)) {
