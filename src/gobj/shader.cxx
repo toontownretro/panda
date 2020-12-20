@@ -334,13 +334,15 @@ cp_dependency(ShaderMatInput inp) {
   if ((inp == SMO_light_ambient) ||
       (inp == SMO_light_source_i) ||
       (inp == SMO_light_source2_i) ||
+      (inp == SMO_light_source_shadow_view_matrix_i) ||
       (inp == SMO_cascade_light_mvps_i) ||
       (inp == SMO_cascade_light_near_far_i)) {
     dep |= SSD_light | SSD_frame;
   }
   if (inp == SMO_mat_constant_x_attrib ||
       inp == SMO_vec_constant_x_attrib ||
-      inp == SMO_lens_exposure_scale) {
+      inp == SMO_lens_exposure_scale ||
+      inp == SMO_light_source_shadow_view_matrix_i) {
     // Some light attribs (eg. position) need to be transformed to view space.
     dep |= SSD_view_transform;
   }
@@ -465,6 +467,7 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
           spec._part[i] == SMO_inv_texmat_i ||
           spec._part[i] == SMO_light_source_i ||
           spec._part[i] == SMO_light_source2_i ||
+          spec._part[i] == SMO_light_source_shadow_view_matrix_i ||
           spec._part[i] == SMO_cascade_light_mvps_i ||
           spec._part[i] == SMO_cascade_light_near_far_i ||
           spec._part[i] == SMO_apiview_clipplane_i ||
@@ -1635,7 +1638,7 @@ bind_parameter(const Parameter &param) {
 
         CPT(InternalName) fqname = ((InternalName *)name.p())->append(member.name);
 
-        if (member.name == "shadowMap") {
+        if (member.name == "shadowMap2D") {
           if (member.type->as_sampled_image() == nullptr) {
             return report_parameter_error(name, type, "expected sampler2D");
           }
@@ -1646,6 +1649,21 @@ bind_parameter(const Parameter &param) {
           bind._id._location = location++;
           bind._part = STO_light_i_shadow_map;
           bind._desired_type = Texture::TT_2d_texture;
+          for (bind._stage = 0; bind._stage < (int)array->get_num_elements(); ++bind._stage) {
+            _tex_spec.push_back(bind);
+            bind._id._location += num_members;
+          }
+        } else if (member.name == "shadowMapCube") {
+          if (member.type->as_sampled_image() == nullptr) {
+            return report_parameter_error(name, type, "expected samplerCube");
+          }
+          ShaderTexSpec bind;
+          bind._id = param;
+          bind._id._name = fqname;
+          bind._id._type = member.type;
+          bind._id._location = location++;
+          bind._part = STO_light_i_shadow_map;
+          bind._desired_type = Texture::TT_cube_map;
           for (bind._stage = 0; bind._stage < (int)array->get_num_elements(); ++bind._stage) {
             _tex_spec.push_back(bind);
             bind._id._location += num_members;
@@ -1696,6 +1714,20 @@ bind_parameter(const Parameter &param) {
             }
             bind._part[0] = SMO_light_source2_i;
             bind._piece = SMP_row3x3;
+          } else if (member.name == "hasShadows") {
+            if (!expect_float_vector(fqname, member.type, 1, 1)) {
+              report_parameter_error(fqname, member.type, "expected a float");
+              return false;
+            }
+            bind._part[0] = SMO_light_source2_i;
+            bind._piece = SMP_cell15;
+          } else if (member.name == "shadowViewMatrix") {
+            if (!expect_float_matrix(fqname, member.type, 4, 4)) {
+              report_parameter_error(fqname, member.type, "expected a mat4");
+              return false;
+            }
+            bind._part[0] = SMO_light_source_shadow_view_matrix_i;
+            bind._piece = SMP_whole;
           } else {
             report_parameter_error(fqname, type, "invalid light source parameter");
             return false;

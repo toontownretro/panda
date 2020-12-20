@@ -213,6 +213,7 @@ public:
     // Parameters of a light source
     SMO_light_source_i,
     SMO_light_source2_i,
+    SMO_light_source_shadow_view_matrix_i,
 
     // Cascaded shadow map projection matrices
     SMO_cascade_light_mvps_i,
