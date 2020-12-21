@@ -18,6 +18,7 @@
 #include "datagram.h"
 #include "datagramIterator.h"
 #include "config_pgraphnodes.h"
+#include "boundingSphere.h"
 
 TypeHandle PointLight::_type_handle;
 
@@ -181,6 +182,16 @@ get_vector_to_light(LVector3 &result, const LPoint3 &from_object_point,
 int PointLight::
 get_class_priority() const {
   return (int)CP_point_priority;
+}
+
+/**
+ * Creates and returns a bounding volume that encloses all of the space this
+ * light might illuminate.
+ */
+PT(GeometricBoundingVolume) PointLight::
+make_light_bounds() const {
+  // The light bounds is simply the outer radius :).
+  return new BoundingSphere(get_point(), get_outer_radius());
 }
 
 /**

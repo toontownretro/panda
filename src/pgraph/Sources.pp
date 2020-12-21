@@ -38,6 +38,7 @@
     cullBinManager.I cullBinManager.h \
     cullFaceAttrib.I cullFaceAttrib.h \
     cullHandler.I cullHandler.h \
+    cullLights.I cullLights.h \
     cullPlanes.I cullPlanes.h \
     cullResult.I cullResult.h \
     cullTraverser.I cullTraverser.h \
@@ -141,6 +142,7 @@
     cullBinManager.cxx \
     cullFaceAttrib.cxx \
     cullHandler.cxx \
+    cullLights.cxx \
     cullPlanes.cxx \
     cullResult.cxx \
     cullTraverser.cxx \
@@ -244,6 +246,7 @@
     cullBinManager.I cullBinManager.h \
     cullFaceAttrib.I cullFaceAttrib.h \
     cullHandler.I cullHandler.h \
+    cullLights.I cullLights.h \
     cullPlanes.I cullPlanes.h \
     cullResult.I cullResult.h \
     cullTraverser.I cullTraverser.h \

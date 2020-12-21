@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "cullPlanes.h"
+#include "cullLights.h"
 #include "workingNodePath.h"
 #include "renderState.h"
 #include "transformState.h"
@@ -74,6 +75,7 @@ PUBLISHED:
   INLINE bool is_this_node_hidden(const DrawMask &camera_mask) const;
 
   bool apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_gbv);
+  void apply_cull_lights(const CullLights *lights, const GeometricBoundingVolume *node_gbv);
 
   void apply_transform_and_state(CullTraverser *trav);
   void apply_transform(const TransformState *node_transform);
@@ -96,6 +98,7 @@ public:
   CPT(RenderState) _state;
   PT(GeometricBoundingVolume) _view_frustum;
   CPT(CullPlanes) _cull_planes;
+  CPT(CullLights) _cull_lights;
   CPT(InstanceList) _instances;
   DrawMask _draw_mask;
   int _portal_depth;

@@ -25,6 +25,7 @@
 #include "pipelineCycler.h"
 #include "updateSeq.h"
 #include "geomNode.h"
+#include "geometricBoundingVolume.h"
 
 class NodePath;
 class PandaNode;
@@ -52,6 +53,8 @@ PUBLISHED:
 
   virtual PandaNode *as_node()=0;
   virtual bool is_ambient_light() const;
+
+  virtual PT(GeometricBoundingVolume) make_light_bounds() const=0;
 
   INLINE const LColor &get_color() const;
   INLINE void set_color(const LColor &color);

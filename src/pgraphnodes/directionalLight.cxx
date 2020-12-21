@@ -18,6 +18,7 @@
 #include "bamReader.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "omniBoundingVolume.h"
 
 TypeHandle DirectionalLight::_type_handle;
 
@@ -135,6 +136,16 @@ get_vector_to_light(LVector3 &result, const LPoint3 &,
 int DirectionalLight::
 get_class_priority() const {
   return (int)CP_directional_priority;
+}
+
+/**
+ * Creates and returns a bounding volume that encloses all of the space this
+ * light might illuminate.
+ */
+PT(GeometricBoundingVolume) DirectionalLight::
+make_light_bounds() const {
+  // A directional light has infinite volume.
+  return new OmniBoundingVolume;
 }
 
 /**

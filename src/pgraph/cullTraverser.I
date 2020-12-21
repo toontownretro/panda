@@ -221,9 +221,13 @@ traverse_child(const CullTraverserData &data, PandaNode *node,
   }
 
   CullTraverserData next_data(data, std::move(node_reader), net_transform, state, view_frustum);
-  if (data._cull_planes != nullptr &&
-      !next_data.apply_cull_planes(data._cull_planes, node_reader.get_bounds()->as_geometric_bounding_volume())) {
+  if (!data._cull_planes->is_empty() &&
+      !next_data.apply_cull_planes(data._cull_planes, next_data._node_reader.get_bounds()->as_geometric_bounding_volume())) {
     return;
+  }
+
+  if (!data._cull_lights->is_empty()) {
+    next_data.apply_cull_lights(data._cull_lights, next_data._node_reader.get_bounds()->as_geometric_bounding_volume());
   }
 
   do_traverse(next_data);
@@ -256,9 +260,13 @@ traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &c
 
   CullTraverserData next_data(data, std::move(node_reader), data._net_transform, state, view_frustum);
 
-  if (data._cull_planes != nullptr &&
+  if (!data._cull_planes->is_empty() &&
       !next_data.apply_cull_planes(data._cull_planes, child.get_bounds())) {
     return;
+  }
+
+  if (!data._cull_lights->is_empty()) {
+    next_data.apply_cull_lights(data._cull_lights, child.get_bounds());
   }
 
   do_traverse(next_data);
@@ -278,7 +286,7 @@ do_traverse(CullTraverserData &data) {
   PandaNodePipelineReader *node_reader = data.node_reader();
   int fancy_bits = node_reader->get_fancy_bits();
 
-  if (fancy_bits == 0 && data._cull_planes == nullptr) {
+  if (fancy_bits == 0 && data._cull_planes->is_empty() && data._cull_lights->is_empty()) {
     // Nothing interesting in this node; just move on.
 
   } else {

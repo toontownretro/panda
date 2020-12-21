@@ -73,6 +73,8 @@ PUBLISHED:
 
   virtual int get_class_priority() const;
 
+  virtual PT(GeometricBoundingVolume) make_light_bounds() const;
+
   static PT(Texture) make_spot(int pixel_width, PN_stdfloat full_radius,
                                LColor &fg, LColor &bg);
 

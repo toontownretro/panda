@@ -19,6 +19,7 @@
 #include "textureAttrib.h"
 #include "renderModeAttrib.h"
 #include "clipPlaneAttrib.h"
+#include "lightAttrib.h"
 #include "boundingPlane.h"
 #include "billboardEffect.h"
 #include "compassEffect.h"
@@ -63,11 +64,16 @@ apply_transform_and_state(CullTraverser *trav) {
     _state = _state->compose(node_state);
   }
 
-  if (clip_plane_cull && _cull_planes != nullptr) {
+  if (clip_plane_cull) {
     _cull_planes = _cull_planes->apply_state(trav, this,
       (const ClipPlaneAttrib *)node_state->get_attrib(ClipPlaneAttrib::get_class_slot()),
       (const ClipPlaneAttrib *)_node_reader.get_off_clip_planes(),
       (const OccluderEffect *)node_effects->get_effect(OccluderEffect::get_class_type()));
+  }
+
+  if (light_cull) {
+    _cull_lights = _cull_lights->apply_state(trav, this,
+      (const LightAttrib *)node_state->get_attrib(LightAttrib::get_class_slot()));
   }
 }
 
@@ -88,14 +94,15 @@ apply_transform(const TransformState *node_transform) {
 
     _net_transform = _net_transform->compose(node_transform);
 
-    if (_view_frustum != nullptr || _cull_planes != nullptr) {
+    if (_view_frustum != nullptr || !_cull_planes->is_empty() || !_cull_lights->is_empty()) {
       // We need to move the viewing frustums into the node's coordinate space
       // by applying the node's inverse transform.
       if (node_transform->is_singular()) {
         // But we can't invert a singular transform!  Instead of trying, we'll
         // just give up on frustum culling from this point down.
         _view_frustum = nullptr;
-        _cull_planes = nullptr;
+        _cull_planes = CullPlanes::make_empty();
+        _cull_lights = CullLights::make_empty();
 
       } else {
         CPT(TransformState) inv_transform =
@@ -110,8 +117,12 @@ apply_transform(const TransformState *node_transform) {
           _view_frustum->xform(inv_transform->get_mat());
         }
 
-        if (_cull_planes != nullptr) {
+        if (!_cull_planes->is_empty()) {
           _cull_planes = _cull_planes->xform(inv_transform->get_mat());
+        }
+
+        if (!_cull_lights->is_empty()) {
+          _cull_lights = _cull_lights->xform(inv_transform->get_mat());
         }
       }
     }
@@ -191,6 +202,29 @@ apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_
   }
 
   return true;
+}
+
+/**
+ * Removes any lights from the state that do not intersect with the indicated
+ * bounding volume.
+ */
+void CullTraverserData::
+apply_cull_lights(const CullLights *lights, const GeometricBoundingVolume *node_gbv) {
+  if (!lights->is_empty()) {
+    int result;
+    CPT(CullLights) new_lights = lights->do_cull(result, _state, node_gbv);
+
+    if (pgraph_cat.is_spam()) {
+      pgraph_cat.spam()
+        << get_node_path() << " cull lights cull result = " << std::hex
+        << result << std::dec << "\n";
+      new_lights->write(pgraph_cat.spam(false));
+    }
+
+    if (!_node_reader.is_final()) {
+      _cull_lights = std::move(new_lights);
+    }
+  }
 }
 
 /**

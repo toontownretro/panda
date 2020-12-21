@@ -26,10 +26,14 @@ CullTraverserData(const NodePath &start,
   _net_transform(net_transform),
   _state(state),
   _view_frustum(view_frustum),
-  _cull_planes(nullptr),
+  _cull_planes(CullPlanes::make_empty()),
+  _cull_lights(CullLights::make_empty()),
   _draw_mask(DrawMask::all_on()),
   _portal_depth(0)
 {
+  // Only update the bounding volume if we're going to end up needing it.
+  bool check_bounds = (view_frustum != nullptr);
+  _node_reader.check_cached(check_bounds);
 }
 
 /**
@@ -49,10 +53,17 @@ CullTraverserData(const CullTraverserData &parent, PandaNode *child,
   _net_transform(net_transform),
   _state(state),
   _view_frustum(view_frustum),
+  _cull_planes(parent._cull_planes),
+  _cull_lights(parent._cull_lights),
   _draw_mask(parent._draw_mask),
   _portal_depth(parent._portal_depth),
   _instances(parent._instances)
 {
+  // Only update the bounding volume if we're going to end up needing it.
+  bool check_bounds = (!_cull_planes->is_empty()) ||
+                    (!_cull_lights->is_empty()) ||
+                    (_view_frustum != nullptr);
+  _node_reader.check_cached(check_bounds);
 }
 
 /**
@@ -73,10 +84,17 @@ CullTraverserData(const CullTraverserData &parent,
   _net_transform(net_transform),
   _state(state),
   _view_frustum(view_frustum),
+  _cull_planes(parent._cull_planes),
+  _cull_lights(parent._cull_lights),
   _draw_mask(parent._draw_mask),
   _portal_depth(parent._portal_depth),
   _instances(parent._instances)
 {
+  // Only update the bounding volume if we're going to end up needing it.
+  bool check_bounds = (!_cull_planes->is_empty()) ||
+                    (!_cull_lights->is_empty()) ||
+                    (_view_frustum != nullptr);
+  _node_reader.check_cached(check_bounds);
 }
 
 /**

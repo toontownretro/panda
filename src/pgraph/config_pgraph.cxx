@@ -121,6 +121,12 @@ ConfigVariableBool clip_plane_cull
           "that are completely behind one or more clip planes (primarily "
           "useful for debugging)  This also disables the use of occluders."));
 
+ConfigVariableBool light_cull
+("light-cull", true,
+ PRC_DESC("Set this true to enable light culling.  This will enable the "
+          "cull traverser to only apply lights onto objects that are "
+          "potentially affected by that light."));
+
 ConfigVariableBool allow_portal_cull
 ("allow-portal-cull", false,
  PRC_DESC("Set this true to enable portal clipping.  This will enable the "

@@ -16,6 +16,7 @@
 #include "bamReader.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "omniBoundingVolume.h"
 
 TypeHandle AmbientLight::_type_handle;
 
@@ -48,6 +49,15 @@ AmbientLight(const AmbientLight &copy) :
 int AmbientLight::
 get_class_priority() const {
   return (int)CP_ambient_priority;
+}
+
+/**
+ * Creates and returns a bounding volume that encloses all of the space this
+ * light might illuminate.
+ */
+PT(GeometricBoundingVolume) AmbientLight::
+make_light_bounds() const {
+  return new OmniBoundingVolume;
 }
 
 /**

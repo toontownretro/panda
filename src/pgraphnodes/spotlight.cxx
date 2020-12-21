@@ -199,6 +199,24 @@ get_class_priority() const {
 }
 
 /**
+ * Creates and returns a bounding volume that encloses all of the space this
+ * light might illuminate.
+ */
+PT(GeometricBoundingVolume) Spotlight::
+make_light_bounds() const {
+  // Use the underlying Lens' bounds.
+  PT(BoundingVolume) bounds = get_lens()->make_bounds();
+  if (bounds == nullptr) {
+    return nullptr;
+  }
+
+  PT(GeometricBoundingVolume) gbv = DCAST(GeometricBoundingVolume, bounds);
+  gbv->xform(get_lens()->get_view_mat());
+
+  return gbv;
+}
+
+/**
  *
  */
 void Spotlight::

@@ -58,6 +58,8 @@ PUBLISHED:
 
   virtual int get_class_priority() const;
 
+  virtual PT(GeometricBoundingVolume) make_light_bounds() const;
+
 public:
   virtual void bind(GraphicsStateGuardianBase *gsg, const NodePath &light,
                     int light_id);

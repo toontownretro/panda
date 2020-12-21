@@ -561,16 +561,29 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         // Cull this Geom.
         continue;
       }
-      if (data._cull_planes != nullptr) {
-        // Also cull the Geom against the cull planes.
+
+      bool has_cull_planes = !data._cull_planes->is_empty();
+      bool has_cull_lights = !data._cull_lights->is_empty();
+
+      if (has_cull_planes || has_cull_lights) {
         CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
-        const GeometricBoundingVolume *geom_gbv =
-          geom_volume->as_geometric_bounding_volume();
-        int result;
-        data._cull_planes->do_cull(result, state, geom_gbv);
-        if (result == BoundingVolume::IF_no_intersection) {
-          // Cull.
-          continue;
+        const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();
+
+        if (has_cull_planes) {
+          // Also cull the Geom against the cull planes.
+          int result;
+          data._cull_planes->do_cull(result, state, geom_gbv);
+          if (result == BoundingVolume::IF_no_intersection) {
+            // Cull.
+            continue;
+          }
+        }
+
+        if (has_cull_lights) {
+          // Cull down the lights to only include those that intersect the
+          // Geom's bounding volume.
+          int result;
+          data._cull_lights->do_cull(result, state, geom_gbv);
         }
       }
 
