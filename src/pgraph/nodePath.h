@@ -1055,6 +1055,7 @@ private:
 
 INLINE std::ostream &operator << (std::ostream &out, const NodePath &node_path);
 
+/* okcircular */
 #include "nodePathCollection.h"
 
 #include "nodePath.I"
