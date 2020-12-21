@@ -21,6 +21,6 @@
 NotifyCategoryDecl(map, EXPCL_PANDA_MAP, EXPTP_PANDA_MAP);
 ConfigureDecl(config_map, EXPCL_PANDA_MAP, EXPTP_PANDA_MAP);
 
-extern EXPCL_PANDA_MAP init_libmap();
+extern EXPCL_PANDA_MAP void init_libmap();
 
 #endif // CONFIG_MAP_H
