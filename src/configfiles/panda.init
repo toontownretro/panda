@@ -13,7 +13,7 @@ DOCSH   setenv CFG_PATH ". ${CFG_PATH} /usr/local/etc ${PLAYER}"
 DOCSH endif
 
 DOSH if [ -z "$CFG_PATH" ]; then
-DOSH   CFG_PATH=". $HOME /usr/local/etc $PLAYER"
+DOSH   CFG_PATH=".:$HOME:/usr/local/etc:$PLAYER"
 DOSH   export CFG_PATH
 DOSH fi
 
