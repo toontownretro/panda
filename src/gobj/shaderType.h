@@ -128,12 +128,20 @@ public:
 
   virtual void output(std::ostream &out) const override;
 
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
 private:
   virtual int compare_to_impl(const ShaderType &other) const override;
 
   virtual int get_align_bytes() const override;
 
-  const ScalarType _scalar_type;
+  ScalarType _scalar_type;
 
 public:
   static TypeHandle get_class_type() {
@@ -170,13 +178,21 @@ public:
 
   virtual void output(std::ostream &out) const override;
 
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
 private:
   virtual int compare_to_impl(const ShaderType &other) const override;
 
   virtual int get_align_bytes() const override;
 
-  const ScalarType _scalar_type;
-  const uint32_t _num_components;
+  ScalarType _scalar_type;
+  uint32_t _num_components;
 
 public:
   static TypeHandle get_class_type() {
@@ -213,14 +229,22 @@ public:
 
   virtual void output(std::ostream &out) const override;
 
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
 private:
   virtual int compare_to_impl(const ShaderType &other) const override;
 
   virtual int get_align_bytes() const override;
 
-  const ScalarType _scalar_type;
-  const uint32_t _num_rows;
-  const uint32_t _num_columns;
+  ScalarType _scalar_type;
+  uint32_t _num_rows;
+  uint32_t _num_columns;
 
 public:
   static TypeHandle get_class_type() {
@@ -273,6 +297,16 @@ private:
   pvector<Member> _members;
 
 public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+  virtual int complete_pointers(TypedWritable **p_list,
+                                BamReader *manager);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
+public:
   static TypeHandle get_class_type() {
     return _type_handle;
   }
@@ -321,6 +355,16 @@ PUBLISHED:
 private:
   const ShaderType *_element_type;
   uint32_t _num_elements;
+
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+  virtual int complete_pointers(TypedWritable **p_list,
+                                BamReader *manager);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:
   static TypeHandle get_class_type() {
@@ -373,6 +417,14 @@ private:
   Access _access;
 
 public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+
+public:
   static TypeHandle get_class_type() {
     return _type_handle;
   }
@@ -398,6 +450,12 @@ public:
   virtual int compare_to_impl(const ShaderType &other) const override;
 
   const Sampler *as_sampler() const override { return this; }
+
+public:
+  static void register_with_read_factory();
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 public:
   static TypeHandle get_class_type() {
@@ -434,6 +492,14 @@ private:
   Texture::TextureType _texture_type;
   ScalarType _sampled_type;
   bool _shadow = false;
+
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:
   static TypeHandle get_class_type() {
