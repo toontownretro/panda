@@ -12,7 +12,7 @@
   event gobj grutil gsgbase linmath mathutil \
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
-  nativenet net audio pnmtext steamnet keyvalues shader \
+  nativenet net audio pnmtext steamnet shader \
   postprocess ssemath raytrace
 
 #define LOCAL_LIBS \
