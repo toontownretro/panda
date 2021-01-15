@@ -1,13 +1,13 @@
 #ifndef KEYVALUES_EXT_H
 #define KEYVALUES_EXT_H
 
-#include "config_keyvalues.h"
+#include "config_putil.h"
 #include "keyValues.h"
 #include "extension.h"
 #include "py_panda.h"
 
 template<>
-class Extension<CKeyValues> : public ExtensionBase<CKeyValues> {
+class Extension<KeyValues> : public ExtensionBase<KeyValues> {
 public:
   PyObject *as_int_list(const std::string &str);
   PyObject *as_float_list(const std::string &str);

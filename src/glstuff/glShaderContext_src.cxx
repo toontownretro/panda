@@ -20,7 +20,6 @@
 
 #include "colorAttrib.h"
 #include "colorScaleAttrib.h"
-#include "materialAttrib.h"
 #include "shaderAttrib.h"
 #include "fogAttrib.h"
 #include "lightAttrib.h"
@@ -878,101 +877,6 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
           << "Could not bind texture input " << name_buffer << "\n";
       }
       return;
-    }
-    if (size > 9 && noprefix.substr(0, 9) == "Material.") {
-      Shader::ShaderMatSpec bind;
-      bind._id = param;
-      bind._func = Shader::SMF_first;
-      bind._part[0] = Shader::SMO_attr_material;
-      bind._arg[0] = nullptr;
-      bind._part[1] = Shader::SMO_identity;
-      bind._arg[1] = nullptr;
-
-      if (noprefix == "Material.baseColor") {
-        if (param_type != GL_FLOAT_VEC4) {
-          GLCAT.error()
-            << "p3d_Material.baseColor should be vec4\n";
-        }
-        bind._part[0] = Shader::SMO_attr_material2;
-        bind._piece = Shader::SMP_row0;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.ambient") {
-        if (param_type != GL_FLOAT_VEC4) {
-          GLCAT.error()
-            << "p3d_Material.ambient should be vec4\n";
-        }
-        bind._piece = Shader::SMP_row0;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.diffuse") {
-        if (param_type != GL_FLOAT_VEC4) {
-          GLCAT.error()
-            << "p3d_Material.diffuse should be vec4\n";
-        }
-        bind._piece = Shader::SMP_row1;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.emission") {
-        if (param_type != GL_FLOAT_VEC4) {
-          GLCAT.error()
-            << "p3d_Material.emission should be vec4\n";
-        }
-        bind._piece = Shader::SMP_row2;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.specular") {
-        if (param_type != GL_FLOAT_VEC3) {
-          GLCAT.error()
-            << "p3d_Material.specular should be vec3\n";
-        }
-        bind._piece = Shader::SMP_row3x3;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.shininess") {
-        if (param_type != GL_FLOAT) {
-          GLCAT.error()
-            << "p3d_Material.shininess should be float\n";
-        }
-        bind._piece = Shader::SMP_cell15;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.roughness") {
-        if (param_type != GL_FLOAT) {
-          GLCAT.error()
-            << "p3d_Material.roughness should be float\n";
-        }
-        bind._part[0] = Shader::SMO_attr_material2;
-        bind._piece = Shader::SMP_cell15;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.metallic") {
-        if (param_type != GL_FLOAT && param_type != GL_BOOL) {
-          GLCAT.error()
-            << "p3d_Material.metallic should be bool or float\n";
-        }
-        bind._part[0] = Shader::SMO_attr_material2;
-        bind._piece = Shader::SMP_row3x1;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
-      else if (noprefix == "Material.refractiveIndex") {
-        if (param_type != GL_FLOAT) {
-          GLCAT.error()
-            << "p3d_Material.refractiveIndex should be float\n";
-        }
-        bind._part[0] = Shader::SMO_attr_material2;
-        bind._piece = Shader::SMP_cell13;
-        _shader->cp_add_mat_spec(bind);
-        return;
-      }
     }
     if (noprefix == "ColorScale") {
       Shader::ShaderMatSpec bind;
@@ -2173,11 +2077,6 @@ set_state_and_transform(const RenderState *target_rs,
     if (state_rs->get_attrib(color_scale_slot) !=
         target_rs->get_attrib(color_scale_slot)) {
       altered |= Shader::SSD_colorscale;
-    }
-    int material_slot = MaterialAttrib::get_class_slot();
-    if (state_rs->get_attrib(material_slot) !=
-        target_rs->get_attrib(material_slot)) {
-      altered |= Shader::SSD_material;
     }
     int fog_slot = FogAttrib::get_class_slot();
     if (state_rs->get_attrib(fog_slot) !=

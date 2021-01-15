@@ -6,23 +6,23 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file shaderParamAttrib.cxx
+ * @file paramAttrib.cxx
  * @author lachbr
  * @date 2020-10-15
  */
 
-#include "shaderParamAttrib.h"
+#include "paramAttrib.h"
+#include "bamReader.h"
 
-TypeHandle ShaderParamAttrib::_type_handle;
-int ShaderParamAttrib::_attrib_slot;
+TypeHandle ParamAttrib::_type_handle;
+int ParamAttrib::_attrib_slot;
 
 /**
  *
  */
-void ShaderParamAttrib::
+void ParamAttrib::
 output(std::ostream &out) const {
   out << get_type() << ":";
-  out << get_shader_name();
   for (size_t i = 0; i < _params.size(); i++) {
     out << " ";
     out << _params.get_key(i) << ":" << _params.get_data(i);
@@ -40,14 +40,10 @@ output(std::ostream &out) const {
  * This will only be called with two ShaderAttrib objects whose get_type()
  * functions return the same.
  */
-int ShaderParamAttrib::
+int ParamAttrib::
 compare_to_impl(const RenderAttrib *other) const {
-  const ShaderParamAttrib *that = (const ShaderParamAttrib *)other;
+  const ParamAttrib *that = (const ParamAttrib *)other;
 
-  int name_cmp = _shader_name.compare(that->_shader_name);
-  if (name_cmp != 0) {
-    return name_cmp;
-  }
   if (_params.size() != that->_params.size()) {
     return (_params.size() < that->_params.size()) ? -1 : 1;
   }
@@ -79,11 +75,10 @@ compare_to_impl(const RenderAttrib *other) const {
  * with compare_to_impl(), above, should return the same hash; RenderAttribs
  * that compare differently should return a different hash.
  */
-size_t ShaderParamAttrib::
+size_t ParamAttrib::
 get_hash_impl() const {
   size_t hash = 0;
 
-  hash = string_hash::add_hash(hash, _shader_name);
   hash = size_t_hash::add_hash(hash, _params.size());
   for (size_t i = 0; i < _params.size(); i++) {
     hash = string_hash::add_hash(hash, _params.get_key(i));
@@ -96,15 +91,70 @@ get_hash_impl() const {
 /**
  *
  */
-CPT(RenderAttrib) ShaderParamAttrib::
+CPT(RenderAttrib) ParamAttrib::
 compose_impl(const RenderAttrib *other) const {
-  ShaderParamAttrib *attr = new ShaderParamAttrib(*this);
-  const ShaderParamAttrib *over = (const ShaderParamAttrib *)other;
+  ParamAttrib *attr = new ParamAttrib(*this);
+  const ParamAttrib *over = (const ParamAttrib *)other;
 
-  attr->_shader_name = over->_shader_name;
   for (size_t i = 0; i < over->_params.size(); i++) {
     attr->_params[over->_params.get_key(i)] = over->_params.get_data(i);
   }
 
   return return_new(attr);
+}
+
+/**
+ * Tells the BamReader how to create objects of type ParamAttrib.
+ */
+void ParamAttrib::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void ParamAttrib::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  RenderAttrib::write_datagram(manager, dg);
+
+  dg.add_uint32(_params.size());
+  for (size_t i = 0; i < _params.size(); i++) {
+    dg.add_string(_params.get_key(i));
+    dg.add_string(_params.get_data(i));
+  }
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type ParamAttrib is encountered in the Bam file.  It should create
+ * the ParamAttrib and extract its information from the file.
+ */
+TypedWritable *ParamAttrib::
+make_from_bam(const FactoryParams &params) {
+  ParamAttrib *attrib = new ParamAttrib;
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+  attrib->fillin(scan, manager);
+
+  return attrib;
+}
+
+/**
+ * This internal function is called by make_from_bam to read in all of the
+ * relevant data from the BamFile for the new ParamAttrib.
+ */
+void ParamAttrib::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  RenderAttrib::fillin(scan, manager);
+
+  size_t size = scan.get_uint32();
+  for (size_t i = 0; i < size; i++) {
+    std::string key = scan.get_string();
+    std::string value = scan.get_string();
+    _params.store(key, value);
+  }
 }

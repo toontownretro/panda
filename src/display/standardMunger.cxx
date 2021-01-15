@@ -18,7 +18,6 @@
 #include "displayRegion.h"
 #include "graphicsStateGuardian.h"
 #include "lightAttrib.h"
-#include "materialAttrib.h"
 #include "renderState.h"
 
 TypeHandle StandardMunger::_type_handle;
@@ -82,19 +81,6 @@ StandardMunger(GraphicsStateGuardianBase *gsg, const RenderState *state,
       // the effect even if it should be obscured.  It doesn't seem worth the
       // effort to detect this contrived situation and handle it correctly.
     }
-  }
-
-  // If we have no lights but do have a material, we will need to remove it so
-  // that it won't appear when we enable color scale via lighting.
-  const LightAttrib *light_attrib;
-  const MaterialAttrib *material_attrib;
-  if (get_gsg()->get_color_scale_via_lighting() &&
-      (!state->get_attrib(light_attrib) || !light_attrib->has_any_on_light()) &&
-      state->get_attrib(material_attrib) &&
-      material_attrib->get_material() != nullptr &&
-      shader_attrib->get_shader() == nullptr) {
-    _remove_material = true;
-    _should_munge_state = true;
   }
 }
 
@@ -348,10 +334,6 @@ munge_state_impl(const RenderState *state) {
     munged_state = munged_state->remove_attrib(ColorScaleAttrib::get_class_slot());
   } else if (_munge_color_scale) {
     munged_state = munged_state->remove_attrib(ColorScaleAttrib::get_class_slot());
-  }
-
-  if (_remove_material) {
-    munged_state = munged_state->remove_attrib(MaterialAttrib::get_class_slot());
   }
 
   return munged_state;

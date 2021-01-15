@@ -29,7 +29,6 @@
 
 class EggPrimitive;
 class EggTexture;
-class EggMaterial;
 
 /**
  * This class is used within this package only to record the render state that
@@ -45,33 +44,14 @@ public:
 
   int compare_to(const EggRenderState &other) const;
 
-private:
-  CPT(RenderAttrib) get_material_attrib(const EggMaterial *egg_mat,
-                                        bool bface);
-  static TexGenAttrib::Mode get_tex_gen(const EggTexture *egg_tex);
-
-  CPT(RenderAttrib)
-  apply_tex_mat(CPT(RenderAttrib) tex_mat_attrib,
-                TextureStage *stage, const EggTexture *egg_tex);
-
 public:
   CPT(RenderState) _state;
   bool _hidden;
   bool _flat_shaded;
   Geom::PrimitiveType _primitive_type;
 
-  typedef EggLoader::BakeInUVs BakeInUVs;
-  typedef EggLoader::TextureDef TextureDef;
-  typedef EggLoader::Materials Materials;
-
-  BakeInUVs _bake_in_uvs;
-
 private:
   EggLoader &_loader;
-
-  typedef pvector<const TextureDef *> TexMatTextures;
-  typedef pmap<LMatrix4d, TexMatTextures> TexMatTransforms;
-  typedef pmap<CPT(InternalName), TexMatTransforms> TexMats;
 };
 
 #include "eggRenderState.I"

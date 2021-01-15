@@ -97,7 +97,6 @@ setup_window(GraphicsOutput *window) {
   CPT(RenderAttrib) dw = DepthWriteAttrib::make(DepthWriteAttrib::M_off);
   _root.node()->set_attrib(dt, 1);
   _root.node()->set_attrib(dw, 1);
-  _root.set_material_off(1);
   _root.set_two_sided(1, 1);
 
   // If we don't set this explicitly, Panda will cause it to be rendered in a

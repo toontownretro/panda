@@ -11,6 +11,8 @@
  * @date 2012-12-19
  */
 
+#if 0
+
 #ifndef SAVE_EGG_FILE_H
 #define SAVE_EGG_FILE_H
 
@@ -36,5 +38,7 @@ save_egg_file(const Filename &filename, PandaNode *node,
 EXPCL_PANDA_EGG2PG bool
 save_egg_data(EggData *data, PandaNode *node);
 END_PUBLISH
+
+#endif
 
 #endif

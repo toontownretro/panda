@@ -11,6 +11,8 @@
  * @date 2002-02-26
  */
 
+#if 0
+
 #include "save_egg_file.h"
 #include "eggSaver.h"
 #include "config_egg2pg.h"
@@ -59,3 +61,5 @@ save_egg_data(EggData *data, PandaNode *node) {
   }
   return true;
 }
+
+#endif

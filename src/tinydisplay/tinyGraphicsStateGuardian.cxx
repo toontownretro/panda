@@ -29,7 +29,6 @@
 #include "shadeModelAttrib.h"
 #include "cullFaceAttrib.h"
 #include "rescaleNormalAttrib.h"
-#include "materialAttrib.h"
 #include "lightAttrib.h"
 #include "scissorAttrib.h"
 #include "bitMask.h"
@@ -98,7 +97,6 @@ reset() {
   _inv_state_mask.clear_bit(RenderModeAttrib::get_class_slot());
   _inv_state_mask.clear_bit(RescaleNormalAttrib::get_class_slot());
   _inv_state_mask.clear_bit(TextureAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(MaterialAttrib::get_class_slot());
   _inv_state_mask.clear_bit(LightAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ScissorAttrib::get_class_slot());
 
@@ -1561,14 +1559,6 @@ set_state_and_transform(const RenderState *target,
     _state_mask.set_bit(texture_slot);
   }
 
-  int material_slot = MaterialAttrib::get_class_slot();
-  if (_target_rs->get_attrib(material_slot) != _state_rs->get_attrib(material_slot) ||
-      !_state_mask.get_bit(material_slot)) {
-    PStatTimer timer(_draw_set_state_material_pcollector);
-    do_issue_material();
-    _state_mask.set_bit(material_slot);
-  }
-
   int light_slot = LightAttrib::get_class_slot();
   if (_target_rs->get_attrib(light_slot) != _state_rs->get_attrib(light_slot) ||
       !_state_mask.get_bit(light_slot)) {
@@ -2092,35 +2082,6 @@ do_issue_cull_face() {
       << "invalid cull face mode " << (int)mode << std::endl;
     break;
   }
-}
-
-/**
- *
- */
-void TinyGraphicsStateGuardian::
-do_issue_material() {
-  static Material empty;
-
-  const MaterialAttrib *target_material = DCAST(MaterialAttrib, _target_rs->get_attrib_def(MaterialAttrib::get_class_slot()));
-
-  const Material *material;
-  if (target_material == nullptr ||
-      target_material->is_off()) {
-    material = &empty;
-  } else {
-    material = target_material->get_material();
-  }
-
-  // Apply the material parameters to the front face.
-  setup_material(&_c->materials[0], material);
-
-  if (material->get_twoside()) {
-    // Also apply the material parameters to the back face.
-    setup_material(&_c->materials[1], material);
-  }
-
-  _c->local_light_model = material->get_local();
-  _c->light_model_two_side = material->get_twoside();
 }
 
 /**
@@ -2923,49 +2884,6 @@ copy_rgba_image(ZTextureLevel *dest, int xsize, int ysize, TinyTextureContext *g
     *dpix = RGBA8_TO_PIXEL(spix[cw + cw + co], spix[cw + co], spix[co], spix[cw + cw + cw + co]);
     ++dpix;
     spix += inc;
-  }
-}
-
-/**
- * Applies the desired parametesr to the indicated GLMaterial object.
- */
-void TinyGraphicsStateGuardian::
-setup_material(GLMaterial *gl_material, const Material *material) {
-  const LColor &specular = material->get_specular();
-  gl_material->specular.v[0] = specular[0];
-  gl_material->specular.v[1] = specular[1];
-  gl_material->specular.v[2] = specular[2];
-  gl_material->specular.v[3] = specular[3];
-
-  const LColor &emission = material->get_emission();
-  gl_material->emission.v[0] = emission[0];
-  gl_material->emission.v[1] = emission[1];
-  gl_material->emission.v[2] = emission[2];
-  gl_material->emission.v[3] = emission[3];
-
-  gl_material->shininess = material->get_shininess();
-  gl_material->shininess_i = (int)((material->get_shininess() / 128.0f) * SPECULAR_BUFFER_RESOLUTION);
-
-  _color_material_flags = CMF_ambient | CMF_diffuse;
-
-  if (material->has_ambient() || material->has_base_color()) {
-    const LColor &ambient = material->get_ambient();
-    gl_material->ambient.v[0] = ambient[0];
-    gl_material->ambient.v[1] = ambient[1];
-    gl_material->ambient.v[2] = ambient[2];
-    gl_material->ambient.v[3] = ambient[3];
-
-    _color_material_flags &= ~CMF_ambient;
-  }
-
-  if (material->has_diffuse() || material->has_base_color()) {
-    const LColor &diffuse = material->get_diffuse();
-    gl_material->diffuse.v[0] = diffuse[0];
-    gl_material->diffuse.v[1] = diffuse[1];
-    gl_material->diffuse.v[2] = diffuse[2];
-    gl_material->diffuse.v[3] = diffuse[3];
-
-    _color_material_flags &= ~CMF_diffuse;
   }
 }
 

@@ -17,10 +17,10 @@
     eggBinner.h \
     eggLoader.h eggLoader.I \
     eggRenderState.h eggRenderState.I \
-    eggSaver.h eggSaver.I \
+    //eggSaver.h eggSaver.I \
     egg_parametrics.h \
     load_egg_file.h \
-    save_egg_file.h \
+    //save_egg_file.h \
     loaderFileTypeEgg.h
 
   #define COMPOSITE_SOURCES \
@@ -31,10 +31,10 @@
     eggBinner.cxx \
     eggLoader.cxx \
     eggRenderState.cxx \
-    eggSaver.cxx \
+    //eggSaver.cxx \
     egg_parametrics.cxx \
     load_egg_file.cxx \
-    save_egg_file.cxx \
+    //save_egg_file.cxx \
     loaderFileTypeEgg.cxx
 
   #if $[DONT_COMPOSITE_PGRAPH]

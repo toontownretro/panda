@@ -58,7 +58,6 @@
 #include "fogAttrib.h"
 #include "lightAttrib.h"
 #include "logicOpAttrib.h"
-#include "materialAttrib.h"
 #include "rescaleNormalAttrib.h"
 #include "scissorAttrib.h"
 #include "shadeModelAttrib.h"
@@ -581,7 +580,6 @@ reset() {
     _inv_state_mask.clear_bit(RescaleNormalAttrib::get_class_slot());
     _inv_state_mask.clear_bit(ShadeModelAttrib::get_class_slot());
     _inv_state_mask.clear_bit(TexGenAttrib::get_class_slot());
-    _inv_state_mask.clear_bit(MaterialAttrib::get_class_slot());
     _inv_state_mask.clear_bit(LightAttrib::get_class_slot());
     _inv_state_mask.clear_bit(FogAttrib::get_class_slot());
   }
@@ -8069,112 +8067,6 @@ do_issue_depth_offset() {
   report_my_gl_errors();
 }
 
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- *
- */
-void CLP(GraphicsStateGuardian)::
-do_issue_material() {
-  static Material empty;
-  const Material *material;
-
-  const MaterialAttrib *target_material;
-  _target_rs->get_attrib_def(target_material);
-
-  if (target_material == nullptr ||
-      target_material->is_off()) {
-    material = &empty;
-  } else {
-    material = target_material->get_material();
-  }
-
-  bool has_material_force_color = _has_material_force_color;
-
-#ifndef NDEBUG
-  if (_show_texture_usage) {
-    // In show_texture_usage mode, all colors are white, so as not to
-    // contaminate the texture color.  This means we disable lighting
-    // materials too.
-    material = &empty;
-    has_material_force_color = false;
-  }
-#endif  // NDEBUG
-
-#ifdef OPENGLES
-  const GLenum face = GL_FRONT_AND_BACK;
-#else
-  GLenum face = material->get_twoside() ? GL_FRONT_AND_BACK : GL_FRONT;
-#endif
-
-  call_glMaterialfv(face, GL_SPECULAR, material->get_specular());
-  call_glMaterialfv(face, GL_EMISSION, material->get_emission());
-  glMaterialf(face, GL_SHININESS, max(min(material->get_shininess(), (PN_stdfloat)128), (PN_stdfloat)0));
-
-  if ((material->has_ambient() && material->has_diffuse()) || material->has_base_color()) {
-    // The material has both an ambient and diffuse specified.  This means we
-    // do not need glMaterialColor().
-    glDisable(GL_COLOR_MATERIAL);
-    call_glMaterialfv(face, GL_AMBIENT, material->get_ambient());
-    call_glMaterialfv(face, GL_DIFFUSE, material->get_diffuse());
-
-  } else if (material->has_ambient()) {
-    // The material specifies an ambient, but not a diffuse component.  The
-    // diffuse component comes from the object's color.
-    if (has_material_force_color) {
-      glDisable(GL_COLOR_MATERIAL);
-      call_glMaterialfv(face, GL_DIFFUSE, _material_force_color);
-    } else {
-#ifndef OPENGLES
-      glColorMaterial(face, GL_DIFFUSE);
-#endif  // OPENGLES
-      glEnable(GL_COLOR_MATERIAL);
-    }
-    call_glMaterialfv(face, GL_AMBIENT, material->get_ambient());
-
-  } else if (material->has_diffuse()) {
-    // The material specifies a diffuse, but not an ambient component.  The
-    // ambient component comes from the object's color.
-    if (has_material_force_color) {
-      glDisable(GL_COLOR_MATERIAL);
-      call_glMaterialfv(face, GL_AMBIENT, _material_force_color);
-    } else {
-#ifndef OPENGLES
-      glColorMaterial(face, GL_AMBIENT);
-#endif  // OPENGLES
-      glEnable(GL_COLOR_MATERIAL);
-    }
-    call_glMaterialfv(face, GL_DIFFUSE, material->get_diffuse());
-
-  } else {
-    // The material specifies neither a diffuse nor an ambient component.
-    // Both components come from the object's color.
-    if (has_material_force_color) {
-      glDisable(GL_COLOR_MATERIAL);
-      call_glMaterialfv(face, GL_AMBIENT, _material_force_color);
-      call_glMaterialfv(face, GL_DIFFUSE, _material_force_color);
-    } else {
-#ifndef OPENGLES
-      glColorMaterial(face, GL_AMBIENT_AND_DIFFUSE);
-#endif  // OPENGLES
-      glEnable(GL_COLOR_MATERIAL);
-    }
-  }
-
-#ifndef OPENGLES
-  glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, material->get_local());
-  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, material->get_twoside());
-
-  if (_use_separate_specular_color) {
-    glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
-  } else {
-    glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SINGLE_COLOR);
-  }
-#endif
-
-  report_my_gl_errors();
-}
-#endif  // SUPPORT_FIXED_FUNCTION
-
 /**
  * Issues the logic operation attribute to the GL.
  */
@@ -11751,14 +11643,6 @@ set_state_and_transform(const RenderState *target,
       do_issue_tex_gen();
       _state_tex_gen = _target_tex_gen;
       _state_mask.set_bit(tex_gen_slot);
-    }
-
-    int material_slot = MaterialAttrib::get_class_slot();
-    if (_target_rs->get_attrib(material_slot) != _state_rs->get_attrib(material_slot) ||
-        !_state_mask.get_bit(material_slot)) {
-      // PStatGPUTimer timer(this, _draw_set_state_material_pcollector);
-      do_issue_material();
-      _state_mask.set_bit(material_slot);
     }
 
     int light_slot = LightAttrib::get_class_slot();

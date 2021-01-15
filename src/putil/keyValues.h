@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "config_keyvalues.h"
+#include "config_putil.h"
 
 #include "typedWritableReferenceCount.h"
 #include "factoryParams.h"
@@ -34,7 +34,7 @@ static const std::string not_found = "not found";
  * Represents a single block from a key-values file.
  * Has a list of string key-value pairs, and can have a list of child blocks.
  */
-class EXPCL_PANDA_KEYVALUES CKeyValues : public TypedWritableReferenceCount {
+class EXPCL_PANDA_PUTIL KeyValues : public TypedWritableReferenceCount {
 PUBLISHED:
 	class Pair {
 	PUBLISHED:
@@ -42,18 +42,18 @@ PUBLISHED:
 		std::string value;
 	};
 
-	CKeyValues(const std::string &name = root_block_name, CKeyValues *parent = nullptr);
+	KeyValues(const std::string &name = root_block_name, KeyValues *parent = nullptr);
 
-	//void set_parent( CKeyValues *parent );
-	CKeyValues *get_parent() const;
+	//void set_parent( KeyValues *parent );
+	KeyValues *get_parent() const;
 
 	void set_name(const std::string &name);
 	const std::string &get_name() const;
 
-	void add_child(CKeyValues *child);
-	CKeyValues *get_child(size_t n) const;
+	void add_child(KeyValues *child);
+	KeyValues *get_child(size_t n) const;
 	int find_child(const std::string &name) const;
-	pvector<CKeyValues *> get_children_with_name(const std::string &name) const;
+	pvector<KeyValues *> get_children_with_name(const std::string &name) const;
 	size_t get_num_children() const;
 
 	std::string &operator [](const std::string &key);
@@ -74,6 +74,7 @@ PUBLISHED:
 
 	Pair *find_pair(const std::string &key);
 	const Pair *find_pair(const std::string &key) const;
+	const Pair *get_pair(size_t n) const;
 
 private:
 	void parse(CKeyValuesTokenizer *tokenizer);
@@ -81,8 +82,8 @@ private:
 	void do_indent(std::ostringstream &out, int curr_indent);
 
 PUBLISHED:
-	static PT(CKeyValues) load(const Filename &filename);
-	static PT(CKeyValues) from_string(const std::string &data);
+	static PT(KeyValues) load(const Filename &filename);
+	static PT(KeyValues) from_string(const std::string &data);
 
   static vector_int parse_int_list(const std::string &str);
 	static vector_float parse_float_list(const std::string &str);
@@ -109,11 +110,11 @@ PUBLISHED:
 	static std::string to_string(const LVecBase2f &v);
 
 private:
-	PT(CKeyValues) _parent;
+	PT(KeyValues) _parent;
 	Filename _filename;
 	std::string _name;
 	pvector<Pair> _keyvalues;
-	pvector<PT(CKeyValues)> _children;
+	pvector<PT(KeyValues)> _children;
 
 public:
   static void register_with_read_factory();
@@ -131,7 +132,7 @@ public:
   }
   static void init_type() {
     TypedWritableReferenceCount::init_type();
-    register_type(_type_handle, "CKeyValues",
+    register_type(_type_handle, "KeyValues",
                   TypedWritableReferenceCount::get_class_type());
   }
   virtual TypeHandle get_type() const {
@@ -143,7 +144,7 @@ private:
   static TypeHandle _type_handle;
 };
 
-INLINE CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {
+INLINE KeyValues::KeyValues(const std::string &name, KeyValues *parent) {
 	_name = name;
 	_parent = parent;
 	if (parent) {
@@ -151,37 +152,37 @@ INLINE CKeyValues::CKeyValues(const std::string &name, CKeyValues *parent) {
 	}
 }
 
-//inline void CKeyValues::set_parent( CKeyValues *parent )
+//inline void KeyValues::set_parent( KeyValues *parent )
 //{
 //	_parent = parent;
 //}
 
-INLINE CKeyValues *CKeyValues::get_parent() const {
+INLINE KeyValues *KeyValues::get_parent() const {
 	return _parent;
 }
 
-INLINE void CKeyValues::set_name(const std::string &name) {
+INLINE void KeyValues::set_name(const std::string &name) {
 	_name = name;
 }
 
-INLINE const std::string &CKeyValues::get_name() const {
+INLINE const std::string &KeyValues::get_name() const {
 	return _name;
 }
 
-INLINE void CKeyValues::add_child(CKeyValues *child) {
+INLINE void KeyValues::add_child(KeyValues *child) {
 	child->_parent = this;
 	_children.push_back(child);
 }
 
-INLINE CKeyValues *CKeyValues::get_child(size_t n) const {
+INLINE KeyValues *KeyValues::get_child(size_t n) const {
 	return _children[n];
 }
 
-INLINE size_t CKeyValues::get_num_children() const {
+INLINE size_t KeyValues::get_num_children() const {
 	return _children.size();
 }
 
-INLINE std::string &CKeyValues::operator[](const std::string &key) {
+INLINE std::string &KeyValues::operator[](const std::string &key) {
 	Pair *pair = find_pair(key);
 	if (pair) {
 		return pair->value;
@@ -195,7 +196,7 @@ INLINE std::string &CKeyValues::operator[](const std::string &key) {
 	}
 }
 
-INLINE void CKeyValues::
+INLINE void KeyValues::
 set_key_value(const std::string &key, const std::string &value) {
 	Pair *pair = find_pair(key);
 	if (!pair) {
@@ -205,7 +206,7 @@ set_key_value(const std::string &key, const std::string &value) {
 	}
 }
 
-INLINE void CKeyValues::
+INLINE void KeyValues::
 add_key_value(const std::string &key, const std::string &value) {
 	Pair newpair;
 	newpair.key = key;
@@ -213,7 +214,7 @@ add_key_value(const std::string &key, const std::string &value) {
 	_keyvalues.push_back(newpair);
 }
 
-INLINE const std::string &CKeyValues::
+INLINE const std::string &KeyValues::
 get_value(const std::string &key) const {
 	int itr = find_key(key);
 	if (itr != -1) {
@@ -223,32 +224,32 @@ get_value(const std::string &key) const {
 	return not_found;
 }
 
-INLINE size_t CKeyValues::get_num_keys() const {
+INLINE size_t KeyValues::get_num_keys() const {
 	return _keyvalues.size();
 }
 
-INLINE bool CKeyValues::has_key(const std::string &key) const {
+INLINE bool KeyValues::has_key(const std::string &key) const {
 	return find_pair(key) != nullptr;
 }
 
-INLINE int CKeyValues::find_key(const std::string &key) const {
+INLINE int KeyValues::find_key(const std::string &key) const {
 	return find_pair(key) - _keyvalues.data();
 }
 
-INLINE const std::string &CKeyValues::get_key(size_t n) const {
+INLINE const std::string &KeyValues::get_key(size_t n) const {
 	return _keyvalues[n].key;
 }
 
-INLINE const std::string &CKeyValues::get_value(size_t n) const {
+INLINE const std::string &KeyValues::get_value(size_t n) const {
 	return _keyvalues[n].value;
 }
 
-INLINE const Filename &CKeyValues::get_filename() const {
+INLINE const Filename &KeyValues::get_filename() const {
 	return _filename;
 }
 
 template <class T>
-INLINE std::string CKeyValues::
+INLINE std::string KeyValues::
 to_string(const pvector<T> &v) {
   std::string res = "";
   for (size_t i = 0; i < v.size(); i++) {
@@ -258,28 +259,28 @@ to_string(const pvector<T> &v) {
   return res;
 }
 
-INLINE std::string CKeyValues::
+INLINE std::string KeyValues::
 to_string(unsigned int v) {
 	std::ostringstream ss;
 	ss << v;
 	return ss.str();
 }
 
-INLINE std::string CKeyValues::
+INLINE std::string KeyValues::
 to_string(int v) {
 	std::ostringstream ss;
 	ss << v;
 	return ss.str();
 }
 
-INLINE std::string CKeyValues::
+INLINE std::string KeyValues::
 to_string(float v) {
 	std::ostringstream ss;
 	ss << v;
 	return ss.str();
 }
 
-INLINE std::string CKeyValues::
+INLINE std::string KeyValues::
 to_string(double v) {
 	std::ostringstream ss;
 	ss << v;

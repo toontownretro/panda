@@ -19,8 +19,7 @@
 
 #include "pandabase.h"
 
-#include "eggTexture.h"
-#include "pt_EggTexture.h"
+#include "eggMaterial.h"
 
 #include "filename.h"
 #include "pointerTo.h"
@@ -31,18 +30,18 @@
 class EggNode;
 class EggVertex;
 
-typedef pset< PT_EggTexture > EggTextures;
-typedef pmap<Filename, EggTextures> EggTextureFilenames;
+typedef pset< PT(EggMaterial) > EggMaterials;
+typedef pmap<Filename, EggMaterials> EggMaterialFilenames;
 
 
 /**
  * Extracts from the egg subgraph beginning at the indicated node a set of all
- * the texture objects referenced, grouped together by filename.  Texture
+ * the material objects referenced, grouped together by filename.  Material
  * objects that share a common filename (but possibly differ in other
  * properties) are returned together in the same element of the map.
  */
 void
-get_textures_by_filename(const EggNode *node, EggTextureFilenames &result);
+get_materials_by_filename(const EggNode *node, EggMaterialFilenames &result);
 
 
 /**

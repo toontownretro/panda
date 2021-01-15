@@ -24,10 +24,8 @@
 #include "eggMesher.h"
 #include "eggVertexPool.h"
 #include "eggVertex.h"
-#include "eggTextureCollection.h"
 #include "eggMaterialCollection.h"
 #include "epvector.h"
-#include "pt_EggTexture.h"
 #include "pt_EggMaterial.h"
 #include "config_egg.h"
 
@@ -316,29 +314,7 @@ has_absolute_pathnames() const {
        ci != _children.end();
        ++ci) {
     EggNode *child = *ci;
-    if (child->is_of_type(EggTexture::get_class_type())) {
-      EggTexture *tex = DCAST(EggTexture, child);
-      if (!tex->get_filename().is_local()) {
-        if (egg_cat.is_debug()) {
-          egg_cat.debug()
-            << "Absolute pathname: " << tex->get_filename()
-            << "\n";
-        }
-        return true;
-      }
-
-      if (tex->has_alpha_filename()) {
-        if (!tex->get_alpha_filename().is_local()) {
-          if (egg_cat.is_debug()) {
-            egg_cat.debug()
-              << "Absolute pathname: " << tex->get_alpha_filename()
-              << "\n";
-          }
-          return true;
-        }
-      }
-
-    } else if (child->is_of_type(EggFilenameNode::get_class_type())) {
+    if (child->is_of_type(EggFilenameNode::get_class_type())) {
       EggFilenameNode *fnode = DCAST(EggFilenameNode, child);
       if (!fnode->get_filename().is_local()) {
         if (egg_cat.is_debug()) {
@@ -373,19 +349,7 @@ resolve_filenames(const DSearchPath &searchpath) {
        ci != _children.end();
        ++ci) {
     EggNode *child = *ci;
-    if (child->is_of_type(EggTexture::get_class_type())) {
-      EggTexture *tex = DCAST(EggTexture, child);
-      Filename tex_filename = tex->get_filename();
-      vfs->resolve_filename(tex_filename, searchpath);
-      tex->set_filename(tex_filename);
-
-      if (tex->has_alpha_filename()) {
-        Filename alpha_filename = tex->get_alpha_filename();
-        vfs->resolve_filename(alpha_filename, searchpath);
-        tex->set_alpha_filename(alpha_filename);
-      }
-
-    } else if (child->is_of_type(EggFilenameNode::get_class_type())) {
+    if (child->is_of_type(EggFilenameNode::get_class_type())) {
       EggFilenameNode *fnode = DCAST(EggFilenameNode, child);
       Filename filename = fnode->get_filename();
       vfs->resolve_filename(filename, searchpath, fnode->get_default_extension());
@@ -409,21 +373,7 @@ force_filenames(const Filename &directory) {
        ci != _children.end();
        ++ci) {
     EggNode *child = *ci;
-    if (child->is_of_type(EggTexture::get_class_type())) {
-      EggTexture *tex = DCAST(EggTexture, child);
-      Filename tex_filename = tex->get_filename();
-      if (tex_filename.is_local()) {
-        tex->set_filename(Filename(directory, tex_filename));
-      }
-
-      if (tex->has_alpha_filename()) {
-        Filename alpha_filename = tex->get_alpha_filename();
-        if (alpha_filename.is_local()) {
-          tex->set_alpha_filename(Filename(directory, alpha_filename));
-        }
-      }
-
-    } else if (child->is_of_type(EggFilenameNode::get_class_type())) {
+    if (child->is_of_type(EggFilenameNode::get_class_type())) {
       EggFilenameNode *fnode = DCAST(EggFilenameNode, child);
       Filename filename = fnode->get_filename();
       if (filename.is_local()) {
@@ -672,32 +622,6 @@ recompute_tangent_binormal(const vector_string &names) {
   }
 
   return changed;
-}
-
-/**
- * This function recomputes the tangent and binormal for any texture
- * coordinate set that affects a normal map.  Returns true if anything was
- * done.
- */
-bool EggGroupNode::
-recompute_tangent_binormal_auto() {
-  vector_string names;
-  EggTextureCollection texs;
-  EggTextureCollection::iterator eti;
-  texs.find_used_textures(this);
-  for (eti = texs.begin(); eti != texs.end(); eti++) {
-    EggTexture *eggtex = (*eti);
-    if ((eggtex->get_env_type() == EggTexture::ET_normal)||
-        (eggtex->get_env_type() == EggTexture::ET_normal_height)||
-        (eggtex->get_env_type() == EggTexture::ET_normal_gloss)) {
-      string uv = eggtex->get_uv_name();
-      vector_string::iterator it = find(names.begin(), names.end(), uv);
-      if (it == names.end()) {
-        names.push_back(uv);
-      }
-    }
-  }
-  return recompute_tangent_binormal(names);
 }
 
 /**
@@ -1358,19 +1282,6 @@ r_flatten_transforms() {
 }
 
 /**
- * The recursive implementation of apply_texmats().
- */
-void EggGroupNode::
-r_apply_texmats(EggTextureCollection &textures) {
-  Children::iterator ci;
-  for (ci = _children.begin();
-       ci != _children.end();
-       ++ci) {
-    (*ci)->r_apply_texmats(textures);
-  }
-}
-
-/**
  * Walks the tree, looking for an EggCoordinateSystem entry.  If one is found,
  * extracts it and returns its value.  If multiple entries are found, extracts
  * all of them and returns CS_invalid if they disagree.
@@ -1424,6 +1335,7 @@ find_coordsys_entry() {
   return coordsys;
 }
 
+#if 0
 /**
  * Walks the tree, looking for EggTextures.  Each EggTexture that is found is
  * removed from the hierarchy and added to the EggTextureCollection.  Returns
@@ -1465,6 +1377,7 @@ find_textures(EggTextureCollection *collection) {
 
   return num_found;
 }
+#endif
 
 /**
  * Walks the tree, looking for EggMaterials.  Each EggMaterial that is found

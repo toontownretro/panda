@@ -36,7 +36,19 @@
 #include "thread.h"
 #include "renderAttribRegistry.h"
 #include "virtualFileSystem.h"
-#include "renderStateScript.h"
+#include "material.h"
+#include "lightAttrib.h"
+#include "depthWriteAttrib.h"
+#include "depthTestAttrib.h"
+#include "depthOffsetAttrib.h"
+#include "colorWriteAttrib.h"
+#include "cullFaceAttrib.h"
+#include "paramAttrib.h"
+#include "alphaTestAttrib.h"
+#include "texturePool.h"
+#include "bamFile.h"
+#include "renderStatePool.h"
+#include "bam.h"
 
 using std::ostream;
 
@@ -143,6 +155,18 @@ RenderState::
  */
 int RenderState::
 compare_to(const RenderState &other) const {
+  if (!get_uniquify_states_ignore_filenames()) {
+    // We care about the filename references.  Compare those.
+    int filename_cmp = _filename.compare_to(other._filename);
+    if (filename_cmp != 0) {
+      return filename_cmp;
+    }
+    int fullpath_cmp = _fullpath.compare_to(other._fullpath);
+    if (fullpath_cmp != 0) {
+      return fullpath_cmp;
+    }
+  }
+
   SlotMask mask = _filled_slots | other._filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {
@@ -333,6 +357,280 @@ make(const RenderAttrib * const *attrib, int num_attribs, int override) {
     state->_filled_slots.set_bit(slot);
   }
   return return_new(state);
+}
+
+/**
+ * Returns a RenderState from the given Material definition.
+ */
+CPT(RenderState) RenderState::
+make(const Material *script) {
+  CPT(RenderState) state = RenderState::make_empty();
+  if (script == nullptr) {
+    return state;
+  }
+
+  if (script->has_fog_off() && script->get_fog_off()) {
+    state = state->set_attrib(FogAttrib::make_off());
+  }
+
+  if (script->has_light_off() && script->get_light_off()) {
+    state = state->set_attrib(LightAttrib::make_all_off());
+  }
+
+  if (script->has_z_write()) {
+    state = state->set_attrib(DepthWriteAttrib::make(
+      script->get_z_write() ? DepthWriteAttrib::M_on :
+                              DepthWriteAttrib::M_off));
+  }
+
+  if (script->has_z_test()) {
+    state = state->set_attrib(DepthTestAttrib::make(
+      script->get_z_test() ? DepthTestAttrib::M_less :
+                             DepthTestAttrib::M_always));
+  }
+
+  if (script->has_z_offset()) {
+    state = state->set_attrib(DepthOffsetAttrib::make(script->get_z_offset()));
+  }
+
+  if (script->has_color()) {
+    state = state->set_attrib(ColorAttrib::make_flat(script->get_color()));
+  }
+
+  if (script->has_color_scale()) {
+    state = state->set_attrib(ColorScaleAttrib::make(script->get_color_scale()));
+  }
+
+  if (script->has_color_write()) {
+    state = state->set_attrib(ColorWriteAttrib::make(script->get_color_write()));
+  }
+
+  if (script->has_cull_face()) {
+    state = state->set_attrib(CullFaceAttrib::make(
+      (CullFaceAttrib::Mode)script->get_cull_face()));
+  }
+
+  if (script->has_shader()) {
+    state = state->set_attrib(ShaderAttrib::make(script->get_shader()));
+  }
+
+  if (script->_parameters.size() != 0) {
+    CPT(RenderAttrib) pa = ParamAttrib::make();
+    for (auto it = script->_parameters.begin();
+         it != script->_parameters.end(); ++it) {
+      pa = DCAST(ParamAttrib, pa)->set_param(
+        (*it).first, (*it).second);
+    }
+
+    state = state->set_attrib(pa);
+  }
+
+  if (script->has_bin()) {
+    state = state->set_attrib(CullBinAttrib::make(
+      script->get_bin_name(), script->get_bin_sort()));
+  }
+
+  if (script->has_alpha_test()) {
+    state = state->set_attrib(AlphaTestAttrib::make(
+      (AlphaTestAttrib::PandaCompareFunc)script->get_alpha_test_compare(),
+      script->get_alpha_test_reference()));
+  }
+
+  if (script->has_transparency()) {
+    TransparencyAttrib::Mode mode;
+    switch (script->get_transparency()) {
+    default:
+    case Material::TM_none:
+      mode = TransparencyAttrib::M_none;
+      break;
+    case Material::TM_alpha:
+      mode = TransparencyAttrib::M_alpha;
+      break;
+    case Material::TM_binary:
+      mode = TransparencyAttrib::M_binary;
+      break;
+    case Material::TM_dual:
+      mode = TransparencyAttrib::M_dual;
+      break;
+    case Material::TM_multisample:
+      mode = TransparencyAttrib::M_multisample;
+      break;
+    }
+
+    state = state->set_attrib(TransparencyAttrib::make(mode));
+  }
+
+  if (script->has_textures()) {
+    CPT(RenderAttrib) ta = TextureAttrib::make();
+    CPT(RenderAttrib) tma = TexMatrixAttrib::make();
+
+    bool has_any_transform = false;
+
+    for (size_t i = 0; i < script->get_num_textures(); i++) {
+      const Material::ScriptTexture *mat_tex = script->get_texture(i);
+
+      PT(Texture) tex;
+      if (mat_tex->_texture_type == Material::ScriptTexture::T_filename) {
+        tex = TexturePool::load_texture(mat_tex->_filename);
+      } else {
+        tex = TexturePool::find_engine_texture(mat_tex->_name);
+      }
+
+      PT(TextureStage) stage;
+      if (mat_tex->_stage_name.empty()) {
+        stage = TextureStage::get_default();
+      } else {
+        stage = new TextureStage(mat_tex->_stage_name);
+      }
+
+      if (!mat_tex->_texcoord_name.empty()) {
+        stage->set_texcoord_name(mat_tex->_texcoord_name);
+      }
+
+      ta = DCAST(TextureAttrib, ta)->add_on_stage(stage, tex);
+
+      if (mat_tex->_has_transform) {
+        CPT(TransformState) ts = TransformState::make_pos_hpr_scale(
+          mat_tex->_pos, mat_tex->_hpr, mat_tex->_scale);
+        tma = DCAST(TexMatrixAttrib, tma)->add_stage(stage, ts);
+        has_any_transform = true;
+      }
+    }
+
+    state = state->set_attrib(ta);
+    if (has_any_transform) {
+      state = state->set_attrib(tma);
+    }
+  }
+
+  state->_filename = script->get_filename();
+  state->_fullpath = script->get_fullpath();
+
+  return state;
+}
+
+/**
+ * Returns a new RenderState object by loading a definition from a file on
+ * disk.  This can be either an ASCII Material script (.pmat) or a binary
+ * RenderState object (.rso).
+ */
+CPT(RenderState) RenderState::
+make(const Filename &filename, const DSearchPath &search_path) {
+  if (filename.get_extension().empty()) {
+    pgraph_cat.error()
+      << "Render state definition filename must have an extension: "
+      << filename.get_fullpath() << "\n";
+    return RenderState::make_empty();
+  }
+
+  if (filename.get_extension() == "pmat") {
+    // ASCII Material script.
+    PT(Material) script = Material::load(filename, search_path);
+    return make(script);
+
+  } else if (filename.get_extension() == "rso") {
+    // Binary render state object.
+
+    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+
+    Filename resolved = filename;
+    if (!vfs->resolve_filename(resolved, search_path)) {
+      pgraph_cat.error()
+        << "Couldn't find render state " << filename.get_fullpath()
+        << " on search path " << search_path << "\n";
+      return nullptr;
+    }
+
+    BamFile bam;
+    if (!bam.open_read(resolved)) {
+      return nullptr;
+    }
+
+    TypedWritable *obj = bam.read_object();
+    if (obj == nullptr || !bam.resolve()) {
+      bam.close();
+      return nullptr;
+    }
+
+    if (!obj->is_of_type(RenderState::get_class_type())) {
+      pgraph_cat.error()
+        << resolved.get_fullpath() << " is not a valid render state object.\n";
+      bam.close();
+      return nullptr;
+    }
+
+    bam.close();
+
+    CPT(RenderState) state = DCAST(RenderState, obj);
+    // Store a reference to our .rso file on the state.
+    state->_filename = filename;
+    state->_fullpath = resolved;
+
+    return state;
+
+  } else {
+    pgraph_cat.error()
+      << "Unknown render state definition file extension: "
+      << filename.get_fullpath() << "\n";
+    return RenderState::make_empty();
+  }
+}
+
+/**
+ * Writes the RenderState object to the indicated .rso file.
+ *
+ * Returns true on success, or false on error.
+ */
+bool RenderState::
+write_rso(const Filename &fullpath) const {
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  Filename filename = Filename::binary_filename(fullpath);
+  std::ostream *out = vfs->open_write_file(filename, true, true);
+  if (out == nullptr) {
+    pgraph_cat.error()
+      << "Unable to open " << filename << "\n";
+    return false;
+  }
+
+  bool success = do_write_rso(*out, filename);
+  vfs->close_write_file(out);
+
+  return success;
+}
+
+/**
+ * Writes the RenderState object to the indicated output stream.
+ *
+ * Returns true on success, or false on error.
+ */
+bool RenderState::
+do_write_rso(std::ostream &out, const Filename &filename) const {
+  DatagramOutputFile dout;
+
+  if (!dout.open(out, filename)) {
+    pgraph_cat.error()
+      << "Could not write render state object: " << filename << "\n";
+    return false;
+  }
+
+  if (!dout.write_header(_bam_header)) {
+    pgraph_cat.error()
+      << "Unable to write to " << filename << "\n";
+    return false;
+  }
+
+  BamWriter writer(&dout);
+  if (!writer.init()) {
+    return false;
+  }
+
+  writer.set_file_texture_mode(BamWriter::BTM_rawdata);
+
+  if (!writer.write_object(this)) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -1200,6 +1498,12 @@ void RenderState::
 do_calc_hash() {
   _hash = 0;
 
+  if (!get_uniquify_states_ignore_filenames()) {
+    // We care about the filename references.  Hash them.
+    _hash = int_hash::add_hash(_hash, _filename.get_hash());
+    _hash = int_hash::add_hash(_hash, _fullpath.get_hash());
+  }
+
   SlotMask mask = _filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {
@@ -1865,11 +2169,20 @@ register_with_read_factory() {
  */
 void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  if (!_filename.empty() && manager->get_file_minor_ver() >= 46) {
+  BamWriter::BamTextureMode file_texture_mode = manager->get_file_texture_mode();
+
+  bool write_raw_data = (file_texture_mode == BamWriter::BTM_rawdata) ||
+                        _filename.empty() ||
+                        (manager->get_file_minor_ver() < 46);
+
+  if (manager->get_file_minor_ver() >= 46) {
+    dg.add_bool(write_raw_data);
+  }
+
+  if (!write_raw_data) {
     // If the state has a valid Filename, it was loaded from a script on disk,
     // and we should just write the path to the script on disk instead of
     // encoding the actual state.
-    BamWriter::BamTextureMode file_texture_mode = manager->get_file_texture_mode();
 
     bool has_bam_dir = !manager->get_filename().empty();
     Filename bam_dir = manager->get_filename().get_dirname();
@@ -1908,16 +2221,9 @@ write_datagram(BamWriter *manager, Datagram &dg) {
         << "Unsupported bam-texture-mode: " << (int)file_texture_mode << "\n";
     }
 
-    dg.add_uint8(1);
     dg.add_string(filename.get_fullpath());
 
   } else {
-    // This indicates we are serializing the RenderState guts instead of
-    // referencing a script file.
-    if (manager->get_file_minor_ver() >= 46) {
-      dg.add_uint8(0);
-    }
-
     // Encode the actual state data.
     TypedWritable::write_datagram(manager, dg);
 
@@ -2049,15 +2355,16 @@ make_from_bam(const FactoryParams &params) {
  */
 void RenderState::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  bool script = false;
+  bool has_raw_data = true;
   if (manager->get_file_minor_ver() >= 46) {
-    script = (bool)scan.get_uint8();
+    has_raw_data = scan.get_bool();
   }
 
-  if (script) {
-    // Only the filename to the script was encoded.
+  if (!has_raw_data) {
+    // Only a filename reference was encoded.  In this case we will be using
+    // the RenderStatePool to load up the RenderState.
     Filename filename = scan.get_string();
-    _read_script_state = RenderStateScript::load(filename);
+    _read_script_state = RenderStatePool::load_state(filename);
 
   } else {
     // The actual state data was encoded.

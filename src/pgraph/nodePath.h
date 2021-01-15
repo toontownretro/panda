@@ -42,7 +42,6 @@
 #include "stl_compares.h"
 #include "shaderInput.h"
 #include "internalNameCollection.h"
-#include "materialCollection.h"
 #include "textureCollection.h"
 #include "textureStageCollection.h"
 
@@ -53,7 +52,6 @@ class Light;
 class PolylightNode;
 class Texture;
 class TextureStage;
-class Material;
 class Fog;
 class GlobPattern;
 class PreparedGraphicsObjects;
@@ -624,9 +622,8 @@ PUBLISHED:
   const SamplerState &get_texture_sampler(TextureStage *stage) const;
 
   void set_shader(const Shader *sha, int priority = 0);
+  void set_shader(const std::string &name, int priority = 0);
   void set_shader_off(int priority = 0);
-  void set_shader_auto(int priority = 0);
-  void set_shader_auto(BitMask32 shader_switch, int priority=0);
   void clear_shader();
 
   void set_shader_input(const ShaderInput &input);
@@ -761,17 +758,6 @@ PUBLISHED:
   TextureStageCollection find_all_texture_stages(const std::string &name) const;
 
   void unify_texture_stages(TextureStage *stage);
-
-  Material *find_material(const std::string &name) const;
-  MaterialCollection find_all_materials() const;
-  MaterialCollection find_all_materials(const std::string &name) const;
-
-  void set_material(Material *tex, int priority = 0);
-  void set_material_off(int priority = 0);
-  void clear_material();
-  bool has_material() const;
-  PT(Material) get_material() const;
-  void replace_material(Material *mat, Material *new_mat);
 
   void set_fog(Fog *fog, int priority = 0);
   void set_fog_off(int priority = 0);
@@ -1014,14 +1000,6 @@ private:
                                  TextureStages &texture_stages) const;
 
   void r_unify_texture_stages(PandaNode *node, TextureStage *stage);
-
-  typedef phash_set<Material *, pointer_hash> Materials;
-  Material *r_find_material(PandaNode *node, const RenderState *state,
-                          const GlobPattern &glob) const;
-  void r_find_all_materials(PandaNode *node, const RenderState *state,
-                           Materials &materials) const;
-  static void r_replace_material(PandaNode *node, Material *mat,
-                                 const MaterialAttrib *new_attrib);
 
   PT(NodePathComponent) _head;
   int _backup_key;

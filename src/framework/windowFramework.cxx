@@ -90,7 +90,6 @@ WindowFramework(PandaFramework *panda_framework) :
   _two_sided_enabled = false;
   _one_sided_reverse_enabled = false;
   _lighting_enabled = false;
-  _perpixel_enabled = false;
   _background_type = BT_default;
 }
 
@@ -113,7 +112,6 @@ WindowFramework(const WindowFramework &copy, DisplayRegion *display_region) :
   _two_sided_enabled = false;
   _one_sided_reverse_enabled = false;
   _lighting_enabled = false;
-  _perpixel_enabled = false;
   _background_type = BT_default;
 
   set_background_type(copy._background_type);
@@ -205,7 +203,6 @@ close_window() {
   _two_sided_enabled = false;
   _one_sided_reverse_enabled = false;
   _lighting_enabled = false;
-  _perpixel_enabled = false;
 
   if (_frame_rate_meter != nullptr) {
     _frame_rate_meter->clear_window();
@@ -258,7 +255,6 @@ get_render_2d() {
 
     _render_2d.set_depth_write(0);
     _render_2d.set_depth_test(0);
-    _render_2d.set_material_off(1);
     _render_2d.set_two_sided(1);
 
     // Now set up a 2-d camera to view render_2d.
@@ -1017,26 +1013,6 @@ set_lighting(bool enable) {
   }
 
   _lighting_enabled = enable;
-}
-
-/**
- * Turns per-pixel lighting on (true) or off (false).
- */
-void WindowFramework::
-set_perpixel(bool enable) {
-  if (enable == _perpixel_enabled) {
-    return;
-  }
-
-  NodePath render = get_render();
-
-  if (enable) {
-    render.set_shader_auto();
-  } else {
-    render.set_shader_off();
-  }
-
-  _perpixel_enabled = enable;
 }
 
 /**

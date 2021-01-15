@@ -27,7 +27,7 @@ TypeHandle CSMDepthShader::_type_handle;
 void CSMDepthShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
-                const ShaderParamAttrib *params,
+                const ParamAttrib *params,
                 const GeomVertexAnimationSpec &anim_spec) {
 
   set_language(Shader::SL_GLSL);

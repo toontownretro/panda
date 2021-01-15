@@ -12,7 +12,6 @@
  */
 
 #include "config_egg.h"
-#include "eggRenderMode.h"
 #include "eggAnimData.h"
 #include "eggAnimPreload.h"
 #include "eggAttributes.h"
@@ -45,7 +44,6 @@
 #include "eggSurface.h"
 #include "eggSwitchCondition.h"
 #include "eggTable.h"
-#include "eggTexture.h"
 #include "eggTriangleFan.h"
 #include "eggTriangleStrip.h"
 #include "eggUserData.h"
@@ -183,7 +181,6 @@ init_libegg() {
   }
   initialized = true;
 
-  EggRenderMode::init_type();
   EggAnimData::init_type();
   EggAnimPreload::init_type();
   EggAttributes::init_type();
@@ -218,7 +215,6 @@ init_libegg() {
   EggSwitchCondition::init_type();
   EggSwitchConditionDistance::init_type();
   EggTable::init_type();
-  EggTexture::init_type();
   EggTriangleFan::init_type();
   EggTriangleStrip::init_type();
   EggUserData::init_type();

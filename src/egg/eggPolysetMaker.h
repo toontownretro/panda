@@ -38,8 +38,6 @@ PUBLISHED:
   };
 
   enum Properties {
-    P_has_texture        = 0x001,
-    P_texture            = 0x002,
     P_has_material       = 0x004,
     P_material           = 0x008,
     P_has_poly_color     = 0x010,
@@ -47,7 +45,6 @@ PUBLISHED:
     P_has_poly_normal    = 0x040,
     P_has_vertex_normal  = 0x080,
     P_has_vertex_color   = 0x100,
-    P_bface              = 0x200,
   };
 
   EggPolysetMaker();

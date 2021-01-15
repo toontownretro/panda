@@ -18,11 +18,8 @@
 
 #include "deferredNodeProperty.h"
 #include "eggData.h"
-#include "eggTexture.h"
-#include "pt_EggTexture.h"
 #include "eggGroup.h"
 #include "eggMaterial.h"
-#include "pt_EggMaterial.h"
 #include "eggVertexPool.h"
 #include "texture.h"
 #include "pandaNode.h"
@@ -80,21 +77,6 @@ public:
   CPT(TransformState) make_transform(const EggTransform *egg_transform);
 
 private:
-  class TextureDef {
-  public:
-    CPT(RenderAttrib) _texture;
-    PT(TextureStage) _stage;
-    const EggTexture *_egg_tex;
-  };
-
-  // This structure is used internally in setup_bucket().
-  typedef pvector<const TextureDef *> TexMatTextures;
-  typedef pmap<LMatrix3d, TexMatTextures> TexMatTransforms;
-  typedef pmap<CPT(InternalName), TexMatTransforms> TexMats;
-
-  // This structure is returned by setup_bucket().
-  typedef pmap<CPT(InternalName), const EggTexture *> BakeInUVs;
-
   // This is used by make_primitive().
   class PrimitiveUnifier {
   public:
@@ -116,15 +98,7 @@ private:
   void make_nurbs_surface(EggNurbsSurface *egg_surface, PandaNode *parent,
                           const LMatrix4d &mat);
 
-  void load_textures();
-  bool load_texture(TextureDef &def, EggTexture *egg_tex);
-  void apply_texture_attributes(Texture *tex, const EggTexture *egg_tex);
-  Texture::CompressionMode convert_compression_mode(EggTexture::CompressionMode compression_mode) const;
-  SamplerState::WrapMode convert_wrap_mode(EggTexture::WrapMode wrap_mode) const;
-  PT(TextureStage) make_texture_stage(const EggTexture *egg_tex);
-
   void separate_switches(EggNode *egg_node);
-  void emulate_bface(EggNode *egg_node);
 
   PandaNode *make_node(EggNode *egg_node, PandaNode *parent);
   PandaNode *make_node(EggBin *egg_bin, PandaNode *parent);
@@ -208,31 +182,6 @@ private:
                              const pvector<std::string> &expanded_history,
                              const std::string &object_type);
 
-  static TextureStage::CombineMode
-  get_combine_mode(const EggTexture *egg_tex,
-                   EggTexture::CombineChannel channel);
-
-  static TextureStage::CombineSource
-  get_combine_source(const EggTexture *egg_tex,
-                     EggTexture::CombineChannel channel, int n);
-
-  static TextureStage::CombineOperand
-  get_combine_operand(const EggTexture *egg_tex,
-                      EggTexture::CombineChannel channel, int n);
-
-  static ColorBlendAttrib::Mode
-  get_color_blend_mode(EggGroup::BlendMode mode);
-
-  static ColorBlendAttrib::Operand
-  get_color_blend_operand(EggGroup::BlendOperand operand);
-
-  typedef pmap<PT_EggTexture, TextureDef> Textures;
-  Textures _textures;
-
-  typedef pmap<CPT_EggMaterial, CPT(RenderAttrib) > Materials;
-  Materials _materials;
-  Materials _materials_bface;
-
   typedef pmap<PT(EggGroup), PT(PandaNode) > Groups;
   Groups _groups;
 
@@ -244,7 +193,6 @@ private:
   public:
     bool operator < (const VertexPoolTransform &other) const;
     PT(EggVertexPool) _vertex_pool;
-    BakeInUVs _bake_in_uvs;
     LMatrix4d _transform;
   };
   typedef pmap<VertexPoolTransform, PT(GeomVertexData) > VertexPoolData;

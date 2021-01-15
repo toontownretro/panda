@@ -123,7 +123,6 @@ public:
   void set_two_sided(bool enable);
   void set_one_sided_reverse(bool enable);
   void set_lighting(bool enable);
-  void set_perpixel(bool enable);
   void set_background_type(BackgroundType type);
 
   INLINE bool get_wireframe() const;
@@ -132,7 +131,6 @@ public:
   INLINE bool get_two_sided() const;
   INLINE bool get_one_sided_reverse() const;
   INLINE bool get_lighting() const;
-  INLINE bool get_perpixel() const;
   INLINE BackgroundType get_background_type() const;
 
   static TextFont *get_shuttle_controls_font();
@@ -202,7 +200,6 @@ private:
   bool _two_sided_enabled;
   bool _one_sided_reverse_enabled;
   bool _lighting_enabled;
-  bool _perpixel_enabled;
 
   PT(FrameRateMeter) _frame_rate_meter;
   PT(SceneGraphAnalyzerMeter) _scene_graph_analyzer_meter;

@@ -18,7 +18,6 @@
 #include "cullTraverserData.h"
 #include "look_at.h"
 #include "shaderAttrib.h"
-#include "shaderParamAttrib.h"
 #include "omniBoundingVolume.h"
 #include "lightAttrib.h"
 #include "boundingSphere.h"
@@ -45,7 +44,7 @@ CascadeLight(const std::string &name) :
   // Make sure we render the shadow scene using the specialized CSMDepth
   // shader.
   CPT(RenderState) state = get_initial_state();
-  state = state->set_attrib(ShaderParamAttrib::make("CSMDepth"), 100);
+  state = state->set_attrib(ShaderAttrib::make("CSMDepth"), 100);
   set_initial_state(state);
 
   // Don't perform any view-frustum culling when rendering to the cascades.

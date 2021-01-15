@@ -24,8 +24,6 @@
 #include "textureAttrib.h"
 #include "texMatrixAttrib.h"
 #include "texGenAttrib.h"
-#include "materialAttrib.h"
-#include "materialCollection.h"
 #include "lightAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "occluderEffect.h"
@@ -49,7 +47,6 @@
 #include "planeNode.h"
 #include "occluderNode.h"
 #include "lensNode.h"
-#include "materialPool.h"
 #include "look_at.h"
 #include "plist.h"
 #include "boundingSphere.h"
@@ -3237,6 +3234,28 @@ set_shader(const Shader *sha, int priority) {
 }
 
 /**
+ * Sets the name of the shader generator that should be used to generate a
+ * shader for this node's state.
+ */
+void NodePath::
+set_shader(const std::string &shader_name, int priority) {
+  nassertv_always(!is_empty());
+
+  const RenderAttrib *attrib =
+    node()->get_attrib(ShaderAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    priority = max(priority,
+                   node()->get_state()->get_override(ShaderAttrib::get_class_slot()));
+    const ShaderAttrib *sa = DCAST(ShaderAttrib, attrib);
+    node()->set_attrib(sa->set_shader(shader_name, priority));
+  } else {
+    // Create a new ShaderAttrib for this node.
+    CPT(ShaderAttrib) sa = DCAST(ShaderAttrib, ShaderAttrib::make());
+    node()->set_attrib(sa->set_shader(shader_name, priority));
+  }
+}
+
+/**
  *
  */
 void NodePath::
@@ -3244,47 +3263,6 @@ set_shader_off(int priority) {
   set_shader(nullptr, priority);
 }
 
-/**
- *
- */
-void NodePath::
-set_shader_auto(int priority) {
-  nassertv_always(!is_empty());
-
-  const RenderAttrib *attrib =
-    node()->get_attrib(ShaderAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    priority = max(priority,
-                   node()->get_state()->get_override(ShaderAttrib::get_class_slot()));
-    const ShaderAttrib *sa = DCAST(ShaderAttrib, attrib);
-    node()->set_attrib(sa->set_shader_auto(priority));
-  } else {
-    // Create a new ShaderAttrib for this node.
-    CPT(ShaderAttrib) sa = DCAST(ShaderAttrib, ShaderAttrib::make());
-    node()->set_attrib(sa->set_shader_auto(priority));
-  }
-}
-
-/**
- * overloaded for auto shader customization
- */
-void NodePath::
-set_shader_auto(BitMask32 shader_switch, int priority) {
-  nassertv_always(!is_empty());
-
-  const RenderAttrib *attrib =
-    node()->get_attrib(ShaderAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    priority = max(priority,
-                   node()->get_state()->get_override(ShaderAttrib::get_class_slot()));
-    const ShaderAttrib *sa = DCAST(ShaderAttrib, attrib);
-    node()->set_attrib(sa->set_shader_auto(shader_switch, priority));
-  } else {
-    // Create a new ShaderAttrib for this node.
-    CPT(ShaderAttrib) sa = DCAST(ShaderAttrib, ShaderAttrib::make());
-    node()->set_attrib(sa->set_shader_auto(shader_switch, priority));
-  }
-}
 /**
  *
  */
@@ -4082,146 +4060,6 @@ find_all_texture_stages(const string &name) const {
     }
   }
   return tc;
-}
-
-/**
- * Returns the first material found applied to geometry at this node or below
- * that matches the indicated name (which may contain wildcards).  Returns the
- * material if it is found, or NULL if it is not.
- */
-Material *NodePath::
-find_material(const string &name) const {
-  nassertr_always(!is_empty(), nullptr);
-  GlobPattern glob(name);
-  return r_find_material(node(), get_net_state(), glob);
-}
-
-/**
- * Returns a list of a materials applied to geometry at this node and below.
- */
-MaterialCollection NodePath::
-find_all_materials() const {
-  nassertr_always(!is_empty(), MaterialCollection());
-  Materials materials;
-  r_find_all_materials(node(), get_net_state(), materials);
-
-  MaterialCollection tc;
-  Materials::iterator ti;
-  for (ti = materials.begin(); ti != materials.end(); ++ti) {
-    tc.add_material(*ti);
-  }
-  return tc;
-}
-
-/**
- * Returns a list of a materials applied to geometry at this node and below
- * that match the indicated name (which may contain wildcard characters).
- */
-MaterialCollection NodePath::
-find_all_materials(const string &name) const {
-  nassertr_always(!is_empty(), MaterialCollection());
-  Materials materials;
-  r_find_all_materials(node(), get_net_state(), materials);
-
-  GlobPattern glob(name);
-
-  MaterialCollection tc;
-  Materials::iterator ti;
-  for (ti = materials.begin(); ti != materials.end(); ++ti) {
-    Material *material = (*ti);
-    if (glob.matches(material->get_name())) {
-      tc.add_material(material);
-    }
-  }
-  return tc;
-}
-
-/**
- * Sets the geometry at this level and below to render using the indicated
- * material.
- *
- * Previously, this operation made a copy of the material structure, but
- * nowadays it assigns the pointer directly.
- */
-void NodePath::
-set_material(Material *mat, int priority) {
-  nassertv_always(!is_empty());
-  nassertv(mat != nullptr);
-  node()->set_attrib(MaterialAttrib::make(mat), priority);
-}
-
-/**
- * Sets the geometry at this level and below to render using no material.
- * This is normally the default, but it may be useful to use this to
- * contradict set_material() at a higher node level (or, with a priority, to
- * override a set_material() at a lower level).
- */
-void NodePath::
-set_material_off(int priority) {
-  nassertv_always(!is_empty());
-  node()->set_attrib(MaterialAttrib::make_off(), priority);
-}
-
-/**
- * Completely removes any material adjustment that may have been set via
- * set_material() from this particular node.
- */
-void NodePath::
-clear_material() {
-  nassertv_always(!is_empty());
-  node()->clear_attrib(MaterialAttrib::get_class_slot());
-}
-
-/**
- * Returns true if a material has been applied to this particular node via
- * set_material(), false otherwise.
- */
-bool NodePath::
-has_material() const {
-  nassertr_always(!is_empty(), false);
-  const RenderAttrib *attrib =
-    node()->get_attrib(MaterialAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    const MaterialAttrib *ma = DCAST(MaterialAttrib, attrib);
-    return !ma->is_off();
-  }
-
-  return false;
-}
-
-/**
- * Returns the material that has been set on this particular node, or NULL if
- * no material has been set.  This is not necessarily the material that will
- * be applied to the geometry at or below this level, as another material at a
- * higher or lower level may override.
- *
- * See also find_material().
- */
-PT(Material) NodePath::
-get_material() const {
-  nassertr_always(!is_empty(), nullptr);
-  const RenderAttrib *attrib =
-    node()->get_attrib(MaterialAttrib::get_class_slot());
-  if (attrib != nullptr) {
-    const MaterialAttrib *ma = DCAST(MaterialAttrib, attrib);
-    return ma->get_material();
-  }
-
-  return nullptr;
-}
-
-/**
- * Recursively searches the scene graph for references to the given material,
- * and replaces them with the new material.
- */
-void NodePath::
-replace_material(Material *mat, Material *new_mat) {
-  nassertv_always(!is_empty());
-  nassertv(mat != nullptr);
-  nassertv(new_mat != nullptr);
-
-  CPT(RenderAttrib) new_attrib = MaterialAttrib::make(new_mat);
-  r_replace_material(node(), mat, (const MaterialAttrib *)new_attrib.p());
 }
 
 /**
@@ -6598,140 +6436,6 @@ r_unify_texture_stages(PandaNode *node, TextureStage *stage) {
   for (int i = 0; i < num_children; i++) {
     PandaNode *child = cr.get_child(i);
     r_unify_texture_stages(child, stage);
-  }
-}
-
-/**
- *
- */
-Material *NodePath::
-r_find_material(PandaNode *node, const RenderState *state,
-               const GlobPattern &glob) const {
-  if (node->is_geom_node()) {
-    GeomNode *gnode;
-    DCAST_INTO_R(gnode, node, nullptr);
-
-    int num_geoms = gnode->get_num_geoms();
-    for (int i = 0; i < num_geoms; i++) {
-      CPT(RenderState) geom_state =
-        state->compose(gnode->get_geom_state(i));
-
-      // Look for a MaterialAttrib on the state.
-      const RenderAttrib *attrib =
-        geom_state->get_attrib(MaterialAttrib::get_class_slot());
-      if (attrib != nullptr) {
-        const MaterialAttrib *ta = DCAST(MaterialAttrib, attrib);
-        if (!ta->is_off()) {
-          Material *material = ta->get_material();
-          if (material != nullptr) {
-            if (glob.matches(material->get_name())) {
-              return material;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Now consider children.
-  PandaNode::Children cr = node->get_children();
-  int num_children = cr.get_num_children();
-  for (int i = 0; i < num_children; i++) {
-    PandaNode *child = cr.get_child(i);
-    CPT(RenderState) next_state = state->compose(child->get_state());
-
-    Material *result = r_find_material(child, next_state, glob);
-    if (result != nullptr) {
-      return result;
-    }
-  }
-
-  return nullptr;
-}
-
-/**
- *
- */
-void NodePath::
-r_find_all_materials(PandaNode *node, const RenderState *state,
-                    NodePath::Materials &materials) const {
-  if (node->is_geom_node()) {
-    GeomNode *gnode;
-    DCAST_INTO_V(gnode, node);
-
-    int num_geoms = gnode->get_num_geoms();
-    for (int i = 0; i < num_geoms; i++) {
-      CPT(RenderState) geom_state =
-        state->compose(gnode->get_geom_state(i));
-
-      // Look for a MaterialAttrib on the state.
-      const RenderAttrib *attrib =
-        geom_state->get_attrib(MaterialAttrib::get_class_slot());
-      if (attrib != nullptr) {
-        const MaterialAttrib *ta = DCAST(MaterialAttrib, attrib);
-        if (!ta->is_off()) {
-          Material *material = ta->get_material();
-          if (material != nullptr) {
-            materials.insert(material);
-          }
-        }
-      }
-    }
-  }
-
-  // Now consider children.
-  PandaNode::Children cr = node->get_children();
-  int num_children = cr.get_num_children();
-  for (int i = 0; i < num_children; i++) {
-    PandaNode *child = cr.get_child(i);
-    CPT(RenderState) next_state = state->compose(child->get_state());
-    r_find_all_materials(child, next_state, materials);
-  }
-}
-
-/**
- *
- */
-void NodePath::
-r_replace_material(PandaNode *node, Material *mat,
-                   const MaterialAttrib *new_attrib) {
-  // Consider the state of the node itself.
-  {
-    CPT(RenderState) node_state = node->get_state();
-    const MaterialAttrib *ma;
-    if (node_state->get_attrib(ma)) {
-      if (mat == ma->get_material()) {
-        node->set_state(node_state->set_attrib(new_attrib));
-      }
-    }
-  }
-
-  // If this is a GeomNode, consider the state of any of its Geoms.
-  if (node->is_geom_node()) {
-    GeomNode *gnode;
-    DCAST_INTO_V(gnode, node);
-
-    int num_geoms = gnode->get_num_geoms();
-    for (int i = 0; i < num_geoms; i++) {
-      CPT(RenderState) geom_state = gnode->get_geom_state(i);
-
-      // Look for a MaterialAttrib on the state.
-      const MaterialAttrib *ma;
-      if (geom_state->get_attrib(ma)) {
-        if (mat == ma->get_material()) {
-          // Replace it
-          gnode->set_geom_state(i, geom_state->set_attrib(new_attrib));
-        }
-      }
-    }
-  }
-
-  // Now consider children.
-  PandaNode::Children cr = node->get_children();
-  size_t num_children = cr.get_num_children();
-  for (size_t i = 0; i < num_children; ++i) {
-    PandaNode *child = cr.get_child(i);
-    r_replace_material(child, mat, new_attrib);
   }
 }
 

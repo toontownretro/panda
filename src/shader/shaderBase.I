@@ -178,7 +178,7 @@ operator ==(const ShaderBase::ShaderSetup &other) const {
  */
 INLINE ShaderBase::
 ShaderBase(const std::string &name) :
-  Namable(name) {
+  Namable(downcase(name)) {
 }
 
 /**

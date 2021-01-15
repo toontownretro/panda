@@ -24,9 +24,10 @@
 #include "bamWriter.h"
 #include "datagram.h"
 
-TypeHandle CKeyValues::_type_handle;
+TypeHandle KeyValues::_type_handle;
 
-NotifyCategoryDeclNoExport(keyvalues) NotifyCategoryDef(keyvalues, "")
+NotifyCategoryDeclNoExport(keyvalues);
+NotifyCategoryDef(keyvalues, "");
 
 char asciitolower(char in) {
   if (in <= 'Z' && in >= 'A') {
@@ -287,7 +288,7 @@ std::string CKeyValuesTokenizer::location()
 
 //------------------------------------------------------------------------------------------------
 
-CKeyValues::Pair *CKeyValues::
+KeyValues::Pair *KeyValues::
 find_pair(const std::string &key) {
   size_t count = _keyvalues.size();
   for (size_t i = 0; i < count; i++) {
@@ -300,7 +301,7 @@ find_pair(const std::string &key) {
   return nullptr;
 }
 
-const CKeyValues::Pair *CKeyValues::
+const KeyValues::Pair *KeyValues::
 find_pair(const std::string &key) const {
   size_t count = _keyvalues.size();
   for (size_t i = 0; i < count; i++) {
@@ -313,7 +314,12 @@ find_pair(const std::string &key) const {
   return nullptr;
 }
 
-int CKeyValues::find_child(const std::string &name) const
+const KeyValues::Pair *KeyValues::
+get_pair(size_t n) const {
+  return &_keyvalues[n];
+}
+
+int KeyValues::find_child(const std::string &name) const
 {
   size_t count = _children.size();
   for (size_t i = 0; i < count; i++)
@@ -327,15 +333,15 @@ int CKeyValues::find_child(const std::string &name) const
   return -1;
 }
 
-pvector<CKeyValues *>
-CKeyValues::get_children_with_name(const std::string &name) const
+pvector<KeyValues *>
+KeyValues::get_children_with_name(const std::string &name) const
 {
-  pvector<CKeyValues *> result;
+  pvector<KeyValues *> result;
 
   size_t count = _children.size();
   for (size_t i = 0; i < count; i++)
   {
-    CKeyValues *child = _children[i];
+    KeyValues *child = _children[i];
     if (child->get_name() == name)
     {
       result.push_back(child);
@@ -345,7 +351,7 @@ CKeyValues::get_children_with_name(const std::string &name) const
   return result;
 }
 
-void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
+void KeyValues::parse(CKeyValuesTokenizer *tokenizer)
 {
   bool has_key = false;
   std::string key;
@@ -366,8 +372,8 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
     }
     else if (token.type == KVTOKEN_BLOCK_BEGIN)
     {
-      PT(CKeyValues)
-      child = new CKeyValues(key, this);
+      PT(KeyValues)
+      child = new KeyValues(key, this);
       child->_filename = _filename;
       child->parse(tokenizer);
       has_key = false;
@@ -388,10 +394,10 @@ void CKeyValues::parse(CKeyValuesTokenizer *tokenizer)
 
 /**
  * Loads a raw text KeyValues definition from the indicated filename and
- * returns a new CKeyValues object representing the root of the KeyValues tree.
+ * returns a new KeyValues object representing the root of the KeyValues tree.
  */
-PT(CKeyValues)
-CKeyValues::load(const Filename &filename) {
+PT(KeyValues)
+KeyValues::load(const Filename &filename) {
   if (filename.empty()) {
     return nullptr;
   }
@@ -423,21 +429,21 @@ CKeyValues::load(const Filename &filename) {
 
   std::string buffer = vfs->read_file(load_filename, true);
 
-  PT(CKeyValues) kv = from_string(buffer);
+  PT(KeyValues) kv = from_string(buffer);
   kv->_filename = filename;
 
   return kv;
 }
 
 /**
- * Parses the indicated string and returns a new CKeyValues object
+ * Parses the indicated string and returns a new KeyValues object
  * representing the root of the KeyValues tree.
  */
-PT(CKeyValues) CKeyValues::
+PT(KeyValues) KeyValues::
 from_string(const std::string &buffer) {
   CKeyValuesTokenizer tokenizer(buffer);
 
-  PT(CKeyValues) kv = new CKeyValues;
+  PT(KeyValues) kv = new KeyValues;
   kv->parse(&tokenizer);
 
   // We should have nothing left.
@@ -453,7 +459,7 @@ from_string(const std::string &buffer) {
 // Helper functions for parsing string values that represent numbers.
 //------------------------------------------------------------------------------------------------
 
-vector_float CKeyValues::parse_float_list(const std::string &str)
+vector_float KeyValues::parse_float_list(const std::string &str)
 {
   vector_float result;
   std::string curr_num_string;
@@ -482,7 +488,7 @@ vector_float CKeyValues::parse_float_list(const std::string &str)
   return result;
 }
 
-vector_int CKeyValues::parse_int_list(const std::string &str)
+vector_int KeyValues::parse_int_list(const std::string &str)
 {
   vector_int result;
   std::string curr_num_string;
@@ -512,7 +518,7 @@ vector_int CKeyValues::parse_int_list(const std::string &str)
 }
 
 pvector<vector_float>
-CKeyValues::
+KeyValues::
 parse_float_tuple_list(const std::string &str) {
   pvector<vector_float> result;
   int current = 0;
@@ -540,12 +546,12 @@ parse_float_tuple_list(const std::string &str) {
   return result;
 }
 
-void CKeyValues::
+void KeyValues::
 parse_material_axis(const std::string &str, LVector3 &axis, LVector2 &shift_scale) {
   sscanf(str.c_str(), "[%f %f %f %f] %f", &axis[0], &axis[1], &axis[2], &shift_scale[0], &shift_scale[1]);
 }
 
-void CKeyValues::
+void KeyValues::
 parse_plane_points(const std::string &str, LPoint3 &p0, LPoint3 &p1, LPoint3 &p2) {
   sscanf(str.c_str(), "(%f %f %f) (%f %f %f) (%f %f %f)",
     &p0[0], &p0[1], &p0[2],
@@ -553,9 +559,9 @@ parse_plane_points(const std::string &str, LPoint3 &p0, LPoint3 &p1, LPoint3 &p2
     &p2[0], &p2[1], &p2[2]);
 }
 
-LVecBase2f CKeyValues::
+LVecBase2f KeyValues::
 to_2f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list(str);
+  vector_float vec = KeyValues::parse_float_list(str);
   LVecBase2f lvec;
   for (size_t i = 0; i < vec.size(); i++) {
       lvec[i] = vec[i];
@@ -563,9 +569,9 @@ to_2f(const std::string &str) {
   return lvec;
 }
 
-LVecBase3f CKeyValues::
+LVecBase3f KeyValues::
 to_3f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list(str);
+  vector_float vec = KeyValues::parse_float_list(str);
   LVecBase3f lvec;
   for (size_t i = 0; i < vec.size(); i++) {
       lvec[i] = vec[i];
@@ -573,9 +579,9 @@ to_3f(const std::string &str) {
   return lvec;
 }
 
-LVecBase4f CKeyValues::
+LVecBase4f KeyValues::
 to_4f(const std::string &str) {
-  vector_float vec = CKeyValues::parse_float_list(str);
+  vector_float vec = KeyValues::parse_float_list(str);
   LVecBase4f lvec;
   for (size_t i = 0; i < vec.size(); i++) {
       lvec[i] = vec[i];
@@ -583,28 +589,28 @@ to_4f(const std::string &str) {
   return lvec;
 }
 
-std::string CKeyValues::
+std::string KeyValues::
 to_string(const LVecBase2f &v) {
   std::ostringstream ss;
   ss << v[0] << " " << v[1];
   return ss.str();
 }
 
-std::string CKeyValues::
+std::string KeyValues::
 to_string(const LVecBase3f &v) {
   std::ostringstream ss;
   ss << v[0] << " " << v[1] << " " << v[2];
   return ss.str();
 }
 
-std::string CKeyValues::
+std::string KeyValues::
 to_string(const LVecBase4f &v) {
   std::ostringstream ss;
   ss << v[0] << " " << v[1] << " " << v[2] << " " << v[3];
   return ss.str();
 }
 
-void CKeyValues::
+void KeyValues::
 write(const Filename &filename, int indent) {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   std::ostringstream out;
@@ -615,7 +621,7 @@ write(const Filename &filename, int indent) {
   vfs->write_file(filename, out.str(), false);
 }
 
-void CKeyValues::
+void KeyValues::
 do_indent(std::ostringstream &out, int curr_indent) {
   int indents = curr_indent;
   for (int i = 0; i < indents; i++) {
@@ -623,7 +629,7 @@ do_indent(std::ostringstream &out, int curr_indent) {
   }
 }
 
-void CKeyValues::
+void KeyValues::
 do_write(std::ostringstream &out, int indent, int &curr_indent) {
   bool is_root = _name == root_block_name;
 
@@ -650,7 +656,7 @@ do_write(std::ostringstream &out, int indent, int &curr_indent) {
 
   // Now write the child blocks
   for (size_t i = 0; i < _children.size(); i++) {
-    CKeyValues *child = _children[i];
+    KeyValues *child = _children[i];
     child->do_write(out, indent, curr_indent);
     // Add an extra line break in between child blocks, but not
     // after the last child block.
@@ -668,9 +674,9 @@ do_write(std::ostringstream &out, int indent, int &curr_indent) {
 }
 
 /**
- * Tells the BamReader how to create objects of type CKeyValues.
+ * Tells the BamReader how to create objects of type KeyValues.
  */
-void CKeyValues::
+void KeyValues::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
 }
@@ -679,7 +685,7 @@ register_with_read_factory() {
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
-void CKeyValues::
+void KeyValues::
 write_datagram(BamWriter *manager, Datagram &dg) {
   TypedWritableReferenceCount::write_datagram(manager, dg);
 
@@ -712,12 +718,12 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  * file for each pointer object written.  The return value is the number of
  * pointers processed from the list.
  */
-int CKeyValues::
+int KeyValues::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int index = TypedWritableReferenceCount::complete_pointers(p_list, manager);
 
   if (p_list[index] != nullptr) {
-    CKeyValues *parent;
+    KeyValues *parent;
     DCAST_INTO_R(parent, p_list[index], index);
     _parent = parent;
   }
@@ -725,7 +731,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   for (size_t i = 0; i < _children.size(); i++) {
     if (p_list[index] != nullptr) {
-      CKeyValues *child;
+      KeyValues *child;
       DCAST_INTO_R(child, p_list[index], index);
       _children[i] = child;
     }
@@ -737,12 +743,12 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
 /**
  * This function is called by the BamReader's factory when a new object of
- * type CKeyValues is encountered in the Bam file.  It should create the
- * CKeyValues and extract its information from the file.
+ * type KeyValues is encountered in the Bam file.  It should create the
+ * KeyValues and extract its information from the file.
  */
-TypedWritable *CKeyValues::
+TypedWritable *KeyValues::
 make_from_bam(const FactoryParams &params) {
-  CKeyValues *kv = new CKeyValues;
+  KeyValues *kv = new KeyValues;
   DatagramIterator scan;
   BamReader *manager;
 
@@ -754,9 +760,9 @@ make_from_bam(const FactoryParams &params) {
 
 /**
  * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new CKeyValues.
+ * relevant data from the BamFile for the new KeyValues.
  */
-void CKeyValues::
+void KeyValues::
 fillin(DatagramIterator &scan, BamReader *manager) {
   TypedWritableReferenceCount::fillin(scan, manager);
 

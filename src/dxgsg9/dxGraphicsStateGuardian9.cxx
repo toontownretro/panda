@@ -2279,7 +2279,6 @@ reset() {
   _inv_state_mask.clear_bit(TextureAttrib::get_class_slot());
   _inv_state_mask.clear_bit(TexGenAttrib::get_class_slot());
   _inv_state_mask.clear_bit(TexMatrixAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(MaterialAttrib::get_class_slot());
   _inv_state_mask.clear_bit(LightAttrib::get_class_slot());
   _inv_state_mask.clear_bit(StencilAttrib::get_class_slot());
   _inv_state_mask.clear_bit(FogAttrib::get_class_slot());
@@ -3262,17 +3261,6 @@ set_state_and_transform(const RenderState *target,
     _state_mask.set_bit(tex_gen_slot);
   }
 
-  int material_slot = MaterialAttrib::get_class_slot();
-  if (_target_rs->get_attrib(material_slot) != _state_rs->get_attrib(material_slot) ||
-      !_state_mask.get_bit(material_slot)) {
-    // PStatTimer timer(_draw_set_state_material_pcollector);
-    do_issue_material();
-    _state_mask.set_bit(material_slot);
-    if (_current_shader_context) {
-      _current_shader_context->issue_parameters(this, Shader::SSD_material);
-    }
-  }
-
   int light_slot = LightAttrib::get_class_slot();
   if (_target_rs->get_attrib(light_slot) != _state_rs->get_attrib(light_slot) ||
       !_state_mask.get_bit(light_slot)) {
@@ -3480,73 +3468,6 @@ get_index_type(Geom::NumericType numeric_type) {
   dxgsg9_cat.error()
     << "Invalid index NumericType value (" << (int)numeric_type << ")\n";
   return D3DFMT_INDEX16;
-}
-
-/**
- *
- */
-void DXGraphicsStateGuardian9::
-do_issue_material() {
-  static Material empty;
-  const Material *material;
-  const MaterialAttrib *target_material = DCAST(MaterialAttrib, _target_rs->get_attrib_def(MaterialAttrib::get_class_slot()));
-  if (target_material->is_off()) {
-    material = &empty;
-  } else {
-    material = target_material->get_material();
-  }
-
-  D3DMATERIAL9 cur_material;
-  LColorf color = LCAST(float, material->get_diffuse());
-  cur_material.Diffuse = *(D3DCOLORVALUE *)(color.get_data());
-  color = LCAST(float, material->get_ambient());
-  cur_material.Ambient = *(D3DCOLORVALUE *)(color.get_data());
-  color = LCAST(float, material->get_specular());
-  cur_material.Specular = *(D3DCOLORVALUE *)(color.get_data());
-  color = LCAST(float, material->get_emission());
-  cur_material.Emissive = *(D3DCOLORVALUE *)(color.get_data());
-  cur_material.Power = material->get_shininess();
-
-  if (material->has_diffuse() || material->has_base_color()) {
-    // If the material specifies an diffuse color, use it.
-    set_render_state(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
-  } else {
-    // Otherwise, the diffuse color comes from the object color.
-    if (_has_material_force_color) {
-      color = LCAST(float, _material_force_color);
-      cur_material.Diffuse = *(D3DCOLORVALUE *)color.get_data();
-      set_render_state(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
-    } else {
-      set_render_state(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
-    }
-  }
-  if (material->has_ambient() || material->has_base_color()) {
-    // If the material specifies an ambient color, use it.
-    set_render_state(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-  } else {
-    // Otherwise, the ambient color comes from the object color.
-    if (_has_material_force_color) {
-      color = LCAST(float, _material_force_color);
-      cur_material.Ambient = *(D3DCOLORVALUE *)color.get_data();
-      set_render_state(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-    } else {
-      set_render_state(D3DRS_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
-    }
-  }
-
-  if (material->has_specular() || material->has_base_color()) {
-    set_render_state(D3DRS_SPECULARENABLE, TRUE);
-  } else {
-    set_render_state(D3DRS_SPECULARENABLE, FALSE);
-  }
-
-  if (material->get_local()) {
-    set_render_state(D3DRS_LOCALVIEWER, TRUE);
-  } else {
-    set_render_state(D3DRS_LOCALVIEWER, FALSE);
-  }
-
-  _d3d_device->SetMaterial(&cur_material);
 }
 
 /**

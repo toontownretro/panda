@@ -49,7 +49,6 @@
     indexBufferContext.I indexBufferContext.h \
     internalName.I internalName.h \
     lens.h lens.I \
-    material.I material.h materialPool.I materialPool.h  \
     matrixLens.I matrixLens.h \
     occlusionQueryContext.I occlusionQueryContext.h \
     orthographicLens.I orthographicLens.h perspectiveLens.I  \
@@ -135,10 +134,9 @@
     geomVertexRewriter.cxx \
     geomVertexWriter.cxx \
     indexBufferContext.cxx \
-    material.cxx  \
     internalName.cxx \
     lens.cxx  \
-    materialPool.cxx matrixLens.cxx \
+    matrixLens.cxx \
     occlusionQueryContext.cxx \
     orthographicLens.cxx  \
     paramTexture.cxx \
@@ -226,8 +224,7 @@
     indexBufferContext.I indexBufferContext.h \
     internalName.I internalName.h \
     lens.h lens.I \
-    material.I material.h \
-    materialPool.I materialPool.h matrixLens.I matrixLens.h \
+    matrixLens.I matrixLens.h \
     occlusionQueryContext.I occlusionQueryContext.h \
     orthographicLens.I orthographicLens.h \
     paramTexture.I paramTexture.h \

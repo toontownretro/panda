@@ -50,6 +50,9 @@ extern ConfigVariableBool transform_cache;
 extern ConfigVariableBool state_cache;
 extern ConfigVariableBool uniquify_transforms;
 extern EXPCL_PANDA_PGRAPH ConfigVariableBool uniquify_states;
+BEGIN_PUBLISH
+extern EXPCL_PANDA_PGRAPH ConfigVariableBool &get_uniquify_states_ignore_filenames();
+END_PUBLISH
 extern ConfigVariableBool uniquify_attribs;
 extern ConfigVariableBool retransform_sprites;
 extern ConfigVariableBool depth_offset_decals;

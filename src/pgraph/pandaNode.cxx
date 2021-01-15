@@ -27,7 +27,7 @@
 #include "config_mathutil.h"
 #include "lightReMutexHolder.h"
 #include "graphicsStateGuardianBase.h"
-#include "renderStateScript.h"
+#include "renderStatePool.h"
 
 using std::ostream;
 using std::ostringstream;
@@ -1077,7 +1077,7 @@ set_state(const RenderState *state, Thread *current_thread) {
  */
 void PandaNode::
 set_state(const Filename &filename, Thread *current_thread) {
-  CPT(RenderState) state = RenderStateScript::load(filename);
+  CPT(RenderState) state = RenderStatePool::load_state(filename);
   if (state) {
     set_state(state, current_thread);
   }

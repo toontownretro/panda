@@ -24,9 +24,6 @@
 #include "geom.h"
 #include "geomNode.h"
 #include "transformState.h"
-#include "material.h"
-#include "materialAttrib.h"
-#include "materialPool.h"
 #include "renderState.h"
 #include "cullFaceAttrib.h"
 #include "textureAttrib.h"
@@ -941,16 +938,10 @@ compute_ring_viz() {
   PT(GeomNode) geom_node = new GeomNode("ring");
   geom_node->add_geom(ring_geom);
 
-  // Get a material for two-sided lighting.
-  PT(Material) material = new Material();
-  material->set_twoside(true);
-  material = MaterialPool::get_material(material);
-
   CPT(RenderState) viz_state =
     RenderState::make(CullFaceAttrib::make(CullFaceAttrib::M_cull_none),
                       TextureAttrib::make_off(),
                       ShaderAttrib::make_off(),
-                      MaterialAttrib::make(material),
                       RenderState::get_max_priority());
   if (_show_color[3] != 1.0f) {
     viz_state = viz_state->add_attrib(TransparencyAttrib::make(TransparencyAttrib::M_alpha),

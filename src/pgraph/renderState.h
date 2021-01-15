@@ -35,6 +35,7 @@
 
 class FactoryParams;
 class ShaderAttrib;
+class Material;
 
 /**
  * This represents a unique collection of RenderAttrib objects that correspond
@@ -88,6 +89,11 @@ PUBLISHED:
                                const RenderAttrib *attrib5, int override = 0);
   static CPT(RenderState) make(const RenderAttrib * const *attrib,
                                int num_attribs, int override = 0);
+  static CPT(RenderState) make(const Material *material);
+  static CPT(RenderState) make(const Filename &filename,
+                               const DSearchPath &search_path = get_model_path());
+
+  bool write_rso(const Filename &filename) const;
 
   CPT(RenderState) compose(const RenderState *other) const;
   CPT(RenderState) invert_compose(const RenderState *other) const;
@@ -133,6 +139,9 @@ PUBLISHED:
 
   INLINE const Filename &get_filename() const;
   MAKE_PROPERTY(filename, get_filename);
+
+  INLINE const Filename &get_fullpath() const;
+  MAKE_PROPERTY(fullpath, get_fullpath);
 
   void output(std::ostream &out) const;
   void write(std::ostream &out, int indent_level) const;
@@ -224,6 +233,7 @@ private:
   INLINE void consider_update_pstats(int old_referenced_bits) const;
   static void update_pstats(int old_referenced_bits, int new_referenced_bits);
 
+  bool do_write_rso(std::ostream &out, const Filename &filename) const;
 public:
   static void init_states();
 
@@ -236,6 +246,8 @@ public:
 
   // The filename that the state came from, if it was loaded via a script on
   // disk.
+  // FIXME: This adds extra memory overhead on RenderState, perhaps this should
+  // be moved to an object that is just referenced by pointer?
   mutable Filename _filename;
   mutable Filename _fullpath;
 

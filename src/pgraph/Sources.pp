@@ -2,8 +2,7 @@
                    dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
     event gsgbase gobj putil linmath \
-    downloader express pandabase pstatclient \
-    keyvalues
+    downloader express pandabase pstatclient
 
 #begin lib_target
   #define TARGET pgraph
@@ -68,8 +67,6 @@
     loaderFileTypeBam.h  \
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
-    materialAttrib.I materialAttrib.h \
-    materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \
@@ -83,6 +80,7 @@
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
     pandaNodeChain.I pandaNodeChain.h \
+    paramAttrib.I paramAttrib.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \
@@ -95,7 +93,7 @@
     renderEffects.I renderEffects.h \
     renderModeAttrib.I renderModeAttrib.h \
     renderState.I renderState.h \
-    renderStateScript.I renderStateScript.h \
+    renderStatePool.h \
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
@@ -104,7 +102,6 @@
     shadeModelAttrib.I shadeModelAttrib.h \
     shaderAttrib.I shaderAttrib.h \
     shaderInput.I shaderInput.h \
-    shaderParamAttrib.I shaderParamAttrib.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
     stateMunger.I stateMunger.h \
@@ -172,8 +169,6 @@
     loaderFileTypeBam.cxx \
     loaderFileTypeRegistry.cxx  \
     logicOpAttrib.cxx \
-    materialAttrib.cxx \
-    materialCollection.cxx \
     modelFlattenRequest.cxx \
     modelLoadRequest.cxx \
     modelSaveRequest.cxx \
@@ -186,6 +181,7 @@
     occluderNode.cxx \
     pandaNode.cxx \
     pandaNodeChain.cxx \
+    paramAttrib.cxx \
     paramNodePath.cxx \
     planeNode.cxx \
     polylightEffect.cxx \
@@ -198,7 +194,7 @@
     renderEffects.cxx \
     renderModeAttrib.cxx \
     renderState.cxx \
-    renderStateScript.cxx \
+    renderStatePool.cxx \
     rescaleNormalAttrib.cxx \
     sceneGraphReducer.cxx \
     sceneSetup.cxx \
@@ -207,7 +203,6 @@
     shadeModelAttrib.cxx \
     shaderAttrib.cxx \
     shaderInput.cxx \
-    shaderParamAttrib.cxx \
     shaderPool.cxx \
     showBoundsEffect.cxx \
     stateMunger.cxx \
@@ -274,8 +269,6 @@
     loaderFileTypeBam.h \
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
-    materialAttrib.I materialAttrib.h \
-    materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \
@@ -289,6 +282,7 @@
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
     pandaNodeChain.I pandaNodeChain.h \
+    paramAttrib.I paramAttrib.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \
@@ -301,7 +295,7 @@
     renderEffects.I renderEffects.h \
     renderModeAttrib.I renderModeAttrib.h \
     renderState.I renderState.h \
-    renderStateScript.I renderStateScript.h \
+    renderStatePool.h \
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
@@ -310,7 +304,6 @@
     shadeModelAttrib.I shadeModelAttrib.h \
     shaderAttrib.I shaderAttrib.h \
     shaderInput.I shaderInput.h \
-    shaderParamAttrib.I shaderParamAttrib.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
     stateMunger.I stateMunger.h \

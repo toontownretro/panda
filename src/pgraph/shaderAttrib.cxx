@@ -28,6 +28,7 @@
 #include "paramNodePath.h"
 #include "paramTexture.h"
 #include "shaderBuffer.h"
+#include "string_utils.h"
 
 using std::ostream;
 using std::ostringstream;
@@ -69,6 +70,20 @@ make(const Shader *shader, int priority) {
 }
 
 /**
+ * Constructs a new ShaderAttrib that indicates the name of the shader
+ * generator that should be used to generate a shader for the state.
+ */
+CPT(RenderAttrib) ShaderAttrib::
+make(const std::string &shader_name, int priority) {
+  ShaderAttrib *attr = new ShaderAttrib;
+  attr->_shader_name = downcase(shader_name);
+  attr->_shader_priority = priority;
+  attr->_auto_shader = true;
+  attr->_has_shader = true;
+  return return_new(attr);
+}
+
+/**
  * Returns a RenderAttrib that corresponds to whatever the standard default
  * properties for render attributes of this type ought to be.
  */
@@ -94,17 +109,12 @@ set_shader(const Shader *s, int priority) const {
  *
  */
 CPT(RenderAttrib) ShaderAttrib::
-set_shader_off(int priority) const {
+set_shader(const std::string &shader_name, int priority) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
+  result->_shader_name = downcase(shader_name);
   result->_shader = nullptr;
   result->_shader_priority = priority;
-  result->_auto_shader = false;
-  result->_auto_normal_on = false;
-  result->_auto_glow_on = false;
-  result->_auto_gloss_on = false;
-  result->_auto_ramp_on = false;
-  result->_auto_shadow_on = false;
-
+  result->_auto_shader = true;
   result->_has_shader = true;
   return return_new(result);
 }
@@ -113,38 +123,13 @@ set_shader_off(int priority) const {
  *
  */
 CPT(RenderAttrib) ShaderAttrib::
-set_shader_auto(int priority) const {
+set_shader_off(int priority) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
   result->_shader = nullptr;
   result->_shader_priority = priority;
-  result->_auto_shader = true;
+  result->_auto_shader = false;
   result->_has_shader = true;
-  result->_auto_normal_on = true;
-  result->_auto_glow_on = true;
-  result->_auto_gloss_on = true;
-  result->_auto_ramp_on = true;
-  result->_auto_shadow_on = true;
-  return return_new(result);
-}
-
-/**
- * Set auto shader with bitmask to customize use, e.g., to keep normal, glow,
- * etc., on or off
- */
-CPT(RenderAttrib) ShaderAttrib::
-set_shader_auto(BitMask32 shader_switch, int priority) const {
-
-  ShaderAttrib *result = new ShaderAttrib(*this);
-  result->_shader = nullptr;
-  result->_shader_priority = priority;
-  result->_auto_shader = true;
-  result->_has_shader = true;
-  result->_auto_normal_on = shader_switch.get_bit(Shader::bit_AutoShaderNormal);
-  result->_auto_glow_on = shader_switch.get_bit(Shader::bit_AutoShaderGlow);
-  result->_auto_gloss_on = shader_switch.get_bit(Shader::bit_AutoShaderGloss);
-  result->_auto_ramp_on = shader_switch.get_bit(Shader::bit_AutoShaderRamp);
-  result->_auto_shadow_on = shader_switch.get_bit(Shader::bit_AutoShaderShadow);
-
+  result->_shader_name = std::string();
   return return_new(result);
 }
 
@@ -158,11 +143,7 @@ clear_shader() const {
   result->_shader_priority = 0;
   result->_auto_shader = false;
   result->_has_shader = false;
-  result->_auto_normal_on = false;
-  result->_auto_glow_on = false;
-  result->_auto_gloss_on = false;
-  result->_auto_ramp_on = false;
-  result->_auto_shadow_on = false;
+  result->_shader_name = std::string();
   return return_new(result);
 }
 
@@ -641,7 +622,7 @@ output(ostream &out) const {
   out << "ShaderAttrib:";
 
   if (_auto_shader) {
-    out << "auto";
+    out << "auto (" << _shader_name << ")";
     return;
   } else if (_has_shader) {
     if (_shader == nullptr) {
@@ -690,20 +671,8 @@ compare_to_impl(const RenderAttrib *other) const {
   if (this->_instance_count != that->_instance_count) {
     return (this->_instance_count < that->_instance_count) ? -1 : 1;
   }
-  if (this->_auto_normal_on != that->_auto_normal_on) {
-    return (this->_auto_normal_on < that->_auto_normal_on) ? -1 : 1;
-  }
-  if (this->_auto_glow_on != that->_auto_glow_on) {
-    return (this->_auto_glow_on < that->_auto_glow_on) ? -1 : 1;
-  }
-  if (this->_auto_gloss_on != that->_auto_gloss_on) {
-    return (this->_auto_gloss_on < that->_auto_gloss_on) ? -1 : 1;
-  }
-  if (this->_auto_ramp_on != that->_auto_ramp_on) {
-    return (this->_auto_ramp_on < that->_auto_ramp_on) ? -1 : 1;
-  }
-  if (this->_auto_shadow_on != that->_auto_shadow_on) {
-    return (this->_auto_shadow_on < that->_auto_shadow_on) ? -1 : 1;
+  if (this->_shader_name != that->_shader_name) {
+    return (this->_shader_name < that->_shader_name) ? -1 : 1;
   }
 
   Inputs::const_iterator i1 = this->_inputs.begin();
@@ -741,10 +710,7 @@ get_hash_impl() const {
   hash = int_hash::add_hash(hash, _flags);
   hash = int_hash::add_hash(hash, _has_flags);
   hash = int_hash::add_hash(hash, _instance_count);
-  hash = int_hash::add_hash(hash, (int)_auto_normal_on);
-  hash = int_hash::add_hash(hash, (int)_auto_glow_on);
-  hash = int_hash::add_hash(hash, (int)_auto_gloss_on);
-  hash = int_hash::add_hash(hash, (int)_auto_shadow_on);
+  hash = string_hash::add_hash(hash, _shader_name);
 
   Inputs::const_iterator ii;
   for (ii = _inputs.begin(); ii != _inputs.end(); ++ii) {
@@ -770,11 +736,7 @@ compose_impl(const RenderAttrib *other) const {
       attr->_shader_priority = over->_shader_priority;
       attr->_auto_shader = over->_auto_shader;
       attr->_has_shader = over->_has_shader;
-      attr->_auto_normal_on = over->_auto_normal_on;
-      attr->_auto_glow_on = over->_auto_glow_on;
-      attr->_auto_gloss_on = over->_auto_gloss_on;
-      attr->_auto_ramp_on = over->_auto_ramp_on;
-      attr->_auto_shadow_on = over->_auto_shadow_on;
+      attr->_shader_name = over->_shader_name;
     }
   }
   // Update the shader-data portion.
@@ -813,9 +775,60 @@ compose_impl(const RenderAttrib *other) const {
 }
 
 /**
- * Factory method to generate a Shader object
+ * Tells the BamReader how to create objects of type ShaderAttrib.
  */
 void ShaderAttrib::
 register_with_read_factory() {
-  // IMPLEMENT ME
+  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void ShaderAttrib::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  RenderAttrib::write_datagram(manager, dg);
+
+  dg.add_string(_shader_name);
+  dg.add_bool(_auto_shader);
+  dg.add_bool(_has_shader);
+  dg.add_int32(_shader_priority);
+  dg.add_int32(_flags);
+  dg.add_int32(_has_flags);
+  dg.add_int32(_instance_count);
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type ShaderAttrib is encountered in the Bam file.  It should create the
+ * ShaderAttrib and extract its information from the file.
+ */
+TypedWritable *ShaderAttrib::
+make_from_bam(const FactoryParams &params) {
+  ShaderAttrib *attrib = new ShaderAttrib;
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+  attrib->fillin(scan, manager);
+
+  return attrib;
+}
+
+/**
+ * This internal function is called by make_from_bam to read in all of the
+ * relevant data from the BamFile for the new ShaderAttrib.
+ */
+void ShaderAttrib::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  RenderAttrib::fillin(scan, manager);
+
+  _shader_name = scan.get_string();
+  _auto_shader = scan.get_bool();
+  _has_shader = scan.get_bool();
+  _shader_priority = scan.get_int32();
+  _flags = scan.get_int32();
+  _has_flags = scan.get_int32();
+  _instance_count = scan.get_int32();
 }

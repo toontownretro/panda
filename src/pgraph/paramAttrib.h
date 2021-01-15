@@ -6,30 +6,31 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file shaderParamAttrib.h
+ * @file paramAttrib.h
  * @author lachbr
  * @date 2020-10-15
  */
 
-#ifndef SHADERPARAMATTRIB_H
-#define SHADERPARAMATTRIB_H
+#ifndef PARAMATTRIB_H
+#define PARAMATTRIB_H
 
 #include "config_pgraph.h"
 #include "renderAttrib.h"
 #include "simpleHashMap.h"
+#include "luse.h"
+#include "string_utils.h"
+#include "keyValues.h"
 
 /**
- * Render attribute that specifies a shader to be used and miscellaneous
- * parameters for the shader.
+ * Render attribute that contains arbitrary key-value parameters.
  */
-class EXPCL_PANDA_PGRAPH ShaderParamAttrib : public RenderAttrib {
+class EXPCL_PANDA_PGRAPH ParamAttrib : public RenderAttrib {
 private:
-  INLINE ShaderParamAttrib(const std::string &shader_name);
-  INLINE ShaderParamAttrib(const ShaderParamAttrib &other);
+  INLINE ParamAttrib();
+  INLINE ParamAttrib(const ParamAttrib &other);
 
 PUBLISHED:
-  INLINE static CPT(RenderAttrib) make(const std::string &shader_name);
-  INLINE CPT(RenderAttrib) set_shader_name(const std::string &name) const;
+  INLINE static CPT(RenderAttrib) make();
   INLINE CPT(RenderAttrib) set_param(const std::string &key,
                                      const std::string &value) const;
 
@@ -38,8 +39,12 @@ PUBLISHED:
   INLINE bool has_param(const std::string &key) const;
   INLINE const std::string &get_param_key(int n) const;
   INLINE const std::string &get_param_value(int n) const;
-
-  INLINE const std::string &get_shader_name() const;
+  INLINE bool get_param_value_bool(int n) const;
+  INLINE int get_param_value_int(int n) const;
+  INLINE float get_param_value_float(int n) const;
+  INLINE LVecBase2f get_param_value_2f(int n) const;
+  INLINE LVecBase3f get_param_value_3f(int n) const;
+  INLINE LVecBase4f get_param_value_4f(int n) const;
 
 public:
   virtual void output(std::ostream &out) const;
@@ -50,8 +55,6 @@ protected:
   virtual CPT(RenderAttrib) compose_impl(const RenderAttrib *other) const;
 
 private:
-  std::string _shader_name;
-
   typedef SimpleHashMap<std::string, std::string, string_hash> Params;
   Params _params;
 
@@ -65,14 +68,22 @@ PUBLISHED:
   MAKE_PROPERTY(class_slot, get_class_slot);
 
 public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  void fillin(DatagramIterator &scan, BamReader *manager);
+
+public:
   static TypeHandle get_class_type() {
     return _type_handle;
   }
   static void init_type() {
     RenderAttrib::init_type();
-    register_type(_type_handle, "ShaderParamAttrib",
+    register_type(_type_handle, "ParamAttrib",
                   RenderAttrib::get_class_type());
-    _attrib_slot = register_slot(_type_handle, 10, new ShaderParamAttrib("VertexLitGeneric"));
+    _attrib_slot = register_slot(_type_handle, 10, new ParamAttrib);
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -84,6 +95,6 @@ private:
   static int _attrib_slot;
 };
 
-#include "shaderParamAttrib.I"
+#include "paramAttrib.I"
 
-#endif // SHADERPARAMATTRIB_H
+#endif // PARAMATTRIB_H

@@ -48,7 +48,6 @@
 #include "spotlight.h"
 #include "textureReloadRequest.h"
 #include "shaderAttrib.h"
-#include "materialAttrib.h"
 #include "depthWriteAttrib.h"
 #include "lightAttrib.h"
 #include "texGenAttrib.h"
@@ -128,7 +127,6 @@ PStatCollector GraphicsStateGuardian::_draw_set_state_shader_parameters_pcollect
 PStatCollector GraphicsStateGuardian::_draw_set_state_texture_pcollector("Draw:Set State:Texture");
 PStatCollector GraphicsStateGuardian::_draw_set_state_tex_matrix_pcollector("Draw:Set State:Tex matrix");
 PStatCollector GraphicsStateGuardian::_draw_set_state_tex_gen_pcollector("Draw:Set State:Tex gen");
-PStatCollector GraphicsStateGuardian::_draw_set_state_material_pcollector("Draw:Set State:Material");
 PStatCollector GraphicsStateGuardian::_draw_set_state_light_pcollector("Draw:Set State:Light");
 PStatCollector GraphicsStateGuardian::_draw_set_state_stencil_pcollector("Draw:Set State:Stencil");
 PStatCollector GraphicsStateGuardian::_draw_set_state_fog_pcollector("Draw:Set State:Fog");
@@ -1003,38 +1001,6 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     double py = 1.0 / tex->get_y_size();
     double pz = 1.0 / tex->get_z_size();
     into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, px, py, pz, 0);
-    return;
-  }
-  case Shader::SMO_attr_material: {
-    const MaterialAttrib *target_material = (const MaterialAttrib *)
-      _target_rs->get_attrib_def(MaterialAttrib::get_class_slot());
-    // Material matrix contains AMBIENT, DIFFUSE, EMISSION, SPECULAR+SHININESS
-    if (target_material->is_off()) {
-      into[0].set(1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0);
-      return;
-    }
-    Material *m = target_material->get_material();
-    LVecBase4 const &amb = m->get_ambient();
-    LVecBase4 const &dif = m->get_diffuse();
-    LVecBase4 const &emm = m->get_emission();
-    LVecBase4 spc = m->get_specular();
-    spc[3] = m->get_shininess();
-    into[0].set(amb[0], amb[1], amb[2], amb[3],
-                dif[0], dif[1], dif[2], dif[3],
-                emm[0], emm[1], emm[2], emm[3],
-                spc[0], spc[1], spc[2], spc[3]);
-    return;
-  }
-  case Shader::SMO_attr_material2: {
-    const MaterialAttrib *target_material = (const MaterialAttrib *)
-      _target_rs->get_attrib_def(MaterialAttrib::get_class_slot());
-    if (target_material->is_off()) {
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
-      return;
-    }
-    Material *m = target_material->get_material();
-    into[0].set_row(0, m->get_base_color());
-    into[0].set_row(3, LVecBase4(m->get_metallic(), m->get_refractive_index(), 0, m->get_roughness()));
     return;
   }
   case Shader::SMO_attr_color: {
@@ -2819,7 +2785,6 @@ do_issue_color() {
 
   if (_color_scale_via_lighting) {
     _state_mask.clear_bit(LightAttrib::get_class_slot());
-    _state_mask.clear_bit(MaterialAttrib::get_class_slot());
 
     determine_light_color_scale();
   }
@@ -2851,7 +2816,6 @@ do_issue_color_scale() {
   }
   if (_color_scale_via_lighting) {
     _state_mask.clear_bit(LightAttrib::get_class_slot());
-    _state_mask.clear_bit(MaterialAttrib::get_class_slot());
 
     determine_light_color_scale();
   }

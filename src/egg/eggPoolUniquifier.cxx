@@ -13,7 +13,6 @@
 
 #include "eggPoolUniquifier.h"
 #include "eggNode.h"
-#include "eggTexture.h"
 #include "eggMaterial.h"
 #include "eggVertexPool.h"
 
@@ -35,9 +34,7 @@ EggPoolUniquifier() {
  */
 std::string EggPoolUniquifier::
 get_category(EggNode *node) {
-  if (node->is_of_type(EggTexture::get_class_type())) {
-    return "tex";
-  } else if (node->is_of_type(EggMaterial::get_class_type())) {
+  if (node->is_of_type(EggMaterial::get_class_type())) {
     return "mat";
   } else if (node->is_of_type(EggVertexPool::get_class_type())) {
     return "vpool";

@@ -25,9 +25,8 @@
 #include "antialiasAttrib.h"
 #include "colorAttrib.h"
 #include "colorScaleAttrib.h"
-#include "materialAttrib.h"
 #include "fogAttrib.h"
-#include "shaderParamAttrib.h"
+#include "shaderAttrib.h"
 #include "lightAttrib.h"
 #include "graphicsStateGuardianBase.h"
 
@@ -72,9 +71,8 @@ LightLensNode(const std::string &name, Lens *lens) :
   // Backface culling helps eliminate artifacts.
   state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_counter_clockwise), 100);
   state = state->set_attrib(FogAttrib::make_off(), 100);
-  state = state->set_attrib(MaterialAttrib::make_off(), 100);
   // Render it using the depth-only shader.
-  state = state->set_attrib(ShaderParamAttrib::make("Depth"), 100);
+  state = state->set_attrib(ShaderAttrib::make("Depth"), 100);
 
   set_initial_state(state);
 }

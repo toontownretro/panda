@@ -25,7 +25,7 @@ TypeHandle DefaultShader::_type_handle;
 void DefaultShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
-                const ShaderParamAttrib *params,
+                const ParamAttrib *params,
                 const GeomVertexAnimationSpec &anim_spec) {
 
   set_language(Shader::SL_GLSL);

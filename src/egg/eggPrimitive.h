@@ -19,13 +19,8 @@
 #include "eggNode.h"
 #include "eggAttributes.h"
 #include "eggVertex.h"
-#include "eggTexture.h"
 #include "eggMaterial.h"
-#include "eggRenderMode.h"
-#include "pt_EggTexture.h"
-#include "pt_EggMaterial.h"
 #include "vector_PT_EggVertex.h"
-#include "vector_PT_EggTexture.h"
 
 #include "pointerTo.h"
 #include "pvector.h"
@@ -44,8 +39,7 @@ class EggVertexPool;
  * can.  However, it is necessary that all vertices belong to the same vertex
  * pool.
  */
-class EXPCL_PANDA_EGG EggPrimitive : public EggNode, public EggAttributes,
-                     public EggRenderMode
+class EXPCL_PANDA_EGG EggPrimitive : public EggNode, public EggAttributes
 {
 
   // This is a bit of private interface stuff that must be here as a forward
@@ -74,47 +68,23 @@ PUBLISHED:
 
   virtual EggPrimitive *make_copy() const=0;
 
-  virtual EggRenderMode *determine_alpha_mode();
-  virtual EggRenderMode *determine_depth_write_mode();
-  virtual EggRenderMode *determine_depth_test_mode();
-  virtual EggRenderMode *determine_visibility_mode();
-  virtual EggRenderMode *determine_depth_offset();
-  virtual EggRenderMode *determine_draw_order();
-  virtual EggRenderMode *determine_bin();
+  //virtual EggRenderMode *determine_visibility_mode();
 
   INLINE std::string get_sort_name() const;
 
   virtual Shading get_shading() const;
   INLINE void clear_connected_shading();
   INLINE Shading get_connected_shading() const;
-
-  INLINE void set_texture(EggTexture *texture);
-  INLINE bool has_texture() const;
-  INLINE bool has_texture(EggTexture *texture) const;
-  INLINE EggTexture *get_texture() const;
-
-  INLINE void add_texture(EggTexture *texture);
-  INLINE void clear_texture();
-  INLINE int get_num_textures() const;
-  INLINE EggTexture *get_texture(int n) const;
-  MAKE_SEQ(get_textures, get_num_textures, get_texture);
+  MAKE_PROPERTY(sort_name, get_sort_name);
 
   INLINE void set_material(EggMaterial *material);
   INLINE void clear_material();
   INLINE EggMaterial *get_material() const;
   INLINE bool has_material() const;
 
-  INLINE void set_bface_flag(bool flag);
-  INLINE bool get_bface_flag() const;
-
-  MAKE_PROPERTY(sort_name, get_sort_name);
   MAKE_PROPERTY(shading, get_shading);
   MAKE_PROPERTY(connected_shading, get_connected_shading);
-
-  MAKE_SEQ_PROPERTY(textures, get_num_textures, get_texture);
   MAKE_PROPERTY2(material, has_material, get_material, set_material, clear_material);
-  MAKE_PROPERTY(bface_flag, get_bface_flag, set_bface_flag);
-
   void copy_attributes(const EggAttributes &other);
   void copy_attributes(const EggPrimitive &other);
 
@@ -215,7 +185,6 @@ protected:
   virtual void r_transform(const LMatrix4d &mat, const LMatrix4d &inv,
                            CoordinateSystem to_cs);
   virtual void r_flatten_transforms();
-  virtual void r_apply_texmats(EggTextureCollection &textures);
 
   void do_apply_flat_attribute(int vertex_index, EggAttributes *attrib);
 
@@ -234,11 +203,8 @@ private:
                                ConnectedShadingNodes &connected_nodes);
 
 private:
-  typedef vector_PT_EggTexture Textures;
-  Textures _textures;
-  PT_EggMaterial _material;
-  bool _bface;
   Shading _connected_shading;
+  PT(EggMaterial) _material;
 
 public:
 
@@ -248,11 +214,9 @@ public:
   static void init_type() {
     EggNode::init_type();
     EggAttributes::init_type();
-    EggRenderMode::get_class_type();
     register_type(_type_handle, "EggPrimitive",
                   EggNode::get_class_type(),
-                  EggAttributes::get_class_type(),
-                  EggRenderMode::get_class_type());
+                  EggAttributes::get_class_type());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -261,8 +225,6 @@ public:
 
 private:
   static TypeHandle _type_handle;
-
-  friend class EggTextureCollection;
 };
 
 #include "eggPrimitive.I"

@@ -52,10 +52,12 @@
     indirectCompareTo.I indirectCompareTo.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
     ioPtaDatagramShort.h keyboardButton.h \
+    keyValues.h \
     iterator_types.h \
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
+    material.I material.h \
     modifierButtons.I modifierButtons.h mouseButton.h \
     mouseData.h nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
@@ -108,9 +110,11 @@
     ioPtaDatagramFloat.cxx \
     ioPtaDatagramInt.cxx ioPtaDatagramShort.cxx \
     keyboardButton.cxx \
+    keyValues.cxx \
     linkedListNode.cxx \
     load_prc_file.cxx \
     loaderOptions.cxx \
+    material.cxx \
     modifierButtons.cxx mouseButton.cxx \
     nameUniquifier.cxx \
     nodeCachedReferenceCount.cxx \
@@ -169,10 +173,12 @@
     indirectCompareTo.I indirectCompareTo.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
     ioPtaDatagramShort.h keyboardButton.h \
+    keyValues.h \
     iterator_types.h \
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
+    material.I material.h \
     modifierButtons.I \
     modifierButtons.h mouseButton.h mouseData.h \
     nameUniquifier.I nameUniquifier.h \
@@ -207,6 +213,8 @@
     callbackObject_ext.h \
     doubleBitMask_ext.h \
     doubleBitMask_ext.I \
+    keyValues_ext.cxx \
+    keyValues_ext.h \
     pythonCallbackObject.cxx \
     pythonCallbackObject.h \
     sparseArray_ext.cxx \

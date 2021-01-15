@@ -61,14 +61,12 @@ class ShaderContext;
 class ShaderBuffer;
 class RenderState;
 class TransformState;
-class Material;
 
 class ColorScaleAttrib;
 class TexMatrixAttrib;
 class ColorAttrib;
 class TextureAttrib;
 class LightAttrib;
-class MaterialAttrib;
 class RenderModeAttrib;
 class AntialiasAttrib;
 class RescaleNormalAttrib;

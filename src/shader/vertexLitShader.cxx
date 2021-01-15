@@ -17,7 +17,7 @@
 #include "textureAttrib.h"
 #include "textureStage.h"
 #include "postProcessDefines.h"
-#include "shaderParamAttrib.h"
+#include "paramAttrib.h"
 #include "keyValues.h"
 #include "lightLensNode.h"
 #include "light.h"
@@ -30,7 +30,7 @@ TypeHandle VertexLitShader::_type_handle;
 void VertexLitShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
-                const ShaderParamAttrib *params,
+                const ParamAttrib *params,
                 const GeomVertexAnimationSpec &anim_spec) {
 
   set_language(Shader::SL_GLSL);
@@ -118,17 +118,17 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // Are we self-illuminating?
   int selfillum_idx = params->find_param("selfillum");
   if (selfillum_idx != -1) {
-    bool selfillum = (bool)atoi(params->get_param_value(selfillum_idx).c_str());
+    bool selfillum = params->get_param_value_bool(selfillum_idx);
     if (selfillum) {
       // Selfillum is enabled.
       set_pixel_shader_define("SELFILLUM");
 
       // Now figure out the tint value.
-      LVecBase3 tint(1.0);
+      LVecBase3f tint(1.0);
       int tint_idx = params->find_param("selfillumtint");
       if (tint_idx != -1) {
         // Got an explicit tint value.
-        tint = CKeyValues::to_3f(params->get_param_value(tint_idx));
+        tint = params->get_param_value_3f(tint_idx);
       }
       set_input(ShaderInput("selfillumTint", tint));
     }

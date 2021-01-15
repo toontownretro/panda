@@ -23,14 +23,10 @@ ShaderAttrib() :
   // As of 10/30/2020, auto-shader is on by default.
   _auto_shader(true),
   _has_shader(true),
+  _shader_name("default"),
   _flags(0),
   _has_flags(0),
-  _instance_count(0),
-  _auto_normal_on(true),
-  _auto_glow_on(true),
-  _auto_gloss_on(true),
-  _auto_ramp_on(true),
-  _auto_shadow_on(true)
+  _instance_count(0)
 {
 }
 
@@ -46,11 +42,6 @@ ShaderAttrib(const ShaderAttrib &copy) :
   _flags(copy._flags),
   _has_flags(copy._has_flags),
   _instance_count(copy._instance_count),
-  _auto_normal_on(copy._auto_normal_on),
-  _auto_glow_on(copy._auto_glow_on),
-  _auto_gloss_on(copy._auto_gloss_on),
-  _auto_ramp_on(copy._auto_ramp_on),
-  _auto_shadow_on(copy._auto_shadow_on),
   _inputs(copy._inputs)
 {
 }
@@ -112,6 +103,15 @@ has_shader_input(CPT_InternalName id) const {
 INLINE size_t ShaderAttrib::
 get_num_shader_inputs() const {
   return _inputs.size();
+}
+
+/**
+ * Returns the name of the shader generator that should be used to generate a
+ * shader for this state.
+ */
+INLINE const std::string &ShaderAttrib::
+get_shader_name() const {
+  return _shader_name;
 }
 
 /**
@@ -233,41 +233,4 @@ set_shader_input(CPT_InternalName id, const NodePath &np, int priority) const {
 INLINE CPT(RenderAttrib) ShaderAttrib::
 set_shader_input(CPT_InternalName id, double n1, double n2, double n3, double n4, int priority) const {
   return set_shader_input(ShaderInput(std::move(id), LVecBase4((PN_stdfloat)n1, (PN_stdfloat)n2, (PN_stdfloat)n3, (PN_stdfloat)n4), priority));
-}
-
-INLINE bool ShaderAttrib::
-auto_normal_on() const {
-  return _auto_normal_on;
-}
-
-/**
- *
- */
-INLINE bool ShaderAttrib::
-auto_glow_on() const {
-  return _auto_glow_on;
-}
-
-/**
- *
- */
-INLINE bool ShaderAttrib::
-auto_gloss_on() const {
-  return _auto_gloss_on;
-}
-
-/**
- *
- */
-INLINE bool ShaderAttrib::
-auto_ramp_on() const {
-  return _auto_ramp_on;
-}
-
-/**
- *
- */
-INLINE bool ShaderAttrib::
-auto_shadow_on() const {
-  return _auto_shadow_on;
 }

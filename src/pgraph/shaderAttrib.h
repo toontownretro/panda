@@ -43,6 +43,7 @@ private:
 
 PUBLISHED:
   static CPT(RenderAttrib) make(const Shader *shader = nullptr, int priority = 0);
+  static CPT(RenderAttrib) make(const std::string &shader_name, int priority = 0);
   static CPT(RenderAttrib) make_off();
   static CPT(RenderAttrib) make_default();
 
@@ -58,17 +59,10 @@ PUBLISHED:
   INLINE bool               auto_shader() const;
   INLINE int                get_shader_priority() const;
   INLINE int                get_instance_count() const;
-  INLINE bool               auto_normal_on() const;
-  INLINE bool               auto_glow_on() const;
-  INLINE bool               auto_gloss_on() const;
-  INLINE bool               auto_ramp_on() const;
-  INLINE bool               auto_shadow_on() const;
 
-  CPT(RenderAttrib) set_shader(const Shader *s, int priority=0) const;
+  CPT(RenderAttrib) set_shader(const Shader *s, int priority = 0) const;
+  CPT(RenderAttrib) set_shader(const std::string &shader_name, int priority = 0) const;
   CPT(RenderAttrib) set_shader_off(int priority=0) const;
-  CPT(RenderAttrib) set_shader_auto(int priority=0) const;
-
-  CPT(RenderAttrib) set_shader_auto(BitMask32 shader_switch, int priority=0) const;
 
   CPT(RenderAttrib) clear_shader() const;
   // Shader Inputs
@@ -119,6 +113,8 @@ PUBLISHED:
   const ShaderInput &get_shader_input(const std::string &id) const;
   INLINE size_t get_num_shader_inputs() const;
 
+  INLINE const std::string &get_shader_name() const;
+
   NodePath get_shader_input_nodepath(const InternalName *id) const;
   LVecBase4 get_shader_input_vector(const InternalName *id) const;
   Texture *get_shader_input_texture(const InternalName *id, SamplerState *sampler=nullptr) const;
@@ -126,8 +122,6 @@ PUBLISHED:
   bool get_shader_input_ptr(const InternalName *id, Shader::ShaderPtrData &data) const;
   const LMatrix4 &get_shader_input_matrix(const InternalName *id, LMatrix4 &matrix) const;
   ShaderBuffer *get_shader_input_buffer(const InternalName *id) const;
-
-  static void register_with_read_factory();
 
 PUBLISHED:
   MAKE_PROPERTY(shader, get_shader);
@@ -145,17 +139,12 @@ private:
 
   CPT(Shader) _shader;
   int         _shader_priority;
+  std::string _shader_name;
   bool        _auto_shader;
   bool        _has_shader;
   int         _flags;
   int         _has_flags;
   int         _instance_count;
-
-  bool        _auto_normal_on;
-  bool        _auto_glow_on;
-  bool        _auto_gloss_on;
-  bool        _auto_ramp_on;
-  bool        _auto_shadow_on;
 
   // We don't keep a reference to the InternalName, since this is also already
   // stored on the ShaderInput object.
@@ -173,6 +162,14 @@ PUBLISHED:
     return get_class_slot();
   }
   MAKE_PROPERTY(class_slot, get_class_slot);
+
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:
   static TypeHandle get_class_type() {

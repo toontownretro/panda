@@ -81,9 +81,6 @@ public:
   Curves _curves_on_surface;
   Trims _trims;
 
-protected:
-  virtual void r_apply_texmats(EggTextureCollection &textures) override;
-
 private:
   typedef vector_double Knots;
   Knots _u_knots;

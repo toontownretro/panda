@@ -325,6 +325,14 @@ get_filename() const {
 }
 
 /**
+ * Returns the fullpath of the script that the RenderState was created from.
+ */
+INLINE const Filename &RenderState::
+get_fullpath() const {
+  return _fullpath;
+}
+
+/**
  * Returns the draw order indicated by the CullBinAttrib, if any, associated
  * by this state (or 0 if there is no CullBinAttrib).  See get_bin_index().
  */

@@ -35,7 +35,6 @@
 #include "geomVertexData.h"
 #include "geomVertexFormat.h"
 #include "lens.h"
-#include "material.h"
 #include "occlusionQueryContext.h"
 #include "orthographicLens.h"
 #include "matrixLens.h"
@@ -574,7 +573,6 @@ ConfigureFn(config_gobj) {
   IndexBufferContext::init_type();
   InternalName::init_type();
   Lens::init_type();
-  Material::init_type();
   MatrixLens::init_type();
   OcclusionQueryContext::init_type();
   OrthographicLens::init_type();
@@ -635,7 +633,6 @@ ConfigureFn(config_gobj) {
   GeomVertexData::register_with_read_factory();
   GeomVertexFormat::register_with_read_factory();
   InternalName::register_with_read_factory();
-  Material::register_with_read_factory();
   MatrixLens::register_with_read_factory();
   OrthographicLens::register_with_read_factory();
   ParamTextureImage::register_with_read_factory();

@@ -16,7 +16,7 @@
 #include "load_dso.h"
 #include "shader.h"
 #include "shaderBase.h"
-#include "shaderParamAttrib.h"
+#include "paramAttrib.h"
 #include "shaderAttrib.h"
 #include "shaderInput.h"
 #include "pvector.h"
@@ -102,8 +102,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   PStatTimer timer(generate_collector);
 
   // First figure out what shader the state would like to use.
-  const ShaderParamAttrib *spa;
-  state->get_attrib_def(spa);
+  const ParamAttrib *pa;
+  state->get_attrib_def(pa);
+
+  const ShaderAttrib *shattr;
+  state->get_attrib_def(shattr);
 
   if (shadermgr_cat.is_debug()) {
     shadermgr_cat.debug()
@@ -113,11 +116,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   find_shader_collector.start();
-  ShaderBase *shader = get_shader(spa->get_shader_name());
+  ShaderBase *shader = get_shader(shattr->get_shader_name());
   find_shader_collector.stop();
   if (!shader) {
     shadermgr_cat.error()
-      << "Shader `" << spa->get_shader_name() << "` not found\n";
+      << "Shader `" << shattr->get_shader_name() << "` not found\n";
     return ShaderAttrib::make();
   }
 
@@ -127,7 +130,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   synthesize_source_collector.start();
-  shader->generate_shader(gsg, state, spa, anim_spec);
+  shader->generate_shader(gsg, state, pa, anim_spec);
   synthesize_source_collector.stop();
 
   CPT(RenderAttrib) generated_attr;
@@ -195,8 +198,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   // Apply inputs from the ShaderAttrib stored directly on the state to our
   // generated ShaderAttrib.
-  const ShaderAttrib *shattr;
-  state->get_attrib_def(shattr);
   if (shattr->get_num_shader_inputs() > (size_t)0) {
     if (shadermgr_cat.is_debug()) {
       shadermgr_cat.debug()

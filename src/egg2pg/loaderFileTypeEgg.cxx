@@ -87,5 +87,5 @@ load_file(const Filename &path, const LoaderOptions &,
 bool LoaderFileTypeEgg::
 save_file(const Filename &path, const LoaderOptions &options,
           PandaNode *node) const {
-  return save_egg_file(path, node);
+  return false;//save_egg_file(path, node);
 }

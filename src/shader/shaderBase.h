@@ -23,11 +23,12 @@
 #include "shaderInput.h"
 #include "shader.h"
 #include "pmap.h"
+#include "string_utils.h"
 
 class GraphicsStateGuardianBase;
 class RenderState;
 class GeomVertexAnimationSpec;
-class ShaderParamAttrib;
+class ParamAttrib;
 
 /**
  * Base shader class.
@@ -95,7 +96,7 @@ public:
 
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               const ShaderParamAttrib *params,
+                               const ParamAttrib *params,
                                const GeomVertexAnimationSpec &anim_spec) = 0;
 
 protected:

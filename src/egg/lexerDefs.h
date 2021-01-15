@@ -22,7 +22,6 @@
 
 void egg_init_lexer(std::istream &in, const std::string &filename);
 void egg_start_group_body();
-void egg_start_texture_body();
 void egg_start_primitive_body();
 int egg_error_count();
 int egg_warning_count();
