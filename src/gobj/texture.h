@@ -53,6 +53,7 @@ class PreparedGraphicsObjects;
 class CullTraverser;
 class CullTraverserData;
 class TexturePeeker;
+class PTexture;
 struct DDSHeader;
 
 /**
@@ -291,6 +292,7 @@ PUBLISHED:
   BLOCKING bool write_txo(std::ostream &out, const std::string &filename = "") const;
   BLOCKING bool read_dds(std::istream &in, const std::string &filename = "", bool header_only = false);
   BLOCKING bool read_ktx(std::istream &in, const std::string &filename = "", bool header_only = false);
+  BLOCKING bool read_ptex(PTexture *ptex, bool header_only = false);
 
   BLOCKING INLINE bool load(const PNMImage &pnmimage, const LoaderOptions &options = LoaderOptions());
   BLOCKING INLINE bool load(const PNMImage &pnmimage, int z, int n, const LoaderOptions &options = LoaderOptions());
@@ -676,6 +678,8 @@ protected:
   bool do_read_dds(CData *cdata, std::istream &in, const std::string &filename, bool header_only);
   bool do_read_ktx_file(CData *cdata, const Filename &fullpath, bool header_only);
   bool do_read_ktx(CData *cdata, std::istream &in, const std::string &filename, bool header_only);
+  bool do_read_ptex_file(CData *cdata, const Filename &fullpath, bool header_only);
+  bool do_read_ptex(CData *cdata, PTexture *ptex, bool header_only);
 
   bool do_write(CData *cdata, const Filename &fullpath, int z, int n,
                 bool write_pages, bool write_mipmaps);
@@ -867,6 +871,7 @@ private:
   INLINE static bool is_txo_filename(const Filename &fullpath);
   INLINE static bool is_dds_filename(const Filename &fullpath);
   INLINE static bool is_ktx_filename(const Filename &fullpath);
+  INLINE static bool is_ptex_filename(const Filename &fullpath);
 
   void do_filter_2d_mipmap_pages(const CData *cdata,
                                  RamImage &to, const RamImage &from,

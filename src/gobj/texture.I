@@ -2452,6 +2452,21 @@ is_ktx_filename(const Filename &fullpath) {
 }
 
 /**
+ * Returns true if the indicated filename ends in .ptex or .ptex.pz or .ptex.gz,
+ * false otherwise.
+ */
+INLINE bool Texture::
+is_ptex_filename(const Filename &fullpath) {
+  std::string extension = fullpath.get_extension();
+#ifdef HAVE_ZLIB
+  if (extension == "pz" || extension == "gz") {
+    extension = Filename(fullpath.get_basename_wo_extension()).get_extension();
+  }
+#endif  // HAVE_ZLIB
+  return (downcase(extension) == "ptex");
+}
+
+/**
  *
  */
 INLINE void Texture::CData::

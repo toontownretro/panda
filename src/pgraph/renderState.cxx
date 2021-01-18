@@ -467,31 +467,32 @@ make(const Material *script) {
     bool has_any_transform = false;
 
     for (size_t i = 0; i < script->get_num_textures(); i++) {
-      const Material::ScriptTexture *mat_tex = script->get_texture(i);
+      const MatTexture *mat_tex = script->get_texture(i);
 
       PT(Texture) tex;
-      if (mat_tex->_texture_type == Material::ScriptTexture::T_filename) {
-        tex = TexturePool::load_texture(mat_tex->_filename);
+      if (mat_tex->get_source() == MatTexture::S_filename) {
+        tex = TexturePool::load_texture(mat_tex->get_filename());
       } else {
-        tex = TexturePool::find_engine_texture(mat_tex->_name);
+        tex = TexturePool::find_engine_texture(mat_tex->get_name());
       }
 
       PT(TextureStage) stage;
-      if (mat_tex->_stage_name.empty()) {
+      if (mat_tex->get_stage_name().empty()) {
         stage = TextureStage::get_default();
       } else {
-        stage = new TextureStage(mat_tex->_stage_name);
+        stage = new TextureStage(mat_tex->get_stage_name());
       }
 
-      if (!mat_tex->_texcoord_name.empty()) {
-        stage->set_texcoord_name(mat_tex->_texcoord_name);
+      if (!mat_tex->get_texcoord_name().empty()) {
+        stage->set_texcoord_name(mat_tex->get_texcoord_name());
       }
 
       ta = DCAST(TextureAttrib, ta)->add_on_stage(stage, tex);
 
-      if (mat_tex->_has_transform) {
-        CPT(TransformState) ts = TransformState::make_pos_hpr_scale(
-          mat_tex->_pos, mat_tex->_hpr, mat_tex->_scale);
+      if (mat_tex->has_transform()) {
+        CPT(TransformState) ts = TransformState::make_pos_hpr_scale_shear(
+          mat_tex->get_pos(), mat_tex->get_hpr(), mat_tex->get_scale(),
+          mat_tex->get_shear());
         tma = DCAST(TexMatrixAttrib, tma)->add_stage(stage, ts);
         has_any_transform = true;
       }

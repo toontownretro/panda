@@ -26,6 +26,78 @@
 class KeyValues;
 
 /**
+ * "texture" block data.
+ */
+class EXPCL_PANDA_PUTIL MatTexture : public ReferenceCount {
+public:
+  // Is the texture block referencing a file on disk or an engine-created
+  // texture?
+  enum Source {
+    S_filename,
+    S_engine,
+  };
+
+  INLINE MatTexture();
+  INLINE MatTexture(const MatTexture &other);
+  INLINE void clear();
+
+  INLINE void set_source(Source source);
+  INLINE Source get_source() const;
+
+  INLINE void set_filename(const Filename &filename);
+  INLINE const Filename &get_filename() const;
+
+  INLINE void set_fullpath(const Filename &fullpath);
+  INLINE const Filename &get_fullpath() const;
+
+  INLINE void set_name(const std::string &name);
+  INLINE const std::string &get_name() const;
+
+  INLINE void set_stage_name(const std::string &name);
+  INLINE const std::string &get_stage_name() const;
+
+  INLINE void set_texcoord_name(const std::string &name);
+  INLINE const std::string &get_texcoord_name() const;
+
+  INLINE void set_pos(const LPoint3 &pos);
+  INLINE const LPoint3 &get_pos() const;
+
+  INLINE void set_hpr(const LVector3 &hpr);
+  INLINE const LVector3 &get_hpr() const;
+
+  INLINE void set_scale(const LVector3 &scale);
+  INLINE const LVector3 &get_scale() const;
+
+  INLINE void set_shear(const LVector3 &shear);
+  INLINE const LVector3 &get_shear() const;
+
+  INLINE void set_transform(const LMatrix4 &transform);
+  INLINE LMatrix4 get_transform() const;
+
+  INLINE bool has_transform() const;
+
+  int compare_to(const MatTexture *other) const;
+
+private:
+  Source _source;
+
+  Filename _filename;
+  Filename _fullpath;
+  std::string _name;
+
+  std::string _stage_name;
+  std::string _texcoord_name;
+
+  bool _has_transform;
+  LPoint3 _pos;
+  LVector3 _hpr;
+  LVector3 _scale;
+  LVector3 _shear;
+
+  friend class Material;
+};
+
+/**
  * Main interface to the material script, which is a text file that describes
  * the material/render state of geometry.
  */
@@ -102,40 +174,7 @@ PUBLISHED:
     CT_vertex,
   };
 
-  /**
-   * "texture" block data.
-   */
-  class ScriptTexture : public ReferenceCount {
-  public:
-    // Is the texture block referencing a file on disk or an engine-created
-    // texture?
-    enum Type {
-      T_filename,
-      T_engine,
-    };
-
-    INLINE ScriptTexture();
-    INLINE ScriptTexture(const ScriptTexture &other);
-    INLINE void clear();
-
-    int compare_to(const ScriptTexture *other) const;
-
-    Type _texture_type;
-
-    Filename _filename;
-    Filename _fullpath;
-    std::string _name;
-
-    std::string _stage_name;
-    std::string _texcoord_name;
-
-    bool _has_transform;
-    LPoint3 _pos;
-    LVector3 _hpr;
-    LVector3 _scale;
-  };
-
-  typedef pvector<PT(ScriptTexture)> Textures;
+  typedef pvector<PT(MatTexture)> Textures;
 
   /**
    * "bin" block data.
@@ -301,11 +340,11 @@ PUBLISHED:
   INLINE bool has_transparency() const;
   INLINE void clear_transparency();
 
-  INLINE void add_texture(ScriptTexture *tex);
+  INLINE void add_texture(MatTexture *tex);
   INLINE size_t get_num_textures() const;
   INLINE bool has_texture(const std::string &name) const;
-  INLINE ScriptTexture *get_texture(size_t n) const;
-  INLINE ScriptTexture *get_texture(const std::string &name) const;
+  INLINE MatTexture *get_texture(size_t n) const;
+  INLINE MatTexture *get_texture(const std::string &name) const;
   INLINE void remove_texture(size_t n);
   INLINE void remove_texture(const std::string &name);
   INLINE bool has_textures() const;

@@ -14,33 +14,35 @@
 /**
  *
  */
-INLINE Material::ScriptTexture::
-ScriptTexture() {
+INLINE MatTexture::
+MatTexture() {
   clear();
 }
 
 /**
  *
  */
-INLINE Material::ScriptTexture::
-ScriptTexture(const Material::ScriptTexture &other) {
-  _texture_type = other._texture_type;
+INLINE MatTexture::
+MatTexture(const MatTexture &other) {
+  _source = other._source;
   _filename = other._filename;
+  _fullpath = other._fullpath;
   _name = other._name;
   _stage_name = other._stage_name;
   _texcoord_name = other._texcoord_name;
-  _has_transform = other._has_transform;
   _pos = other._pos;
   _hpr = other._hpr;
   _scale = other._scale;
+  _shear = other._shear;
+  _has_transform = other._has_transform;
 }
 
 /**
  * Resets the texture state.
  */
-INLINE void Material::ScriptTexture::
+INLINE void MatTexture::
 clear() {
-  _texture_type = T_filename;
+  _source = S_filename;
   _filename = "";
   _name = "";
   _stage_name = "";
@@ -49,6 +51,195 @@ clear() {
   _pos.set(0, 0, 0);
   _hpr.set(0, 0, 0);
   _scale.set(1, 1, 1);
+  _shear.set(0, 0, 0);
+}
+
+/**
+ * Sets the texture source.
+ */
+INLINE void MatTexture::
+set_source(Source source) {
+  _source = source;
+}
+
+/**
+ * Returns the texture source.
+ */
+INLINE MatTexture::Source MatTexture::
+get_source() const {
+  return _source;
+}
+
+/**
+ * Sets the filename of the texture.
+ */
+INLINE void MatTexture::
+set_filename(const Filename &filename) {
+  _filename = filename;
+}
+
+/**
+ * Returns the filename of the texture.
+ */
+INLINE const Filename &MatTexture::
+get_filename() const {
+  return _filename;
+}
+
+/**
+ * Sets the fullpath of the texture.
+ */
+INLINE void MatTexture::
+set_fullpath(const Filename &fullpath) {
+  _fullpath = fullpath;
+}
+
+/**
+ * Returns the fullpath of the texture.
+ */
+INLINE const Filename &MatTexture::
+get_fullpath() const {
+  return _fullpath;
+}
+
+/**
+ * Sets the name of the texture.  Only necessary for engine textures.
+ */
+INLINE void MatTexture::
+set_name(const std::string &name) {
+  _name = name;
+}
+
+/**
+ * Returns the name of the texture.  Only set for engine textures.
+ */
+INLINE const std::string &MatTexture::
+get_name() const {
+  return _name;
+}
+
+/**
+ * Sets the stage/slot name of the texture.
+ */
+INLINE void MatTexture::
+set_stage_name(const std::string &name) {
+  _stage_name = name;
+}
+
+/**
+ * Returns the stage/slot name of the texture.
+ */
+INLINE const std::string &MatTexture::
+get_stage_name() const {
+  return _stage_name;
+}
+
+/**
+ * Sets texcoord name of the texture.
+ */
+INLINE void MatTexture::
+set_texcoord_name(const std::string &name) {
+  _texcoord_name = name;
+}
+
+/**
+ * Returns the texcoord name of the texture.
+ */
+INLINE const std::string &MatTexture::
+get_texcoord_name() const {
+  return _texcoord_name;
+}
+
+/**
+ * Sets the texcoord offset position.
+ */
+INLINE void MatTexture::
+set_pos(const LPoint3 &pos) {
+  _pos = pos;
+}
+
+/**
+ * Returns the texcoord offset position.
+ */
+INLINE const LPoint3 &MatTexture::
+get_pos() const {
+  return _pos;
+}
+
+/**
+ * Sets the texcoord offset angles.
+ */
+INLINE void MatTexture::
+set_hpr(const LVector3 &hpr) {
+  _hpr = hpr;
+}
+
+/**
+ * Returns the texcoord offset angles.
+ */
+INLINE const LVector3 &MatTexture::
+get_hpr() const {
+  return _hpr;
+}
+
+/**
+ * Sets the texcoord offset scale.
+ */
+INLINE void MatTexture::
+set_scale(const LVector3 &scale) {
+  _scale = scale;
+}
+
+/**
+ * Returns the texcoord offset scale.
+ */
+INLINE const LVector3 &MatTexture::
+get_scale() const {
+  return _scale;
+}
+
+/**
+ * Sets the texcoord offset shear.
+ */
+INLINE void MatTexture::
+set_shear(const LVector3 &shear) {
+  _shear = shear;
+}
+
+/**
+ * Returns the texcoord offset shear.
+ */
+INLINE const LVector3 &MatTexture::
+get_shear() const {
+  return _shear;
+}
+
+
+/**
+ * Sets the texcoord offset transform.
+ */
+INLINE void MatTexture::
+set_transform(const LMatrix4 &transform) {
+  decompose_matrix(transform, _scale, _shear, _hpr, _pos);
+}
+
+/**
+ * Returns the texcoord offset transform.
+ */
+INLINE LMatrix4 MatTexture::
+get_transform() const {
+  LMatrix4 mat;
+  compose_matrix(mat, _scale, _shear, _hpr, _pos);
+  return mat;
+}
+
+/**
+ * Returns true if the texture has a non-identity texcoord transform, false
+ * otherwise.
+ */
+INLINE bool MatTexture::
+has_transform() const {
+  return _has_transform;
 }
 
 /**
@@ -709,7 +900,7 @@ clear_transparency() {
  * Adds a texture onto the state.
  */
 INLINE void Material::
-add_texture(ScriptTexture *tex) {
+add_texture(MatTexture *tex) {
   size_t index;
   for (index = 0; index < _textures.size(); index++) {
     if (_textures[index]->_stage_name == tex->_stage_name) {
@@ -751,7 +942,7 @@ has_texture(const std::string &name) const {
 /**
  * Returns the texture at the indicated index.
  */
-INLINE Material::ScriptTexture *Material::
+INLINE MatTexture *Material::
 get_texture(size_t n) const {
   nassertr(n < _textures.size(), nullptr);
 
@@ -762,7 +953,7 @@ get_texture(size_t n) const {
  * Returns the texture with the indicated stage name, or nullptr if none
  * exists.
  */
-INLINE Material::ScriptTexture *Material::
+INLINE MatTexture *Material::
 get_texture(const std::string &name) const {
   for (size_t i = 0; i < _textures.size(); i++) {
     if (_textures[i]->_stage_name == name) {

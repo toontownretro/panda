@@ -15,6 +15,7 @@
 #include "lightMutexHolder.h"
 #include "virtualFileSystem.h"
 #include "keyValues.h"
+#include "string_utils.h"
 
 Material::ScriptCache Material::_cache;
 LightMutex Material::_mutex;
@@ -22,15 +23,15 @@ LightMutex Material::_mutex;
 /**
  *
  */
-int Material::ScriptTexture::
-compare_to(const Material::ScriptTexture *other) const {
-  if (_texture_type != other->_texture_type) {
-    return (_texture_type < other->_texture_type) ? -1 : 1;
+int MatTexture::
+compare_to(const MatTexture *other) const {
+  if (_source != other->_source) {
+    return (_source < other->_source) ? -1 : 1;
   }
 
   int cmp;
 
-  if (_texture_type == T_filename) {
+  if (_source == S_filename) {
     cmp = _filename.compare_to(other->_filename);
   } else {
     cmp = _name.compare(other->_name);
@@ -64,6 +65,10 @@ compare_to(const Material::ScriptTexture *other) const {
       return cmp;
     }
     cmp = _scale.compare_to(other->_scale);
+    if (cmp != 0) {
+      return cmp;
+    }
+    cmp = _shear.compare_to(other->_shear);
     if (cmp != 0) {
       return cmp;
     }
@@ -149,8 +154,8 @@ resolve_filenames() {
 
   // Currently the only things that can use filenames are textures.
   for (size_t i = 0; i < _textures.size(); i++) {
-    ScriptTexture *tex = _textures[i];
-    if (tex->_texture_type == ScriptTexture::T_filename) {
+    MatTexture *tex = _textures[i];
+    if (tex->get_source() == MatTexture::S_filename) {
       if (!vfs->resolve_filename(tex->_fullpath, search_path)) {
         success = false;
       }
@@ -353,7 +358,7 @@ compose(const Material *other) {
 
   if (other->has_textures()) {
     for (size_t i = 0; i < other->get_num_textures(); i++) {
-      PT(ScriptTexture) tex = new ScriptTexture(*(other->get_texture(i)));
+      PT(MatTexture) tex = new MatTexture(*(other->get_texture(i)));
       add_texture(tex);
     }
   }
@@ -651,12 +656,12 @@ write(const Filename &filename, Material::PathMode path_mode) {
 
   if (has_textures()) {
     for (size_t i = 0; i < get_num_textures(); i++) {
-      ScriptTexture *tex = get_texture(i);
+      MatTexture *tex = get_texture(i);
 
       PT(KeyValues) tex_block = new KeyValues("texture", script);
       tex_block->set_key_value("stage", tex->_stage_name);
 
-      if (tex->_texture_type == ScriptTexture::T_filename) {
+      if (tex->_source == MatTexture::S_filename) {
         Filename tex_filename = tex->_filename;
 
         switch (path_mode) {
@@ -691,6 +696,7 @@ write(const Filename &filename, Material::PathMode path_mode) {
         const LPoint3 &pos = tex->_pos;
         const LVector3 &hpr = tex->_hpr;
         const LVector3 &scale = tex->_scale;
+        const LVector3 &shear = tex->_shear;
 
         if (pos != LPoint3(0)) {
           tex_block->set_key_value("pos", KeyValues::to_string(pos));
@@ -703,7 +709,14 @@ write(const Filename &filename, Material::PathMode path_mode) {
         if (scale != LVector3(1)) {
           tex_block->set_key_value("scale", KeyValues::to_string(scale));
         }
+
+        if (shear != LVector3(0)) {
+          tex_block->set_key_value("shear", KeyValues::to_string(shear));
+        }
       }
+#if 0
+
+#endif
     }
   }
 
@@ -819,15 +832,14 @@ is_true_string(const std::string &value) {
 void Material::
 parse_texture_block(KeyValues *block, Material *script) {
   Filename filename;
-  Filename alpha_filename;
   std::string stage_name;
   std::string texcoord_name;
   std::string tex_name;
   LPoint3 pos(0, 0, 0);
   LVector3 hpr(0, 0, 0);
   LVector3 scale(1, 1, 1);
+  LVector3 shear(0, 0, 0);
   bool got_transform = false;
-  bool cubemap = false;
 
   for (size_t i = 0; i < block->get_num_keys(); i++) {
     const std::string &key = block->get_key(i);
@@ -841,12 +853,6 @@ parse_texture_block(KeyValues *block, Material *script) {
 
     } else if (key == "filename") {
       filename = value;
-
-    } else if (key == "alpha_filename") {
-      alpha_filename = value;
-
-    } else if (key == "cubemap") {
-      cubemap = parse_bool_string(value);
 
     } else if (key == "name") {
       tex_name = value;
@@ -862,16 +868,21 @@ parse_texture_block(KeyValues *block, Material *script) {
     } else if (key == "scale") {
       scale = KeyValues::to_3f(value);
       got_transform = true;
-    }
+
+    } else if (key == "shear") {
+      shear = KeyValues::to_3f(value);
+      got_transform = true;
+
+    } /*else */
   }
 
-  PT(ScriptTexture) tex = new ScriptTexture;
+  PT(MatTexture) tex = new MatTexture;
   if (tex_name.empty() && !filename.empty()) {
-    tex->_texture_type = ScriptTexture::T_filename;
+    tex->_source = MatTexture::S_filename;
     tex->_filename = filename;
     tex->_fullpath = filename;
   } else {
-    tex->_texture_type = ScriptTexture::T_engine;
+    tex->_source = MatTexture::S_engine;
     tex->_name = tex_name;
   }
 
@@ -881,6 +892,7 @@ parse_texture_block(KeyValues *block, Material *script) {
   tex->_pos = pos;
   tex->_hpr = hpr;
   tex->_scale = scale;
+  tex->_shear = shear;
 
   script->add_texture(tex);
 }

@@ -42,6 +42,7 @@
 #include "streamReader.h"
 #include "texturePeeker.h"
 #include "convert_srgb.h"
+#include "pTexture.h"
 
 #ifdef HAVE_SQUISH
 #include <squish.h>
@@ -958,6 +959,21 @@ read_ktx(istream &in, const string &filename, bool header_only) {
   cdata->inc_properties_modified();
   cdata->inc_image_modified();
   return do_read_ktx(cdata, in, filename, header_only);
+}
+
+/**
+ * Reads the texture from a PTEX file object.  This is a Panda-defined file
+ * format, which is simply a source text description of a texture object.  It
+ * can contain the filename of the texture image, the texture format, filtering
+ * properties, wrapping mode, and so on.  This is like the egg version of a
+ * texture.
+ */
+bool Texture::
+read_ptex(PTexture *ptex, bool header_only) {
+  CDWriter cdata(_cycler, true);
+  cdata->inc_properties_modified();
+  cdata->inc_image_modified();
+  return do_read_ptex(cdata, ptex, header_only);
 }
 
 /**
@@ -2815,6 +2831,13 @@ do_read(CData *cdata, const Filename &fullpath, const Filename &alpha_fullpath,
       record->add_dependent_file(fullpath);
     }
     return do_read_ktx_file(cdata, fullpath, header_only);
+  }
+
+  if (is_ptex_filename(fullpath)) {
+    if (record != nullptr) {
+      record->add_dependent_file(fullpath);
+    }
+    return do_read_ptex_file(cdata, fullpath, header_only);
   }
 
   // If read_pages or read_mipmaps is specified, then z and n actually
@@ -4933,6 +4956,433 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
 
   cdata->_loaded_from_image = true;
   cdata->_loaded_from_txo = true;
+
+  return true;
+}
+
+/**
+ * Called internally when read() detects a PTEX file.  Assumes the lock is
+ * already held.
+ */
+bool Texture::
+do_read_ptex_file(CData *cdata, const Filename &fullpath, bool header_only) {
+  PT(PTexture) ptex = PTexture::load(fullpath);
+  if (ptex == nullptr) {
+    return false;
+  }
+
+  if (!has_name()) {
+    set_name(fullpath.get_basename_wo_extension());
+  }
+
+  bool success = do_read_ptex(cdata, ptex, header_only);
+
+  cdata->_fullpath = fullpath;
+  cdata->_alpha_fullpath = Filename();
+  cdata->_keep_ram_image = false;
+
+  return success;
+}
+
+/**
+ * Converts the given PTexture compression mode to a Texture compression mode.
+ */
+static Texture::CompressionMode
+ptex_compression_mode(PTexture::CompressionMode mode) {
+  switch (mode) {
+  case PTexture::CM_off:
+    return Texture::CM_off;
+
+  case PTexture::CM_on:
+    return Texture::CM_on;
+
+  case PTexture::CM_fxt1:
+    return Texture::CM_fxt1;
+
+  case PTexture::CM_dxt1:
+    return Texture::CM_dxt1;
+
+  case PTexture::CM_dxt2:
+    return Texture::CM_dxt2;
+
+  case PTexture::CM_dxt3:
+    return Texture::CM_dxt3;
+
+  case PTexture::CM_dxt4:
+    return Texture::CM_dxt4;
+
+  case PTexture::CM_dxt5:
+    return Texture::CM_dxt5;
+
+  case PTexture::CM_default:
+  default:
+    return Texture::CM_default;
+  }
+}
+
+/**
+ * Converts the given PTexture wrap mode to a Texture wrap mode.
+ */
+static Texture::WrapMode
+ptex_wrap_mode(PTexture::WrapMode mode) {
+  switch (mode) {
+  case PTexture::WM_clamp:
+    return SamplerState::WM_clamp;
+
+  case PTexture::WM_repeat:
+    return SamplerState::WM_repeat;
+
+  case PTexture::WM_mirror:
+    return SamplerState::WM_mirror;
+
+  case PTexture::WM_mirror_once:
+    return SamplerState::WM_mirror_once;
+
+  case PTexture::WM_border_color:
+    return SamplerState::WM_border_color;
+
+  case PTexture::WM_unspecified:
+  default:
+    return SamplerState::WM_repeat;
+  }
+}
+
+/**
+ *
+ */
+bool Texture::
+do_read_ptex(CData *cdata, PTexture *ptex, bool header_only) {
+  // Check to see if we should reduce the number of channels in the texture.
+  int wanted_channels = 0;
+  bool wanted_alpha = false;
+  switch (ptex->get_format()) {
+  case PTexture::F_red:
+  case PTexture::F_green:
+  case PTexture::F_blue:
+  case PTexture::F_alpha:
+  case PTexture::F_luminance:
+  case PTexture::F_sluminance:
+    wanted_channels = 1;
+    wanted_alpha = false;
+    break;
+
+  case PTexture::F_luminance_alpha:
+  case PTexture::F_luminance_alphamask:
+  case PTexture::F_sluminance_alpha:
+    wanted_channels = 2;
+    wanted_alpha = true;
+    break;
+
+  case PTexture::F_rgb:
+  case PTexture::F_rgb12:
+  case PTexture::F_rgb8:
+  case PTexture::F_rgb5:
+  case PTexture::F_rgb332:
+  case PTexture::F_srgb:
+    wanted_channels = 3;
+    wanted_alpha = false;
+    break;
+
+  case PTexture::F_rgba:
+  case PTexture::F_rgbm:
+  case PTexture::F_rgba12:
+  case PTexture::F_rgba8:
+  case PTexture::F_rgba4:
+  case PTexture::F_rgba5:
+  case PTexture::F_srgb_alpha:
+    wanted_channels = 4;
+    wanted_alpha = true;
+    break;
+
+  case PTexture::F_unspecified:
+    wanted_alpha = !ptex->get_alpha_image_filename().empty();
+  }
+
+  LoaderOptions options;
+
+  if (!header_only) {
+    // By convention, we will preload the simple texture images.
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_preload_simple);
+  }
+
+  switch (ptex->get_minfilter()) {
+  case PTexture::FT_nearest:
+  case PTexture::FT_linear:
+  case PTexture::FT_unspecified:
+    break;
+
+  case PTexture::FT_nearest_mipmap_nearest:
+  case PTexture::FT_linear_mipmap_nearest:
+  case PTexture::FT_nearest_mipmap_linear:
+  case PTexture::FT_linear_mipmap_linear:
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_generate_mipmaps);
+  }
+
+  // Allow the texture loader to pre-compress the texture.
+  if (ptex->get_compression() == PTexture::CM_on) {
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_allow_compression);
+  }
+
+  int z_size = 1;
+  TextureType type;
+  switch (ptex->get_texture_type()) {
+  case PTexture::TT_1d_texture:
+    type = TT_1d_texture;
+    break;
+  case PTexture::TT_3d_texture:
+    type = TT_3d_texture;
+    break;
+  case PTexture::TT_cube_map:
+    type = TT_cube_map;
+    z_size = 6;
+    break;
+  default:
+    type = TT_2d_texture;
+    break;
+  }
+
+  do_setup_texture(cdata, type, 1, 1, z_size, Texture::T_unsigned_byte, Texture::F_rgba);
+
+  Filename alpha_filename;
+  if (wanted_alpha) {
+    alpha_filename = ptex->get_alpha_image_fullpath();
+  }
+
+  if (ptex->get_texture_type() == PTexture::TT_unspecified ||
+      ptex->get_texture_type() == PTexture::TT_1d_texture) {
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_allow_1d);
+  }
+
+  if (!do_read(cdata,
+               ptex->get_image_fullpath(),
+               alpha_filename,
+               wanted_channels,
+               0, 0, 0, (z_size > 1), false,
+               options, nullptr)) {
+    return false;
+  }
+
+  if (ptex->get_compression() != PTexture::CM_default) {
+    do_set_compression(cdata, ptex_compression_mode(ptex->get_compression()));
+  }
+
+  SamplerState sampler;
+
+  PTexture::WrapMode wrap_u = ptex->get_wrap_u();
+  PTexture::WrapMode wrap_v = ptex->get_wrap_v();
+  PTexture::WrapMode wrap_w = ptex->get_wrap_w();
+
+  if (wrap_u != PTexture::WM_unspecified) {
+    sampler.set_wrap_u(ptex_wrap_mode(wrap_u));
+  }
+  if (wrap_v != PTexture::WM_unspecified) {
+    sampler.set_wrap_v(ptex_wrap_mode(wrap_v));
+  }
+  if (wrap_w != PTexture::WM_unspecified) {
+    sampler.set_wrap_w(ptex_wrap_mode(wrap_w));
+  }
+
+  if (ptex->has_border_color()) {
+    sampler.set_border_color(ptex->get_border_color());
+  }
+
+  switch (ptex->get_minfilter()) {
+  case PTexture::FT_nearest:
+    sampler.set_minfilter(SamplerState::FT_nearest);
+    break;
+  case PTexture::FT_linear:
+    sampler.set_minfilter(SamplerState::FT_linear);
+    break;
+  case PTexture::FT_nearest_mipmap_nearest:
+    sampler.set_minfilter(SamplerState::FT_nearest_mipmap_nearest);
+    break;
+  case PTexture::FT_linear_mipmap_nearest:
+    sampler.set_minfilter(SamplerState::FT_linear_mipmap_nearest);
+    break;
+  case PTexture::FT_nearest_mipmap_linear:
+    sampler.set_minfilter(SamplerState::FT_nearest_mipmap_linear);
+    break;
+  case PTexture::FT_linear_mipmap_linear:
+    sampler.set_minfilter(SamplerState::FT_linear_mipmap_linear);
+    break;
+  case PTexture::FT_unspecified:
+    break;
+  }
+
+  switch (ptex->get_magfilter()) {
+  case PTexture::FT_nearest:
+  case PTexture::FT_nearest_mipmap_nearest:
+  case PTexture::FT_nearest_mipmap_linear:
+    sampler.set_magfilter(SamplerState::FT_nearest);
+    break;
+
+  case PTexture::FT_linear:
+  case PTexture::FT_linear_mipmap_nearest:
+  case PTexture::FT_linear_mipmap_linear:
+    sampler.set_magfilter(SamplerState::FT_linear);
+    break;
+
+  case PTexture::FT_unspecified:
+    break;
+  }
+
+  if (ptex->has_anisotropic_degree()) {
+    sampler.set_anisotropic_degree(ptex->get_anisotropic_degree());
+  }
+
+  if (ptex->has_min_lod()) {
+    sampler.set_min_lod(ptex->get_min_lod());
+  }
+
+  if (ptex->has_max_lod()) {
+    sampler.set_max_lod(ptex->get_max_lod());
+  }
+
+  if (ptex->has_lod_bias()) {
+    sampler.set_lod_bias(ptex->get_lod_bias());
+  }
+
+  cdata->_default_sampler = sampler;
+
+  if (cdata->_num_components == 1) {
+    switch (ptex->get_format()) {
+    case PTexture::F_red:
+      do_set_format(cdata, F_red);
+      break;
+    case PTexture::F_green:
+      do_set_format(cdata, F_green);
+      break;
+    case PTexture::F_blue:
+      do_set_format(cdata, F_blue);
+      break;
+    case PTexture::F_alpha:
+      do_set_format(cdata, F_alpha);
+      break;
+    case PTexture::F_luminance:
+      do_set_format(cdata, F_luminance);
+      break;
+    case PTexture::F_sluminance:
+      do_set_format(cdata, F_sluminance);
+      break;
+    default:
+      gobj_cat.warning()
+        << "Ignoring inappropriate format " << ptex->get_format()
+        << " for 1-component texture " << ptex->get_name() << "\n";
+      break;
+    }
+
+  } else if (cdata->_num_components == 2) {
+    switch (ptex->get_format()) {
+    case PTexture::F_luminance_alpha:
+      do_set_format(cdata, F_luminance_alpha);
+      break;
+    case PTexture::F_luminance_alphamask:
+      do_set_format(cdata, F_luminance_alphamask);
+      break;
+    case PTexture::F_sluminance_alpha:
+      do_set_format(cdata, F_sluminance_alpha);
+      break;
+    default:
+      gobj_cat.warning()
+        << "Ignoring inappropriate format " << ptex->get_format()
+        << " for 2-component texture " << ptex->get_name() << "\n";
+      break;
+    }
+
+  } else if (cdata->_num_components == 3) {
+    switch (ptex->get_format()) {
+    case PTexture::F_rgb:
+      do_set_format(cdata, F_rgb);
+      break;
+    case PTexture::F_rgb12:
+      // Only do this if the component width supports it.
+      if (cdata->_component_width >= 2) {
+        do_set_format(cdata, F_rgb12);
+      } else {
+        gobj_cat.warning()
+          << "Ignoring inappropriate format " << ptex->get_format()
+          << " for 8-bit texture " << ptex->get_name() << "\n";
+      }
+      break;
+    case PTexture::F_rgb8:
+    case PTexture::F_rgba8:
+      // We'll quietly accept RGBA8 for a 3-component texture, since flt2egg
+      // generates these for 3-component as well as for 4-component textures.
+      do_set_format(cdata, F_rgb8);
+      break;
+    case PTexture::F_rgb5:
+      do_set_format(cdata, F_rgb5);
+      break;
+    case PTexture::F_rgb332:
+      do_set_format(cdata, F_rgb332);
+      break;
+    case PTexture::F_srgb:
+    case PTexture::F_srgb_alpha:
+      do_set_format(cdata, F_srgb);
+      break;
+    default:
+      gobj_cat.warning()
+        << "Ignoring inappropriate format " << ptex->get_format()
+        << " for 3-component texture " << ptex->get_name() << "\n";
+      break;
+    }
+
+  } else if (cdata->_num_components == 4) {
+    switch (ptex->get_format()) {
+    case PTexture::F_rgba:
+      do_set_format(cdata, F_rgba);
+      break;
+    case PTexture::F_rgbm:
+      do_set_format(cdata, F_rgbm);
+      break;
+    case PTexture::F_rgba12:
+      if (cdata->_component_width >= 2) {
+        // Only do this if the component width supports it.
+        do_set_format(cdata, F_rgba12);
+      } else {
+        gobj_cat.warning()
+          << "Ignoring inappropriate format " << ptex->get_format()
+          << " for 8-bit texture " << ptex->get_name() << "\n";
+      }
+      break;
+    case PTexture::F_rgba8:
+      do_set_format(cdata, F_rgba8);
+      break;
+    case PTexture::F_rgba4:
+      do_set_format(cdata, F_rgba4);
+      break;
+    case PTexture::F_rgba5:
+      do_set_format(cdata, F_rgba5);
+      break;
+    case PTexture::F_srgb_alpha:
+      do_set_format(cdata, F_srgb_alpha);
+      break;
+    default:
+      gobj_cat.warning()
+        << "Ignoring inappropriate format " << ptex->get_format()
+        << " for 4-component texture " << ptex->get_name() << "\n";
+      break;
+    }
+  }
+
+  switch(ptex->get_quality()) {
+  case PTexture::QL_unspecified:
+  case PTexture::QL_default:
+    do_set_quality_level(cdata, QL_default);
+    break;
+  case PTexture::QL_fastest:
+    do_set_quality_level(cdata, QL_fastest);
+    break;
+  case PTexture::QL_normal:
+    do_set_quality_level(cdata, QL_normal);
+    break;
+  case PTexture::QL_best:
+    do_set_quality_level(cdata, QL_best);
+    break;
+  }
+
+  cdata->_loaded_from_txo = true;
+  cdata->_loaded_from_image = true;
 
   return true;
 }
