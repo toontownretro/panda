@@ -14,6 +14,7 @@
 #include "config_shader.h"
 #include "shaderBase.h"
 #include "shaderManager.h"
+#include "shaderObject.h"
 #include "depthShader.h"
 #include "csmDepthShader.h"
 #include "vertexLitShader.h"
@@ -74,4 +75,7 @@ init_libshader() {
   CSMDepthShader::init_type();
   VertexLitShader::init_type();
   LightmappedShader::init_type();
+
+  ShaderObject::init_type();
+  ShaderObject::register_with_read_factory();
 }

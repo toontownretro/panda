@@ -14,6 +14,7 @@
     shaderBase.h shaderBase.I shaderBase.T \
     shaderEnums.h \
     shaderManager.h shaderManager.I \
+    shaderObject.h shaderObject.I \
     shaderSource.h shaderSource.I \
     shaderStage.h shaderStage.I shaderStage.T \
     vertexLitShader.h vertexLitShader.I
@@ -29,6 +30,7 @@
     shaderBase.cxx \
     shaderEnums.cxx \
     shaderManager.cxx \
+    shaderObject.cxx \
     shaderSource.cxx \
     shaderStage.cxx \
     vertexLitShader.cxx
