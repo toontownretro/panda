@@ -21,6 +21,8 @@
 #include "encryptStream.h"
 #include "virtualFileSystem.h"
 #include "virtualFile.h"
+#include "lzmaDecoder.h"
+#include "datagramIterator.h"
 
 #include <algorithm>
 #include <iterator>
@@ -1129,12 +1131,47 @@ open_read_subfile(Subfile *subfile) {
 #ifndef HAVE_ZLIB
     express_cat.error()
       << "zlib not compiled in; cannot read compressed multifiles.\n";
+    delete stream;
     return nullptr;
 #else  // HAVE_ZLIB
     // Oops, the subfile is compressed.  So actually, return an
     // IDecompressStream that wraps around the ISubStream.
-    IDecompressStream *wrapper = new IDecompressStream(stream, true, -1, false);
-    stream = wrapper;
+
+    if (subfile->_compression_method == CM_lzma) {
+      char *compressed_buffer = new char[subfile->_data_length];
+      stream->read(compressed_buffer, subfile->_data_length);
+
+      // LZMA subfile header:
+      // Version info - 2 bytes
+      // Properties size - 2 bytes
+      // Propreties data - properties size
+      // Compressed data
+
+      int propsize = *(unsigned short *)(compressed_buffer + 2);
+      char properties[propsize];
+      for (int i = 0; i < propsize; i++) {
+        properties[i] = compressed_buffer[i + 4];
+      }
+
+      CLZMA lzma;
+      unsigned char *buffer = new unsigned char[subfile->_uncompressed_length];
+      unsigned int size = lzma.Uncompress((unsigned char *)compressed_buffer + 4 + propsize, buffer,
+                                          subfile->_uncompressed_length, subfile->_data_length - (4 + propsize), properties);
+      delete[] compressed_buffer;
+      if (size != subfile->_uncompressed_length) {
+        nassert_raise("Subfile uncompressed size != bytes we uncompressed.");
+        delete[] buffer;
+        return nullptr;
+      }
+
+      delete stream;
+      stream = new std::istringstream(
+        std::string((const char *)buffer, subfile->_uncompressed_length));
+
+    } else {
+      IDecompressStream *wrapper = new IDecompressStream(stream, true, -1, false);
+      stream = wrapper;
+    }
 #endif  // HAVE_ZLIB
   }
 

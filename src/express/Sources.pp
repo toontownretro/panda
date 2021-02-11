@@ -25,6 +25,7 @@
     hashGeneratorBase.I hashGeneratorBase.h \
     hashVal.I hashVal.h \
     indirectLess.I indirectLess.h \
+    lzmaDecoder.h \
     memoryInfo.I memoryInfo.h \
     memoryUsage.I memoryUsage.h \
     memoryUsagePointerCounts.I memoryUsagePointerCounts.h \
@@ -89,6 +90,7 @@
     error_utils.cxx \
     fileReference.cxx \
     hashGeneratorBase.cxx hashVal.cxx \
+    lzmaDecoder.cxx \
     memoryInfo.cxx memoryUsage.cxx memoryUsagePointerCounts.cxx \
     memoryUsagePointers.cxx multifile.cxx \
     namable.cxx \
@@ -149,6 +151,7 @@
     hashGeneratorBase.I hashGeneratorBase.h \
     hashVal.I hashVal.h \
     indirectLess.I indirectLess.h \
+    lzmaDecoder.h \
     memoryInfo.I memoryInfo.h \
     memoryUsage.I memoryUsage.h \
     memoryUsagePointerCounts.I memoryUsagePointerCounts.h \
