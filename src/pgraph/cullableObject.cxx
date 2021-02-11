@@ -161,7 +161,9 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       if (data_reader.get_format()->get_animation().get_animation_type() == Geom::AT_hardware) {
         static CPT(RenderState) state = RenderState::make(
           DCAST(ShaderAttrib, ShaderAttrib::make())->set_flag(ShaderAttrib::F_hardware_skinning, true));
-        _state = _state->compose(state);
+        // Compose it backwards so the flag still gets picked up if the higher
+        // ShaderAttrib has an override value.
+        _state = state->compose(_state);
       }
 
       ensure_generated_shader(gsg);
