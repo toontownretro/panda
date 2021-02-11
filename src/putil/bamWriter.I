@@ -103,6 +103,26 @@ set_file_texture_mode(BamTextureMode file_texture_mode) {
 }
 
 /**
+ * Returns the BamTextureMode preference indicated by the Bam file currently
+ * being written.  Material objects written to this Bam file will be encoded
+ * according to the specified mode.
+ */
+INLINE BamWriter::BamTextureMode BamWriter::
+get_file_material_mode() const {
+  return _file_material_mode;
+}
+
+/**
+ * Changes the BamTextureMode preference for the Bam file currently being
+ * written.  Material objects written to this Bam file will be encoded
+ * according to the specified mode.
+ */
+INLINE void BamWriter::
+set_file_material_mode(BamTextureMode file_material_mode) {
+  _file_material_mode = file_material_mode;
+}
+
+/**
  * Returns the root node of the part of the scene graph we are currently
  * writing out.  This is used for determining what to make NodePaths relative
  * to.

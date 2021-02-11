@@ -84,6 +84,9 @@ PUBLISHED:
   INLINE BamTextureMode get_file_texture_mode() const;
   INLINE void set_file_texture_mode(BamTextureMode file_texture_mode);
 
+  INLINE BamTextureMode get_file_material_mode() const;
+  INLINE void set_file_material_mode(BamTextureMode file_material_mode);
+
   INLINE TypedWritable *get_root_node() const;
   INLINE void set_root_node(TypedWritable *root_node);
 
@@ -93,6 +96,7 @@ PUBLISHED:
   MAKE_PROPERTY(file_endian, get_file_endian);
   MAKE_PROPERTY(file_stdfloat_double, get_file_stdfloat_double);
   MAKE_PROPERTY(file_texture_mode, get_file_texture_mode);
+  MAKE_PROPERTY(file_material_mode, get_file_material_mode);
   MAKE_PROPERTY(root_node, get_root_node, set_root_node);
 
 public:
@@ -127,6 +131,7 @@ private:
   BamEndian _file_endian;
   bool _file_stdfloat_double;
   BamTextureMode _file_texture_mode;
+  BamTextureMode _file_material_mode;
 
   // Stores the PandaNode representing the root of the node hierarchy we are
   // currently writing, if any, for the purpose of writing NodePaths.  This is

@@ -61,7 +61,8 @@ PUBLISHED:
     BOC_file_data,
   };
 
-  // This enum is used to control how textures are written to a bam stream.
+  // This enum is used to control how textures and materials are written to a
+  // bam stream.
   enum BamTextureMode {
     BTM_unchanged,
     BTM_fullpath,

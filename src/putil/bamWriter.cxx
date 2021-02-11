@@ -100,6 +100,7 @@ BamWriter(DatagramSink *target) :
   _file_endian = bam_endian;
   _file_stdfloat_double = bam_stdfloat_double;
   _file_texture_mode = bam_texture_mode;
+  _file_material_mode = bam_material_mode;
 }
 
 /**
@@ -161,6 +162,7 @@ init() {
 
   _file_endian = bam_endian;
   _file_texture_mode = bam_texture_mode;
+  _file_material_mode = bam_material_mode;
 
   // Write out the current major and minor BAM file version numbers.
   Datagram header;

@@ -89,6 +89,11 @@ ConfigVariableEnum<BamEnums::BamTextureMode> bam_texture_mode
  PRC_DESC("Set this to specify how textures should be written into Bam files."
           "See the panda source or documentation for available options."));
 
+ConfigVariableEnum<BamEnums::BamTextureMode> bam_material_mode
+("bam-material-mode", BamEnums::BTM_relative,
+ PRC_DESC("Set this to specify how materials should be written into Bam files."
+          "See the panda source or documentation for available options."));
+
 ConfigureFn(config_putil) {
   init_libputil();
 }
