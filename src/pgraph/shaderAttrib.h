@@ -113,7 +113,7 @@ PUBLISHED:
   const ShaderInput &get_shader_input(const std::string &id) const;
   INLINE size_t get_num_shader_inputs() const;
 
-  INLINE const std::string &get_shader_name() const;
+  INLINE const InternalName *get_shader_name() const;
 
   NodePath get_shader_input_nodepath(const InternalName *id) const;
   LVecBase4 get_shader_input_vector(const InternalName *id) const;
@@ -139,7 +139,7 @@ private:
 
   CPT(Shader) _shader;
   int         _shader_priority;
-  std::string _shader_name;
+  CPT(InternalName) _shader_name;
   bool        _auto_shader;
   bool        _has_shader;
   int         _flags;

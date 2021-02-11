@@ -94,6 +94,10 @@ public:
 
   INLINE void reset();
 
+  INLINE void add_alias(const std::string &alias);
+  INLINE size_t get_num_aliases() const;
+  INLINE const std::string &get_alias(size_t n) const;
+
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
                                const ParamAttrib *params,
@@ -165,6 +169,8 @@ protected:
 private:
   typedef pmap<ShaderSetup, CPT(RenderAttrib)> SetupCache;
   SetupCache _cache;
+
+  vector_string _aliases;
 
   friend class ShaderManager;
 

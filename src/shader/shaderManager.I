@@ -64,7 +64,7 @@ get_global_ptr() {
  * that name.
  */
 INLINE ShaderBase *ShaderManager::
-get_shader(const std::string &name) const {
+get_shader(CPT_InternalName name) const {
   ShaderRegistry::const_iterator it = _shaders.find(name);
   if (it != _shaders.end()) {
     return (*it).second;

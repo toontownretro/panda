@@ -17,4 +17,6 @@
 INLINE VertexLitShader::
 VertexLitShader() :
   ShaderBase("VertexLitGeneric") {
+
+  add_alias("default");
 }

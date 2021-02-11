@@ -88,7 +88,10 @@ load_shader_libraries() {
  */
 void ShaderManager::
 register_shader(ShaderBase *shader) {
-  _shaders[shader->get_name()] = shader;
+  _shaders[InternalName::make(shader->get_name())] = shader;
+  for (size_t i = 0; i < shader->get_num_aliases(); i++) {
+    _shaders[InternalName::make(shader->get_alias(i))] = shader;
+  }
 }
 
 /**
@@ -108,6 +111,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   const ShaderAttrib *shattr;
   state->get_attrib_def(shattr);
 
+  if (shattr->get_shader_name() == nullptr) {
+    shadermgr_cat.error()
+      << "ShaderAttrib had a NULL shader name.\n";
+    return ShaderAttrib::make();
+  }
+
   if (shadermgr_cat.is_debug()) {
     shadermgr_cat.debug()
       << "Generating shader for state: ";
@@ -120,7 +129,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   find_shader_collector.stop();
   if (!shader) {
     shadermgr_cat.error()
-      << "Shader `" << shattr->get_shader_name() << "` not found\n";
+      << "Shader `" << shattr->get_shader_name()->get_name() << "` not found\n";
     return ShaderAttrib::make();
   }
 

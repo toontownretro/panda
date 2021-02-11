@@ -414,3 +414,27 @@ INLINE void ShaderBase::
 reset() {
   _setup.clear();
 }
+
+/**
+ * Adds an alternative name that can be used to refer to this shader.
+ */
+INLINE void ShaderBase::
+add_alias(const std::string &name) {
+  _aliases.push_back(downcase(name));
+}
+
+/**
+ * Returns the number of alternative names for this shader.
+ */
+INLINE size_t ShaderBase::
+get_num_aliases() const {
+  return _aliases.size();
+}
+
+/**
+ * Returns the nth alternative name for this shader.
+ */
+INLINE const std::string &ShaderBase::
+get_alias(size_t n) const {
+  return _aliases[n];
+}

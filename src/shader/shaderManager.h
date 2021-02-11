@@ -20,6 +20,7 @@
 #include "geomVertexAnimationSpec.h"
 #include "renderAttrib.h"
 #include "shaderEnums.h"
+#include "internalName.h"
 
 class ShaderBase;
 class RenderState;
@@ -49,10 +50,10 @@ public:
                                             const RenderState *state,
                                             const GeomVertexAnimationSpec &anim_spec) override;
 
-  INLINE ShaderBase *get_shader(const std::string &name) const;
+  INLINE ShaderBase *get_shader(CPT_InternalName name) const;
 
 private:
-  typedef phash_map<std::string, ShaderBase *, string_hash> ShaderRegistry;
+  typedef phash_map<CPT(InternalName), ShaderBase *> ShaderRegistry;
   ShaderRegistry _shaders;
 
   ShaderQuality _quality;

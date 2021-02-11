@@ -76,7 +76,7 @@ make(const Shader *shader, int priority) {
 CPT(RenderAttrib) ShaderAttrib::
 make(const std::string &shader_name, int priority) {
   ShaderAttrib *attr = new ShaderAttrib;
-  attr->_shader_name = downcase(shader_name);
+  attr->_shader_name = InternalName::make(downcase(shader_name));
   attr->_shader_priority = priority;
   attr->_auto_shader = true;
   attr->_has_shader = true;
@@ -111,7 +111,7 @@ set_shader(const Shader *s, int priority) const {
 CPT(RenderAttrib) ShaderAttrib::
 set_shader(const std::string &shader_name, int priority) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
-  result->_shader_name = downcase(shader_name);
+  result->_shader_name = InternalName::make(downcase(shader_name));
   result->_shader = nullptr;
   result->_shader_priority = priority;
   result->_auto_shader = true;
@@ -129,7 +129,7 @@ set_shader_off(int priority) const {
   result->_shader_priority = priority;
   result->_auto_shader = false;
   result->_has_shader = true;
-  result->_shader_name = std::string();
+  result->_shader_name = nullptr;
   return return_new(result);
 }
 
@@ -143,7 +143,7 @@ clear_shader() const {
   result->_shader_priority = 0;
   result->_auto_shader = false;
   result->_has_shader = false;
-  result->_shader_name = std::string();
+  result->_shader_name = nullptr;
   return return_new(result);
 }
 
@@ -710,7 +710,7 @@ get_hash_impl() const {
   hash = int_hash::add_hash(hash, _flags);
   hash = int_hash::add_hash(hash, _has_flags);
   hash = int_hash::add_hash(hash, _instance_count);
-  hash = string_hash::add_hash(hash, _shader_name);
+  hash = pointer_hash::add_hash(hash, _shader_name);
 
   Inputs::const_iterator ii;
   for (ii = _inputs.begin(); ii != _inputs.end(); ++ii) {
@@ -790,7 +790,7 @@ void ShaderAttrib::
 write_datagram(BamWriter *manager, Datagram &dg) {
   RenderAttrib::write_datagram(manager, dg);
 
-  dg.add_string(_shader_name);
+  dg.add_string(_shader_name->get_name());
   dg.add_bool(_auto_shader);
   dg.add_bool(_has_shader);
   dg.add_int32(_shader_priority);
@@ -824,7 +824,7 @@ void ShaderAttrib::
 fillin(DatagramIterator &scan, BamReader *manager) {
   RenderAttrib::fillin(scan, manager);
 
-  _shader_name = scan.get_string();
+  _shader_name = InternalName::make(scan.get_string());
   _auto_shader = scan.get_bool();
   _has_shader = scan.get_bool();
   _shader_priority = scan.get_int32();

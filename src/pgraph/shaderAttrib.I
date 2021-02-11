@@ -23,7 +23,7 @@ ShaderAttrib() :
   // As of 10/30/2020, auto-shader is on by default.
   _auto_shader(true),
   _has_shader(true),
-  _shader_name("default"),
+  _shader_name(InternalName::make("default")),
   _flags(0),
   _has_flags(0),
   _instance_count(0)
@@ -42,7 +42,8 @@ ShaderAttrib(const ShaderAttrib &copy) :
   _flags(copy._flags),
   _has_flags(copy._has_flags),
   _instance_count(copy._instance_count),
-  _inputs(copy._inputs)
+  _inputs(copy._inputs),
+  _shader_name(copy._shader_name)
 {
 }
 
@@ -109,7 +110,7 @@ get_num_shader_inputs() const {
  * Returns the name of the shader generator that should be used to generate a
  * shader for this state.
  */
-INLINE const std::string &ShaderAttrib::
+INLINE const InternalName *ShaderAttrib::
 get_shader_name() const {
   return _shader_name;
 }

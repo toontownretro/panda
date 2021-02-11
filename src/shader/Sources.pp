@@ -9,7 +9,6 @@
   #define SOURCES \
     config_shader.h \
     csmDepthShader.h csmDepthShader.I \
-    defaultShader.h defaultShader.I \
     depthShader.h depthShader.I \
     shaderBase.h shaderBase.I shaderBase.T \
     shaderEnums.h \
@@ -24,7 +23,6 @@
   #define COMPOSITE_SOURCES \
     config_shader.cxx \
     csmDepthShader.cxx \
-    defaultShader.cxx \
     depthShader.cxx \
     shaderBase.cxx \
     shaderEnums.cxx \
