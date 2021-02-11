@@ -15,6 +15,7 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
+    ikEffector.I ikEffector.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define COMPOSITE_SOURCES \
@@ -24,6 +25,7 @@
     characterSlider.cxx \
     characterVertexSlider.cxx \
     config_char.cxx  \
+    ikEffector.cxx \
     jointVertexTransform.cxx
 
   #define INSTALL_HEADERS \
@@ -34,6 +36,7 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
+    ikEffector.I ikEffector.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define IGATESCAN all
