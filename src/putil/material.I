@@ -33,8 +33,7 @@ MatTexture(const MatTexture &other) {
   _pos = other._pos;
   _hpr = other._hpr;
   _scale = other._scale;
-  _shear = other._shear;
-  _has_transform = other._has_transform;
+  _transform_flags = other._transform_flags;
 }
 
 /**
@@ -47,11 +46,10 @@ clear() {
   _name = "";
   _stage_name = "";
   _texcoord_name = "";
-  _has_transform = false;
   _pos.set(0, 0, 0);
   _hpr.set(0, 0, 0);
   _scale.set(1, 1, 1);
-  _shear.set(0, 0, 0);
+  _transform_flags = 0;
 }
 
 /**
@@ -154,82 +152,120 @@ get_texcoord_name() const {
  * Sets the texcoord offset position.
  */
 INLINE void MatTexture::
-set_pos(const LPoint3 &pos) {
-  _pos = pos;
+set_pos2d(const LPoint2d &pos) {
+  _pos.set(pos[0], pos[1], 0.0);
+  _transform_flags |= T_pos2d;
 }
 
 /**
  * Returns the texcoord offset position.
  */
-INLINE const LPoint3 &MatTexture::
-get_pos() const {
-  return _pos;
+INLINE LPoint2d MatTexture::
+get_pos2d() const {
+  return _pos.get_xy();
+}
+
+/**
+ * Returns true if there is a texcoord offset position, false otherwise.
+ */
+INLINE bool MatTexture::
+has_pos2d() const {
+  return (_transform_flags & T_pos2d) != 0;
+}
+
+/**
+ * Clears the texcoord offset position.
+ */
+INLINE void MatTexture::
+clear_pos2d() {
+  _pos.set(0, 0, 0);
+  _transform_flags &= ~T_pos2d;
 }
 
 /**
  * Sets the texcoord offset angles.
  */
 INLINE void MatTexture::
-set_hpr(const LVector3 &hpr) {
-  _hpr = hpr;
+set_hpr2d(const LVector2d &hpr) {
+  _hpr.set(hpr[0], hpr[1], 0.0);
+  _transform_flags |= T_hpr2d;
 }
 
 /**
  * Returns the texcoord offset angles.
  */
-INLINE const LVector3 &MatTexture::
-get_hpr() const {
-  return _hpr;
+INLINE LVector2d MatTexture::
+get_hpr2d() const {
+  return _hpr.get_xy();
+}
+
+/**
+ * Returns true if there are texcoord offset angles, false otherwise.
+ */
+INLINE bool MatTexture::
+has_hpr2d() const {
+  return (_transform_flags & T_hpr2d) != 0;
+}
+
+/**
+ * Clears the texcoord offset angles.
+ */
+INLINE void MatTexture::
+clear_hpr2d() {
+  _hpr.set(0, 0, 0);
+  _transform_flags &= ~T_hpr2d;
 }
 
 /**
  * Sets the texcoord offset scale.
  */
 INLINE void MatTexture::
-set_scale(const LVector3 &scale) {
-  _scale = scale;
+set_scale2d(const LVector2d &scale) {
+  _scale.set(scale[0], scale[1], 1.0);
+  _transform_flags |= T_scale2d;
 }
 
 /**
  * Returns the texcoord offset scale.
  */
-INLINE const LVector3 &MatTexture::
-get_scale() const {
-  return _scale;
+INLINE LVector2d MatTexture::
+get_scale2d() const {
+  return _scale.get_xy();
 }
 
 /**
- * Sets the texcoord offset shear.
+ * Returns true if there is a texcoord offset scale, false otherwise.
+ */
+INLINE bool MatTexture::
+has_scale2d() const {
+  return (_transform_flags & T_scale2d) != 0;
+}
+
+/**
+ * Clears the texcoord offset scale.
  */
 INLINE void MatTexture::
-set_shear(const LVector3 &shear) {
-  _shear = shear;
+clear_scale2d() {
+  _scale.set(1, 1, 1);
+  _transform_flags &= ~T_scale2d;
 }
-
-/**
- * Returns the texcoord offset shear.
- */
-INLINE const LVector3 &MatTexture::
-get_shear() const {
-  return _shear;
-}
-
 
 /**
  * Sets the texcoord offset transform.
  */
 INLINE void MatTexture::
-set_transform(const LMatrix4 &transform) {
-  decompose_matrix(transform, _scale, _shear, _hpr, _pos);
+set_transform2d(const LMatrix3d &transform) {
+  decompose_matrix(transform, _scale, _hpr, _pos);
+  _transform_flags = T_all;
 }
 
 /**
  * Returns the texcoord offset transform.
  */
-INLINE LMatrix4 MatTexture::
-get_transform() const {
-  LMatrix4 mat;
-  compose_matrix(mat, _scale, _shear, _hpr, _pos);
+INLINE LMatrix3d MatTexture::
+get_transform2d() const {
+  LMatrix3d mat;
+  compose_matrix(mat, _scale, _hpr, _pos);
   return mat;
 }
 
@@ -238,8 +274,19 @@ get_transform() const {
  * otherwise.
  */
 INLINE bool MatTexture::
-has_transform() const {
-  return _has_transform;
+has_transform2d() const {
+  return (_transform_flags & T_all) != 0;
+}
+
+/**
+ * Clears the texcoord offset transform.
+ */
+INLINE void MatTexture::
+clear_transform2d() {
+  clear_pos2d();
+  clear_hpr2d();
+  clear_scale2d();
+  _transform_flags = 0;
 }
 
 /**

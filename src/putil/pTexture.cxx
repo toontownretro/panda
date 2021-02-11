@@ -52,6 +52,7 @@ PTexture(const PTexture &other) {
   _anisotropic_degree = other._anisotropic_degree;
   _quality = other._quality;
   _compression = other._compression;
+  _num_pages = other._num_pages;
 
   _flags = other._flags;
 }
@@ -81,7 +82,54 @@ clear() {
   _anisotropic_degree = 0;
   _quality = QL_unspecified;
   _compression = CM_default;
+  _num_pages = 1;
   _flags = 0;
+}
+
+/**
+ * Given the number of color components (channels) in the image file as
+ * actually read from the disk, return true if this texture seems to have an
+ * alpha channel or not.  This depends on the EggTexture's format as well as
+ * the number of channels.
+ */
+bool PTexture::
+has_alpha_channel(int num_components) const {
+  switch (_format) {
+  case F_red:
+  case F_green:
+  case F_blue:
+  case F_luminance:
+  case F_sluminance:
+  case F_rgb:
+  case F_rgb12:
+  case F_rgb8:
+  case F_rgb5:
+  case F_rgb332:
+  case F_srgb:
+    // These formats never use alpha, regardless of the number of components
+    // we have.
+    return false;
+
+  case F_alpha:
+    // This format always uses alpha.
+    return true;
+
+  case F_luminance_alpha:
+  case F_luminance_alphamask:
+  case F_sluminance_alpha:
+  case F_rgba:
+  case F_rgbm:
+  case F_rgba12:
+  case F_rgba8:
+  case F_rgba4:
+  case F_rgba5:
+  case F_srgb_alpha:
+  case F_unspecified:
+    // These formats use alpha if the image had alpha.
+    return (num_components == 2 || num_components == 4);
+  }
+
+  return false;
 }
 
 /**
@@ -183,6 +231,10 @@ compare_to(const PTexture *other) const {
     return (_compression < other->_compression) ? -1 : 1;
   }
 
+  if (_num_pages != other->_num_pages) {
+    return (_num_pages < other->_num_pages) ? -1 : 1;
+  }
+
   return 0;
 }
 
@@ -197,18 +249,24 @@ resolve_filenames(const DSearchPath &search_path) {
 
   bool all_ok = true;
 
-  if (!_image_filename.empty()) {
-    _image_fullpath = _image_filename;
-    if (!vfs->resolve_filename(_image_fullpath, search_path)) {
-      all_ok = false;
-    }
-  }
+  // We don't resolve the filenames for cubemaps or 3D textures because they
+  // are pattern filenames.
+  if (_texture_type <= TT_2d_texture) {
 
-  if (!_alpha_image_filename.empty()) {
-    _alpha_image_fullpath = _alpha_image_filename;
-    if (!vfs->resolve_filename(_alpha_image_fullpath, search_path)) {
-      all_ok = false;
+    if (!_image_filename.empty()) {
+      _image_fullpath = _image_filename;
+      if (!vfs->resolve_filename(_image_fullpath, search_path)) {
+        all_ok = false;
+      }
     }
+
+    if (!_alpha_image_filename.empty()) {
+      _alpha_image_fullpath = _alpha_image_filename;
+      if (!vfs->resolve_filename(_alpha_image_fullpath, search_path)) {
+        all_ok = false;
+      }
+    }
+
   }
 
   return all_ok;
@@ -283,6 +341,11 @@ write(const Filename &filename) {
 
   if (has_anisotropic_degree()) {
     kv->set_key_value("anisotropic", KeyValues::to_string(get_anisotropic_degree()));
+  }
+
+  if (get_texture_type() == TT_3d_texture) {
+    // 3D textures need an explicit page count.
+    kv->set_key_value("num_pages", KeyValues::to_string(get_num_pages()));
   }
 
   kv->write(filename, 2);
@@ -373,6 +436,9 @@ load(const Filename &filename, const DSearchPath &search_path) {
 
     } else if (key == "border_color") {
       tex->set_border_color(KeyValues::to_4f(value));
+
+    } else if (key == "num_pages") {
+      tex->set_num_pages(atoi(value.c_str()));
     }
   }
 

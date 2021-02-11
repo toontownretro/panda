@@ -51,24 +51,26 @@ compare_to(const MatTexture *other) const {
     return cmp;
   }
 
-  if (_has_transform != other->_has_transform) {
-    return (_has_transform < other->_has_transform) ? -1 : 1;
+  if (_transform_flags != other->_transform_flags) {
+    return (_transform_flags < other->_transform_flags) ? -1 : 1;
   }
 
-  if (_has_transform) {
+  if (has_pos2d()) {
     cmp = _pos.compare_to(other->_pos);
     if (cmp != 0) {
       return cmp;
     }
+  }
+
+  if (has_hpr2d()) {
     cmp = _hpr.compare_to(other->_hpr);
     if (cmp != 0) {
       return cmp;
     }
+  }
+
+  if (has_scale2d()) {
     cmp = _scale.compare_to(other->_scale);
-    if (cmp != 0) {
-      return cmp;
-    }
-    cmp = _shear.compare_to(other->_shear);
     if (cmp != 0) {
       return cmp;
     }
@@ -133,7 +135,7 @@ clear() {
   _shader.clear();
   _bin.clear();
   _alpha_test.clear();
-  _transparency = TM_none;
+  _transparency = TM_unspecified;
   _textures.clear();
   _color_blend = CBM_none;
 }
@@ -478,7 +480,7 @@ parse(const std::string &data, const DSearchPath &search_path) {
       script->set_light_off(nolight);
 
     } else if (key == "transparency") {
-      TransparencyMode mode = TM_none;
+      TransparencyMode mode = TM_unspecified;
       if (is_true_string(value) || value == "alpha") {
         mode = TM_alpha;
       } else if (value == "2" || value == "multisample") {
@@ -487,6 +489,8 @@ parse(const std::string &data, const DSearchPath &search_path) {
         mode = TM_binary;
       } else if (value == "4" || value == "dual") {
         mode = TM_dual;
+      } else if (!parse_bool_string(value)) {
+        mode = TM_none;
       }
       script->set_transparency(mode);
 
@@ -595,11 +599,13 @@ write(const Filename &filename, Material::PathMode path_mode) {
 
   if (has_transparency()) {
     switch (get_transparency()) {
+    default:
+    case TM_unspecified:
+      break;
     case TM_none:
       script->set_key_value("transparency", "off");
       break;
     case TM_alpha:
-    default:
       script->set_key_value("transparency", "alpha");
       break;
     case TM_multisample:
@@ -692,31 +698,17 @@ write(const Filename &filename, Material::PathMode path_mode) {
       }
 
       // Write out texture transform if we have it.
-      if (tex->_has_transform) {
-        const LPoint3 &pos = tex->_pos;
-        const LVector3 &hpr = tex->_hpr;
-        const LVector3 &scale = tex->_scale;
-        const LVector3 &shear = tex->_shear;
-
-        if (pos != LPoint3(0)) {
-          tex_block->set_key_value("pos", KeyValues::to_string(pos));
-        }
-
-        if (hpr != LVector3(0)) {
-          tex_block->set_key_value("hpr", KeyValues::to_string(hpr));
-        }
-
-        if (scale != LVector3(1)) {
-          tex_block->set_key_value("scale", KeyValues::to_string(scale));
-        }
-
-        if (shear != LVector3(0)) {
-          tex_block->set_key_value("shear", KeyValues::to_string(shear));
-        }
+      if (tex->has_pos2d()) {
+        tex_block->set_key_value("pos", KeyValues::to_string(LCAST(float, tex->get_pos2d())));
       }
-#if 0
 
-#endif
+      if (tex->has_hpr2d()) {
+        tex_block->set_key_value("hpr", KeyValues::to_string(LCAST(float, tex->get_hpr2d())));
+      }
+
+      if (tex->has_scale2d()) {
+        tex_block->set_key_value("scale", KeyValues::to_string(LCAST(float, tex->get_scale2d())));
+      }
     }
   }
 
@@ -835,11 +827,12 @@ parse_texture_block(KeyValues *block, Material *script) {
   std::string stage_name;
   std::string texcoord_name;
   std::string tex_name;
-  LPoint3 pos(0, 0, 0);
-  LVector3 hpr(0, 0, 0);
-  LVector3 scale(1, 1, 1);
-  LVector3 shear(0, 0, 0);
-  bool got_transform = false;
+  LPoint2f pos(0, 0);
+  LVector2f hpr(0, 0);
+  LVector2f scale(1, 1);
+  bool got_pos = false;
+  bool got_hpr = false;
+  bool got_scale = false;
 
   for (size_t i = 0; i < block->get_num_keys(); i++) {
     const std::string &key = block->get_key(i);
@@ -858,22 +851,17 @@ parse_texture_block(KeyValues *block, Material *script) {
       tex_name = value;
 
     } else if (key == "pos") {
-      pos = KeyValues::to_3f(value);
-      got_transform = true;
+      pos = KeyValues::to_2f(value);
+      got_pos = true;
 
     } else if (key == "hpr") {
-      hpr = KeyValues::to_3f(value);
-      got_transform = true;
+      hpr = KeyValues::to_2f(value);
+      got_hpr = true;
 
     } else if (key == "scale") {
-      scale = KeyValues::to_3f(value);
-      got_transform = true;
-
-    } else if (key == "shear") {
-      shear = KeyValues::to_3f(value);
-      got_transform = true;
-
-    } /*else */
+      scale = KeyValues::to_2f(value);
+      got_scale = true;
+    }
   }
 
   PT(MatTexture) tex = new MatTexture;
@@ -888,11 +876,15 @@ parse_texture_block(KeyValues *block, Material *script) {
 
   tex->_stage_name = stage_name;
   tex->_texcoord_name = texcoord_name;
-  tex->_has_transform = got_transform;
-  tex->_pos = pos;
-  tex->_hpr = hpr;
-  tex->_scale = scale;
-  tex->_shear = shear;
+  if (got_pos) {
+    tex->set_pos2d(LCAST(double, pos));
+  }
+  if (got_hpr) {
+    tex->set_hpr2d(LCAST(double, hpr));
+  }
+  if (got_scale) {
+    tex->set_scale2d(LCAST(double, scale));
+  }
 
   script->add_texture(tex);
 }

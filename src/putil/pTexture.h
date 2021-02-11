@@ -91,6 +91,8 @@ PUBLISHED:
   PTexture();
   PTexture(const PTexture &copy);
 
+  bool has_alpha_channel(int num_components) const;
+
   void clear();
 
   int compare_to(const PTexture *other) const;
@@ -172,6 +174,9 @@ PUBLISHED:
   INLINE void set_compression(CompressionMode mode);
   INLINE CompressionMode get_compression() const;
 
+  INLINE void set_num_pages(int pages);
+  INLINE int get_num_pages() const;
+
   static TextureType string_texture_type(const std::string &string);
   static std::string texture_type_string(TextureType type);
 
@@ -214,6 +219,7 @@ private:
   int _anisotropic_degree;
   QualityLevel _quality;
   CompressionMode _compression;
+  int _num_pages;
 
   unsigned int _flags;
 };

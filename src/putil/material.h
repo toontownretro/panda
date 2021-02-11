@@ -37,6 +37,13 @@ public:
     S_engine,
   };
 
+  enum Transform {
+    T_pos2d = 0x1,
+    T_hpr2d = 0x2,
+    T_scale2d = 0x4,
+    T_all = (T_pos2d | T_hpr2d | T_scale2d),
+  };
+
   INLINE MatTexture();
   INLINE MatTexture(const MatTexture &other);
   INLINE void clear();
@@ -59,22 +66,25 @@ public:
   INLINE void set_texcoord_name(const std::string &name);
   INLINE const std::string &get_texcoord_name() const;
 
-  INLINE void set_pos(const LPoint3 &pos);
-  INLINE const LPoint3 &get_pos() const;
+  INLINE void set_pos2d(const LPoint2d &pos);
+  INLINE LPoint2d get_pos2d() const;
+  INLINE bool has_pos2d() const;
+  INLINE void clear_pos2d();
 
-  INLINE void set_hpr(const LVector3 &hpr);
-  INLINE const LVector3 &get_hpr() const;
+  INLINE void set_hpr2d(const LVector2d &hpr);
+  INLINE LVector2d get_hpr2d() const;
+  INLINE bool has_hpr2d() const;
+  INLINE void clear_hpr2d();
 
-  INLINE void set_scale(const LVector3 &scale);
-  INLINE const LVector3 &get_scale() const;
+  INLINE void set_scale2d(const LVector2d &scale);
+  INLINE LVector2d get_scale2d() const;
+  INLINE bool has_scale2d() const;
+  INLINE void clear_scale2d();
 
-  INLINE void set_shear(const LVector3 &shear);
-  INLINE const LVector3 &get_shear() const;
-
-  INLINE void set_transform(const LMatrix4 &transform);
-  INLINE LMatrix4 get_transform() const;
-
-  INLINE bool has_transform() const;
+  INLINE void set_transform2d(const LMatrix3d &transform);
+  INLINE LMatrix3d get_transform2d() const;
+  INLINE bool has_transform2d() const;
+  INLINE void clear_transform2d();
 
   int compare_to(const MatTexture *other) const;
 
@@ -88,11 +98,10 @@ private:
   std::string _stage_name;
   std::string _texcoord_name;
 
-  bool _has_transform;
-  LPoint3 _pos;
-  LVector3 _hpr;
-  LVector3 _scale;
-  LVector3 _shear;
+  unsigned int _transform_flags;
+  LPoint3d _pos;
+  LVector3d _hpr;
+  LVector3d _scale;
 
   friend class Material;
 };
@@ -145,6 +154,7 @@ PUBLISHED:
   };
 
   enum TransparencyMode {
+    TM_unspecified,
     TM_none,
     TM_alpha,
     TM_binary,

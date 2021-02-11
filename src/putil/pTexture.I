@@ -131,6 +131,9 @@ has_alpha_image_filename() const {
 INLINE void PTexture::
 set_texture_type(TextureType type) {
   _texture_type = type;
+  if (_texture_type == TT_cube_map) {
+    set_num_pages(6);
+  }
 }
 
 /**
@@ -437,4 +440,22 @@ set_compression(CompressionMode mode) {
 INLINE PTexture::CompressionMode PTexture::
 get_compression() const {
   return _compression;
+}
+
+/**
+ * Sets the number of pages/z-slices in the texture.  It is only necessary to
+ * set an explicit page count for 3D textures, cubemaps always have 6, and 2D
+ * and 1D textures always have 1.
+ */
+INLINE void PTexture::
+set_num_pages(int pages) {
+  _num_pages = pages;
+}
+
+/**
+ * Returns the number of pages/z-slices in the texture.
+ */
+INLINE int PTexture::
+get_num_pages() const {
+  return _num_pages;
 }
