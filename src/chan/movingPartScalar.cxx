@@ -79,18 +79,25 @@ get_blend_value(const PartBundle *root) {
         ValueType v;
         channel->get_value(control->get_frame(), v);
 
+        PN_stdfloat weight = effect * control->get_part_weight(this);
+
         if (!cdata->_frame_blend_flag) {
           // Hold the current frame until the next one is ready.
-          _value += v * effect;
+          _value += v * weight;
         } else {
           // Blend between successive frames.
           PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-          _value += v * (effect * (1.0f - frac));
+          _value += v * (weight * (1.0f - frac));
 
           channel->get_value(control->get_next_frame(), v);
-          _value += v * (effect * frac);
+          _value += v * (weight * frac);
         }
-        net += effect;
+
+        if (!control->is_additive() && weight != 0.0f) {
+          _value /= weight;
+        }
+
+        net += weight;
       }
     }
 
@@ -98,9 +105,6 @@ get_blend_value(const PartBundle *root) {
       if (restore_initial_pose) {
         _value = _default_value;
       }
-
-    } else {
-      _value /= net;
     }
   }
 }

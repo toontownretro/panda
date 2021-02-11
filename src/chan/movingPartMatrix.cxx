@@ -97,18 +97,25 @@ get_blend_value(const PartBundle *root) {
             ValueType v;
             channel->get_value(control->get_frame(), v);
 
+            PN_stdfloat weight = effect * control->get_part_weight(this);
+
             if (!cdata->_frame_blend_flag) {
               // Hold the current frame until the next one is ready.
-              net_value += v * effect;
+              net_value += v * weight;
             } else {
               // Blend between successive frames.
               PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-              net_value += v * (effect * (1.0f - frac));
+              net_value += v * (weight * (1.0f - frac));
 
               channel->get_value(control->get_next_frame(), v);
-              net_value += v * (effect * frac);
+              net_value += v * (weight * frac);
             }
-            net_effect += effect;
+
+            if (!control->is_additive() && weight != 0.0f) {
+              net_value /= weight;
+            }
+
+            net_effect += weight;
           }
         }
 
@@ -117,7 +124,7 @@ get_blend_value(const PartBundle *root) {
             _value = _default_value;
           }
         } else {
-          _value = net_value / net_effect;
+          _value = net_value;
         }
       }
       break;
@@ -153,29 +160,44 @@ get_blend_value(const PartBundle *root) {
             channel->get_scale(frame, iscale);
             channel->get_shear(frame, ishear);
 
+            PN_stdfloat weight = effect * control->get_part_weight(this);
+
             if (!cdata->_frame_blend_flag) {
               // Hold the current frame until the next one is ready.
-              net_value += v * effect;
-              scale += iscale * effect;
-              shear += ishear * effect;
+              net_value += v * weight;
+              if (!control->is_additive()) {
+                scale += iscale * weight;
+                shear += ishear * weight;
+              }
             } else {
               // Blend between successive frames.
               PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-              PN_stdfloat e0 = effect * (1.0f - frac);
+              PN_stdfloat e0 = weight * (1.0f - frac);
               net_value += v * e0;
-              scale += iscale * e0;
-              shear += ishear * e0;
+              if (!control->is_additive()) {
+                scale += iscale * e0;
+                shear += ishear * e0;
+              }
 
               int next_frame = control->get_next_frame();
               channel->get_value_no_scale_shear(next_frame, v);
               channel->get_scale(next_frame, iscale);
               channel->get_shear(next_frame, ishear);
-              PN_stdfloat e1 = effect * frac;
+              PN_stdfloat e1 = weight * frac;
               net_value += v * e1;
-              scale += iscale * e1;
-              shear += ishear * e1;
+              if (!control->is_additive()) {
+                scale += iscale * e1;
+                shear += ishear * e1;
+              }
             }
-            net_effect += effect;
+
+            if (!control->is_additive() && weight != 0.0f) {
+              net_value /= weight;
+              scale /= weight;
+              shear /= weight;
+            }
+
+            net_effect += weight;
           }
         }
 
@@ -185,10 +207,6 @@ get_blend_value(const PartBundle *root) {
           }
 
         } else {
-          net_value /= net_effect;
-          scale /= net_effect;
-          shear /= net_effect;
-
           // Now rebuild the matrix with the correct scale values.
 
           LVector3 false_scale, false_shear, hpr, translate;
@@ -226,35 +244,54 @@ get_blend_value(const PartBundle *root) {
             channel->get_pos(frame, ipos);
             channel->get_shear(frame, ishear);
 
+            PN_stdfloat weight = effect * control->get_part_weight(this);
+
             if (!cdata->_frame_blend_flag) {
               // Hold the current frame until the next one is ready.
-              scale += iscale * effect;
-              hpr += ihpr * effect;
-              pos += ipos * effect;
-              shear += ishear * effect;
+              if (!control->is_additive()) {
+                scale += iscale * weight;
+                shear += ishear * weight;
+              }
+
+              hpr += ihpr * weight;
+              pos += ipos * weight;
             } else {
               // Blend between successive frames.
               PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-              PN_stdfloat e0 = effect * (1.0f - frac);
+              PN_stdfloat e0 = weight * (1.0f - frac);
 
-              scale += iscale * e0;
+              if (!control->is_additive()) {
+                scale += iscale * e0;
+                shear += ishear * e0;
+              }
+
               hpr += ihpr * e0;
               pos += ipos * e0;
-              shear += ishear * e0;
 
               int next_frame = control->get_next_frame();
               channel->get_scale(next_frame, iscale);
               channel->get_hpr(next_frame, ihpr);
               channel->get_pos(next_frame, ipos);
               channel->get_shear(next_frame, ishear);
-              PN_stdfloat e1 = effect * frac;
+              PN_stdfloat e1 = weight * frac;
 
-              scale += iscale * e1;
+              if (!control->is_additive()) {
+                scale += iscale * e1;
+                shear += ishear * e1;
+              }
+
               hpr += ihpr * e1;
               pos += ipos * e1;
-              shear += ishear * e1;
             }
-            net_effect += effect;
+
+            if (!control->is_additive() && weight != 0.0f) {
+              pos /= weight;
+              hpr /= weight;
+              scale /= weight;
+              shear /= weight;
+            }
+
+            net_effect += weight;
           }
         }
 
@@ -264,11 +301,6 @@ get_blend_value(const PartBundle *root) {
           }
 
         } else {
-          scale /= net_effect;
-          hpr /= net_effect;
-          pos /= net_effect;
-          shear /= net_effect;
-
           compose_matrix(_value, scale, shear, hpr, pos);
         }
       }
@@ -303,17 +335,22 @@ get_blend_value(const PartBundle *root) {
             channel->get_pos(frame, ipos);
             channel->get_shear(frame, ishear);
 
+            PN_stdfloat weight = effect * control->get_part_weight(this);
+
             if (!cdata->_frame_blend_flag) {
               // Hold the current frame until the next one is ready.
-              scale += iscale * effect;
-              quat += iquat * effect;
-              pos += ipos * effect;
-              shear += ishear * effect;
+              if (!control->is_additive()) {
+                scale += iscale * weight;
+                shear += ishear * weight;
+              }
+
+              quat += iquat * weight;
+              pos += ipos * weight;
 
             } else {
               // Blend between successive frames.
               PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-              PN_stdfloat e0 = effect * (1.0f - frac);
+              PN_stdfloat e0 = weight * (1.0f - frac);
 
               scale += iscale * e0;
               quat += iquat * e0;
@@ -325,14 +362,25 @@ get_blend_value(const PartBundle *root) {
               channel->get_quat(next_frame, iquat);
               channel->get_pos(next_frame, ipos);
               channel->get_shear(next_frame, ishear);
-              PN_stdfloat e1 = effect * frac;
+              PN_stdfloat e1 = weight * frac;
 
-              scale += iscale * e1;
+              if (!control->is_additive()) {
+                scale += iscale * e1;
+                shear += ishear * e1;
+              }
+
               quat += iquat * e1;
               pos += ipos * e1;
-              shear += ishear * e1;
             }
-            net_effect += effect;
+
+            if (!control->is_additive() && weight != 0.0f) {
+              pos /= weight;
+              quat /= weight;
+              scale /= weight;
+              shear /= weight;
+            }
+
+            net_effect += weight;
           }
         }
 
@@ -342,11 +390,6 @@ get_blend_value(const PartBundle *root) {
           }
 
         } else {
-          scale /= net_effect;
-          quat /= net_effect;
-          pos /= net_effect;
-          shear /= net_effect;
-
           // There should be no need to normalize the quaternion, assuming all
           // of the input quaternions were already normalized.
 
