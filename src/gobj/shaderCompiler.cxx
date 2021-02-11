@@ -37,7 +37,8 @@ ShaderCompiler::
  * ShaderModule on success.
  */
 PT(ShaderModule) ShaderCompiler::
-compile_now(ShaderModule::Stage stage, const Filename &fn, BamCacheRecord *record) const {
+compile_now(ShaderModule::Stage stage, const Filename &fn, const Options &options,
+            BamCacheRecord *record) const {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   PT(VirtualFile) vf = vfs->find_file(fn, get_model_path());
   if (vf == nullptr) {
@@ -54,7 +55,7 @@ compile_now(ShaderModule::Stage stage, const Filename &fn, BamCacheRecord *recor
   }
 
   // The default implementation calls the version that takes an istream.
-  PT(ShaderModule) module = compile_now(stage, *in, vf->get_filename(), record);
+  PT(ShaderModule) module = compile_now(stage, *in, vf->get_filename(), options, record);
   vf->close_read_file(in);
   return module;
 }

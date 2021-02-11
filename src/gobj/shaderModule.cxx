@@ -16,6 +16,49 @@
 TypeHandle ShaderModule::_type_handle;
 
 /**
+ * Writes the contents of the Variable for shipping out to a Bam file.
+ */
+void ShaderModule::Variable::
+write_datagram(Datagram &dg, BamWriter *manager) {
+  manager->write_pointer(dg, type);
+  dg.add_string(name->get_name());
+  dg.add_int32(_location);
+}
+
+/**
+ * Reads the contents from the Datagram to re-create the Variable from a Bam
+ * file.
+ */
+void ShaderModule::Variable::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  manager->read_pointer(scan);
+  name = InternalName::make(scan.get_string());
+  _location = scan.get_int32();
+}
+
+/**
+ * Writes the contents of the SpecializationConstant for shipping out to a Bam
+ * file.
+ */
+void ShaderModule::SpecializationConstant::
+write_datagram(Datagram &dg, BamWriter *manager) {
+  manager->write_pointer(dg, type);
+  dg.add_string(name->get_name());
+  dg.add_uint32(id);
+}
+
+/**
+ * Reads the contents from the Datagram to re-create the SpecializationConstant
+ * from a Bam file.
+ */
+void ShaderModule::SpecializationConstant::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  manager->read_pointer(scan);
+  name = InternalName::make(scan.get_string());
+  id = scan.get_uint32();
+}
+
+/**
  *
  */
 ShaderModule::
@@ -81,8 +124,72 @@ output(std::ostream &out) const {
  */
 void ShaderModule::
 write_datagram(BamWriter *manager, Datagram &dg) {
+  CopyOnWriteObject::write_datagram(manager, dg);
+
   dg.add_uint8((int)_stage);
   dg.add_string(_source_filename);
+  dg.add_uint32(_used_caps);
+
+  dg.add_uint32(_inputs.size());
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    _inputs[i].write_datagram(dg, manager);
+  }
+
+  dg.add_uint32(_outputs.size());
+  for (size_t i = 0; i < _outputs.size(); i++) {
+    _outputs[i].write_datagram(dg, manager);
+  }
+
+  dg.add_uint32(_parameters.size());
+  for (size_t i = 0; i < _parameters.size(); i++) {
+    _parameters[i].write_datagram(dg, manager);
+  }
+
+  dg.add_uint32(_spec_constants.size());
+  for (size_t i = 0; i < _spec_constants.size(); i++) {
+    _spec_constants[i].write_datagram(dg, manager);
+  }
+}
+
+/**
+ * Called after the object is otherwise completely read from a Bam file, this
+ * function's job is to store the pointers that were retrieved from the Bam
+ * file for each pointer object written.  The return value is the number of
+ * pointers processed from the list.
+ */
+int ShaderModule::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int index = CopyOnWriteObject::complete_pointers(p_list, manager);
+
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    if (p_list[index] != nullptr) {
+      _inputs[i].type = (const ShaderType *)p_list[index];
+    }
+    index++;
+  }
+
+  for (size_t i = 0; i < _outputs.size(); i++) {
+    if (p_list[index] != nullptr) {
+      _outputs[i].type = (const ShaderType *)p_list[index];
+    }
+    index++;
+  }
+
+  for (size_t i = 0; i < _parameters.size(); i++) {
+    if (p_list[index] != nullptr) {
+      _parameters[i].type = (const ShaderType *)p_list[index];
+    }
+    index++;
+  }
+
+  for (size_t i = 0; i < _spec_constants.size(); i++) {
+    if (p_list[index] != nullptr) {
+      _spec_constants[i].type = (const ShaderType *)p_list[index];
+    }
+    index++;
+  }
+
+  return index;
 }
 
 /**
@@ -91,8 +198,39 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void ShaderModule::
 fillin(DatagramIterator &scan, BamReader *manager) {
+  CopyOnWriteObject::fillin(scan, manager);
+
   _stage = (Stage)scan.get_uint8();
   _source_filename = scan.get_string();
+  _used_caps = scan.get_uint32();
+
+  size_t num_inputs = scan.get_uint32();
+  for (size_t i = 0; i < num_inputs; i++) {
+    Variable var;
+    var.fillin(scan, manager);
+    _inputs.push_back(var);
+  }
+
+  size_t num_outputs = scan.get_uint32();
+  for (size_t i = 0; i < num_outputs; i++) {
+    Variable var;
+    var.fillin(scan, manager);
+    _outputs.push_back(var);
+  }
+
+  size_t num_params = scan.get_uint32();
+  for (size_t i = 0; i < num_params; i++) {
+    Variable var;
+    var.fillin(scan, manager);
+    _parameters.push_back(var);
+  }
+
+  size_t num_spec_consts = scan.get_uint32();
+  for (size_t i = 0; i < num_spec_consts; i++) {
+    SpecializationConstant spec_const;
+    spec_const.fillin(scan, manager);
+    _spec_constants.push_back(spec_const);
+  }
 }
 
 /**

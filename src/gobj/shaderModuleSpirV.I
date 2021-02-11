@@ -28,6 +28,15 @@ get_data_size() const {
 }
 
 /**
+ * Internal default constructor.  Only used when reading the shader module from
+ * a Bam file.
+ */
+INLINE ShaderModuleSpirV::
+ShaderModuleSpirV() :
+  ShaderModule(Stage::vertex) {
+}
+
+/**
  * Returns true if this is a debug instruction.
  */
 INLINE bool ShaderModuleSpirV::Instruction::
@@ -117,6 +126,14 @@ InstructionStream(const uint32_t *words, size_t num_words) :
 INLINE ShaderModuleSpirV::InstructionStream::
 InstructionStream(std::vector<uint32_t> words) :
   _words(std::move(words)) {
+}
+
+/**
+ * Moves the given words into this stream.
+ */
+INLINE void ShaderModuleSpirV::InstructionStream::
+operator = (std::vector<uint32_t> &&words) {
+  _words = std::move(words);
 }
 
 /**

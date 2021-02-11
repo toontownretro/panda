@@ -15,6 +15,7 @@
 #include "config_gobj.h"
 #include "virtualFile.h"
 #include "shaderCompilerGlslPreProc.h"
+#include "string_utils.h"
 
 #ifndef CPPPARSER
 #include <glslang/Public/ShaderLang.h>
@@ -274,7 +275,8 @@ get_languages() const {
  */
 PT(ShaderModule) ShaderCompilerGlslang::
 compile_now(ShaderModule::Stage stage, std::istream &in,
-            const Filename &fullpath, BamCacheRecord *record) const {
+            const Filename &fullpath, const Options &options,
+            BamCacheRecord *record) const {
 
   vector_uchar code;
   if (!VirtualFile::simple_read_file(&in, code)) {
@@ -325,7 +327,7 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
     static ShaderCompilerGlslPreProc preprocessor;
 
     std::istringstream stream(std::string((const char *)&code[0], code.size()));
-    return preprocessor.compile_now(stage, stream, fullpath, record);
+    return preprocessor.compile_now(stage, stream, fullpath, options, record);
   }
 
   static bool is_initialized = false;
@@ -369,6 +371,8 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
   shader.setStringsWithLengthsAndNames(&string, &length, &fname, 1);
   shader.setEntryPoint("main");
 
+  std::string preamble;
+
   // If it's marked as a Cg shader, we compile it with the HLSL front-end.
   if (is_cg) {
     messages = (EShMessages)(messages | EShMsgHlslDX9Compatible | EShMsgHlslLegalization);
@@ -394,7 +398,8 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
     // Generate a special preamble to define some functions that Cg defines but
     // HLSL doesn't.  This is sourced from cg_preamble.hlsl.
     extern const char cg_preamble[];
-    shader.setPreamble(cg_preamble);
+    preamble = cg_preamble;
+    preamble += '\n';
 
     // We map shadow samplers to DX10 syntax, but those use separate samplers/
     // images, so we need to ask glslang to kindly combine these back.
@@ -404,8 +409,17 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
   } else {
     shader.setEnvInput(glslang::EShSource::EShSourceGlsl, (EShLanguage)stage, glslang::EShClient::EShClientOpenGL, 450);
 
-    shader.setPreamble("#extension GL_GOOGLE_cpp_style_line_directive : require\n");
+    preamble = "#extension GL_GOOGLE_cpp_style_line_directive : require\n";
   }
+
+  // Tack on the defines from the options to the preamble.
+  for (size_t i = 0; i < options.get_num_defines(); i++) {
+    const Options::Define *define = options.get_define(i);
+    preamble += "#define " + define->name->get_name() + " " + std::to_string(define->value) + "\n";
+  }
+
+  shader.setPreamble(preamble.c_str());
+
   shader.setEnvClient(glslang::EShClient::EShClientOpenGL, glslang::EShTargetOpenGL_450);
   shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
 

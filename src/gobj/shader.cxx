@@ -833,7 +833,7 @@ do_read_source(ShaderModule::Stage stage, std::istream &in,
   ShaderCompiler *compiler = get_compiler(_language);
   nassertr(compiler != nullptr, false);
 
-  PT(ShaderModule) module = compiler->compile_now(stage, in, fullpath, record);
+  PT(ShaderModule) module = compiler->compile_now(stage, in, fullpath, ShaderCompiler::Options(), record);
   if (!module) {
     return false;
   }

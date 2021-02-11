@@ -61,7 +61,7 @@
     savedContext.I savedContext.h \
     shader.I shader.h \
     shaderBuffer.h shaderBuffer.I \
-    shaderCompiler.h \
+    shaderCompiler.h shaderCompiler.I \
     shaderCompilerGlslang.h \
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \
@@ -236,7 +236,7 @@
     savedContext.I savedContext.h \
     shader.I shader.h \
     shaderBuffer.h shaderBuffer.I \
-    shaderCompiler.h \
+    shaderCompiler.h shaderCompiler.I \
     shaderCompilerGlslang.h \
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \

@@ -83,6 +83,7 @@ public:
     InstructionStream() = default;
     INLINE InstructionStream(const uint32_t *words, size_t num_words);
     INLINE InstructionStream(std::vector<uint32_t> words);
+    INLINE void operator = (std::vector<uint32_t> &&words);
 
     bool validate_header() const;
 
@@ -243,8 +244,18 @@ public:
   };
 
 private:
+  INLINE ShaderModuleSpirV();
+
   void remap_locations(spv::StorageClass storage_class, const pmap<int, int> &locations);
   void strip();
+
+public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:
   static TypeHandle get_class_type() {

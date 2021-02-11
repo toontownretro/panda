@@ -31,17 +31,20 @@ public:
   virtual ShaderLanguages get_languages() const override;
   virtual PT(ShaderModule) compile_now(Stage stage, std::istream &in,
                                        const Filename &fullpath,
+                                       const Options &options = Options(),
                                        BamCacheRecord *record = nullptr) const override;
 
 private:
   bool r_preprocess_include(ShaderModuleGlsl *module,
                             std::ostream &out, const std::string &filename,
                             const Filename &source_dir,
+                            const Options &options,
                             std::set<Filename> &open_files,
                             BamCacheRecord *record, int depth) const;
   bool r_preprocess_source(ShaderModuleGlsl *module,
                            std::ostream &out, std::istream &in,
                            const std::string &fn, const Filename &full_fn,
+                           const Options &options,
                            std::set<Filename> &open_files,
                            BamCacheRecord *record,
                            int fileno = 0, int depth = 0) const;

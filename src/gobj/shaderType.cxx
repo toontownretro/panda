@@ -57,9 +57,9 @@ init_type() {
     _registered_types = new Registry;
   }
 
-  TypedReferenceCount::init_type();
+  TypedWritable::init_type();
   ::register_type(_type_handle, "ShaderType",
-                  TypedReferenceCount::get_class_type());
+                  TypedWritable::get_class_type());
 
   ::register_type(Scalar::_type_handle, "ShaderType::Scalar", _type_handle);
   ::register_type(Vector::_type_handle, "ShaderType::Vector", _type_handle);

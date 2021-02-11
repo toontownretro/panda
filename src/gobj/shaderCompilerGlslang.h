@@ -31,6 +31,7 @@ public:
   virtual ShaderLanguages get_languages() const override;
   virtual PT(ShaderModule) compile_now(Stage stage, std::istream &in,
                                        const Filename &fullpath,
+                                       const Options &options = Options(),
                                        BamCacheRecord *record = nullptr) const override;
 
 private:

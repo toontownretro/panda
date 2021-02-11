@@ -51,7 +51,8 @@ get_languages() const {
  */
 PT(ShaderModule) ShaderCompilerGlslPreProc::
 compile_now(ShaderModule::Stage stage, std::istream &in,
-            const Filename &fullpath, BamCacheRecord *record) const {
+            const Filename &fullpath, const Options &options,
+            BamCacheRecord *record) const {
   PT(ShaderModuleGlsl) module = new ShaderModuleGlsl(stage);
   std::string &into = module->_raw_source;
 
@@ -71,7 +72,7 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 
   std::ostringstream sstr;
   std::set<Filename> open_files;
-  if (r_preprocess_source(module, sstr, in, filename, fullpath, open_files, record)) {
+  if (r_preprocess_source(module, sstr, in, filename, fullpath, options, open_files, record)) {
     into = sstr.str();
 
     // Strip trailing whitespace.
@@ -99,7 +100,8 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 bool ShaderCompilerGlslPreProc::
 r_preprocess_source(ShaderModuleGlsl *module,
                     std::ostream &out, std::istream &in, const std::string &fn,
-                    const Filename &full_fn, std::set<Filename> &once_files,
+                    const Filename &full_fn, const Options &options,
+                    std::set<Filename> &once_files,
                     BamCacheRecord *record, int fileno, int depth) const {
 
   // Iterate over the lines for things we may need to preprocess.
@@ -232,7 +234,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
         }
 
         // OK, great.  Process the include.
-        if (!r_preprocess_include(module, out, incfn, source_dir, once_files, record, depth + 1)) {
+        if (!r_preprocess_include(module, out, incfn, source_dir, options, once_files, record, depth + 1)) {
           // An error occurred.  Pass on the failure.
           shader_cat.error(false) << "included at line "
             << lineno << " of file " << fn << ":\n  " << line << "\n";
@@ -280,6 +282,14 @@ r_preprocess_source(ShaderModuleGlsl *module,
 
     } else if (strcmp(directive, "version") == 0) {
       had_version = true;
+
+      line += "\n";
+
+      // Put the #defines directly under the #version.
+      for (size_t i = 0; i < options.get_num_defines(); i++) {
+        const Options::Define *define = options.get_define(i);
+        line += "#define " + define->name->get_name() + " " + std::to_string(define->value) + "\n";
+      }
 
     } else if (strcmp(directive, "extension") == 0) {
       // Check for special preprocessing extensions.
@@ -363,7 +373,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
 
       // OK, great.  Process the include.
       Filename source_dir = full_fn.get_dirname();
-      if (!r_preprocess_include(module, out, incfn, source_dir, once_files, record, depth + 1)) {
+      if (!r_preprocess_include(module, out, incfn, source_dir, options, once_files, record, depth + 1)) {
         // An error occurred.  Pass on the failure.
         shader_cat.error(false) << "included at line "
           << lineno << " of file " << fn << ":\n  " << line << "\n";
@@ -426,6 +436,7 @@ bool ShaderCompilerGlslPreProc::
 r_preprocess_include(ShaderModuleGlsl *module,
                      std::ostream &out, const std::string &fn,
                      const Filename &source_dir,
+                     const Options &options,
                      std::set<Filename> &once_files,
                      BamCacheRecord *record, int depth) const {
 
@@ -484,7 +495,7 @@ r_preprocess_include(ShaderModuleGlsl *module,
       << "Preprocessing shader include " << fileno << ": " << fn << "\n";
   }
 
-  bool result = r_preprocess_source(module, out, *source, fn, full_fn, once_files, record, fileno, depth);
+  bool result = r_preprocess_source(module, out, *source, fn, full_fn, options, once_files, record, fileno, depth);
   vf->close_read_file(source);
   return result;
 }
