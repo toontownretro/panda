@@ -1028,134 +1028,6 @@ load_related(const InternalName *suffix) const {
 }
 
 /**
- * Replaces the current system-RAM image with the new data, converting it
- * first if necessary from the indicated component-order format.  See
- * get_ram_image_as() for specifications about the format.  This method cannot
- * support compressed image data or sub-pages; use set_ram_image() for that.
- */
-void Texture::
-set_ram_image_as(CPTA_uchar image, const string &supplied_format) {
-  CDWriter cdata(_cycler, true);
-
-  string format = upcase(supplied_format);
-
-  // Make sure we can grab something that's uncompressed.
-  int imgsize = cdata->_x_size * cdata->_y_size;
-  nassertv(image.size() == (size_t)(cdata->_component_width * format.size() * imgsize));
-
-  // Check if the format is already what we have internally.
-  if ((cdata->_num_components == 1 && format.size() == 1) ||
-      (cdata->_num_components == 2 && format.size() == 2 && format.at(1) == 'A' && format.at(0) != 'A') ||
-      (cdata->_num_components == 3 && format == "BGR") ||
-      (cdata->_num_components == 4 && format == "BGRA")) {
-    // The format string is already our format, so we just need to copy it.
-    do_set_ram_image(cdata, image);
-    return;
-  }
-
-  // Create a new empty array that can hold our image.
-  PTA_uchar newdata = PTA_uchar::empty_array(imgsize * cdata->_num_components * cdata->_component_width, get_class_type());
-
-  // These ifs are for optimization of commonly used image types.
-  if (cdata->_component_width == 1) {
-    if (format == "RGBA" && cdata->_num_components == 4) {
-      imgsize *= 4;
-      for (int p = 0; p < imgsize; p += 4) {
-        newdata[p + 2] = image[p    ];
-        newdata[p + 1] = image[p + 1];
-        newdata[p    ] = image[p + 2];
-        newdata[p + 3] = image[p + 3];
-      }
-      do_set_ram_image(cdata, newdata);
-      return;
-    }
-    if (format == "RGB" && cdata->_num_components == 3) {
-      imgsize *= 3;
-      for (int p = 0; p < imgsize; p += 3) {
-        newdata[p + 2] = image[p    ];
-        newdata[p + 1] = image[p + 1];
-        newdata[p    ] = image[p + 2];
-      }
-      do_set_ram_image(cdata, newdata);
-      return;
-    }
-    if (format == "A" && cdata->_num_components != 3) {
-      // We can generally rely on alpha to be the last component.
-      int component = cdata->_num_components - 1;
-      for (int p = 0; p < imgsize; ++p) {
-        newdata[component] = image[p];
-      }
-      do_set_ram_image(cdata, newdata);
-      return;
-    }
-    for (int p = 0; p < imgsize; ++p) {
-      for (uchar s = 0; s < format.size(); ++s) {
-        signed char component = -1;
-        if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
-          component = 0;
-        } else if (format.at(s) == 'G') {
-          component = 1;
-        } else if (format.at(s) == 'R') {
-          component = 2;
-        } else if (format.at(s) == 'A') {
-          if (cdata->_num_components != 3) {
-            component = cdata->_num_components - 1;
-          } else {
-            // Ignore.
-          }
-        } else if (format.at(s) == '0') {
-          // Ignore.
-        } else if (format.at(s) == '1') {
-          // Ignore.
-        } else {
-          gobj_cat.error() << "Unexpected component character '"
-            << format.at(s) << "', expected one of RGBA!\n";
-          return;
-        }
-        if (component >= 0) {
-          newdata[p * cdata->_num_components + component] = image[p * format.size() + s];
-        }
-      }
-    }
-    do_set_ram_image(cdata, newdata);
-    return;
-  }
-  for (int p = 0; p < imgsize; ++p) {
-    for (uchar s = 0; s < format.size(); ++s) {
-      signed char component = -1;
-      if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
-        component = 0;
-      } else if (format.at(s) == 'G') {
-        component = 1;
-      } else if (format.at(s) == 'R') {
-        component = 2;
-      } else if (format.at(s) == 'A') {
-        if (cdata->_num_components != 3) {
-          component = cdata->_num_components - 1;
-        } else {
-          // Ignore.
-        }
-      } else if (format.at(s) == '0') {
-        // Ignore.
-      } else if (format.at(s) == '1') {
-        // Ignore.
-      } else {
-        gobj_cat.error() << "Unexpected component character '"
-          << format.at(s) << "', expected one of RGBA!\n";
-        return;
-      }
-      if (component >= 0) {
-        memcpy((void*)(newdata + (p * cdata->_num_components + component) * cdata->_component_width),
-               (void*)(image + (p * format.size() + s) * cdata->_component_width),
-               cdata->_component_width);
-      }
-    }
-  }
-  do_set_ram_image(cdata, newdata);
-  return;
-}
-
-/**
  * Returns the flag that indicates whether this Texture is eligible to have
  * its main RAM copy of the texture memory dumped when the texture is prepared
  * for rendering.  See set_keep_ram_image().
@@ -5131,6 +5003,7 @@ do_read_ptex(CData *cdata, PTexture *ptex, bool header_only) {
     break;
   case PTexture::TT_3d_texture:
     type = TT_3d_texture;
+    z_size = ptex->get_num_pages();
     break;
   case PTexture::TT_cube_map:
     type = TT_cube_map;
@@ -5157,7 +5030,7 @@ do_read_ptex(CData *cdata, PTexture *ptex, bool header_only) {
                ptex->get_image_fullpath(),
                alpha_filename,
                wanted_channels,
-               0, 0, 0, (z_size > 1), false,
+               0, (z_size > 1) ? z_size : 0, 0, (z_size > 1), false,
                options, nullptr)) {
     return false;
   }
@@ -5967,6 +5840,18 @@ do_set_ram_image(CData *cdata, CPTA_uchar image, Texture::CompressionMode compre
 }
 
 /**
+ * Replaces the current system-RAM image with the new data, converting it
+ * first if necessary from the indicated component-order format.  See
+ * get_ram_image_as() for specifications about the format.  This method cannot
+ * support compressed image data or sub-pages; use set_ram_image() for that.
+ */
+void Texture::
+do_set_ram_image_as(CData *cdata, CPTA_uchar image, const string &supplied_format) {
+  do_set_ram_image(cdata,
+    swap_to_bgr(cdata, image, cdata->_x_size * cdata->_y_size * cdata->_z_size * cdata->_num_views, supplied_format));
+}
+
+/**
  * This is called internally to uniquify the nth mipmap image pointer without
  * updating cdata->_image_modified.
  */
@@ -6034,6 +5919,21 @@ do_set_ram_mipmap_image(CData *cdata, int n, CPTA_uchar image, size_t page_size)
     cdata->inc_image_modified();
   }
 }
+
+/**
+ *
+ */
+void Texture::
+do_set_ram_mipmap_image_as(CData *cdata, int n, CPTA_uchar image, const string &supplied_format) {
+  int imgsize =
+    do_get_expected_mipmap_x_size(cdata, n) *
+    do_get_expected_mipmap_y_size(cdata, n) *
+    do_get_expected_mipmap_z_size(cdata, n) *
+    cdata->_num_views;
+  do_set_ram_mipmap_image(cdata, n,
+    swap_to_bgr(cdata, image, imgsize, supplied_format));
+}
+
 
 /**
  * Returns a string with a single pixel representing the clear color of the
@@ -10274,6 +10174,126 @@ do_unsquish(CData *cdata, int squish_flags) {
   return false;
 
 #endif  // HAVE_SQUISH
+}
+
+/**
+ * Converts the component-order of the provided image to BGR and returns a new
+ * image that is exactly the same, but in BGR component-order.
+ */
+CPTA_uchar Texture::
+swap_to_bgr(CData *cdata, CPTA_uchar image, int imgsize, const string &supplied_format) {
+  string format = upcase(supplied_format);
+
+  nassertr(cdata->_compression == CM_off, image);
+  nassertr((imgsize * cdata->_num_components * cdata->_component_width) == image.size(), image);
+
+  // Check if the format is already what we have internally.
+  if ((cdata->_num_components == 1 && format.size() == 1) ||
+      (cdata->_num_components == 2 && format.size() == 2 && format.at(1) == 'A' && format.at(0) != 'A') ||
+      (cdata->_num_components == 3 && format == "BGR") ||
+      (cdata->_num_components == 4 && format == "BGRA")) {
+    // The format string is already our format, just return the original.
+    return image;
+  }
+
+  // Create a new empty array that can hold our image.
+  PTA_uchar newdata = PTA_uchar::empty_array(imgsize * cdata->_num_components * cdata->_component_width, get_class_type());
+
+  // These ifs are for optimization of commonly used image types.
+  if (cdata->_component_width == 1) {
+    if (format == "RGBA" && cdata->_num_components == 4) {
+      imgsize *= 4;
+      for (int p = 0; p < imgsize; p += 4) {
+        newdata[p + 2] = image[p    ];
+        newdata[p + 1] = image[p + 1];
+        newdata[p    ] = image[p + 2];
+        newdata[p + 3] = image[p + 3];
+      }
+      return newdata;
+    }
+    if (format == "RGB" && cdata->_num_components == 3) {
+      imgsize *= 3;
+      for (int p = 0; p < imgsize; p += 3) {
+        newdata[p + 2] = image[p    ];
+        newdata[p + 1] = image[p + 1];
+        newdata[p    ] = image[p + 2];
+      }
+      return newdata;
+    }
+    if (format == "A" && cdata->_num_components != 3) {
+      // We can generally rely on alpha to be the last component.
+      int component = cdata->_num_components - 1;
+      for (int p = 0; p < imgsize; ++p) {
+        newdata[component] = image[p];
+      }
+      return newdata;
+    }
+
+    for (int p = 0; p < imgsize; ++p) {
+      for (uchar s = 0; s < format.size(); ++s) {
+        signed char component = -1;
+        if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
+          component = 0;
+        } else if (format.at(s) == 'G') {
+          component = 1;
+        } else if (format.at(s) == 'R') {
+          component = 2;
+        } else if (format.at(s) == 'A') {
+          if (cdata->_num_components != 3) {
+            component = cdata->_num_components - 1;
+          } else {
+            // Ignore.
+          }
+        } else if (format.at(s) == '0') {
+          // Ignore.
+        } else if (format.at(s) == '1') {
+          // Ignore.
+        } else {
+          gobj_cat.error() << "Unexpected component character '"
+            << format.at(s) << "', expected one of RGBA!\n";
+          return image;
+        }
+        if (component >= 0) {
+          newdata[p * cdata->_num_components + component] = image[p * format.size() + s];
+        }
+      }
+    }
+    return newdata;
+  }
+
+  for (int p = 0; p < imgsize; ++p) {
+    for (uchar s = 0; s < format.size(); ++s) {
+      signed char component = -1;
+      if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
+        component = 0;
+      } else if (format.at(s) == 'G') {
+        component = 1;
+      } else if (format.at(s) == 'R') {
+        component = 2;
+      } else if (format.at(s) == 'A') {
+        if (cdata->_num_components != 3) {
+          component = cdata->_num_components - 1;
+        } else {
+          // Ignore.
+        }
+      } else if (format.at(s) == '0') {
+        // Ignore.
+      } else if (format.at(s) == '1') {
+        // Ignore.
+      } else {
+        gobj_cat.error() << "Unexpected component character '"
+          << format.at(s) << "', expected one of RGBA!\n";
+        return image;
+      }
+      if (component >= 0) {
+        memcpy((void*)(newdata + (p * cdata->_num_components + component) * cdata->_component_width),
+               (void*)(image + (p * format.size() + s) * cdata->_component_width),
+               cdata->_component_width);
+      }
+    }
+  }
+
+  return newdata;
 }
 
 /**

@@ -451,7 +451,7 @@ PUBLISHED:
 #ifndef CPPPARSER
   INLINE void set_ram_image(CPTA_uchar image, CompressionMode compression = CM_off,
                             size_t page_size = 0);
-  void set_ram_image_as(CPTA_uchar image, const std::string &provided_format);
+  INLINE void set_ram_image_as(CPTA_uchar image, const std::string &provided_format);
 #else
   EXTEND void set_ram_image(PyObject *image, CompressionMode compression = CM_off,
                             size_t page_size = 0);
@@ -488,6 +488,7 @@ PUBLISHED:
   void set_ram_mipmap_pointer(int n, void *image, size_t page_size = 0);
   void set_ram_mipmap_pointer_from_int(long long pointer, int n, int page_size);
   INLINE void set_ram_mipmap_image(int n, CPTA_uchar image, size_t page_size = 0);
+  INLINE void set_ram_mipmap_image_as(int n, CPTA_uchar image, const std::string &provided_format);
   void clear_ram_mipmap_image(int n);
   INLINE void clear_ram_mipmap_images();
   INLINE void generate_ram_mipmap_images();
@@ -696,9 +697,11 @@ protected:
   PTA_uchar do_make_ram_image(CData *cdata);
   void do_set_ram_image(CData *cdata, CPTA_uchar image,
                         CompressionMode compression = CM_off, size_t page_size = 0);
+  void do_set_ram_image_as(CData *cdata, CPTA_uchar image, const std::string &provided_format);
   PTA_uchar do_modify_ram_mipmap_image(CData *cdata, int n);
   PTA_uchar do_make_ram_mipmap_image(CData *cdata, int n);
-  void do_set_ram_mipmap_image(CData *cdata, int n, CPTA_uchar image, size_t page_size);
+  void do_set_ram_mipmap_image(CData *cdata, int n, CPTA_uchar image, size_t page_size = 0);
+  void do_set_ram_mipmap_image_as(CData *cdata, int n, CPTA_uchar image, const std::string &provided_format);
   size_t do_get_clear_data(const CData *cdata, unsigned char *into) const;
 
   bool consider_auto_process_ram_image(bool generate_mipmaps, bool allow_compression);
@@ -926,6 +929,8 @@ private:
 
   bool do_squish(CData *cdata, CompressionMode compression, int squish_flags);
   bool do_unsquish(CData *cdata, int squish_flags);
+
+  CPTA_uchar swap_to_bgr(CData *cdata, CPTA_uchar image, int img_size, const std::string &provided_format);
 
 protected:
   typedef pvector<RamImage> RamImages;

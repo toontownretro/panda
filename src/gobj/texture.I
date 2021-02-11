@@ -1433,6 +1433,18 @@ set_ram_image(CPTA_uchar image, Texture::CompressionMode compression,
 }
 
 /**
+ * Replaces the current system-RAM image with the new data, converting it
+ * first if necessary from the indicated component-order format.  See
+ * get_ram_image_as() for specifications about the format.  This method cannot
+ * support compressed image data or sub-pages; use set_ram_image() for that.
+ */
+INLINE void Texture::
+set_ram_image_as(CPTA_uchar image, const std::string &provided_format) {
+  CDWriter cdata(_cycler, true);
+  do_set_ram_image_as(cdata, image, provided_format);
+}
+
+/**
  * Discards the current system-RAM image.
  */
 INLINE void Texture::
@@ -1664,6 +1676,18 @@ INLINE void Texture::
 set_ram_mipmap_image(int n, CPTA_uchar image, size_t page_size) {
   CDWriter cdata(_cycler, false);
   do_set_ram_mipmap_image(cdata, n, image, page_size);
+}
+
+/**
+ * Replaces the current system-RAM image with the new data, converting it
+ * first if necessary from the indicated component-order format.  See
+ * get_ram_image_as() for specifications about the format.  This method cannot
+ * support compressed image data or sub-pages; use set_ram_image() for that.
+ */
+INLINE void Texture::
+set_ram_mipmap_image_as(int n, CPTA_uchar image, const std::string &provided_format) {
+  CDWriter cdata(_cycler, true);
+  do_set_ram_mipmap_image_as(cdata, n, image, provided_format);
 }
 
 /**
