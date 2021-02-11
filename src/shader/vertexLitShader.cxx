@@ -125,7 +125,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
       // Now figure out the tint value.
       LVecBase3f tint(1.0);
-      int tint_idx = params->find_param("selfillumtint");
+      int tint_idx = params->find_param("selfillum_tint");
       if (tint_idx != -1) {
         // Got an explicit tint value.
         tint = params->get_param_value_3f(tint_idx);
@@ -133,6 +133,43 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       set_input(ShaderInput("selfillumTint", tint));
     }
   }
+
+  // Rimlight?
+  int rimlight_idx = params->find_param("rimlight");
+  if (rimlight_idx != -1) {
+    bool rimlight = params->get_param_value_bool(rimlight_idx);
+
+    if (rimlight && ConfigVariableBool("mat_rimlight", true)) {
+      float boost = 1.0f;
+      float exponent = 4.0f;
+
+      int boost_idx = params->find_param("rimlight_boost");
+      if (boost_idx != -1) {
+        boost = params->get_param_value_float(boost_idx);
+      }
+
+      int exponent_idx = params->find_param("rimlight_exponent");
+      if (exponent_idx != -1) {
+        exponent = params->get_param_value_float(exponent_idx);
+      }
+
+      set_pixel_shader_define("RIMLIGHT");
+      set_input(ShaderInput("rimlightParams", LVector2(boost, exponent)));
+    }
+  }
+
+  // Half-lambert?
+  int halflambert_idx = params->find_param("half_lambert");
+  if (halflambert_idx != -1) {
+    bool half_lambert = params->get_param_value_bool(halflambert_idx);
+    if (half_lambert) {
+      set_pixel_shader_define("HALFLAMBERT");
+    }
+  }
+
+  bool got_arme_texture = false;
+  bool got_base_color_texture = false;
+  bool got_envmap_texture = false;
 
   // Find the textures in use.
   const TextureAttrib *ta;
@@ -147,20 +184,86 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       set_pixel_shader_define("BASETEXTURE");
       set_vertex_shader_define("BASETEXTURE_INDEX", i);
       set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+      got_base_color_texture = true;
 
     } else if (stage_name == "arme") {
       set_pixel_shader_define("ARME");
       set_input(ShaderInput("armeSampler", ta->get_on_texture(stage)));
+      got_arme_texture = true;
 
     } else if (stage_name == "reflection") {
       set_pixel_shader_define("PLANAR_REFLECTION");
       set_vertex_shader_define("PLANAR_REFLECTION");
       set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
 
+    } else if (stage_name == "normal") {
+      set_pixel_shader_define("BUMPMAP");
+      set_input(ShaderInput("bumpSampler", ta->get_on_texture(stage)));
+
+    } else if (stage_name == "envmap") {
+      set_pixel_shader_define("ENVMAP");
+      set_input(ShaderInput("envmapSampler", ta->get_on_texture(stage)));
+      got_envmap_texture = true;
+
+    } else if (stage_name == "lightwarp") {
+      set_pixel_shader_define("LIGHTWARP");
+      set_input(ShaderInput("lightwarpSampler", ta->get_on_texture(stage)));
     }
   }
 
   set_vertex_shader_define("NUM_TEXTURES", num_stages);
+
+  if (!got_base_color_texture) {
+    // Check for an explicit base color value from material parameters.
+    int base_color_idx = params->find_param("base_color");
+    if (base_color_idx != -1) {
+      LVector4f base_color = params->get_param_value_4f(base_color_idx);
+      set_pixel_shader_define("BASECOLOR");
+      set_input(ShaderInput("baseColor", base_color));
+    }
+  }
+
+  if (!got_arme_texture) {
+    // Check for explicit ARME values via material parameters.
+    float ao = 1.0f;
+    float roughness = 1.0f;
+    float metalness = 0.0f;
+    float emission = 0.0f;
+
+    int ao_idx = params->find_param("ao");
+    if (ao_idx != -1) {
+      ao = params->get_param_value_float(ao_idx);
+    }
+
+    int roughness_idx = params->find_param("roughness");
+    if (roughness_idx != -1) {
+      roughness = params->get_param_value_float(roughness_idx);
+    }
+
+    int metalness_idx = params->find_param("metalness");
+    if (metalness_idx != -1) {
+      metalness = params->get_param_value_float(metalness_idx);
+    }
+
+    int emission_idx = params->find_param("emission");
+    if (emission_idx != -1) {
+      emission = params->get_param_value_float(emission_idx);
+    }
+
+    set_input(ShaderInput("armeParams", LVector4f(ao, roughness, metalness, emission)));
+  }
+
+  if (got_envmap_texture) {
+    // Check for a tint parameter.
+    LVector3f envmap_tint(1.0f);
+
+    int envmap_tint_idx = params->find_param("envmap_tint");
+    if (envmap_tint_idx != -1) {
+      envmap_tint = params->get_param_value_3f(envmap_tint_idx);
+    }
+
+    set_input(ShaderInput("envmapTint", envmap_tint));
+  }
 
   if (add_csm(state)) {
     need_world_normal = true;
