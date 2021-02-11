@@ -65,3 +65,23 @@ INLINE signed char ColorRGBExp32::
 get_exponent() const {
   return _exponent;
 }
+
+/**
+ * Fills in the structure from the given datagram.
+ */
+void CompressedLightCube::
+read_datagram(DatagramIterator &dgi) {
+  for (int i = 0; i < 6; i++) {
+    color[i].read_datagram(dgi);
+  }
+}
+
+/**
+ * Writes the structure to the indicated datagram.
+ */
+void CompressedLightCube::
+write_datagram(Datagram &dg) const {
+  for (int i = 0; i < 6; i++) {
+    color[i].write_datagram(dg);
+  }
+}

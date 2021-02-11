@@ -15,6 +15,8 @@
 #define COLORRGBEXP32_H
 
 #include "config_mathutil.h"
+#include "datagram.h"
+#include "datagramIterator.h"
 #include "luse.h"
 
 /**
@@ -42,11 +44,21 @@ PUBLISHED:
 
   LVecBase3 as_linear_color() const;
 
+  void read_datagram(DatagramIterator &dgi);
+  void write_datagram(Datagram &dg) const;
+
 private:
   unsigned char _r;
   unsigned char _g;
   unsigned char _b;
   signed char _exponent;
+};
+
+struct CompressedLightCube {
+  ColorRGBExp32 color[6];
+
+  INLINE void read_datagram(DatagramIterator &dgi);
+  INLINE void write_datagram(Datagram &dg) const;
 };
 
 #include "colorRGBExp32.I"

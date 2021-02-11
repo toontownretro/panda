@@ -105,3 +105,25 @@ as_linear_color() const {
     255.0f * tex_light_to_linear(_b, _exponent)
   );
 }
+
+/**
+ * Fills in the structure from the given datagram.
+ */
+void ColorRGBExp32::
+read_datagram(DatagramIterator &dgi) {
+  _r = dgi.get_uint8();
+  _g = dgi.get_uint8();
+  _b = dgi.get_uint8();
+  _exponent = dgi.get_int8();
+}
+
+/**
+ * Writes the structure to the indicated datagram.
+ */
+void ColorRGBExp32::
+write_datagram(Datagram &dg) const {
+  dg.add_uint8(_r);
+  dg.add_uint8(_g);
+  dg.add_uint8(_b);
+  dg.add_int8(_exponent);
+}
