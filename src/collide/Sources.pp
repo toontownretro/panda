@@ -108,6 +108,10 @@
   #define IGATESCAN all
 
   #define IGATEEXT \
-    collisionPolygon_ext.h collisionPolygon_ext.cxx
+    collisionHandlerEvent_ext.h collisionHandlerEvent_ext.cxx \
+    collisionHandlerPhysical_ext.h collisionHandlerPhysical_ext.cxx \
+    collisionHandlerQueue_ext.h collisionHandlerQueue_ext.cxx \
+    collisionPolygon_ext.h collisionPolygon_ext.cxx \
+    collisionTraverser_ext.h collisionTraverser_ext.cxx
 
 #end lib_target

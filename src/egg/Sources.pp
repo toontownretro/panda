@@ -146,8 +146,14 @@
 
   #define IGATESCAN all
   #define IGATEEXT \
+    eggComment_ext.cxx \
+    eggComment_ext.h \
+    eggCoordinateSystem_ext.cxx \
+    eggCoordinateSystem_ext.h \
     eggGroupNode_ext.cxx \
-    eggGroupNode_ext.h
+    eggGroupNode_ext.h \
+    eggNode_ext.cxx \
+    eggNode_ext.h
 
 #end lib_target
 

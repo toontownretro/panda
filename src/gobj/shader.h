@@ -245,10 +245,28 @@ public:
     STO_stage_i,
     STO_light_i_shadow_map,
 
+    STO_ff_stage_i,
+    STO_stage_modulate_i,
+    STO_stage_add_i,
+    STO_stage_normal_i,
+    STO_stage_height_i,
+    STO_stage_selector_i,
+    STO_stage_gloss_i,
+    STO_stage_emission_i,
+
     STO_cascade_light_shadow_map,
 
     // Textures for materials that need to be sampled in the shader.
     STO_material_texture,
+  };
+
+  enum ShaderArgClass {
+    SAC_scalar,
+    SAC_vector,
+    SAC_matrix,
+    SAC_sampler,
+    SAC_array,
+    SAC_unknown,
   };
 
   enum ShaderMatPiece {

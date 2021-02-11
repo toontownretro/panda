@@ -103,6 +103,17 @@ private:
     static TypeHandle _type_handle;
 
     friend class InstancedNode;
+
+  public:
+    static TypeHandle get_class_type() {
+      return _type_handle;
+    }
+    static void init_type() {
+      register_type(_type_handle, "InstancedNode::CData");
+    }
+
+  private:
+    static TypeHandle _type_handle;
   };
 
   PipelineCycler<CData> _cycler;
