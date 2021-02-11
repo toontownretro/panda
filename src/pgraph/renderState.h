@@ -251,6 +251,43 @@ public:
   mutable Filename _filename;
   mutable Filename _fullpath;
 
+  // This is the root object that is written to and read from a .rso file.  We
+  // have to do this because the RenderState pointers can change when we read
+  // them, so we need another object to retrieve the final pointer from.
+  class BamRoot : public TypedWritableReferenceCount {
+  public:
+    BamRoot() = default;
+
+    CPT(RenderState) _state;
+
+  public:
+    static void register_with_read_factory();
+    virtual void write_datagram(BamWriter *manager, Datagram &dg);
+    virtual int complete_pointers(TypedWritable **plist, BamReader *manager);
+    virtual bool require_fully_complete() const;
+
+  protected:
+    static TypedWritable *make_from_bam(const FactoryParams &params);
+    void fillin(DatagramIterator &scan, BamReader *manager);
+
+  public:
+    static TypeHandle get_class_type() {
+      return _type_handle;
+    }
+    static void init_type() {
+      TypedWritableReferenceCount::init_type();
+      register_type(_type_handle, "RenderState::BamRoot",
+                    TypedWritableReferenceCount::get_class_type());
+    }
+    virtual TypeHandle get_type() const {
+      return get_class_type();
+    }
+    virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+  private:
+    static TypeHandle _type_handle;
+  };
+
 private:
   // This mutex protects _states.  It also protects any modification to the
   // cache, which is encoded in _composition_cache and

@@ -70,6 +70,7 @@ PStatCollector RenderState::_state_validate_pcollector("*:State Cache:Validate")
 CacheStats RenderState::_cache_stats;
 
 TypeHandle RenderState::_type_handle;
+TypeHandle RenderState::BamRoot::_type_handle;
 
 
 /**
@@ -440,6 +441,7 @@ make(const Material *script) {
     TransparencyAttrib::Mode mode;
     switch (script->get_transparency()) {
     default:
+    case Material::TM_unspecified:
     case Material::TM_none:
       mode = TransparencyAttrib::M_none;
       break;
@@ -489,10 +491,9 @@ make(const Material *script) {
 
       ta = DCAST(TextureAttrib, ta)->add_on_stage(stage, tex);
 
-      if (mat_tex->has_transform()) {
-        CPT(TransformState) ts = TransformState::make_pos_hpr_scale_shear(
-          mat_tex->get_pos(), mat_tex->get_hpr(), mat_tex->get_scale(),
-          mat_tex->get_shear());
+      if (mat_tex->has_transform2d()) {
+        CPT(TransformState) ts = TransformState::make_mat3(
+          LCAST(PN_stdfloat, mat_tex->get_transform2d()));
         tma = DCAST(TexMatrixAttrib, tma)->add_stage(stage, ts);
         has_any_transform = true;
       }
@@ -553,19 +554,19 @@ make(const Filename &filename, const DSearchPath &search_path) {
       return nullptr;
     }
 
-    if (!obj->is_of_type(RenderState::get_class_type())) {
+    if (!obj->is_of_type(BamRoot::get_class_type())) {
       pgraph_cat.error()
         << resolved.get_fullpath() << " is not a valid render state object.\n";
       bam.close();
       return nullptr;
     }
 
-    bam.close();
-
-    CPT(RenderState) state = DCAST(RenderState, obj);
+    CPT(RenderState) state = DCAST(BamRoot, obj)->_state;
     // Store a reference to our .rso file on the state.
     state->_filename = filename;
     state->_fullpath = resolved;
+
+    bam.close();
 
     return state;
 
@@ -625,9 +626,12 @@ do_write_rso(std::ostream &out, const Filename &filename) const {
     return false;
   }
 
-  writer.set_file_texture_mode(BamWriter::BTM_rawdata);
+  writer.set_file_material_mode(BamWriter::BTM_rawdata);
 
-  if (!writer.write_object(this)) {
+  PT(BamRoot) root = new BamRoot;
+  root->_state = this;
+
+  if (!writer.write_object(root)) {
     return false;
   }
 
@@ -2170,9 +2174,9 @@ register_with_read_factory() {
  */
 void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  BamWriter::BamTextureMode file_texture_mode = manager->get_file_texture_mode();
+  BamWriter::BamTextureMode file_material_mode = manager->get_file_material_mode();
 
-  bool write_raw_data = (file_texture_mode == BamWriter::BTM_rawdata) ||
+  bool write_raw_data = (file_material_mode == BamWriter::BTM_rawdata) ||
                         _filename.empty() ||
                         (manager->get_file_minor_ver() < 46);
 
@@ -2191,7 +2195,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
     VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
-    switch (file_texture_mode) {
+    switch (file_material_mode) {
     case BamWriter::BTM_unchanged:
     case BamWriter::BTM_rawdata:
       break;
@@ -2219,7 +2223,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
     default:
       pgraph_cat.error()
-        << "Unsupported bam-texture-mode: " << (int)file_texture_mode << "\n";
+        << "Unsupported bam-material-mode: " << (int)file_material_mode << "\n";
     }
 
     dg.add_string(filename.get_fullpath());
@@ -2292,7 +2296,7 @@ change_this(TypedWritable *old_ptr, BamReader *manager) {
   RenderState *state = DCAST(RenderState, old_ptr);
 
   CPT(RenderState) pointer;
-  if (state->_read_script_state) {
+  if (state->_read_script_state != nullptr) {
     // Change ourselves to the state loaded from the script on disk.
     pointer = state->_read_script_state;
   } else {
@@ -2307,6 +2311,9 @@ change_this(TypedWritable *old_ptr, BamReader *manager) {
   if (pointer == state) {
     pointer->ref();
     manager->register_finalize(state);
+  } else if (pointer == state->_read_script_state) {
+    pointer->ref();
+    manager->register_finalize((RenderState *)pointer.p());
   }
 
   // We have to cast the pointer back to non-const, because the bam reader
@@ -2357,8 +2364,10 @@ make_from_bam(const FactoryParams &params) {
 void RenderState::
 fillin(DatagramIterator &scan, BamReader *manager) {
   bool has_raw_data = true;
-  if (manager->get_file_minor_ver() >= 46) {
+  if (manager->get_file_minor_ver() >= 47) {
     has_raw_data = scan.get_bool();
+  } else if (manager->get_file_minor_ver() >= 46) {
+    has_raw_data = !(bool)scan.get_uint8();
   }
 
   if (!has_raw_data) {
@@ -2381,4 +2390,86 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       (*_read_overrides).push_back(override);
     }
   }
+}
+
+/**
+ * Tells the BamReader how to create objects of type BamRoot.
+ */
+void RenderState::BamRoot::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void RenderState::BamRoot::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  TypedWritableReferenceCount::write_datagram(manager, dg);
+
+  manager->write_pointer(dg, _state);
+}
+
+/**
+ * Receives an array of pointers, one for each time manager->read_pointer()
+ * was called in fillin(). Returns the number of pointers processed.
+ */
+int RenderState::BamRoot::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
+
+  RenderState *state;
+  DCAST_INTO_R(state, p_list[pi++], pi);
+  _state = state;
+
+/*
+ * Finalize these pointers now to decrement their artificially-held reference
+ * counts.  We do this now, rather than later, in case some other object
+ * reassigns them a little later on during initialization, before they can
+ * finalize themselves normally (for instance, the character may change the
+ * node's transform).  If that happens, the pointer may discover that no one
+ * else holds its reference count when it finalizes, which will constitute a
+ * memory leak (see the comments in TransformState::finalize(), etc.).
+ */
+  manager->finalize_now((RenderState *)_state.p());
+
+  return pi;
+}
+
+/**
+ * Some objects require all of their nested pointers to have been completed
+ * before the objects themselves can be completed.  If this is the case,
+ * override this method to return true, and be careful with circular
+ * references (which would make the object unreadable from a bam file).
+ */
+bool RenderState::BamRoot::
+require_fully_complete() const {
+  return false;
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type RenderState is encountered in the Bam file.  It should create the
+ * RenderState and extract its information from the file.
+ */
+TypedWritable *RenderState::BamRoot::
+make_from_bam(const FactoryParams &params) {
+  BamRoot *root = new BamRoot;
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+  root->fillin(scan, manager);
+
+  return root;
+}
+
+/**
+ * This internal function is called by make_from_bam to read in all of the
+ * relevant data from the BamFile for the new RenderState.
+ */
+void RenderState::BamRoot::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  manager->read_pointer(scan);
 }

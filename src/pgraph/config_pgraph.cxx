@@ -485,6 +485,7 @@ init_libpgraph() {
   RenderEffects::init_type();
   RenderModeAttrib::init_type();
   RenderState::init_type();
+  RenderState::BamRoot::init_type();
   RescaleNormalAttrib::init_type();
   SceneSetup::init_type();
   ScissorAttrib::init_type();
@@ -540,6 +541,7 @@ init_libpgraph() {
   RenderEffects::register_with_read_factory();
   RenderModeAttrib::register_with_read_factory();
   RenderState::register_with_read_factory();
+  RenderState::BamRoot::register_with_read_factory();
   RescaleNormalAttrib::register_with_read_factory();
   ScissorAttrib::register_with_read_factory();
   ScissorEffect::register_with_read_factory();
