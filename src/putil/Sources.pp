@@ -69,8 +69,9 @@
     pTexture.I pTexture.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
-    timedCycle.I timedCycle.h typedWritable.I \
-    typedWritable.h \
+    timedCycle.I timedCycle.h \
+    tokenFile.I tokenFile.h \
+    typedWritable.I typedWritable.h \
     typedWritableReferenceCount.I \
     typedWritableReferenceCount.h updateSeq.I updateSeq.h \
     uniqueIdAllocator.h \
@@ -126,7 +127,8 @@
     pTexture.cxx \
     simpleHashMap.cxx \
     sparseArray.cxx \
-    timedCycle.cxx typedWritable.cxx \
+    timedCycle.cxx \
+    tokenFile.cxx typedWritable.cxx \
     typedWritableReferenceCount.cxx updateSeq.cxx \
     uniqueIdAllocator.cxx \
     vector_typedWritable.cxx \
@@ -193,7 +195,8 @@
     pTexture.I pTexture.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
-    timedCycle.I timedCycle.h typedWritable.I \
+    timedCycle.I timedCycle.h \
+    tokenFile.I tokenFile.h typedWritable.I \
     typedWritable.h typedWritableReferenceCount.I \
     typedWritableReferenceCount.h updateSeq.I updateSeq.h \
     uniqueIdAllocator.h \
@@ -271,6 +274,16 @@
 
   #define SOURCES \
     test_linestream.cxx
+
+  #define LOCAL_LIBS $[LOCAL_LIBS] putil
+
+#end test_bin_target
+
+#begin test_bin_target
+  #define TARGET test_tokenfile
+
+  #define SOURCES \
+    test_tokenfile.cxx
 
   #define LOCAL_LIBS $[LOCAL_LIBS] putil
 
