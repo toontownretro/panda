@@ -72,7 +72,7 @@ evaluate(MovingPartMatrix *part, bool frame_blend_flag) {
     i1->evaluate(part, frame_blend_flag);
 
     _position = i0->get_position() + (i1->get_position() - i0->get_position()) * _alpha;
-    LQuaternion::slerp(i0->get_rotation(), i1->get_rotation(), _alpha, _rotation);
+    LQuaternion::blend(i0->get_rotation(), i1->get_rotation(), _alpha, _rotation);
     _scale = i0->get_scale() + (i1->get_scale() - i0->get_scale()) * _alpha;
     _shear = i0->get_shear() + (i1->get_shear() - i0->get_shear()) * _alpha;
   }
