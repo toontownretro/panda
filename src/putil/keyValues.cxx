@@ -23,6 +23,7 @@
 #include "bamReader.h"
 #include "bamWriter.h"
 #include "datagram.h"
+#include "tokenFile.h"
 
 TypeHandle KeyValues::_type_handle;
 
@@ -35,255 +36,6 @@ char asciitolower(char in) {
   }
 
   return in;
-}
-
-enum {
-  KVTOKEN_NONE,
-  KVTOKEN_BLOCK_BEGIN,
-  KVTOKEN_BLOCK_END,
-  KVTOKEN_STRING,
-  KVTOKEN_MACROS,
-};
-
-struct KeyValueToken_t
-{
-  int type;
-  std::string data;
-
-  bool invalid() const { return type == KVTOKEN_NONE; }
-};
-
-class CKeyValuesTokenizer
-{
-public:
-  CKeyValuesTokenizer(const std::string &buffer);
-
-  KeyValueToken_t next_token();
-
-private:
-  void ignore_whitespace();
-  bool ignore_comment();
-  std::string get_string();
-
-  char current();
-  bool forward();
-  char next();
-  std::string location();
-
-private:
-  std::string _buffer;
-  size_t _buflen;
-  size_t _position;
-  int _last_line_break;
-  int _line;
-};
-
-CKeyValuesTokenizer::
-    CKeyValuesTokenizer(const std::string &buffer)
-{
-  _buffer = buffer;
-  _buflen = buffer.size();
-  _position = 0;
-  _last_line_break = 0;
-  _line = 1;
-}
-
-KeyValueToken_t CKeyValuesTokenizer::next_token()
-{
-  KeyValueToken_t token;
-
-  while (1)
-  {
-    ignore_whitespace();
-    if (!ignore_comment())
-    {
-      break;
-    }
-  }
-
-  // Get the next character and check if we got any character
-  char c = current();
-  if (!c)
-  {
-    token.type = KVTOKEN_NONE;
-    return token;
-  }
-
-  // Emit any valid tokens
-  if (c == '{')
-  {
-    forward();
-    token.type = KVTOKEN_BLOCK_BEGIN;
-    return token;
-  }
-  else if (c == '}')
-  {
-    forward();
-    token.type = KVTOKEN_BLOCK_END;
-    return token;
-  }
-  else
-  {
-    token.data = get_string();
-    token.type = KVTOKEN_STRING;
-    return token;
-  }
-}
-
-std::string CKeyValuesTokenizer::get_string()
-{
-  bool escape = false;
-  std::string result = "";
-
-  bool quoted = false;
-  if (current() == '"')
-  {
-    quoted = true;
-    forward();
-  }
-
-  while (1)
-  {
-    char c = current();
-
-    // Check if we have a character yet
-    if (!c)
-    {
-      break;
-    }
-
-    // These characters are not part of unquoted strings.
-    if (!quoted && (c == '{' || c == '}' || c == ' ' || c == '\t'))
-    {
-      break;
-    }
-
-    // Check if it's the end of a quoted string.
-    if (!escape && quoted && c == '"')
-    {
-      break;
-    }
-
-    // Check if it's the end of the line
-    if (c == '\n' || c == '\r') {
-      if (quoted) {
-        // If we reached the end of a line in a quoted string,
-        // this is a syntax error.
-        keyvalues_cat.error()
-          << "Syntax error: reached end of line while parsing quoted string\n";
-      }
-      forward();
-      break;
-    }
-
-    // Add the character or escape sequence to the result
-    if (escape)
-    {
-      escape = false;
-
-      if (c == '"')
-      {
-        result += '"';
-      }
-      else if (c == '\\')
-      {
-        result += '\\';
-      }
-    }
-    else if (c == '\\')
-    {
-      escape = true;
-    }
-    else {
-      result += c;
-    }
-
-    forward();
-  }
-
-  if (quoted)
-  {
-    forward();
-  }
-
-  return result;
-}
-
-void CKeyValuesTokenizer::ignore_whitespace()
-{
-  while (1)
-  {
-    char c = current();
-
-    if (!c)
-    {
-      break;
-    }
-
-    if (c == '\n')
-    {
-      // Keep track of this data for debug
-      _last_line_break = _position;
-      _line++;
-    }
-
-    if (c != ' ' && c != '\n' && c != '\t' && c != '\r')
-    {
-      break;
-    }
-
-    forward();
-  }
-}
-
-bool CKeyValuesTokenizer::ignore_comment()
-{
-  if (current() == '/' && next() == '/')
-  {
-    while (current() != '\n')
-    {
-      if (!forward()) {
-        return true;
-      }
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
-char CKeyValuesTokenizer::current()
-{
-  if (_position >= _buflen)
-  {
-    return 0;
-  }
-
-  return _buffer[_position];
-}
-
-bool CKeyValuesTokenizer::forward()
-{
-  _position++;
-  return _position < _buflen;
-}
-
-char CKeyValuesTokenizer::next()
-{
-  if ((_position + 1) >= _buflen)
-  {
-    return 0;
-  }
-
-  return _buffer[_position + 1];
-}
-
-std::string CKeyValuesTokenizer::location()
-{
-  std::ostringstream ss;
-  ss << "line " << _line << ", column " << (_position - _last_line_break);
-  return ss.str();
 }
 
 //------------------------------------------------------------------------------------------------
@@ -351,41 +103,34 @@ KeyValues::get_children_with_name(const std::string &name) const
   return result;
 }
 
-void KeyValues::parse(CKeyValuesTokenizer *tokenizer)
+void KeyValues::parse(TokenFile *tokens)
 {
   bool has_key = false;
   std::string key;
 
-  while (1)
+  while (tokens->token_available(true))
   {
-    KeyValueToken_t token = tokenizer->next_token();
-    if (token.invalid())
-    {
-      // keyvalues_cat.error()
-      //	<< "Unexpected end of file\n";
-      break;
-    }
+    tokens->next_token(true);
 
-    if (token.type == KVTOKEN_BLOCK_END)
-    {
+    std::string token = tokens->get_token();
+
+    if (token == "}") {
       break;
-    }
-    else if (token.type == KVTOKEN_BLOCK_BEGIN)
-    {
-      PT(KeyValues)
-      child = new KeyValues(key, this);
+
+    } else if (token == "{") {
+      PT(KeyValues) child = new KeyValues(key, this);
       child->_filename = _filename;
-      child->parse(tokenizer);
+      child->parse(tokens);
       has_key = false;
-    }
-    else if (token.type == KVTOKEN_STRING)
-    {
+
+    } else {
       if (has_key) {
-        add_key_value(key, token.data);
-        key = "";
+        add_key_value(key, token);
+        key.clear();
         has_key = false;
+
       } else {
-        key = token.data;
+        key = token;
         has_key = true;
       }
     }
@@ -427,9 +172,14 @@ KeyValues::load(const Filename &filename) {
     return nullptr;
   }
 
-  std::string buffer = vfs->read_file(load_filename, true);
+  TokenFile tokens;
+  tokens.local_object();
+  if (!tokens.read(load_filename)) {
+    return nullptr;
+  }
 
-  PT(KeyValues) kv = from_string(buffer);
+  PT(KeyValues) kv = new KeyValues;
+  kv->parse(&tokens);
   kv->_filename = filename;
 
   return kv;
@@ -441,16 +191,16 @@ KeyValues::load(const Filename &filename) {
  */
 PT(KeyValues) KeyValues::
 from_string(const std::string &buffer) {
-  CKeyValuesTokenizer tokenizer(buffer);
+  std::istringstream iss = std::istringstream(buffer, std::ios::in);
 
-  PT(KeyValues) kv = new KeyValues;
-  kv->parse(&tokenizer);
-
-  // We should have nothing left.
-  if (!tokenizer.next_token().invalid()) {
-    keyvalues_cat.error() << "Unexpected EOF\n";
+  TokenFile tokens;
+  tokens.local_object();
+  if (!tokens.tokenize(iss)) {
     return nullptr;
   }
+
+  PT(KeyValues) kv = new KeyValues;
+  kv->parse(&tokens);
 
   return kv;
 }

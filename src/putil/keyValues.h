@@ -25,7 +25,7 @@
 #include "vector_int.h"
 #include "vector_float.h"
 
-class CKeyValuesTokenizer;
+class TokenFile;
 
 static const std::string root_block_name = "__root";
 static const std::string not_found = "not found";
@@ -77,7 +77,7 @@ PUBLISHED:
 	const Pair *get_pair(size_t n) const;
 
 private:
-	void parse(CKeyValuesTokenizer *tokenizer);
+	void parse(TokenFile *tokens);
 	void do_write(std::ostringstream &out, int indent, int &curr_indent);
 	void do_indent(std::ostringstream &out, int curr_indent);
 

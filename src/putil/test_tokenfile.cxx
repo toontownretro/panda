@@ -21,34 +21,16 @@ indent(std::ostream &stream, int indent_level) {
   }
 }
 
-void
-r_list_tokens(TokenBlock *block, int indent_level) {
-  indent(std::cout, indent_level);
-  std::cout << "{\n";
-
-  TokenBase *token = block->next();
-  while (token) {
-    if (token->as_block()) {
-      r_list_tokens(token->as_block(), indent_level + 2);
-
-    } else {
-      TokenString *str = token->as_string();
-      indent(std::cout, indent_level + 2);
-      std::cout << str->get_token() << "\n";
-    }
-
-    token = block->next();
-  }
-
-  indent(std::cout, indent_level);
-  std::cout << "}\n";
-}
-
 int
 main(int argc, char *argv[]) {
   std::cout << "Hello\n";
 
-  Filename filename("/home/lachbr/player/test.tok");
+  if (argc < 2) {
+    std::cerr << "You must specify the token file.\n";
+    return 1;
+  }
+
+  Filename filename(argv[1]);
   std::cout << "init filename\n";
 
   PT(TokenFile) tokenfile = new TokenFile;
@@ -59,8 +41,9 @@ main(int argc, char *argv[]) {
     return 1;
   }
 
-  TokenBlock *root = tokenfile->get_root();
-  r_list_tokens(root, 0);
+  while (tokenfile->next_token(true)) {
+    std::cout << tokenfile->get_token() << "\n";
+  }
 
   return 0;
 }

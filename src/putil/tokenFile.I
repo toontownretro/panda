@@ -14,47 +14,24 @@
 /**
  *
  */
-INLINE TokenBlock::
-TokenBlock() {
-  _token_index = 0;
-}
-
-/**
- * Returns the next token in the block, or NULL if there is no next token.
- */
-INLINE TokenBase *TokenBlock::
-next() {
-  if (_token_index >= _tokens.size() - 1) {
-    return nullptr;
-  }
-
-  return _tokens[_token_index++];
-}
-
-/**
- * Returns the previous token in the block, or NULL if there is no previous
- * token.
- */
-INLINE TokenBase *TokenBlock::
-prev() {
-  if (_token_index == 0) {
-    return nullptr;
-  }
-
-  return _tokens[--_token_index];
-}
-
-/**
- *
- */
 INLINE TokenFile::
 TokenFile() {
+  _token_index = -1;
+  _token = nullptr;
 }
 
 /**
- * Returns the root TokenBlock of the TokenFile.
+ * Returns the filename of the TokenFile.
  */
-INLINE TokenBlock *TokenFile::
-get_root() const {
-  return _root;
+INLINE const Filename &TokenFile::
+get_filename() const {
+  return _filename;
+}
+
+/**
+ * Returns the fullpath of the TokenFile.
+ */
+INLINE const Filename &TokenFile::
+get_fullpath() const {
+  return _fullpath;
 }
