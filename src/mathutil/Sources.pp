@@ -43,6 +43,7 @@
     stackedPerlinNoise3.h stackedPerlinNoise3.I \
     triangulator.h triangulator.I \
     triangulator3.h triangulator3.I \
+    triangulatorDelaunay.h triangulatorDelaunay.I \
     unionBoundingVolume.h unionBoundingVolume.I
 
   #define COMPOSITE_SOURCES \
@@ -74,6 +75,7 @@
     stackedPerlinNoise3.cxx \
     triangulator.cxx \
     triangulator3.cxx \
+    triangulatorDelaunay.cxx \
     unionBoundingVolume.cxx
 
   #define INSTALL_HEADERS \
