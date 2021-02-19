@@ -94,6 +94,7 @@ stop() {
 
   // Don't call animation_activated() here; stopping an animation should not
   // activate it.
+  animation_deactivated();
 }
 
 /**

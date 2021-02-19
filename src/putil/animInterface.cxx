@@ -78,6 +78,14 @@ animation_activated() {
 }
 
 /**
+ * This is provided as a callback method for when the user calls the stop()
+ * method to stop the animation playing.
+ */
+void AnimInterface::
+animation_deactivated() {
+}
+
+/**
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */

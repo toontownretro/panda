@@ -78,6 +78,7 @@ protected:
   INLINE void set_frame_rate(double frame_rate);
   INLINE void set_num_frames(int num_frames);
   virtual void animation_activated();
+  virtual void animation_deactivated();
 
 private:
   enum PlayMode {
