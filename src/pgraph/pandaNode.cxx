@@ -2136,6 +2136,17 @@ is_ambient_light() const {
 }
 
 /**
+ * Replaces the "from" state on this node with the "to" state.  Does nothing if
+ * the node's state is not the "from" state.
+ */
+void PandaNode::
+replace_state(const RenderState *from, const RenderState *to, Thread *current_thread) {
+  if (get_state(current_thread) == from) {
+    set_state(to, current_thread);
+  }
+}
+
+/**
  * Reads the bytes created by a previous call to encode_to_bam_stream(), and
  * extracts and returns the single object on those bytes.  Returns NULL on
  * error.

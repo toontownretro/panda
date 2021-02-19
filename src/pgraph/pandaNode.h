@@ -328,6 +328,8 @@ PUBLISHED:
   virtual Light *as_light();
   virtual bool is_ambient_light() const;
 
+  virtual void replace_state(const RenderState *from, const RenderState *to, Thread *current_thread = Thread::get_current_thread());
+
   enum FancyBits {
     FB_transform            = 0x0001,
     FB_state                = 0x0002,

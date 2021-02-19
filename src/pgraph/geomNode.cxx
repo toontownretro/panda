@@ -809,6 +809,29 @@ unify(int max_indices, bool preserve_order) {
 }
 
 /**
+ * Replaces the "from" state on this node with the "to" state.  Does nothing if
+ * the node's state is not the "from" state.
+ *
+ * The GeomNode implementation also replaces any Geom states matching the
+ * "from" state with the "to" state.
+ */
+void GeomNode::
+replace_state(const RenderState *from, const RenderState *to, Thread *current_thread) {
+  PandaNode::replace_state(from, to, current_thread);
+
+  CDWriter cdata(_cycler, true, current_thread);
+
+  GeomList::iterator wgi;
+  PT(GeomList) geoms = cdata->modify_geoms();
+  for (wgi = geoms->begin(); wgi != geoms->end(); ++wgi) {
+    GeomEntry &entry = (*wgi);
+    if (entry._state == from) {
+      entry._state = to;
+    }
+  }
+}
+
+/**
  * Writes a short description of all the Geoms in the node.
  */
 void GeomNode::

@@ -85,6 +85,8 @@ PUBLISHED:
   void decompose();
   void unify(int max_indices, bool preserve_order);
 
+  virtual void replace_state(const RenderState *from, const RenderState *to, Thread *current_thread = Thread::get_current_thread());
+
   void write_geoms(std::ostream &out, int indent_level) const;
   void write_verbose(std::ostream &out, int indent_level) const;
 
