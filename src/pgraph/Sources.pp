@@ -67,6 +67,7 @@
     loaderFileTypeBam.h  \
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
+    materialGroup.I materialGroup.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \
@@ -169,6 +170,7 @@
     loaderFileTypeBam.cxx \
     loaderFileTypeRegistry.cxx  \
     logicOpAttrib.cxx \
+    materialGroup.cxx \
     modelFlattenRequest.cxx \
     modelLoadRequest.cxx \
     modelSaveRequest.cxx \
@@ -269,6 +271,7 @@
     loaderFileTypeBam.h \
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
+    materialGroup.I materialGroup.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \

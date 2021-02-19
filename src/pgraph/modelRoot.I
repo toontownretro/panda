@@ -19,7 +19,8 @@ ModelRoot(const std::string &name) :
   ModelNode(name),
   _fullpath(name),
   _timestamp(0),
-  _reference(new ModelRoot::ModelReference)
+  _reference(new ModelRoot::ModelReference),
+  _active_material_group(0)
 {
 }
 
@@ -31,7 +32,8 @@ ModelRoot(const Filename &fullpath, time_t timestamp) :
   ModelNode(fullpath.get_basename()),
   _fullpath(fullpath),
   _timestamp(timestamp),
-  _reference(new ModelRoot::ModelReference)
+  _reference(new ModelRoot::ModelReference),
+  _active_material_group(0)
 {
 }
 
@@ -115,6 +117,64 @@ set_reference(ModelRoot::ModelReference *ref) {
 }
 
 /**
+ * Sets the active material group.  This will recursively replace all materials
+ * of the current group with the materials of the new group on all nodes and
+ * Geoms, until another ModelRoot is reached.
+ */
+INLINE void ModelRoot::
+set_active_material_group(size_t n) {
+  nassertv(n < _material_groups.size());
+
+  if (n == _active_material_group) {
+    return;
+  }
+
+  r_set_active_material_group(this, n);
+  _active_material_group = n;
+}
+
+/**
+ * Returns the index of the active material group.
+ */
+INLINE size_t ModelRoot::
+get_active_material_group() const {
+  return _active_material_group;
+}
+
+/**
+ * Adds a new material group to the model.  This adds a group of materials that
+ * represent a particular "skin" of the model.
+ */
+INLINE void ModelRoot::
+add_material_group(MaterialGroup *group) {
+#ifndef NDEBUG
+  if (_material_groups.size() != 0) {
+    // All groups should have the same number of materials.
+    nassertv(_material_groups[0]->get_num_materials() == group->get_num_materials());
+  }
+#endif
+
+  _material_groups.push_back(group);
+}
+
+/**
+ * Returns the number of material groups on the model.
+ */
+INLINE size_t ModelRoot::
+get_num_material_groups() const {
+  return _material_groups.size();
+}
+
+/**
+ * Returns the nth material group on the model.
+ */
+INLINE MaterialGroup *ModelRoot::
+get_material_group(size_t n) const {
+  nassertr(n < _material_groups.size(), nullptr);
+  return _material_groups[n];
+}
+
+/**
  *
  */
 INLINE ModelRoot::
@@ -122,7 +182,9 @@ ModelRoot(const ModelRoot &copy) :
   ModelNode(copy),
   _fullpath(copy._fullpath),
   _timestamp(copy._timestamp),
-  _reference(copy._reference)
+  _reference(copy._reference),
+  _active_material_group(copy._active_material_group),
+  _material_groups(copy._material_groups)
 {
 }
 

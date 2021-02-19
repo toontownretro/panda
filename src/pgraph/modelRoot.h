@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "referenceCount.h"
 #include "modelNode.h"
+#include "materialGroup.h"
 
 /**
  * A node of this type is created automatically at the root of each model file
@@ -50,6 +51,19 @@ PUBLISHED:
   void set_reference(ModelReference *ref);
   MAKE_PROPERTY(reference, get_reference, set_reference);
 
+  INLINE void set_active_material_group(size_t n);
+  INLINE size_t get_active_material_group() const;
+  MAKE_PROPERTY(active_material_group, get_active_material_group, set_active_material_group);
+
+  INLINE void add_material_group(MaterialGroup *group);
+  INLINE size_t get_num_material_groups() const;
+  INLINE MaterialGroup *get_material_group(size_t n) const;
+  MAKE_SEQ(get_material_groups, get_num_material_groups, get_material_group);
+  MAKE_SEQ_PROPERTY(material_groups, get_num_material_groups, get_material_group);
+
+private:
+  void r_set_active_material_group(PandaNode *node, size_t n);
+
 protected:
   INLINE ModelRoot(const ModelRoot &copy);
 
@@ -61,9 +75,15 @@ private:
   time_t _timestamp;
   PT(ModelReference) _reference;
 
+  // This handles skins.
+  typedef pvector<PT(MaterialGroup)> MaterialGroups;
+  MaterialGroups _material_groups;
+  size_t _active_material_group;
+
 public:
   static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &dg);
+  virtual int complete_pointers(TypedWritable **plist, BamReader *manager);
 
 protected:
   static TypedWritable *make_from_bam(const FactoryParams &params);

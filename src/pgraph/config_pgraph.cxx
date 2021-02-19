@@ -91,6 +91,7 @@
 #include "texGenAttrib.h"
 #include "transformState.h"
 #include "transparencyAttrib.h"
+#include "materialGroup.h"
 
 #include "dconfig.h"
 
@@ -501,6 +502,7 @@ init_libpgraph() {
   TexGenAttrib::init_type();
   TransformState::init_type();
   TransparencyAttrib::init_type();
+  MaterialGroup::init_type();
 
   AlphaTestAttrib::register_with_read_factory();
   AntialiasAttrib::register_with_read_factory();
@@ -554,6 +556,7 @@ init_libpgraph() {
   TexGenAttrib::register_with_read_factory();
   TransformState::register_with_read_factory();
   TransparencyAttrib::register_with_read_factory();
+  MaterialGroup::register_with_read_factory();
 
   // By initializing the _states map up front, we also guarantee that the
   // _states_lock mutex gets created before we spawn any threads (assuming no
