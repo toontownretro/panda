@@ -40,7 +40,7 @@ write(ostream &out) {
 TextureStagePool::
 TextureStagePool() {
   ConfigVariableEnum<Mode> texture_stage_pool_mode
-    ("texture-stage-pool-mode", M_none,
+    ("texture-stage-pool-mode", M_unique,
      PRC_DESC("Defines the initial value of TextureStagePool::set_mode().  "
               "Set this to 'none' to disable the use of the TextureStagePool, "
               "to 'name' to group TextureStages by name only, or 'unique' "
