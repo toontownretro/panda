@@ -49,6 +49,7 @@
 #include "bamFile.h"
 #include "renderStatePool.h"
 #include "bam.h"
+#include "textureStagePool.h"
 
 using std::ostream;
 
@@ -489,6 +490,9 @@ make(const Material *script) {
         stage->set_texcoord_name(mat_tex->get_texcoord_name());
       }
 
+      // Now unify the stage pointer.
+      stage = TextureStagePool::get_stage(stage);
+
       ta = DCAST(TextureAttrib, ta)->add_on_stage(stage, tex);
 
       if (mat_tex->has_transform2d()) {
@@ -508,7 +512,7 @@ make(const Material *script) {
   state->_filename = script->get_filename();
   state->_fullpath = script->get_fullpath();
 
-  return state;
+  return return_unique((RenderState *)state.p());
 }
 
 /**
