@@ -222,6 +222,128 @@ get_hpr(CoordinateSystem cs) const {
 }
 
 /**
+ * Makes sure this quaternion is within 180 degrees of the given quaternion.
+ * If not, reverses this quaternion.
+ */
+void FLOATNAME(LQuaternion)::
+align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q, FLOATNAME(LQuaternion) &qt) {
+  int i;
+  FLOATTYPE a = 0.0f;
+  FLOATTYPE b = 0.0f;
+  for (i = 0; i < 4; i++) {
+    a += (p[i] - q[i]) * (p[i] - q[i]);
+    b += (p[i] + q[i]) * (p[i] + q[i]);
+  }
+
+  if (a > b) {
+    qt = -q;
+  } else if (&qt != &q) {
+    qt = q;
+  }
+}
+
+/**
+ * Do a piecewise addition of the quaternion elements.  This makes little
+ * mathematical sense, but it's a cheap way to simulate a slerp.
+ */
+void FLOATNAME(LQuaternion)::
+blend(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q, FLOATTYPE t,
+      FLOATNAME(LQuaternion) &qt) {
+  // Decide if one of the quaternions is backwards.
+  FLOATNAME(LQuaternion) q2;
+  align(p, q, q2);
+  blend_no_align(p, q2, t, qt);
+}
+
+/**
+ * Piecewise addition of quaternion elements without aligning this quaternion
+ * to the other.
+ */
+void FLOATNAME(LQuaternion)::
+blend_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+               FLOATTYPE t, FLOATNAME(LQuaternion) &qt) {
+  FLOATTYPE sclp, sclq;
+  int i;
+
+  // 0.0 returns p, 1.0 returns q.
+  sclp = 1.0f - t;
+  sclq = t;
+  qt = sclp * p + sclq * q;
+  qt.normalize();
+}
+
+/**
+ *
+ */
+void FLOATNAME(LQuaternion)::
+identity_blend(const FLOATNAME(LQuaternion) &p, FLOATTYPE t, FLOATNAME(LQuaternion) &qt) {
+  FLOATTYPE sclp;
+  sclp = 1.0f - t;
+
+  qt[0] = p[0] * sclp;
+  qt[1] = p[1] * sclp;
+  qt[2] = p[2] * sclp;
+
+  if (qt[3] < 0.0f) {
+    qt[3] = p[3] * sclp - t;
+  } else {
+    qt[3] = p[3] * sclp + t;
+  }
+
+  qt.normalize();
+}
+
+/**
+ *
+ */
+void FLOATNAME(LQuaternion)::
+slerp(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q, FLOATTYPE t,
+      FLOATNAME(LQuaternion) &qt) {
+  FLOATNAME(LQuaternion) q2;
+  align(p, q, q2);
+  slerp_no_align(p, q2, t, qt);
+}
+
+/**
+ *
+ */
+void FLOATNAME(LQuaternion)::
+slerp_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+               FLOATTYPE t, FLOATNAME(LQuaternion) &qt) {
+  FLOATTYPE omega, cosom, sinom, sclp, sclq;
+  int i;
+
+  // 0.0 return sp, 1.0 returns q.
+
+  cosom = p.dot(q);
+
+  if ((1.0f + cosom) > 0.000001f) {
+    if ((1.0f - cosom) > 0.000001f) {
+      omega = std::acos(cosom);
+      sinom = std::sin(omega);
+      sclp = std::sin((1.0f - t) * omega) / sinom;
+      sclq = std::sin(t * omega) / sinom;
+
+    } else {
+      sclp = 1.0f - t;
+      sclq = t;
+    }
+    qt = sclp * p + sclq * q;
+
+  } else {
+    qt[0] = -q[1];
+    qt[1] = q[0];
+    qt[2] = -q[3];
+    qt[3] = q[2];
+    sclp = std::sin((1.0f - t) * (0.5f * M_PI));
+    sclq = std::sin(t * (0.5f * M_PI));
+    for (i = 0; i < 3; i++) {
+      qt[i] = sclp * p[i] + sclq * qt[i];
+    }
+  }
+}
+
+/**
  * Sets the quaternion according to the rotation represented by the matrix.
  * Originally we tried an algorithm presented by Do-While Jones, but that
  * turned out to be broken.  This is based on the quat lib from UNC.

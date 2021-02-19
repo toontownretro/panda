@@ -78,6 +78,19 @@ PUBLISHED:
   void set_hpr(const FLOATNAME(LVecBase3) &hpr, CoordinateSystem cs = CS_default);
   FLOATNAME(LVecBase3) get_hpr(CoordinateSystem cs = CS_default) const;
 
+  static void align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+                    FLOATNAME(LQuaternion) &qt);
+  static void blend(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+                    FLOATTYPE t, FLOATNAME(LQuaternion) &qt);
+  static void blend_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+                             FLOATTYPE t, FLOATNAME(LQuaternion) &qt);
+  static void identity_blend(const FLOATNAME(LQuaternion) &p, FLOATTYPE t,
+                             FLOATNAME(LQuaternion) &qt);
+  static void slerp(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+                    FLOATTYPE t, FLOATNAME(LQuaternion) &qt);
+  static void slerp_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
+                             FLOATTYPE t, FLOATNAME(LQuaternion) &qt);
+
   INLINE_LINMATH FLOATNAME(LVector3) get_axis() const;
   INLINE_LINMATH FLOATNAME(LVector3) get_axis_normalized() const;
   INLINE_LINMATH FLOATTYPE get_angle_rad() const;
