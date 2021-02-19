@@ -31,6 +31,7 @@
 #include "transformState.h"
 #include "weakPointerTo.h"
 #include "copyOnWritePointer.h"
+#include "animGraphNode.h"
 
 class Loader;
 class AnimBundle;
@@ -45,10 +46,7 @@ class AnimPreloadTable;
  */
 class EXPCL_PANDA_CHAN PartBundle : public PartGroup {
 public:
-
-  // This is passed down through the MovingParts during the do_update() call
-  // to specify the channels that are in effect.
-  typedef pmap<AnimControl *, PN_stdfloat> ChannelBlend;
+  typedef pvector<PT(AnimControl)> ActiveControls;
 
 protected:
   // The copy constructor is protected; use make_copy() or copy_subgraph().
@@ -64,42 +62,8 @@ PUBLISHED:
   INLINE void clear_anim_preload();
   void merge_anim_preloads(const PartBundle *other);
 
-  // This is the parameter to set_blend_type() and specifies the kind of
-  // blending operation to be performed when multiple controls are in effect
-  // simultaneously (see set_control_effect()) or between sequential frames of
-  // the animation.
-  enum BlendType {
-    // BT_linear does a componentwise average of all blended matrices, which
-    // is a linear blend.  The result of this is that if a particular vertex
-    // would have been at point P in one animation and point Q in another one,
-    // it will end up on the line in between them in the resulting blend
-    // animation.  However, this tends to stretch and squash limbs in strange
-    // and disturbing ways.
-    BT_linear,
-
-    // BT_normalized_linear is a compromise on BT_linear.  The matrix is
-    // blended linearly without the scale and shear components, and the
-    // blended scale and shear components are applied separately.  This keeps
-    // all of the character's body parts in the correct size and shape.
-    // However, if the hierarchy is disconnected, body parts can fly off.
-    // It's essential the skeleton hierarchy be completely connected to use
-    // this blend mode successully.
-    BT_normalized_linear,
-
-    // BT_componentwise linearly blends all components separately, including
-    // H, P, and R, and recomposes the matrix.
-    BT_componentwise,
-
-    // BT_componentwise_quat linearly blends all components separately, except
-    // for rotation which is blended as a quaternion.
-    BT_componentwise_quat,
-  };
-
-  INLINE void set_blend_type(BlendType bt);
-  INLINE BlendType get_blend_type() const;
-
-  void set_anim_blend_flag(bool anim_blend_flag);
-  INLINE bool get_anim_blend_flag() const;
+  INLINE void set_anim_graph(AnimGraphNode *graph);
+  INLINE AnimGraphNode *get_anim_graph() const;
 
   INLINE void set_frame_blend_flag(bool frame_blend_flag);
   INLINE bool get_frame_blend_flag() const;
@@ -113,15 +77,9 @@ PUBLISHED:
   INLINE PartBundleNode *get_node(int n) const;
   MAKE_SEQ(get_nodes, get_num_nodes, get_node);
 
-  MAKE_PROPERTY(blend_type, get_blend_type, set_blend_type);
-  MAKE_PROPERTY(anim_blend_flag, get_anim_blend_flag, set_anim_blend_flag);
   MAKE_PROPERTY(frame_blend_flag, get_frame_blend_flag, set_frame_blend_flag);
   MAKE_PROPERTY(root_xform, get_root_xform, set_root_xform);
   MAKE_SEQ_PROPERTY(nodes, get_num_nodes, get_node);
-
-  void clear_control_effects();
-  INLINE void set_control_effect(AnimControl *control, PN_stdfloat effect);
-  INLINE PN_stdfloat get_control_effect(AnimControl *control) const;
 
   virtual void output(std::ostream &out) const;
   virtual void write(std::ostream &out, int indent_level) const;
@@ -146,15 +104,14 @@ PUBLISHED:
   bool force_update();
 
 public:
-  virtual bool do_update(PartBundle *root, const CycleData *root_cdata,
-                         PartGroup *parent, bool parent_changed,
-                         bool anim_changed, Thread *current_thread);
-
   // The following functions aren't really part of the public interface;
   // they're just public so we don't have to declare a bunch of friends.
   virtual void control_activated(AnimControl *control);
-  void control_removed(AnimControl *control);
+  virtual void control_deactivated(AnimControl *control);
+
   INLINE void set_update_delay(double delay);
+
+  INLINE void mark_anim_changed();
 
   bool do_bind_anim(AnimControl *control, AnimBundle *anim,
                     int hierarchy_match_flags, const PartSubset &subset);
@@ -165,10 +122,6 @@ protected:
 
 private:
   class CData;
-
-  void do_set_control_effect(AnimControl *control, PN_stdfloat effect, CData *cdata);
-  PN_stdfloat do_get_control_effect(AnimControl *control, const CData *cdata) const;
-  void clear_and_stop_intersecting(AnimControl *control, CData *cdata);
 
   COWPT(AnimPreloadTable) _anim_preload;
 
@@ -193,12 +146,10 @@ private:
       return PartBundle::get_class_type();
     }
 
-    BlendType _blend_type;
-    bool _anim_blend_flag;
     bool _frame_blend_flag;
     LMatrix4 _root_xform;
-    AnimControl *_last_control_set;
-    ChannelBlend _blend;
+    PT(AnimGraphNode) _anim_graph;
+    ActiveControls _active_controls;
     bool _anim_changed;
     double _last_update;
   };
@@ -249,9 +200,6 @@ inline std::ostream &operator <<(std::ostream &out, const PartBundle &bundle) {
   bundle.output(out);
   return out;
 }
-
-EXPCL_PANDA_CHAN std::ostream &operator <<(std::ostream &out, PartBundle::BlendType blend_type);
-EXPCL_PANDA_CHAN std::istream &operator >>(std::istream &in, PartBundle::BlendType &blend_type);
 
 #include "partBundle.I"
 

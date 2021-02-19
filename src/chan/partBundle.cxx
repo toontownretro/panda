@@ -37,15 +37,6 @@ using std::string;
 
 TypeHandle PartBundle::_type_handle;
 
-
-static ConfigVariableEnum<PartBundle::BlendType> anim_blend_type
-("anim-blend-type", PartBundle::BT_normalized_linear,
- PRC_DESC("The default blend type to use for blending animations between "
-          "frames, or between multiple animations.  See interpolate-frames, "
-          "and also PartBundle::set_anim_blend_flag() and "
-          "PartBundle::set_frame_blend_flag()."));
-
-
 /**
  * Normally, you'd use make_copy() or copy_subgraph() to make a copy of this.
  */
@@ -58,8 +49,6 @@ PartBundle(const PartBundle &copy) :
 
   CDWriter cdata(_cycler, true);
   CDReader cdata_from(copy._cycler);
-  cdata->_blend_type = cdata_from->_blend_type;
-  cdata->_anim_blend_flag = cdata_from->_anim_blend_flag;
   cdata->_frame_blend_flag = cdata_from->_frame_blend_flag;
   cdata->_root_xform = cdata_from->_root_xform;
 }
@@ -107,40 +96,6 @@ merge_anim_preloads(const PartBundle *other) {
 }
 
 /**
- * Defines the way the character responds to multiple calls to
- * set_control_effect()).  By default, this flag is set false, which disallows
- * multiple animations.  When this flag is false, it is not necessary to
- * explicitly set the control_effect when starting an animation; starting the
- * animation will implicitly remove the control_effect from the previous
- * animation and set it on the current one.
- *
- * However, if this flag is set true, the control_effect must be explicitly
- * set via set_control_effect() whenever an animation is to affect the
- * character.
- */
-void PartBundle::
-set_anim_blend_flag(bool anim_blend_flag) {
-  nassertv(Thread::get_current_pipeline_stage() == 0);
-
-  CDLockedReader cdata(_cycler);
-  if (cdata->_anim_blend_flag != anim_blend_flag) {
-    CDWriter cdataw(_cycler, cdata);
-    cdataw->_anim_blend_flag = anim_blend_flag;
-
-    if (!anim_blend_flag && cdataw->_blend.size() > 1) {
-      // If we just changed to disallow animation blending, we should
-      // eliminate all the AnimControls other than the most-recently-added
-      // one.
-
-      nassertv(cdataw->_last_control_set != nullptr);
-      clear_and_stop_intersecting(cdataw->_last_control_set, cdataw);
-    }
-
-    cdataw->_anim_changed = true;
-  }
-}
-
-/**
  * Returns a PartBundle that is a duplicate of this one, but with the
  * indicated transform applied.  If this is called multiple times with the
  * same TransformState pointer, it returns the same PartBundle each time.
@@ -182,6 +137,7 @@ apply_transform(const TransformState *transform) {
   return new_bundle;
 }
 
+#if 0
 /**
  * Sets the control effect of all AnimControls to zero (but does not "stop"
  * the AnimControls).  The character will no longer be affected by any
@@ -205,6 +161,7 @@ clear_control_effects() {
     determine_effective_channels(cdataw);
   }
 }
+#endif
 
 /**
  * Writes a one-line description of the bundle.
@@ -347,15 +304,9 @@ load_bind_anim(Loader *loader, const Filename &filename,
 void PartBundle::
 wait_pending() {
   CDReader cdata(_cycler);
-  ChannelBlend::const_iterator cbi;
-  for (cbi = cdata->_blend.begin();
-       cbi != cdata->_blend.end();
-       ++cbi) {
-    AnimControl *control = (*cbi).first;
-    PN_stdfloat effect = (*cbi).second;
-    if (effect != 0.0f) {
-      control->wait_pending();
-    }
+  ActiveControls::const_iterator aci;
+  for (aci = cdata->_active_controls.begin(); aci != cdata->_active_controls.end(); ++aci) {
+    (*aci)->wait_pending();
   }
 }
 
@@ -487,10 +438,9 @@ update() {
                             current_thread);
 
     // Now update all the controls for next time.
-    ChannelBlend::const_iterator cbi;
-    for (cbi = cdata->_blend.begin(); cbi != cdata->_blend.end(); ++cbi) {
-      AnimControl *control = (*cbi).first;
-      control->mark_channels(frame_blend_flag);
+    ActiveControls::const_iterator aci;
+    for (aci = cdata->_active_controls.begin(); aci != cdata->_active_controls.end(); ++aci) {
+      (*aci)->mark_channels(frame_blend_flag);
     }
 
     cdata->_anim_changed = false;
@@ -508,56 +458,16 @@ bool PartBundle::
 force_update() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
+
   bool any_changed = do_update(this, cdata, nullptr, true, true, current_thread);
 
   // Now update all the controls for next time.
-  ChannelBlend::const_iterator cbi;
-  for (cbi = cdata->_blend.begin(); cbi != cdata->_blend.end(); ++cbi) {
-    AnimControl *control = (*cbi).first;
-    control->mark_channels(cdata->_frame_blend_flag);
+  ActiveControls::const_iterator aci;
+  for (aci = cdata->_active_controls.begin(); aci != cdata->_active_controls.end(); ++aci) {
+    (*aci)->mark_channels(cdata->_frame_blend_flag);
   }
 
   cdata->_anim_changed = false;
-
-  return any_changed;
-}
-
-/**
- * Recursively update this particular part and all of its descendents for the
- * current frame.  This is not really public and is not intended to be called
- * directly; it is called from the top of the tree by PartBundle::update().
- *
- * The return value is true if any part has changed, false otherwise.
- */
-bool PartBundle::
-do_update(PartBundle *root, const CycleData *cdata, PartGroup *,
-          bool parent_changed, bool anim_changed, Thread *current_thread) {
-
-  bool any_changed = PartGroup::do_update(this, cdata, this, parent_changed, anim_changed, current_thread);
-
-  LPoint3 root_pos = ((CData *)cdata)->_root_xform.get_row3(3);
-  if (r_init_ik(root_pos)) {
-    int num_iterations = 0;
-    int max_iterations = ik_max_iterations;
-    PN_stdfloat error;
-    do {
-      LPoint3 root_pos_copy(root_pos);
-      r_reverse_ik(root_pos_copy);
-      error = (root_pos_copy - root_pos).length_squared();
-
-      r_forward_ik(root_pos);
-      ++num_iterations;
-    }
-    while (!IS_NEARLY_ZERO(error) && num_iterations < max_iterations);
-
-    if (chan_cat.is_debug()) {
-      chan_cat.debug()
-        << "IK solver ran for " << num_iterations << " iterations, error="
-        << error << "\n";
-    }
-
-    r_apply_ik(((CData *)cdata)->_root_xform);
-  }
 
   return any_changed;
 }
@@ -572,39 +482,32 @@ control_activated(AnimControl *control) {
   nassertv(Thread::get_current_pipeline_stage() == 0);
   nassertv(control->get_part() == this);
 
-  CDLockedReader cdata(_cycler);
-
-  // If (and only if) our anim_blend_flag is false, then starting an animation
-  // implicitly enables it.
-  if (!cdata->_anim_blend_flag) {
-    CDWriter cdataw(_cycler, cdata);
-    do_set_control_effect(control, 1.0f, cdataw);
+  CDWriter cdata(_cycler);
+  ActiveControls::const_iterator aci;
+  aci = std::find(cdata->_active_controls.begin(), cdata->_active_controls.end(), control);
+  if (aci == cdata->_active_controls.end()) {
+    cdata->_active_controls.push_back(control);
+    cdata->_anim_changed = true;
   }
 }
 
 /**
- * Called by the AnimControl when it destructs.  This needs to remove the
- * AnimControl pointer from all pipeline stages.
+ * Called by the AnimControl whenever its stops an animation.  This is just a
+ * hook so the bundle can do something, if necessary, before the animation
+ * stopped.
  */
 void PartBundle::
-control_removed(AnimControl *control) {
+control_deactivated(AnimControl *control) {
+  nassertv(Thread::get_current_pipeline_stage() == 0);
   nassertv(control->get_part() == this);
 
-  OPEN_ITERATE_ALL_STAGES(_cycler) {
-    CDStageWriter cdata(_cycler, pipeline_stage);
-    ChannelBlend::iterator cbi = cdata->_blend.find(control);
-    if (cbi != cdata->_blend.end()) {
-      cdata->_blend.erase(cbi);
-      cdata->_anim_changed = true;
-
-      // We need to make sure that any _effective_channel pointers that point
-      // to this control are cleared.
-      if (pipeline_stage == 0) {
-        determine_effective_channels(cdata);
-      }
-    }
+  CDWriter cdata(_cycler);
+  ActiveControls::iterator aci;
+  aci = std::find(cdata->_active_controls.begin(), cdata->_active_controls.end(), control);
+  if (aci != cdata->_active_controls.end()) {
+    cdata->_active_controls.erase(aci);
+    cdata->_anim_changed = true;
   }
-  CLOSE_ITERATE_ALL_STAGES(_cycler);
 }
 
 /**
@@ -684,40 +587,7 @@ remove_node(PartBundleNode *node) {
   _nodes.erase(ni);
 }
 
-/**
- * The private implementation of set_control_effect().
- */
-void PartBundle::
-do_set_control_effect(AnimControl *control, PN_stdfloat effect, CData *cdata) {
-  nassertv(control->get_part() == this);
-
-  if (effect == 0.0f) {
-    // An effect of zero means to eliminate the control.
-    ChannelBlend::iterator cbi = cdata->_blend.find(control);
-    if (cbi != cdata->_blend.end()) {
-      cdata->_blend.erase(cbi);
-      cdata->_anim_changed = true;
-    }
-
-  } else {
-    // Otherwise we define it.
-
-    // If anim_blend_flag is false, we only allow one AnimControl at a time.
-    // Stop all of the other AnimControls.
-    if (!cdata->_anim_blend_flag) {
-      clear_and_stop_intersecting(control, cdata);
-    }
-
-    if (do_get_control_effect(control, cdata) != effect) {
-      cdata->_blend[control] = effect;
-      cdata->_anim_changed = true;
-    }
-    cdata->_last_control_set = control;
-  }
-
-  determine_effective_channels(cdata);
-}
-
+#if 0
 /**
  * The private implementation of get_control_effect().
  */
@@ -766,6 +636,7 @@ clear_and_stop_intersecting(AnimControl *control, CData *cdata) {
     determine_effective_channels(cdata);
   }
 }
+#endif
 
 /**
  * Called by the BamReader to perform any final actions needed for setting up
@@ -852,11 +723,8 @@ register_with_read_factory() {
  */
 PartBundle::CData::
 CData() {
-  _blend_type = anim_blend_type;
-  _anim_blend_flag = false;
   _frame_blend_flag = interpolate_frames;
   _root_xform = LMatrix4::ident_mat();
-  _last_control_set = nullptr;
   _anim_changed = false;
   _last_update = 0.0;
 }
@@ -866,12 +734,9 @@ CData() {
  */
 PartBundle::CData::
 CData(const PartBundle::CData &copy) :
-  _blend_type(copy._blend_type),
-  _anim_blend_flag(copy._anim_blend_flag),
   _frame_blend_flag(copy._frame_blend_flag),
   _root_xform(copy._root_xform),
-  _last_control_set(copy._last_control_set),
-  _blend(copy._blend),
+  _anim_graph(copy._anim_graph),
   _anim_changed(copy._anim_changed),
   _last_update(copy._last_update)
 {
@@ -894,8 +759,6 @@ make_copy() const {
  */
 void PartBundle::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  dg.add_uint8(_blend_type);
-  dg.add_bool(_anim_blend_flag);
   dg.add_bool(_frame_blend_flag);
   _root_xform.write_datagram(dg);
 
@@ -908,61 +771,6 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
  */
 void PartBundle::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _blend_type = (BlendType)scan.get_uint8();
-  _anim_blend_flag = scan.get_bool();
   _frame_blend_flag = scan.get_bool();
   _root_xform.read_datagram(scan);
-}
-
-/**
- *
- */
-ostream &
-operator << (ostream &out, PartBundle::BlendType blend_type) {
-  switch (blend_type) {
-    case PartBundle::BT_linear:
-      return out << "linear";
-
-    case PartBundle::BT_normalized_linear:
-      return out << "normalized_linear";
-
-    case PartBundle::BT_componentwise:
-      return out << "componentwise";
-
-    case PartBundle::BT_componentwise_quat:
-      return out << "componentwise_quat";
-  }
-
-  chan_cat->error()
-    << "Invalid BlendType value: " << (int)blend_type << "\n";
-  nassertr(false, out);
-  return out;
-}
-
-/**
- *
- */
-istream &
-operator >> (istream &in, PartBundle::BlendType &blend_type) {
-  string word;
-  in >> word;
-
-  if (cmp_nocase_uh(word, "linear") == 0) {
-    blend_type = PartBundle::BT_linear;
-
-  } else if (cmp_nocase_uh(word, "normalized_linear") == 0) {
-    blend_type = PartBundle::BT_normalized_linear;
-
-  } else if (cmp_nocase_uh(word, "componentwise") == 0) {
-    blend_type = PartBundle::BT_componentwise;
-
-  } else if (cmp_nocase_uh(word, "componentwise_quat") == 0) {
-    blend_type = PartBundle::BT_componentwise_quat;
-
-  } else {
-    chan_cat->error()
-      << "Invalid BlendType string: " << word << "\n";
-    blend_type = PartBundle::BT_linear;
-  }
-  return in;
 }

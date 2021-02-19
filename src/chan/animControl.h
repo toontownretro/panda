@@ -28,7 +28,6 @@
 
 class PartBundle;
 class AnimChannelBase;
-class MovingPartBase;
 
 /**
  * Controls the timing of a character animation.  An AnimControl object is
@@ -48,26 +47,7 @@ public:
   void fail_anim(PartBundle *part);
 
 PUBLISHED:
-  enum BlendType {
-    // The animation should be applied to the character by blending between
-    // all other animations that are playing on the character.
-    BT_average,
-    // The animation should be applied to the character through additive
-    // blending.  The animation values are added onto the character's current
-    // animation for a given frame.
-    BT_add,
-  };
-
   virtual ~AnimControl();
-
-  INLINE void set_blend_type(BlendType type);
-  INLINE BlendType get_blend_type() const;
-
-  void set_part_weight(MovingPartBase *part, PN_stdfloat weight);
-  PN_stdfloat get_part_weight(MovingPartBase *part) const;
-  void clear_part_weights();
-
-  INLINE bool is_additive() const;
 
   INLINE bool is_pending() const;
   void wait_pending();
@@ -94,16 +74,13 @@ public:
 
 protected:
   virtual void animation_activated();
+  virtual void animation_deactivated();
 
 private:
   bool _pending;
   std::string _pending_done_event;
   Mutex _pending_lock;  // protects the above two.
   ConditionVar _pending_cvar; // signals when _pending goes true.
-
-  BlendType _blend_type;
-  typedef pmap<PT(MovingPartBase), PN_stdfloat> PartWeights;
-  PartWeights _part_weights;
 
   // This is a PT(PartGroup) instead of a PT(PartBundle), just because we
   // can't include partBundle.h for circular reasons.  But it actually keeps a

@@ -15,7 +15,8 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
-    ikEffector.I ikEffector.h \
+    ikChain.h ikChain.I \
+    ikSolver.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define COMPOSITE_SOURCES \
@@ -25,7 +26,8 @@
     characterSlider.cxx \
     characterVertexSlider.cxx \
     config_char.cxx  \
-    ikEffector.cxx \
+    ikChain.cxx \
+    ikSolver.cxx \
     jointVertexTransform.cxx
 
   #define INSTALL_HEADERS \
@@ -36,7 +38,8 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
-    ikEffector.I ikEffector.h \
+    ikChain.h ikChain.I \
+    ikSolver.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define IGATESCAN all

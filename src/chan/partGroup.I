@@ -18,7 +18,8 @@
 INLINE PartGroup::
 PartGroup(const std::string &name) :
   Namable(name),
-  _children(get_class_type())
+  _children(get_class_type()),
+  _parent(nullptr)
 {
 }
 
@@ -29,8 +30,17 @@ PartGroup(const std::string &name) :
 INLINE PartGroup::
 PartGroup(const PartGroup &copy) :
   Namable(copy),
-  _children(get_class_type())
+  _children(get_class_type()),
+  _parent(nullptr)
 {
   // We don't copy children in the copy constructor.  However, copy_subgraph()
   // will do this.
+}
+
+/**
+ * Returns the parent of this PartGroup.
+ */
+INLINE PartGroup *PartGroup::
+get_parent() const {
+  return _parent;
 }

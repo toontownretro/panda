@@ -19,6 +19,7 @@
 #include "partBundle.h"
 #include "partGroup.h"
 #include "animControl.h"
+#include "ikChain.h"
 
 class Character;
 
@@ -36,6 +37,10 @@ PUBLISHED:
 PUBLISHED:
   INLINE Character *get_node(int n) const;
 
+  INLINE void add_ik_chain(IKChain *chain);
+  INLINE int get_num_ik_chains() const;
+  INLINE IKChain *get_ik_chain(int n) const;
+
 protected:
   virtual PartGroup *make_copy() const;
   virtual void add_node(PartBundleNode *node);
@@ -43,6 +48,9 @@ protected:
 
 private:
   void r_set_character(PartGroup *group, Character *character);
+
+  typedef pvector<PT(IKChain)> IKChains;
+  IKChains _ik_chains;
 
 public:
   static void register_with_read_factory();

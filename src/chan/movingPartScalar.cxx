@@ -47,7 +47,7 @@ get_blend_value(const PartBundle *root) {
 
   PartBundle::CDReader cdata(root->_cycler);
 
-  if (cdata->_blend.empty()) {
+  if (cdata->_active_controls.empty() || !cdata->_anim_graph) {
     // No channel is bound; supply the default value.
     if (restore_initial_pose) {
       _value = _default_value;
@@ -60,52 +60,8 @@ get_blend_value(const PartBundle *root) {
     channel->get_value(_effective_control->get_frame(), _value);
 
   } else {
-    // A blend of two or more values.
-    _value = 0.0f;
-    PN_stdfloat net = 0.0f;
-
-    PartBundle::ChannelBlend::const_iterator cbi;
-    for (cbi = cdata->_blend.begin(); cbi != cdata->_blend.end(); ++cbi) {
-      AnimControl *control = (*cbi).first;
-      PN_stdfloat effect = (*cbi).second;
-      nassertv(effect != 0.0f);
-
-      ChannelType *channel = nullptr;
-      int channel_index = control->get_channel_index();
-      if (channel_index >= 0 && channel_index < (int)_channels.size()) {
-        channel = DCAST(ChannelType, _channels[channel_index]);
-      }
-      if (channel != nullptr) {
-        ValueType v;
-        channel->get_value(control->get_frame(), v);
-
-        PN_stdfloat weight = effect * control->get_part_weight(this);
-
-        if (!cdata->_frame_blend_flag) {
-          // Hold the current frame until the next one is ready.
-          _value += v * weight;
-        } else {
-          // Blend between successive frames.
-          PN_stdfloat frac = (PN_stdfloat)control->get_frac();
-          _value += v * (weight * (1.0f - frac));
-
-          channel->get_value(control->get_next_frame(), v);
-          _value += v * (weight * frac);
-        }
-
-        if (!control->is_additive() && weight != 0.0f) {
-          _value /= weight;
-        }
-
-        net += weight;
-      }
-    }
-
-    if (net == 0.0f) {
-      if (restore_initial_pose) {
-        _value = _default_value;
-      }
-    }
+    // TODO: Slider anim graph?
+    _value = _default_value;
   }
 }
 

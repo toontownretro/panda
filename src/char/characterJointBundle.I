@@ -22,7 +22,8 @@
  */
 INLINE CharacterJointBundle::
 CharacterJointBundle(const CharacterJointBundle &copy) :
-  PartBundle(copy)
+  PartBundle(copy),
+  _ik_chains(copy._ik_chains)
 {
 }
 
@@ -32,4 +33,29 @@ CharacterJointBundle(const CharacterJointBundle &copy) :
 INLINE Character *CharacterJointBundle::
 get_node(int n) const {
   return DCAST(Character, PartBundle::get_node(n));
+}
+
+/**
+ * Adds an IKChain to the PartBundle.  The given chain of joints will receive
+ * inverse kinematics.
+ */
+INLINE void CharacterJointBundle::
+add_ik_chain(IKChain *chain) {
+  _ik_chains.push_back(chain);
+}
+
+/**
+ * Returns the number of IKChains on the PartBundle.
+ */
+INLINE int CharacterJointBundle::
+get_num_ik_chains() const {
+  return (int)_ik_chains.size();
+}
+
+/**
+ * Returns the nth IKChain on the PartBundle.
+ */
+INLINE IKChain *CharacterJointBundle::
+get_ik_chain(int n) const {
+  return _ik_chains[n];
 }

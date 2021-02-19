@@ -72,7 +72,7 @@ protected:
   virtual void find_bound_joints(int &joint_index, bool is_included,
                                  BitArray &bound_joints,
                                  const PartSubset &subset);
-  virtual void determine_effective_channels(const CycleData *root_cdata);
+  //virtual void determine_effective_channels(const CycleData *root_cdata);
 
   // This is the vector of all channels bound to this part.
   typedef pvector< PT(AnimChannelBase) > Channels;

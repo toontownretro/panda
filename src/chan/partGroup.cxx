@@ -41,6 +41,8 @@ PartGroup(PartGroup *parent, const std::string &name) :
   nassertv(parent != nullptr);
 
   parent->_children.push_back(this);
+
+  _parent = parent;
 }
 
 /**
@@ -83,12 +85,12 @@ copy_subgraph() const {
   Children::const_iterator ci;
   for (ci = _children.begin(); ci != _children.end(); ++ci) {
     PartGroup *child = (*ci)->copy_subgraph();
+    child->_parent = root;
     root->_children.push_back(child);
   }
 
   return root;
 }
-
 
 /**
  * Returns the number of child nodes of the group.
@@ -504,71 +506,6 @@ determine_effective_channels(const CycleData *root_cdata) {
   Children::iterator ci;
   for (ci = _children.begin(); ci != _children.end(); ++ci) {
     (*ci)->determine_effective_channels(root_cdata);
-  }
-}
-
-/**
- * Recursively initializes the joint for IK, calculating the current net
- * position and lengths.  Returns true if there were any effectors under this
- * node, false otherwise.
- */
-bool PartGroup::
-r_init_ik(const LPoint3 &parent_pos) {
-  bool has_any = false;
-  for (PartGroup *child : _children) {
-    has_any = child->r_init_ik(parent_pos) || has_any;
-  }
-  return has_any;
-}
-
-/**
- * Executes a forward IK pass on the given points (which are set up by
- * r_setup_ik_points).
- */
-void PartGroup::
-r_forward_ik(const LPoint3 &parent_pos) {
-  for (PartGroup *child : _children) {
-    child->r_forward_ik(parent_pos);
-  }
-}
-
-/**
- * Executes a reverse IK pass on the given points (which are set up by
- * r_setup_ik_points).  Returns true if there were any effectors under this
- * joint, in which case the new position of this joint is stored in out_pos.
- */
-bool PartGroup::
-r_reverse_ik(LPoint3 &parent_pos) {
-  LPoint3 effective_pos(0);
-  int num_effectors = 0;
-
-  for (PartGroup *child : _children) {
-    LPoint3 desired_pos = parent_pos;
-    if (!child->r_reverse_ik(desired_pos)) {
-      // No effectors under this joint, so it's not of interest to the reverse
-      // pass.
-      continue;
-    }
-
-    effective_pos += desired_pos;
-    ++num_effectors;
-  }
-
-  if (num_effectors == 0) {
-    return false;
-  }
-
-  parent_pos = effective_pos * (1.0 / num_effectors);
-  return true;
-}
-
-/**
- *
- */
-void PartGroup::
-r_apply_ik(const LMatrix4 &parent_net_transform) {
-  for (PartGroup *child : _children) {
-    child->r_apply_ik(parent_net_transform);
   }
 }
 

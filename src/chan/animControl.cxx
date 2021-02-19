@@ -42,7 +42,6 @@ AnimControl(const std::string &name, PartBundle *part,
 
   _pending = true;
   _anim = nullptr;
-  _blend_type = BT_average;
   _channel_index = -1;
   set_frame_rate(frame_rate);
   set_num_frames(num_frames);
@@ -105,39 +104,7 @@ fail_anim(PartBundle *part) {
  */
 AnimControl::
 ~AnimControl() {
-  get_part()->control_removed(this);
-}
-
-/**
- * Sets the amount by which the animation for the indicated part should affect
- * the character.
- */
-void AnimControl::
-set_part_weight(MovingPartBase *part, PN_stdfloat weight) {
-  _part_weights[part] = weight;
-}
-
-/**
- * Returns the amount by which the animation for the indicated part should
- * affect the character.
- */
-PN_stdfloat AnimControl::
-get_part_weight(MovingPartBase *part) const {
-  PartWeights::const_iterator pwi = _part_weights.find(part);
-  if (pwi == _part_weights.end()) {
-    // Full weight if there is no explicit weight for the part.
-    return 1.0;
-  } else {
-    return (*pwi).second;
-  }
-}
-
-/**
- * Clears all explicit part weights for the AnimControl.
- */
-void AnimControl::
-clear_part_weights() {
-  _part_weights.clear();
+  //get_part()->control_removed(this);
 }
 
 /**
@@ -247,4 +214,13 @@ mark_channels(bool frame_blend_flag) {
 void AnimControl::
 animation_activated() {
   get_part()->control_activated(this);
+}
+
+/**
+ * This is provided as a callback method for when the user calls the stop()
+ * method to stop the animation playing.
+ */
+void AnimControl::
+animation_deactivated() {
+  get_part()->control_deactivated(this);
 }

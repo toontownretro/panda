@@ -35,11 +35,14 @@ PUBLISHED:
 
   PT(AnimBundle) copy_bundle() const;
 
-  INLINE double get_base_frame_rate() const;
+  INLINE void set_base_frame_rate(PN_stdfloat fps);
+  INLINE PN_stdfloat get_base_frame_rate() const;
+
+  INLINE void set_num_frames(int num_frames);
   INLINE int get_num_frames() const;
 
-  MAKE_PROPERTY(base_frame_rate, get_base_frame_rate);
-  MAKE_PROPERTY(num_frames, get_num_frames);
+  MAKE_PROPERTY(base_frame_rate, get_base_frame_rate, set_base_frame_rate);
+  MAKE_PROPERTY(num_frames, get_num_frames, set_num_frames);
 
   virtual void output(std::ostream &out) const;
 

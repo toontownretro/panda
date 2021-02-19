@@ -124,18 +124,14 @@ do_update(PartBundle *root, const CycleData *root_cdata, PartGroup *parent,
 
     } else {
       const PartBundle::CData *cdata = (const PartBundle::CData *)root_cdata;
-      PartBundle::ChannelBlend::const_iterator bci;
-      for (bci = cdata->_blend.begin();
-           !needs_update && bci != cdata->_blend.end();
-           ++bci) {
-        AnimControl *control = (*bci).first;
 
-        AnimChannelBase *channel = nullptr;
+      PartBundle::ActiveControls::const_iterator aci;
+      for (aci = cdata->_active_controls.begin();
+           !needs_update && aci != cdata->_active_controls.end(); ++aci) {
+        AnimControl *control = *aci;
         int channel_index = control->get_channel_index();
         if (channel_index >= 0 && channel_index < (int)_channels.size()) {
-          channel = _channels[channel_index];
-        }
-        if (channel != nullptr) {
+          AnimChannelBase *channel = _channels[channel_index];
           needs_update = control->channel_has_changed(channel, cdata->_frame_blend_flag);
         }
       }
@@ -295,6 +291,7 @@ find_bound_joints(int &joint_index, bool is_included, BitArray &bound_joints,
   PartGroup::find_bound_joints(joint_index, is_included, bound_joints, subset);
 }
 
+#if 0
 /**
  * Should be called whenever the ChannelBlend values have changed, this
  * recursively updates the _effective_channel member in each part.
@@ -331,6 +328,7 @@ determine_effective_channels(const CycleData *root_cdata) {
 
   PartGroup::determine_effective_channels(root_cdata);
 }
+#endif
 
 /**
  * Writes the contents of this object to the datagram for shipping out to a

@@ -12,33 +12,6 @@
  */
 
 /**
- * Sets the blend type of the AnimControl.  This controls how the animation
- * should be applied to the character.
- */
-INLINE void AnimControl::
-set_blend_type(AnimControl::BlendType type) {
-  _blend_type = type;
-}
-
-/**
- * Returns the blend type of the AnimControl.  THis controls how the animation
- * should be applied to the character.
- */
-INLINE AnimControl::BlendType AnimControl::
-get_blend_type() const {
-  return _blend_type;
-}
-
-/**
- * Returns true if the animation should be applied to the character through
- * additive blending, false otherwise.
- */
-INLINE bool AnimControl::
-is_additive() const {
-  return _blend_type == BT_add;
-}
-
-/**
  * Returns true if the AnimControl is being bound asynchronously, and has not
  * yet finished.  If this is true, the AnimControl's interface is still
  * available and will be perfectly useful (though get_anim() might return

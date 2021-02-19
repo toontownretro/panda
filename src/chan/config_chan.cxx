@@ -31,6 +31,13 @@
 #include "partBundleNode.h"
 #include "partGroup.h"
 
+// Anim graph objects
+#include "animGraphNode.h"
+#include "animAddNode.h"
+#include "animBlendNode2D.h"
+#include "animMixNode.h"
+#include "animSampleNode.h"
+
 #include "luse.h"
 #include "dconfig.h"
 
@@ -101,12 +108,10 @@ PRC_DESC("This specifies the priority assign to an asynchronous bind "
          "model loads).  A higher number here makes the animations "
          "load sooner."));
 
-ConfigVariableInt ik_max_iterations
-("ik-max-iterations", 8,
- PRC_DESC("Set this to limit the number of iterations for the IK solver."));
-
 
 ConfigureFn(config_chan) {
+  AnimAddNode::init_type();
+  AnimBlendNode2D::init_type();
   AnimBundle::init_type();
   AnimBundleNode::init_type();
   AnimChannelBase::init_type();
@@ -116,8 +121,11 @@ ConfigureFn(config_chan) {
   AnimChannelScalarTable::init_type();
   AnimChannelScalarDynamic::init_type();
   AnimControl::init_type();
+  AnimGraphNode::init_type();
   AnimGroup::init_type();
+  AnimMixNode::init_type();
   AnimPreloadTable::init_type();
+  AnimSampleNode::init_type();
   BindAnimRequest::init_type();
   MovingPartBase::init_type();
   MovingPartMatrix::init_type();

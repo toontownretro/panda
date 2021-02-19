@@ -29,14 +29,34 @@ AnimBundle() {
 }
 
 /**
+ * Sets the ideal number of frames per second of the animation, when it is
+ * running at normal speed.  This may not be the same as the actual playing
+ * frame rate, as it might have been adjusted through set_play_rate() on the
+ * AnimControl object.  See AnimControl::get_effective_frame_rate().
+ */
+INLINE void AnimBundle::
+set_base_frame_rate(PN_stdfloat fps) {
+  _fps = fps;
+}
+
+/**
  * Returns the ideal number of frames per second of the animation, when it is
  * running at normal speed.  This may not be the same as the actual playing
  * frame rate, as it might have been adjusted through set_play_rate() on the
  * AnimControl object.  See AnimControl::get_effective_frame_rate().
  */
-INLINE double AnimBundle::
+INLINE PN_stdfloat AnimBundle::
 get_base_frame_rate() const {
   return _fps;
+}
+
+/**
+ * Sets the number of frames of animation, or 0 if the animation has no fixed
+ * number of frames.
+ */
+INLINE void AnimBundle::
+set_num_frames(int num_frames) {
+  _num_frames = num_frames;
 }
 
 /**

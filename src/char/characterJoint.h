@@ -49,11 +49,6 @@ public:
                                 Thread *current_thread);
   virtual void do_xform(const LMatrix4 &mat, const LMatrix4 &inv_mat);
 
-  bool r_init_ik(const LPoint3 &parent_pos);
-  void r_forward_ik(const LPoint3 &parent_pos);
-  bool r_reverse_ik(LPoint3 &out_pos);
-  void r_apply_ik(const LMatrix4 &parent_net_transform);
-
 PUBLISHED:
   bool add_net_transform(PandaNode *node);
   bool remove_net_transform(PandaNode *node);
@@ -67,11 +62,11 @@ PUBLISHED:
   void clear_local_transforms();
   NodePathCollection get_local_transforms();
 
-  void get_transform(LMatrix4 &transform) const;
+  virtual void get_transform(LMatrix4 &transform) const;
   INLINE const LMatrix4 &get_transform() const;
   CPT(TransformState) get_transform_state() const;
 
-  void get_net_transform(LMatrix4 &transform) const;
+  virtual void get_net_transform(LMatrix4 &transform) const;
 
   Character *get_character() const;
 
@@ -119,11 +114,6 @@ public:
   // animated position.
   LMatrix4 _skinning_matrix;
 
-  // Used by IK calculations.
-  LPoint3 _ik_pos;
-  PN_stdfloat _ik_length;
-  PN_stdfloat _ik_weight;
-
 public:
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -144,6 +134,7 @@ private:
   friend class Character;
   friend class CharacterJointBundle;
   friend class JointVertexTransform;
+  friend class IKChain;
 };
 
 #include "characterJoint.I"

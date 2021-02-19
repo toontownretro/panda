@@ -47,39 +47,26 @@ clear_anim_preload() {
 }
 
 /**
- * Defines the algorithm that is used when blending multiple frames or
- * multiple animations together, when either anim_blend_flag or
- * frame_blend_flag is set to true.
- *
- * See partBundle.h for a description of the meaning of each of the BlendType
- * values.
+ * Sets the animation graph that the character should evaluate to determine
+ * a final pose for a frame of animation.
  */
 INLINE void PartBundle::
-set_blend_type(PartBundle::BlendType bt) {
-  nassertv(Thread::get_current_pipeline_stage() == 0);
+set_anim_graph(AnimGraphNode *graph) {
   CDWriter cdata(_cycler);
-  cdata->_blend_type = bt;
+  if (cdata->_anim_graph != graph) {
+    cdata->_anim_graph = graph;
+    cdata->_anim_changed = true;
+  }
 }
 
 /**
- * Returns the algorithm that is used when blending multiple frames or
- * multiple animations together, when either anim_blend_flag or
- * frame_blend_flag is set to true.
+ * Returns the animation graph that the character should evaluate to determine
+ * a final pose for a frame of animation.
  */
-INLINE PartBundle::BlendType PartBundle::
-get_blend_type() const {
+INLINE AnimGraphNode *PartBundle::
+get_anim_graph() const {
   CDReader cdata(_cycler);
-  return cdata->_blend_type;
-}
-
-/**
- * Returns whether the character allows multiple different animations to be
- * bound simultaneously.  See set_anim_blend_flag().
- */
-INLINE bool PartBundle::
-get_anim_blend_flag() const {
-  CDReader cdata(_cycler);
-  return cdata->_anim_blend_flag;
+  return cdata->_anim_graph;
 }
 
 /**
@@ -169,36 +156,6 @@ get_node(int n) const {
   return _nodes[n];
 }
 
-
-/**
- * Sets the amount by which the character is affected by the indicated
- * AnimControl (and its associated animation).  Normally, this will only be
- * zero or one.  Zero indicates the animation does not affect the character,
- * and one means it does.
- *
- * If the _anim_blend_flag is not false (see set_anim_blend_flag()), it is
- * possible to have multiple AnimControls in effect simultaneously.  In this
- * case, the effect is a weight that indicates the relative importance of each
- * AnimControl to the final animation.
- */
-void PartBundle::
-set_control_effect(AnimControl *control, PN_stdfloat effect) {
-  nassertv(Thread::get_current_pipeline_stage() == 0);
-
-  CDWriter cdata(_cycler);
-  do_set_control_effect(control, effect, cdata);
-}
-
-/**
- * Returns the amount by which the character is affected by the indicated
- * AnimControl and its associated animation.  See set_control_effect().
- */
-INLINE PN_stdfloat PartBundle::
-get_control_effect(AnimControl *control) const {
-  CDReader cdata(_cycler);
-  return do_get_control_effect(control, cdata);
-}
-
 /**
  * Specifies the minimum amount of time, in seconds, that should elapse
  * between any two consecutive updates.  This is normally used by
@@ -207,4 +164,14 @@ get_control_effect(AnimControl *control) const {
 INLINE void PartBundle::
 set_update_delay(double delay) {
   _update_delay = delay;
+}
+
+/**
+ * Marks the animation as being changed.  This will cause the character to
+ * recompute its animation the next time it is rendered.
+ */
+INLINE void PartBundle::
+mark_anim_changed() {
+  CDWriter cdata(_cycler);
+  cdata->_anim_changed = true;
 }
