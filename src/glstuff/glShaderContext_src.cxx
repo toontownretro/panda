@@ -861,7 +861,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
 
       if (!get_sampler_texture_type(bind._desired_type, param_type)) {
         GLCAT.error()
-          << "Could not bind texture input " << param_name << "\n";
+          << "Could not bind texture input " << name_buffer << "\n";
         return;
       }
 
@@ -874,7 +874,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         if (!tail.empty()) {
           GLCAT.error()
             << "Error parsing shader input name: unexpected '"
-            << tail << "' in '" << param_name << "'\n";
+            << tail << "' in '" << name_buffer << "'\n";
           return;
         }
         _glgsg->_glUniform1i(p, _shader->_tex_spec.size());
