@@ -12,6 +12,38 @@
  */
 
 /**
+ *
+ */
+INLINE void AnimAddNode::
+set_base(AnimGraphNode *base) {
+  _base = base;
+}
+
+/**
+ *
+ */
+INLINE AnimGraphNode *AnimAddNode::
+get_base() const {
+  return _base;
+}
+
+/**
+ *
+ */
+INLINE void AnimAddNode::
+set_add(AnimGraphNode *add) {
+  _add = add;
+}
+
+/**
+ *
+ */
+INLINE AnimGraphNode *AnimAddNode::
+get_add() const {
+  return _add;
+}
+
+/**
  * Sets the weight of the addition of the additive pose onto the base pose.
  * A smaller value results in a smaller contribution of the additive pose, and
  * vice versa.

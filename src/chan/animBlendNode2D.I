@@ -19,11 +19,23 @@ void AnimBlendNode2D::
 add_input(AnimGraphNode *node, const LPoint2 &point) {
   nassertv(point[0] >= -1 && point[0] <= 1 && point[1] >= -1 && point[1] <= 1);
 
-  _inputs.push_back(node);
-  _input_points.push_back(point);
-  _input_weights.push_back(0.0f);
+  Input input;
+  input._node = node;
+  input._point = point;
+  input._weight = 0.0f;
+  _inputs.push_back(std::move(input));
 
   _has_triangles = false;
+}
+
+/**
+ * Returns the AnimGraphNode for the input at the indicated index.
+ */
+INLINE AnimGraphNode *AnimBlendNode2D::
+get_input_node(int n) const {
+  nassertr(n >= 0 && n < (int)_inputs.size(), nullptr);
+
+  return _inputs[n]._node;
 }
 
 /**
@@ -31,9 +43,9 @@ add_input(AnimGraphNode *node, const LPoint2 &point) {
  */
 LPoint2 AnimBlendNode2D::
 get_input_point(int n) const {
-  nassertr(n >= 0 && n < (int)_input_points.size(), LPoint2());
+  nassertr(n >= 0 && n < (int)_inputs.size(), LPoint2());
 
-  return _input_points[n];
+  return _inputs[n]._point;
 }
 
 /**

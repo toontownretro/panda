@@ -38,8 +38,8 @@ build_triangles() {
   _triangles.clear();
 
   TriangulatorDelaunay triangles;
-  for (size_t i = 0; i < _input_points.size(); i++) {
-    triangles.add_point(_input_points[i]);
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    triangles.add_point(_inputs[i]._point);
   }
   triangles.triangulate();
 
@@ -60,7 +60,7 @@ build_triangles() {
  */
 void AnimBlendNode2D::
 compute_weights() {
-  if (_input_points.size() == 0) {
+  if (_inputs.size() == 0) {
     return;
   }
 
@@ -69,9 +69,9 @@ compute_weights() {
   }
 
   // Zero out all of the control weights to start.
-  vector_stdfloat::iterator ci;
-  for (ci = _input_weights.begin(); ci != _input_weights.end(); ++ci) {
-    (*ci) = 0.0f;
+  Inputs::iterator ci;
+  for (ci = _inputs.begin(); ci != _inputs.end(); ++ci) {
+    (*ci)._weight = 0.0f;
   }
 
   LPoint2 best_point;
@@ -81,9 +81,9 @@ compute_weights() {
 
   for (int i = 0; i < (int)_triangles.size(); i++) {
     LPoint2 points[3];
-    points[0] = _input_points[_triangles[i].a];
-    points[1] = _input_points[_triangles[i].b];
-    points[2] = _input_points[_triangles[i].c];
+    points[0] = _inputs[_triangles[i].a]._point;
+    points[1] = _inputs[_triangles[i].b]._point;
+    points[2] = _inputs[_triangles[i].c]._point;
 
     if (point_in_triangle(points[0], points[1], points[2], _input_coord)) {
       triangle = i;
@@ -122,16 +122,16 @@ compute_weights() {
   _active_tri = &_triangles[triangle];
 
   // Now apply the blend weights to the three controls in effect.
-  _input_weights[_triangles[triangle].a] = blend_weights[0];
-  _input_weights[_triangles[triangle].b] = blend_weights[1];
-  _input_weights[_triangles[triangle].c] = blend_weights[2];
+  _inputs[_triangles[triangle].a]._weight = blend_weights[0];
+  _inputs[_triangles[triangle].b]._weight = blend_weights[1];
+  _inputs[_triangles[triangle].c]._weight = blend_weights[2];
 }
 
 /**
  *
  */
 void AnimBlendNode2D::
-evaluate(MovingPartMatrix *part, bool frame_blend_flag) {
+evaluate(AnimGraphEvalContext &context) {
   if (_input_coord_changed || !_has_triangles) {
     compute_weights();
     _input_coord_changed = false;
@@ -142,73 +142,70 @@ evaluate(MovingPartMatrix *part, bool frame_blend_flag) {
     return;
   }
 
-  AnimGraphNode *i0 = _inputs[_active_tri->a];
-  AnimGraphNode *i1 = _inputs[_active_tri->b];
-  AnimGraphNode *i2 = _inputs[_active_tri->c];
+  AnimGraphNode *i0 = _inputs[_active_tri->a]._node;
+  AnimGraphNode *i1 = _inputs[_active_tri->b]._node;
+  AnimGraphNode *i2 = _inputs[_active_tri->c]._node;
 
-  PN_stdfloat w0 = _input_weights[_active_tri->a];
-  PN_stdfloat w1 = _input_weights[_active_tri->b];
-  PN_stdfloat w2 = _input_weights[_active_tri->c];
+  PN_stdfloat w0 = _inputs[_active_tri->a]._weight;
+  PN_stdfloat w1 = _inputs[_active_tri->b]._weight;
+  PN_stdfloat w2 = _inputs[_active_tri->c]._weight;
+
+  AnimGraphEvalContext i0_ctx(context);
+  AnimGraphEvalContext i1_ctx(context);
+  AnimGraphEvalContext i2_ctx(context);
 
   if (w0 != 0.0f) {
-    i0->evaluate(part, frame_blend_flag);
+    i0->evaluate(i0_ctx);
   }
 
   if (w1 != 0.0f) {
-    i1->evaluate(part, frame_blend_flag);
+    i1->evaluate(i1_ctx);
   }
 
   if (w2 != 0.0f) {
-    i2->evaluate(part, frame_blend_flag);
+    i2->evaluate(i2_ctx);
   }
 
   if (w0 == 1.0f) {
-    _position = i0->get_position();
-    _rotation = i0->get_rotation();
-    _scale = i0->get_scale();
-    _shear = i0->get_shear();
+    context = std::move(i0_ctx);
 
   } else if (w1 == 1.0f) {
-    _position = i1->get_position();
-    _rotation = i1->get_rotation();
-    _scale = i1->get_scale();
-    _shear = i1->get_shear();
+    context = std::move(i1_ctx);
 
   } else if (w2 == 1.0f) {
-    _position = i2->get_position();
-    _rotation = i2->get_rotation();
-    _scale = i2->get_scale();
-    _shear = i2->get_shear();
+    context = std::move(i2_ctx);
 
   } else {
-    _position.set(0, 0, 0);
-    _rotation.set(0, 0, 0, 0);
-    _scale.set(0, 0, 0);
-    _shear.set(0, 0, 0);
+    for (size_t i = 0; i < context._joints.size(); i++) {
+      JointTransform &joint = context._joints[i];
+      JointTransform &a_joint = i0_ctx._joints[i];
+      JointTransform &b_joint = i1_ctx._joints[i];
+      JointTransform &c_joint = i2_ctx._joints[i];
 
-    if (w0 != 0.0f) {
-      _position += i0->get_position() * w0;
-      _scale += i0->get_scale() * w0;
-      _shear += i0->get_shear() * w0;
-    }
-    if (w1 != 0.0f) {
-      _position += i1->get_position() * w1;
-      _scale += i1->get_scale() * w1;
-      _shear += i1->get_shear() * w1;
-    }
-    if (w2 != 0.0f) {
-      _position += i2->get_position() * w2;
-      _scale += i2->get_scale() * w2;
-      _shear += i2->get_shear() * w2;
-    }
+      if (w0 != 0.0f) {
+        joint._position += a_joint._position * w0;
+        joint._scale += a_joint._scale * w0;
+        joint._shear += a_joint._shear * w0;
+      }
+      if (w1 != 0.0f) {
+        joint._position += b_joint._position * w1;
+        joint._scale += b_joint._scale * w1;
+        joint._shear += b_joint._shear * w1;
+      }
+      if (w2 != 0.0f) {
+        joint._position += c_joint._position * w2;
+        joint._scale += c_joint._scale * w2;
+        joint._shear += c_joint._shear * w2;
+      }
 
-    if (w1 < 0.001f) {
-      // On diagonal.
-      LQuaternion::blend(i0->get_rotation(), i2->get_rotation(), w2 / (w0 + w2), _rotation);
-    } else {
-      LQuaternion q;
-      LQuaternion::blend(i0->get_rotation(), i1->get_rotation(), w1 / (w0 + w1), q);
-      LQuaternion::blend(q, i2->get_rotation(), w2, _rotation);
+      if (w1 < 0.001f) {
+        // On diagonal.
+        LQuaternion::blend(a_joint._rotation, c_joint._rotation, w2 / (w0 + w2), joint._rotation);
+      } else {
+        LQuaternion q;
+        LQuaternion::blend(a_joint._rotation, b_joint._rotation, w1 / (w0 + w1), q);
+        LQuaternion::blend(q, c_joint._rotation, w2, joint._rotation);
+      }
     }
   }
 }

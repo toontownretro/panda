@@ -27,6 +27,7 @@
     animMixNode.I animMixNode.h \
     animPreloadTable.I animPreloadTable.h \
     animSampleNode.I animSampleNode.h \
+    animStateMachine.I animStateMachine.h \
     auto_bind.h  \
     bindAnimRequest.I bindAnimRequest.h \
     config_chan.h \
@@ -59,6 +60,7 @@
     animMixNode.cxx \
     animPreloadTable.cxx \
     animSampleNode.cxx \
+    animStateMachine.cxx \
     auto_bind.cxx  \
     bindAnimRequest.cxx \
     config_chan.cxx \
@@ -90,6 +92,7 @@
     animMixNode.I animMixNode.h \
     animPreloadTable.I animPreloadTable.h \
     animSampleNode.I animSampleNode.h \
+    animStateMachine.I animStateMachine.h \
     auto_bind.h  \
     bindAnimRequest.I bindAnimRequest.h \
     config_chan.h \

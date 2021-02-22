@@ -15,8 +15,6 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
-    ikChain.h ikChain.I \
-    ikSolver.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define COMPOSITE_SOURCES \
@@ -38,8 +36,6 @@
     characterSlider.h \
     characterVertexSlider.I characterVertexSlider.h \
     config_char.h \
-    ikChain.h ikChain.I \
-    ikSolver.h \
     jointVertexTransform.I jointVertexTransform.h
 
   #define IGATESCAN all

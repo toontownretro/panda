@@ -6,7 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file animGraphNode.I
+ * @file animIKLockNode.I
  * @author lachbr
- * @date 2021-02-18
+ * @date 2021-02-21
  */

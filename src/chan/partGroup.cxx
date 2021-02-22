@@ -39,9 +39,7 @@ PartGroup(PartGroup *parent, const std::string &name) :
   _children(get_class_type())
 {
   nassertv(parent != nullptr);
-
   parent->_children.push_back(this);
-
   _parent = parent;
 }
 
@@ -85,8 +83,8 @@ copy_subgraph() const {
   Children::const_iterator ci;
   for (ci = _children.begin(); ci != _children.end(); ++ci) {
     PartGroup *child = (*ci)->copy_subgraph();
-    child->_parent = root;
     root->_children.push_back(child);
+    child->_parent = root;
   }
 
   return root;
@@ -629,6 +627,7 @@ find_bound_joints(int &joint_index, bool is_included, BitArray &bound_joints,
 void PartGroup::
 write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
+  manager->write_pointer(me, _parent);
   me.add_uint16(_children.size());
   for (size_t i = 0; i < _children.size(); i++) {
     manager->write_pointer(me, _children[i]);
@@ -651,6 +650,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     mat.read_datagram(scan);
   }
 
+  manager->read_pointer(scan);
+
   int num_children = scan.get_uint16();
   _children.reserve(num_children);
   for (int i = 0; i < num_children; i++) {
@@ -666,6 +667,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 int PartGroup::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
+
+  _parent = DCAST(PartGroup, p_list[pi++]);
 
   Children::iterator ci;
   for (ci = _children.begin(); ci != _children.end(); ++ci) {

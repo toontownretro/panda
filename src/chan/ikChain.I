@@ -126,7 +126,7 @@ get_pad() const {
 /**
  * Returns the foot/hand joint.
  */
-INLINE CharacterJoint *IKChain::
+INLINE MovingPartMatrix *IKChain::
 get_foot() const {
   return _foot;
 }
@@ -134,7 +134,7 @@ get_foot() const {
 /**
  * Returns the knee/elbow joint.
  */
-INLINE CharacterJoint *IKChain::
+INLINE MovingPartMatrix *IKChain::
 get_knee() const {
   return _knee;
 }
@@ -142,7 +142,7 @@ get_knee() const {
 /**
  * Returns the hip/shoulder joint.
  */
-INLINE CharacterJoint *IKChain::
+INLINE MovingPartMatrix *IKChain::
 get_hip() const {
   return _hip;
 }

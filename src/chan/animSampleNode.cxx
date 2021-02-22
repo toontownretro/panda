@@ -33,14 +33,6 @@ AnimSampleNode(const std::string &name) :
 }
 
 /**
- *
- */
-int AnimSampleNode::
-get_max_inputs() const {
-  return 0;
-}
-
-/**
  * Runs the entire animation from beginning to end and stops.
  */
 void AnimSampleNode::
@@ -132,87 +124,67 @@ set_play_rate(double play_rate) {
  *
  */
 void AnimSampleNode::
-wait_pending() {
-  DELEGATE_TO_CONTROL(wait_pending());
-}
-
-/**
- *
- */
-void AnimSampleNode::
-mark_channels(bool frame_blend_flag) {
-  DELEGATE_TO_CONTROL(mark_channels(frame_blend_flag));
-}
-
-/**
- *
- */
-bool AnimSampleNode::
-channel_has_changed(AnimChannelBase *chan, bool frame_blend_flag) const {
-  if (_control != nullptr) {
-    return _control->channel_has_changed(chan, frame_blend_flag);
-  }
-
-  return false;
-}
-
-/**
- *
- */
-void AnimSampleNode::
-evaluate(MovingPartMatrix *part, bool frame_blend_flag) {
+evaluate(AnimGraphEvalContext &context) {
   nassertv(_control != nullptr);
 
-  MovingPartMatrix::ChannelType *channel = nullptr;
-  int channel_index = _control->get_channel_index();
-  if (channel_index >= 0 && channel_index < part->get_max_bound()) {
-    channel = DCAST(MovingPartMatrix::ChannelType, part->get_bound(channel_index));
-  }
-
-  if (channel == nullptr) {
-    return;
-  }
+  bool frame_blend_flag = context._frame_blend;
 
   int frame = _control->get_frame();
 
   LPoint3 ipos;
   LVector3 iscale, ishear;
   LQuaternion iquat;
-  channel->get_pos(frame, ipos);
-  channel->get_quat(frame, iquat);
-  channel->get_scale(frame, iscale);
-  channel->get_shear(frame, ishear);
 
-  if (!frame_blend_flag) {
-    // Hold the current frame until the next one is ready.
-    _position = ipos;
-    _rotation = iquat;
-    _scale = iscale;
-    _shear = ishear;
+  for (size_t i = 0; i < context._joints.size(); i++) {
+    JointTransform &joint = context._joints[i];
+    MovingPartMatrix *part = context._parts[i];
 
-  } else {
-    // Frame blending is enabled.  Need to blend between successive frames.
+    MovingPartMatrix::ChannelType *channel = nullptr;
+    int channel_index = _control->get_channel_index();
+    if (channel_index >= 0 && channel_index < part->get_max_bound()) {
+      channel = DCAST(MovingPartMatrix::ChannelType, part->get_bound(channel_index));
+    }
 
-    PN_stdfloat frac = (PN_stdfloat)_control->get_frac();
-    PN_stdfloat e0 = 1.0f - frac;
+    if (channel == nullptr) {
+      continue;
+    }
 
-    _position = ipos * e0;
-    _scale = iscale * e0;
-    _shear = ishear * e0;
+    channel->get_pos(frame, ipos);
+    channel->get_quat(frame, iquat);
+    channel->get_scale(frame, iscale);
+    channel->get_shear(frame, ishear);
 
-    LQuaternion next_quat;
-    int next_frame = _control->get_next_frame();
-    channel->get_pos(next_frame, ipos);
-    channel->get_quat(next_frame, next_quat);
-    channel->get_scale(next_frame, iscale);
-    channel->get_shear(next_frame, ishear);
+    if (!frame_blend_flag) {
+      // Hold the current frame until the next one is ready.
+      joint._position = ipos;
+      joint._rotation = iquat;
+      joint._scale = iscale;
+      joint._shear = ishear;
 
-    PN_stdfloat e1 = frac;
+    } else {
+      // Frame blending is enabled.  Need to blend between successive frames.
 
-    _position += ipos * e1;
-    _scale += iscale * e1;
-    _shear += ishear * e1;
+      PN_stdfloat frac = (PN_stdfloat)_control->get_frac();
+      PN_stdfloat e0 = 1.0f - frac;
 
-    LQuaternion::blend(iquat, next_quat, frac, _rotation);
+      joint._position = ipos * e0;
+      joint._scale = iscale * e0;
+      joint._shear = ishear * e0;
+
+      LQuaternion next_quat;
+      int next_frame = _control->get_next_frame();
+      channel->get_pos(next_frame, ipos);
+      channel->get_quat(next_frame, next_quat);
+      channel->get_scale(next_frame, iscale);
+      channel->get_shear(next_frame, ishear);
+
+      PN_stdfloat e1 = frac;
+
+      joint._position += ipos * e1;
+      joint._scale += iscale * e1;
+      joint._shear += ishear * e1;
+
+      LQuaternion::blend(iquat, next_quat, frac, joint._rotation);
+    }
   }
 }

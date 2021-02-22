@@ -24,15 +24,21 @@ class EXPCL_PANDA_CHAN AnimMixNode final : public AnimGraphNode {
 PUBLISHED:
   AnimMixNode(const std::string &name);
 
+  INLINE void set_a(AnimGraphNode *a);
+  INLINE AnimGraphNode *get_a() const;
+
+  INLINE void set_b(AnimGraphNode *b);
+  INLINE AnimGraphNode *get_b() const;
+
   INLINE void set_alpha(PN_stdfloat alpha);
   INLINE PN_stdfloat get_alpha() const;
 
-  virtual int get_max_inputs() const override;
-
 public:
-  virtual void evaluate(MovingPartMatrix *part, bool frame_blend_flag) override;
+  virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
+  PT(AnimGraphNode) _a;
+  PT(AnimGraphNode) _b;
   PN_stdfloat _alpha;
 
 public:

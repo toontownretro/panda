@@ -29,6 +29,7 @@ PUBLISHED:
   void build_triangles();
 
   INLINE void add_input(AnimGraphNode *input, const LPoint2 &point);
+  INLINE AnimGraphNode *get_input_node(int n) const;
   INLINE LPoint2 get_input_point(int n) const;
 
   void compute_weights();
@@ -37,7 +38,7 @@ PUBLISHED:
   INLINE void set_input_y(PN_stdfloat y);
 
 public:
-  virtual void evaluate(MovingPartMatrix *part, bool frame_blend_flag) override;
+  virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
   void blend_triangle(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c,
@@ -60,10 +61,14 @@ private:
   typedef pvector<Triangle> Triangles;
   Triangles _triangles;
 
-  typedef pvector<LPoint2> Points;
-  Points _input_points;
-
-  vector_stdfloat _input_weights;
+  class Input {
+  public:
+    PT(AnimGraphNode) _node;
+    LPoint2 _point;
+    PN_stdfloat _weight;
+  };
+  typedef pvector<Input> Inputs;
+  Inputs _inputs;
 
   Triangle *_active_tri;
 

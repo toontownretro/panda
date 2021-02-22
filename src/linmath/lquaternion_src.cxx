@@ -222,6 +222,34 @@ get_hpr(CoordinateSystem cs) const {
 }
 
 /**
+ *
+ */
+FLOATNAME(LQuaternion) FLOATNAME(LQuaternion)::
+find_between_normals(const FLOATNAME(LVecBase3) &a, const FLOATNAME(LVecBase3) &b) {
+  const FLOATTYPE norm_ab = 1.0f;
+  FLOATTYPE w = norm_ab + a.dot(b);
+
+  FLOATNAME(LQuaternion) quat;
+
+  if (w >= 1e-6f * norm_ab) {
+    quat.set(a[1] * b[2] - a[2] * b[1],
+             a[2] * b[0] - a[0] * b[2],
+             a[0] * b[1] - a[1] * b[0],
+             w);
+  } else {
+    // A and B in opposite directions.
+    w = 0.0f;
+    quat = std::abs(a[0]) > std::abs(a[1])
+           ? FLOATNAME(LQuaternion)(-a[2], 0.0f, a[0], w)
+           : FLOATNAME(LQuaternion)(0.0f, -a[2], a[1], w);
+  }
+
+  quat.normalize();
+  return quat;
+
+}
+
+/**
  * Makes sure this quaternion is within 180 degrees of the given quaternion.
  * If not, reverses this quaternion.
  */

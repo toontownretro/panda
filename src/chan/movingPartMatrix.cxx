@@ -75,11 +75,11 @@ get_blend_value(const PartBundle *root) {
 
   } else {
     // A blend of two or more values.
-    AnimGraphNode *graph = cdata->_anim_graph;
-    graph->evaluate(this, cdata->_frame_blend_flag);
+    //AnimGraphNode *graph = cdata->_anim_graph;
+    //graph->evaluate(this, cdata->_frame_blend_flag);
 
-    _value = LMatrix4::scale_shear_mat(graph->get_scale(), graph->get_shear()) * graph->get_rotation();
-    _value.set_row(3, graph->get_position());
+    //_value = LMatrix4::scale_shear_mat(graph->get_scale(), graph->get_shear()) * graph->get_rotation();
+    //_value.set_row(3, graph->get_position());
   }
 }
 

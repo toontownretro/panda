@@ -28,6 +28,7 @@
 #include "configVariableEnum.h"
 #include "loaderOptions.h"
 #include "bindAnimRequest.h"
+#include "movingPartMatrix.h"
 
 #include <algorithm>
 
@@ -416,6 +417,17 @@ release_joint(const string &joint_name) {
   return child->clear_forced_channel();
 }
 
+void
+r_build_joints(pvector<MovingPartMatrix *> &joints, PartGroup *group) {
+  if (group->is_character_joint()) {
+    joints.push_back((MovingPartMatrix *)group);
+  }
+
+  for (int i = 0; i < group->get_num_children(); i++) {
+    r_build_joints(joints, group->get_child(i));
+  }
+}
+
 /**
  * Updates all the parts in the bundle to reflect the data for the current
  * frame (as set in each of the AnimControls).
@@ -427,6 +439,11 @@ bool PartBundle::
 update() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
+
+  if (cdata->_anim_graph == nullptr) {
+    return false;
+  }
+
   bool any_changed = false;
 
   double now = ClockObject::get_global_clock()->get_frame_time(current_thread);
@@ -434,8 +451,25 @@ update() {
     bool anim_changed = cdata->_anim_changed;
     bool frame_blend_flag = cdata->_frame_blend_flag;
 
-    any_changed = do_update(this, cdata, nullptr, false, anim_changed,
-                            current_thread);
+    pvector<MovingPartMatrix *> joints;
+    joints.reserve(128);
+    r_build_joints(joints, this);
+
+    AnimGraphEvalContext context(joints.data(), (int)joints.size(), frame_blend_flag);
+    cdata->_anim_graph->evaluate(context);
+
+    for (size_t i = 0; i < joints.size(); i++) {
+      MovingPartMatrix *part = joints[i];
+      JointTransform &joint = context._joints[i];
+      part->_value = LMatrix4::scale_shear_mat(joint._scale, joint._shear) * joint._rotation;
+      part->_value.set_row(3, joint._position);
+      part->update_internals(this, part->get_parent(), true, true, current_thread);
+    }
+
+    any_changed = true;
+
+    //any_changed = do_update(this, cdata, nullptr, false, anim_changed,
+    //                        current_thread);
 
     // Now update all the controls for next time.
     ActiveControls::const_iterator aci;
@@ -459,7 +493,28 @@ force_update() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
 
-  bool any_changed = do_update(this, cdata, nullptr, true, true, current_thread);
+  if (cdata->_anim_graph == nullptr) {
+    return false;
+  }
+
+  pvector<MovingPartMatrix *> joints;
+  joints.reserve(128);
+  r_build_joints(joints, this);
+
+  AnimGraphEvalContext context(joints.data(), (int)joints.size(), cdata->_frame_blend_flag);
+  cdata->_anim_graph->evaluate(context);
+
+  for (size_t i = 0; i < joints.size(); i++) {
+    MovingPartMatrix *part = joints[i];
+    JointTransform &joint = context._joints[i];
+    part->_value = LMatrix4::scale_shear_mat(joint._scale, joint._shear) * joint._rotation;
+    part->_value.set_row(3, joint._position);
+    part->update_internals(this, part->get_parent(), true, true, current_thread);
+  }
+
+  bool any_changed = true;
+
+  //bool any_changed = do_update(this, cdata, nullptr, true, true, current_thread);
 
   // Now update all the controls for next time.
   ActiveControls::const_iterator aci;

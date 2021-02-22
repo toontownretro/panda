@@ -78,6 +78,9 @@ PUBLISHED:
   void set_hpr(const FLOATNAME(LVecBase3) &hpr, CoordinateSystem cs = CS_default);
   FLOATNAME(LVecBase3) get_hpr(CoordinateSystem cs = CS_default) const;
 
+  static FLOATNAME(LQuaternion) find_between_normals(const FLOATNAME(LVecBase3) &axis1,
+                                                     const FLOATNAME(LVecBase3) &axis2);
+
   static void align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
                     FLOATNAME(LQuaternion) &qt);
   static void blend(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,

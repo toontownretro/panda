@@ -12,6 +12,38 @@
  */
 
 /**
+ * Sets the first input.
+ */
+INLINE void AnimMixNode::
+set_a(AnimGraphNode *a) {
+  _a = a;
+}
+
+/**
+ * Returns the first input.
+ */
+INLINE AnimGraphNode *AnimMixNode::
+get_a() const {
+  return _a;
+}
+
+/**
+ * Sets the second input.
+ */
+INLINE void AnimMixNode::
+set_b(AnimGraphNode *b) {
+  _b = b;
+}
+
+/**
+ * Returns the second input.
+ */
+INLINE AnimGraphNode *AnimMixNode::
+get_b() const {
+  return _b;
+}
+
+/**
  * Sets the mixing value.  0.0 is fully input 1, 1.0 is fully input 2.
  */
 INLINE void AnimMixNode::

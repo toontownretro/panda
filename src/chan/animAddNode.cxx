@@ -27,42 +27,34 @@ AnimAddNode(const std::string &name) :
 /**
  *
  */
-int AnimAddNode::
-get_max_inputs() const {
-  return 2;
-}
-
-/**
- *
- */
 void AnimAddNode::
-evaluate(MovingPartMatrix *part, bool frame_blend_flag) {
-  nassertv(get_num_inputs() == 2);
+evaluate(AnimGraphEvalContext &context) {
+  nassertv(_base != nullptr && _add != nullptr);
 
-  if (_alpha == 0.0f) {
+  if (_alpha <= 0.001f) {
     // Not doing any adding.  Fast path.
-    AnimGraphNode *base = _inputs[0];
-
-    _position = base->get_position();
-    _rotation = base->get_rotation();
-    _scale = base->get_scale();
-    _shear = base->get_shear();
+    _base->evaluate(context);
 
   } else {
-    AnimGraphNode *base = _inputs[0];
-    base->evaluate(part, frame_blend_flag);
+    AnimGraphEvalContext base_ctx(context);
+    _base->evaluate(base_ctx);
 
-    AnimGraphNode *layer = _inputs[1];
-    layer->evaluate(part, frame_blend_flag);
+    AnimGraphEvalContext add_ctx(context);
+    _add->evaluate(add_ctx);
 
-    _position = base->get_position() + (layer->get_position() * _alpha);
+    for (size_t i = 0; i < context._joints.size(); i++) {
+      JointTransform &joint = context._joints[i];
+      JointTransform &base_joint = base_ctx._joints[i];
+      JointTransform &add_joint = add_ctx._joints[i];
 
-    LQuaternion add_quat = LQuaternion::ident_quat();
-    LQuaternion::blend(add_quat, layer->get_rotation(), _alpha, add_quat);
-    _rotation = base->get_rotation() * add_quat;
+      joint._position = base_joint._position + (add_joint._position * _alpha);
+      LQuaternion add_quat = LQuaternion::ident_quat();
+      LQuaternion::blend(add_quat, add_joint._rotation, _alpha, add_quat);
+      joint._rotation = base_joint._rotation * add_quat;
 
-    // Not adding scale or shear.
-    _shear = base->get_shear();
-    _scale = base->get_scale();
+      // Not adding scale or shear.
+      joint._scale = base_joint._scale;
+      joint._shear = base_joint._shear;
+    }
   }
 }

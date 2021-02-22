@@ -19,7 +19,7 @@
 #include "namable.h"
 #include "nodePath.h"
 
-class CharacterJoint;
+class MovingPartMatrix;
 
 /**
  * This class represents a chain of joints that should receive inverse kinematics.
@@ -27,9 +27,9 @@ class CharacterJoint;
  * Currently, this only supports a hip-knee-foot set up as it is easy to
  * compute and the most common use of IK in a video game.
  */
-class EXPCL_PANDA_CHAR IKChain : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_CHAN IKChain : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
-  IKChain(const std::string &name, CharacterJoint *foot);
+  IKChain(const std::string &name, MovingPartMatrix *foot);
 
   bool solve_ik();
 
@@ -51,17 +51,17 @@ PUBLISHED:
   INLINE void set_pad(PN_stdfloat pad);
   INLINE PN_stdfloat get_pad() const;
 
-  INLINE CharacterJoint *get_foot() const;
-  INLINE CharacterJoint *get_knee() const;
-  INLINE CharacterJoint *get_hip() const;
+  INLINE MovingPartMatrix *get_foot() const;
+  INLINE MovingPartMatrix *get_knee() const;
+  INLINE MovingPartMatrix *get_hip() const;
 
 private:
   INLINE IKChain();
 
 private:
-  CharacterJoint *_foot;
-  CharacterJoint *_knee;
-  CharacterJoint *_hip;
+  MovingPartMatrix *_foot;
+  MovingPartMatrix *_knee;
+  MovingPartMatrix *_hip;
 
   // NodePath that feeds the IK solver the desired foot placement location.
   NodePath _foot_locator;

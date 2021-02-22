@@ -14,7 +14,7 @@
 #include "ikChain.h"
 #include "partGroup.h"
 #include "config_char.h"
-#include "characterJoint.h"
+#include "movingPartMatrix.h"
 
 TypeHandle IKChain::_type_handle;
 
@@ -22,12 +22,12 @@ TypeHandle IKChain::_type_handle;
  *
  */
 IKChain::
-IKChain(const std::string &name, CharacterJoint *foot) :
+IKChain(const std::string &name, MovingPartMatrix *foot) :
   Namable(name) {
 
   _foot = foot;
-  _knee = (CharacterJoint *)_foot->get_parent();
-  _hip = (CharacterJoint *)_knee->get_parent();
+  _knee = (MovingPartMatrix *)_foot->get_parent();
+  _hip = (MovingPartMatrix *)_knee->get_parent();
 
   _height = 0.0;
   _floor = 0.0;
@@ -79,9 +79,9 @@ int IKChain::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
 
-  _hip = DCAST(CharacterJoint, p_list[pi++]);
-  _knee = DCAST(CharacterJoint, p_list[pi++]);
-  _foot = DCAST(CharacterJoint, p_list[pi++]);
+  _hip = DCAST(MovingPartMatrix, p_list[pi++]);
+  _knee = DCAST(MovingPartMatrix, p_list[pi++]);
+  _foot = DCAST(MovingPartMatrix, p_list[pi++]);
 
   return pi;
 }

@@ -26,15 +26,21 @@ class EXPCL_PANDA_CHAN AnimAddNode final : public AnimGraphNode {
 PUBLISHED:
   AnimAddNode(const std::string &name);
 
+  INLINE void set_base(AnimGraphNode *base);
+  INLINE AnimGraphNode *get_base() const;
+
+  INLINE void set_add(AnimGraphNode *add);
+  INLINE AnimGraphNode *get_add() const;
+
   INLINE void set_alpha(PN_stdfloat alpha);
   INLINE PN_stdfloat get_alpha() const;
 
-  virtual int get_max_inputs() const override;
-
 public:
-  virtual void evaluate(MovingPartMatrix *part, bool frame_blend_flag) override;
+  virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
+  PT(AnimGraphNode) _base;
+  PT(AnimGraphNode) _add;
   PN_stdfloat _alpha;
 
 public:

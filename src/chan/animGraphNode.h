@@ -23,6 +23,77 @@
 
 class MovingPartMatrix;
 class AnimChannelBase;
+class PartBundle;
+
+class JointTransform {
+public:
+  JointTransform() = default;
+  JointTransform(const JointTransform &copy) :
+    _position(copy._position),
+    _rotation(copy._rotation),
+    _scale(copy._scale),
+    _shear(copy._shear)
+  {
+  }
+
+  JointTransform(JointTransform &&other) :
+    _position(std::move(other._position)),
+    _rotation(std::move(other._rotation)),
+    _scale(std::move(other._scale)),
+    _shear(std::move(other._shear))
+  {
+  }
+
+  void operator = (JointTransform &&other) {
+    _position = std::move(other._position);
+    _rotation = std::move(other._rotation);
+    _scale = std::move(other._scale);
+    _shear = std::move(other._shear);
+  }
+
+  LVector3 _position;
+  LQuaternion _rotation;
+  LVector3 _scale;
+  LVector3 _shear;
+};
+
+class AnimGraphEvalContext {
+public:
+  AnimGraphEvalContext(MovingPartMatrix **parts, int num_parts,
+                       bool frame_blend_flag) {
+    _joints.resize(num_parts);
+    _parts = parts;
+    _frame_blend = frame_blend_flag;
+  }
+
+  AnimGraphEvalContext(const AnimGraphEvalContext &copy) :
+    _frame_blend(copy._frame_blend),
+    _parts(copy._parts)
+  {
+    _joints.resize(copy._joints.size());
+  }
+
+  AnimGraphEvalContext(AnimGraphEvalContext &&other) :
+    _frame_blend(std::move(other._frame_blend)),
+    _joints(std::move(other._joints)),
+    _parts(std::move(other._parts))
+  {
+  }
+
+  void operator = (AnimGraphEvalContext &&other) {
+    _frame_blend = std::move(other._frame_blend);
+    _joints = std::move(other._joints);
+    _parts = std::move(other._parts);
+  }
+
+  void mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat c);
+
+  typedef pvector<JointTransform> JointTransforms;
+  JointTransforms _joints;
+
+  bool _frame_blend;
+  MovingPartMatrix **_parts;
+};
 
 /**
  * The fundamental base class for all nodes in the animation graph.  Each node
@@ -32,45 +103,8 @@ class EXPCL_PANDA_CHAN AnimGraphNode : public TypedWritableReferenceCount, publi
 PUBLISHED:
   AnimGraphNode(const std::string &name);
 
-  INLINE void add_input(AnimGraphNode *input);
-  INLINE int get_num_inputs() const;
-  INLINE AnimGraphNode *get_input(int n) const;
-
-  INLINE const LPoint3 &get_position() const;
-  INLINE const LQuaternion &get_rotation() const;
-  INLINE const LVector3 &get_scale() const;
-  INLINE const LVector3 &get_shear() const;
-
-  virtual int get_max_inputs() const;
-
-  // Replication of AnimControl interfaces that simply call into all the
-  // inputs.  When an AnimSampleNode is reached, actually calls the identical
-  // AnimControl method.
-  virtual void play();
-  virtual void play(double from, double to);
-  virtual void loop(bool restart);
-  virtual void loop(bool restart, double from, double to);
-  virtual void pingpong(bool restart);
-  virtual void pingpong(bool restart, double from, double to);
-  virtual void stop();
-  virtual void pose(double frame);
-  virtual void set_play_rate(double play_rate);
-
 public:
-  virtual void wait_pending();
-  virtual void mark_channels(bool frame_blend_flag);
-  virtual bool channel_has_changed(AnimChannelBase *channel, bool frame_blend_flag) const;
-
-  virtual void evaluate(MovingPartMatrix *part, bool frame_blend_flag);
-
-protected:
-  LPoint3 _position;
-  LQuaternion _rotation;
-  LVector3 _scale;
-  LVector3 _shear;
-
-  typedef pvector<PT(AnimGraphNode)> Inputs;
-  Inputs _inputs;
+  virtual void evaluate(AnimGraphEvalContext &context) = 0;
 
 public:
   virtual TypeHandle get_type() const {

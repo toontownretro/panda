@@ -28,26 +28,20 @@ PUBLISHED:
   INLINE void set_control(AnimControl *control);
   INLINE AnimControl *get_control() const;
 
-  virtual int get_max_inputs() const override;
-
   // Replication of AnimControl interfaces that simply call into the
   // AnimControl.
-  virtual void play() override;
-  virtual void play(double from, double to) override;
-  virtual void loop(bool restart) override;
-  virtual void loop(bool restart, double from, double to) override;
-  virtual void pingpong(bool restart) override;
-  virtual void pingpong(bool restart, double from, double to) override;
-  virtual void stop() override;
-  virtual void pose(double frame) override;
-  virtual void set_play_rate(double play_rate) override;
+  virtual void play();
+  virtual void play(double from, double to);
+  virtual void loop(bool restart);
+  virtual void loop(bool restart, double from, double to);
+  virtual void pingpong(bool restart);
+  virtual void pingpong(bool restart, double from, double to);
+  virtual void stop();
+  virtual void pose(double frame);
+  virtual void set_play_rate(double play_rate);
 
 public:
-  virtual void wait_pending() override;
-  virtual void mark_channels(bool frame_blend_flag) override;
-  virtual bool channel_has_changed(AnimChannelBase *channel, bool frame_blend_flag) const override;
-
-  virtual void evaluate(MovingPartMatrix *part, bool frame_blend_flag) override;
+  virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
   PT(AnimControl) _control;

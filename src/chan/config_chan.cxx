@@ -37,6 +37,7 @@
 #include "animBlendNode2D.h"
 #include "animMixNode.h"
 #include "animSampleNode.h"
+#include "animStateMachine.h"
 
 #include "luse.h"
 #include "dconfig.h"
@@ -126,6 +127,7 @@ ConfigureFn(config_chan) {
   AnimMixNode::init_type();
   AnimPreloadTable::init_type();
   AnimSampleNode::init_type();
+  AnimStateMachine::init_type();
   BindAnimRequest::init_type();
   MovingPartBase::init_type();
   MovingPartMatrix::init_type();
