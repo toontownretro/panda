@@ -18,11 +18,19 @@
 #include "namable.h"
 #include "animChannelBase.h"
 #include "pvector.h"
+#include "datagram.h"
+#include "datagramIterator.h"
 
 /**
  * Base class for CharacterJoint and CharacterSlider.
  */
 class EXPCL_PANDA_ANIM CharacterPart : public Namable {
+protected:
+  CharacterPart();
+  CharacterPart(const std::string &name);
+
+  void write_datagram(Datagram &dg);
+  void read_datagram(DatagramIterator &dgi);
 
 protected:
   // The index of this part into the Character's list of parts of this type.
@@ -31,6 +39,8 @@ protected:
   // This is the vector of all channels bound to this part.
   typedef pvector< PT(AnimChannelBase) > Channels;
   Channels _channels;
+
+  friend class Character;
 };
 
 #include "characterPart.I"

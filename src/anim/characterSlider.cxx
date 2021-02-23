@@ -12,3 +12,45 @@
  */
 
 #include "characterSlider.h"
+
+/**
+ *
+ */
+CharacterSlider::
+CharacterSlider() :
+  CharacterPart(),
+  _value(0.0f),
+  _default_value(0.0f)
+{
+}
+
+/**
+ *
+ */
+CharacterSlider::
+CharacterSlider(const std::string &name) :
+  CharacterPart(name),
+  _value(0.0f),
+  _default_value(0.0f)
+{
+}
+
+/**
+ *
+ */
+void CharacterSlider::
+write_datagram(Datagram &dg) {
+  CharacterPart::write_datagram(dg);
+  dg.add_stdfloat(_value);
+  dg.add_stdfloat(_default_value);
+}
+
+/**
+ *
+ */
+void CharacterSlider::
+read_datagram(DatagramIterator &dgi) {
+  CharacterPart::read_datagram(dgi);
+  _value = dgi.get_stdfloat();
+  _default_value = dgi.get_stdfloat();
+}

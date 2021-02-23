@@ -15,7 +15,7 @@
 #define CHARACTERSLIDER_H
 
 #include "pandabase.h"
-#include "namable.h"
+#include "characterPart.h"
 
 class Datagram;
 class DatagramIterator;
@@ -25,11 +25,9 @@ class DatagramIterator;
  * Receives a floating point value each frame that determines the influence of
  * a particular morph target.
  */
-class EXPCL_PANDA_ANIM CharacterSlider : public Namable {
+class EXPCL_PANDA_ANIM CharacterSlider final : public CharacterPart {
 private:
   CharacterSlider();
-
-public:
   CharacterSlider(const std::string &name);
 
   void write_datagram(Datagram &dg);

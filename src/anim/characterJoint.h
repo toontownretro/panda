@@ -15,8 +15,9 @@
 #define CHARACTERJOINT_H
 
 #include "pandabase.h"
-#include "namable.h"
+#include "characterPart.h"
 #include "luse.h"
+#include "vector_int.h"
 
 class Datagram;
 class DatagramIterator;
@@ -25,11 +26,9 @@ class DatagramIterator;
  * A single joint of a Character.  Receives a matrix each frame that transforms
  * the vertices assigned to the joint.
  */
-class EXPCL_PANDA_ANIM CharacterJoint : public Namable {
+class EXPCL_PANDA_ANIM CharacterJoint final : public CharacterPart {
 private:
   CharacterJoint();
-
-public:
   CharacterJoint(const std::string &name);
 
   void write_datagram(Datagram &dg);
@@ -37,6 +36,7 @@ public:
 
 public:
   int _parent;
+  vector_int _children;
 
   LMatrix4 _value;
   LMatrix4 _default_value;

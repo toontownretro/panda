@@ -66,13 +66,20 @@ merge_anim_preloads(const Character *other) {
  */
 CharacterJoint *Character::
 make_joint(const std::string &name, int parent) {
+  int index = (int)_joints.size();
+
   CharacterJoint joint(name);
   joint._parent = parent;
+  joint._index = index;
 
-  size_t joint_index = _joints.size();
+  if (parent != -1) {
+    CharacterJoint &parent_joint = _joints[parent];
+    parent_joint._children.push_back(joint._index);
+  }
+
   _joints.push_back(std::move(joint));
 
-  return &_joints[joint_index];
+  return &_joints[index];
 }
 
 /**
