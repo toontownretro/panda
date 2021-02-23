@@ -6,9 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file animTable.cxx
+ * @file characterPart.I
  * @author lachbr
- * @date 2021-02-22
+ * @date 2021-02-23
  */
-
-#include "animTable.h"

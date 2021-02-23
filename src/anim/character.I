@@ -12,6 +12,41 @@
  */
 
 /**
+ * Returns the AnimPreloadTable associated with the Character.  This table,
+ * if present, can be used for the benefit of load_bind_anim() to allow
+ * asynchronous binding.
+ */
+INLINE CPT(AnimPreloadTable) Character::
+get_anim_preload() const {
+  return _anim_preload.get_read_pointer();
+}
+
+/**
+ * Returns a modifiable pointer to the AnimPreloadTable associated with the
+ * Character, if any.
+ */
+INLINE PT(AnimPreloadTable) Character::
+modify_anim_preload() {
+  return _anim_preload.get_write_pointer();
+}
+
+/**
+ * Replaces the AnimPreloadTable associated with the Character.
+ */
+INLINE void Character::
+set_anim_preload(AnimPreloadTable *anim_preload) {
+  _anim_preload = anim_preload;
+}
+
+/**
+ * Removes any AnimPreloadTable associated with the Character.
+ */
+INLINE void Character::
+clear_anim_preload() {
+  _anim_preload = nullptr;
+}
+
+/**
  * Specifies whether the character interpolates (blends) between two
  * sequential frames of an active animation, showing a smooth intra-frame
  * motion, or whether it holds each frame until the next frame is ready,

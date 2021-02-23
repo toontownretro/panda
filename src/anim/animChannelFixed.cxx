@@ -6,7 +6,12 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file animTable.I
- * @author lachbr
- * @date 2021-02-22
+ * @file animChannelFixed.cxx
+ * @author rdb
+ * @date 2016-05-29
  */
+
+#include "animChannelFixed.h"
+
+template class AnimChannelFixed<ACMatrixSwitchType>;
+template class AnimChannelFixed<ACScalarSwitchType>;
