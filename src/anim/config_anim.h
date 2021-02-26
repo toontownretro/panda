@@ -29,6 +29,7 @@ EXPCL_PANDA_ANIM extern ConfigVariableBool read_compressed_channels;
 EXPCL_PANDA_ANIM extern ConfigVariableBool interpolate_frames;
 EXPCL_PANDA_ANIM extern ConfigVariableBool restore_initial_pose;
 EXPCL_PANDA_ANIM extern ConfigVariableInt async_bind_priority;
+EXPCL_PANDA_ANIM extern ConfigVariableBool even_animation;
 
 extern EXPCL_PANDA_ANIM void init_libanim();
 

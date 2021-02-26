@@ -18,9 +18,7 @@
 #include "eggGroup.h"
 #include "eggPrimitive.h"
 #include "eggBin.h"
-#include "partGroup.h"
 #include "characterJoint.h"
-#include "characterJointBundle.h"
 #include "characterSlider.h"
 #include "character.h"
 #include "geomNode.h"
@@ -47,18 +45,16 @@ CharacterMaker::
 CharacterMaker(EggGroup *root, EggLoader &loader, bool structured)
   : _loader(loader), _egg_root(root) {
 
-  _character_node = new Character(_egg_root->get_name());
-  _bundle = _character_node->get_bundle(0);
+  _character_node = new CharacterNode(_egg_root->get_name());
+  _bundle = _character_node->get_character();
 
-  _morph_root = nullptr;
-  _skeleton_root = new PartGroup(_bundle, "<skeleton>");
   _structured = structured;
 }
 
 /**
  *
  */
-Character *CharacterMaker::
+CharacterNode *CharacterMaker::
 make_node() {
   make_bundle();
   return _character_node;
@@ -73,20 +69,17 @@ get_name() const {
 }
 
 /**
- * Returns the PartGroup node associated with the given egg node.  If the egg
- * node is not a node in the character's hierarchy, returns the top of the
- * character's hierarchy.
+ * Returns the CharacterJoint index associated with the given egg node, or -1
+ * if there is no association.
  */
-PartGroup *CharacterMaker::
-egg_to_part(EggNode *egg_node) const {
-  int index = egg_to_index(egg_node);
-  if (index < 0) {
-    // If there's a reference to the geometry outside of the character, just
-    // return the root of the character.
-    return _bundle;
+int CharacterMaker::
+egg_to_joint(EggNode *egg_node) const {
+  NodeMap::const_iterator jmi = _joint_map.find(egg_node);
+  if (jmi == _joint_map.end()) {
+    return -1;
   }
-  nassertr(index < (int)_parts.size(), nullptr);
-  return _parts[index];
+
+  return (*jmi).second;
 }
 
 /**
@@ -97,7 +90,7 @@ egg_to_part(EggNode *egg_node) const {
  */
 VertexTransform *CharacterMaker::
 egg_to_transform(EggNode *egg_node) {
-  int index = egg_to_index(egg_node);
+  int index = egg_to_joint(egg_node);
   if (index < 0) {
     // Not a joint in the hierarchy.
     return get_identity_transform();
@@ -108,27 +101,10 @@ egg_to_transform(EggNode *egg_node) {
     return (*vi).second;
   }
 
-  PartGroup *part = _parts[index];
-  CharacterJoint *joint;
-  DCAST_INTO_R(joint, part, get_identity_transform());
-
-  PT(VertexTransform) vt = new JointVertexTransform(joint);
+  PT(VertexTransform) vt = new JointVertexTransform(_bundle, index);
   _vertex_transforms[index] = vt;
 
   return vt;
-}
-
-/**
- * Returns the index number associated with the PartGroup node for the given
- * egg node, or -1.
- */
-int CharacterMaker::
-egg_to_index(EggNode *egg_node) const {
-  NodeMap::const_iterator nmi = _node_map.find(egg_node);
-  if (nmi == _node_map.end()) {
-    return -1;
-  }
-  return (*nmi).second;
 }
 
 /**
@@ -137,15 +113,15 @@ egg_to_index(EggNode *egg_node) const {
  * the character's top node.
  */
 PandaNode *CharacterMaker::
-part_to_node(PartGroup *part, const string &name) const {
+part_to_node(const string &name) const {
   PandaNode *node = _character_node;
 
-  if (part->is_character_joint()) {
-    CharacterJoint *joint = DCAST(CharacterJoint, part);
-    if (joint->_geom_node != nullptr) {
-      node = joint->_geom_node;
-    }
-  }
+  //if (part->is_character_joint()) {
+    //CharacterJoint *joint = DCAST(CharacterJoint, part);
+    //if (joint->_geom_node != nullptr) {
+    //  node = joint->_geom_node;
+    //}
+  //}
 
   // We should always return a GeomNode, so that all polysets created at the
   // same level will get added into the same GeomNode.  Look for a child of
@@ -171,20 +147,15 @@ part_to_node(PartGroup *part, const string &name) const {
  */
 int CharacterMaker::
 create_slider(const string &name) {
-  if (_morph_root == nullptr) {
-    _morph_root = new PartGroup(_bundle, "morph");
-  }
-  CharacterSlider *slider = new CharacterSlider(_morph_root, name);
-  int index = _parts.size();
-  _parts.push_back(slider);
-  return index;
+  int slider = _bundle->make_slider(name);
+  return slider;
 }
 
 /**
  * Returns the VertexSlider corresponding to the indicated egg slider name.
  */
 VertexSlider *CharacterMaker::
-egg_to_slider(const string &name) {
+egg_to_vertex_slider(const string &name) {
   VertexSliders::iterator vi = _vertex_sliders.find(name);
   if (vi != _vertex_sliders.end()) {
     return (*vi).second;
@@ -192,7 +163,7 @@ egg_to_slider(const string &name) {
 
   int index = create_slider(name);
   PT(VertexSlider) slider =
-    new CharacterVertexSlider(DCAST(CharacterSlider, _parts[index]));
+    new CharacterVertexSlider(_bundle, index);
   _vertex_sliders[name] = slider;
   return slider;
 }
@@ -201,22 +172,22 @@ egg_to_slider(const string &name) {
 /**
  *
  */
-CharacterJointBundle *CharacterMaker::
+Character *CharacterMaker::
 make_bundle() {
-  build_joint_hierarchy(_egg_root, _skeleton_root, -1);
+  build_joint_hierarchy(_egg_root, -1);
 
   // if we are structured, the egg loader is going to take care of making the
   // geometry
   if(!_structured) {
     make_geometry(_egg_root);
   }
-  _bundle->sort_descendants();
-  parent_joint_nodes(_skeleton_root);
+  //_bundle->sort_descendants();
+  parent_joint_nodes(0);
 
   // Now call update() one more time, to ensure that all of the joints have
   // their correct transform (since we might have modified the default
   // transform after construction).
-  _bundle->force_update();
+  _bundle->recompute_joint_net_transforms();
 
   return _bundle;
 }
@@ -225,7 +196,7 @@ make_bundle() {
  *
  */
 void CharacterMaker::
-build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index) {
+build_joint_hierarchy(EggNode *egg_node, int parent) {
   if (egg_node->is_of_type(EggAnimPreload::get_class_type())) {
     EggAnimPreload *egg_anim_preload = DCAST(EggAnimPreload, egg_node);
 
@@ -268,11 +239,11 @@ build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index) {
 
       LMatrix4 matf = LCAST(PN_stdfloat, matd);
 
-      CharacterJoint *joint =
-        new CharacterJoint(_character_node, _character_node->get_bundle(0),
-                           part, egg_group->get_name(), matf);
-      index = _parts.size();
-      _parts.push_back(joint);
+      int index = _bundle->make_joint(egg_group->get_name(), parent, matf);
+      _joint_map[egg_group] = index;
+      parent = index;
+
+      CharacterJoint *joint = _bundle->get_joint(index);
 
       // Now that we have computed _net_transform (which we need to convert
       // the vertices), update the default transform from the <DefaultPose>
@@ -284,6 +255,8 @@ build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index) {
         joint->_value = matf;
       }
 
+      // FIXME
+#if 0
       if (egg_group->has_dcs_type()) {
         // If the joint requested an explicit DCS, create a node for it.
         PT(ModelNode) geom_node = new ModelNode(egg_group->get_name());
@@ -293,17 +266,16 @@ build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index) {
 
         joint->_geom_node = geom_node.p();
       }
+#endif
 
-      part = joint;
+      //part = joint;
     }
 
     EggGroup::const_iterator ci;
     for (ci = egg_group->begin(); ci != egg_group->end(); ++ci) {
-      build_joint_hierarchy((*ci), part, index);
+      build_joint_hierarchy((*ci), parent);
     }
   }
-
-  _node_map[egg_node] = index;
 }
 
 /**
@@ -311,7 +283,8 @@ build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index) {
  * joints under the character node.
  */
 void CharacterMaker::
-parent_joint_nodes(PartGroup *part) {
+parent_joint_nodes(int joint) {
+  #if 0
   if (part->is_character_joint()) {
     CharacterJoint *joint = DCAST(CharacterJoint, part);
     PandaNode *joint_node = joint->_geom_node;
@@ -325,6 +298,8 @@ parent_joint_nodes(PartGroup *part) {
   for (int i = 0; i < part->get_num_children(); i++) {
     parent_joint_nodes(part->get_child(i));
   }
+
+  #endif
 }
 
 /**
@@ -340,26 +315,16 @@ make_geometry(EggNode *egg_node) {
     if (!egg_bin->empty() &&
         (egg_bin->get_bin_number() == EggBinner::BN_polyset ||
          egg_bin->get_bin_number() == EggBinner::BN_patches)) {
-      EggGroupNode *bin_home = determine_bin_home(egg_bin);
+      EggGroupNode *bin_home = _egg_root;
+      // This is a dynamic polyset that lives under the character's root
+      // node.
 
-      bool is_dynamic;
-      if (bin_home == nullptr) {
-        // This is a dynamic polyset that lives under the character's root
-        // node.
-        bin_home = _egg_root;
-        is_dynamic = true;
-      } else {
-        // This is a totally static polyset that is parented under some
-        // animated joint node.
-        is_dynamic = false;
-      }
-
-      PandaNode *parent = part_to_node(egg_to_part(bin_home), egg_bin->get_name());
+      PandaNode *parent = part_to_node(/*egg_to_part(bin_home),*/ egg_bin->get_name());
       LMatrix4d transform =
         egg_bin->get_vertex_frame() *
         bin_home->get_node_frame_inv();
 
-      _loader.make_polyset(egg_bin, parent, &transform, is_dynamic,
+      _loader.make_polyset(egg_bin, parent, &transform, true,
                            this);
     }
   }
@@ -372,246 +337,6 @@ make_geometry(EggNode *egg_node) {
       make_geometry(*ci);
     }
   }
-}
-
-/**
- *
- */
-EggGroupNode *CharacterMaker::
-determine_primitive_home(EggPrimitive *egg_primitive) {
-  // A primitive's vertices may be referenced by any joint in the character.
-  // Or, the primitive itself may be explicitly placed under a joint.
-
-  // If any of the vertices are referenced by multiple joints, or if any two
-  // vertices are referenced by different joints, then the entire primitive
-  // must be considered dynamic.  (We'll indicate a dynamic primitive by
-  // returning NULL.)
-
-  // We need to keep track of the one joint we've encountered so far, to see
-  // if all the vertices are referenced by the same joint.
-  EggGroupNode *home = nullptr;
-
-  EggPrimitive::const_iterator vi;
-  for (vi = egg_primitive->begin();
-       vi != egg_primitive->end();
-       ++vi) {
-    EggVertex *vertex = (*vi);
-    if (vertex->gref_size() > 1) {
-      // This vertex is referenced by multiple joints; the primitive is
-      // dynamic.
-      return nullptr;
-    }
-
-    if (!vertex->_dxyzs.empty() ||
-        !vertex->_dnormals.empty() ||
-        !vertex->_drgbas.empty()) {
-      // This vertex has some morph slider definitions; therefore, the
-      // primitive is dynamic.
-      return nullptr;
-    }
-    EggVertex::const_uv_iterator uvi;
-    for (uvi = vertex->uv_begin(); uvi != vertex->uv_end(); ++uvi) {
-      if (!(*uvi)->_duvs.empty()) {
-        // Ditto: the vertex has some UV morphs; therefore the primitive is
-        // dynamic.
-        return nullptr;
-      }
-    }
-
-    EggGroupNode *vertex_home;
-
-    if (vertex->gref_size() == 0) {
-      // This vertex is not referenced at all, which means it belongs right
-      // where it is.
-      vertex_home = egg_primitive->get_parent();
-    } else {
-      nassertr(vertex->gref_size() == 1, nullptr);
-      // This vertex is referenced exactly once.
-      vertex_home = *vertex->gref_begin();
-    }
-
-    if (home != nullptr && home != vertex_home) {
-      // Oops, two vertices are referenced by different joints!  The primitive
-      // is dynamic.
-      return nullptr;
-    }
-
-    home = vertex_home;
-  }
-
-  // This shouldn't be possible, unless there are no vertices--but we check
-  // for that before calling this function.
-  nassertr(home != nullptr, nullptr);
-
-  // So, all the vertices are assigned to the same group.  This means the
-  // polygon belongs entirely to one joint.
-
-  // If the group is not, in fact, a joint then we return the first joint
-  // above the group.
-  EggGroup *egg_group = nullptr;
-  if (home->is_of_type(EggGroup::get_class_type())) {
-    egg_group = DCAST(EggGroup, home);
-  }
-  while (egg_group != nullptr &&
-         egg_group->get_group_type() != EggGroup::GT_joint &&
-         egg_group->get_dart_type() == EggGroup::DT_none) {
-    nassertr(egg_group->get_parent() != nullptr, nullptr);
-    home = egg_group->get_parent();
-    egg_group = nullptr;
-    if (home->is_of_type(EggGroup::get_class_type())) {
-      egg_group = DCAST(EggGroup, home);
-    }
-  }
-
-  if (egg_group != nullptr &&
-      egg_group->get_group_type() == EggGroup::GT_joint &&
-      !egg_group->has_dcs_type()) {
-    // If the home is a joint without a <DCS> flag--this is the normal case--
-    // we'll move the polygon under the character node and animate it from
-    // there explicitly.
-    return nullptr;
-  }
-
-  // Otherwise, if the joint *does* have a <DCS> flag, we'll create static
-  // geometry that we parent directly to the joint node.  We'll also create
-  // static geometry for polygons that have no explicit joint assignment.
-  return home;
-}
-
-/**
- * Examines the joint assignment of the vertices of all of the primitives
- * within this bin to determine which parent node the bin's polyset should be
- * created under.
- */
-EggGroupNode *CharacterMaker::
-determine_bin_home(EggBin *egg_bin) {
-  // A primitive's vertices may be referenced by any joint in the character.
-  // Or, the primitive itself may be explicitly placed under a joint.
-
-  // If any of the vertices, in any primitive, are referenced by multiple
-  // joints, or if any two vertices are referenced by different joints, then
-  // the entire bin must be considered dynamic.  (We'll indicate a dynamic bin
-  // by returning NULL.)
-
-  if (!egg_rigid_geometry) {
-    // If we don't have egg-rigid-geometry enabled, then all geometry is
-    // considered dynamic.
-    return nullptr;
-  }
-
-  // We need to keep track of the one joint we've encountered so far, to see
-  // if all the vertices are referenced by the same joint.
-  EggGroupNode *home = nullptr;
-
-  EggGroupNode::const_iterator ci;
-  for (ci = egg_bin->begin(); ci != egg_bin->end(); ++ci) {
-    CPT(EggPrimitive) egg_primitive = DCAST(EggPrimitive, (*ci));
-
-    EggPrimitive::const_iterator vi;
-    for (vi = egg_primitive->begin();
-         vi != egg_primitive->end();
-         ++vi) {
-      EggVertex *vertex = (*vi);
-      if (vertex->gref_size() > 1) {
-        // This vertex is referenced by multiple joints; the primitive is
-        // dynamic.
-        return nullptr;
-      }
-
-      if (!vertex->_dxyzs.empty() ||
-          !vertex->_dnormals.empty() ||
-          !vertex->_drgbas.empty()) {
-        // This vertex has some morph slider definitions; therefore, the
-        // primitive is dynamic.
-        return nullptr;
-      }
-      EggVertex::const_uv_iterator uvi;
-      for (uvi = vertex->uv_begin(); uvi != vertex->uv_end(); ++uvi) {
-        if (!(*uvi)->_duvs.empty()) {
-          // Ditto: the vertex has some UV morphs; therefore the primitive is
-          // dynamic.
-          return nullptr;
-        }
-      }
-
-      EggGroupNode *vertex_home;
-
-      if (vertex->gref_size() == 0) {
-        // This vertex is not referenced at all, which means it belongs right
-        // where it is.
-        vertex_home = egg_primitive->get_parent();
-      } else {
-        nassertr(vertex->gref_size() == 1, nullptr);
-        // This vertex is referenced exactly once.
-        vertex_home = *vertex->gref_begin();
-      }
-
-      if (home != nullptr && home != vertex_home) {
-        // Oops, two vertices are referenced by different joints!  The
-        // primitive is dynamic.
-        return nullptr;
-      }
-
-      home = vertex_home;
-    }
-  }
-
-  // This shouldn't be possible, unless there are no vertices--but we
-  // eliminate invalid primitives before we begin, so all primitives should
-  // have vertices, and all bins should have primitives.
-  nassertr(home != nullptr, nullptr);
-
-  // So, all the vertices are assigned to the same group.  This means all the
-  // primitives in the bin belong entirely to one joint.
-
-  // If the group is not, in fact, a joint then we return the first joint
-  // above the group.
-  EggGroup *egg_group = nullptr;
-  if (home->is_of_type(EggGroup::get_class_type())) {
-    egg_group = DCAST(EggGroup, home);
-  }
-  while (egg_group != nullptr &&
-         egg_group->get_group_type() != EggGroup::GT_joint &&
-         egg_group->get_dart_type() == EggGroup::DT_none) {
-    nassertr(egg_group->get_parent() != nullptr, nullptr);
-    home = egg_group->get_parent();
-    egg_group = nullptr;
-    if (home->is_of_type(EggGroup::get_class_type())) {
-      egg_group = DCAST(EggGroup, home);
-    }
-  }
-
-  if (egg_group != nullptr &&
-      egg_group->get_group_type() == EggGroup::GT_joint &&
-      !egg_group->has_dcs_type()) {
-    // If we have rigid geometry that is assigned to a joint without a <DCS>
-    // flag, which means the joint didn't get created as its own node, go
-    // ahead and make an implicit node for the joint.
-
-    if (egg_group->get_dcs_type() == EggGroup::DC_none) {
-/*
- * Unless the user specifically forbade exposing the joint by putting an
- * explicit "<DCS> { none }" entry in the joint.  In this case, we return NULL
- * to treat the geometry as dynamic (and animate it by animating its
- * vertices), but display lists and vertex buffers will perform better if more
- * geometry is rigid.  There's a tradeoff, though, since the cull traverser
- * will have to do more work with additional transforms in the scene graph,
- * and this may also break up the geometry into more individual pieces, which
- * is the biggest limiting factor on modern PC graphics cards.
- */
-      return nullptr;
-    }
-
-    CharacterJoint *joint;
-    DCAST_INTO_R(joint, egg_to_part(egg_group), home);
-    egg_group->set_dcs_type(EggGroup::DC_default);
-
-    PT(ModelNode) geom_node = new ModelNode(egg_group->get_name());
-    geom_node->set_preserve_transform(ModelNode::PT_local);
-    joint->_geom_node = geom_node.p();
-  }
-
-  return home;
 }
 
 /**

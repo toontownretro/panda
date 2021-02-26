@@ -13,6 +13,27 @@
 
 #include "config_anim.h"
 
+#include "animBundle.h"
+#include "animBundleNode.h"
+#include "animControl.h"
+#include "animPreloadTable.h"
+#include "bindAnimRequest.h"
+
+#include "character.h"
+#include "characterNode.h"
+#include "characterVertexSlider.h"
+#include "jointVertexTransform.h"
+
+// Anim graph objects
+#include "animGraphNode.h"
+#include "animAddNode.h"
+#include "animBlendNode2D.h"
+#include "animMixNode.h"
+#include "animSampleNode.h"
+#include "animStateMachine.h"
+
+#include "luse.h"
+
 ConfigureDef(config_anim);
 ConfigureFn(config_anim) {
   init_libanim();
@@ -80,6 +101,14 @@ PRC_DESC("This specifies the priority assign to an asynchronous bind "
          "model loads).  A higher number here makes the animations "
          "load sooner."));
 
+ConfigVariableBool even_animation
+("even-animation", false,
+ PRC_DESC("When this is true, characters' vertices will be recomputed "
+          "every frame, whether they need it or not.  This will tend to "
+          "balance out the frame rate so that it is more uniformly slow.  "
+          "The default is to compute vertices only when they need to be "
+          "computed, which can lead to an uneven frame rate."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -94,4 +123,36 @@ init_libanim() {
   }
 
   initialized = true;
+
+  AnimAddNode::init_type();
+  AnimBlendNode2D::init_type();
+  AnimBundle::init_type();
+  JointFrameData::init_type();
+  AnimBundleNode::init_type();
+  AnimControl::init_type();
+  AnimGraphNode::init_type();
+  AnimMixNode::init_type();
+  AnimPreloadTable::init_type();
+  AnimSampleNode::init_type();
+  AnimStateMachine::init_type();
+  BindAnimRequest::init_type();
+
+  Character::init_type();
+  CharacterNode::init_type();
+  CharacterVertexSlider::init_type();
+  JointVertexTransform::init_type();
+
+  // This isn't defined in this package, but it *is* essential that it be
+  // initialized.  We have to do it explicitly here since template statics
+  // don't necessarily resolve very well across dynamic libraries.
+  LMatrix4::init_type();
+
+  AnimBundle::register_with_read_factory();
+  AnimBundleNode::register_with_read_factory();
+  AnimPreloadTable::register_with_read_factory();
+
+  Character::register_with_read_factory();
+  CharacterNode::register_with_read_factory();
+  CharacterVertexSlider::register_with_read_factory();
+  JointVertexTransform::register_with_read_factory();
 }

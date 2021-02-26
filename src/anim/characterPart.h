@@ -16,29 +16,36 @@
 
 #include "pandabase.h"
 #include "namable.h"
-#include "animChannelBase.h"
 #include "pvector.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "vector_int.h"
 
 /**
  * Base class for CharacterJoint and CharacterSlider.
  */
 class EXPCL_PANDA_ANIM CharacterPart : public Namable {
-protected:
+public:
   CharacterPart();
+  CharacterPart(const CharacterPart &other);
+  CharacterPart(CharacterPart &&other);
+
+protected:
   CharacterPart(const std::string &name);
 
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
+
+public:
+  INLINE int get_max_bound() const;
+  INLINE int get_bound(int n) const;
 
 protected:
   // The index of this part into the Character's list of parts of this type.
   int _index;
 
   // This is the vector of all channels bound to this part.
-  typedef pvector< PT(AnimChannelBase) > Channels;
-  Channels _channels;
+  vector_int _channels;
 
   friend class Character;
 };

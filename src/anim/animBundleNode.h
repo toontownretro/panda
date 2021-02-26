@@ -26,7 +26,7 @@
  * PartBundleNode, it exists solely to make it easy to store AnimBundles in
  * the scene graph.
  */
-class EXPCL_PANDA_CHAN AnimBundleNode : public PandaNode {
+class EXPCL_PANDA_ANIM AnimBundleNode : public PandaNode {
 PUBLISHED:
   INLINE explicit AnimBundleNode(const std::string &name, AnimBundle *bundle);
 

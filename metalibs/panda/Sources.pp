@@ -8,7 +8,7 @@
 #define BUILDING_DLL BUILDING_PANDA
 
 #define COMPONENT_LIBS \
-  chan char collide cull device dgraph display dxml \
+  anim collide cull device dgraph display dxml \
   event gobj grutil gsgbase linmath mathutil \
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \

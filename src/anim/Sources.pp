@@ -1,7 +1,7 @@
 // New animation system
 
 #define LOCAL_LIBS \
-  pgraph
+  pgraph ssemath
 
 #begin lib_target
   #define TARGET anim
@@ -9,18 +9,54 @@
   #define BUILDING_DLL BUILDING_PANDA_ANIM
 
   #define SOURCES \
-    animTable.h animTable.I \
+    animAddNode.h animAddNode.I \
+    animBlendNode2D.h animBlendNode2D.I \
+    animBundle.h animBundle.I \
+    animBundleNode.h animBundleNode.I \
+    animControl.h animControl.I \
+    animControlCollection.h animControlCollection.I \
+    animGraphNode.h animGraphNode.I \
+    animMixNode.h animMixNode.I \
+    animPreloadTable.h animPreloadTable.I \
+    animSampleNode.h animSampleNode.I \
+    animStateMachine.h animStateMachine.I \
+    auto_bind.h \
+    bindAnimRequest.h bindAnimRequest.I \
     character.h character.I \
     characterJoint.h characterJoint.I \
+    characterNode.h characterNode.I \
+    characterPart.h characterPart.I \
     characterSlider.h characterSlider.I \
-    config_anim.h
+    characterVertexSlider.h characterVertexSlider.I \
+    config_anim.h \
+    ikSolver.h \
+    jointVertexTransform.h jointVertexTransform.I \
+    partSubset.h partSubset.I
 
   #define COMPOSITE_SOURCES \
-    animTable.cxx \
+    animAddNode.cxx \
+    animBlendNode2D.cxx \
+    animBundle.cxx \
+    animBundleNode.cxx \
+    animControl.cxx \
+    animControlCollection.cxx \
+    animGraphNode.cxx \
+    animMixNode.cxx \
+    animPreloadTable.cxx \
+    animSampleNode.cxx \
+    animStateMachine.cxx \
+    auto_bind.cxx \
+    bindAnimRequest.cxx \
     character.cxx \
     characterJoint.cxx \
+    characterNode.cxx \
+    characterPart.cxx \
     characterSlider.cxx \
-    config_anim.cxx
+    characterVertexSlider.cxx \
+    config_anim.cxx \
+    ikSolver.cxx \
+    jointVertexTransform.cxx \
+    partSubset.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

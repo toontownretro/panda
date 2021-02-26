@@ -28,6 +28,8 @@
 #include "animControl.h"
 #include "filename.h"
 #include "partSubset.h"
+#include "animPreloadTable.h"
+#include "animGraphNode.h"
 
 class FactoryParams;
 class AnimBundle;
@@ -57,6 +59,9 @@ PUBLISHED:
   INLINE void clear_anim_preload();
   void merge_anim_preloads(const Character *other);
 
+  INLINE void set_anim_graph(AnimGraphNode *graph);
+  INLINE AnimGraphNode *get_anim_graph() const;
+
   INLINE void set_frame_blend_flag(bool frame_blend_flag);
   INLINE bool get_frame_blend_flag() const;
 
@@ -67,8 +72,9 @@ PUBLISHED:
   MAKE_PROPERTY(frame_blend_flag, get_frame_blend_flag, set_frame_blend_flag);
   MAKE_PROPERTY(root_xform, get_root_xform, set_root_xform);
 
-  CharacterJoint *make_joint(const std::string &name, int parent = -1);
-  CharacterSlider *make_slider(const std::string &name);
+  int make_joint(const std::string &name, int parent = -1,
+                             const LMatrix4 &default_value = LMatrix4::ident_mat());
+  int make_slider(const std::string &name, PN_stdfloat default_value = 0.0f);
 
   INLINE int get_num_joints() const;
   INLINE CharacterJoint *get_joint(int n);
@@ -86,13 +92,26 @@ PUBLISHED:
                                  bool allow_async);
 
   bool update();
+  bool force_update();
+
+  void recompute_joint_net_transforms();
+  void recompute_joint_net_transform(int joint);
 
 public:
   bool do_bind_anim(AnimControl *control, AnimBundle *anim,
                     int hierarchy_match_flags, const PartSubset &subset);
 
+  INLINE void set_update_delay(double delay);
+
 private:
   bool check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const;
+  void find_bound_joints(int n, bool is_included, BitArray &bound_joints, const PartSubset &subset);
+  void pick_channel_index(int n, plist<int> &holes, int &next) const;
+  void bind_hierarchy(const AnimBundle *anim, int n, int channel_index,
+                      bool is_included, BitArray &bound_joints, const PartSubset &subset);
+
+  class CData;
+  bool apply_pose(CData *cdata, const AnimGraphEvalContext &context, Thread *current_thread);
 
 private:
   typedef pvector<CharacterJoint> Joints;
@@ -120,6 +139,7 @@ private:
 
     bool _frame_blend_flag;
     LMatrix4 _root_xform;
+    PT(AnimGraphNode) _anim_graph;
     bool _anim_changed;
     double _last_update;
   };
@@ -132,7 +152,10 @@ private:
 
 public:
   static void register_with_read_factory();
+  virtual void finalize(BamReader *manager);
   virtual void write_datagram(BamWriter* manager, Datagram &me);
+  virtual int complete_pointers(TypedWritable **p_list,
+                                BamReader *manager);
 
   static TypedWritable *make_from_bam(const FactoryParams &params);
 

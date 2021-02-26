@@ -16,6 +16,8 @@
 
 #include "pandabase.h"
 #include "characterPart.h"
+#include "pset.h"
+#include "characterVertexSlider.h"
 
 class Datagram;
 class DatagramIterator;
@@ -26,16 +28,23 @@ class DatagramIterator;
  * a particular morph target.
  */
 class EXPCL_PANDA_ANIM CharacterSlider final : public CharacterPart {
-private:
+public:
   CharacterSlider();
+  CharacterSlider(const CharacterSlider &other);
+  CharacterSlider(CharacterSlider &&other);
+
+private:
   CharacterSlider(const std::string &name);
 
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
 
-private:
+public:
   PN_stdfloat _value;
   PN_stdfloat _default_value;
+
+  typedef pset<CharacterVertexSlider *> VertexSliders;
+  VertexSliders _vertex_sliders;
 
   friend class Character;
 };

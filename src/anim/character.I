@@ -47,6 +47,29 @@ clear_anim_preload() {
 }
 
 /**
+ * Sets the animation graph that the character should evaluate to determine
+ * a final pose for a frame of animation.
+ */
+INLINE void Character::
+set_anim_graph(AnimGraphNode *graph) {
+  CDWriter cdata(_cycler);
+  if (cdata->_anim_graph != graph) {
+    cdata->_anim_graph = graph;
+    cdata->_anim_changed = true;
+  }
+}
+
+/**
+ * Returns the animation graph that the character should evaluate to determine
+ * a final pose for a frame of animation.
+ */
+INLINE AnimGraphNode *Character::
+get_anim_graph() const {
+  CDReader cdata(_cycler);
+  return cdata->_anim_graph;
+}
+
+/**
  * Specifies whether the character interpolates (blends) between two
  * sequential frames of an active animation, showing a smooth intra-frame
  * motion, or whether it holds each frame until the next frame is ready,
@@ -137,4 +160,14 @@ get_slider(int n) {
   nassertr(n >= 0 && n < (int)_sliders.size(), nullptr);
 
   return &_sliders[n];
+}
+
+/**
+ * Specifies the minimum amount of time, in seconds, that should elapse
+ * between any two consecutive updates.  This is normally used by
+ * Character::set_lod_animation(), and should not be called directly.
+ */
+INLINE void Character::
+set_update_delay(double delay) {
+  _update_delay = delay;
 }

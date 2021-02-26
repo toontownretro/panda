@@ -64,6 +64,7 @@
 /* BUILDING_PANDA is just a buildsystem shortcut for all of these: */
 #ifdef BUILDING_PANDA
   #define BUILDING_LIBPANDA
+  #define BUILDING_PANDA_ANIM
   #define BUILDING_PANDA_AUDIO
   #define BUILDING_PANDA_CHAN
   #define BUILDING_PANDA_CHAR
@@ -137,6 +138,14 @@
 #else
   #define EXPCL_LIBPANDA IMPORT_CLASS
   #define EXPTP_LIBPANDA IMPORT_TEMPL
+#endif
+
+#ifdef BUILDING_PANDA_ANIM
+  #define EXPCL_PANDA_ANIM EXPORT_CLASS
+  #define EXPTP_PANDA_ANIM EXPORT_TEMPL
+#else
+  #define EXPCL_PANDA_ANIM IMPORT_CLASS
+  #define EXPTP_PANDA_ANIM IMPORT_TEMPL
 #endif
 
 #ifdef BUILDING_PANDA_AUDIO

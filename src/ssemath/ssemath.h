@@ -40,6 +40,7 @@ typedef union {
 
 typedef fltx4 i32x4;
 typedef fltx4 u32x4;
+typedef fltx4 bi32x4;
 
 #elif (defined(_X360))
 
@@ -53,12 +54,14 @@ typedef union {
 typedef __vector4 fltx4;
 typedef __vector4 i32x4; // a VMX register; just a way of making it explicit that we're doing integer ops.
 typedef __vector4 u32x4; // a VMX register; just a way of making it explicit that we're doing unsigned integer ops.
+typedef __vector4 bi32x4;
 
 #else
 
 typedef __m128 fltx4;
 typedef __m128 i32x4;
 typedef __m128 u32x4;
+typedef fltx4 bi32x4;
 
 #endif
 
@@ -149,6 +152,7 @@ extern EXPCL_PANDA_SSEMATH const fltx4 Four_2ToThe23s;    // (1<<23)..
 extern EXPCL_PANDA_SSEMATH const fltx4 Four_2ToThe24s;    // (1<<24)..
 extern EXPCL_PANDA_SSEMATH const fltx4 Four_Origin;       // 0 0 0 1 (origin point, like vr0 on the PS2)
 extern EXPCL_PANDA_SSEMATH const fltx4 Four_NegativeOnes; // -1 -1 -1 -1
+extern EXPCL_PANDA_SSEMATH const fltx4 Four_DegToRad;     // (float)(M_PI_F / 180.f) times four
 #else
 #define Four_Zeros XMVectorZero()    // 0 0 0 0
 #define Four_Ones XMVectorSplatOne() // 1 1 1 1
@@ -177,6 +181,7 @@ extern EXPCL_PANDA_SSEMATH const ALIGN_16BYTE uint32_t g_SIMD_clear_wmask[];    
 extern EXPCL_PANDA_SSEMATH const ALIGN_16BYTE uint32_t g_SIMD_ComponentMask[4][4]; // [0xFFFFFFFF 0 0 0], [0 0xFFFFFFFF 0 0], [0 0 0xFFFFFFFF 0], [0 0 0 0xFFFFFFFF]
 extern EXPCL_PANDA_SSEMATH const ALIGN_16BYTE uint32_t g_SIMD_AllOnesMask[];       // ~0,~0,~0,~0
 extern EXPCL_PANDA_SSEMATH const ALIGN_16BYTE int32_t g_SIMD_Low16BitsMask[];     // 0xffff x 4
+extern EXPCL_PANDA_SSEMATH const ALIGN_16BYTE int32_t g_SIMD_EveryOtherMask[];    // 0, ~0, 0, ~0
 
 // this mask is used for skipping the tail of things. If you have N elements in an array, and wish
 // to mask out the tail, g_SIMD_SkipTailMask[N & 3] what you want to use for the last iteration.
@@ -2336,6 +2341,61 @@ INLINE void StoreAlignedIntSIMD(intx4 &pSIMD, const fltx4 &a)
 INLINE void StoreUnalignedIntSIMD(int32_t *pSIMD, const fltx4 &a)
 {
         _mm_storeu_ps(reinterpret_cast<float *>(pSIMD), a);
+}
+
+// a={ a.x, a.z, b.x, b.z }
+// combine two fltx4s by throwing away every other field.
+INLINE fltx4 CompressSIMD( fltx4 const & a, fltx4 const &b )
+{
+	return _mm_shuffle_ps( a, b, MM_SHUFFLE_REV( 0, 2, 0, 2 ) );
+}
+
+// Load four consecutive uint16's, and turn them into floating point numbers.
+// This function isn't especially fast and could be made faster if anyone is
+// using it heavily.
+INLINE fltx4 LoadAndConvertUint16SIMD( const uint16_t *pInts )
+{
+#ifdef POSIX
+	fltx4 retval;
+	SubFloat( retval, 0 ) = pInts[0];
+	SubFloat( retval, 1 ) = pInts[1];
+	SubFloat( retval, 2 ) = pInts[2];
+	SubFloat( retval, 3 ) = pInts[3];
+	return retval;
+#else
+	__m128i inA = _mm_loadl_epi64( (__m128i const*) pInts); // Load the lower 64 bits of the value pointed to by p into the lower 64 bits of the result, zeroing the upper 64 bits of the result.
+	inA = _mm_unpacklo_epi16( inA, _mm_setzero_si128() ); // unpack unsigned 16's to signed 32's
+	return _mm_cvtepi32_ps(inA);
+#endif
+}
+
+
+// a={ a.x, b.x, c.x, d.x }
+// combine 4 fltx4s by throwing away 3/4s of the fields
+INLINE fltx4 Compress4SIMD( fltx4 const a, fltx4 const &b, fltx4 const &c, fltx4 const &d )
+{
+	fltx4 aacc = _mm_shuffle_ps( a, c, MM_SHUFFLE_REV( 0, 0, 0, 0 ) );
+	fltx4 bbdd = _mm_shuffle_ps( b, d, MM_SHUFFLE_REV( 0, 0, 0, 0 ) );
+	return MaskedAssign( LoadAlignedSIMD( g_SIMD_EveryOtherMask ), bbdd, aacc );
+}
+
+// outa={a.x, a.x, a.y, a.y}, outb = a.z, a.z, a.w, a.w }
+INLINE void ExpandSIMD( fltx4 const &a, fltx4 &fl4OutA, fltx4 &fl4OutB )
+{
+	fl4OutA = _mm_shuffle_ps( a, a, MM_SHUFFLE_REV( 0, 0, 1, 1 ) );
+	fl4OutB = _mm_shuffle_ps( a, a, MM_SHUFFLE_REV( 2, 2, 3, 3 ) );
+
+}
+
+// construct a fltx4 from four different scalars, which are assumed to be neither aligned nor contiguous
+ALWAYS_INLINE fltx4 LoadGatherSIMD( const float &x, const float &y, const float &z, const float &w )
+{
+	// load the float into the low word of each vector register (this exploits the unaligned load op)
+	fltx4 vx = _mm_load_ss( &x );
+	fltx4 vy = _mm_load_ss( &y );
+	fltx4 vz = _mm_load_ss( &z );
+	fltx4 vw = _mm_load_ss( &w );
+	return Compress4SIMD( vx, vy, vz, vw );
 }
 
 // CHRISG: the conversion functions all seem to operate on m64's only...

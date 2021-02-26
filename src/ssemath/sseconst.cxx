@@ -16,6 +16,7 @@ const fltx4 Four_Threes = {3.0, 3.0, 3.0, 3.0};
 const fltx4 Four_Fours = {4.0, 4.0, 4.0, 4.0};
 const fltx4 Four_Origin = {0, 0, 0, 1};
 const fltx4 Four_NegativeOnes = {-1, -1, -1, -1};
+const fltx4 Four_DegToRad= { ((float)(M_PI / 180.f)), ((float)(M_PI / 180.f)), ((float)(M_PI / 180.f)), ((float)(M_PI / 180.f))};
 
 const fltx4 Four_2ToThe21s = {(float)(1 << 21), (float)(1 << 21), (float)(1 << 21), (float)(1 << 21)};
 const fltx4 Four_2ToThe22s = {(float)(1 << 22), (float)(1 << 22), (float)(1 << 22), (float)(1 << 22)};
@@ -42,6 +43,7 @@ const uint32_t ALIGN_16BYTE g_SIMD_lsbmask[4] = {0xfffffffe, 0xfffffffe, 0xfffff
 const uint32_t ALIGN_16BYTE g_SIMD_clear_wmask[4] = {0xffffffff, 0xffffffff, 0xffffffff, 0};
 const uint32_t ALIGN_16BYTE g_SIMD_AllOnesMask[4] = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff}; // ~0,~0,~0,~0
 const int32_t ALIGN_16BYTE g_SIMD_Low16BitsMask[4] = {0xffff, 0xffff, 0xffff, 0xffff};                // 0xffff x 4
+const int32_t ALIGN_16BYTE g_SIMD_EveryOtherMask[4] = { 0, ~0, 0, ~0 };
 
 const uint32_t ALIGN_16BYTE g_SIMD_ComponentMask[4][4] =
     {

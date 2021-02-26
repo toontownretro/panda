@@ -69,49 +69,78 @@ get_num_frames() const {
 }
 
 /**
- * Adds a new matrix (joint) channel to the bundle.
+ * Sets the joint animation table.
  */
 INLINE void AnimBundle::
-add_channel(AnimChannelMatrix *channel) {
-  _joint_channels.push_back(channel);
+set_joint_channel_data(CPTA_JointFrameData data) {
+  _joint_frames = data;
 }
 
 /**
- * Adds a new scalar (slider) channel to the bundle.
+ * Returns the joint animation table.
  */
-INLINE void AnimBundle::
-add_channel(AnimChannelScalar *channel) {
-  _slider_channels.push_back(channel);
+INLINE CPTA_JointFrameData AnimBundle::
+get_joint_channel_data() const {
+  return _joint_frames;
 }
 
 /**
- * Returns the number of joint channels in the bundle.
+ * Sets the slider animation table.
+ */
+INLINE void AnimBundle::
+set_slider_channel_data(CPTA_stdfloat data) {
+  _slider_frames = data;
+}
+
+/**
+ * Returns the slider animation table.
+ */
+INLINE CPTA_stdfloat AnimBundle::
+get_slider_channel_data() const {
+  return _slider_frames;
+}
+
+/**
+ * Records the name of indicated joint channel.  This is used to aid Character
+ * in binding to the animation, because we can't guarantee ordering of
+ * channels.
+ */
+INLINE void AnimBundle::
+record_joint_channel_name(int channel, const std::string &name) {
+  _joint_channel_names[name] = channel;
+}
+
+/**
+ * Records the name of indicated slider channel.  This is used to aid Character
+ * in binding to the animation, because we can't guarantee ordering of
+ * channels.
+ */
+INLINE void AnimBundle::
+record_slider_channel_name(int channel, const std::string &name) {
+  _slider_channel_names[name] = channel;
+}
+
+/**
+ * Returns the number of recorded joint channels.
  */
 INLINE int AnimBundle::
 get_num_joint_channels() const {
-  return (int)_joint_channels.size();
+  return (int)_joint_channel_names.size();
 }
 
 /**
- * Returns the nth joint channel in the bundle.
- */
-INLINE AnimChannelMatrix *AnimBundle::
-get_joint_channel(int n) const {
-  return _joint_channels[n];
-}
-
-/**
- * Returns the number of slider channels in the bundle.
+ * Returns the number of recorded slider channels.
  */
 INLINE int AnimBundle::
 get_num_slider_channels() const {
-  return (int)_slider_channels.size();
+  return (int)_slider_channel_names.size();
 }
 
 /**
- * Returns the nth slider channel in the bundle.
+ * Returns the index into the animation table for the animation data of the
+ * given joint at the given frame.
  */
-INLINE AnimChannelScalar *AnimBundle::
-get_slider_channel(int n) const {
-  return _slider_channels[n];
+INLINE int AnimBundle::
+get_channel_data_index(int num_channels, int frame, int channel) {
+  return num_channels * frame + channel;
 }

@@ -5,8 +5,8 @@
   #define TARGET framework
   #define BUILDING_DLL BUILDING_FRAMEWORK
   #define LOCAL_LIBS \
-    recorder pgui pgraph putil collide chan text \
-    pnmimage pnmimagetypes event char
+    recorder pgui pgraph putil collide text \
+    pnmimage pnmimagetypes event anim
 
 #if $[LINK_ALL_STATIC]
   // If we're statically linking, we need to explicitly link with

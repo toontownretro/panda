@@ -1491,7 +1491,7 @@ make_vertex_data(const EggRenderState *render_state,
 
       pmap<string, BitArray>::iterator si;
       for (si = slider_names.begin(); si != slider_names.end(); ++si) {
-        PT(VertexSlider) slider = character_maker->egg_to_slider((*si).first);
+        PT(VertexSlider) slider = character_maker->egg_to_vertex_slider((*si).first);
         slider_table->add_slider(slider, (*si).second);
       }
     }

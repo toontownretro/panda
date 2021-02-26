@@ -10,10 +10,10 @@
 
   #define LOCAL_LIBS \
     iphonedisplay \
-    framework putil collide pgraph chan text \
+    framework putil collide pgraph text \
     pnmimage pnmimagetypes event gobj display \
     mathutil putil express dgraph device tform \
-    linmath pstatclient panda glstuff
+    linmath pstatclient panda glstuff anim
 
   #define SOURCES \
     pview_delegate.h pview_delegate.mm \

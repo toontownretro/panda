@@ -5,7 +5,7 @@
 #begin lib_target
   #define TARGET egg2pg
   #define LOCAL_LIBS \
-    parametrics collide egg pgraph chan char
+    parametrics collide egg pgraph anim
 
   #define BUILDING_DLL BUILDING_PANDA_EGG2PG
 

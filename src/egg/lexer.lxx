@@ -562,10 +562,6 @@ NUMERIC         ([+-]?(([0-9]+[.]?)|([0-9]*[.][0-9]+))([eE][+-]?[0-9]+)?)
   accept();
   return TANGENT;
 }
-"<TEXLIST>" {
-  accept();
-  return TEXLIST;
-}
 "<TLENGTHS>" {
   accept();
   return TLENGTHS;

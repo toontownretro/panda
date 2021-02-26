@@ -4,7 +4,7 @@
 #define USE_PACKAGES freetype
 
 #define LOCAL_LIBS \
-    framework putil collide pgraph chan text \
+    framework putil collide pgraph anim text \
     pnmimage pnmimagetypes pnmtext event gobj display \
     mathutil putil express dgraph device tform \
     linmath pstatclient panda

@@ -18,7 +18,7 @@
 #include "texturePool.h"
 #include "multitexReducer.h"
 #include "sceneGraphReducer.h"
-#include "partGroup.h"
+#include "character.h"
 #include "cardMaker.h"
 #include "bamCache.h"
 #include "virtualFileSystem.h"
@@ -346,8 +346,8 @@ main(int argc, char **argv) {
   bool auto_center = false;
   bool show_loading = false;
   bool auto_screenshot = false;
-  int hierarchy_match_flags = PartGroup::HMF_ok_part_extra |
-                              PartGroup::HMF_ok_anim_extra;
+  int hierarchy_match_flags = Character::HMF_ok_part_extra |
+                              Character::HMF_ok_anim_extra;
   Filename screenshotfn;
   bool delete_models = false;
   bool apply_lighting = false;
@@ -374,7 +374,7 @@ main(int argc, char **argv) {
       break;
 
     case 'i':
-      hierarchy_match_flags |= PartGroup::HMF_ok_wrong_root_name;
+      hierarchy_match_flags |= Character::HMF_ok_wrong_root_name;
       break;
 
     case 's':

@@ -10,3 +10,19 @@
  * @author lachbr
  * @date 2021-02-23
  */
+
+/**
+ *
+ */
+INLINE int CharacterPart::
+get_max_bound() const {
+  return (int)_channels.size();
+}
+
+/**
+ *
+ */
+INLINE int CharacterPart::
+get_bound(int n) const {
+  return _channels[n];
+}

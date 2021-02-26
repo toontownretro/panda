@@ -12,13 +12,11 @@
  */
 
 #include "animControl.h"
-#include "animChannelBase.h"
 #include "character.h"
-#include "config_chan.h"
+#include "config_anim.h"
 #include "dcast.h"
 #include "mutexHolder.h"
 #include "throw_event.h"
-#include "movingPartBase.h"
 
 TypeHandle AnimControl::_type_handle;
 
@@ -117,7 +115,7 @@ wait_pending() {
   if (_pending) {
     // TODO: we should elevate the priority of the associated BindAnimRequest
     // while we're waiting for it, so it will jump to the front of the queue.
-    chan_cat.info()
+    anim_cat.info()
       << "Blocking " << *Thread::get_current_thread()
       << " until " << get_name() << " is bound\n";
     while (_pending) {
@@ -175,6 +173,7 @@ output(std::ostream &out) const {
   }
 }
 
+#if 0
 /**
  * Returns true if the indicated channel value has changed since the last call
  * to mark_channels().
@@ -190,9 +189,12 @@ channel_has_changed(AnimChannelBase *channel, bool frame_blend_flag) const {
   if (frame_blend_flag) {
     this_frac = get_frac();
   }
-  return channel->has_changed(_marked_frame, _marked_frac,
-                              this_frame, this_frac);
+
+  return true;
+  //return channel->has_changed(_marked_frame, _marked_frac,
+  //                            this_frame, this_frac);
 }
+#endif
 
 /**
  * Marks this point as the point of reference for the next call to
@@ -213,7 +215,7 @@ mark_channels(bool frame_blend_flag) {
  */
 void AnimControl::
 animation_activated() {
-  get_part()->control_activated(this);
+  //get_part()->control_activated(this);
 }
 
 /**
@@ -222,5 +224,5 @@ animation_activated() {
  */
 void AnimControl::
 animation_deactivated() {
-  get_part()->control_deactivated(this);
+  //get_part()->control_deactivated(this);
 }

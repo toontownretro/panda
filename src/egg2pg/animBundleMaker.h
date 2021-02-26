@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "typedef.h"
+#include "animBundle.h"
 
 class EggNode;
 class EggGroupNode;
@@ -23,10 +24,7 @@ class EggTable;
 class EggXfmSAnim;
 class EggSAnimData;
 class AnimGroup;
-class AnimBundle;
 class AnimBundleNode;
-class AnimChannelScalarTable;
-class AnimChannelMatrixXfmTable;
 
 /**
  * Converts an EggTable hierarchy, beginning with a <Bundle> entry, into an
@@ -42,22 +40,29 @@ private:
   AnimBundle *make_bundle();
 
   void inspect_tree(EggNode *node);
-  void build_hierarchy(EggTable *egg_table, AnimGroup *parent);
+  void build_hierarchy(EggTable *egg_table, AnimBundle *bundle);
 
-  AnimChannelScalarTable *
+  void
   create_s_channel(EggSAnimData *egg_anim, const std::string &name,
-                   AnimGroup *parent);
-  AnimChannelMatrixXfmTable *
+                   AnimBundle *bundle);
+  void
   create_xfm_channel(EggNode *egg_node, const std::string &name,
-                     AnimGroup *parent);
-  AnimChannelMatrixXfmTable *
+                     AnimBundle *bundle);
+  void
   create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
-                     AnimGroup *parent);
+                     AnimBundle *bundle);
 
   PN_stdfloat _fps;
   int _num_frames;
   bool _ok_fps;
   bool _ok_num_frames;
+  int _num_joints;
+  int _num_sliders;
+  int _joint_index;
+  int _slider_index;
+
+  PTA_stdfloat _slider_data;
+  PTA_JointFrameData _joint_data;
 
   EggTable *_root;
 

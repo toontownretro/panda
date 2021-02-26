@@ -18,6 +18,8 @@
 #include "characterPart.h"
 #include "luse.h"
 #include "vector_int.h"
+#include "ordered_vector.h"
+#include "jointVertexTransform.h"
 
 class Datagram;
 class DatagramIterator;
@@ -27,12 +29,18 @@ class DatagramIterator;
  * the vertices assigned to the joint.
  */
 class EXPCL_PANDA_ANIM CharacterJoint final : public CharacterPart {
-private:
+public:
   CharacterJoint();
+  CharacterJoint(const CharacterJoint &other);
+  CharacterJoint(CharacterJoint &&other);
+
+private:
   CharacterJoint(const std::string &name);
 
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
+
+  //AnimChannelBase *make_default_channel() const;
 
 public:
   int _parent;
@@ -50,6 +58,9 @@ public:
   // in its neutral pose) to transform it from its neutral position to its
   // animated position.
   LMatrix4 _skinning_matrix;
+
+  typedef ov_set<JointVertexTransform *> VertexTransforms;
+  VertexTransforms _vertex_transforms;
 
   friend class Character;
 };

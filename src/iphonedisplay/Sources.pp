@@ -9,7 +9,7 @@
   #define TARGET iphonedisplay
 
   #define LOCAL_LIBS \
-    framework putil collide pgraph chan text \
+    framework putil collide pgraph anim text \
     pnmimage pnmimagetypes event gobj display \
     mathutil putil express dgraph device tform \
     linmath pstatclient panda glstuff glesgsg

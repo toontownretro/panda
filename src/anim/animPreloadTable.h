@@ -32,7 +32,7 @@ class FactoryParams;
  *
  * This table is normally built by an offline tool, such as egg-optchar.
  */
-class EXPCL_PANDA_CHAN AnimPreloadTable : public CopyOnWriteObject {
+class EXPCL_PANDA_ANIM AnimPreloadTable : public CopyOnWriteObject {
 public:
   class AnimRecord {
   public:

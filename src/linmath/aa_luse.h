@@ -124,6 +124,8 @@ typedef LRGBColorf LRGBColor;
 typedef UnalignedLVecBase4f UnalignedLVecBase4;
 typedef UnalignedLMatrix4f UnalignedLMatrix4;
 
+typedef AlignedLVecBase3f AlignedLVecBase3;
+
 // Bogus typedefs for interrogate and legacy Python code.
 #ifdef CPPPARSER
 typedef LMatrix4f Mat4;
@@ -167,6 +169,8 @@ typedef LRGBColord LRGBColor;
 
 typedef UnalignedLVecBase4d UnalignedLVecBase4;
 typedef UnalignedLMatrix4d UnalignedLMatrix4;
+
+typedef AlignedLVecBase3d AlignedLVecBase3;
 
 // Bogus typedefs for interrogate and legacy Python code.
 #ifdef CPPPARSER

@@ -78,10 +78,10 @@
   #define TARGET test_pgentry
 
   #define LOCAL_LIBS \
-    framework putil collide pgraph chan text \
+    framework putil collide pgraph text \
     pnmimage pnmimagetypes event gobj display \
     mathutil putil express dgraph device tform \
-    linmath pstatclient panda
+    linmath pstatclient panda anim
 
   #define UNIX_SYS_LIBS m
 

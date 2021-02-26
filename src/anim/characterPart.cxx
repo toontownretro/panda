@@ -27,6 +27,28 @@ CharacterPart() :
  *
  */
 CharacterPart::
+CharacterPart(const CharacterPart &other) :
+  Namable(other),
+  _index(other._index),
+  _channels(other._channels)
+{
+}
+
+/**
+ *
+ */
+CharacterPart::
+CharacterPart(CharacterPart &&other) :
+  Namable(std::move(other)),
+  _index(std::move(_index)),
+  _channels(std::move(_channels))
+{
+}
+
+/**
+ *
+ */
+CharacterPart::
 CharacterPart(const std::string &name) :
   Namable(name),
   _index(-1)

@@ -25,7 +25,7 @@
 #include "frameRateMeter.h"
 #include "sceneGraphAnalyzerMeter.h"
 #include "pointerTo.h"
-#include "partGroup.h"
+#include "character.h"
 #include "pvector.h"
 #include "typedWritableReferenceCount.h"
 #include "loaderOptions.h"
@@ -94,8 +94,8 @@ public:
   NodePath load_model(const NodePath &parent, Filename filename);
   NodePath load_default_model(const NodePath &parent);
   void loop_animations(int hierarchy_match_flags =
-                       PartGroup::HMF_ok_part_extra |
-                       PartGroup::HMF_ok_anim_extra);
+                       Character::HMF_ok_part_extra |
+                       Character::HMF_ok_anim_extra);
   void stagger_animations();
   void next_anim_control();
   void set_anim_controls(bool enable);

@@ -118,6 +118,7 @@ normalize() {
     // incidentally also normalize the table, because we are totally
     // rebuilding it.
     normalize_by_rebuilding();
+    normalize_by_expanding();
 
   } else {
     // Otherwise, if the order string is already the standard order string, we

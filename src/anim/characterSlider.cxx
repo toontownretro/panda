@@ -28,6 +28,30 @@ CharacterSlider() :
  *
  */
 CharacterSlider::
+CharacterSlider(const CharacterSlider &other) :
+  CharacterPart(other),
+  _value(other._value),
+  _default_value(other._default_value),
+  _vertex_sliders(other._vertex_sliders)
+{
+}
+
+/**
+ *
+ */
+CharacterSlider::
+CharacterSlider(CharacterSlider &&other) :
+  CharacterPart(std::move(other)),
+  _value(std::move(other._value)),
+  _default_value(std::move(other._default_value)),
+  _vertex_sliders(std::move(other._vertex_sliders))
+{
+}
+
+/**
+ *
+ */
+CharacterSlider::
 CharacterSlider(const std::string &name) :
   CharacterPart(name),
   _value(0.0f),

@@ -202,6 +202,11 @@ private:
   static TypeHandle _type_handle;
 };
 
+/**
+ * A 3-component vector aligned to 16-byte boundaries.
+ */
+class EXPCL_PANDA_LINMATH ALIGN_LINMATH FLOATNAME(AlignedLVecBase3) : public FLOATNAME(LVecBase3) {
+};
 
 INLINE std::ostream &operator << (std::ostream &out, const FLOATNAME(LVecBase3) &vec) {
   vec.output(out);

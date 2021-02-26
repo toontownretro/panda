@@ -26,7 +26,6 @@
 #include "conditionVar.h"
 
 class Character;
-class AnimChannelBase;
 
 /**
  * Controls the timing of a character animation.  An AnimControl object is
@@ -34,7 +33,7 @@ class AnimChannelBase;
  * animation: whether started, stopped, or looping, and the current frame
  * number and play rate.
  */
-class EXPCL_PANDA_CHAN AnimControl : public TypedReferenceCount, public AnimInterface, public Namable {
+class EXPCL_PANDA_ANIM AnimControl : public TypedReferenceCount, public AnimInterface, public Namable {
 public:
   AnimControl(const std::string &name, Character *part,
               double frame_rate, int num_frames);
@@ -68,7 +67,7 @@ public:
   // The following functions aren't really part of the public interface;
   // they're just public so we don't have to declare a bunch of friends.
 
-  bool channel_has_changed(AnimChannelBase *channel, bool frame_blend_flag) const;
+  //bool channel_has_changed(AnimChannelBase *channel, bool frame_blend_flag) const;
   void mark_channels(bool frame_blend_flag);
 
 protected:

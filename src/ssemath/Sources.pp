@@ -8,12 +8,15 @@
   #define SOURCES \
     config_ssemath.h \
     sse.h \
-    ssemath.h
+    ssemath.h \
+    ssequaternion.h
+
   #define COMPOSITE_SOURCES \
     config_ssemath.cxx \
     powsse.cxx \
     sse.cxx \
     sseconst.cxx
+
   #define INSTALL_HEADERS \
     $[SOURCES]
 

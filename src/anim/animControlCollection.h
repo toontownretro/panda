@@ -30,7 +30,7 @@
  * name will decrement the previous control's reference count (and possibly
  * delete it, unbinding its animation).
  */
-class EXPCL_PANDA_CHAN AnimControlCollection {
+class EXPCL_PANDA_ANIM AnimControlCollection {
 PUBLISHED:
   AnimControlCollection();
   ~AnimControlCollection();

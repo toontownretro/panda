@@ -22,8 +22,6 @@
 #include "eggGroupNode.h"
 #include "animBundle.h"
 #include "animBundleNode.h"
-#include "animChannelMatrixXfmTable.h"
-#include "animChannelScalarTable.h"
 
 using std::min;
 
@@ -34,6 +32,8 @@ AnimBundleMaker::
 AnimBundleMaker(EggTable *root) : _root(root) {
   _fps = 0.0f;
   _num_frames = 1;
+  _num_joints = 0;
+  _num_sliders = 0;
 
   _ok_fps = true;
   _ok_num_frames = true;
@@ -56,6 +56,15 @@ AnimBundleMaker(EggTable *root) : _root(root) {
       << "AnimBundle " << _root->get_name()
       << " specifies contradictory number of frames.\n";
   }
+
+  egg2pg_cat.info()
+    << "counted " << _num_joints << " joints, " << _num_frames << " frames\n";
+
+  _joint_data.resize(_num_joints * _num_frames);
+  _slider_data.resize(_num_sliders * _num_frames);
+
+  _slider_index = 0;
+  _joint_index = 0;
 }
 
 
@@ -82,7 +91,8 @@ make_bundle() {
     }
   }
 
-  bundle->sort_descendants();
+  bundle->set_joint_channel_data(_joint_data);
+  bundle->set_slider_channel_data(_slider_data);
 
   return bundle;
 }
@@ -119,6 +129,8 @@ inspect_tree(EggNode *egg_node) {
         _ok_fps = false;
       }
     }
+
+    _num_joints++;
   }
 
   if (egg_node->is_of_type(EggSAnimData::get_class_type())) {
@@ -135,6 +147,8 @@ inspect_tree(EggNode *egg_node) {
         _ok_num_frames = false;
       }
     }
+
+    _num_sliders++;
   }
 
   if (egg_node->is_of_type(EggXfmAnimData::get_class_type())) {
@@ -151,6 +165,8 @@ inspect_tree(EggNode *egg_node) {
         _ok_num_frames = false;
       }
     }
+
+    _num_joints++;
   }
 
   if (egg_node->is_of_type(EggGroupNode::get_class_type())) {
@@ -168,18 +184,19 @@ inspect_tree(EggNode *egg_node) {
  * Walks the egg tree again, creating the AnimChannels as appropriate.
  */
 void AnimBundleMaker::
-build_hierarchy(EggTable *egg_table, AnimGroup *parent) {
-  AnimGroup *this_node = nullptr;
-
+build_hierarchy(EggTable *egg_table, AnimBundle *bundle) {
   // First, scan the children of egg_table for anim data tables.  If any of
   // them is named "xform", it's a special case--this one stands for the
   // egg_table node itself.  Don't ask me why.
 
+  bool got_channel = false;
+
   EggTable::const_iterator ci;
   for (ci = egg_table->begin(); ci != egg_table->end(); ++ci) {
     if ((*ci)->get_name() == "xform") {
-      if (this_node == nullptr) {
-        this_node = create_xfm_channel((*ci), egg_table->get_name(), parent);
+      if (!got_channel) {
+        create_xfm_channel((*ci), egg_table->get_name(), bundle);
+        got_channel = true;
       } else {
         egg2pg_cat.warning()
           << "Duplicate xform table under node "
@@ -188,22 +205,17 @@ build_hierarchy(EggTable *egg_table, AnimGroup *parent) {
     }
   }
 
-  // If none of them were named "xform", just create a plain old AnimGroup.
-  if (this_node == nullptr) {
-    this_node = new AnimGroup(parent, egg_table->get_name());
-  }
-
   // Now walk the children again, creating any leftover tables, and recursing.
   for (ci = egg_table->begin(); ci != egg_table->end(); ++ci) {
     if ((*ci)->get_name() == "xform") {
       // Skip this one.  We already got it.
     } else if ((*ci)->is_of_type(EggSAnimData::get_class_type())) {
       EggSAnimData *egg_anim = DCAST(EggSAnimData, *ci);
-      create_s_channel(egg_anim, egg_anim->get_name(), this_node);
+      create_s_channel(egg_anim, egg_anim->get_name(), bundle);
 
     } else if ((*ci)->is_of_type(EggTable::get_class_type())) {
       EggTable *child = DCAST(EggTable, *ci);
-      build_hierarchy(child, this_node);
+      build_hierarchy(child, bundle);
     }
   }
 }
@@ -213,23 +225,18 @@ build_hierarchy(EggTable *egg_table, AnimGroup *parent) {
  * Creates an AnimChannelScalarTable corresponding to the given EggSAnimData
  * structure.
  */
-AnimChannelScalarTable *AnimBundleMaker::
+void AnimBundleMaker::
 create_s_channel(EggSAnimData *egg_anim, const std::string &name,
-                 AnimGroup *parent) {
-  AnimChannelScalarTable *table
-    = new AnimChannelScalarTable(parent, name);
-
+                 AnimBundle *bundle) {
   // First we have to copy the table data from PTA_double to PTA_stdfloat.
-  PTA_stdfloat new_data = PTA_stdfloat::empty_array(egg_anim->get_num_rows(),
-                                                    table->get_class_type());
   for (int i = 0; i < egg_anim->get_num_rows(); i++) {
-    new_data[i] = (PN_stdfloat)egg_anim->get_value(i);
+    int index = AnimBundle::get_channel_data_index(_num_sliders, i, _slider_index);
+    _slider_data[i] = (PN_stdfloat)egg_anim->get_value(i);
   }
 
-  // Now we can assign the table.
-  table->set_table(new_data);
+  bundle->record_slider_channel_name(_slider_index, name);
 
-  return table;
+  _slider_index++;
 }
 
 
@@ -237,23 +244,25 @@ create_s_channel(EggSAnimData *egg_anim, const std::string &name,
  * Creates an AnimChannelMatrixXfmTable corresponding to the given EggNode
  * structure, if possible.
  */
-AnimChannelMatrixXfmTable *AnimBundleMaker::
+void AnimBundleMaker::
 create_xfm_channel(EggNode *egg_node, const std::string &name,
-                   AnimGroup *parent) {
+                   AnimBundle *bundle) {
   if (egg_node->is_of_type(EggXfmAnimData::get_class_type())) {
     EggXfmAnimData *egg_anim = DCAST(EggXfmAnimData, egg_node);
     EggXfmSAnim new_anim(*egg_anim);
-    return create_xfm_channel(&new_anim, name, parent);
+    create_xfm_channel(&new_anim, name, bundle);
+    return;
 
   } else if (egg_node->is_of_type(EggXfmSAnim::get_class_type())) {
     EggXfmSAnim *egg_anim = DCAST(EggXfmSAnim, egg_node);
-    return create_xfm_channel(egg_anim, name, parent);
+    create_xfm_channel(egg_anim, name, bundle);
+    return;
   }
 
   egg2pg_cat.warning()
     << "Inappropriate node named xform under node "
     << name << "\n";
-  return nullptr;
+  return;
 }
 
 
@@ -261,58 +270,70 @@ create_xfm_channel(EggNode *egg_node, const std::string &name,
  * Creates an AnimChannelMatrixXfmTable corresponding to the given EggXfmSAnim
  * structure.
  */
-AnimChannelMatrixXfmTable *AnimBundleMaker::
+void AnimBundleMaker::
 create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
-                   AnimGroup *parent) {
+                   AnimBundle *bundle) {
   // Ensure that the anim table is optimal and that it is standard order.
-  egg_anim->optimize_to_standard_order();
+  egg_anim->normalize();
 
-  AnimChannelMatrixXfmTable *table
-    = new AnimChannelMatrixXfmTable(parent, name);
+  egg_anim->write(std::cout, 0);
 
   // The EggXfmSAnim structure has a number of children which are EggSAnimData
   // tables.  Each of these represents a separate component of the transform
   // data, and will be added to the table.
 
   EggXfmSAnim::const_iterator ci;
+
+  pvector<LVecBase3> hpr;
+  hpr.resize(_num_frames);
+
   for (ci = egg_anim->begin(); ci != egg_anim->end(); ++ci) {
     if ((*ci)->is_of_type(EggSAnimData::get_class_type())) {
       EggSAnimData *child = DCAST(EggSAnimData, *ci);
 
-      if (child->get_name().empty()) {
-        egg2pg_cat.warning()
-          << "Unnamed subtable of <Xfm$Anim_S$> " << name
-          << "\n";
-      } else {
-        char table_id = child->get_name()[0];
+      char table_id = child->get_name()[0];
 
-        if (child->get_name().length() > 1 ||
-            !table->is_valid_id(table_id)) {
-          egg2pg_cat.warning()
-            << "Unexpected table name " << child->get_name()
-            << ", child of " << name << "\n";
+      for (int i = 0; i < child->get_num_rows(); i++) {
+        JointFrameData &frame_data = _joint_data[AnimBundle::get_channel_data_index(_num_joints, i, _joint_index)];
 
-        } else if (table->has_table(table_id)) {
-          egg2pg_cat.warning()
-            << "Duplicate table definition for " << table_id
-            << " under " << name << "\n";
+        if (table_id == 'x') {
+          frame_data.pos[0] = (PN_stdfloat)child->get_value(i);
 
-        } else {
+        } else if (table_id == 'y') {
+          frame_data.pos[1] = (PN_stdfloat)child->get_value(i);
 
-          // Now we have to copy the table data from PTA_double to
-          // PTA_stdfloat.
-          PTA_stdfloat new_data=PTA_stdfloat::empty_array(child->get_num_rows(),
-                                                    table->get_class_type());
-          for (int i = 0; i < child->get_num_rows(); i++) {
-            new_data[i] = (PN_stdfloat)child->get_value(i);
-          }
+        } else if (table_id == 'z') {
+          frame_data.pos[2] = (PN_stdfloat)child->get_value(i);
 
-          // Now we can assign the table.
-          table->set_table(table_id, new_data);
+        } else if (table_id == 'i') {
+          frame_data.scale[0] = (PN_stdfloat)child->get_value(i);
+
+        } else if (table_id == 'j') {
+          frame_data.scale[1] = (PN_stdfloat)child->get_value(i);
+
+        } else if (table_id == 'k') {
+          frame_data.scale[2] = (PN_stdfloat)child->get_value(i);
+
+        } else if (table_id == 'h') {
+          hpr[i][0] = (PN_stdfloat)child->get_value(i);
+
+        } else if (table_id == 'p') {
+          hpr[i][1] = (PN_stdfloat)child->get_value(i);
+
+        } else if (table_id == 'r') {
+          hpr[i][2] = (PN_stdfloat)child->get_value(i);
         }
       }
     }
   }
 
-  return table;
+  // Convert each HPR frame to a quaternion.
+  for (size_t i = 0; i < hpr.size(); i++) {
+    JointFrameData &frame_data = _joint_data[AnimBundle::get_channel_data_index(_num_joints, i, _joint_index)];
+    frame_data.quat.set_hpr(hpr[i]);
+  }
+
+  bundle->record_joint_channel_name(_joint_index, name);
+
+  _joint_index++;
 }

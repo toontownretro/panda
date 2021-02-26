@@ -12,6 +12,7 @@
  */
 
 #include "characterJoint.h"
+//#include "animChannelMatrixFixed.h"
 
 /**
  * This is a private constructor only used during Bam reading.
@@ -19,6 +20,40 @@
 CharacterJoint::
 CharacterJoint() :
   CharacterPart() {
+}
+
+/**
+ *
+ */
+CharacterJoint::
+CharacterJoint(const CharacterJoint &other) :
+  CharacterPart(other),
+  _value(other._value),
+  _default_value(other._default_value),
+  _initial_net_transform_inverse(other._initial_net_transform_inverse),
+  _skinning_matrix(other._skinning_matrix),
+  _net_transform(other._net_transform),
+  _parent(other._parent),
+  _children(other._children),
+  _vertex_transforms(other._vertex_transforms)
+{
+}
+
+/**
+ *
+ */
+CharacterJoint::
+CharacterJoint(CharacterJoint &&other) :
+  CharacterPart(std::move(other)),
+  _value(std::move(other._value)),
+  _default_value(std::move(other._default_value)),
+  _initial_net_transform_inverse(std::move(other._initial_net_transform_inverse)),
+  _skinning_matrix(std::move(other._skinning_matrix)),
+  _net_transform(std::move(other._net_transform)),
+  _parent(std::move(other._parent)),
+  _children(std::move(other._children)),
+  _vertex_transforms(std::move(other._vertex_transforms))
+{
 }
 
 /**
@@ -72,3 +107,17 @@ read_datagram(DatagramIterator &dgi) {
   _default_value.read_datagram(dgi);
   _initial_net_transform_inverse.read_datagram(dgi);
 }
+
+#if 0
+/**
+ *
+ */
+AnimChannelBase *CharacterJoint::
+make_default_channel() const {
+  //LVecBase3 pos, hpr, scale, shear;
+  //decompose_matrix(_default_value, pos, hpr, scale, shear);
+  //return new AnimChannelMatrixFixed(get_name(), pos, hpr, scale);
+
+  return nullptr;
+}
+#endif

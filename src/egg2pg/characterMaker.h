@@ -18,8 +18,7 @@
 
 #include "vertexTransform.h"
 #include "vertexSlider.h"
-#include "character.h"
-#include "vector_PartGroupStar.h"
+#include "characterNode.h"
 #include "typedef.h"
 #include "pmap.h"
 
@@ -29,12 +28,9 @@ class EggGroup;
 class EggGroupNode;
 class EggPrimitive;
 class EggBin;
-class PartGroup;
-class CharacterJointBundle;
 class Character;
 class GeomNode;
 class CharacterSlider;
-class MovingPartBase;
 class EggLoader;
 class PandaNode;
 
@@ -46,33 +42,31 @@ class EXPCL_PANDA_EGG2PG CharacterMaker {
 public:
   CharacterMaker(EggGroup *root, EggLoader &loader, bool structured = false);
 
-  Character *make_node();
+  CharacterNode *make_node();
 
   std::string get_name() const;
-  PartGroup *egg_to_part(EggNode *egg_node) const;
+
+  int egg_to_joint(EggNode *egg_node) const;
+
   VertexTransform *egg_to_transform(EggNode *egg_node);
-  int egg_to_index(EggNode *egg_node) const;
-  PandaNode *part_to_node(PartGroup *part, const std::string &name) const;
+
+  PandaNode *part_to_node(const std::string &name) const;
 
   int create_slider(const std::string &name);
-  VertexSlider *egg_to_slider(const std::string &name);
+  VertexSlider *egg_to_vertex_slider(const std::string &name);
 
 private:
-  CharacterJointBundle *make_bundle();
-  void build_joint_hierarchy(EggNode *egg_node, PartGroup *part, int index);
-  void parent_joint_nodes(PartGroup *part);
+  Character *make_bundle();
+  void build_joint_hierarchy(EggNode *egg_node, int parent);
+  void parent_joint_nodes(int joint);
 
   void make_geometry(EggNode *egg_node);
 
-  EggGroupNode *determine_primitive_home(EggPrimitive *egg_primitive);
-  EggGroupNode *determine_bin_home(EggBin *egg_bin);
   VertexTransform *get_identity_transform();
 
   typedef pmap<EggNode *, int> NodeMap;
-  NodeMap _node_map;
-
-  typedef vector_PartGroupStar Parts;
-  Parts _parts;
+  NodeMap _slider_map;
+  NodeMap _joint_map;
 
   typedef pmap<int, PT(VertexTransform) > VertexTransforms;
   VertexTransforms _vertex_transforms;
@@ -83,10 +77,8 @@ private:
 
   EggLoader &_loader;
   EggGroup *_egg_root;
-  PT(Character) _character_node;
-  CharacterJointBundle *_bundle;
-  PartGroup *_morph_root;
-  PartGroup *_skeleton_root;
+  PT(CharacterNode) _character_node;
+  Character *_bundle;
 
   bool _structured;
 
