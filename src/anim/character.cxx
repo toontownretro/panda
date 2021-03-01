@@ -19,8 +19,35 @@
 #include "loader.h"
 #include "animBundleNode.h"
 #include "bindAnimRequest.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+#include "characterJointEffect.h"
 
 TypeHandle Character::_type_handle;
+
+static PStatCollector apply_pose_collector("*:Animation:Joints:ApplyPose");
+static PStatCollector ap_compose_collector("*:Animation:Joints:ApplyPose:Compose");
+static PStatCollector ap_net_collector("*:Animation:Joints:ApplyPose:NetTransform");
+static PStatCollector ap_skinning_collector("*:Animation:Joints:ApplyPose:SkinningMatrix");
+static PStatCollector ap_mark_jvt_collector("*:Animation:Joints:ApplyPose:MarkModified");
+static PStatCollector ap_update_net_transform_nodes("*:Animation:Joints:ApplyPose:UpdateNetTransformNodes");
+
+/**
+ *
+ */
+Character::
+Character(const Character &copy) :
+  Namable(copy)
+{
+  _anim_preload = copy._anim_preload;
+  _update_delay = 0.0;
+  _active_owner = nullptr;
+
+  CDWriter cdata(_cycler, true);
+  CDReader cdata_from(copy._cycler);
+  cdata->_frame_blend_flag = cdata_from->_frame_blend_flag;
+  cdata->_root_xform = cdata_from->_root_xform;
+}
 
 /**
  *
@@ -28,7 +55,8 @@ TypeHandle Character::_type_handle;
 Character::
 Character(const std::string &name) :
   Namable(name),
-  _update_delay(0.0)
+  _update_delay(0.0),
+  _active_owner(nullptr)
 {
 }
 
@@ -67,18 +95,20 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   joint._parent = parent;
   joint._index = index;
   joint._default_value = default_value;
-  joint._value = default_value;
 
   if (parent != -1) {
     _joints[parent]._children.push_back(joint._index);
   }
 
   _joints.push_back(joint);
+  _joint_values.push_back(default_value);
+  _joint_net_transforms.push_back(LMatrix4::ident_mat());
+  _joint_skinning_matrices.push_back(LMatrix4::ident_mat());
+  _joint_vertex_transforms.push_back(nullptr);
+  _joint_net_transform_nodes.push_back(NodeList());
 
   recompute_joint_net_transform(index);
-
-  CharacterJoint &vjoint = _joints[index];
-  vjoint._initial_net_transform_inverse = invert(vjoint._net_transform);
+  _joint_initial_net_transform_inverse.push_back(invert(_joint_net_transforms[index]));
 
   return index;
 }
@@ -234,7 +264,7 @@ update() {
     AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
     cdata->_anim_graph->evaluate(ctx);
 
-    any_changed = apply_pose(cdata, ctx, current_thread);
+    any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);
 
     cdata->_anim_changed = false;
     cdata->_last_update = now;
@@ -261,7 +291,7 @@ force_update() {
   AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
   cdata->_anim_graph->evaluate(ctx);
 
-  bool any_changed = apply_pose(cdata, ctx, current_thread);
+  bool any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);
 
   cdata->_anim_changed = false;
   cdata->_last_update = now;
@@ -287,80 +317,288 @@ recompute_joint_net_transform(int i) {
   CharacterJoint &joint = _joints[i];
 
   if (joint._parent != -1) {
-    joint._net_transform = joint._value * _joints[joint._parent]._net_transform;
+    _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
 
   } else {
-    joint._net_transform = joint._value * get_root_xform();
+    _joint_net_transforms[i] = _joint_values[i] * get_root_xform();
   }
+}
+
+/**
+ * Adds the indicated node to the list of nodes that will be updated each
+ * frame with the joint's net transform from the root.  Returns true if the
+ * node is successfully added, false if it had already been added.
+ *
+ * A CharacterJointEffect for this joint's Character will automatically be
+ * added to the specified node.
+ */
+bool Character::
+add_net_transform(int joint, PandaNode *node) {
+  nassertr(joint >= 0 && joint < (int)_joints.size(), false);
+
+  node->set_effect(CharacterJointEffect::make(_active_owner));
+  CPT(TransformState) t = TransformState::make_mat(_joint_net_transforms[joint]);
+  node->set_transform(t, Thread::get_current_thread());
+  return _joint_net_transform_nodes[joint].insert(node).second;
+}
+
+/**
+ * Removes the indicated node from the list of nodes that will be updated each
+ * frame with the joint's net transform from the root.  Returns true if the
+ * node is successfully removed, false if it was not on the list.
+ *
+ * If the node has a CharacterJointEffect that matches this joint's Character,
+ * it will be cleared.
+ */
+bool Character::
+remove_net_transform(int joint, PandaNode *node) {
+  nassertr(joint >= 0 && joint < (int)_joints.size(), false);
+
+  CPT(RenderEffect) effect = node->get_effect(CharacterJointEffect::get_class_type());
+  if (effect != nullptr &&
+      DCAST(CharacterJointEffect, effect)->matches_character(_active_owner)) {
+    node->clear_effect(CharacterJointEffect::get_class_type());
+  }
+
+  return (_joint_net_transform_nodes[joint].erase(node) > 0);
+}
+
+/**
+ * Returns true if the node is on the list of nodes that will be updated each
+ * frame with the joint's net transform from the root, false otherwise.
+ */
+bool Character::
+has_net_transform(int joint, PandaNode *node) const {
+  nassertr(joint >= 0 && joint < (int)_joints.size(), false);
+  return (_joint_net_transform_nodes[joint].count(node) > 0);
+}
+
+/**
+ * Removes all nodes from the list of nodes that will be updated each frame
+ * with the joint's net transform from the root.
+ */
+void Character::
+clear_net_transforms(int joint) {
+  nassertv(joint >= 0 && joint < (int)_joints.size());
+
+  NodeList::iterator ai;
+  for (ai = _joint_net_transform_nodes[joint].begin();
+       ai != _joint_net_transform_nodes[joint].end();
+       ++ai) {
+    PandaNode *node = *ai;
+
+    CPT(RenderEffect) effect = node->get_effect(CharacterJointEffect::get_class_type());
+    if (effect != nullptr &&
+        DCAST(CharacterJointEffect, effect)->matches_character(_active_owner)) {
+      node->clear_effect(CharacterJointEffect::get_class_type());
+    }
+  }
+
+  _joint_net_transform_nodes[joint].clear();
+}
+
+/**
+ * Returns a list of the net transforms set for this node.  Note that this
+ * returns a list of NodePaths, even though the net transforms are actually a
+ * list of PandaNodes.
+ */
+NodePathCollection Character::
+get_net_transforms(int joint) {
+  NodePathCollection npc;
+
+  nassertr(joint >= 0 && joint < (int)_joints.size(), npc);
+
+  NodeList::iterator ai;
+  for (ai = _joint_net_transform_nodes[joint].begin();
+       ai != _joint_net_transform_nodes[joint].end();
+       ++ai) {
+    PandaNode *node = *ai;
+    npc.add_path(NodePath::any_path(node));
+  }
+
+  return npc;
 }
 
 /**
  *
  */
+PT(Character) Character::
+make_copy() const {
+  return new Character(*this);
+}
+
+/**
+ *
+ */
+PT(Character) Character::
+copy_subgraph() const {
+  PT(Character) copy = make_copy();
+
+  for (size_t i = 0; i < _joints.size(); i++) {
+    copy->_joints.push_back(_joints[i]);
+    copy->_joint_values.push_back(_joint_values[i]);
+    copy->_joint_net_transforms.push_back(_joint_net_transforms[i]);
+    copy->_joint_skinning_matrices.push_back(_joint_skinning_matrices[i]);
+    copy->_joint_initial_net_transform_inverse.push_back(_joint_initial_net_transform_inverse[i]);
+    copy->_joint_net_transform_nodes.push_back(NodeList());
+    copy->_joint_vertex_transforms.push_back(nullptr);
+
+    // We don't copy the sets of transform nodes.
+  }
+
+  for (size_t i = 0; i < _sliders.size(); i++) {
+    copy->_sliders.push_back(_sliders[i]);
+  }
+
+  return copy;
+}
 
 /**
  * Applies the final pose computed by the animation graph to each joint.
  */
 bool Character::
-apply_pose(CData *cdata, const AnimGraphEvalContext &context, Thread *current_thread) {
-  //BitArray changed_mask;
-
-  bool any_changed = false;
+apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread) {
+  PStatTimer timer(apply_pose_collector);
 
   size_t joint_count = _joints.size();
+
+  ap_compose_collector.start();
   for (size_t i = 0; i < joint_count; i++) {
     const JointTransform &xform = context._joints[i];
+
+    _joint_values[i] = LMatrix4::scale_mat(xform._scale) * xform._rotation;
+    _joint_values[i].set_row(3, xform._position);
+  }
+  ap_compose_collector.stop();
+
+  ap_net_collector.start();
+  for (size_t i = 0; i < joint_count; i++) {
     CharacterJoint &joint = _joints[i];
 
-    joint._value = LMatrix4::scale_mat(xform._scale) * xform._rotation;
-    joint._value.set_row(3, xform._position);
-
-    bool self_changed = false;
-    bool net_changed = false;
-
-    //if (value != joint._value) {
-      //changed_mask.set_bit(i);
-      //joint._value = std::move(value);
-      self_changed = true;
-      any_changed = true;
-    //}
-
     if (joint._parent != -1) {
-      bool parent_changed = true;//changed_mask.get_bit(joint._parent);
+      _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
 
-      if (parent_changed || self_changed) {
-        CharacterJoint &parent_joint = _joints[joint._parent];
-        joint._net_transform = joint._value * parent_joint._net_transform;
-        net_changed = true;
-      }
     } else {
-      if (self_changed) {
-        joint._net_transform = joint._value * cdata->_root_xform;
-        net_changed = true;
-      }
+      _joint_net_transforms[i] = _joint_values[i] * root_xform;
     }
 
-    if (net_changed) {
-      // TODO: Net expose joints!!!
+    _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
+  }
+  ap_net_collector.stop();
 
-      // Recompute the transform used by any vertices animated by this joint.
-      joint._skinning_matrix = joint._initial_net_transform_inverse * joint._net_transform;
-
-      // Also tell our related JointVertexTransforms that we've changed their
-      // underlying matrix.
-      CharacterJoint::VertexTransforms::iterator vti;
-      for (vti = joint._vertex_transforms.begin(); vti != joint._vertex_transforms.end(); ++vti) {
-        (*vti)->mark_modified(current_thread);
-      }
+  ap_mark_jvt_collector.start();
+  for (size_t i = 0; i < joint_count; i++) {
+    JointVertexTransform *trans = _joint_vertex_transforms[i];
+    if (trans != nullptr) {
+      trans->mark_modified(current_thread);
     }
+  }
+  ap_mark_jvt_collector.stop();
 
-    if (self_changed) {
-      // TODO: Local expose joints
+  ap_update_net_transform_nodes.start();
+  // Apply the joint transforms to any expose joint nodes.
+  NodeList::const_iterator nli;
+  for (size_t i = 0; i < joint_count; i++) {
+    const NodeList &node_list = _joint_net_transform_nodes[i];
+    if (node_list.empty()) {
+      continue;
     }
+    CPT(TransformState) ts = TransformState::make_mat(_joint_net_transforms[i]);
+    for (nli = node_list.begin(); nli != node_list.end(); ++nli) {
+      //std::cout << "Updating " << (*nli)->get_name() << " with ts " << *ts << "\n";
+      (*nli)->set_transform(ts, current_thread);
+    }
+  }
+  ap_update_net_transform_nodes.stop();
 
+  return true;
+}
+
+/**
+ * Adds the PartBundleNode pointer to the set of nodes associated with the
+ * PartBundle.  Normally called only by the PartBundleNode itself, for
+ * instance when the bundle is flattened with another node.
+ */
+void Character::
+add_node(CharacterNode *node) {
+  nassertv(find(_nodes.begin(), _nodes.end(), node) == _nodes.end());
+  _nodes.push_back(node);
+
+  update_active_owner(_active_owner, node);
+}
+
+/**
+ * Removes the PartBundleNode pointer from the set of nodes associated with
+ * the PartBundle.  Normally called only by the PartBundleNode itself, for
+ * instance when the bundle is flattened with another node.
+ */
+void Character::
+remove_node(CharacterNode *node) {
+  Nodes::iterator ni = find(_nodes.begin(), _nodes.end(), node);
+  nassertv(ni != _nodes.end());
+  _nodes.erase(ni);
+
+  if (get_num_nodes() > 0) {
+    update_active_owner(_active_owner, get_node(get_num_nodes() - 1));
+  }
+}
+
+/**
+ * Updates the active CharacterNode owner of this Character.  Redirects the
+ * CharacterJointEffects to the new owner.
+ */
+void Character::
+update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner) {
+  if (old_owner == new_owner) {
+    return;
   }
 
-  return any_changed;
+  for (size_t i = 0; i < _joints.size(); i++) {
+    if (new_owner != nullptr) {
+      // Change or set a _character pointer on each joint's exposed node.
+      NodeList::iterator ai;
+      for (ai = _joint_net_transform_nodes[i].begin();
+           ai != _joint_net_transform_nodes[i].end();
+           ++ai) {
+        PandaNode *node = *ai;
+        node->set_effect(CharacterJointEffect::make(new_owner));
+      }
+      //for (ai = _local_transform_nodes.begin();
+      //     ai != _local_transform_nodes.end();
+      //     ++ai) {
+      //  PandaNode *node = *ai;
+      //  node->set_effect(CharacterJointEffect::make(character));
+      //}
+
+    } else {
+      // Clear the _character pointer on each joint's exposed node.
+      NodeList::iterator ai;
+      for (ai = _joint_net_transform_nodes[i].begin();
+           ai != _joint_net_transform_nodes[i].end();
+           ++ai) {
+        PandaNode *node = *ai;
+
+        CPT(RenderEffect) effect = node->get_effect(CharacterJointEffect::get_class_type());
+        if (effect != nullptr &&
+            DCAST(CharacterJointEffect, effect)->matches_character(old_owner)) {
+          node->clear_effect(CharacterJointEffect::get_class_type());
+        }
+      }
+      //for (ai = _local_transform_nodes.begin();
+      //     ai != _local_transform_nodes.end();
+      //     ++ai) {
+      //  PandaNode *node = *ai;
+      //
+      //  CPT(RenderEffect) effect = node->get_effect(CharacterJointEffect::get_class_type());
+      //  if (effect != nullptr &&
+      //      DCAST(CharacterJointEffect, effect)->matches_character(_character)) {
+      //    node->clear_effect(CharacterJointEffect::get_class_type());
+      //  }
+      //}
+    }
+  }
+
+  _active_owner = new_owner;
 }
 
 /**
@@ -423,7 +661,7 @@ bool Character::
 check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const {
   Thread::consider_yield();
 
-  if (anim->get_num_joint_channels() > get_num_joints() &&
+  if (anim->get_num_joint_entries() > get_num_joints() &&
       (hierarchy_match_flags & HMF_ok_anim_extra) == 0) {
 
     anim_cat.error()
@@ -431,7 +669,7 @@ check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const {
       << "Character " << get_name() << "\n";
     return false;
 
-  } else if (get_num_joints() > anim->get_num_joint_channels() &&
+  } else if (get_num_joints() > anim->get_num_joint_entries() &&
              (hierarchy_match_flags & HMF_ok_part_extra) == 0) {
     anim_cat.error()
       << "Character " << get_name() << " has more joints than joint channels on "
@@ -449,7 +687,7 @@ check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const {
     }
   }
 
-  if (anim->get_num_slider_channels() > get_num_sliders() &&
+  if (anim->get_num_slider_entries() > get_num_sliders() &&
       (hierarchy_match_flags & HMF_ok_anim_extra) == 0) {
 
     anim_cat.error()
@@ -457,7 +695,7 @@ check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const {
       << "Character " << get_name() << "\n";
     return false;
 
-  } else if (get_num_sliders() > anim->get_num_slider_channels() &&
+  } else if (get_num_sliders() > anim->get_num_slider_entries() &&
              (hierarchy_match_flags & HMF_ok_part_extra) == 0) {
     anim_cat.error()
       << "Character " << get_name() << " has more sliders than slider channels on "
@@ -732,4 +970,12 @@ void Character::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
   _frame_blend_flag = scan.get_bool();
   _root_xform.read_datagram(scan);
+}
+
+/**
+ *
+ */
+void Character::
+set_joint_vertex_transform(JointVertexTransform *transform, int n) {
+  _joint_vertex_transforms[n] = transform;
 }

@@ -29,8 +29,8 @@ CharacterPart() :
 CharacterPart::
 CharacterPart(const CharacterPart &other) :
   Namable(other),
-  _index(other._index),
-  _channels(other._channels)
+  _index(other._index)//,
+  //_channels(other._channels)
 {
 }
 

@@ -22,6 +22,7 @@
 #include "eggGroupNode.h"
 #include "animBundle.h"
 #include "animBundleNode.h"
+#include "vector_stdfloat.h"
 
 using std::min;
 
@@ -59,12 +60,6 @@ AnimBundleMaker(EggTable *root) : _root(root) {
 
   egg2pg_cat.info()
     << "counted " << _num_joints << " joints, " << _num_frames << " frames\n";
-
-  _joint_data.resize(_num_joints * _num_frames);
-  _slider_data.resize(_num_sliders * _num_frames);
-
-  _slider_index = 0;
-  _joint_index = 0;
 }
 
 
@@ -91,8 +86,8 @@ make_bundle() {
     }
   }
 
-  bundle->set_joint_channel_data(_joint_data);
-  bundle->set_slider_channel_data(_slider_data);
+  bundle->set_joint_table(std::move(_joint_table));
+  bundle->set_slider_table(std::move(_slider_table));
 
   return bundle;
 }
@@ -228,15 +223,17 @@ build_hierarchy(EggTable *egg_table, AnimBundle *bundle) {
 void AnimBundleMaker::
 create_s_channel(EggSAnimData *egg_anim, const std::string &name,
                  AnimBundle *bundle) {
+  SliderEntry slider;
+  slider.name = name;
+  slider.first_frame = (int)_slider_table.size();
+  slider.num_frames = egg_anim->get_num_rows();
+
+  bundle->add_slider_entry(slider);
+
   // First we have to copy the table data from PTA_double to PTA_stdfloat.
   for (int i = 0; i < egg_anim->get_num_rows(); i++) {
-    int index = AnimBundle::get_channel_data_index(_num_sliders, i, _slider_index);
-    _slider_data[i] = (PN_stdfloat)egg_anim->get_value(i);
+    _slider_table.push_back((PN_stdfloat)egg_anim->get_value(i));
   }
-
-  bundle->record_slider_channel_name(_slider_index, name);
-
-  _slider_index++;
 }
 
 
@@ -274,18 +271,23 @@ void AnimBundleMaker::
 create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
                    AnimBundle *bundle) {
   // Ensure that the anim table is optimal and that it is standard order.
-  egg_anim->normalize();
-
-  egg_anim->write(std::cout, 0);
+  egg_anim->optimize_to_standard_order();
 
   // The EggXfmSAnim structure has a number of children which are EggSAnimData
   // tables.  Each of these represents a separate component of the transform
   // data, and will be added to the table.
 
+  JointEntry joint;
+  joint.name = name;
+
+  joint.first_frame = (int)_joint_table.size();
+  joint.num_frames = 0;
+
   EggXfmSAnim::const_iterator ci;
 
-  pvector<LVecBase3> hpr;
-  hpr.resize(_num_frames);
+  vector_stdfloat x, y, z;
+  vector_stdfloat sx, sy, sz;
+  vector_stdfloat h, p, r;
 
   for (ci = egg_anim->begin(); ci != egg_anim->end(); ++ci) {
     if ((*ci)->is_of_type(EggSAnimData::get_class_type())) {
@@ -294,46 +296,106 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
       char table_id = child->get_name()[0];
 
       for (int i = 0; i < child->get_num_rows(); i++) {
-        JointFrameData &frame_data = _joint_data[AnimBundle::get_channel_data_index(_num_joints, i, _joint_index)];
-
-        if (table_id == 'x') {
-          frame_data.pos[0] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'y') {
-          frame_data.pos[1] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'z') {
-          frame_data.pos[2] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'i') {
-          frame_data.scale[0] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'j') {
-          frame_data.scale[1] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'k') {
-          frame_data.scale[2] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'h') {
-          hpr[i][0] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'p') {
-          hpr[i][1] = (PN_stdfloat)child->get_value(i);
-
-        } else if (table_id == 'r') {
-          hpr[i][2] = (PN_stdfloat)child->get_value(i);
+        switch (table_id) {
+        case 'x':
+          x.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'y':
+          y.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'z':
+          z.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'i':
+          sx.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'j':
+          sy.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'k':
+          sz.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'h':
+          h.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'p':
+          p.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'r':
+          r.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        default:
+          break;
         }
       }
     }
   }
 
-  // Convert each HPR frame to a quaternion.
-  for (size_t i = 0; i < hpr.size(); i++) {
-    JointFrameData &frame_data = _joint_data[AnimBundle::get_channel_data_index(_num_joints, i, _joint_index)];
-    frame_data.quat.set_hpr(hpr[i]);
+  // Check for any 0-length frames.
+
+  if (h.empty()) {
+    h.push_back(0.0f);
+  }
+  if (p.empty()) {
+    p.push_back(0.0f);
+  }
+  if (r.empty()) {
+    r.push_back(0.0f);
   }
 
-  bundle->record_joint_channel_name(_joint_index, name);
+  if (x.empty()) {
+    x.push_back(0.0f);
+  }
+  if (y.empty()) {
+    y.push_back(0.0f);
+  }
+  if (z.empty()) {
+    z.push_back(0.0f);
+  }
 
-  _joint_index++;
+  if (sx.empty()) {
+    sx.push_back(1.0f);
+  }
+  if (sy.empty()) {
+    sy.push_back(1.0f);
+  }
+  if (sz.empty()) {
+    sz.push_back(1.0f);
+  }
+
+  joint.num_frames = std::max(x.size(), std::max(y.size(), z.size()));
+  joint.num_frames = std::max((size_t)joint.num_frames, std::max(h.size(), std::max(p.size(), r.size())));
+  joint.num_frames = std::max((size_t)joint.num_frames, std::max(sx.size(), std::max(sy.size(), sz.size())));
+
+  for (int i = 0; i < joint.num_frames; i++) {
+    LVecBase3 pos(
+      x[i % x.size()],
+      y[i % y.size()],
+      z[i % z.size()]
+    );
+
+    LVecBase3 scale(
+      sx[i % sx.size()],
+      sy[i % sy.size()],
+      sz[i % sz.size()]
+    );
+
+    LVector3 hpr(
+      h[i % h.size()],
+      p[i % p.size()],
+      r[i % r.size()]
+    );
+
+    LQuaternion quat;
+    quat.set_hpr(hpr);
+
+    JointFrame frame;
+    frame.pos = std::move(pos);
+    frame.quat = std::move(quat);
+    frame.scale = std::move(scale);
+
+    _joint_table.push_back(std::move(frame));
+  }
+
+  bundle->add_joint_entry(joint);
 }

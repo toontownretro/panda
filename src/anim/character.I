@@ -127,6 +127,24 @@ get_root_xform() const {
 }
 
 /**
+ * Returns the number of PartBundleNodes that contain a pointer to this
+ * PartBundle.
+ */
+INLINE int Character::
+get_num_nodes() const {
+  return _nodes.size();
+}
+
+/**
+ * Returns the nth PartBundleNode associated with this PartBundle.
+ */
+INLINE CharacterNode *Character::
+get_node(int n) const {
+  nassertr(n >= 0 && n < (int)_nodes.size(), nullptr);
+  return _nodes[n];
+}
+
+/**
  * Returns the number of joints in the Character.
  */
 INLINE int Character::
@@ -135,13 +153,26 @@ get_num_joints() const {
 }
 
 /**
- * Returns the nth joint of the Character.
+ * Returns the index of the joint with the indicated name, or -1 if no such
+ * joint exists.
  */
-INLINE CharacterJoint *Character::
-get_joint(int n) {
-  nassertr(n >= 0 && n < (int)_joints.size(), nullptr);
+INLINE int Character::
+find_joint(const std::string &name) const {
+  for (int i = 0; i < (int)_joints.size(); i++) {
+    if (_joints[i].get_name() == name) {
+      return i;
+    }
+  }
 
-  return &_joints[n];
+  return -1;
+}
+
+/**
+ * Returns the name of the indicated joint.
+ */
+INLINE const std::string &Character::
+get_joint_name(int n) const {
+  return _joints[n].get_name();
 }
 
 /**
@@ -153,13 +184,76 @@ get_num_sliders() const {
 }
 
 /**
- * Returns the nth slider of the Character.
+ * Returns the index of the slider with the indicated name, or -1 if no such
+ * slider exists.
  */
-INLINE CharacterSlider *Character::
-get_slider(int n) {
-  nassertr(n >= 0 && n < (int)_sliders.size(), nullptr);
+INLINE int Character::
+find_slider(const std::string &name) const {
+  for (int i = 0; i < (int)_sliders.size(); i++) {
+    if (_sliders[i].get_name() == name) {
+      return i;
+    }
+  }
 
-  return &_sliders[n];
+  return -1;
+}
+
+/**
+ * Returns the current value of the indicated slider.
+ */
+INLINE PN_stdfloat Character::
+get_slider_value(int n) const {
+  return _sliders[n]._value;
+}
+
+/**
+ * Returns the name of the indicated slider.
+ */
+INLINE const std::string &Character::
+get_slider_name(int n) const {
+  return _sliders[n].get_name();
+}
+
+/**
+ * Sets the CharacterVertexSlider associated with the indicated slider.
+ */
+INLINE void Character::
+set_vertex_slider(int n, CharacterVertexSlider *slider) {
+  _sliders[n]._vertex_slider = slider;
+}
+
+
+/**
+ * Sets the default pose of the specified joint.
+ */
+INLINE void Character::
+set_joint_default_value(int n, const LMatrix4 &value) {
+  _joint_values[n] = value;
+  _joints[n]._default_value = value;
+}
+
+/**
+ * Returns the current skinning matrix of the specified joint.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_skinning_matrix(int n) const {
+  return _joint_skinning_matrices[n];
+}
+
+/**
+ * Returns the net transform of the indicated joint.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_net_transform(int n) const {
+  return _joint_net_transforms[n];
+}
+
+/**
+ * Returns the local transform of the indicated joint.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_transform(int n) const {
+  return _joint_values[n];
 }
 
 /**

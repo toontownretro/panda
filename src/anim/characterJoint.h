@@ -20,6 +20,8 @@
 #include "vector_int.h"
 #include "ordered_vector.h"
 #include "jointVertexTransform.h"
+#include "nodePathCollection.h"
+#include "pandaNode.h"
 
 class Datagram;
 class DatagramIterator;
@@ -46,21 +48,7 @@ public:
   int _parent;
   vector_int _children;
 
-  LMatrix4 _value;
   LMatrix4 _default_value;
-
-  // These are filled in as the joint animates.
-  LMatrix4 _net_transform;
-  LMatrix4 _initial_net_transform_inverse;
-
-  // This is the product of the above; the matrix that gets applied to a
-  // vertex (whose coordinates are in the coordinate space of the character
-  // in its neutral pose) to transform it from its neutral position to its
-  // animated position.
-  LMatrix4 _skinning_matrix;
-
-  typedef ov_set<JointVertexTransform *> VertexTransforms;
-  VertexTransforms _vertex_transforms;
 
   friend class Character;
 };

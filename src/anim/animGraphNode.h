@@ -20,6 +20,7 @@
 #include "luse.h"
 #include "pointerTo.h"
 #include "pvector.h"
+#include "plist.h"
 #include "characterJoint.h"
 
 static constexpr int max_joints = 256;
@@ -31,11 +32,13 @@ public:
     T *p;
 
     if (!_free_blocks.empty()) {
-      p = _free_blocks[_free_blocks.size() - 1];
+      p = _free_blocks.back();
+      //memset(p, 0, sizeof(T) * count_per_alloc);
       _free_blocks.pop_back();
 
     } else {
       p = new T[count_per_alloc];
+      //memset(p, 0, sizeof(T) * count_per_alloc);
     }
 
     return p;
@@ -46,7 +49,7 @@ public:
   }
 
 private:
-  pvector<T *> _free_blocks;
+  plist<T *> _free_blocks;
 };
 
 class JointTransform {
@@ -85,7 +88,6 @@ public:
   AnimGraphEvalContext(CharacterJoint *parts, int num_parts,
                        bool frame_blend_flag) {
     _joints = joint_transform_pool.alloc();
-    memset(_joints, 0, sizeof(JointTransform) * max_joints);
     _num_joints = num_parts;
     _parts = parts;
     _frame_blend = frame_blend_flag;
@@ -97,26 +99,17 @@ public:
     _num_joints(copy._num_joints)
   {
     _joints = joint_transform_pool.alloc();
-    memset(_joints, 0, sizeof(JointTransform) * max_joints);
   }
 
-  AnimGraphEvalContext(AnimGraphEvalContext &&other) :
-    _frame_blend(std::move(other._frame_blend)),
-    _joints(std::move(other._joints)),
-    _parts(std::move(other._parts)),
-    _num_joints(std::move(other._num_joints))
-  {
+  void steal(AnimGraphEvalContext &other) {
+    _joints = other._joints;
+    other._joints = nullptr;
   }
 
   ~AnimGraphEvalContext() {
-    //joint_transform_pool.free(_joints);
-  }
-
-  void operator = (AnimGraphEvalContext &&other) {
-    _frame_blend = std::move(other._frame_blend);
-    _joints = std::move(other._joints);
-    _parts = std::move(other._parts);
-    _num_joints = std::move(other._num_joints);
+    if (_joints != nullptr) {
+      joint_transform_pool.free(_joints);
+    }
   }
 
   void mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat c);

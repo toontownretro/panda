@@ -20,12 +20,6 @@
 #include "bamWriter.h"
 
 TypeHandle AnimBundle::_type_handle;
-TypeHandle JointFrameData::_type_handle;
-
-template class PointerToBase<ReferenceCountedVector<JointFrameData> >;
-template class PointerToArrayBase<JointFrameData>;
-template class PointerToArray<JointFrameData>;
-template class ConstPointerToArray<JointFrameData>;
 
 /**
  * Creates a new AnimBundle, just like this one, without copying any children.
@@ -39,9 +33,9 @@ AnimBundle(const AnimBundle &copy) :
   _fps(copy._fps),
   _num_frames(copy._num_frames),
   _joint_frames(copy._joint_frames),
-  _slider_frames(copy._slider_frames),
-  _joint_channel_names(copy._joint_channel_names),
-  _slider_channel_names(copy._slider_channel_names)
+  _joint_entries(copy._joint_entries),
+  _slider_table(copy._slider_table),
+  _slider_entries(copy._slider_entries)
 {
 }
 
@@ -63,10 +57,12 @@ copy_bundle() const {
  */
 int AnimBundle::
 find_joint_channel(const std::string &name) const {
-  ChannelNames::const_iterator cni = _joint_channel_names.find(name);
-  if (cni != _joint_channel_names.end()) {
-    return (*cni).second;
+  for (size_t i = 0; i < _joint_entries.size(); i++) {
+    if (_joint_entries[i].name == name) {
+      return (int)i;
+    }
   }
+
   return -1;
 }
 
@@ -76,10 +72,12 @@ find_joint_channel(const std::string &name) const {
  */
 int AnimBundle::
 find_slider_channel(const std::string &name) const {
-  ChannelNames::const_iterator cni = _slider_channel_names.find(name);
-  if (cni != _slider_channel_names.end()) {
-    return (*cni).second;
+  for (size_t i = 0; i < _slider_entries.size(); i++) {
+    if (_slider_entries[i].name == name) {
+      return (int)i;
+    }
   }
+
   return -1;
 }
 
@@ -110,36 +108,56 @@ void AnimBundle::
 write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
 
-  me.add_uint32(_joint_frames.size());
-  for (size_t i = 0; i < _joint_frames.size(); i++) {
-    const JointFrameData &joint_frame = _joint_frames[i];
-
-    joint_frame.pos.write_datagram(me);
-    joint_frame.quat.write_datagram(me);
-    joint_frame.scale.write_datagram(me);
-  }
-
-  me.add_uint16(_joint_channel_names.size());
-  for (ChannelNames::const_iterator cni = _joint_channel_names.begin();
-       cni != _joint_channel_names.end(); ++cni) {
-    me.add_string((*cni).first);
-    me.add_uint16((*cni).second);
-  }
-
-  me.add_uint32(_slider_frames.size());
-  for (size_t i = 0; i < _slider_frames.size(); i++) {
-    me.add_stdfloat(_slider_frames[i]);
-  }
-
-  me.add_uint16(_slider_channel_names.size());
-  for (ChannelNames::const_iterator cni = _slider_channel_names.begin();
-       cni != _slider_channel_names.end(); ++cni) {
-    me.add_string((*cni).first);
-    me.add_uint16((*cni).second);
-  }
-
   me.add_stdfloat(_fps);
   me.add_uint16(_num_frames);
+
+  /*
+  me.add_uint16(_joint_entries.size());
+  for (size_t i = 0; i < _joint_entries.size(); i++) {
+    const JointEntry &entry = _joint_entries[i];
+
+    me.add_string(entry.name);
+
+    me.add_int16(entry.first_pos_frame);
+    me.add_int16(entry.num_pos_frames);
+
+    me.add_int16(entry.first_scale_frame);
+    me.add_int16(entry.num_scale_frames);
+
+    me.add_int16(entry.first_quat_frame);
+    me.add_int16(entry.num_quat_frames);
+  }
+
+  me.add_uint16(_joint_pos.size());
+  for (size_t i = 0; i < _joint_pos.size(); i++) {
+    _joint_pos[i].write_datagram(me);
+  }
+
+  me.add_uint16(_joint_quat.size());
+  for (size_t i = 0; i < _joint_quat.size(); i++) {
+    _joint_quat[i].write_datagram(me);
+  }
+
+  me.add_uint16(_joint_scale.size());
+  for (size_t i = 0; i < _joint_scale.size(); i++) {
+    _joint_scale[i].write_datagram(me);
+  }
+
+  me.add_uint16(_slider_entries.size());
+  for (size_t i = 0; i < _slider_entries.size(); i++) {
+    const SliderEntry &entry = _slider_entries[i];
+
+    me.add_string(entry.name);
+
+    me.add_int16(entry.first_frame);
+    me.add_int16(entry.num_frames);
+  }
+
+  me.add_uint16(_slider_table.size());
+  for (size_t i = 0; i < _slider_table.size(); i++) {
+    me.add_stdfloat(_slider_table[i]);
+  }
+  */
 }
 
 /**
@@ -151,6 +169,7 @@ void AnimBundle::
 fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
 
+  /*
   PTA(JointFrameData) joint_frames;
   joint_frames.resize(scan.get_uint32());
 
@@ -184,6 +203,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     int channel = scan.get_uint16();
     _slider_channel_names[name] = channel;
   }
+  */
 
   _fps = scan.get_stdfloat();
   _num_frames = scan.get_uint16();

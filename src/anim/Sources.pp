@@ -24,6 +24,7 @@
     bindAnimRequest.h bindAnimRequest.I \
     character.h character.I \
     characterJoint.h characterJoint.I \
+    characterJointEffect.h characterJointEffect.I \
     characterNode.h characterNode.I \
     characterPart.h characterPart.I \
     characterSlider.h characterSlider.I \
@@ -49,6 +50,7 @@
     bindAnimRequest.cxx \
     character.cxx \
     characterJoint.cxx \
+    characterJointEffect.cxx \
     characterNode.cxx \
     characterPart.cxx \
     characterSlider.cxx \

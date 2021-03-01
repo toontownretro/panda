@@ -69,35 +69,68 @@ get_num_frames() const {
 }
 
 /**
- * Sets the joint animation table.
+ *
  */
 INLINE void AnimBundle::
-set_joint_channel_data(CPTA_JointFrameData data) {
-  _joint_frames = data;
+set_joint_table(JointFrames &&table) {
+  _joint_frames = std::move(table);
 }
 
+
 /**
- * Returns the joint animation table.
+ *
  */
-INLINE CPTA_JointFrameData AnimBundle::
-get_joint_channel_data() const {
+INLINE const JointFrames &AnimBundle::
+get_joint_table() const {
   return _joint_frames;
 }
 
 /**
- * Sets the slider animation table.
+ *
  */
-INLINE void AnimBundle::
-set_slider_channel_data(CPTA_stdfloat data) {
-  _slider_frames = data;
+INLINE const JointFrame &AnimBundle::
+get_joint_frame(int joint, int frame) const {
+  return get_joint_frame(_joint_entries[joint], frame);
 }
 
 /**
- * Returns the slider animation table.
+ *
  */
-INLINE CPTA_stdfloat AnimBundle::
-get_slider_channel_data() const {
-  return _slider_frames;
+INLINE const JointFrame &AnimBundle::
+get_joint_frame(const JointEntry &joint, int frame) const {
+  return _joint_frames[joint.first_frame + (frame % joint.num_frames)];
+}
+
+/**
+ *
+ */
+INLINE void AnimBundle::
+set_slider_table(vector_stdfloat &&table) {
+  _slider_table = std::move(table);
+}
+
+/**
+ *
+ */
+INLINE const vector_stdfloat &AnimBundle::
+get_slider_table() const {
+  return _slider_table;
+}
+
+/**
+ *
+ */
+INLINE void AnimBundle::
+get_scalar(int slider, int frame, PN_stdfloat &scalar) const {
+  get_scalar(_slider_entries[slider], frame, scalar);
+}
+
+/**
+ *
+ */
+INLINE void AnimBundle::
+get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const {
+  scalar = _slider_table[slider.first_frame + (frame % slider.num_frames)];
 }
 
 /**
@@ -106,8 +139,16 @@ get_slider_channel_data() const {
  * channels.
  */
 INLINE void AnimBundle::
-record_joint_channel_name(int channel, const std::string &name) {
-  _joint_channel_names[name] = channel;
+add_joint_entry(const JointEntry &entry) {
+  _joint_entries.push_back(entry);
+}
+
+/**
+ *
+ */
+INLINE const JointEntry &AnimBundle::
+get_joint_entry(int joint) const {
+  return _joint_entries[joint];
 }
 
 /**
@@ -116,31 +157,30 @@ record_joint_channel_name(int channel, const std::string &name) {
  * channels.
  */
 INLINE void AnimBundle::
-record_slider_channel_name(int channel, const std::string &name) {
-  _slider_channel_names[name] = channel;
+add_slider_entry(const SliderEntry &entry) {
+  _slider_entries.push_back(entry);
+}
+
+/**
+ *
+ */
+INLINE const SliderEntry &AnimBundle::
+get_slider_entry(int slider) const {
+  return _slider_entries[slider];
 }
 
 /**
  * Returns the number of recorded joint channels.
  */
 INLINE int AnimBundle::
-get_num_joint_channels() const {
-  return (int)_joint_channel_names.size();
+get_num_joint_entries() const {
+  return (int)_joint_entries.size();
 }
 
 /**
  * Returns the number of recorded slider channels.
  */
 INLINE int AnimBundle::
-get_num_slider_channels() const {
-  return (int)_slider_channel_names.size();
-}
-
-/**
- * Returns the index into the animation table for the animation data of the
- * given joint at the given frame.
- */
-INLINE int AnimBundle::
-get_channel_data_index(int num_channels, int frame, int channel) {
-  return num_channels * frame + channel;
+get_num_slider_entries() const {
+  return (int)_slider_entries.size();
 }

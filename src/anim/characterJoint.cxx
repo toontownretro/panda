@@ -13,6 +13,7 @@
 
 #include "characterJoint.h"
 //#include "animChannelMatrixFixed.h"
+#include "characterJointEffect.h"
 
 /**
  * This is a private constructor only used during Bam reading.
@@ -28,14 +29,10 @@ CharacterJoint() :
 CharacterJoint::
 CharacterJoint(const CharacterJoint &other) :
   CharacterPart(other),
-  _value(other._value),
-  _default_value(other._default_value),
-  _initial_net_transform_inverse(other._initial_net_transform_inverse),
-  _skinning_matrix(other._skinning_matrix),
-  _net_transform(other._net_transform),
   _parent(other._parent),
   _children(other._children),
-  _vertex_transforms(other._vertex_transforms)
+  //_vertex_transforms(other._vertex_transforms),
+  _default_value(other._default_value)
 {
 }
 
@@ -45,14 +42,10 @@ CharacterJoint(const CharacterJoint &other) :
 CharacterJoint::
 CharacterJoint(CharacterJoint &&other) :
   CharacterPart(std::move(other)),
-  _value(std::move(other._value)),
-  _default_value(std::move(other._default_value)),
-  _initial_net_transform_inverse(std::move(other._initial_net_transform_inverse)),
-  _skinning_matrix(std::move(other._skinning_matrix)),
-  _net_transform(std::move(other._net_transform)),
   _parent(std::move(other._parent)),
   _children(std::move(other._children)),
-  _vertex_transforms(std::move(other._vertex_transforms))
+  //_vertex_transforms(std::move(other._vertex_transforms)),
+  _default_value(std::move(other._default_value))
 {
 }
 
@@ -63,11 +56,7 @@ CharacterJoint::
 CharacterJoint(const std::string &name) :
   CharacterPart(name)
 {
-  _value = LMatrix4::ident_mat();
   _default_value = LMatrix4::ident_mat();
-  _initial_net_transform_inverse = LMatrix4::ident_mat();
-  _net_transform = LMatrix4::ident_mat();
-  _skinning_matrix = LMatrix4::ident_mat();
 }
 
 /**
@@ -84,9 +73,9 @@ write_datagram(Datagram &dg) {
     dg.add_int16(_children[i]);
   }
 
-  _value.write_datagram(dg);
-  _default_value.write_datagram(dg);
-  _initial_net_transform_inverse.write_datagram(dg);
+  //_value.write_datagram(dg);
+  //_default_value.write_datagram(dg);
+  //_initial_net_transform_inverse.write_datagram(dg);
 }
 
 /**
@@ -103,9 +92,9 @@ read_datagram(DatagramIterator &dgi) {
     _children[i] = dgi.get_int16();
   }
 
-  _value.read_datagram(dgi);
-  _default_value.read_datagram(dgi);
-  _initial_net_transform_inverse.read_datagram(dgi);
+  //_value.read_datagram(dgi);
+  //_default_value.read_datagram(dgi);
+  //_initial_net_transform_inverse.read_datagram(dgi);
 }
 
 #if 0

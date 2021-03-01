@@ -36,12 +36,12 @@ CharacterVertexSlider() :
  */
 CharacterVertexSlider::
 CharacterVertexSlider(Character *character, int slider) :
-  VertexSlider(InternalName::make(character->get_slider(slider)->get_name())),
+  VertexSlider(InternalName::make(character->get_slider_name(slider))),
   _char(character),
   _slider(slider)
 {
   // Tell the char_slider that we need to be informed when it moves.
-  _char->get_slider(_slider)->_vertex_sliders.insert(this);
+  _char->set_vertex_slider(_slider, this);
 }
 
 /**
@@ -50,7 +50,9 @@ CharacterVertexSlider(Character *character, int slider) :
 CharacterVertexSlider::
 ~CharacterVertexSlider() {
   // Tell the char_slider to stop informing us about its motion.
-  _char->get_slider(_slider)->_vertex_sliders.erase(this);
+  if (_char != nullptr) {
+    _char->set_vertex_slider(_slider, nullptr);
+  }
 }
 
 /**
@@ -58,7 +60,7 @@ CharacterVertexSlider::
  */
 PN_stdfloat CharacterVertexSlider::
 get_slider() const {
-  return _char->get_slider(_slider)->_value;
+  return _char->get_slider_value(_slider);
 }
 
 /**
@@ -90,8 +92,8 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = VertexSlider::complete_pointers(p_list, manager);
 
   _char = DCAST(Character, p_list[pi++]);
-  _char->get_slider(_slider)->_vertex_sliders.insert(this);
-  _name = InternalName::make(_char->get_slider(_slider)->get_name());
+  _char->set_vertex_slider(_slider, this);
+  _name = InternalName::make(_char->get_slider_name(_slider));
 
   return pi;
 }

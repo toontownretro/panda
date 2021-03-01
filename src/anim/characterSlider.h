@@ -43,8 +43,7 @@ public:
   PN_stdfloat _value;
   PN_stdfloat _default_value;
 
-  typedef pset<CharacterVertexSlider *> VertexSliders;
-  VertexSliders _vertex_sliders;
+  CharacterVertexSlider *_vertex_slider;
 
   friend class Character;
 };

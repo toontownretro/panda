@@ -40,7 +40,7 @@ JointVertexTransform(Character *character, int joint) :
   _joint(joint)
 {
   // Tell the joint that we need to be informed when it moves.
-  _char->get_joint(joint)->_vertex_transforms.insert(this);
+  _char->set_joint_vertex_transform(this, joint);
   mark_modified(Thread::get_current_thread());
 }
 
@@ -50,7 +50,9 @@ JointVertexTransform(Character *character, int joint) :
 JointVertexTransform::
 ~JointVertexTransform() {
   // Tell the joint to stop informing us about its motion.
-  _char->get_joint(_joint)->_vertex_transforms.erase(this);
+  if (_char != nullptr) {
+    _char->set_joint_vertex_transform(nullptr, _joint);
+  }
 }
 
 /**
@@ -58,7 +60,7 @@ JointVertexTransform::
  */
 void JointVertexTransform::
 get_matrix(LMatrix4 &matrix) const {
-  matrix = _char->get_joint(_joint)->_skinning_matrix;
+  matrix = _char->get_joint_skinning_matrix(_joint);
 }
 
 /**
@@ -69,7 +71,7 @@ get_matrix(LMatrix4 &matrix) const {
  */
 void JointVertexTransform::
 mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
-  result.multiply(_char->get_joint(_joint)->_skinning_matrix, previous);
+  result.multiply(_char->get_joint_skinning_matrix(_joint), previous);
 }
 
 /**
@@ -79,7 +81,7 @@ mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
  */
 void JointVertexTransform::
 accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
-  accum.accumulate(_char->get_joint(_joint)->_skinning_matrix, weight);
+  accum.accumulate(_char->get_joint_skinning_matrix(_joint), weight);
 }
 
 /**
@@ -87,7 +89,7 @@ accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
  */
 void JointVertexTransform::
 output(std::ostream &out) const {
-  out << _char->get_joint(_joint)->get_name();
+  out << _char->get_joint_name(_joint);
 }
 
 /**
@@ -119,7 +121,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = VertexTransform::complete_pointers(p_list, manager);
 
   _char = DCAST(Character, p_list[pi++]);
-  _char->get_joint(_joint)->_vertex_transforms.insert(this);
+  _char->set_joint_vertex_transform(this, _joint);
 
   return pi;
 }

@@ -167,17 +167,19 @@ evaluate(AnimGraphEvalContext &context) {
   }
 
   if (w0 == 1.0f) {
-    context = std::move(i0_ctx);
+    context.steal(i0_ctx);
 
   } else if (w1 == 1.0f) {
-    context = std::move(i1_ctx);
+    context.steal(i1_ctx);
 
   } else if (w2 == 1.0f) {
-    context = std::move(i2_ctx);
+    context.steal(i2_ctx);
 
   } else {
     for (int i = 0; i < context._num_joints; i++) {
       JointTransform &joint = context._joints[i];
+      joint._position.set(0, 0, 0);
+      joint._scale.set(0, 0, 0);
       JointTransform &a_joint = i0_ctx._joints[i];
       JointTransform &b_joint = i1_ctx._joints[i];
       JointTransform &c_joint = i2_ctx._joints[i];

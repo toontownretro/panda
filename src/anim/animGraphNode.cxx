@@ -28,14 +28,16 @@ JointTransformPool joint_transform_pool;
  */
 void AnimGraphEvalContext::
 mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat frac) {
+  PN_stdfloat e0 = 1.0f - frac;
+
   for (int i = 0; i < _num_joints; i++) {
     JointTransform &joint = _joints[i];
     const JointTransform &a_joint = a._joints[i];
     const JointTransform &b_joint = b._joints[i];
 
-    joint._position = a_joint._position + (b_joint._position - a_joint._position) * frac;
+    joint._position = (a_joint._position * e0) + (b_joint._position * frac);
+    joint._scale = (a_joint._scale * e0) + (b_joint._scale * frac);
     LQuaternion::blend(a_joint._rotation, b_joint._rotation, frac, joint._rotation);
-    joint._scale = a_joint._scale + (b_joint._scale - a_joint._scale) * frac;
   }
 }
 

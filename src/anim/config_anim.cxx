@@ -21,6 +21,7 @@
 
 #include "character.h"
 #include "characterNode.h"
+#include "characterJointEffect.h"
 #include "characterVertexSlider.h"
 #include "jointVertexTransform.h"
 
@@ -127,7 +128,6 @@ init_libanim() {
   AnimAddNode::init_type();
   AnimBlendNode2D::init_type();
   AnimBundle::init_type();
-  JointFrameData::init_type();
   AnimBundleNode::init_type();
   AnimControl::init_type();
   AnimGraphNode::init_type();
@@ -139,6 +139,7 @@ init_libanim() {
 
   Character::init_type();
   CharacterNode::init_type();
+  CharacterJointEffect::init_type();
   CharacterVertexSlider::init_type();
   JointVertexTransform::init_type();
 
@@ -153,6 +154,7 @@ init_libanim() {
 
   Character::register_with_read_factory();
   CharacterNode::register_with_read_factory();
+  CharacterJointEffect::register_with_read_factory();
   CharacterVertexSlider::register_with_read_factory();
   JointVertexTransform::register_with_read_factory();
 }

@@ -58,11 +58,9 @@ private:
   bool _ok_num_frames;
   int _num_joints;
   int _num_sliders;
-  int _joint_index;
-  int _slider_index;
 
-  PTA_stdfloat _slider_data;
-  PTA_JointFrameData _joint_data;
+  JointFrames _joint_table;
+  vector_stdfloat _slider_table;
 
   EggTable *_root;
 

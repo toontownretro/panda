@@ -34,13 +34,17 @@
 class FactoryParams;
 class AnimBundle;
 class Loader;
+class CharacterNode;
 
 /**
  * An animated character.  Defines a hierarchy of joints that influence the
  * position of vertices.  May also contain one or more sliders, which influence
  * morph targets.
  */
-class EXPCL_PANDA_ANIM Character : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_ANIM Character final : public TypedWritableReferenceCount, public Namable {
+private:
+  Character(const Character &copy);
+
 PUBLISHED:
   // This enum defines bits which may be passed into check_hierarchy() and
   // PartBundle::bind_anim() to allow an inexact match of channel hierarchies.
@@ -69,18 +73,34 @@ PUBLISHED:
   //INLINE void xform(const LMatrix4 &mat);
   INLINE const LMatrix4 &get_root_xform() const;
 
+  INLINE int get_num_nodes() const;
+  INLINE CharacterNode *get_node(int n) const;
+  MAKE_SEQ(get_nodes, get_num_nodes, get_node);
+
   MAKE_PROPERTY(frame_blend_flag, get_frame_blend_flag, set_frame_blend_flag);
   MAKE_PROPERTY(root_xform, get_root_xform, set_root_xform);
+  MAKE_SEQ_PROPERTY(nodes, get_num_nodes, get_node);
 
   int make_joint(const std::string &name, int parent = -1,
                              const LMatrix4 &default_value = LMatrix4::ident_mat());
   int make_slider(const std::string &name, PN_stdfloat default_value = 0.0f);
 
   INLINE int get_num_joints() const;
-  INLINE CharacterJoint *get_joint(int n);
+  INLINE int find_joint(const std::string &name) const;
+  INLINE const std::string &get_joint_name(int n) const;
 
   INLINE int get_num_sliders() const;
-  INLINE CharacterSlider *get_slider(int n);
+  INLINE int find_slider(const std::string &name) const;
+  INLINE PN_stdfloat get_slider_value(int n) const;
+  INLINE const std::string &get_slider_name(int n) const;
+  INLINE void set_vertex_slider(int n, CharacterVertexSlider *slider);
+
+  INLINE void set_joint_default_value(int n, const LMatrix4 &value);
+  INLINE const LMatrix4 &get_joint_skinning_matrix(int n) const;
+  INLINE const LMatrix4 &get_joint_net_transform(int n) const;
+  INLINE const LMatrix4 &get_joint_transform(int n) const;
+
+  void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
 
   PT(AnimControl) bind_anim(AnimBundle *anim,
                             int hierarchy_match_flags = 0,
@@ -97,24 +117,54 @@ PUBLISHED:
   void recompute_joint_net_transforms();
   void recompute_joint_net_transform(int joint);
 
+  bool add_net_transform(int joint, PandaNode *node);
+  bool remove_net_transform(int joint, PandaNode *node);
+  bool has_net_transform(int joint, PandaNode *node) const;
+  void clear_net_transforms(int joint);
+  NodePathCollection get_net_transforms(int joint);
+
+  PT(Character) make_copy() const;
+  PT(Character) copy_subgraph() const;
+
 public:
+  void add_node(CharacterNode *node);
+  void remove_node(CharacterNode *node);
+
   bool do_bind_anim(AnimControl *control, AnimBundle *anim,
                     int hierarchy_match_flags, const PartSubset &subset);
 
   INLINE void set_update_delay(double delay);
 
 private:
+  void update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner);
+
   bool check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const;
   void find_bound_joints(int n, bool is_included, BitArray &bound_joints, const PartSubset &subset);
   void pick_channel_index(int n, plist<int> &holes, int &next) const;
   void bind_hierarchy(const AnimBundle *anim, int n, int channel_index,
                       bool is_included, BitArray &bound_joints, const PartSubset &subset);
 
-  class CData;
-  bool apply_pose(CData *cdata, const AnimGraphEvalContext &context, Thread *current_thread);
+  bool apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread);
 
 private:
+  typedef pvector<LMatrix4> Matrices;
+  typedef pvector<JointVertexTransform *> VertexTransforms;
   typedef pvector<CharacterJoint> Joints;
+  typedef ov_set<PT(PandaNode)> NodeList;
+  typedef pvector<NodeList> NodeLists;
+
+  // These are filled in as the joint animates.
+  Matrices _joint_values;
+  Matrices _joint_net_transforms;
+  // This is the product of the above; the matrix that gets applied to a
+  // vertex (whose coordinates are in the coordinate space of the character
+  // in its neutral pose) to transform it from its neutral position to its
+  // animated position.
+  Matrices _joint_skinning_matrices;
+  Matrices _joint_initial_net_transform_inverse;
+  Matrices _joint_default_values;
+  VertexTransforms _joint_vertex_transforms;
+  NodeLists _joint_net_transform_nodes;
   Joints _joints;
 
   typedef pvector<CharacterSlider> Sliders;
@@ -123,6 +173,13 @@ private:
   double _update_delay;
 
   COWPT(AnimPreloadTable) _anim_preload;
+
+  // The active owner of this Character.  All expose joint nodes are parented
+  // to this CharacterNode.
+  CharacterNode *_active_owner;
+
+  typedef pvector<CharacterNode *> Nodes;
+  Nodes _nodes;
 
   // This is the data that must be cycled between pipeline stages.
   class CData : public CycleData {
@@ -180,6 +237,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class CharacterNode;
 };
 
 #include "character.I"

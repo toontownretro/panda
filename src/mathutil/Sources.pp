@@ -36,7 +36,7 @@
     perlinNoise3.h perlinNoise3.I \
     plane.h plane_src.I plane_src.h \
     pta_LMatrix4.h pta_LMatrix3.h pta_LVecBase3.h \
-    pta_LVecBase4.h pta_LVecBase2.h \
+    pta_LVecBase4.h pta_LVecBase2.h pta_LQuaternion.h \
     randomizer.h randomizer.I \
     rotate_to.h \
     stackedPerlinNoise2.h stackedPerlinNoise2.I \
@@ -68,7 +68,7 @@
     perlinNoise3.cxx \
     plane.cxx \
     pta_LMatrix4.cxx pta_LMatrix3.cxx pta_LVecBase3.cxx \
-    pta_LVecBase4.cxx pta_LVecBase2.cxx \
+    pta_LVecBase4.cxx pta_LVecBase2.cxx pta_LQuaternion.cxx \
     randomizer.cxx \
     rotate_to.cxx \
     stackedPerlinNoise2.cxx \
@@ -82,6 +82,14 @@
     $[SOURCES]
 
   #define IGATESCAN all
+
+  #define IGATEEXT \
+    pta_LMatrix3_ext.h \
+    pta_LMatrix4_ext.h \
+    pta_LQuaternion_ext.h \
+    pta_LVecBase2_ext.h \
+    pta_LVecBase3_ext.h \
+    pta_LVecBase4_ext.h
 
 #end lib_target
 

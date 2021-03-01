@@ -67,4 +67,14 @@ forcetype PointerToArrayBase<LVecBase2i>
 forcetype PointerToArray<LVecBase2i>
 forcetype ConstPointerToArray<LVecBase2i>
 
+forcetype PointerToBase<ReferenceCountedVector<LQuaterniond> >
+forcetype PointerToArrayBase<LQuaterniond>
+forcetype PointerToArray<LQuaterniond>
+forcetype ConstPointerToArray<LQuaterniond>
+
+forcetype PointerToBase<ReferenceCountedVector<LQuaternionf> >
+forcetype PointerToArrayBase<LQuaternionf>
+forcetype PointerToArray<LQuaternionf>
+forcetype ConstPointerToArray<LQuaternionf>
+
 forceinclude "pointerToArray_ext.h"

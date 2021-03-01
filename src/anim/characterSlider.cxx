@@ -20,7 +20,8 @@ CharacterSlider::
 CharacterSlider() :
   CharacterPart(),
   _value(0.0f),
-  _default_value(0.0f)
+  _default_value(0.0f),
+  _vertex_slider(nullptr)
 {
 }
 
@@ -32,7 +33,7 @@ CharacterSlider(const CharacterSlider &other) :
   CharacterPart(other),
   _value(other._value),
   _default_value(other._default_value),
-  _vertex_sliders(other._vertex_sliders)
+  _vertex_slider(nullptr)
 {
 }
 
@@ -44,7 +45,7 @@ CharacterSlider(CharacterSlider &&other) :
   CharacterPart(std::move(other)),
   _value(std::move(other._value)),
   _default_value(std::move(other._default_value)),
-  _vertex_sliders(std::move(other._vertex_sliders))
+  _vertex_slider(std::move(other._vertex_slider))
 {
 }
 
@@ -55,7 +56,8 @@ CharacterSlider::
 CharacterSlider(const std::string &name) :
   CharacterPart(name),
   _value(0.0f),
-  _default_value(0.0f)
+  _default_value(0.0f),
+  _vertex_slider(nullptr)
 {
 }
 

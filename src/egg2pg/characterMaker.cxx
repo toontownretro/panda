@@ -25,7 +25,6 @@
 #include "transformState.h"
 #include "eggSurface.h"
 #include "eggCurve.h"
-#include "modelNode.h"
 #include "characterVertexSlider.h"
 #include "jointVertexTransform.h"
 #include "userVertexTransform.h"
@@ -182,7 +181,8 @@ make_bundle() {
     make_geometry(_egg_root);
   }
   //_bundle->sort_descendants();
-  parent_joint_nodes(0);
+
+  parent_joint_nodes();
 
   // Now call update() one more time, to ensure that all of the joints have
   // their correct transform (since we might have modified the default
@@ -243,20 +243,15 @@ build_joint_hierarchy(EggNode *egg_node, int parent) {
       _joint_map[egg_group] = index;
       parent = index;
 
-      CharacterJoint *joint = _bundle->get_joint(index);
-
       // Now that we have computed _net_transform (which we need to convert
       // the vertices), update the default transform from the <DefaultPose>
       // entry.
       if (egg_group->get_default_pose().has_transform()) {
         matd = egg_group->get_default_pose().get_transform3d();
         matf = LCAST(PN_stdfloat, matd);
-        joint->_default_value = matf;
-        joint->_value = matf;
+        _bundle->set_joint_default_value(index, matf);
       }
 
-      // FIXME
-#if 0
       if (egg_group->has_dcs_type()) {
         // If the joint requested an explicit DCS, create a node for it.
         PT(ModelNode) geom_node = new ModelNode(egg_group->get_name());
@@ -264,9 +259,8 @@ build_joint_hierarchy(EggNode *egg_node, int parent) {
         // To prevent flattening from messing with geometry on exposed joints
         geom_node->set_preserve_transform(ModelNode::PT_net);
 
-        joint->_geom_node = geom_node.p();
+        _joint_dcs[index] = geom_node;
       }
-#endif
 
       //part = joint;
     }
@@ -283,23 +277,15 @@ build_joint_hierarchy(EggNode *egg_node, int parent) {
  * joints under the character node.
  */
 void CharacterMaker::
-parent_joint_nodes(int joint) {
-  #if 0
-  if (part->is_character_joint()) {
-    CharacterJoint *joint = DCAST(CharacterJoint, part);
-    PandaNode *joint_node = joint->_geom_node;
-    if (joint_node != nullptr) {
-      _character_node->add_child(joint_node);
-      joint->add_net_transform(joint_node);
-      joint_node->set_transform(TransformState::make_mat(joint->_net_transform));
-    }
+parent_joint_nodes() {
+  for (JointDCS::const_iterator jdi = _joint_dcs.begin(); jdi != _joint_dcs.end(); ++jdi) {
+    int joint = (*jdi).first;
+    ModelNode *joint_node = (*jdi).second;
+    _character_node->add_child(joint_node);
+    _bundle->add_net_transform(joint, joint_node);
+    joint_node->set_transform(
+      TransformState::make_mat(_bundle->get_joint_net_transform(joint)));
   }
-
-  for (int i = 0; i < part->get_num_children(); i++) {
-    parent_joint_nodes(part->get_child(i));
-  }
-
-  #endif
 }
 
 /**

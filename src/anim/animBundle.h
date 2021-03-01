@@ -19,40 +19,67 @@
 #include "typedWritableReferenceCount.h"
 #include "namable.h"
 #include "pointerTo.h"
-#include "pta_stdfloat.h"
+#include "vector_stdfloat.h"
 #include "luse.h"
 
 class FactoryParams;
 
-class JointFrameData {
+/**
+ * There is one instance of this class for each joint in an animation.  It
+ * specifies the indices for a joint into the animation tables for each
+ * component.  It also specifies the number of sequential frames for a joint
+ * for each component, because egg files optimize out components that remain
+ * constant.
+ */
+class JointEntry {
 PUBLISHED:
-  LVecBase3 pos;
+  std::string name;
+
+  int first_frame, num_frames;
+};
+typedef pvector<JointEntry> JointEntries;
+
+class ALIGN_16BYTE JointFrame {
+PUBLISHED:
   LQuaternion quat;
+  LVecBase3 pos;
   LVecBase3 scale;
 
-  bool operator == (const JointFrameData &other) const {
-    return pos == other.pos && quat == other.quat && scale == other.scale;
+  JointFrame() = default;
+
+  JointFrame(const JointFrame &copy) :
+    quat(copy.quat),
+    pos(copy.pos),
+    scale(copy.scale)
+  {
   }
 
-public:
-  static TypeHandle get_class_type() {
-    return _type_handle;
-  }
-  static void init_type() {
-    register_type(_type_handle, "JointFrameData");
+  JointFrame(JointFrame &&other) :
+    quat(std::move(other.quat)),
+    pos(std::move(other.pos)),
+    scale(std::move(other.scale))
+  {
   }
 
-private:
-  static TypeHandle _type_handle;
+  void operator = (JointFrame &&other) {
+    quat = std::move(other.quat);
+    pos = std::move(other.pos);
+    scale = std::move(other.scale);
+  }
 };
+typedef pvector<JointFrame> JointFrames;
 
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToBase<ReferenceCountedVector<JointFrameData> >)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArrayBase<JointFrameData>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArray<JointFrameData>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerToArray<JointFrameData>)
+/**
+ * There is one instance of this class for each slider in an animation.  It
+ * specifies the index for a slider into the animation table.
+ */
+class SliderEntry {
+PUBLISHED:
+  std::string name;
 
-typedef PointerToArray<JointFrameData> PTA_JointFrameData;
-typedef ConstPointerToArray<JointFrameData> CPTA_JointFrameData;
+  int first_frame, num_frames;
+};
+typedef pvector<SliderEntry> SliderEntries;
 
 /**
  * This is the root of an AnimChannel hierarchy.  It knows the frame rate and
@@ -74,27 +101,34 @@ PUBLISHED:
   INLINE void set_num_frames(int num_frames);
   INLINE int get_num_frames() const;
 
-  INLINE void set_joint_channel_data(CPTA_JointFrameData data);
-  INLINE CPTA_JointFrameData get_joint_channel_data() const;
+  INLINE void set_joint_table(JointFrames &&table);
+  INLINE const JointFrames &get_joint_table() const;
 
-  INLINE void set_slider_channel_data(CPTA_stdfloat data);
-  INLINE CPTA_stdfloat get_slider_channel_data() const;
+  INLINE const JointFrame &get_joint_frame(int joint, int frame) const;
+  INLINE const JointFrame &get_joint_frame(const JointEntry &joint, int frame) const;
+
+  INLINE void set_slider_table(vector_stdfloat &&table);
+  INLINE const vector_stdfloat &get_slider_table() const;
+
+  INLINE void get_scalar(int slider, int frame, PN_stdfloat &scalar) const;
+  INLINE void get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const;
 
   int find_joint_channel(const std::string &name) const;
   int find_slider_channel(const std::string &name) const;
 
-  INLINE void record_joint_channel_name(int channel, const std::string &name);
-  INLINE void record_slider_channel_name(int channel, const std::string &name);
+  INLINE void add_joint_entry(const JointEntry &joint);
+  INLINE const JointEntry &get_joint_entry(int n) const;
 
-  INLINE int get_num_joint_channels() const;
-  INLINE int get_num_slider_channels() const;
+  INLINE void add_slider_entry(const SliderEntry &slider);
+  INLINE const SliderEntry &get_slider_entry(int n) const;
+
+  INLINE int get_num_joint_entries() const;
+  INLINE int get_num_slider_entries() const;
 
   MAKE_PROPERTY(base_frame_rate, get_base_frame_rate, set_base_frame_rate);
   MAKE_PROPERTY(num_frames, get_num_frames, set_num_frames);
 
   virtual void output(std::ostream &out) const;
-
-  static INLINE int get_channel_data_index(int num_channels, int frame, int channel);
 
 protected:
   INLINE AnimBundle();
@@ -105,15 +139,11 @@ private:
   PN_stdfloat _fps;
   int _num_frames;
 
-  typedef pmap<std::string, int> ChannelNames;
-  ChannelNames _joint_channel_names;
-  ChannelNames _slider_channel_names;
+  JointEntries _joint_entries;
+  JointFrames _joint_frames;
 
-  // One entry for each joint for each frame.
-  CPTA_JointFrameData _joint_frames;
-
-  // One entry for each slider for each frame.
-  CPTA_stdfloat _slider_frames;
+  SliderEntries _slider_entries;
+  vector_stdfloat _slider_table;
 
 public:
   static void register_with_read_factory();

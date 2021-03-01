@@ -32,6 +32,11 @@ private:
 PUBLISHED:
   CharacterNode(const std::string &name);
 
+public:
+  ~CharacterNode();
+
+PUBLISHED:
+
   void update();
   void force_update();
 
@@ -48,8 +53,41 @@ public:
                       const TransformState *transform,
                       Thread *current_thread) const override;
 
+protected:
+  virtual void r_copy_children(const PandaNode *from, InstanceMap &inst_map,
+                               Thread *current_thread) override;
+
 private:
   void do_update();
+
+  typedef pmap<const PandaNode *, PandaNode *> NodeMap;
+  typedef pmap<const GeomVertexData *, GeomVertexData *> GeomVertexMap;
+  typedef pmap<const VertexTransform *, PT(JointVertexTransform) > GeomJointMap;
+  typedef pmap<const VertexSlider *, PT(CharacterVertexSlider) > GeomSliderMap;
+
+  void r_copy_char(PandaNode *dest, const PandaNode *source,
+                   const CharacterNode *from, NodeMap &node_map,
+                   GeomVertexMap &gvmap,
+                   GeomJointMap &gjmap, GeomSliderMap &gsmap);
+  void r_update_geom(PandaNode *node,
+                     GeomVertexMap &gvmap,
+                     GeomJointMap &gjmap, GeomSliderMap &gsmap);
+  PT(Geom) copy_geom(const Geom *source,
+                     GeomVertexMap &gvmap,
+                     GeomJointMap &gjmap, GeomSliderMap &gsmap);
+  void copy_node_pointers(const CharacterNode::NodeMap &node_map,
+                          Character *dest, const Character *source);
+  CPT(TransformTable) redirect_transform_table(const TransformTable *source,
+                                               GeomJointMap &gjmap);
+  CPT(TransformBlendTable) redirect_transform_blend_table
+  (const TransformBlendTable *source,
+   GeomJointMap &gjmap);
+  CPT(SliderTable) redirect_slider_table(const SliderTable *source,
+                                         GeomSliderMap &gsmap);
+
+  PT(JointVertexTransform) redirect_joint(const VertexTransform *vt,
+                                          GeomJointMap &gjmap);
+  PT(CharacterVertexSlider) redirect_slider(const VertexSlider *vs, GeomSliderMap &gsmap);
 
   PT(Character) _char;
 
