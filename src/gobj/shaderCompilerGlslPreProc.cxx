@@ -14,6 +14,8 @@
 #include "shaderCompilerGlslPreProc.h"
 #include "shaderModuleGlsl.h"
 #include "config_gobj.h"
+#include "config_putil.h"
+#include "virtualFileSystem.h"
 
 #include "dcast.h"
 

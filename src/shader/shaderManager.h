@@ -18,6 +18,7 @@
 #include "shaderManagerBase.h"
 #include "pmap.h"
 #include "geomVertexAnimationSpec.h"
+#include "graphicsStateGuardianBase.h"
 #include "renderAttrib.h"
 #include "shaderEnums.h"
 #include "internalName.h"

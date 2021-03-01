@@ -16,6 +16,8 @@
 #include "virtualFile.h"
 #include "shaderCompilerGlslPreProc.h"
 #include "string_utils.h"
+#include "config_putil.h"
+#include "virtualFileSystem.h"
 
 #ifndef CPPPARSER
 #include <glslang/Public/ShaderLang.h>
