@@ -569,6 +569,10 @@ write(const Filename &filename, Material::PathMode path_mode) {
 
   PT(KeyValues) script = new KeyValues;
 
+  if (has_shader()) {
+    script->set_key_value("shader", get_shader());
+  }
+
   if (has_color()) {
     script->set_key_value("color", KeyValues::to_string(get_color()));
   }
@@ -665,7 +669,9 @@ write(const Filename &filename, Material::PathMode path_mode) {
       MatTexture *tex = get_texture(i);
 
       PT(KeyValues) tex_block = new KeyValues("texture", script);
-      tex_block->set_key_value("stage", tex->_stage_name);
+      if (!tex->_stage_name.empty()) {
+        tex_block->set_key_value("stage", tex->_stage_name);
+      }
 
       if (tex->_source == MatTexture::S_filename) {
         Filename tex_filename = tex->_filename;
@@ -745,10 +751,6 @@ write(const Filename &filename, Material::PathMode path_mode) {
     case AlphaTest::C_always:
       ata_block->set_key_value("compare", "always");
     }
-  }
-
-  if (has_shader()) {
-    script->set_key_value("name", get_shader());
   }
 
 #if 0

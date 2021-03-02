@@ -29,7 +29,7 @@ class KeyValues;
  * "texture" block data.
  */
 class EXPCL_PANDA_PUTIL MatTexture : public ReferenceCount {
-public:
+PUBLISHED:
   // Is the texture block referencing a file on disk or an engine-created
   // texture?
   enum Source {
