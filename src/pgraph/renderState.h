@@ -137,10 +137,10 @@ PUBLISHED:
   EXTENSION(PyObject *get_composition_cache() const);
   EXTENSION(PyObject *get_invert_composition_cache() const);
 
-  INLINE const Filename &get_filename() const;
+  INLINE Filename get_filename() const;
   MAKE_PROPERTY(filename, get_filename);
 
-  INLINE const Filename &get_fullpath() const;
+  INLINE Filename get_fullpath() const;
   MAKE_PROPERTY(fullpath, get_fullpath);
 
   void output(std::ostream &out) const;
@@ -244,12 +244,15 @@ public:
   mutable CPT(RenderAttrib) _generated_shader;
   mutable UpdateSeq _generated_shader_seq;
 
+  class FilenameReference : public ReferenceCount {
+  public:
+    Filename _filename;
+    Filename _fullpath;
+  };
+
   // The filename that the state came from, if it was loaded via a script on
   // disk.
-  // FIXME: This adds extra memory overhead on RenderState, perhaps this should
-  // be moved to an object that is just referenced by pointer?
-  mutable Filename _filename;
-  mutable Filename _fullpath;
+  mutable PT(FilenameReference) _filename_ref;
 
   // This is the root object that is written to and read from a .rso file.  We
   // have to do this because the RenderState pointers can change when we read

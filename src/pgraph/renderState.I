@@ -85,7 +85,7 @@ has_attrib(int slot) const {
  */
 INLINE const RenderAttrib *RenderState::
 get_attrib(TypeHandle type) const {
-  RenderAttribRegistry *reg = RenderAttribRegistry::get_global_ptr();
+  RenderAttribRegistry *reg = RenderAttribRegistry::quick_get_global_ptr();
   int slot = reg->get_slot(type);
   return _attributes[slot]._attrib;
 }
@@ -118,7 +118,7 @@ get_attrib_def(int slot) const {
  */
 INLINE int RenderState::
 get_override(TypeHandle type) const {
-  RenderAttribRegistry *reg = RenderAttribRegistry::get_global_ptr();
+  RenderAttribRegistry *reg = RenderAttribRegistry::quick_get_global_ptr();
   int slot = reg->get_slot(type);
   return _attributes[slot]._override;
 }
@@ -319,17 +319,25 @@ get_invert_composition_cache_result(size_t n) const {
 /**
  * Returns the Filename of the script that the RenderState was created from.
  */
-INLINE const Filename &RenderState::
+INLINE Filename RenderState::
 get_filename() const {
-  return _filename;
+  if (_filename_ref == nullptr) {
+    return Filename();
+  }
+
+  return _filename_ref->_filename;
 }
 
 /**
  * Returns the fullpath of the script that the RenderState was created from.
  */
-INLINE const Filename &RenderState::
+INLINE Filename RenderState::
 get_fullpath() const {
-  return _fullpath;
+  if (_filename_ref == nullptr) {
+    return Filename();
+  }
+
+  return _filename_ref->_fullpath;
 }
 
 /**

@@ -108,11 +108,8 @@ RenderState(const RenderState &copy) :
   _lock("RenderState")
 {
   // Copy over the attributes.
-  RenderAttribRegistry *reg = RenderAttribRegistry::get_global_ptr();
-  int num_slots = reg->get_num_slots();
-  for (int i = 0; i < num_slots; ++i) {
-    _attributes[i] = copy._attributes[i];
-  }
+  int num_slots = RenderAttribRegistry::quick_get_global_ptr()->get_num_slots();
+  std::copy(copy._attributes, copy._attributes + num_slots, _attributes);
 
   _saved_entry = -1;
   _last_mi = -1;
@@ -157,18 +154,6 @@ RenderState::
  */
 int RenderState::
 compare_to(const RenderState &other) const {
-  if (!get_uniquify_states_ignore_filenames()) {
-    // We care about the filename references.  Compare those.
-    int filename_cmp = _filename.compare_to(other._filename);
-    if (filename_cmp != 0) {
-      return filename_cmp;
-    }
-    int fullpath_cmp = _fullpath.compare_to(other._fullpath);
-    if (fullpath_cmp != 0) {
-      return fullpath_cmp;
-    }
-  }
-
   SlotMask mask = _filled_slots | other._filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {
@@ -509,10 +494,11 @@ make(const Material *script) {
     }
   }
 
-  state->_filename = script->get_filename();
-  state->_fullpath = script->get_fullpath();
+  state->_filename_ref = new FilenameReference;
+  state->_filename_ref->_filename = script->get_filename();
+  state->_filename_ref->_fullpath = script->get_fullpath();
 
-  return return_unique((RenderState *)state.p());
+  return state;
 }
 
 /**
@@ -567,8 +553,9 @@ make(const Filename &filename, const DSearchPath &search_path) {
 
     CPT(RenderState) state = DCAST(BamRoot, obj)->_state;
     // Store a reference to our .rso file on the state.
-    state->_filename = filename;
-    state->_fullpath = resolved;
+    state->_filename_ref = new FilenameReference;
+    state->_filename_ref->_filename = filename;
+    state->_filename_ref->_fullpath = resolved;
 
     bam.close();
 
@@ -1507,12 +1494,6 @@ void RenderState::
 do_calc_hash() {
   _hash = 0;
 
-  if (!get_uniquify_states_ignore_filenames()) {
-    // We care about the filename references.  Hash them.
-    _hash = int_hash::add_hash(_hash, _filename.get_hash());
-    _hash = int_hash::add_hash(_hash, _fullpath.get_hash());
-  }
-
   SlotMask mask = _filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {
@@ -2180,8 +2161,11 @@ void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
   BamWriter::BamTextureMode file_material_mode = manager->get_file_material_mode();
 
+  FilenameReference *fref = _filename_ref;
+
   bool write_raw_data = (file_material_mode == BamWriter::BTM_rawdata) ||
-                        _filename.empty() ||
+                        (fref == nullptr) ||
+                        (fref != nullptr && fref->_filename.empty()) ||
                         (manager->get_file_minor_ver() < 46);
 
   if (manager->get_file_minor_ver() >= 46) {
@@ -2195,7 +2179,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
     bool has_bam_dir = !manager->get_filename().empty();
     Filename bam_dir = manager->get_filename().get_dirname();
-    Filename filename = _filename;
+    Filename filename = fref->_filename;
 
     VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
@@ -2205,24 +2189,24 @@ write_datagram(BamWriter *manager, Datagram &dg) {
       break;
 
     case BamWriter::BTM_fullpath:
-      filename = _fullpath;
+      filename = fref->_fullpath;
       break;
 
     case BamWriter::BTM_relative:
-      filename = _fullpath;
+      filename = fref->_fullpath;
       bam_dir.make_absolute(vfs->get_cwd());
       if (!has_bam_dir || !filename.make_relative_to(bam_dir, true)) {
         filename.find_on_searchpath(get_model_path());
       }
       if (pgraph_cat.is_debug()) {
         pgraph_cat.debug()
-          << "RenderState script " << _fullpath
+          << "RenderState script " << fref->_fullpath
           << " found as " << filename << "\n";
       }
       break;
 
     case BamWriter::BTM_basename:
-      filename = _fullpath.get_basename();
+      filename = fref->_fullpath.get_basename();
       break;
 
     default:

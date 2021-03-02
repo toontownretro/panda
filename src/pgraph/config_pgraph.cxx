@@ -71,6 +71,7 @@
 #include "occluderNode.h"
 #include "portalClipper.h"
 #include "renderAttrib.h"
+#include "renderAttribRegistry.h"
 #include "renderEffect.h"
 #include "renderEffects.h"
 #include "renderModeAttrib.h"
@@ -423,6 +424,9 @@ init_libpgraph() {
     return;
   }
   initialized = true;
+
+  // Initialize the registry now so it's safe to call quick_get_global_ptr().
+  RenderAttribRegistry *ra_reg = RenderAttribRegistry::get_global_ptr();
 
   AlphaTestAttrib::init_type();
   AntialiasAttrib::init_type();
