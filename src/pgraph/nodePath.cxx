@@ -24,6 +24,8 @@
 #include "textureAttrib.h"
 #include "texMatrixAttrib.h"
 #include "texGenAttrib.h"
+#include "materialAttrib.h"
+#include "materialCollection.h"
 #include "lightAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "occluderEffect.h"
@@ -41,12 +43,14 @@
 #include "showBoundsEffect.h"
 #include "transparencyAttrib.h"
 #include "antialiasAttrib.h"
+#include "audioVolumeAttrib.h"
 #include "texProjectorEffect.h"
 #include "scissorEffect.h"
 #include "texturePool.h"
 #include "planeNode.h"
 #include "occluderNode.h"
 #include "lensNode.h"
+#include "materialPool.h"
 #include "look_at.h"
 #include "plist.h"
 #include "boundingSphere.h"
@@ -955,6 +959,11 @@ set_pos(const LVecBase3 &pos) {
   node()->reset_prev_transform();
 }
 
+/**
+ * Sets the X component of the position transform, leaving other components
+ * untouched.
+ * @see set_pos()
+ */
 void NodePath::
 set_x(PN_stdfloat x) {
   nassertv_always(!is_empty());
@@ -963,6 +972,11 @@ set_x(PN_stdfloat x) {
   set_pos(pos);
 }
 
+/**
+ * Sets the Y component of the position transform, leaving other components
+ * untouched.
+ * @see set_pos()
+ */
 void NodePath::
 set_y(PN_stdfloat y) {
   nassertv_always(!is_empty());
@@ -971,6 +985,11 @@ set_y(PN_stdfloat y) {
   set_pos(pos);
 }
 
+/**
+ * Sets the Z component of the position transform, leaving other components
+ * untouched.
+ * @see set_pos()
+ */
 void NodePath::
 set_z(PN_stdfloat z) {
   nassertv_always(!is_empty());
@@ -1123,6 +1142,11 @@ set_scale(const LVecBase3 &scale) {
   set_transform(transform->set_scale(scale));
 }
 
+/**
+ * Sets the x-scale component of the transform, leaving other components
+ * untouched.
+ * @see set_scale()
+ */
 void NodePath::
 set_sx(PN_stdfloat sx) {
   nassertv_always(!is_empty());
@@ -1132,6 +1156,11 @@ set_sx(PN_stdfloat sx) {
   set_transform(transform->set_scale(scale));
 }
 
+/**
+ * Sets the y-scale component of the transform, leaving other components
+ * untouched.
+ * @see set_scale()
+ */
 void NodePath::
 set_sy(PN_stdfloat sy) {
   nassertv_always(!is_empty());
@@ -1141,6 +1170,11 @@ set_sy(PN_stdfloat sy) {
   set_transform(transform->set_scale(scale));
 }
 
+/**
+ * Sets the z-scale component of the transform, leaving other components
+ * untouched.
+ * @see set_scale()
+ */
 void NodePath::
 set_sz(PN_stdfloat sz) {
   nassertv_always(!is_empty());
@@ -3234,11 +3268,18 @@ set_shader(const Shader *sha, int priority) {
 }
 
 /**
- * Sets the name of the shader generator that should be used to generate a
- * shader for this node's state.
+ *
  */
 void NodePath::
-set_shader(const std::string &shader_name, int priority) {
+set_shader_off(int priority) {
+  set_shader(nullptr, priority);
+}
+
+/**
+ *
+ */
+void NodePath::
+set_shader_auto(int priority) {
   nassertv_always(!is_empty());
 
   const RenderAttrib *attrib =
@@ -3247,22 +3288,34 @@ set_shader(const std::string &shader_name, int priority) {
     priority = max(priority,
                    node()->get_state()->get_override(ShaderAttrib::get_class_slot()));
     const ShaderAttrib *sa = DCAST(ShaderAttrib, attrib);
-    node()->set_attrib(sa->set_shader(shader_name, priority));
+    node()->set_attrib(sa->set_shader_auto(priority));
   } else {
     // Create a new ShaderAttrib for this node.
     CPT(ShaderAttrib) sa = DCAST(ShaderAttrib, ShaderAttrib::make());
-    node()->set_attrib(sa->set_shader(shader_name, priority));
+    node()->set_attrib(sa->set_shader_auto(priority));
   }
 }
 
 /**
- *
+ * overloaded for auto shader customization
  */
 void NodePath::
-set_shader_off(int priority) {
-  set_shader(nullptr, priority);
-}
+set_shader_auto(BitMask32 shader_switch, int priority) {
+  nassertv_always(!is_empty());
 
+  const RenderAttrib *attrib =
+    node()->get_attrib(ShaderAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    priority = max(priority,
+                   node()->get_state()->get_override(ShaderAttrib::get_class_slot()));
+    const ShaderAttrib *sa = DCAST(ShaderAttrib, attrib);
+    node()->set_attrib(sa->set_shader_auto(shader_switch, priority));
+  } else {
+    // Create a new ShaderAttrib for this node.
+    CPT(ShaderAttrib) sa = DCAST(ShaderAttrib, ShaderAttrib::make());
+    node()->set_attrib(sa->set_shader_auto(shader_switch, priority));
+  }
+}
 /**
  *
  */
@@ -4063,6 +4116,148 @@ find_all_texture_stages(const string &name) const {
 }
 
 /**
+ * Returns the first material found applied to geometry at this node or below
+ * that matches the indicated name (which may contain wildcards).  Returns the
+ * material if it is found, or NULL if it is not.
+ */
+Material *NodePath::
+find_material(const string &name) const {
+  nassertr_always(!is_empty(), nullptr);
+  GlobPattern glob(name);
+  return r_find_material(node(), get_net_state(), glob);
+}
+
+/**
+ * Returns a list of a materials applied to geometry at this node and below.
+ */
+MaterialCollection NodePath::
+find_all_materials() const {
+  nassertr_always(!is_empty(), MaterialCollection());
+  Materials materials;
+  r_find_all_materials(node(), get_net_state(), materials);
+
+  MaterialCollection tc;
+  Materials::iterator ti;
+  for (ti = materials.begin(); ti != materials.end(); ++ti) {
+    tc.add_material(*ti);
+  }
+  return tc;
+}
+
+/**
+ * Returns a list of a materials applied to geometry at this node and below
+ * that match the indicated name (which may contain wildcard characters).
+ */
+MaterialCollection NodePath::
+find_all_materials(const string &name) const {
+  nassertr_always(!is_empty(), MaterialCollection());
+  Materials materials;
+  r_find_all_materials(node(), get_net_state(), materials);
+
+  GlobPattern glob(name);
+
+  MaterialCollection tc;
+  Materials::iterator ti;
+  for (ti = materials.begin(); ti != materials.end(); ++ti) {
+    Material *material = (*ti);
+    if (glob.matches(material->get_name())) {
+      tc.add_material(material);
+    }
+  }
+  return tc;
+}
+
+/**
+ * Sets the geometry at this level and below to render using the indicated
+ * material.
+ *
+ * Previously, this operation made a copy of the material structure, but
+ * nowadays it assigns the pointer directly.
+ */
+void NodePath::
+set_material(Material *mat, int priority) {
+  nassertv_always(!is_empty());
+  nassertv(mat != nullptr);
+  node()->set_attrib(MaterialAttrib::make(mat), priority);
+}
+
+/**
+ * Sets the geometry at this level and below to render using no material.
+ * This is normally the default, but it may be useful to use this to
+ * contradict set_material() at a higher node level (or, with a priority, to
+ * override a set_material() at a lower level).
+ */
+void NodePath::
+set_material_off(int priority) {
+  nassertv_always(!is_empty());
+  node()->set_attrib(MaterialAttrib::make_off(), priority);
+}
+
+/**
+ * Completely removes any material adjustment that may have been set via
+ * set_material() from this particular node.
+ */
+void NodePath::
+clear_material() {
+  nassertv_always(!is_empty());
+  node()->clear_attrib(MaterialAttrib::get_class_slot());
+}
+
+/**
+ * Returns true if a material has been applied to this particular node via
+ * set_material(), false otherwise.
+ */
+bool NodePath::
+has_material() const {
+  nassertr_always(!is_empty(), false);
+  const RenderAttrib *attrib =
+    node()->get_attrib(MaterialAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    const MaterialAttrib *ma = DCAST(MaterialAttrib, attrib);
+    return !ma->is_off();
+  }
+
+  return false;
+}
+
+/**
+ * Returns the material that has been set on this particular node, or NULL if
+ * no material has been set.  This is not necessarily the material that will
+ * be applied to the geometry at or below this level, as another material at a
+ * higher or lower level may override.
+ *
+ * See also find_material().
+ */
+PT(Material) NodePath::
+get_material() const {
+  nassertr_always(!is_empty(), nullptr);
+  const RenderAttrib *attrib =
+    node()->get_attrib(MaterialAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    const MaterialAttrib *ma = DCAST(MaterialAttrib, attrib);
+    return ma->get_material();
+  }
+
+  return nullptr;
+}
+
+/**
+ * Recursively searches the scene graph for references to the given material,
+ * and replaces them with the new material.
+ *
+ * @since 1.10.0
+ */
+void NodePath::
+replace_material(Material *mat, Material *new_mat) {
+  nassertv_always(!is_empty());
+  nassertv(mat != nullptr);
+  nassertv(new_mat != nullptr);
+
+  CPT(RenderAttrib) new_attrib = MaterialAttrib::make(new_mat);
+  r_replace_material(node(), mat, (const MaterialAttrib *)new_attrib.p());
+}
+
+/**
  * Sets the geometry at this level and below to render using the indicated
  * fog.
  */
@@ -4773,6 +4968,8 @@ get_transparency() const {
  * Specifically sets or disables a logical operation on this particular node.
  * If no other nodes override, this will cause geometry to be rendered without
  * color blending but instead using the given logical operator.
+ *
+ * @since 1.10.0
  */
 void NodePath::
 set_logic_op(LogicOpAttrib::Operation op, int priority) {
@@ -4785,6 +4982,8 @@ set_logic_op(LogicOpAttrib::Operation op, int priority) {
  * Completely removes any logical operation that may have been set on this
  * node via set_logic_op(). The geometry at this level and below will
  * subsequently be rendered using standard color blending.
+ *
+ * @since 1.10.0
  */
 void NodePath::
 clear_logic_op() {
@@ -4797,6 +4996,8 @@ clear_logic_op() {
  * particular node via set_logic_op().  If this returns true, then
  * get_logic_op() may be called to determine whether a logical operation has
  * been explicitly disabled for this node or set to particular operation.
+ *
+ * @since 1.10.0
  */
 bool NodePath::
 has_logic_op() const {
@@ -4811,6 +5012,8 @@ has_logic_op() const {
  * has_logic_op().  This does not necessarily imply that the geometry will
  * or will not be rendered with the given logical operation, as there may be
  * other nodes that override.
+ *
+ * @since 1.10.0
  */
 LogicOpAttrib::Operation NodePath::
 get_logic_op() const {
@@ -4872,6 +5075,101 @@ get_antialias() const {
   }
 
   return AntialiasAttrib::M_none;
+}
+
+/**
+ * Returns true if an audio volume has been applied to the referenced node,
+ * false otherwise.  It is still possible that volume at this node might have
+ * been scaled by an ancestor node.
+ */
+bool NodePath::
+has_audio_volume() const {
+  nassertr_always(!is_empty(), false);
+  return node()->has_attrib(AudioVolumeAttrib::get_class_slot());
+}
+
+/**
+ * Completely removes any audio volume from the referenced node.  This is
+ * preferable to simply setting the audio volume to identity, as it also
+ * removes the overhead associated with having an audio volume at all.
+ */
+void NodePath::
+clear_audio_volume() {
+  nassertv_always(!is_empty());
+  node()->clear_attrib(AudioVolumeAttrib::get_class_slot());
+}
+
+/**
+ * Sets the audio volume component of the transform
+ */
+void NodePath::
+set_audio_volume(PN_stdfloat volume, int priority) {
+  nassertv_always(!is_empty());
+
+  const RenderAttrib *attrib =
+    node()->get_attrib(AudioVolumeAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    priority = max(priority,
+                   node()->get_state()->get_override(AudioVolumeAttrib::get_class_slot()));
+    CPT(AudioVolumeAttrib) ava = DCAST(AudioVolumeAttrib, attrib);
+
+    // Modify the existing AudioVolumeAttrib to add the indicated volume.
+    node()->set_attrib(ava->set_volume(volume), priority);
+
+  } else {
+    // Create a new AudioVolumeAttrib for this node.
+    node()->set_attrib(AudioVolumeAttrib::make(volume), priority);
+  }
+}
+
+/**
+ * Disables any audio volume attribute inherited from above.  This is not the
+ * same thing as clear_audio_volume(), which undoes any previous
+ * set_audio_volume() operation on this node; rather, this actively disables
+ * any set_audio_volume() that might be inherited from a parent node.
+ *
+ * It is legal to specify a new volume on the same node with a subsequent call
+ * to set_audio_volume(); this new scale will apply to lower nodes.
+ */
+void NodePath::
+set_audio_volume_off(int priority) {
+  nassertv_always(!is_empty());
+  node()->set_attrib(AudioVolumeAttrib::make_off(), priority);
+}
+
+/**
+ * Returns the complete audio volume that has been applied to this node via a
+ * previous call to set_audio_volume(), or 1. (identity) if no volume has been
+ * applied to this particular node.
+ */
+PN_stdfloat NodePath::
+get_audio_volume() const {
+  const RenderAttrib *attrib =
+    node()->get_attrib(AudioVolumeAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    const AudioVolumeAttrib *ava = DCAST(AudioVolumeAttrib, attrib);
+    return ava->get_volume();
+  }
+
+  return 1.0f;
+}
+
+/**
+ * Returns the complete audio volume for this node taking highers nodes in the
+ * graph into account.
+ */
+PN_stdfloat NodePath::
+get_net_audio_volume() const {
+  CPT(RenderState) net_state = get_net_state();
+  const RenderAttrib *attrib = net_state->get_attrib(AudioVolumeAttrib::get_class_slot());
+  if (attrib != nullptr) {
+    const AudioVolumeAttrib *ava = DCAST(AudioVolumeAttrib, attrib);
+    if (ava != nullptr) {
+      return ava->get_volume();
+    }
+  }
+
+  return 1.0f;
 }
 
 /**
@@ -6436,6 +6734,140 @@ r_unify_texture_stages(PandaNode *node, TextureStage *stage) {
   for (int i = 0; i < num_children; i++) {
     PandaNode *child = cr.get_child(i);
     r_unify_texture_stages(child, stage);
+  }
+}
+
+/**
+ *
+ */
+Material *NodePath::
+r_find_material(PandaNode *node, const RenderState *state,
+               const GlobPattern &glob) const {
+  if (node->is_geom_node()) {
+    GeomNode *gnode;
+    DCAST_INTO_R(gnode, node, nullptr);
+
+    int num_geoms = gnode->get_num_geoms();
+    for (int i = 0; i < num_geoms; i++) {
+      CPT(RenderState) geom_state =
+        state->compose(gnode->get_geom_state(i));
+
+      // Look for a MaterialAttrib on the state.
+      const RenderAttrib *attrib =
+        geom_state->get_attrib(MaterialAttrib::get_class_slot());
+      if (attrib != nullptr) {
+        const MaterialAttrib *ta = DCAST(MaterialAttrib, attrib);
+        if (!ta->is_off()) {
+          Material *material = ta->get_material();
+          if (material != nullptr) {
+            if (glob.matches(material->get_name())) {
+              return material;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Now consider children.
+  PandaNode::Children cr = node->get_children();
+  int num_children = cr.get_num_children();
+  for (int i = 0; i < num_children; i++) {
+    PandaNode *child = cr.get_child(i);
+    CPT(RenderState) next_state = state->compose(child->get_state());
+
+    Material *result = r_find_material(child, next_state, glob);
+    if (result != nullptr) {
+      return result;
+    }
+  }
+
+  return nullptr;
+}
+
+/**
+ *
+ */
+void NodePath::
+r_find_all_materials(PandaNode *node, const RenderState *state,
+                    NodePath::Materials &materials) const {
+  if (node->is_geom_node()) {
+    GeomNode *gnode;
+    DCAST_INTO_V(gnode, node);
+
+    int num_geoms = gnode->get_num_geoms();
+    for (int i = 0; i < num_geoms; i++) {
+      CPT(RenderState) geom_state =
+        state->compose(gnode->get_geom_state(i));
+
+      // Look for a MaterialAttrib on the state.
+      const RenderAttrib *attrib =
+        geom_state->get_attrib(MaterialAttrib::get_class_slot());
+      if (attrib != nullptr) {
+        const MaterialAttrib *ta = DCAST(MaterialAttrib, attrib);
+        if (!ta->is_off()) {
+          Material *material = ta->get_material();
+          if (material != nullptr) {
+            materials.insert(material);
+          }
+        }
+      }
+    }
+  }
+
+  // Now consider children.
+  PandaNode::Children cr = node->get_children();
+  int num_children = cr.get_num_children();
+  for (int i = 0; i < num_children; i++) {
+    PandaNode *child = cr.get_child(i);
+    CPT(RenderState) next_state = state->compose(child->get_state());
+    r_find_all_materials(child, next_state, materials);
+  }
+}
+
+/**
+ *
+ */
+void NodePath::
+r_replace_material(PandaNode *node, Material *mat,
+                   const MaterialAttrib *new_attrib) {
+  // Consider the state of the node itself.
+  {
+    CPT(RenderState) node_state = node->get_state();
+    const MaterialAttrib *ma;
+    if (node_state->get_attrib(ma)) {
+      if (mat == ma->get_material()) {
+        node->set_state(node_state->set_attrib(new_attrib));
+      }
+    }
+  }
+
+  // If this is a GeomNode, consider the state of any of its Geoms.
+  if (node->is_geom_node()) {
+    GeomNode *gnode;
+    DCAST_INTO_V(gnode, node);
+
+    int num_geoms = gnode->get_num_geoms();
+    for (int i = 0; i < num_geoms; i++) {
+      CPT(RenderState) geom_state = gnode->get_geom_state(i);
+
+      // Look for a MaterialAttrib on the state.
+      const MaterialAttrib *ma;
+      if (geom_state->get_attrib(ma)) {
+        if (mat == ma->get_material()) {
+          // Replace it
+          gnode->set_geom_state(i, geom_state->set_attrib(new_attrib));
+        }
+      }
+    }
+  }
+
+  // Now consider children.
+  PandaNode::Children cr = node->get_children();
+  size_t num_children = cr.get_num_children();
+  for (size_t i = 0; i < num_children; ++i) {
+    PandaNode *child = cr.get_child(i);
+    r_replace_material(child, mat, new_attrib);
   }
 }
 
