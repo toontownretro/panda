@@ -28,7 +28,8 @@
     textNode.I textNode.h \
     textProperties.I textProperties.h \
     textPropertiesManager.I textPropertiesManager.h \
-    cmss12.bam_src.c cmss12.bam.pz_src.c persans.ttf_src.c
+    Roboto-Regular.bam_src.c Roboto-Regular.bam.pz_src.c Roboto-Regular.ttf_src.c
+    //cmss12.bam_src.c cmss12.bam.pz_src.c persans.ttf_src.c
 
   #define COMPOSITE_SOURCES \
     config_text.cxx \

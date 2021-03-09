@@ -35,7 +35,7 @@
 
 // If we have FreeType available, include the ttf font; it's superior because
 // it's dynamic.  See above.
-#include "persans.ttf_src.c"
+#include "Roboto-Regular.ttf_src.c"
 
 #elif defined(HAVE_ZLIB)
 
@@ -47,7 +47,7 @@
 // egg2bam -rawtex -o cmss12.bam cmss12.egg pzip cmss12.bam bin2c -n
 // default_font_data -o cmss12.bam.pz_src.c cmss12.bam.pz
 
-#include "cmss12.bam.pz_src.c"
+#include "Roboto-Regular.bam.pz_src.c"
 
 #else
 
@@ -58,7 +58,7 @@
 // egg2bam -rawtex -o cmss12.bam cmss12.egg bin2c -n default_font_data -o
 // cmss12.bam_src.c cmss12.bam
 
-#include "cmss12.bam_src.c"
+#include "Roboto-Regular.bam_src.c"
 
 #endif
 
