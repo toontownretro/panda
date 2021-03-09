@@ -205,7 +205,7 @@ ConfigVariableEnum<SamplerState::FilterType> text_magfilter
 ("text-magfilter", SamplerState::FT_linear,
  PRC_DESC("The default texture magfilter type for dynamic text fonts"));
 ConfigVariableEnum<SamplerState::WrapMode> text_wrap_mode
-("text-wrap-mode", SamplerState::WM_border_color,
+("text-wrap-mode", SamplerState::WM_clamp,
  PRC_DESC("The default wrap mode for dynamic text fonts"));
 ConfigVariableEnum<Texture::QualityLevel> text_quality_level
 ("text-quality-level", Texture::QL_best,
