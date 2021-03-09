@@ -14,9 +14,20 @@
 /**
  *
  */
+INLINE TokenFile::Token::
+Token() {
+  _data = "";
+  _newline = true;
+  _line_number = -1;
+  _next = nullptr;
+}
+
+/**
+ *
+ */
 INLINE TokenFile::
 TokenFile() {
-  _token_index = -1;
+  _num_tokens = 0;
   _token = nullptr;
 }
 

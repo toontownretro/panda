@@ -24,7 +24,9 @@ NotifyCategoryDef(tokenfile, "util");
  * Returns true on success, or false if the file could not be read.
  */
 bool TokenFile::
-read(const Filename &filename, const DSearchPath &search_path) {
+read(Filename filename, const DSearchPath &search_path) {
+  filename.set_binary();
+
   Filename resolved = filename;
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   if (!vfs->resolve_filename(resolved, search_path)) {
@@ -65,7 +67,7 @@ read(const Filename &filename, const DSearchPath &search_path) {
     tokenfile_cat.debug()
       << "Tokenize result: " << success << "\n";
     tokenfile_cat.debug()
-      << "We have " << _tokens.size() << " tokens, index is " << _token_index << "\n";
+      << "We have " << _num_tokens << " tokens\n";
   }
 
   vfile->close_read_file(stream);
@@ -80,9 +82,10 @@ read(const Filename &filename, const DSearchPath &search_path) {
  */
 bool TokenFile::
 tokenize(std::istream &is) {
-  _tokens.clear();
-  _token_index = -1;
-  _token = nullptr;
+  _tokens = new Token;
+  _tokens->_data = "START";
+  _num_tokens = 0;
+  _token = _tokens;
 
   IStreamWrapper *wrapper = new IStreamWrapper(&is, false);
   wrapper->acquire();
@@ -117,11 +120,11 @@ tokenize(std::istream &is) {
 
         // The beginning of a comment ends the current token.
         if (current_token.length() != 0) {
-          Token tok;
-          tok._data = current_token;
-          tok._newline = new_line;
-          tok._line_number = line_number;
-          _tokens.push_back(tok);
+          PT(Token) tok = new Token;
+          tok->_data = current_token;
+          tok->_newline = new_line;
+          tok->_line_number = line_number;
+          add_token(tok);
           new_line = false;
           current_token.clear();
         }
@@ -164,11 +167,11 @@ tokenize(std::istream &is) {
 
       } else if (current_token.length() != 0) {
         // End of a token.
-        Token tok;
-        tok._data = current_token;
-        tok._newline = new_line;
-        tok._line_number = line_number;
-        _tokens.push_back(tok);
+        PT(Token) tok = new Token;
+        tok->_data = current_token;
+        tok->_newline = new_line;
+        tok->_line_number = line_number;
+        add_token(tok);
         current_token.clear();
       }
 
@@ -188,22 +191,22 @@ tokenize(std::istream &is) {
 
       } else if (current_token.length() != 0) {
         // End of a token.
-        Token tok;
-        tok._data = current_token;
-        tok._newline = new_line;
-        tok._line_number = line_number;
-        _tokens.push_back(tok);
+        PT(Token) tok = new Token;
+        tok->_data = current_token;
+        tok->_newline = new_line;
+        tok->_line_number = line_number;
+        add_token(tok);
         new_line = false;
         current_token.clear();
       }
 
     } else if (quoted_string && c == quote_character) {
       // End of a quoted string, end of the token.
-      Token tok;
-      tok._data = current_token;
-      tok._newline = new_line;
-      tok._line_number = line_number;
-      _tokens.push_back(tok);
+      PT(Token) tok = new Token;
+      tok->_data = current_token;
+      tok->_newline = new_line;
+      tok->_line_number = line_number;
+      add_token(tok);
       new_line = false;
       current_token.clear();
       quoted_string = false;
@@ -216,11 +219,11 @@ tokenize(std::istream &is) {
 
       // Should also end the current token.
       if (current_token.length() != 0) {
-        Token tok;
-        tok._data = current_token;
-        tok._newline = new_line;
-        tok._line_number = line_number;
-        _tokens.push_back(tok);
+        PT(Token) tok = new Token;
+        tok->_data = current_token;
+        tok->_newline = new_line;
+        tok->_line_number = line_number;
+        add_token(tok);
         new_line = false;
         current_token.clear();
       }
@@ -230,6 +233,9 @@ tokenize(std::istream &is) {
       current_token += c;
     }
   }
+
+  // Move to head of token list.
+  _token = _tokens;
 
   if (quoted_string) {
     tokenfile_cat.error()
@@ -249,7 +255,7 @@ tokenize(std::istream &is) {
  */
 bool TokenFile::
 next_token(bool cross_line) {
-  if (_token_index >= (int)_tokens.size() - 1) {
+  if (_token->_next == nullptr || _token == nullptr) {
     // End of all tokens.
     if (!cross_line && _token) {
       tokenfile_cat.error()
@@ -259,8 +265,8 @@ next_token(bool cross_line) {
     return false;
   }
 
-  Token &token = _tokens[++_token_index];
-  if (!cross_line && token._newline) {
+  Token *token = _token->_next;
+  if (!cross_line && token->_newline) {
     // Token is on a new line, but we didn't want it to be on a new line.
     if (_token) {
       tokenfile_cat.error()
@@ -271,7 +277,7 @@ next_token(bool cross_line) {
   }
 
   // Token is valid, store it off.
-  _token = &token;
+  _token = token;
   return true;
 }
 
@@ -283,12 +289,12 @@ next_token(bool cross_line) {
  */
 bool TokenFile::
 token_available(bool cross_line) const {
-  if (_token_index >= (int)_tokens.size() - 1) {
+  if (_token->_next == nullptr) {
     return false;
   }
 
   if (!cross_line) {
-    return !_tokens[_token_index + 1]._newline;
+    return !_token->_next->_newline;
   } else {
     return true;
   }
@@ -305,4 +311,13 @@ get_token() const {
   }
 
   return _token->_data;
+}
+
+/**
+ *
+ */
+void TokenFile::
+add_token(Token *tok) {
+  _token->_next = tok;
+  _token = tok;
 }
