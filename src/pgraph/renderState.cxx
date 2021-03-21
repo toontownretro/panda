@@ -71,7 +71,6 @@ PStatCollector RenderState::_state_validate_pcollector("*:State Cache:Validate")
 CacheStats RenderState::_cache_stats;
 
 TypeHandle RenderState::_type_handle;
-TypeHandle RenderState::BamRoot::_type_handle;
 
 
 /**
@@ -344,289 +343,6 @@ make(const RenderAttrib * const *attrib, int num_attribs, int override) {
     state->_filled_slots.set_bit(slot);
   }
   return return_new(state);
-}
-
-/**
- * Returns a RenderState from the given Material definition.
- */
-CPT(RenderState) RenderState::
-make(const Material *script) {
-  CPT(RenderState) state = RenderState::make_empty();
-  if (script == nullptr) {
-    return state;
-  }
-
-  if (script->has_fog_off() && script->get_fog_off()) {
-    state = state->set_attrib(FogAttrib::make_off());
-  }
-
-  if (script->has_light_off() && script->get_light_off()) {
-    state = state->set_attrib(LightAttrib::make_all_off());
-  }
-
-  if (script->has_z_write()) {
-    state = state->set_attrib(DepthWriteAttrib::make(
-      script->get_z_write() ? DepthWriteAttrib::M_on :
-                              DepthWriteAttrib::M_off));
-  }
-
-  if (script->has_z_test()) {
-    state = state->set_attrib(DepthTestAttrib::make(
-      script->get_z_test() ? DepthTestAttrib::M_less :
-                             DepthTestAttrib::M_always));
-  }
-
-  if (script->has_z_offset()) {
-    state = state->set_attrib(DepthOffsetAttrib::make(script->get_z_offset()));
-  }
-
-  if (script->has_color()) {
-    state = state->set_attrib(ColorAttrib::make_flat(script->get_color()));
-  }
-
-  if (script->has_color_scale()) {
-    state = state->set_attrib(ColorScaleAttrib::make(script->get_color_scale()));
-  }
-
-  if (script->has_color_write()) {
-    state = state->set_attrib(ColorWriteAttrib::make(script->get_color_write()));
-  }
-
-  if (script->has_cull_face()) {
-    state = state->set_attrib(CullFaceAttrib::make(
-      (CullFaceAttrib::Mode)script->get_cull_face()));
-  }
-
-  if (script->has_shader()) {
-    state = state->set_attrib(ShaderAttrib::make(script->get_shader()));
-  }
-
-  if (script->_parameters.size() != 0) {
-    CPT(RenderAttrib) pa = ParamAttrib::make();
-    for (auto it = script->_parameters.begin();
-         it != script->_parameters.end(); ++it) {
-      pa = DCAST(ParamAttrib, pa)->set_param(
-        (*it).first, (*it).second);
-    }
-
-    state = state->set_attrib(pa);
-  }
-
-  if (script->has_bin()) {
-    state = state->set_attrib(CullBinAttrib::make(
-      script->get_bin_name(), script->get_bin_sort()));
-  }
-
-  if (script->has_alpha_test()) {
-    state = state->set_attrib(AlphaTestAttrib::make(
-      (AlphaTestAttrib::PandaCompareFunc)script->get_alpha_test_compare(),
-      script->get_alpha_test_reference()));
-  }
-
-  if (script->has_transparency()) {
-    TransparencyAttrib::Mode mode;
-    switch (script->get_transparency()) {
-    default:
-    case Material::TM_unspecified:
-    case Material::TM_none:
-      mode = TransparencyAttrib::M_none;
-      break;
-    case Material::TM_alpha:
-      mode = TransparencyAttrib::M_alpha;
-      break;
-    case Material::TM_binary:
-      mode = TransparencyAttrib::M_binary;
-      break;
-    case Material::TM_dual:
-      mode = TransparencyAttrib::M_dual;
-      break;
-    case Material::TM_multisample:
-      mode = TransparencyAttrib::M_multisample;
-      break;
-    }
-
-    state = state->set_attrib(TransparencyAttrib::make(mode));
-  }
-
-  if (script->has_textures()) {
-    CPT(RenderAttrib) ta = TextureAttrib::make();
-    CPT(RenderAttrib) tma = TexMatrixAttrib::make();
-
-    bool has_any_transform = false;
-
-    for (size_t i = 0; i < script->get_num_textures(); i++) {
-      const MatTexture *mat_tex = script->get_texture(i);
-
-      PT(Texture) tex;
-      if (mat_tex->get_source() == MatTexture::S_filename) {
-        tex = TexturePool::load_texture(mat_tex->get_filename());
-      } else {
-        tex = TexturePool::find_engine_texture(mat_tex->get_name());
-      }
-
-      PT(TextureStage) stage;
-      if (mat_tex->get_stage_name().empty()) {
-        stage = TextureStage::get_default();
-      } else {
-        stage = new TextureStage(mat_tex->get_stage_name());
-      }
-
-      if (!mat_tex->get_texcoord_name().empty()) {
-        stage->set_texcoord_name(mat_tex->get_texcoord_name());
-      }
-
-      // Now unify the stage pointer.
-      stage = TextureStagePool::get_stage(stage);
-
-      ta = DCAST(TextureAttrib, ta)->add_on_stage(stage, tex);
-
-      if (mat_tex->has_transform2d()) {
-        CPT(TransformState) ts = TransformState::make_mat3(
-          LCAST(PN_stdfloat, mat_tex->get_transform2d()));
-        tma = DCAST(TexMatrixAttrib, tma)->add_stage(stage, ts);
-        has_any_transform = true;
-      }
-    }
-
-    state = state->set_attrib(ta);
-    if (has_any_transform) {
-      state = state->set_attrib(tma);
-    }
-  }
-
-  state->_filename_ref = new FilenameReference;
-  state->_filename_ref->_filename = script->get_filename();
-  state->_filename_ref->_fullpath = script->get_fullpath();
-
-  return state;
-}
-
-/**
- * Returns a new RenderState object by loading a definition from a file on
- * disk.  This can be either an ASCII Material script (.pmat) or a binary
- * RenderState object (.rso).
- */
-CPT(RenderState) RenderState::
-make(const Filename &filename, const DSearchPath &search_path) {
-  if (filename.get_extension().empty()) {
-    pgraph_cat.error()
-      << "Render state definition filename must have an extension: "
-      << filename.get_fullpath() << "\n";
-    return RenderState::make_empty();
-  }
-
-  if (filename.get_extension() == "pmat") {
-    // ASCII Material script.
-    PT(Material) script = Material::load(filename, search_path);
-    return make(script);
-
-  } else if (filename.get_extension() == "rso") {
-    // Binary render state object.
-
-    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-
-    Filename resolved = filename;
-    if (!vfs->resolve_filename(resolved, search_path)) {
-      pgraph_cat.error()
-        << "Couldn't find render state " << filename.get_fullpath()
-        << " on search path " << search_path << "\n";
-      return nullptr;
-    }
-
-    BamFile bam;
-    if (!bam.open_read(resolved)) {
-      return nullptr;
-    }
-
-    TypedWritable *obj = bam.read_object();
-    if (obj == nullptr || !bam.resolve()) {
-      bam.close();
-      return nullptr;
-    }
-
-    if (!obj->is_of_type(BamRoot::get_class_type())) {
-      pgraph_cat.error()
-        << resolved.get_fullpath() << " is not a valid render state object.\n";
-      bam.close();
-      return nullptr;
-    }
-
-    CPT(RenderState) state = DCAST(BamRoot, obj)->_state;
-    // Store a reference to our .rso file on the state.
-    state->_filename_ref = new FilenameReference;
-    state->_filename_ref->_filename = filename;
-    state->_filename_ref->_fullpath = resolved;
-
-    bam.close();
-
-    return state;
-
-  } else {
-    pgraph_cat.error()
-      << "Unknown render state definition file extension: "
-      << filename.get_fullpath() << "\n";
-    return RenderState::make_empty();
-  }
-}
-
-/**
- * Writes the RenderState object to the indicated .rso file.
- *
- * Returns true on success, or false on error.
- */
-bool RenderState::
-write_rso(const Filename &fullpath) const {
-  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  Filename filename = Filename::binary_filename(fullpath);
-  std::ostream *out = vfs->open_write_file(filename, true, true);
-  if (out == nullptr) {
-    pgraph_cat.error()
-      << "Unable to open " << filename << "\n";
-    return false;
-  }
-
-  bool success = do_write_rso(*out, filename);
-  vfs->close_write_file(out);
-
-  return success;
-}
-
-/**
- * Writes the RenderState object to the indicated output stream.
- *
- * Returns true on success, or false on error.
- */
-bool RenderState::
-do_write_rso(std::ostream &out, const Filename &filename) const {
-  DatagramOutputFile dout;
-
-  if (!dout.open(out, filename)) {
-    pgraph_cat.error()
-      << "Could not write render state object: " << filename << "\n";
-    return false;
-  }
-
-  if (!dout.write_header(_bam_header)) {
-    pgraph_cat.error()
-      << "Unable to write to " << filename << "\n";
-    return false;
-  }
-
-  BamWriter writer(&dout);
-  if (!writer.init()) {
-    return false;
-  }
-
-  writer.set_file_material_mode(BamWriter::BTM_rawdata);
-
-  PT(BamRoot) root = new BamRoot;
-  root->_state = this;
-
-  if (!writer.write_object(root)) {
-    return false;
-  }
-
-  return true;
 }
 
 /**
@@ -1492,8 +1208,6 @@ validate_filled_slots() const {
  */
 void RenderState::
 do_calc_hash() {
-  _hash = 0;
-
   SlotMask mask = _filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {
@@ -2159,84 +1873,24 @@ register_with_read_factory() {
  */
 void RenderState::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  BamWriter::BamTextureMode file_material_mode = manager->get_file_material_mode();
+  TypedWritable::write_datagram(manager, dg);
 
-  FilenameReference *fref = _filename_ref;
+  int num_attribs = _filled_slots.get_num_on_bits();
+  nassertv(num_attribs == (int)(uint16_t)num_attribs);
+  dg.add_uint16(num_attribs);
 
-  bool write_raw_data = (file_material_mode == BamWriter::BTM_rawdata) ||
-                        (fref == nullptr) ||
-                        (fref != nullptr && fref->_filename.empty()) ||
-                        (manager->get_file_minor_ver() < 46);
+  // **** We should smarten up the writing of the override number--most of the
+  // time these will all be zero.
+  SlotMask mask = _filled_slots;
+  int slot = mask.get_lowest_on_bit();
+  while (slot >= 0) {
+    const Attribute &attrib = _attributes[slot];
+    nassertv(attrib._attrib != nullptr);
+    manager->write_pointer(dg, attrib._attrib);
+    dg.add_int32(attrib._override);
 
-  if (manager->get_file_minor_ver() >= 46) {
-    dg.add_bool(write_raw_data);
-  }
-
-  if (!write_raw_data) {
-    // If the state has a valid Filename, it was loaded from a script on disk,
-    // and we should just write the path to the script on disk instead of
-    // encoding the actual state.
-
-    bool has_bam_dir = !manager->get_filename().empty();
-    Filename bam_dir = manager->get_filename().get_dirname();
-    Filename filename = fref->_filename;
-
-    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-
-    switch (file_material_mode) {
-    case BamWriter::BTM_unchanged:
-    case BamWriter::BTM_rawdata:
-      break;
-
-    case BamWriter::BTM_fullpath:
-      filename = fref->_fullpath;
-      break;
-
-    case BamWriter::BTM_relative:
-      filename = fref->_fullpath;
-      bam_dir.make_absolute(vfs->get_cwd());
-      if (!has_bam_dir || !filename.make_relative_to(bam_dir, true)) {
-        filename.find_on_searchpath(get_model_path());
-      }
-      if (pgraph_cat.is_debug()) {
-        pgraph_cat.debug()
-          << "RenderState script " << fref->_fullpath
-          << " found as " << filename << "\n";
-      }
-      break;
-
-    case BamWriter::BTM_basename:
-      filename = fref->_fullpath.get_basename();
-      break;
-
-    default:
-      pgraph_cat.error()
-        << "Unsupported bam-material-mode: " << (int)file_material_mode << "\n";
-    }
-
-    dg.add_string(filename.get_fullpath());
-
-  } else {
-    // Encode the actual state data.
-    TypedWritable::write_datagram(manager, dg);
-
-    int num_attribs = _filled_slots.get_num_on_bits();
-    nassertv(num_attribs == (int)(uint16_t)num_attribs);
-    dg.add_uint16(num_attribs);
-
-    // **** We should smarten up the writing of the override number--most of the
-    // time these will all be zero.
-    SlotMask mask = _filled_slots;
-    int slot = mask.get_lowest_on_bit();
-    while (slot >= 0) {
-      const Attribute &attrib = _attributes[slot];
-      nassertv(attrib._attrib != nullptr);
-      manager->write_pointer(dg, attrib._attrib);
-      dg.add_int32(attrib._override);
-
-      mask.clear_bit(slot);
-      slot = mask.get_lowest_on_bit();
-    }
+    mask.clear_bit(slot);
+    slot = mask.get_lowest_on_bit();
   }
 }
 
@@ -2284,13 +1938,8 @@ change_this(TypedWritable *old_ptr, BamReader *manager) {
   RenderState *state = DCAST(RenderState, old_ptr);
 
   CPT(RenderState) pointer;
-  if (state->_read_script_state != nullptr) {
-    // Change ourselves to the state loaded from the script on disk.
-    pointer = state->_read_script_state;
-  } else {
-    // Uniquify the pointer.
-    pointer = return_unique(state);
-  }
+  // Uniquify the pointer.
+  pointer = return_unique(state);
 
   // But now we have a problem, since we have to hold the reference count and
   // there's no way to return a TypedWritable while still holding the
@@ -2299,9 +1948,6 @@ change_this(TypedWritable *old_ptr, BamReader *manager) {
   if (pointer == state) {
     pointer->ref();
     manager->register_finalize(state);
-  } else if (pointer == state->_read_script_state) {
-    pointer->ref();
-    manager->register_finalize((RenderState *)pointer.p());
   }
 
   // We have to cast the pointer back to non-const, because the bam reader
@@ -2351,113 +1997,15 @@ make_from_bam(const FactoryParams &params) {
  */
 void RenderState::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  bool has_raw_data = true;
-  if (manager->get_file_minor_ver() >= 47) {
-    has_raw_data = scan.get_bool();
-  } else if (manager->get_file_minor_ver() >= 46) {
-    has_raw_data = !(bool)scan.get_uint8();
+  TypedWritable::fillin(scan, manager);
+
+  int num_attribs = scan.get_uint16();
+  _read_overrides = new vector_int;
+  (*_read_overrides).reserve(num_attribs);
+
+  for (int i = 0; i < num_attribs; ++i) {
+    manager->read_pointer(scan);
+    int override = scan.get_int32();
+    (*_read_overrides).push_back(override);
   }
-
-  if (!has_raw_data) {
-    // Only a filename reference was encoded.  In this case we will be using
-    // the RenderStatePool to load up the RenderState.
-    Filename filename = scan.get_string();
-    _read_script_state = RenderStatePool::load_state(filename);
-
-  } else {
-    // The actual state data was encoded.
-    TypedWritable::fillin(scan, manager);
-
-    int num_attribs = scan.get_uint16();
-    _read_overrides = new vector_int;
-    (*_read_overrides).reserve(num_attribs);
-
-    for (int i = 0; i < num_attribs; ++i) {
-      manager->read_pointer(scan);
-      int override = scan.get_int32();
-      (*_read_overrides).push_back(override);
-    }
-  }
-}
-
-/**
- * Tells the BamReader how to create objects of type BamRoot.
- */
-void RenderState::BamRoot::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
- * Writes the contents of this object to the datagram for shipping out to a
- * Bam file.
- */
-void RenderState::BamRoot::
-write_datagram(BamWriter *manager, Datagram &dg) {
-  TypedWritableReferenceCount::write_datagram(manager, dg);
-
-  manager->write_pointer(dg, _state);
-}
-
-/**
- * Receives an array of pointers, one for each time manager->read_pointer()
- * was called in fillin(). Returns the number of pointers processed.
- */
-int RenderState::BamRoot::
-complete_pointers(TypedWritable **p_list, BamReader *manager) {
-  int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
-
-  RenderState *state;
-  DCAST_INTO_R(state, p_list[pi++], pi);
-  _state = state;
-
-/*
- * Finalize these pointers now to decrement their artificially-held reference
- * counts.  We do this now, rather than later, in case some other object
- * reassigns them a little later on during initialization, before they can
- * finalize themselves normally (for instance, the character may change the
- * node's transform).  If that happens, the pointer may discover that no one
- * else holds its reference count when it finalizes, which will constitute a
- * memory leak (see the comments in TransformState::finalize(), etc.).
- */
-  manager->finalize_now((RenderState *)_state.p());
-
-  return pi;
-}
-
-/**
- * Some objects require all of their nested pointers to have been completed
- * before the objects themselves can be completed.  If this is the case,
- * override this method to return true, and be careful with circular
- * references (which would make the object unreadable from a bam file).
- */
-bool RenderState::BamRoot::
-require_fully_complete() const {
-  return false;
-}
-
-/**
- * This function is called by the BamReader's factory when a new object of
- * type RenderState is encountered in the Bam file.  It should create the
- * RenderState and extract its information from the file.
- */
-TypedWritable *RenderState::BamRoot::
-make_from_bam(const FactoryParams &params) {
-  BamRoot *root = new BamRoot;
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  root->fillin(scan, manager);
-
-  return root;
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new RenderState.
- */
-void RenderState::BamRoot::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  manager->read_pointer(scan);
 }

@@ -317,30 +317,6 @@ get_invert_composition_cache_result(size_t n) const {
 }
 
 /**
- * Returns the Filename of the script that the RenderState was created from.
- */
-INLINE Filename RenderState::
-get_filename() const {
-  if (_filename_ref == nullptr) {
-    return Filename();
-  }
-
-  return _filename_ref->_filename;
-}
-
-/**
- * Returns the fullpath of the script that the RenderState was created from.
- */
-INLINE Filename RenderState::
-get_fullpath() const {
-  if (_filename_ref == nullptr) {
-    return Filename();
-  }
-
-  return _filename_ref->_fullpath;
-}
-
-/**
  * Returns the draw order indicated by the CullBinAttrib, if any, associated
  * by this state (or 0 if there is no CullBinAttrib).  See get_bin_index().
  */

@@ -35,7 +35,6 @@
 
 class FactoryParams;
 class ShaderAttrib;
-class Material;
 
 /**
  * This represents a unique collection of RenderAttrib objects that correspond
@@ -89,11 +88,6 @@ PUBLISHED:
                                const RenderAttrib *attrib5, int override = 0);
   static CPT(RenderState) make(const RenderAttrib * const *attrib,
                                int num_attribs, int override = 0);
-  static CPT(RenderState) make(const Material *material);
-  static CPT(RenderState) make(const Filename &filename,
-                               const DSearchPath &search_path = get_model_path());
-
-  bool write_rso(const Filename &filename) const;
 
   CPT(RenderState) compose(const RenderState *other) const;
   CPT(RenderState) invert_compose(const RenderState *other) const;
@@ -244,53 +238,6 @@ public:
   mutable CPT(RenderAttrib) _generated_shader;
   mutable UpdateSeq _generated_shader_seq;
 
-  class FilenameReference : public ReferenceCount {
-  public:
-    Filename _filename;
-    Filename _fullpath;
-  };
-
-  // The filename that the state came from, if it was loaded via a script on
-  // disk.
-  mutable PT(FilenameReference) _filename_ref;
-
-  // This is the root object that is written to and read from a .rso file.  We
-  // have to do this because the RenderState pointers can change when we read
-  // them, so we need another object to retrieve the final pointer from.
-  class BamRoot : public TypedWritableReferenceCount {
-  public:
-    BamRoot() = default;
-
-    CPT(RenderState) _state;
-
-  public:
-    static void register_with_read_factory();
-    virtual void write_datagram(BamWriter *manager, Datagram &dg);
-    virtual int complete_pointers(TypedWritable **plist, BamReader *manager);
-    virtual bool require_fully_complete() const;
-
-  protected:
-    static TypedWritable *make_from_bam(const FactoryParams &params);
-    void fillin(DatagramIterator &scan, BamReader *manager);
-
-  public:
-    static TypeHandle get_class_type() {
-      return _type_handle;
-    }
-    static void init_type() {
-      TypedWritableReferenceCount::init_type();
-      register_type(_type_handle, "RenderState::BamRoot",
-                    TypedWritableReferenceCount::get_class_type());
-    }
-    virtual TypeHandle get_type() const {
-      return get_class_type();
-    }
-    virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
-
-  private:
-    static TypeHandle _type_handle;
-  };
-
 private:
   // This mutex protects _states.  It also protects any modification to the
   // cache, which is encoded in _composition_cache and
@@ -397,8 +344,6 @@ private:
   unsigned int _flags;
 
   vector_int *_read_overrides;  // Only used during bam reading.
-
-  CPT(RenderState) _read_script_state; // Only used during bam reading.
 
   // This mutex protects _flags, and all of the above computed values.
   LightMutex _lock;
