@@ -18,6 +18,7 @@
 #include "materialParamFloat.h"
 #include "materialParamTexture.h"
 #include "materialParamVector.h"
+#include "standardMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -51,4 +52,7 @@ init_libmaterial() {
   MaterialParamFloat::register_with_read_factory();
   MaterialParamTexture::register_with_read_factory();
   MaterialParamVector::register_with_read_factory();
+
+  StandardMaterial::init_type();
+  StandardMaterial::register_with_read_factory();
 }

@@ -61,7 +61,7 @@ void MaterialBase::
 write_pmat(const Filename &filename) {
   PT(KeyValues) kv = new KeyValues;
 
-  PT(KeyValues) mat_block = new KeyValues(get_name(), kv);
+  PT(KeyValues) mat_block = new KeyValues(get_type().get_name(), kv);
   write_keyvalues(mat_block, filename);
 
   kv->write(filename);
@@ -123,6 +123,8 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
     DCAST_INTO_R(param, p_list[pi++], pi);
     _params[param->get_name()] = param;
   }
+
+  return pi;
 }
 
 /**

@@ -19,6 +19,9 @@
 #include "materialParamBool.h"
 #include "materialParamFloat.h"
 #include "materialParamColor.h"
+#include "bamReader.h"
+
+TypeHandle StandardMaterial::_type_handle;
 
 /**
  *
@@ -116,6 +119,28 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
       set_param(tex);
     }
   }
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+TypedWritable *StandardMaterial::
+make_from_bam(const FactoryParams &params) {
+  StandardMaterial *mat = new StandardMaterial;
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  mat->fillin(scan, manager);
+  return mat;
 }
 
 /**

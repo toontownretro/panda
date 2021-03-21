@@ -18,9 +18,6 @@
 #include "dconfig.h"
 #include "notifyCategoryProxy.h"
 
-#define EXPCL_PANDA_MATERIAL
-#define EXPTP_PANDA_MATERIAL
-
 ConfigureDecl(config_material, EXPCL_PANDA_MATERIAL, EXPTP_PANDA_MATERIAL);
 NotifyCategoryDecl(material, EXPCL_PANDA_MATERIAL, EXPTP_PANDA_MATERIAL);
 
