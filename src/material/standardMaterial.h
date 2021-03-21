@@ -20,7 +20,8 @@
 #include "texture.h"
 
 /**
- *
+ * Standard material with all the fundamental parameters (base texture, normal
+ * map, etc), with a few common fancy parameters (rim light, lightwarp, etc).
  */
 class EXPCL_PANDA_GOBJ StandardMaterial : public MaterialBase {
 PUBLISHED:
@@ -42,7 +43,7 @@ PUBLISHED:
   INLINE Texture *get_base_texture() const;
 
   INLINE void set_base_color(const LColor &color);
-  INLINE const LColor &get_base_color() const;
+  INLINE LColor get_base_color() const;
 
   INLINE void set_normal_texture(Texture *texture);
   INLINE Texture *get_normal_texture() const;
@@ -72,42 +73,9 @@ PUBLISHED:
   INLINE PN_stdfloat get_emission() const;
 
 public:
-  virtual void read_keyvalues(KeyValues *kv) override;
-  virtual void write_keyvalues(KeyValues *kv) override;
-
-private:
-  bool _rim_light; // Enable a dedicated rim lighting term?
-  PN_stdfloat _rim_light_boost;
-  PN_stdfloat _rim_light_exponent;
-
-  bool _half_lambert; // Enable half-lambertian diffuse?
-
-  // Can have a base color texture...
-  PT(Texture) _base_texture;
-  // ...or a single base color value.
-  LColor _base_color;
-
-  PT(Texture) _normal_texture;
-  PT(Texture) _lightwarp_texture;
-
-  // We might have a dedicated environment map...
-  PT(Texture) _envmap_texture;
-  // ...or use the closest environment map to the node.
-  bool _env_cubemap;
-
-  // Emission has to be turned on explicitly.
-  bool _enable_emission;
-
-  // Can have a packed occlusion-roughness-metalness-emission texture...
-  PT(Texture) _arme_texture;
-  // ...or dedicated values for roughness, metalness, and emission.
-  PN_stdfloat _roughness;
-  PN_stdfloat _metalness;
-  PN_stdfloat _emission;
+  virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path) override;
 
 public:
-  virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
-
   static MaterialBase *create_StandardMaterial();
 
 protected:
