@@ -23,7 +23,9 @@ ShaderAttrib() :
   // As of 10/30/2020, auto-shader is on by default.
   _auto_shader(true),
   _has_shader(true),
-  _shader_name(InternalName::make("default")),
+  // A NULL shader name means to use whatever shader is best for the material
+  // type that is applied.
+  _shader_name(nullptr),
   _flags(0),
   _has_flags(0),
   _instance_count(0)

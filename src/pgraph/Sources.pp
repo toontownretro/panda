@@ -2,7 +2,7 @@
                    dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
     event gsgbase gobj putil linmath \
-    downloader express pandabase pstatclient
+    downloader express pandabase pstatclient material
 
 #begin lib_target
   #define TARGET pgraph
