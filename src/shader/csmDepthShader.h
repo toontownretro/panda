@@ -23,7 +23,7 @@ class EXPCL_PANDA_SHADER CSMDepthShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               const ParamAttrib *params,
+                               Material *material,
                                const GeomVertexAnimationSpec &anim_spec) override;
 protected:
   INLINE CSMDepthShader();

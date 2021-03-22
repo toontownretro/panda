@@ -16,13 +16,14 @@
 #include "load_dso.h"
 #include "shader.h"
 #include "shaderBase.h"
-#include "paramAttrib.h"
 #include "shaderAttrib.h"
 #include "shaderInput.h"
 #include "pvector.h"
 #include "renderState.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
+#include "material.h"
+#include "materialAttrib.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -83,8 +84,7 @@ load_shader_libraries() {
 }
 
 /**
- * Registers the shader.  The shader can now be invoked by RenderStates that
- * want to use it.
+ * Registers the indicated shader.
  */
 void ShaderManager::
 register_shader(ShaderBase *shader) {
@@ -92,6 +92,16 @@ register_shader(ShaderBase *shader) {
   for (size_t i = 0; i < shader->get_num_aliases(); i++) {
     _shaders[InternalName::make(shader->get_alias(i))] = shader;
   }
+}
+
+/**
+ * Registers the indicated shader and associates it with the indicated material
+ * type.
+ */
+void ShaderManager::
+register_shader(ShaderBase *shader, TypeHandle material_type) {
+  register_shader(shader);
+  _material_shaders[material_type] = shader;
 }
 
 /**
@@ -104,16 +114,34 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 const GeomVertexAnimationSpec &anim_spec) {
   PStatTimer timer(generate_collector);
 
-  // First figure out what shader the state would like to use.
-  const ParamAttrib *pa;
-  state->get_attrib_def(pa);
+  // First figure out what shader the state should use.
+  const MaterialAttrib *mattr;
+  state->get_attrib_def(mattr);
+
+  Material *material = mattr->get_material();
 
   const ShaderAttrib *shattr;
   state->get_attrib_def(shattr);
 
+  ShaderBase *shader = nullptr;
   if (shattr->get_shader_name() == nullptr) {
+    // Use the shader associated with the material type.
+    TypeHandle material_type = material != nullptr ? material->get_type() : TypeHandle::none();
+    MaterialShaders::const_iterator msi = _material_shaders.find(material->get_type());
+    if (msi != _material_shaders.end()) {
+      shader = (*msi).second;
+    }
+
+  } else {
+    // There's a specific shader requested by the render state, regardless of
+    // the material type.
+    shader = get_shader(shattr->get_shader_name());
+  }
+
+  if (shader == nullptr) {
     shadermgr_cat.error()
-      << "ShaderAttrib had a NULL shader name.\n";
+      << "Could not determine shader to use for state: ";
+    state->output(shadermgr_cat.error(false));
     return ShaderAttrib::make();
   }
 
@@ -122,24 +150,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       << "Generating shader for state: ";
     state->output(shadermgr_cat.debug(false));
     shadermgr_cat.debug(false) << "\n";
-  }
 
-  find_shader_collector.start();
-  ShaderBase *shader = get_shader(shattr->get_shader_name());
-  find_shader_collector.stop();
-  if (!shader) {
-    shadermgr_cat.error()
-      << "Shader `" << shattr->get_shader_name()->get_name() << "` not found\n";
-    return ShaderAttrib::make();
-  }
-
-  if (shadermgr_cat.is_debug()) {
     shadermgr_cat.debug()
       << "Using shader " << shader->get_name() << "\n";
   }
 
   synthesize_source_collector.start();
-  shader->generate_shader(gsg, state, pa, anim_spec);
+  shader->generate_shader(gsg, state, material, anim_spec);
   synthesize_source_collector.stop();
 
   CPT(RenderAttrib) generated_attr;

@@ -18,7 +18,8 @@
 #include "depthShader.h"
 #include "csmDepthShader.h"
 #include "vertexLitShader.h"
-#include "lightmappedShader.h"
+#include "noMatShader.h"
+//#include "lightmappedShader.h"
 
 ConfigureDef(config_shader);
 ConfigureFn(config_shader) {
@@ -74,7 +75,8 @@ init_libshader() {
   DepthShader::init_type();
   CSMDepthShader::init_type();
   VertexLitShader::init_type();
-  LightmappedShader::init_type();
+  NoMatShader::init_type();
+  //LightmappedShader::init_type();
 
   ShaderObject::init_type();
   ShaderObject::register_with_read_factory();

@@ -46,6 +46,7 @@ public:
   void load_shader_libraries();
 
   void register_shader(ShaderBase *shader);
+  void register_shader(ShaderBase *shader, TypeHandle material_type);
 
   virtual CPT(RenderAttrib) generate_shader(GraphicsStateGuardianBase *gsg,
                                             const RenderState *state,
@@ -55,7 +56,10 @@ public:
 
 private:
   typedef phash_map<CPT(InternalName), ShaderBase *> ShaderRegistry;
+  // This maps material types to the shader that can render it.
+  typedef pmap<TypeHandle, ShaderBase *> MaterialShaders;
   ShaderRegistry _shaders;
+  MaterialShaders _material_shaders;
 
   ShaderQuality _quality;
 

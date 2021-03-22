@@ -10,7 +10,7 @@
     config_shader.h \
     csmDepthShader.h csmDepthShader.I \
     depthShader.h depthShader.I \
-    lightmappedShader.h lightmappedShader.I \
+    //lightmappedShader.h lightmappedShader.I \
     shaderBase.h shaderBase.I shaderBase.T \
     shaderEnums.h \
     shaderManager.h shaderManager.I \
@@ -26,7 +26,7 @@
     config_shader.cxx \
     csmDepthShader.cxx \
     depthShader.cxx \
-    lightmappedShader.cxx \
+    //lightmappedShader.cxx \
     shaderBase.cxx \
     shaderEnums.cxx \
     shaderManager.cxx \

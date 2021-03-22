@@ -6,29 +6,30 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file depthShader.h
+ * @file noMatShader.h
  * @author lachbr
- * @date 2020-12-16
+ * @date 2021-03-22
  */
 
-#ifndef DEPTHSHADER_H
-#define DEPTHSHADER_H
+#ifndef NOMATSHADER_H
+#define NOMATSHADER_H
 
 #include "pandabase.h"
 #include "shaderBase.h"
 
 /**
- * Generates a shader for rendering to a single shadow depth map.
+ * This is the shader that gets used for render states that do not contain a
+ * material.  Used for single-textured (through TextureAttrib) unlit geometry,
+ * such as UI elements and sprites.
  */
-class DepthShader : public ShaderBase {
+class EXPCL_PANDA_SHADER NoMatShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               Material *params,
+                               Material *material,
                                const GeomVertexAnimationSpec &anim_spec) override;
-
 protected:
-  INLINE DepthShader();
+  INLINE NoMatShader();
 
 public:
   static TypeHandle get_class_type() {
@@ -36,9 +37,9 @@ public:
   }
   static void init_type() {
     ShaderBase::init_type();
-    register_type(_type_handle, "DepthShader",
+    register_type(_type_handle, "NoMatShader",
                   ShaderBase::get_class_type());
-    register_shader(new DepthShader);
+    register_shader(new NoMatShader, TypeHandle::none());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -49,6 +50,6 @@ private:
   static TypeHandle _type_handle;
 };
 
-#include "depthShader.I"
+#include "noMatShader.I"
 
-#endif // DEPTHSHADER_H
+#endif // NOMATSHADER_H

@@ -16,6 +16,9 @@
 #include "transparencyAttrib.h"
 #include "textureAttrib.h"
 #include "textureStage.h"
+#include "material.h"
+#include "materialParamTexture.h"
+#include "materialParamColor.h"
 
 TypeHandle DepthShader::_type_handle;
 
@@ -25,7 +28,7 @@ TypeHandle DepthShader::_type_handle;
 void DepthShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
-                const ParamAttrib *params,
+                Material *material,
                 const GeomVertexAnimationSpec &anim_spec) {
 
   set_language(Shader::SL_GLSL);
@@ -47,14 +50,35 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   // Need textures for alpha-tested shadows.
-  const TextureAttrib *ta;
-  state->get_attrib_def(ta);
-  for (int i = 0; i < ta->get_num_on_stages(); i++) {
-    TextureStage *stage = ta->get_on_stage(i);
-    if (stage == TextureStage::get_default() ||
-        stage->get_name() == "albedo") {
+
+  if (material == nullptr) {
+    const TextureAttrib *ta;
+    state->get_attrib_def(ta);
+
+    Texture *tex = ta->get_on_texture(TextureStage::get_default());
+    if (tex != nullptr) {
       set_pixel_shader_define("BASETEXTURE");
-      set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+      set_vertex_shader_define("BASETEXTURE");
+      set_input(ShaderInput("baseTextureSampler", tex));
+    } else {
+      set_input(ShaderInput("baseColor", LColor(1, 1, 1, 1)));
+    }
+
+  } else {
+    MaterialParamBase *param = material->get_param("$basecolor");
+    if (param != nullptr) {
+      if (param->is_of_type(MaterialParamTexture::get_class_type())) {
+        set_pixel_shader_define("BASETEXTURE");
+        set_vertex_shader_define("BASETEXTURE");
+        set_input(ShaderInput("baseTextureSampler", DCAST(MaterialParamTexture, param)->get_value()));
+
+      } else if (param->is_of_type(MaterialParamColor::get_class_type())) {
+        set_input(ShaderInput("baseColor", DCAST(MaterialParamColor, param)->get_value()));
+      }
+
+    } else {
+      set_input(ShaderInput("baseColor", LColor(1, 1, 1, 1)));
     }
   }
+
 }

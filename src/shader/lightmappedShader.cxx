@@ -11,6 +11,8 @@
  * @date 2021-01-02
  */
 
+#if 0
+
 #include "lightmappedShader.h"
 #include "renderState.h"
 #include "textureStage.h"
@@ -85,3 +87,5 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
 }
+
+#endif

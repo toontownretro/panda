@@ -11,6 +11,8 @@
  * @date 2021-01-02
  */
 
+#if 0
+
 #ifndef LIGHTMAPPEDSHADER_H
 #define LIGHTMAPPEDSHADER_H
 
@@ -23,7 +25,7 @@ class EXPCL_PANDA_SHADER LightmappedShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               const ParamAttrib *params,
+                               Material *params,
                                const GeomVertexAnimationSpec &anim_spec) override;
 protected:
   INLINE LightmappedShader();
@@ -50,3 +52,5 @@ private:
 #include "lightmappedShader.I"
 
 #endif // LIGHTMAPPEDSHADER_H
+
+#endif

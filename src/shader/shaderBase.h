@@ -28,7 +28,7 @@
 class GraphicsStateGuardianBase;
 class RenderState;
 class GeomVertexAnimationSpec;
-class ParamAttrib;
+class Material;
 
 /**
  * Base shader class.
@@ -100,13 +100,14 @@ public:
 
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               const ParamAttrib *params,
+                               Material *material,
                                const GeomVertexAnimationSpec &anim_spec) = 0;
 
 protected:
   INLINE ShaderBase(const std::string &name);
 
   static void register_shader(ShaderBase *shader);
+  static void register_shader(ShaderBase *shader, TypeHandle material_type);
 
   bool add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec);
   bool add_fog(const RenderState *state);

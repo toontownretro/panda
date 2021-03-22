@@ -39,6 +39,15 @@ register_shader(ShaderBase *shader) {
 }
 
 /**
+ *
+ */
+void ShaderBase::
+register_shader(ShaderBase *shader, TypeHandle material_type) {
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
+  mgr->register_shader(shader, material_type);
+}
+
+/**
  * Sets up #defines for hardware skinning.
  */
 bool ShaderBase::
