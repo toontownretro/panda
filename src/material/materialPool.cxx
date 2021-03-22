@@ -32,7 +32,7 @@ MaterialPool() {
 /**
  *
  */
-PT(MaterialBase) MaterialPool::
+PT(Material) MaterialPool::
 ns_load_material(const Filename &filename, const DSearchPath &search_path) {
   Materials::const_iterator it;
 
@@ -58,7 +58,7 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
 
   // Not in cache, load it up.
 
-  PT(MaterialBase) material;
+  PT(Material) material;
 
   if (fullpath.get_extension() == "pmat") {
     // Keyvalues material file.
@@ -114,13 +114,13 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
       return nullptr;
     }
 
-    if (!obj->is_of_type(MaterialBase::get_class_type())) {
+    if (!obj->is_of_type(Material::get_class_type())) {
       material_cat.error()
         << "File " << fullpath << " does not contain a material!\n";
       return nullptr;
     }
 
-    material = DCAST(MaterialBase, obj);
+    material = DCAST(Material, obj);
 
   } else {
     material_cat.error()
@@ -151,7 +151,7 @@ ns_release_all_materials() {
 /**
  *
  */
-MaterialBase *MaterialPool::
+Material *MaterialPool::
 ns_find_material(const Filename &filename) const {
   Materials::const_iterator it;
 

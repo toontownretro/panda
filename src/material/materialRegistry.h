@@ -19,7 +19,7 @@
 #include "typeHandle.h"
 #include "pmap.h"
 
-class MaterialBase;
+class Material;
 
 /**
  * This is a global class that knows about all material types in the world and
@@ -31,13 +31,13 @@ private:
   MaterialRegistry();
 
 public:
-  typedef MaterialBase *(*CreateMaterialFunc)();
+  typedef Material *(*CreateMaterialFunc)();
 
   void register_material(const TypeHandle &type, CreateMaterialFunc create_func);
 
 PUBLISHED:
-  PT(MaterialBase) create_material(const std::string &name);
-  PT(MaterialBase) create_material(const TypeHandle &type);
+  PT(Material) create_material(const std::string &name);
+  PT(Material) create_material(const TypeHandle &type);
 
   static MaterialRegistry *get_global_ptr();
 

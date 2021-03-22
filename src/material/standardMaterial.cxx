@@ -19,6 +19,7 @@
 #include "materialParamBool.h"
 #include "materialParamFloat.h"
 #include "materialParamColor.h"
+#include "materialParamVector.h"
 #include "bamReader.h"
 
 TypeHandle StandardMaterial::_type_handle;
@@ -28,7 +29,7 @@ TypeHandle StandardMaterial::_type_handle;
  */
 StandardMaterial::
 StandardMaterial(const std::string &name) :
-  MaterialBase(name)
+  Material(name)
 {
 }
 
@@ -86,6 +87,11 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
       PT(MaterialParamBool) si = new MaterialParamBool("$selfillum");
       si->from_string(value, search_path);
       set_param(si);
+
+    } else if (key == "$selfillumtint") {
+      PT(MaterialParamVector) sit = new MaterialParamVector("$selfillumtint");
+      sit->from_string(value, search_path);
+      set_param(sit);
 
     } else if (key == "$envmap") {
       if (value == "env_cubemap") {
@@ -146,7 +152,7 @@ make_from_bam(const FactoryParams &params) {
 /**
  *
  */
-MaterialBase *StandardMaterial::
+Material *StandardMaterial::
 create_StandardMaterial() {
   return new StandardMaterial;
 }
@@ -465,4 +471,25 @@ get_emission() const {
   }
 
   return DCAST(MaterialParamFloat, param)->get_value();
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+set_emission_tint(const LVecBase3 &tint) {
+  set_param(new MaterialParamVector("$selfillumtint", tint));
+}
+
+/**
+ *
+ */
+LVecBase3 StandardMaterial::
+get_emission_tint() const {
+  MaterialParamBase *param = get_param("$selfillumtint");
+  if (param == nullptr) {
+    return LVecBase3(1);
+  }
+
+  return DCAST(MaterialParamVector, param)->get_value();
 }

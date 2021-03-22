@@ -28,7 +28,7 @@ get_global_ptr() {
  * loaded material.  If a given filename has already been loaded, returns the
  * same material pointer.
  */
-INLINE PT(MaterialBase) MaterialPool::
+INLINE PT(Material) MaterialPool::
 load_material(const Filename &filename, const DSearchPath &search_path) {
   return get_global_ptr()->ns_load_material(filename, search_path);
 }
@@ -48,7 +48,7 @@ release_all_materials() {
  * Does not actually load the material if it's not in the cache.  Use
  * load_material() to do that.
  */
-INLINE MaterialBase *MaterialPool::
+INLINE Material *MaterialPool::
 find_material(const Filename &filename) {
   return get_global_ptr()->ns_find_material(filename);
 }

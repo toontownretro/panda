@@ -31,7 +31,7 @@ make_off() {
  * Returns a new MaterialAttrib that references the indicated Material.
  */
 CPT(RenderAttrib) MaterialAttrib::
-make(MaterialBase *material) {
+make(Material *material) {
   MaterialAttrib *attr = new MaterialAttrib;
   attr->_material = material;
 
@@ -181,7 +181,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = RenderAttrib::complete_pointers(p_list, manager);
 
   if (_has_raw_data) {
-    MaterialBase *mat;
+    Material *mat;
     DCAST_INTO_R(mat, p_list[pi++], pi);
     _material = mat;
   }

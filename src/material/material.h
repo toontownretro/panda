@@ -6,13 +6,13 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file materialBase.h
+ * @file material.h
  * @author lachbr
  * @date 2021-03-06
  */
 
-#ifndef MATERIALBASE_H
-#define MATERIALBASE_H
+#ifndef MATERIAL_H
+#define MATERIAL_H
 
 #include "pandabase.h"
 #include "typedWritableReferenceCount.h"
@@ -32,9 +32,9 @@
  * named parameters.  It is up to derived material types to expose the
  * parameters that can be set for that particular material.
  */
-class EXPCL_PANDA_GOBJ MaterialBase : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_GOBJ Material : public TypedWritableReferenceCount, public Namable {
 public:
-  MaterialBase(const std::string &name);
+  Material(const std::string &name);
 
   virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path);
   virtual void write_keyvalues(KeyValues *kv, const Filename &filename);
@@ -86,7 +86,7 @@ public:
   static void init_type() {
     TypedWritableReferenceCount::init_type();
     Namable::init_type();
-    register_type(_type_handle, "MaterialBase",
+    register_type(_type_handle, "Material",
                   TypedWritableReferenceCount::get_class_type(),
                   Namable::get_class_type());
   }
@@ -96,6 +96,6 @@ private:
 };
 
 
-#include "materialBase.I"
+#include "material.I"
 
-#endif // MATERIALBASE_H
+#endif // MATERIAL_H

@@ -14,7 +14,7 @@
 /**
  * Returns the material referenced by this material attribute.
  */
-INLINE MaterialBase *MaterialAttrib::
+INLINE Material *MaterialAttrib::
 get_material() const {
   return _material;
 }

@@ -6,7 +6,7 @@
 
   #define SOURCES \
     config_material.h \
-    materialBase.I materialBase.h \
+    material.I material.h \
     materialParamBase.I materialParamBase.h \
     materialParamBool.I materialParamBool.h \
     materialParamColor.I materialParamColor.h \
@@ -19,7 +19,7 @@
 
   #define COMPOSITE_SOURCES \
     config_material.cxx \
-    materialBase.cxx \
+    material.cxx \
     materialParamBase.cxx \
     materialParamBool.cxx \
     materialParamColor.cxx \

@@ -6,7 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file materialBase.I
+ * @file material.I
  * @author lachbr
  * @date 2021-03-06
  */
@@ -15,7 +15,7 @@
  * Returns the material parameter with the indicated name, or NULL if no such
  * parameter exists.
  */
-INLINE MaterialParamBase *MaterialBase::
+INLINE MaterialParamBase *Material::
 get_param(CPT_InternalName name) const {
   Params::const_iterator pi = _params.find(name);
   if (pi == _params.end()) {
@@ -28,7 +28,7 @@ get_param(CPT_InternalName name) const {
 /**
  * Sets the filename of the material.
  */
-INLINE void MaterialBase::
+INLINE void Material::
 set_filename(const Filename &filename) {
   _filename = filename;
 }
@@ -36,7 +36,7 @@ set_filename(const Filename &filename) {
 /**
  *
  */
-INLINE const Filename &MaterialBase::
+INLINE const Filename &Material::
 get_filename() const {
   return _filename;
 }
@@ -44,7 +44,7 @@ get_filename() const {
 /**
  *
  */
-INLINE void MaterialBase::
+INLINE void Material::
 set_fullpath(const Filename &fullpath) {
   _fullpath = fullpath;
 }
@@ -52,7 +52,7 @@ set_fullpath(const Filename &fullpath) {
 /**
  *
  */
-INLINE const Filename &MaterialBase::
+INLINE const Filename &Material::
 get_fullpath() const {
   return _fullpath;
 }
@@ -61,7 +61,7 @@ get_fullpath() const {
  * Sets a new parameter on the material.  Replaces any existing parameter with
  * the same name.
  */
-INLINE void MaterialBase::
+INLINE void Material::
 set_param(MaterialParamBase *param) {
   _params[param->get_name()] = param;
 }
@@ -70,7 +70,7 @@ set_param(MaterialParamBase *param) {
  * Removes the indicated parameter from the material.  Quietly does nothing if
  * the parameter was not actually part of this material.
  */
-INLINE void MaterialBase::
+INLINE void Material::
 clear_param(MaterialParamBase *param) {
   Params::iterator pi = _params.find(param->get_name());
   if (pi == _params.end()) {

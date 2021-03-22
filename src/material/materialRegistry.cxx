@@ -12,7 +12,7 @@
  */
 
 #include "materialRegistry.h"
-#include "materialBase.h"
+#include "material.h"
 #include "typeRegistry.h"
 
 MaterialRegistry *MaterialRegistry::_global_ptr = nullptr;
@@ -31,7 +31,7 @@ MaterialRegistry() {
 void MaterialRegistry::
 register_material(const TypeHandle &type, CreateMaterialFunc create_func) {
   nassertv(_registered_materials.find(type) == _registered_materials.end());
-  nassertv(type.is_derived_from(MaterialBase::get_class_type()));
+  nassertv(type.is_derived_from(Material::get_class_type()));
 
   _registered_materials[type] = create_func;
 }
@@ -41,7 +41,7 @@ register_material(const TypeHandle &type, CreateMaterialFunc create_func) {
  *
  * Returns NULL if there is no registered material type with the given name.
  */
-PT(MaterialBase) MaterialRegistry::
+PT(Material) MaterialRegistry::
 create_material(const std::string &name) {
   TypeHandle type = TypeRegistry::ptr()->find_type(name);
   if (type == TypeHandle::none()) {
@@ -56,7 +56,7 @@ create_material(const std::string &name) {
  *
  * Returns NULL if there is no registered material type with the given name.
  */
-PT(MaterialBase) MaterialRegistry::
+PT(Material) MaterialRegistry::
 create_material(const TypeHandle &type) {
   RegisteredMaterials::const_iterator it = _registered_materials.find(type);
   if (it == _registered_materials.end()) {

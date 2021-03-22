@@ -12,7 +12,7 @@
  */
 
 #include "config_material.h"
-#include "materialBase.h"
+#include "material.h"
 #include "materialParamBool.h"
 #include "materialParamColor.h"
 #include "materialParamFloat.h"
@@ -39,7 +39,7 @@ init_libmaterial() {
 
   initialized = true;
 
-  MaterialBase::init_type();
+  Material::init_type();
 
   MaterialParamBool::init_type();
   MaterialParamColor::init_type();

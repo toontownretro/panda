@@ -6,12 +6,12 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file materialBase.cxx
+ * @file material.cxx
  * @author lachbr
  * @date 2021-03-06
  */
 
-#include "materialBase.h"
+#include "material.h"
 #include "config_material.h"
 #include "virtualFileSystem.h"
 #include "keyValues.h"
@@ -19,13 +19,13 @@
 #include "bamWriter.h"
 #include "datagramOutputFile.h"
 
-TypeHandle MaterialBase::_type_handle;
+TypeHandle Material::_type_handle;
 
 /**
  *
  */
-MaterialBase::
-MaterialBase(const std::string &name) :
+Material::
+Material(const std::string &name) :
   Namable(name),
   _num_params(0)
 {
@@ -34,7 +34,7 @@ MaterialBase(const std::string &name) :
 /**
  *
  */
-void MaterialBase::
+void Material::
 read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
   // Left up to derived materials.
 }
@@ -42,7 +42,7 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
 /**
  *
  */
-void MaterialBase::
+void Material::
 write_keyvalues(KeyValues *kv, const Filename &filename) {
   Params::const_iterator pi;
   for (pi = _params.begin(); pi != _params.end(); ++pi) {
@@ -57,7 +57,7 @@ write_keyvalues(KeyValues *kv, const Filename &filename) {
 /**
  * Writes this material to the indicated text-format .pmat file.
  */
-void MaterialBase::
+void Material::
 write_pmat(const Filename &filename) {
   PT(KeyValues) kv = new KeyValues;
 
@@ -70,7 +70,7 @@ write_pmat(const Filename &filename) {
 /**
  * Writes this material to the indicated Bam-format .mto file.
  */
-bool MaterialBase::
+bool Material::
 write_mto(const Filename &filename) {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   vfs->delete_file(filename);
@@ -100,7 +100,7 @@ write_mto(const Filename &filename) {
  * Writes the contents of this object to a Datagram for shipping out to a Bam
  * file.
  */
-void MaterialBase::
+void Material::
 write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
 
@@ -114,7 +114,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
 /**
  *
  */
-int MaterialBase::
+int Material::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
 
@@ -130,7 +130,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 /**
  * Reads in the contents of this object from the Datagram.
  */
-void MaterialBase::
+void Material::
 fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
 

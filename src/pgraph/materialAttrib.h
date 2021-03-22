@@ -16,7 +16,7 @@
 
 #include "pandabase.h"
 #include "renderAttrib.h"
-#include "materialBase.h"
+#include "material.h"
 
 /**
  * A render attribute that contains a material object.
@@ -27,14 +27,14 @@ private:
 
 PUBLISHED:
   static CPT(RenderAttrib) make_off();
-  static CPT(RenderAttrib) make(MaterialBase *material);
+  static CPT(RenderAttrib) make(Material *material);
   static CPT(RenderAttrib) make_default();
 
-  INLINE MaterialBase *get_material() const;
+  INLINE Material *get_material() const;
   MAKE_PROPERTY(material, get_material);
 
 private:
-  PT(MaterialBase) _material;
+  PT(Material) _material;
 
   // Used only during Bam reading.
   bool _has_raw_data;

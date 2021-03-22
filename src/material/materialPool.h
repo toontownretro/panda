@@ -16,7 +16,7 @@
 
 #include "pandabase.h"
 #include "filename.h"
-#include "materialBase.h"
+#include "material.h"
 #include "pmap.h"
 
 /**
@@ -30,17 +30,17 @@ private:
 PUBLISHED:
   INLINE static MaterialPool *get_global_ptr();
 
-  INLINE static PT(MaterialBase) load_material(const Filename &filename, const DSearchPath &search_path = get_model_path());
+  INLINE static PT(Material) load_material(const Filename &filename, const DSearchPath &search_path = get_model_path());
   INLINE static void release_all_materials();
-  INLINE static MaterialBase *find_material(const Filename &filename);
+  INLINE static Material *find_material(const Filename &filename);
 
 private:
-  PT(MaterialBase) ns_load_material(const Filename &filename, const DSearchPath &search_path);
+  PT(Material) ns_load_material(const Filename &filename, const DSearchPath &search_path);
   void ns_release_all_materials();
-  MaterialBase *ns_find_material(const Filename &filename) const;
+  Material *ns_find_material(const Filename &filename) const;
 
 private:
-  typedef pmap<Filename, PT(MaterialBase)> Materials;
+  typedef pmap<Filename, PT(Material)> Materials;
   Materials _materials;
   Materials _fullpath_materials;
 

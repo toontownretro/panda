@@ -14,7 +14,7 @@
 #ifndef STANDARDMATERIAL_H
 #define STANDARDMATERIAL_H
 
-#include "materialBase.h"
+#include "material.h"
 #include "materialRegistry.h"
 #include "pointerTo.h"
 #include "texture.h"
@@ -23,7 +23,7 @@
  * Standard material with all the fundamental parameters (base texture, normal
  * map, etc), with a few common fancy parameters (rim light, lightwarp, etc).
  */
-class EXPCL_PANDA_GOBJ StandardMaterial : public MaterialBase {
+class EXPCL_PANDA_GOBJ StandardMaterial : public Material {
 PUBLISHED:
   StandardMaterial(const std::string &name = "");
 
@@ -72,6 +72,9 @@ PUBLISHED:
   void set_emission(PN_stdfloat emission);
   PN_stdfloat get_emission() const;
 
+  void set_emission_tint(const LVecBase3 &tint);
+  LVecBase3 get_emission_tint() const;
+
 public:
   virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path) override;
 
@@ -80,7 +83,7 @@ public:
   static TypedWritable *make_from_bam(const FactoryParams &params);
 
   // Material registry methods.
-  static MaterialBase *create_StandardMaterial();
+  static Material *create_StandardMaterial();
 
 public:
   virtual TypeHandle get_type() const {
@@ -91,9 +94,9 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    MaterialBase::init_type();
+    Material::init_type();
     register_type(_type_handle, "StandardMaterial",
-                  MaterialBase::get_class_type());
+                  Material::get_class_type());
     MaterialRegistry::get_global_ptr()
       ->register_material(_type_handle, create_StandardMaterial);
   }
