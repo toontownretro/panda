@@ -57,7 +57,6 @@
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
-    material.I material.h \
     modifierButtons.I modifierButtons.h mouseButton.h \
     mouseData.h nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
@@ -116,7 +115,6 @@
     linkedListNode.cxx \
     load_prc_file.cxx \
     loaderOptions.cxx \
-    material.cxx \
     modifierButtons.cxx mouseButton.cxx \
     nameUniquifier.cxx \
     nodeCachedReferenceCount.cxx \
@@ -182,7 +180,6 @@
     linkedListNode.I linkedListNode.h \
     load_prc_file.h \
     loaderOptions.I loaderOptions.h \
-    material.I material.h \
     modifierButtons.I \
     modifierButtons.h mouseButton.h mouseData.h \
     nameUniquifier.I nameUniquifier.h \
