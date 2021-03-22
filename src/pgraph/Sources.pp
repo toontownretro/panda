@@ -68,7 +68,7 @@
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
     materialAttrib.I materialAttrib.h \
-    materialGroup.I materialGroup.h \
+    materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \
@@ -82,7 +82,6 @@
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
     pandaNodeChain.I pandaNodeChain.h \
-    paramAttrib.I paramAttrib.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \
@@ -171,7 +170,7 @@
     loaderFileTypeRegistry.cxx  \
     logicOpAttrib.cxx \
     materialAttrib.cxx \
-    materialGroup.cxx \
+    materialCollection.cxx \
     modelFlattenRequest.cxx \
     modelLoadRequest.cxx \
     modelSaveRequest.cxx \
@@ -184,7 +183,6 @@
     occluderNode.cxx \
     pandaNode.cxx \
     pandaNodeChain.cxx \
-    paramAttrib.cxx \
     paramNodePath.cxx \
     planeNode.cxx \
     polylightEffect.cxx \
@@ -272,7 +270,7 @@
     loaderFileTypeRegistry.h \
     logicOpAttrib.I logicOpAttrib.h \
     materialAttrib.I materialAttrib.h \
-    materialGroup.I materialGroup.h \
+    materialCollection.I materialCollection.h \
     modelFlattenRequest.I modelFlattenRequest.h \
     modelLoadRequest.I modelLoadRequest.h \
     modelSaveRequest.I modelSaveRequest.h \
@@ -286,7 +284,6 @@
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
     pandaNodeChain.I pandaNodeChain.h \
-    paramAttrib.I paramAttrib.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \

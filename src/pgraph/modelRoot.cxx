@@ -26,11 +26,11 @@ r_set_active_material_group(PandaNode *node, size_t n) {
     return;
   }
 
-  MaterialGroup *group = _material_groups[_active_material_group];
-  MaterialGroup *new_group = _material_groups[n];
+  const MaterialCollection &group = _material_groups[_active_material_group];
+  const MaterialCollection &new_group = _material_groups[n];
 
-  for (size_t i = 0; i < group->get_num_materials(); i++) {
-    node->replace_state(group->get_material(i), new_group->get_material(i));
+  for (size_t i = 0; i < group.get_num_materials(); i++) {
+    node->replace_material(group.get_material(i), new_group.get_material(i));
   }
 
   for (int i = 0; i < node->get_num_children(); i++) {
@@ -67,7 +67,10 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
   dg.add_uint8(_material_groups.size());
   for (size_t i = 0; i < _material_groups.size(); i++) {
-    manager->write_pointer(dg, _material_groups[i]);
+    dg.add_uint8(_material_groups[i].get_num_materials());
+    for (int j = 0; j < _material_groups[i].get_num_materials(); j++) {
+      manager->write_pointer(dg, _material_groups[i].get_material(j));
+    }
   }
 }
 
@@ -80,10 +83,12 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = ModelNode::complete_pointers(p_list, manager);
 
   for (size_t i = 0; i < _material_groups.size(); i++) {
-    TypedWritable *p = p_list[pi++];
-    MaterialGroup *group;
-    DCAST_INTO_R(group, p, pi);
-    _material_groups[i] = group;
+    for (int j = 0; j < _material_groups[i].get_num_materials(); i++) {
+      TypedWritable *p = p_list[pi++];
+      Material *mat;
+      DCAST_INTO_R(mat, p, pi);
+      _material_groups[i].set_material(j, mat);
+    }
   }
 
   return pi;
@@ -115,5 +120,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   ModelNode::fillin(scan, manager);
 
   _material_groups.resize(scan.get_uint8());
-  manager->read_pointers(scan, _material_groups.size());
+  for (size_t i = 0; i < _material_groups.size(); i++) {
+    int num_materials = scan.get_uint8();
+    for (int j = 0; j < num_materials; j++) {
+      manager->read_pointer(scan);
+      _material_groups[i].add_material(nullptr);
+    }
+  }
 }

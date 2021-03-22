@@ -146,11 +146,11 @@ get_active_material_group() const {
  * represent a particular "skin" of the model.
  */
 INLINE void ModelRoot::
-add_material_group(MaterialGroup *group) {
+add_material_group(const MaterialCollection &group) {
 #ifndef NDEBUG
   if (_material_groups.size() != 0) {
     // All groups should have the same number of materials.
-    nassertv(_material_groups[0]->get_num_materials() == group->get_num_materials());
+    nassertv(_material_groups[0].get_num_materials() == group.get_num_materials());
   }
 #endif
 
@@ -168,9 +168,9 @@ get_num_material_groups() const {
 /**
  * Returns the nth material group on the model.
  */
-INLINE MaterialGroup *ModelRoot::
+INLINE const MaterialCollection &ModelRoot::
 get_material_group(size_t n) const {
-  nassertr(n < _material_groups.size(), nullptr);
+  //nassertr(n < _material_groups.size(), nullptr);
   return _material_groups[n];
 }
 

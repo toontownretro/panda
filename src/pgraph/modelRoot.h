@@ -17,7 +17,7 @@
 #include "pandabase.h"
 #include "referenceCount.h"
 #include "modelNode.h"
-#include "materialGroup.h"
+#include "materialCollection.h"
 
 /**
  * A node of this type is created automatically at the root of each model file
@@ -55,9 +55,9 @@ PUBLISHED:
   INLINE size_t get_active_material_group() const;
   MAKE_PROPERTY(active_material_group, get_active_material_group, set_active_material_group);
 
-  INLINE void add_material_group(MaterialGroup *group);
+  INLINE void add_material_group(const MaterialCollection &group);
   INLINE size_t get_num_material_groups() const;
-  INLINE MaterialGroup *get_material_group(size_t n) const;
+  INLINE const MaterialCollection &get_material_group(size_t n) const;
   MAKE_SEQ(get_material_groups, get_num_material_groups, get_material_group);
   MAKE_SEQ_PROPERTY(material_groups, get_num_material_groups, get_material_group);
 
@@ -76,7 +76,7 @@ private:
   PT(ModelReference) _reference;
 
   // This handles skins.
-  typedef pvector<PT(MaterialGroup)> MaterialGroups;
+  typedef pvector<MaterialCollection> MaterialGroups;
   MaterialGroups _material_groups;
   size_t _active_material_group;
 
