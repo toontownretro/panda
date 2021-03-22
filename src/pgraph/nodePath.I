@@ -430,16 +430,6 @@ set_state(const RenderState *state, Thread *current_thread) {
 }
 
 /**
- * Changes the complete state object on this node by loading a state
- * description from a file.
- */
-INLINE void NodePath::
-set_state(const Filename &filename, Thread *current_thread) {
-  nassertv_always(!is_empty());
-  node()->set_state(filename, current_thread);
-}
-
-/**
  * Returns the net state on this node from the root.
  */
 INLINE CPT(RenderState) NodePath::

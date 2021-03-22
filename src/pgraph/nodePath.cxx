@@ -43,7 +43,6 @@
 #include "showBoundsEffect.h"
 #include "transparencyAttrib.h"
 #include "antialiasAttrib.h"
-#include "audioVolumeAttrib.h"
 #include "texProjectorEffect.h"
 #include "scissorEffect.h"
 #include "texturePool.h"
@@ -4214,7 +4213,7 @@ has_material() const {
     node()->get_attrib(MaterialAttrib::get_class_slot());
   if (attrib != nullptr) {
     const MaterialAttrib *ma = DCAST(MaterialAttrib, attrib);
-    return !ma->is_off();
+    return ma->get_material() != nullptr;
   }
 
   return false;
