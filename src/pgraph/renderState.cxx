@@ -43,11 +43,9 @@
 #include "depthOffsetAttrib.h"
 #include "colorWriteAttrib.h"
 #include "cullFaceAttrib.h"
-#include "paramAttrib.h"
 #include "alphaTestAttrib.h"
 #include "texturePool.h"
 #include "bamFile.h"
-#include "renderStatePool.h"
 #include "bam.h"
 #include "textureStagePool.h"
 

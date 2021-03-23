@@ -131,12 +131,6 @@ PUBLISHED:
   EXTENSION(PyObject *get_composition_cache() const);
   EXTENSION(PyObject *get_invert_composition_cache() const);
 
-  INLINE Filename get_filename() const;
-  MAKE_PROPERTY(filename, get_filename);
-
-  INLINE Filename get_fullpath() const;
-  MAKE_PROPERTY(fullpath, get_fullpath);
-
   void output(std::ostream &out) const;
   void write(std::ostream &out, int indent_level) const;
 

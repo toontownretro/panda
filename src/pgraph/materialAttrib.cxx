@@ -24,7 +24,10 @@ int MaterialAttrib::_attrib_slot;
  */
 CPT(RenderAttrib) MaterialAttrib::
 make_off() {
-  return RenderAttribRegistry::get_global_ptr()->get_slot_default(_attrib_slot);
+  MaterialAttrib *attr = new MaterialAttrib;
+  attr->_is_off = true;
+
+  return return_new(attr);
 }
 
 /**
@@ -92,6 +95,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
                   _material->get_filename().empty();
 
   dg.add_bool(raw_data);
+  dg.add_bool(_is_off);
 
   if (raw_data) {
     // We're putting the material directly in the Bam file.
@@ -163,6 +167,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   RenderAttrib::fillin(scan, manager);
 
   _has_raw_data = scan.get_bool();
+  _is_off = scan.get_bool();
 
   if (_has_raw_data) {
     manager->read_pointer(scan);

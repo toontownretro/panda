@@ -12,6 +12,7 @@
  */
 
 #include "modelRoot.h"
+#include "nodePath.h"
 
 TypeHandle ModelRoot::_type_handle;
 
@@ -30,7 +31,7 @@ r_set_active_material_group(PandaNode *node, size_t n) {
   const MaterialCollection &new_group = _material_groups[n];
 
   for (size_t i = 0; i < group.get_num_materials(); i++) {
-    node->replace_material(group.get_material(i), new_group.get_material(i));
+    NodePath(node).replace_material(group.get_material(i), new_group.get_material(i));
   }
 
   for (int i = 0; i < node->get_num_children(); i++) {

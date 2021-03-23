@@ -61,7 +61,6 @@
 #include "nodePath.h"
 #include "nodePathComponent.h"
 #include "pandaNode.h"
-#include "paramAttrib.h"
 #include "paramNodePath.h"
 #include "planeNode.h"
 #include "polylightEffect.h"
@@ -92,7 +91,6 @@
 #include "texGenAttrib.h"
 #include "transformState.h"
 #include "transparencyAttrib.h"
-#include "materialGroup.h"
 
 #include "dconfig.h"
 
@@ -476,7 +474,6 @@ init_libpgraph() {
   NodePathComponent::init_type();
   PandaNode::init_type();
   PandaNodePipelineReader::init_type();
-  ParamAttrib::init_type();
   ParamNodePath::init_type();
   PlaneNode::init_type();
   PolylightNode::init_type();
@@ -490,7 +487,6 @@ init_libpgraph() {
   RenderEffects::init_type();
   RenderModeAttrib::init_type();
   RenderState::init_type();
-  RenderState::BamRoot::init_type();
   RescaleNormalAttrib::init_type();
   SceneSetup::init_type();
   ScissorAttrib::init_type();
@@ -506,7 +502,6 @@ init_libpgraph() {
   TexGenAttrib::init_type();
   TransformState::init_type();
   TransparencyAttrib::init_type();
-  MaterialGroup::init_type();
 
   AlphaTestAttrib::register_with_read_factory();
   AntialiasAttrib::register_with_read_factory();
@@ -537,7 +532,6 @@ init_libpgraph() {
   ModelNode::register_with_read_factory();
   ModelRoot::register_with_read_factory();
   PandaNode::register_with_read_factory();
-  ParamAttrib::register_with_read_factory();
   ParamNodePath::register_with_read_factory();
   PlaneNode::register_with_read_factory();
   PolylightNode::register_with_read_factory();
@@ -547,7 +541,6 @@ init_libpgraph() {
   RenderEffects::register_with_read_factory();
   RenderModeAttrib::register_with_read_factory();
   RenderState::register_with_read_factory();
-  RenderState::BamRoot::register_with_read_factory();
   RescaleNormalAttrib::register_with_read_factory();
   ScissorAttrib::register_with_read_factory();
   ScissorEffect::register_with_read_factory();
@@ -560,7 +553,6 @@ init_libpgraph() {
   TexGenAttrib::register_with_read_factory();
   TransformState::register_with_read_factory();
   TransparencyAttrib::register_with_read_factory();
-  MaterialGroup::register_with_read_factory();
 
   // By initializing the _states map up front, we also guarantee that the
   // _states_lock mutex gets created before we spawn any threads (assuming no

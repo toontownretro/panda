@@ -23,7 +23,7 @@
  */
 class EXPCL_PANDA_PGRAPH MaterialAttrib : public RenderAttrib {
 private:
-  MaterialAttrib() = default;
+  INLINE MaterialAttrib();
 
 PUBLISHED:
   static CPT(RenderAttrib) make_off();
@@ -33,8 +33,12 @@ PUBLISHED:
   INLINE Material *get_material() const;
   MAKE_PROPERTY(material, get_material);
 
+  INLINE bool is_off() const;
+
 private:
   PT(Material) _material;
+
+  bool _is_off;
 
   // Used only during Bam reading.
   bool _has_raw_data;

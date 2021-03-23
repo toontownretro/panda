@@ -44,6 +44,7 @@
 #include "internalNameCollection.h"
 #include "textureCollection.h"
 #include "textureStageCollection.h"
+#include "materialCollection.h"
 
 class NodePathCollection;
 class FindApproxPath;
@@ -60,6 +61,8 @@ class Shader;
 class ShaderBuffer;
 class ShaderInput;
 class WeakNodePath;
+class Material;
+class MaterialAttrib;
 
 //
 // A NodePath is the fundamental unit of high-level interaction with the scene
@@ -758,6 +761,17 @@ PUBLISHED:
 
   void unify_texture_stages(TextureStage *stage);
 
+  Material *find_material(const std::string &name) const;
+  MaterialCollection find_all_materials() const;
+  MaterialCollection find_all_materials(const std::string &name) const;
+
+  void set_material(Material *tex, int priority = 0);
+  void set_material_off(int priority = 0);
+  void clear_material();
+  bool has_material() const;
+  PT(Material) get_material() const;
+  void replace_material(Material *mat, Material *new_mat);
+
   void set_fog(Fog *fog, int priority = 0);
   void set_fog_off(int priority = 0);
   void clear_fog();
@@ -999,6 +1013,14 @@ private:
                                  TextureStages &texture_stages) const;
 
   void r_unify_texture_stages(PandaNode *node, TextureStage *stage);
+
+  typedef phash_set<Material *, pointer_hash> Materials;
+  Material *r_find_material(PandaNode *node, const RenderState *state,
+                          const GlobPattern &glob) const;
+  void r_find_all_materials(PandaNode *node, const RenderState *state,
+                           Materials &materials) const;
+  static void r_replace_material(PandaNode *node, Material *mat,
+                                 const MaterialAttrib *new_attrib);
 
   PT(NodePathComponent) _head;
   int _backup_key;

@@ -11,6 +11,7 @@
     csmDepthShader.h csmDepthShader.I \
     depthShader.h depthShader.I \
     //lightmappedShader.h lightmappedShader.I \
+    noMatShader.h noMatShader.I \
     shaderBase.h shaderBase.I shaderBase.T \
     shaderEnums.h \
     shaderManager.h shaderManager.I \
@@ -27,6 +28,7 @@
     csmDepthShader.cxx \
     depthShader.cxx \
     //lightmappedShader.cxx \
+    noMatShader.cxx \
     shaderBase.cxx \
     shaderEnums.cxx \
     shaderManager.cxx \

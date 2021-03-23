@@ -218,6 +218,7 @@
     doubleBitMask_ext.I \
     keyValues_ext.cxx \
     keyValues_ext.h \
+    paramPyObject.h paramPyObject.I paramPyObject.cxx \
     pythonCallbackObject.cxx \
     pythonCallbackObject.h \
     sparseArray_ext.cxx \

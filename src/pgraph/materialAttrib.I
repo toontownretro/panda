@@ -12,9 +12,28 @@
  */
 
 /**
+ *
+ */
+INLINE MaterialAttrib::
+MaterialAttrib() :
+  _material(nullptr),
+  _has_raw_data(false),
+  _is_off(false)
+{
+}
+
+/**
  * Returns the material referenced by this material attribute.
  */
 INLINE Material *MaterialAttrib::
 get_material() const {
   return _material;
+}
+
+/**
+ * Returns true if this is an "off" material attribute, false otherwise.
+ */
+INLINE bool MaterialAttrib::
+is_off() const {
+  return _is_off;
 }
