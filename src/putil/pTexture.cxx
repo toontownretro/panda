@@ -249,24 +249,18 @@ resolve_filenames(const DSearchPath &search_path) {
 
   bool all_ok = true;
 
-  // We don't resolve the filenames for cubemaps or 3D textures because they
-  // are pattern filenames.
-  if (_texture_type <= TT_2d_texture) {
-
-    if (!_image_filename.empty()) {
-      _image_fullpath = _image_filename;
-      if (!vfs->resolve_filename(_image_fullpath, search_path)) {
-        all_ok = false;
-      }
+  if (!_image_filename.empty()) {
+    _image_fullpath = _image_filename;
+    if (!vfs->resolve_filename(_image_fullpath, search_path)) {
+      all_ok = false;
     }
+  }
 
-    if (!_alpha_image_filename.empty()) {
-      _alpha_image_fullpath = _alpha_image_filename;
-      if (!vfs->resolve_filename(_alpha_image_fullpath, search_path)) {
-        all_ok = false;
-      }
+  if (!_alpha_image_filename.empty()) {
+    _alpha_image_fullpath = _alpha_image_filename;
+    if (!vfs->resolve_filename(_alpha_image_fullpath, search_path)) {
+      all_ok = false;
     }
-
   }
 
   return all_ok;

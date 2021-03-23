@@ -58,6 +58,11 @@ get_fullpath() const {
 INLINE void PTexture::
 set_image_filename(const Filename &filename) {
   _image_filename = filename;
+  if (_texture_type == TT_3d_texture || _texture_type == TT_cube_map) {
+    _image_filename.set_pattern(true);
+  } else {
+    _image_filename.set_pattern(false);
+  }
 }
 
 /**
@@ -74,6 +79,11 @@ get_image_filename() const {
 INLINE void PTexture::
 set_image_fullpath(const Filename &fullpath) {
   _image_fullpath = fullpath;
+  if (_texture_type == TT_3d_texture || _texture_type == TT_cube_map) {
+    _image_fullpath.set_pattern(true);
+  } else {
+    _image_fullpath.set_pattern(false);
+  }
 }
 
 /**
@@ -133,6 +143,14 @@ set_texture_type(TextureType type) {
   _texture_type = type;
   if (_texture_type == TT_cube_map) {
     set_num_pages(6);
+  }
+
+  if (_texture_type == TT_cube_map || _texture_type == TT_3d_texture) {
+    _image_filename.set_pattern(true);
+    _image_fullpath.set_pattern(true);
+  } else {
+    _image_filename.set_pattern(false);
+    _image_fullpath.set_pattern(false);
   }
 }
 
