@@ -41,8 +41,11 @@ to_string(std::string &str, const Filename &filename) {
     str = "__null__";
 
   } else {
+    Filename out_filename = filename;
+    out_filename.make_canonical();
     Filename tex_filename = _value->get_fullpath();
-    tex_filename.make_relative_to(filename.get_dirname());
+    tex_filename.make_canonical();
+    tex_filename.make_relative_to(out_filename.get_dirname());
     str = tex_filename.get_fullpath();
   }
 }
