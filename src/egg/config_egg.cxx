@@ -55,6 +55,7 @@
 #include "eggVertexAux.h"
 #include "eggXfmAnimData.h"
 #include "eggXfmSAnim.h"
+#include "pmdlObject.h"
 
 #include "dconfig.h"
 
@@ -64,6 +65,7 @@
 
 Configure(config_egg);
 NotifyCategoryDef(egg, "");
+NotifyCategoryDef(pmdl, "");
 
 ConfigureFn(config_egg) {
   init_libegg();
@@ -228,4 +230,6 @@ init_libegg() {
   EggVertexAux::init_type();
   EggXfmAnimData::init_type();
   EggXfmSAnim::init_type();
+
+  PMDLObject::init_type();
 }

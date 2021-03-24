@@ -23,6 +23,7 @@
 #include "configVariableInt.h"
 
 NotifyCategoryDecl(egg, EXPCL_PANDA_EGG, EXPTP_PANDA_EGG);
+NotifyCategoryDecl(pmdl, EXPCL_PANDA_EGG, EXPTP_PANDA_EGG);
 
 extern ConfigVariableBool egg_support_old_anims;
 

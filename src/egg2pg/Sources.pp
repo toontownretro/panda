@@ -21,7 +21,9 @@
     egg_parametrics.h \
     load_egg_file.h \
     //save_egg_file.h \
-    loaderFileTypeEgg.h
+    loaderFileTypeEgg.h \
+    loaderFileTypePmdl.h \
+    pmdlLoader.h pmdlLoader.I
 
   #define COMPOSITE_SOURCES \
     animBundleMaker.cxx \
@@ -35,7 +37,9 @@
     egg_parametrics.cxx \
     load_egg_file.cxx \
     //save_egg_file.cxx \
-    loaderFileTypeEgg.cxx
+    loaderFileTypeEgg.cxx \
+    loaderFileTypePmdl.cxx \
+    pmdlLoader.cxx
 
   #if $[DONT_COMPOSITE_PGRAPH]
     #define SOURCES $[SOURCES] $[COMPOSITE_SOURCES]

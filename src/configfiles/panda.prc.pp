@@ -61,6 +61,7 @@ gl-force-fbo-color 0
 # loaded directly into Panda.
 
 load-file-type egg pandaegg
+load-file-type pmdl pandaegg
 
 
 # These entries work very similar to load-file-type, except they are

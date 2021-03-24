@@ -15,6 +15,7 @@
 
 #include "dconfig.h"
 #include "loaderFileTypeEgg.h"
+#include "loaderFileTypePmdl.h"
 #include "loaderFileTypeRegistry.h"
 #include "configVariableManager.h"
 #include "configVariableCore.h"
@@ -224,8 +225,10 @@ init_libegg2pg() {
 
   EggRenderState::init_type();
   LoaderFileTypeEgg::init_type();
+  LoaderFileTypePMDL::init_type();
 
   LoaderFileTypeRegistry *reg = LoaderFileTypeRegistry::get_global_ptr();
 
   reg->register_type(new LoaderFileTypeEgg);
+  reg->register_type(new LoaderFileTypePMDL);
 }
