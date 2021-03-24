@@ -21,6 +21,7 @@
 #include "materialParamColor.h"
 #include "materialParamVector.h"
 #include "bamReader.h"
+#include "string_utils.h"
 
 TypeHandle StandardMaterial::_type_handle;
 
@@ -42,15 +43,20 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
     std::string key = downcase(kv->get_key(i));
     const std::string &value = kv->get_value(i);
 
-    if (key == "$basetexture" || key == "$basemap") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$basecolor");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    if (key == "$basetexture" || key == "$basemap" || key == "$basecolor") {
 
-    } else if (key == "$basecolor") {
-      PT(MaterialParamColor) color = new MaterialParamColor("$basecolor");
-      color->from_string(value, search_path);
-      set_param(color);
+      // Bad hack to determine if it's a texture or color.  Need a special
+      // syntax to easily differentiate.
+      if (value.find(".ptex") != std::string::npos) {
+        PT(MaterialParamTexture) tex = new MaterialParamTexture("$basecolor");
+        tex->from_string(value, search_path);
+        set_param(tex);
+
+      } else {
+        PT(MaterialParamColor) color = new MaterialParamColor("$basecolor");
+        color->from_string(value, search_path);
+        set_param(color);
+      }
 
     } else if (key == "$normal" || key == "$bumpmap" ||
                key == "$normalmap" || key == "$normaltexture") {
