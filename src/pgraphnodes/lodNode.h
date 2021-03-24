@@ -92,6 +92,10 @@ PUBLISHED:
   bool verify_child_bounds() const;
 
 protected:
+  PN_stdfloat compute_pixel_diameter_of_sphere(
+    CullTraverser *trav, LPoint3 &pos, PN_stdfloat radius) const;
+  PN_stdfloat get_lod_metric(PN_stdfloat sphere_size) const;
+
   int compute_child(CullTraverser *trav, CullTraverserData &data);
 
   bool show_switches_cull_callback(CullTraverser *trav, CullTraverserData &data);

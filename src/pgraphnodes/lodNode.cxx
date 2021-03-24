@@ -148,7 +148,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   if (data._instances == nullptr || cdata->_got_force_switch) {
     LPoint3 center = cdata->_center * rel_transform->get_mat();
-    PN_stdfloat dist2 = center.dot(center);
+    PN_stdfloat size = compute_pixel_diameter_of_sphere(trav, center, 0.5f * lod_scale);
+    PN_stdfloat metric = get_lod_metric(size);
 
     for (int index = 0; index < num_children; ++index) {
       const Switch &sw = cdata->_switch_vector[index];
@@ -156,7 +157,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       if (cdata->_got_force_switch) {
         in_range = (cdata->_force_switch == index);
       } else {
-        in_range = sw.in_range_2(dist2 * lod_scale);
+        in_range = sw.in_range(metric);
       }
 
       if (in_range) {
@@ -174,11 +175,13 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     for (size_t ii = 0; ii < num_instances; ++ii) {
       LPoint3 inst_center = cdata->_center *
         rel_transform->compose((*data._instances)[ii].get_transform())->get_mat();
-      PN_stdfloat dist2 = inst_center.dot(inst_center);
+
+      PN_stdfloat size = compute_pixel_diameter_of_sphere(trav, inst_center, 0.5f * lod_scale);
+      PN_stdfloat metric = get_lod_metric(size);
 
       for (int index = 0; index < num_children; ++index) {
         const Switch &sw = cdata->_switch_vector[index];
-        if (!sw.in_range_2(dist2 * lod_scale)) {
+        if (!sw.in_range(metric)) {
           in_range[index].set_bit(ii);
         }
       }
@@ -373,13 +376,14 @@ compute_child(CullTraverser *trav, CullTraverserData &data) {
     center *= 1.0 / data._instances->size();
   }
 
-  PN_stdfloat dist2 = center.dot(center);
+  PN_stdfloat size = compute_pixel_diameter_of_sphere(trav, center, 0.5f * lod_scale);
+  PN_stdfloat metric = get_lod_metric(size);
 
   for (int index = 0; index < (int)cdata->_switch_vector.size(); ++index) {
-    if (cdata->_switch_vector[index].in_range_2(dist2 * lod_scale)) {
+    if (cdata->_switch_vector[index].in_range(metric)) {
       if (pgraph_cat.is_debug()) {
         pgraph_cat.debug()
-          << data.get_node_path() << " at distance " << sqrt(dist2)
+          << data.get_node_path() << " at metric " << metric
           << ", selected child " << index << "\n";
       }
 
@@ -389,13 +393,55 @@ compute_child(CullTraverser *trav, CullTraverserData &data) {
 
   if (pgraph_cat.is_debug()) {
     pgraph_cat.debug()
-      << data.get_node_path() << " at distance " << sqrt(dist2)
+      << data.get_node_path() << " at metric " << metric
       << ", no children in range.\n";
   }
 
   return -1;
 }
 
+/**
+ * Calculates the number of on-screen pixels the given sphere takes up.
+ *
+ * The origin of the sphere is assumed to already be in view space.
+ */
+PN_stdfloat LODNode::
+compute_pixel_diameter_of_sphere(CullTraverser *trav,
+                                 LPoint3 &pos, PN_stdfloat radius) const {
+  const Lens *lens = trav->get_scene()->get_lens();
+  const LMatrix4 &proj_matrix = lens->get_projection_mat();
+
+  LPoint4 test_point1(pos + (LVector3::up() * radius), 1.0);
+  LPoint4 test_point2(pos + (LVector3::down() * radius), 1.0);
+
+  LPoint4 clip_pos1 = proj_matrix.xform(test_point1);
+  LPoint4 clip_pos2 = proj_matrix.xform(test_point2);
+
+  if (clip_pos1[3] >= 0.001f) {
+    clip_pos1[1] /= clip_pos1[3];
+
+  } else {
+    clip_pos1[1] *= 1000.0f;
+  }
+
+  if (clip_pos2[3] >= 0.001f) {
+    clip_pos2[1] /= clip_pos2[3];
+
+  } else {
+    clip_pos2[1] *= 1000.0f;
+  }
+
+  PN_stdfloat height = trav->get_scene()->get_viewport_height();
+  return height * fabs(clip_pos2[1] - clip_pos1[1]);
+}
+
+/**
+ * Calculates the value that should be used to determine the active switch.
+ */
+PN_stdfloat LODNode::
+get_lod_metric(PN_stdfloat sphere_size) const {
+  return (sphere_size != 0.0f) ? (100.0f / sphere_size) : 0.0f;
+}
 
 /**
  * A special version of cull_callback() that is to be invoked when the LODNode
@@ -407,14 +453,16 @@ show_switches_cull_callback(CullTraverser *trav, CullTraverserData &data) {
   CDReader cdata(_cycler);
 
   CPT(TransformState) rel_transform = get_rel_transform(trav, data);
-  LPoint3 center = cdata->_center * rel_transform->get_mat();
-  PN_stdfloat dist2 = center.dot(center);
+  LPoint3 center_view = cdata->_center * rel_transform->get_mat();
+
+  PN_stdfloat size = compute_pixel_diameter_of_sphere(trav, center_view, 0.5f);
+  PN_stdfloat metric = get_lod_metric(size);
 
   // Now orient the disk(s) in camera space such that their origin is at
   // center, and the (0, 0, 0) point in camera space is on the disk.
   LMatrix4 mat;
-  look_at(mat, -center, LVector3(0.0f, 0.0f, 1.0f));
-  mat.set_row(3, center);
+  look_at(mat, -center_view, LVector3(0.0f, 0.0f, 1.0f));
+  mat.set_row(3, center_view);
   CPT(TransformState) viz_transform =
     rel_transform->invert_compose(TransformState::make_mat(mat));
 
@@ -425,7 +473,7 @@ show_switches_cull_callback(CullTraverser *trav, CullTraverserData &data) {
       if (cdata->_got_force_switch) {
         in_range = (cdata->_force_switch == index);
       } else {
-        in_range = sw.in_range_2(dist2);
+        in_range = sw.in_range(metric);
       }
 
       if (in_range) {
