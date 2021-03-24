@@ -25,6 +25,7 @@
 #include "internalName.h"
 #include "materialParamBase.h"
 #include "config_putil.h"
+#include "simpleHashMap.h"
 
 /**
  * This is an abstract base class for any kind of material that can be applied
@@ -40,6 +41,8 @@ public:
   virtual void write_keyvalues(KeyValues *kv, const Filename &filename);
 
 PUBLISHED:
+  INLINE size_t get_num_params() const;
+  INLINE MaterialParamBase *get_param(size_t n) const;
   INLINE MaterialParamBase *get_param(CPT_InternalName name) const;
 
   INLINE void set_filename(const Filename &filename);
@@ -61,7 +64,7 @@ protected:
   Filename _filename;
   Filename _fullpath;
 
-  typedef pmap<CPT_InternalName, PT(MaterialParamBase)> Params;
+  typedef SimpleHashMap<CPT_InternalName, PT(MaterialParamBase)> Params;
   Params _params;
 
 private:

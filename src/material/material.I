@@ -12,17 +12,33 @@
  */
 
 /**
+ * Returns the number of parameters in the material.
+ */
+INLINE size_t Material::
+get_num_params() const {
+  return _params.size();
+}
+
+/**
+ * Returns the nth parameter in the material.
+ */
+INLINE MaterialParamBase *Material::
+get_param(size_t n) const {
+  return _params.get_data(n);
+}
+
+/**
  * Returns the material parameter with the indicated name, or NULL if no such
  * parameter exists.
  */
 INLINE MaterialParamBase *Material::
 get_param(CPT_InternalName name) const {
-  Params::const_iterator pi = _params.find(name);
-  if (pi == _params.end()) {
+  int index = _params.find(name);
+  if (index == -1) {
     return nullptr;
   }
 
-  return (*pi).second;
+  return _params.get_data(index);
 }
 
 /**
@@ -72,10 +88,5 @@ set_param(MaterialParamBase *param) {
  */
 INLINE void Material::
 clear_param(MaterialParamBase *param) {
-  Params::iterator pi = _params.find(param->get_name());
-  if (pi == _params.end()) {
-    return;
-  }
-
-  _params.erase(pi);
+  _params.remove(param->get_name());
 }

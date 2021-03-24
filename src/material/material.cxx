@@ -44,11 +44,10 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
  */
 void Material::
 write_keyvalues(KeyValues *kv, const Filename &filename) {
-  Params::const_iterator pi;
-  for (pi = _params.begin(); pi != _params.end(); ++pi) {
-    const std::string &name = (*pi).first->get_name();
+  for (size_t i = 0; i < _params.size(); i++) {
+    const std::string &name = _params.get_key(i)->get_name();
     std::string value;
-    (*pi).second->to_string(value, filename);
+    _params.get_data(i)->to_string(value, filename);
 
     kv->set_key_value(name, value);
   }
@@ -105,9 +104,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
 
   me.add_uint8(_params.size());
-  for (Params::const_iterator pi = _params.begin();
-       pi != _params.end(); ++pi) {
-    manager->write_pointer(me, (*pi).second);
+  for (size_t i = 0; i < _params.size(); i++) {
+    manager->write_pointer(me, _params.get_data(i));
   }
 }
 
