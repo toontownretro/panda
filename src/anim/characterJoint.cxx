@@ -74,7 +74,7 @@ write_datagram(Datagram &dg) {
   }
 
   //_value.write_datagram(dg);
-  //_default_value.write_datagram(dg);
+  _default_value.write_datagram(dg);
   //_initial_net_transform_inverse.write_datagram(dg);
 }
 
@@ -93,7 +93,7 @@ read_datagram(DatagramIterator &dgi) {
   }
 
   //_value.read_datagram(dgi);
-  //_default_value.read_datagram(dgi);
+  _default_value.read_datagram(dgi);
   //_initial_net_transform_inverse.read_datagram(dgi);
 }
 

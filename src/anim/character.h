@@ -162,7 +162,7 @@ private:
   // animated position.
   Matrices _joint_skinning_matrices;
   Matrices _joint_initial_net_transform_inverse;
-  Matrices _joint_default_values;
+  //Matrices _joint_default_values;
   VertexTransforms _joint_vertex_transforms;
   NodeLists _joint_net_transform_nodes;
   Joints _joints;

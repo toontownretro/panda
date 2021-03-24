@@ -13,7 +13,7 @@
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
   nativenet net audio pnmtext steamnet shader \
-  postprocess ssemath raytrace
+  postprocess ssemath raytrace bsp material
 
 #define LOCAL_LIBS \
   downloader express pandabase

@@ -8,6 +8,6 @@
     mathutil movies parametrics pgraph pgraphnodes pgui \
     pipeline pnmimage pstatclient putil recorder text tform \
     prc nativenet net audio pnmtext steamnet shader \
-    postprocess raytrace
+    postprocess raytrace bsp material
   #define LOCAL_LIBS panda
 #end python_module_target

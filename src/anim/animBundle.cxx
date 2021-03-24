@@ -111,36 +111,21 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_stdfloat(_fps);
   me.add_uint16(_num_frames);
 
-  /*
   me.add_uint16(_joint_entries.size());
   for (size_t i = 0; i < _joint_entries.size(); i++) {
     const JointEntry &entry = _joint_entries[i];
 
     me.add_string(entry.name);
 
-    me.add_int16(entry.first_pos_frame);
-    me.add_int16(entry.num_pos_frames);
-
-    me.add_int16(entry.first_scale_frame);
-    me.add_int16(entry.num_scale_frames);
-
-    me.add_int16(entry.first_quat_frame);
-    me.add_int16(entry.num_quat_frames);
+    me.add_int16(entry.first_frame);
+    me.add_int16(entry.num_frames);
   }
 
-  me.add_uint16(_joint_pos.size());
-  for (size_t i = 0; i < _joint_pos.size(); i++) {
-    _joint_pos[i].write_datagram(me);
-  }
-
-  me.add_uint16(_joint_quat.size());
-  for (size_t i = 0; i < _joint_quat.size(); i++) {
-    _joint_quat[i].write_datagram(me);
-  }
-
-  me.add_uint16(_joint_scale.size());
-  for (size_t i = 0; i < _joint_scale.size(); i++) {
-    _joint_scale[i].write_datagram(me);
+  me.add_uint16(_joint_frames.size());
+  for (size_t i = 0; i < _joint_frames.size(); i++) {
+    _joint_frames[i].pos.write_datagram(me);
+    _joint_frames[i].quat.write_datagram(me);
+    _joint_frames[i].scale.write_datagram(me);
   }
 
   me.add_uint16(_slider_entries.size());
@@ -157,7 +142,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _slider_table.size(); i++) {
     me.add_stdfloat(_slider_table[i]);
   }
-  */
+
 }
 
 /**
@@ -169,44 +154,34 @@ void AnimBundle::
 fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
 
-  /*
-  PTA(JointFrameData) joint_frames;
-  joint_frames.resize(scan.get_uint32());
-
-  for (size_t i = 0; i < joint_frames.size(); i++) {
-    joint_frames[i].pos.read_datagram(scan);
-    joint_frames[i].quat.read_datagram(scan);
-    joint_frames[i].scale.read_datagram(scan);
-  }
-
-  _joint_frames = joint_frames;
-
-  size_t size = scan.get_uint16();
-  for (size_t i = 0; i < size; i++) {
-    std::string name = scan.get_string();
-    int channel = scan.get_uint16();
-    _joint_channel_names[name] = channel;
-  }
-
-  PTA_stdfloat slider_frames;
-  slider_frames.resize(scan.get_uint32());
-
-  for (size_t i = 0; i < slider_frames.size(); i++) {
-    slider_frames[i] = scan.get_stdfloat();
-  }
-
-  _slider_frames = slider_frames;
-
-  size = scan.get_uint16();
-  for (size_t i = 0; i < size; i++) {
-    std::string name = scan.get_string();
-    int channel = scan.get_uint16();
-    _slider_channel_names[name] = channel;
-  }
-  */
-
   _fps = scan.get_stdfloat();
   _num_frames = scan.get_uint16();
+
+  _joint_entries.resize(scan.get_uint16());
+  for (size_t i = 0; i < _joint_entries.size(); i++) {
+    _joint_entries[i].name = scan.get_string();
+    _joint_entries[i].first_frame = scan.get_int16();
+    _joint_entries[i].num_frames = scan.get_int16();
+  }
+
+  _joint_frames.resize(scan.get_uint16());
+  for (size_t i = 0; i < _joint_frames.size(); i++) {
+    _joint_frames[i].pos.read_datagram(scan);
+    _joint_frames[i].quat.read_datagram(scan);
+    _joint_frames[i].scale.read_datagram(scan);
+  }
+
+  _slider_entries.resize(scan.get_uint16());
+  for (size_t i = 0; i < _slider_entries.size(); i++) {
+    _slider_entries[i].name = scan.get_string();
+    _slider_entries[i].first_frame = scan.get_int16();
+    _slider_entries[i].num_frames = scan.get_int16();
+  }
+
+  _slider_table.resize(scan.get_uint16());
+  for (size_t i = 0; i < _slider_table.size(); i++) {
+    _slider_table[i] = scan.get_stdfloat();
+  }
 }
 
 /**

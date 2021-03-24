@@ -846,9 +846,22 @@ void Character::
 write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
 
+  NodeList::iterator ni;
+
   me.add_int16((int)_joints.size());
   for (int i = 0; i < (int)_joints.size(); i++) {
     _joints[i].write_datagram(me);
+    _joint_values[i].write_datagram(me);
+    _joint_net_transforms[i].write_datagram(me);
+    _joint_skinning_matrices[i].write_datagram(me);
+    _joint_initial_net_transform_inverse[i].write_datagram(me);
+
+    me.add_int16(_joint_net_transform_nodes[i].size());
+    for (ni = _joint_net_transform_nodes[i].begin();
+         ni != _joint_net_transform_nodes[i].end();
+         ni++) {
+      manager->write_pointer(me, (*ni));
+    }
   }
 
   me.add_int16((int)_sliders.size());
@@ -869,9 +882,17 @@ int Character::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = 0;
 
-  if (manager->get_file_minor_ver() >= 17) {
-    _anim_preload = DCAST(AnimPreloadTable, p_list[pi++]);
+  NodeList::iterator ni;
+
+  for (size_t i = 0; i < _joints.size(); i++) {
+    for (ni = _joint_net_transform_nodes[i].begin();
+         ni != _joint_net_transform_nodes[i].end();
+         ++ni) {
+      (*ni) = DCAST(PandaNode, p_list[pi++]);
+    }
   }
+
+  _anim_preload = DCAST(AnimPreloadTable, p_list[pi++]);
 
   return pi;
 }
@@ -899,8 +920,23 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
 
   _joints.resize(scan.get_int16());
+  _joint_values.resize(_joints.size());
+  _joint_net_transforms.resize(_joints.size());
+  _joint_skinning_matrices.resize(_joints.size());
+  _joint_initial_net_transform_inverse.resize(_joints.size());
+  _joint_net_transform_nodes.resize(_joints.size());
+  _joint_vertex_transforms.resize(_joints.size());
   for (size_t i = 0; i < _joints.size(); i++) {
     _joints[i].read_datagram(scan);
+    _joint_values[i].read_datagram(scan);
+    _joint_net_transforms[i].read_datagram(scan);
+    _joint_skinning_matrices[i].read_datagram(scan);
+    _joint_initial_net_transform_inverse[i].read_datagram(scan);
+
+    _joint_net_transform_nodes[i].resize(scan.get_int16());
+    manager->read_pointers(scan, _joint_net_transform_nodes[i].size());
+
+    _joint_vertex_transforms[i] = nullptr;
   }
 
   _sliders.resize(scan.get_int16());
