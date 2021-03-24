@@ -34,15 +34,15 @@ public:
 						     "shaders/postprocess/blur.frag.glsl" ) );
 		get_quad().set_shader_input( "texSampler",
 					     _blur_input );
-		get_quad().set_shader_input( "psTapOffsets", _ps_tap_offsets );
-		get_quad().set_shader_input( "vsTapOffsets", _vs_tap_offsets );
+		get_quad().set_shader_input("resolution", LVector2(_buffer->get_x_size(), _buffer->get_y_size()));
+		get_quad().set_shader_input( "blurDirection", LVector2(1, 0) );
 		get_quad().set_shader_input( "scaleFactor", LVecBase3f( 1, 1, 1 ) );
 	}
 
 	virtual void update()
 	{
 		PostProcessPass::update();
-
+#if 0
 		// Our buffer's size
 		int width = _buffer->get_size()[0];
 		float dx = 1.0f / width;
@@ -66,6 +66,7 @@ public:
 
 		_ps_tap_offsets[2][1] = 0.0f;
 		_ps_tap_offsets[2][0] = 11.4401f * dx;
+#endif
 	}
 
 private:
@@ -95,8 +96,8 @@ public:
 						     "shaders/postprocess/blur.frag.glsl" ) );
 		get_quad().set_shader_input( "texSampler",
 					     _blur_x->get_color_texture() );
-		get_quad().set_shader_input( "psTapOffsets", _ps_tap_offsets );
-		get_quad().set_shader_input( "vsTapOffsets", _vs_tap_offsets );
+		get_quad().set_shader_input("resolution", LVector2(_buffer->get_x_size(), _buffer->get_y_size()));
+		get_quad().set_shader_input( "blurDirection", LVector2(0, 1) );
 		get_quad().set_shader_input( "scaleFactor", _scale_factor );
 	}
 
@@ -105,6 +106,9 @@ public:
 		PostProcessPass::update();
 
 		// Our buffer's size
+		get_quad().set_shader_input("resolution", LVector2(_buffer->get_x_size(), _buffer->get_y_size()));
+
+#if 0
 		int height = _buffer->get_size()[1];
 		float dy = 1.0f / height;
 
@@ -127,6 +131,7 @@ public:
 
 		_ps_tap_offsets[2][0] = 0.0f;
 		_ps_tap_offsets[2][1] = 11.4401f * dy;
+#endif
 	}
 
 private:
