@@ -1,3 +1,5 @@
+#if 0
+
 /**
  * PANDA 3D SOFTWARE
  * Copyright (c) Carnegie Mellon University.  All rights reserved.
@@ -11,8 +13,6 @@
  * @date 2012-12-19
  */
 
-#if 0
-
 #ifndef EGGSAVER_H
 #define EGGSAVER_H
 
@@ -21,6 +21,7 @@
 #include "luse.h"
 #include "eggData.h"
 #include "eggTextureCollection.h"
+#include "eggMaterialCollection.h"
 
 class WorkingNodePath;
 class EggGroup;
@@ -40,6 +41,7 @@ class GeomVertexData;
 class GeomPrimitive;
 class PandaNode;
 class RenderState;
+class Material;
 class Texture;
 class CharacterJoint;
 class EggVertex;
@@ -99,11 +101,13 @@ private:
   bool apply_tags(EggGroup *egg_group, PandaNode *node);
   bool apply_tag(EggGroup *egg_group, PandaNode *node, const std::string &tag);
 
+  EggMaterial *get_egg_material(Material *tex);
   EggTexture *get_egg_texture(Texture *tex);
 
   PT(EggData) _data;
 
   PT(EggVertexPool) _vpool;
+  EggMaterialCollection _materials;
   EggTextureCollection _textures;
 };
 

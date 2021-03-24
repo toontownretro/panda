@@ -1,3 +1,5 @@
+#if 0
+
 /**
  * PANDA 3D SOFTWARE
  * Copyright (c) Carnegie Mellon University.  All rights reserved.
@@ -11,8 +13,6 @@
  * @date 2012-12-19
  */
 
-#if 0
-
 #include "eggSaver.h"
 
 #include "pandaNode.h"
@@ -23,6 +23,7 @@
 #include "transformState.h"
 #include "colorScaleAttrib.h"
 #include "colorAttrib.h"
+#include "materialAttrib.h"
 #include "textureAttrib.h"
 #include "cullBinAttrib.h"
 #include "cullFaceAttrib.h"
@@ -70,6 +71,7 @@
 #include "eggPoint.h"
 #include "eggLine.h"
 #include "eggTexture.h"
+#include "eggMaterial.h"
 #include "eggRenderMode.h"
 #include "eggTable.h"
 #include "dcast.h"
@@ -787,6 +789,16 @@ convert_primitive(const GeomVertexData *vertex_data,
     }
   }
 
+  // Check for a material.
+  EggMaterial *egg_mat = nullptr;
+  const MaterialAttrib *ma;
+  if (net_state->get_attrib(ma)) {
+    egg_mat = get_egg_material(ma->get_material());
+    if (egg_mat != nullptr) {
+      egg_prim->set_material(egg_mat);
+    }
+  }
+
   // Check for a texture.
   const TextureAttrib *ta;
   if (net_state->get_attrib(ta)) {
@@ -1220,6 +1232,55 @@ apply_tag(EggGroup *egg_group, PandaNode *node, const string &tag) {
   string value = node->get_tag(tag);
   egg_group->set_tag(tag, value);
   return true;
+}
+
+/**
+ * Returns an EggMaterial pointer that corresponds to the indicated Material.
+ */
+EggMaterial *EggSaver::
+get_egg_material(Material *mat) {
+  if (mat != nullptr) {
+    EggMaterial temp(mat->get_name());
+    if (mat->has_base_color()) {
+      temp.set_base(mat->get_base_color());
+    }
+
+    if (mat->has_ambient()) {
+      temp.set_amb(mat->get_ambient());
+    }
+
+    if (mat->has_diffuse()) {
+      temp.set_diff(mat->get_diffuse());
+    }
+
+    if (mat->has_specular()) {
+      temp.set_spec(mat->get_specular());
+    }
+
+    if (mat->has_emission()) {
+      temp.set_emit(mat->get_emission());
+    }
+
+    if (mat->has_roughness()) {
+      temp.set_roughness(mat->get_roughness());
+    } else {
+      temp.set_shininess(mat->get_shininess());
+    }
+
+    if (mat->has_metallic()) {
+      temp.set_metallic(mat->get_metallic());
+    }
+
+    if (mat->has_refractive_index()) {
+      temp.set_ior(mat->get_refractive_index());
+    }
+
+    temp.set_local(mat->get_local());
+
+    return _materials.create_unique_material(temp, ~EggMaterial::E_mref_name);
+  }
+
+  return nullptr;
 }
 
 /**

@@ -18,6 +18,7 @@
 #include "virtualFileSystem.h"
 #include "config_putil.h"
 #include "bamCacheRecord.h"
+#include "pmdlLoader.h"
 
 static PT(PandaNode)
 load_from_loader(EggLoader &loader) {
@@ -135,4 +136,24 @@ load_egg_data(EggData *data, CoordinateSystem cs) {
   loader._data->set_coordinate_system(cs);
 
   return load_from_loader(loader);
+}
+
+PT(PandaNode)
+load_pmdl_file(const Filename &filename, CoordinateSystem cs) {
+  PT(PMDLData) data = new PMDLData;
+  if (!data->read(filename)) {
+    return nullptr;
+  }
+
+  return load_pmdl_data(data, cs);
+}
+
+/**
+ *
+ */
+PT(PandaNode)
+load_pmdl_data(PMDLData *data, CoordinateSystem cs) {
+  PMDLLoader loader(data);
+  loader.build_graph();
+  return loader._root;
 }

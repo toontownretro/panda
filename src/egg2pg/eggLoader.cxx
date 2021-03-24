@@ -52,6 +52,7 @@
 #include "eggPatch.h"
 #include "eggPoint.h"
 #include "eggLine.h"
+#include "eggTextureCollection.h"
 #include "eggNurbsCurve.h"
 #include "eggNurbsSurface.h"
 #include "eggGroupNode.h"
@@ -63,6 +64,7 @@
 #include "eggTable.h"
 #include "eggBinner.h"
 #include "eggVertexPool.h"
+#include "pt_EggTexture.h"
 #include "characterMaker.h"
 #include "character.h"
 #include "animBundleMaker.h"
@@ -93,6 +95,12 @@
 #include "uvScrollNode.h"
 #include "textureStagePool.h"
 #include "cmath.h"
+#include "virtualFileSystem.h"
+#include "string_utils.h"
+#include "eggMaterialCollection.h"
+#include "modelIndex.h"
+#include "materialPool.h"
+#include "materialAttrib.h"
 
 #include <ctype.h>
 #include <algorithm>
@@ -155,6 +163,78 @@ EggLoader(const EggData *data) :
   _dynamic_override_char_maker = nullptr;
 }
 
+/**
+ *
+ */
+void EggLoader::
+collect_pmats() {
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  Filename egg_dir = _data->get_egg_filename().get_dirname();
+
+  EggMaterialCollection mats;
+  mats.find_used_materials(_data);
+
+  EggTextureCollection texs;
+  texs.find_used_textures(_data);
+
+  if (mats.empty() && texs.empty()) {
+    return;
+  }
+
+  ModelIndex *index = ModelIndex::get_global_ptr();
+
+  for (EggMaterialCollection::iterator mit = mats.begin(); mit != mats.end(); ++mit) {
+    EggMaterial *mat = (*mit);
+
+    std::string egg_mat_name = mat->get_name();
+
+    ModelIndex::Asset *mat_asset = index->find_asset("materials", egg_mat_name);
+    if (mat_asset != nullptr) {
+      _egg_material_pmats[mat] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
+
+    } else {
+      // If it's not in the model index, check in the directory of the egg
+      // file.
+      Filename mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (egg_mat_name + ".pmat");
+      if (mat_filename.is_regular_file()) {
+        _egg_material_pmats[mat] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
+      }
+    }
+  }
+
+  for (EggTextureCollection::iterator ti = texs.begin(); ti != texs.end(); ++ti) {
+    EggTexture *tex = (*ti);
+
+    Filename tex_filename = tex->get_fullpath();
+
+    // Try with the extension included.  It might be material.rgb.pmat
+    ModelIndex::Asset *mat_asset = index->find_asset("materials", tex_filename.get_basename());
+    if (mat_asset != nullptr) {
+      _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
+
+    } else {
+      // If it's not in the model index, check in the directory of the egg
+      // file.
+      Filename mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (tex_filename.get_basename() + ".pmat");
+      if (mat_filename.is_regular_file()) {
+        _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
+
+      } else {
+        // Try with just the basename.
+        mat_asset = index->find_asset("materials", tex_filename.get_basename_wo_extension());
+        if (mat_asset != nullptr) {
+          _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
+
+        } else {
+          mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (tex_filename.get_basename_wo_extension() + ".pmat");
+          if (mat_filename.is_regular_file()) {
+            _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
+          }
+        }
+      }
+    }
+  }
+}
 
 /**
  *
@@ -168,6 +248,9 @@ build_graph() {
   if (!expand_all_object_types(_data)) {
     return;
   }
+
+  // Try to deduce .pmat files from the EggMaterials and EggTextures.
+  collect_pmats();
 
   // Clean up the vertices.
   _data->clear_connected_shading();
@@ -186,6 +269,10 @@ build_graph() {
   // parented directly to a sequence or switch are sorted into sub-groups
   // first, to prevent them being unified into a single polyset.
   separate_switches(_data);
+
+  //if (egg_emulate_bface) {
+  //  emulate_bface(_data);
+  //}
 
   // Then bin up the polysets and LOD nodes.
   _data->remove_invalid_primitives(true);
@@ -839,6 +926,843 @@ make_nurbs_surface(EggNurbsSurface *egg_surface, PandaNode *parent,
 }
 
 /**
+ * Loads the texture referenced by the given EggTexture if it hasn't been
+ * loaded already.
+ *
+ * Returns true on success or false if the texture couldn't be loaded.
+ */
+bool EggLoader::
+load_texture(EggTexture *egg_tex) {
+  if (_textures.find(egg_tex) != _textures.end()) {
+    // We've already loaded this one!
+    return true;
+  }
+
+  TextureDef def;
+  if (load_texture(def, egg_tex)) {
+    // Now associate the pointers, so we'll be able to look up the Texture
+    // pointer given an EggTexture pointer, later.
+    _textures[egg_tex] = def;
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ *
+ */
+bool EggLoader::
+load_texture(TextureDef &def, EggTexture *egg_tex) {
+  // First check if there's a corresponding .ptex for this texture.  If there
+  // is, we will load that and skip the code below.
+  ModelIndex *index = ModelIndex::get_global_ptr();
+
+  // First try with the extension included (in case there are multiple textures
+  // with the same basename but different extensions).
+  ModelIndex::Asset *tex_asset = index->find_asset("textures", egg_tex->get_filename().get_basename());
+  if (tex_asset == nullptr) {
+    // Didn't find it.  Try without the extension now.
+    tex_asset = index->find_asset("textures", egg_tex->get_filename().get_basename_wo_extension());
+  }
+
+  if (tex_asset != nullptr) {
+    // We found a corresponding .ptex, use that instead.
+    PT(Texture) tex = TexturePool::load_texture(tex_asset->_src);
+    if (tex == nullptr) {
+      return false;
+    }
+
+    // Make a texture stage for the texture.
+    PT(TextureStage) stage = make_texture_stage(egg_tex);
+    def._texture = DCAST(TextureAttrib, TextureAttrib::make())->add_on_stage(stage, tex);
+    def._stage = stage;
+    def._egg_tex = egg_tex;
+
+    return true;
+  }
+
+  // Check to see if we should reduce the number of channels in the texture.
+  int wanted_channels = 0;
+  bool wanted_alpha = false;
+  switch (egg_tex->get_format()) {
+  case EggTexture::F_red:
+  case EggTexture::F_green:
+  case EggTexture::F_blue:
+  case EggTexture::F_alpha:
+  case EggTexture::F_luminance:
+  case EggTexture::F_sluminance:
+    wanted_channels = 1;
+    wanted_alpha = false;
+    break;
+
+  case EggTexture::F_luminance_alpha:
+  case EggTexture::F_luminance_alphamask:
+  case EggTexture::F_sluminance_alpha:
+    wanted_channels = 2;
+    wanted_alpha = true;
+    break;
+
+  case EggTexture::F_rgb:
+  case EggTexture::F_rgb12:
+  case EggTexture::F_rgb8:
+  case EggTexture::F_rgb5:
+  case EggTexture::F_rgb332:
+  case EggTexture::F_srgb:
+    wanted_channels = 3;
+    wanted_alpha = false;
+    break;
+
+  case EggTexture::F_rgba:
+  case EggTexture::F_rgbm:
+  case EggTexture::F_rgba12:
+  case EggTexture::F_rgba8:
+  case EggTexture::F_rgba4:
+  case EggTexture::F_rgba5:
+  case EggTexture::F_srgb_alpha:
+    wanted_channels = 4;
+    wanted_alpha = true;
+    break;
+
+  case EggTexture::F_unspecified:
+    wanted_alpha = egg_tex->has_alpha_filename();
+  }
+
+  // Since some properties of the textures are inferred from the texture files
+  // themselves (if the properties are not explicitly specified in the egg
+  // file), then we add the textures as dependents for the egg file.
+  if (_record != nullptr) {
+    _record->add_dependent_file(egg_tex->get_fullpath());
+    if (egg_tex->has_alpha_filename() && wanted_alpha) {
+      _record->add_dependent_file(egg_tex->get_alpha_fullpath());
+    }
+  }
+
+  // By convention, the egg loader will preload the simple texture images.
+  LoaderOptions options;
+  if (egg_preload_simple_textures) {
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_preload_simple);
+  }
+
+  if (!egg_ignore_filters && !egg_ignore_mipmaps) {
+    switch (egg_tex->get_minfilter()) {
+    case EggTexture::FT_nearest:
+    case EggTexture::FT_linear:
+    case EggTexture::FT_unspecified:
+      break;
+
+    case EggTexture::FT_nearest_mipmap_nearest:
+    case EggTexture::FT_linear_mipmap_nearest:
+    case EggTexture::FT_nearest_mipmap_linear:
+    case EggTexture::FT_linear_mipmap_linear:
+      options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_generate_mipmaps);
+    }
+  }
+
+  if (egg_tex->get_multiview()) {
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_multiview);
+    if (egg_tex->has_num_views()) {
+      options.set_texture_num_views(egg_tex->get_num_views());
+    }
+  }
+
+  // Allow the texture loader to pre-compress the texture.
+  if (egg_tex->get_compression_mode() == EggTexture::CM_on) {
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_allow_compression);
+  }
+
+  PT(Texture) tex;
+  switch (egg_tex->get_texture_type()) {
+  case EggTexture::TT_unspecified:
+  case EggTexture::TT_1d_texture:
+    options.set_texture_flags(options.get_texture_flags() | LoaderOptions::TF_allow_1d);
+    // Fall through.
+
+  case EggTexture::TT_2d_texture:
+    if (egg_tex->has_alpha_filename() && wanted_alpha) {
+      tex = TexturePool::load_texture(egg_tex->get_fullpath(),
+                                      egg_tex->get_alpha_fullpath(),
+                                      wanted_channels,
+                                      egg_tex->get_alpha_file_channel(),
+                                      egg_tex->get_read_mipmaps(), options);
+    } else {
+      tex = TexturePool::load_texture(egg_tex->get_fullpath(),
+                                      wanted_channels,
+                                      egg_tex->get_read_mipmaps(), options);
+    }
+    break;
+
+  case EggTexture::TT_3d_texture:
+    tex = TexturePool::load_3d_texture(egg_tex->get_fullpath(),
+                                       egg_tex->get_read_mipmaps(), options);
+    break;
+
+  case EggTexture::TT_cube_map:
+    tex = TexturePool::load_cube_map(egg_tex->get_fullpath(),
+                                     egg_tex->get_read_mipmaps(), options);
+    break;
+  }
+
+  if (tex == nullptr) {
+    return false;
+  }
+
+  // Record the original filenames in the textures (as loaded from the egg
+  // file).  These filenames will be written back to the bam file if the bam
+  // file is written out.
+  tex->set_filename(egg_tex->get_filename());
+  if (egg_tex->has_alpha_filename() && wanted_alpha) {
+    tex->set_alpha_filename(egg_tex->get_alpha_filename());
+  }
+
+  // See if there is some egg data hanging on the texture.  In particular, the
+  // TxaFileFilter might have left that here for us.
+  TypedReferenceCount *aux = tex->get_aux_data("egg");
+  if (aux != nullptr &&
+      aux->is_of_type(EggTexture::get_class_type())) {
+    EggTexture *aux_egg_tex = DCAST(EggTexture, aux);
+
+    if (aux_egg_tex->get_alpha_mode() != EggTexture::AM_unspecified) {
+      egg_tex->set_alpha_mode(aux_egg_tex->get_alpha_mode());
+    }
+    if (aux_egg_tex->get_format() != EggTexture::F_unspecified) {
+      egg_tex->set_format(aux_egg_tex->get_format());
+    }
+    if (aux_egg_tex->get_minfilter() != EggTexture::FT_unspecified) {
+      egg_tex->set_minfilter(aux_egg_tex->get_minfilter());
+    }
+    if (aux_egg_tex->get_magfilter() != EggTexture::FT_unspecified) {
+      egg_tex->set_magfilter(aux_egg_tex->get_magfilter());
+    }
+    if (aux_egg_tex->has_anisotropic_degree()) {
+      egg_tex->set_anisotropic_degree(aux_egg_tex->get_anisotropic_degree());
+    }
+  }
+
+  apply_texture_attributes(tex, egg_tex);
+
+  // Make a texture stage for the texture.
+  PT(TextureStage) stage = make_texture_stage(egg_tex);
+  def._texture = DCAST(TextureAttrib, TextureAttrib::make())->add_on_stage(stage, tex);
+  def._stage = stage;
+  def._egg_tex = egg_tex;
+
+  return true;
+}
+
+
+/**
+ *
+ */
+void EggLoader::
+apply_texture_attributes(Texture *tex, const EggTexture *egg_tex) {
+  if (egg_tex->get_compression_mode() != EggTexture::CM_default) {
+    tex->set_compression(convert_compression_mode(egg_tex->get_compression_mode()));
+  }
+
+  SamplerState sampler;
+
+  EggTexture::WrapMode wrap_u = egg_tex->determine_wrap_u();
+  EggTexture::WrapMode wrap_v = egg_tex->determine_wrap_v();
+  EggTexture::WrapMode wrap_w = egg_tex->determine_wrap_w();
+
+  if (wrap_u != EggTexture::WM_unspecified) {
+    sampler.set_wrap_u(convert_wrap_mode(wrap_u));
+  }
+  if (wrap_v != EggTexture::WM_unspecified) {
+    sampler.set_wrap_v(convert_wrap_mode(wrap_v));
+  }
+  if (wrap_w != EggTexture::WM_unspecified) {
+    sampler.set_wrap_w(convert_wrap_mode(wrap_w));
+  }
+
+  if (egg_tex->has_border_color()) {
+    sampler.set_border_color(egg_tex->get_border_color());
+  }
+
+  switch (egg_tex->get_minfilter()) {
+  case EggTexture::FT_nearest:
+    sampler.set_minfilter(SamplerState::FT_nearest);
+    break;
+
+  case EggTexture::FT_linear:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring minfilter request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else {
+      sampler.set_minfilter(SamplerState::FT_linear);
+    }
+    break;
+
+  case EggTexture::FT_nearest_mipmap_nearest:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring minfilter request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else if (egg_ignore_mipmaps) {
+      egg2pg_cat.warning()
+        << "Ignoring mipmap request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else {
+      sampler.set_minfilter(SamplerState::FT_nearest_mipmap_nearest);
+    }
+    break;
+
+  case EggTexture::FT_linear_mipmap_nearest:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring minfilter request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else if (egg_ignore_mipmaps) {
+      egg2pg_cat.warning()
+        << "Ignoring mipmap request\n";
+      sampler.set_minfilter(SamplerState::FT_linear);
+    } else {
+      sampler.set_minfilter(SamplerState::FT_linear_mipmap_nearest);
+    }
+    break;
+
+  case EggTexture::FT_nearest_mipmap_linear:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring minfilter request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else if (egg_ignore_mipmaps) {
+      egg2pg_cat.warning()
+        << "Ignoring mipmap request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else {
+      sampler.set_minfilter(SamplerState::FT_nearest_mipmap_linear);
+    }
+    break;
+
+  case EggTexture::FT_linear_mipmap_linear:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring minfilter request\n";
+      sampler.set_minfilter(SamplerState::FT_nearest);
+    } else if (egg_ignore_mipmaps) {
+      egg2pg_cat.warning()
+        << "Ignoring mipmap request\n";
+      sampler.set_minfilter(SamplerState::FT_linear);
+    } else {
+      sampler.set_minfilter(SamplerState::FT_linear_mipmap_linear);
+    }
+    break;
+
+  case EggTexture::FT_unspecified:
+    break;
+  }
+
+  switch (egg_tex->get_magfilter()) {
+  case EggTexture::FT_nearest:
+  case EggTexture::FT_nearest_mipmap_nearest:
+  case EggTexture::FT_nearest_mipmap_linear:
+    sampler.set_magfilter(SamplerState::FT_nearest);
+    break;
+
+  case EggTexture::FT_linear:
+  case EggTexture::FT_linear_mipmap_nearest:
+  case EggTexture::FT_linear_mipmap_linear:
+    if (egg_ignore_filters) {
+      egg2pg_cat.warning()
+        << "Ignoring magfilter request\n";
+      sampler.set_magfilter(SamplerState::FT_nearest);
+    } else {
+      sampler.set_magfilter(SamplerState::FT_linear);
+    }
+    break;
+
+  case EggTexture::FT_unspecified:
+    break;
+  }
+
+  if (egg_tex->has_anisotropic_degree()) {
+    sampler.set_anisotropic_degree(egg_tex->get_anisotropic_degree());
+  }
+
+  if (egg_tex->has_min_lod()) {
+    sampler.set_min_lod(egg_tex->get_min_lod());
+  }
+
+  if (egg_tex->has_max_lod()) {
+    sampler.set_max_lod(egg_tex->get_max_lod());
+  }
+
+  if (egg_tex->has_lod_bias()) {
+    sampler.set_lod_bias(egg_tex->get_lod_bias());
+  }
+
+  tex->set_default_sampler(sampler);
+
+  bool force_srgb = false;
+  if (egg_force_srgb_textures) {
+    switch (egg_tex->get_env_type()) {
+    case EggTexture::ET_unspecified:
+    case EggTexture::ET_modulate:
+    case EggTexture::ET_decal:
+    case EggTexture::ET_blend:
+    case EggTexture::ET_replace:
+    case EggTexture::ET_add:
+    case EggTexture::ET_blend_color_scale:
+    case EggTexture::ET_modulate_glow:
+    case EggTexture::ET_modulate_gloss:
+      force_srgb = true;
+      if (egg2pg_cat.is_debug()) {
+        egg2pg_cat.debug()
+          << "Enabling sRGB format on texture " << egg_tex->get_name() << "\n";
+      }
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  if (tex->get_num_components() == 1) {
+    switch (egg_tex->get_format()) {
+    case EggTexture::F_red:
+      tex->set_format(Texture::F_red);
+      break;
+    case EggTexture::F_green:
+      tex->set_format(Texture::F_green);
+      break;
+    case EggTexture::F_blue:
+      tex->set_format(Texture::F_blue);
+      break;
+    case EggTexture::F_alpha:
+      tex->set_format(Texture::F_alpha);
+      break;
+    case EggTexture::F_luminance:
+      tex->set_format(force_srgb ? Texture::F_sluminance : Texture::F_luminance);
+      break;
+    case EggTexture::F_sluminance:
+      tex->set_format(Texture::F_sluminance);
+      break;
+
+    default:
+      egg2pg_cat.warning()
+        << "Ignoring inappropriate format " << egg_tex->get_format()
+        << " for 1-component texture " << egg_tex->get_name() << "\n";
+
+    case EggTexture::F_unspecified:
+      if (force_srgb) {
+        tex->set_format(Texture::F_sluminance);
+      }
+      break;
+    }
+
+  } else if (tex->get_num_components() == 2) {
+    switch (egg_tex->get_format()) {
+    case EggTexture::F_luminance_alpha:
+      tex->set_format(force_srgb ? Texture::F_sluminance_alpha : Texture::F_luminance_alpha);
+      break;
+
+    case EggTexture::F_luminance_alphamask:
+      tex->set_format(force_srgb ? Texture::F_sluminance_alpha : Texture::F_luminance_alphamask);
+      break;
+
+    case EggTexture::F_sluminance_alpha:
+      tex->set_format(Texture::F_sluminance_alpha);
+      break;
+
+    default:
+      egg2pg_cat.warning()
+        << "Ignoring inappropriate format " << egg_tex->get_format()
+        << " for 2-component texture " << egg_tex->get_name() << "\n";
+
+    case EggTexture::F_unspecified:
+      if (force_srgb) {
+        tex->set_format(Texture::F_sluminance_alpha);
+      }
+      break;
+    }
+
+  } else if (tex->get_num_components() == 3) {
+    switch (egg_tex->get_format()) {
+    case EggTexture::F_rgb:
+      tex->set_format(force_srgb ? Texture::F_srgb : Texture::F_rgb);
+      break;
+    case EggTexture::F_rgb12:
+      if (force_srgb) {
+        tex->set_format(Texture::F_srgb);
+      } else if (tex->get_component_width() >= 2) {
+        // Only do this if the component width supports it.
+        tex->set_format(Texture::F_rgb12);
+      } else {
+        egg2pg_cat.warning()
+          << "Ignoring inappropriate format " << egg_tex->get_format()
+          << " for 8-bit texture " << egg_tex->get_name() << "\n";
+      }
+      break;
+    case EggTexture::F_rgb8:
+    case EggTexture::F_rgba8:
+      // We'll quietly accept RGBA8 for a 3-component texture, since flt2egg
+      // generates these for 3-component as well as for 4-component textures.
+      tex->set_format(force_srgb ? Texture::F_srgb : Texture::F_rgb8);
+      break;
+    case EggTexture::F_rgb5:
+      tex->set_format(force_srgb ? Texture::F_srgb : Texture::F_rgb5);
+      break;
+    case EggTexture::F_rgb332:
+      tex->set_format(force_srgb ? Texture::F_srgb : Texture::F_rgb332);
+      break;
+    case EggTexture::F_srgb:
+    case EggTexture::F_srgb_alpha:
+      tex->set_format(Texture::F_srgb);
+      break;
+
+    default:
+      egg2pg_cat.warning()
+        << "Ignoring inappropriate format " << egg_tex->get_format()
+        << " for 3-component texture " << egg_tex->get_name() << "\n";
+
+    case EggTexture::F_unspecified:
+      if (force_srgb) {
+        tex->set_format(Texture::F_srgb);
+      }
+      break;
+    }
+
+  } else if (tex->get_num_components() == 4) {
+    switch (egg_tex->get_format()) {
+    case EggTexture::F_rgba:
+      tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgba);
+      break;
+    case EggTexture::F_rgbm:
+      tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgbm);
+      break;
+    case EggTexture::F_rgba12:
+      if (force_srgb) {
+        tex->set_format(Texture::F_srgb_alpha);
+      } else if (tex->get_component_width() >= 2) {
+        // Only do this if the component width supports it.
+        tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgba12);
+      } else {
+        egg2pg_cat.warning()
+          << "Ignoring inappropriate format " << egg_tex->get_format()
+          << " for 8-bit texture " << egg_tex->get_name() << "\n";
+      }
+      break;
+    case EggTexture::F_rgba8:
+      tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgba8);
+      break;
+    case EggTexture::F_rgba4:
+      tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgba4);
+      break;
+    case EggTexture::F_rgba5:
+      tex->set_format(force_srgb ? Texture::F_srgb_alpha : Texture::F_rgba5);
+      break;
+    case EggTexture::F_srgb_alpha:
+      tex->set_format(Texture::F_srgb_alpha);
+      break;
+
+    default:
+      egg2pg_cat.warning()
+        << "Ignoring inappropriate format " << egg_tex->get_format()
+        << " for 4-component texture " << egg_tex->get_name() << "\n";
+
+    case EggTexture::F_unspecified:
+      if (force_srgb) {
+        tex->set_format(Texture::F_srgb_alpha);
+      }
+      break;
+    }
+  }
+
+  if (force_srgb && tex->get_format() != Texture::F_alpha &&
+      !Texture::is_srgb(tex->get_format())) {
+    egg2pg_cat.warning()
+      << "Unable to enable sRGB format on texture " << egg_tex->get_name()
+      << " with specified format " << egg_tex->get_format() << "\n";
+  }
+
+  switch (egg_tex->get_quality_level()) {
+  case EggTexture::QL_unspecified:
+  case EggTexture::QL_default:
+    tex->set_quality_level(Texture::QL_default);
+    break;
+
+  case EggTexture::QL_fastest:
+    tex->set_quality_level(Texture::QL_fastest);
+    break;
+
+  case EggTexture::QL_normal:
+    tex->set_quality_level(Texture::QL_normal);
+    break;
+
+  case EggTexture::QL_best:
+    tex->set_quality_level(Texture::QL_best);
+    break;
+  }
+}
+
+/**
+ * Returns the Texture::CompressionMode enum corresponding to the
+ * EggTexture::CompressionMode.  Returns CM_default if the compression mode is
+ * unspecified.
+ */
+Texture::CompressionMode EggLoader::
+convert_compression_mode(EggTexture::CompressionMode compression_mode) const {
+  switch (compression_mode) {
+  case EggTexture::CM_off:
+    return Texture::CM_off;
+
+  case EggTexture::CM_on:
+    return Texture::CM_on;
+
+  case EggTexture::CM_fxt1:
+    return Texture::CM_fxt1;
+
+  case EggTexture::CM_dxt1:
+    return Texture::CM_dxt1;
+
+  case EggTexture::CM_dxt2:
+    return Texture::CM_dxt2;
+
+  case EggTexture::CM_dxt3:
+    return Texture::CM_dxt3;
+
+  case EggTexture::CM_dxt4:
+    return Texture::CM_dxt4;
+
+  case EggTexture::CM_dxt5:
+    return Texture::CM_dxt5;
+
+  case EggTexture::CM_default:
+    return Texture::CM_default;
+  }
+
+  egg2pg_cat.warning()
+    << "Unexpected texture compression flag: " << (int)compression_mode << "\n";
+  return Texture::CM_default;
+}
+
+/**
+ * Returns the SamplerState::WrapMode enum corresponding to the
+ * EggTexture::WrapMode.  Returns WM_repeat if the wrap mode is unspecified.
+ */
+SamplerState::WrapMode EggLoader::
+convert_wrap_mode(EggTexture::WrapMode wrap_mode) const {
+  switch (wrap_mode) {
+  case EggTexture::WM_clamp:
+    return SamplerState::WM_clamp;
+
+  case EggTexture::WM_repeat:
+    return SamplerState::WM_repeat;
+
+  case EggTexture::WM_mirror:
+    return SamplerState::WM_mirror;
+
+  case EggTexture::WM_mirror_once:
+    return SamplerState::WM_mirror_once;
+
+  case EggTexture::WM_border_color:
+    return SamplerState::WM_border_color;
+
+  case EggTexture::WM_unspecified:
+    return SamplerState::WM_repeat;
+  }
+
+  egg2pg_cat.warning()
+    << "Unexpected texture wrap flag: " << (int)wrap_mode << "\n";
+  return SamplerState::WM_repeat;
+}
+
+/**
+ * Creates a TextureStage object suitable for rendering the indicated texture.
+ */
+PT(TextureStage) EggLoader::
+make_texture_stage(const EggTexture *egg_tex) {
+  // If the egg texture specifies any relevant TextureStage properties, or if
+  // it is multitextured on top of anything else, it gets its own texture
+  // stage; otherwise, it gets the default texture stage.
+  if (!egg_tex->has_stage_name() &&
+      !egg_tex->has_uv_name() &&
+      !egg_tex->has_color() &&
+      (egg_tex->get_env_type() == EggTexture::ET_unspecified ||
+       egg_tex->get_env_type() == EggTexture::ET_modulate) &&
+      egg_tex->get_combine_mode(EggTexture::CC_rgb) == EggTexture::CM_unspecified &&
+      egg_tex->get_combine_mode(EggTexture::CC_alpha) == EggTexture::CM_unspecified &&
+
+      !egg_tex->has_priority() &&
+      egg_tex->get_multitexture_sort() == 0 &&
+      !egg_tex->get_saved_result()) {
+    return TextureStage::get_default();
+  }
+
+  PT(TextureStage) stage = new TextureStage(egg_tex->get_stage_name());
+
+  switch (egg_tex->get_env_type()) {
+  case EggTexture::ET_modulate:
+    stage->set_mode(TextureStage::M_modulate);
+    break;
+
+  case EggTexture::ET_decal:
+    stage->set_mode(TextureStage::M_decal);
+    break;
+
+  case EggTexture::ET_blend:
+    stage->set_mode(TextureStage::M_blend);
+    break;
+
+  case EggTexture::ET_replace:
+    stage->set_mode(TextureStage::M_replace);
+    break;
+
+  case EggTexture::ET_add:
+    stage->set_mode(TextureStage::M_add);
+    break;
+
+  case EggTexture::ET_blend_color_scale:
+    stage->set_mode(TextureStage::M_blend_color_scale);
+    break;
+
+  case EggTexture::ET_modulate_glow:
+    stage->set_mode(TextureStage::M_modulate_glow);
+    break;
+
+  case EggTexture::ET_modulate_gloss:
+    stage->set_mode(TextureStage::M_modulate_gloss);
+    break;
+
+  case EggTexture::ET_normal:
+    stage->set_name("normal");
+    stage->set_mode(TextureStage::M_normal);
+    break;
+
+  case EggTexture::ET_normal_height:
+    stage->set_mode(TextureStage::M_normal_height);
+    break;
+
+  case EggTexture::ET_glow:
+    stage->set_mode(TextureStage::M_glow);
+    break;
+
+  case EggTexture::ET_gloss:
+    stage->set_mode(TextureStage::M_gloss);
+    break;
+
+  case EggTexture::ET_height:
+    stage->set_mode(TextureStage::M_height);
+    break;
+
+  case EggTexture::ET_selector:
+    stage->set_mode(TextureStage::M_selector);
+    break;
+
+  case EggTexture::ET_normal_gloss:
+    stage->set_mode(TextureStage::M_normal_gloss);
+    break;
+
+  case EggTexture::ET_emission:
+    stage->set_mode(TextureStage::M_emission);
+    break;
+
+  case EggTexture::ET_unspecified:
+    break;
+  }
+
+  switch (egg_tex->get_combine_mode(EggTexture::CC_rgb)) {
+  case EggTexture::CM_replace:
+    stage->set_combine_rgb(get_combine_mode(egg_tex, EggTexture::CC_rgb),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 0),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 0));
+    break;
+
+  case EggTexture::CM_modulate:
+  case EggTexture::CM_add:
+  case EggTexture::CM_add_signed:
+  case EggTexture::CM_subtract:
+  case EggTexture::CM_dot3_rgb:
+  case EggTexture::CM_dot3_rgba:
+    stage->set_combine_rgb(get_combine_mode(egg_tex, EggTexture::CC_rgb),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 0),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 0),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 1),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 1));
+    break;
+
+  case EggTexture::CM_interpolate:
+    stage->set_combine_rgb(get_combine_mode(egg_tex, EggTexture::CC_rgb),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 0),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 0),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 1),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 1),
+                           get_combine_source(egg_tex, EggTexture::CC_rgb, 2),
+                           get_combine_operand(egg_tex, EggTexture::CC_rgb, 2));
+    break;
+
+  case EggTexture::CM_unspecified:
+    break;
+  }
+
+  switch (egg_tex->get_combine_mode(EggTexture::CC_alpha)) {
+  case EggTexture::CM_replace:
+    stage->set_combine_alpha(get_combine_mode(egg_tex, EggTexture::CC_alpha),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 0),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 0));
+    break;
+
+  case EggTexture::CM_modulate:
+  case EggTexture::CM_add:
+  case EggTexture::CM_add_signed:
+  case EggTexture::CM_subtract:
+    stage->set_combine_alpha(get_combine_mode(egg_tex, EggTexture::CC_alpha),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 0),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 0),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 1),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 1));
+    break;
+
+  case EggTexture::CM_interpolate:
+    stage->set_combine_alpha(get_combine_mode(egg_tex, EggTexture::CC_alpha),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 0),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 0),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 1),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 1),
+                             get_combine_source(egg_tex, EggTexture::CC_alpha, 2),
+                             get_combine_operand(egg_tex, EggTexture::CC_alpha, 2));
+    break;
+
+  case EggTexture::CM_unspecified:
+  case EggTexture::CM_dot3_rgb:
+  case EggTexture::CM_dot3_rgba:
+    break;
+  }
+
+
+  if (egg_tex->has_uv_name()) {
+    PT(InternalName) name =
+      InternalName::get_texcoord_name(egg_tex->get_uv_name());
+    stage->set_texcoord_name(name);
+  }
+
+  if (egg_tex->has_rgb_scale()) {
+    stage->set_rgb_scale(egg_tex->get_rgb_scale());
+  }
+
+  if (egg_tex->has_alpha_scale()) {
+    stage->set_alpha_scale(egg_tex->get_alpha_scale());
+  }
+
+  stage->set_saved_result(egg_tex->get_saved_result());
+
+  stage->set_sort(egg_tex->get_multitexture_sort() * 10);
+
+  if (egg_tex->has_priority()) {
+    stage->set_sort(egg_tex->get_priority());
+  }
+
+  if (egg_tex->has_color()) {
+    stage->set_color(egg_tex->get_color());
+  }
+
+  return TextureStagePool::get_stage(stage);
+}
+
+/**
  * Walks the tree recursively, looking for EggPrimitives that are children of
  * sequence or switch nodes.  If any are found, they are moved within their
  * own group to protect them from being flattened with their neighbors.
@@ -874,6 +1798,58 @@ separate_switches(EggNode *egg_node) {
 
       ci = cnext;
     }
+  }
+}
+
+/**
+ * Looks for EggPolygons with a bface flag applied to them.  Any such polygons
+ * are duplicated into a pair of back-to-back polygons, and the bface flag is
+ * removed.
+ */
+void EggLoader::
+emulate_bface(EggNode *egg_node) {
+  if (egg_node->is_of_type(EggGroupNode::get_class_type())) {
+    EggGroupNode *egg_group = DCAST(EggGroupNode, egg_node);
+    PT(EggGroupNode) dup_prims = new EggGroupNode;
+
+    EggGroupNode::iterator ci;
+    for (ci = egg_group->begin(); ci != egg_group->end(); ++ci) {
+      PT(EggNode) child = (*ci);
+      if (child->is_of_type(EggPolygon::get_class_type())) {
+        EggPolygon *poly = DCAST(EggPolygon, child);
+        if (poly->get_bface_flag()) {
+          poly->set_bface_flag(false);
+
+          PT(EggPolygon) dup_poly = new EggPolygon(*poly);
+          dup_poly->reverse_vertex_ordering();
+          if (dup_poly->has_normal()) {
+            dup_poly->set_normal(-dup_poly->get_normal());
+          }
+
+          // Also reverse the normal on any vertices.
+          EggPolygon::iterator vi;
+          for (vi = dup_poly->begin(); vi != dup_poly->end(); ++vi) {
+            EggVertex *vertex = (*vi);
+            if (vertex->has_normal()) {
+              EggVertex dup_vertex(*vertex);
+              dup_vertex.set_normal(-dup_vertex.get_normal());
+              EggVertex *new_vertex = vertex->get_pool()->create_unique_vertex(dup_vertex);
+              if (new_vertex != vertex) {
+                new_vertex->copy_grefs_from(*vertex);
+                dup_poly->replace(vi, new_vertex);
+              }
+            }
+          }
+          dup_prims->add_child(dup_poly);
+        }
+      }
+
+      emulate_bface(child);
+    }
+
+    // Now that we've iterated through all the children, add in any duplicated
+    // polygons we generated.
+    egg_group->steal_children(*dup_prims);
   }
 }
 
@@ -1235,6 +2211,16 @@ create_group_arc(EggGroup *egg_group, PandaNode *parent, PandaNode *node) {
     node->set_tag((*ti).first, (*ti).second);
   }
 
+  if (egg_group->get_blend_mode() != EggGroup::BM_unspecified &&
+      egg_group->get_blend_mode() != EggGroup::BM_none) {
+    // Apply a ColorBlendAttrib to the group.
+    ColorBlendAttrib::Mode mode = get_color_blend_mode(egg_group->get_blend_mode());
+    ColorBlendAttrib::Operand a = get_color_blend_operand(egg_group->get_blend_operand_a());
+    ColorBlendAttrib::Operand b = get_color_blend_operand(egg_group->get_blend_operand_b());
+    LColor color = egg_group->get_blend_color();
+    node->set_attrib(ColorBlendAttrib::make(mode, a, b, color));
+  }
+
   // If the group specified some property that should propagate down to the
   // leaves, we have to remember this node and apply the property later, after
   // we've created the actual geometry.
@@ -1350,6 +2336,7 @@ make_vertex_data(const EggRenderState *render_state,
                  bool ignore_color) {
   VertexPoolTransform vpt;
   vpt._vertex_pool = vertex_pool;
+  vpt._bake_in_uvs = render_state->_bake_in_uvs;
   vpt._transform = transform;
 
   VertexPoolData::iterator di;
@@ -1587,6 +2574,12 @@ make_vertex_data(const EggRenderState *render_state,
       PT(InternalName) iname = InternalName::get_texcoord_name(name);
       gvw.set_column(iname);
 
+      BakeInUVs::const_iterator buv = render_state->_bake_in_uvs.find(iname);
+      if (buv != render_state->_bake_in_uvs.end()) {
+        // If we are to bake in a texture matrix, do so now.
+        uvw = uvw * (*buv).second->get_transform3d();
+      }
+
       gvw.set_data3d(uvw);
 
       if (is_dynamic) {
@@ -1597,6 +2590,10 @@ make_vertex_data(const EggRenderState *render_state,
             InternalName::get_morph(iname, morph.get_name());
           gvw.set_column(delta_name);
           LTexCoord3d duvw = morph.get_offset();
+          if (buv != render_state->_bake_in_uvs.end()) {
+            LTexCoord3d new_uvw = orig_uvw + duvw;
+            duvw = (new_uvw * (*buv).second->get_transform3d()) - uvw;
+          }
 
           gvw.add_data3d(duvw);
         }
@@ -1851,6 +2848,10 @@ set_occluder_polygon(EggGroup *egg_group, OccluderNode *pnode) {
                           LCAST(PN_stdfloat, v1),
                           LCAST(PN_stdfloat, v2),
                           LCAST(PN_stdfloat, v3));
+
+      if (poly->get_bface_flag()) {
+        pnode->set_double_sided(true);
+      }
     }
   }
 }
@@ -2901,6 +3902,198 @@ do_expand_object_type(EggGroup *egg_group, const pset<string> &expanded,
 }
 
 /**
+ * Extracts the combine_mode from the given egg texture, and returns its
+ * corresponding TextureStage value.
+ */
+TextureStage::CombineMode EggLoader::
+get_combine_mode(const EggTexture *egg_tex,
+                 EggTexture::CombineChannel channel) {
+  switch (egg_tex->get_combine_mode(channel)) {
+  case EggTexture::CM_unspecified:
+    // fall through
+
+  case EggTexture::CM_modulate:
+    return TextureStage::CM_modulate;
+
+  case EggTexture::CM_replace:
+    return TextureStage::CM_replace;
+
+  case EggTexture::CM_add:
+    return TextureStage::CM_add;
+
+  case EggTexture::CM_add_signed:
+    return TextureStage::CM_add_signed;
+
+  case EggTexture::CM_interpolate:
+    return TextureStage::CM_interpolate;
+
+  case EggTexture::CM_subtract:
+    return TextureStage::CM_subtract;
+
+  case EggTexture::CM_dot3_rgb:
+    return TextureStage::CM_dot3_rgb;
+
+  case EggTexture::CM_dot3_rgba:
+    return TextureStage::CM_dot3_rgba;
+  };
+
+  return TextureStage::CM_undefined;
+}
+
+/**
+ * Extracts the combine_source from the given egg texture, and returns its
+ * corresponding TextureStage value.
+ */
+TextureStage::CombineSource EggLoader::
+get_combine_source(const EggTexture *egg_tex,
+                   EggTexture::CombineChannel channel, int n) {
+  switch (egg_tex->get_combine_source(channel, n)) {
+  case EggTexture::CS_unspecified:
+    // The default source if it is unspecified is based on the parameter
+    // index.
+    switch (n) {
+    case 0:
+      return TextureStage::CS_previous;
+    case 1:
+      return TextureStage::CS_texture;
+    case 2:
+      return TextureStage::CS_constant;
+    }
+    // Otherwise, fall through
+
+  case EggTexture::CS_texture:
+    return TextureStage::CS_texture;
+
+  case EggTexture::CS_constant:
+    return TextureStage::CS_constant;
+
+  case EggTexture::CS_primary_color:
+    return TextureStage::CS_primary_color;
+
+  case EggTexture::CS_previous:
+    return TextureStage::CS_previous;
+
+  case EggTexture::CS_constant_color_scale:
+    return TextureStage::CS_constant_color_scale;
+
+  case EggTexture::CS_last_saved_result:
+    return TextureStage::CS_last_saved_result;
+  };
+
+  return TextureStage::CS_undefined;
+}
+
+/**
+ * Extracts the combine_operand from the given egg texture, and returns its
+ * corresponding TextureStage value.
+ */
+TextureStage::CombineOperand EggLoader::
+get_combine_operand(const EggTexture *egg_tex,
+                    EggTexture::CombineChannel channel, int n) {
+  switch (egg_tex->get_combine_operand(channel, n)) {
+  case EggTexture::CO_unspecified:
+    if (channel == EggTexture::CC_rgb) {
+      // The default operand for RGB is src_color, except for the third
+      // parameter, which defaults to src_alpha.
+      return n < 2 ? TextureStage::CO_src_color : TextureStage::CO_src_alpha;
+    } else {
+      // The default operand for alpha is always src_alpha.
+      return TextureStage::CO_src_alpha;
+    }
+
+  case EggTexture::CO_src_color:
+    return TextureStage::CO_src_color;
+
+  case EggTexture::CO_one_minus_src_color:
+    return TextureStage::CO_one_minus_src_color;
+
+  case EggTexture::CO_src_alpha:
+    return TextureStage::CO_src_alpha;
+
+  case EggTexture::CO_one_minus_src_alpha:
+    return TextureStage::CO_one_minus_src_alpha;
+  };
+
+  return TextureStage::CO_undefined;
+}
+
+/**
+ * Converts the EggGroup's BlendMode to the corresponding
+ * ColorBlendAttrib::Mode value.
+ */
+ColorBlendAttrib::Mode EggLoader::
+get_color_blend_mode(EggGroup::BlendMode mode) {
+  switch (mode) {
+  case EggGroup::BM_unspecified:
+  case EggGroup::BM_none:
+    return ColorBlendAttrib::M_none;
+  case EggGroup::BM_add:
+    return ColorBlendAttrib::M_add;
+  case EggGroup::BM_subtract:
+    return ColorBlendAttrib::M_subtract;
+  case EggGroup::BM_inv_subtract:
+    return ColorBlendAttrib::M_inv_subtract;
+  case EggGroup::BM_min:
+    return ColorBlendAttrib::M_min;
+  case EggGroup::BM_max:
+    return ColorBlendAttrib::M_max;
+  }
+
+  return ColorBlendAttrib::M_none;
+}
+
+/**
+ * Converts the EggGroup's BlendOperand to the corresponding
+ * ColorBlendAttrib::Operand value.
+ */
+ColorBlendAttrib::Operand EggLoader::
+get_color_blend_operand(EggGroup::BlendOperand operand) {
+  switch (operand) {
+  case EggGroup::BO_zero:
+    return ColorBlendAttrib::O_zero;
+  case EggGroup::BO_unspecified:
+  case EggGroup::BO_one:
+    return ColorBlendAttrib::O_one;
+  case EggGroup::BO_incoming_color:
+    return ColorBlendAttrib::O_incoming_color;
+  case EggGroup::BO_one_minus_incoming_color:
+    return ColorBlendAttrib::O_one_minus_incoming_color;
+  case EggGroup::BO_fbuffer_color:
+    return ColorBlendAttrib::O_fbuffer_color;
+  case EggGroup::BO_one_minus_fbuffer_color:
+    return ColorBlendAttrib::O_one_minus_fbuffer_color;
+  case EggGroup::BO_incoming_alpha:
+    return ColorBlendAttrib::O_incoming_alpha;
+  case EggGroup::BO_one_minus_incoming_alpha:
+    return ColorBlendAttrib::O_one_minus_incoming_alpha;
+  case EggGroup::BO_fbuffer_alpha:
+    return ColorBlendAttrib::O_fbuffer_alpha;
+  case EggGroup::BO_one_minus_fbuffer_alpha:
+    return ColorBlendAttrib::O_one_minus_fbuffer_alpha;
+  case EggGroup::BO_constant_color:
+    return ColorBlendAttrib::O_constant_color;
+  case EggGroup::BO_one_minus_constant_color:
+    return ColorBlendAttrib::O_one_minus_constant_color;
+  case EggGroup::BO_constant_alpha:
+    return ColorBlendAttrib::O_constant_alpha;
+  case EggGroup::BO_one_minus_constant_alpha:
+    return ColorBlendAttrib::O_one_minus_constant_alpha;
+  case EggGroup::BO_incoming_color_saturate:
+    return ColorBlendAttrib::O_incoming_color_saturate;
+  case EggGroup::BO_color_scale:
+    return ColorBlendAttrib::O_color_scale;
+  case EggGroup::BO_one_minus_color_scale:
+    return ColorBlendAttrib::O_one_minus_color_scale;
+  case EggGroup::BO_alpha_scale:
+    return ColorBlendAttrib::O_alpha_scale;
+  case EggGroup::BO_one_minus_alpha_scale:
+    return ColorBlendAttrib::O_one_minus_alpha_scale;
+  }
+
+  return ColorBlendAttrib::O_zero;
+}
+
+/**
  *
  */
 bool EggLoader::VertexPoolTransform::
@@ -2912,6 +4105,23 @@ operator < (const EggLoader::VertexPoolTransform &other) const {
   if (compare != 0) {
     return compare < 0;
   }
+
+  if (_bake_in_uvs.size() != other._bake_in_uvs.size()) {
+    return _bake_in_uvs.size() < other._bake_in_uvs.size();
+  }
+
+  BakeInUVs::const_iterator ai, bi;
+  ai = _bake_in_uvs.begin();
+  bi = other._bake_in_uvs.begin();
+  while (ai != _bake_in_uvs.end()) {
+    nassertr(bi != other._bake_in_uvs.end(), false);
+    if ((*ai) != (*bi)) {
+      return (*ai) < (*bi);
+    }
+    ++ai;
+    ++bi;
+  }
+  nassertr(bi == other._bake_in_uvs.end(), false);
 
   return false;
 }

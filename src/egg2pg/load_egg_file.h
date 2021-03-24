@@ -19,6 +19,7 @@
 #include "pandaNode.h"
 #include "coordinateSystem.h"
 #include "eggData.h"
+#include "pmdlData.h"
 
 class BamCacheRecord;
 
@@ -42,6 +43,13 @@ load_egg_file(const Filename &filename, CoordinateSystem cs = CS_default,
  */
 EXPCL_PANDA_EGG2PG PT(PandaNode)
 load_egg_data(EggData *data, CoordinateSystem cs = CS_default);
+
+EXPCL_PANDA_EGG2PG PT(PandaNode)
+load_pmdl_file(const Filename &filename, CoordinateSystem cs = CS_default);
+
+EXPCL_PANDA_EGG2PG PT(PandaNode)
+load_pmdl_data(PMDLData *data, CoordinateSystem cs = CS_default);
+
 END_PUBLISH
 
 #endif

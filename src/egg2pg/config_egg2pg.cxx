@@ -139,6 +139,13 @@ ConfigVariableBool egg_suppress_hidden
           "scalar are not created at all.  When false, these objects are "
           "created, but initially stashed."));
 
+ConfigVariableEnum<EggRenderMode::AlphaMode> egg_alpha_mode
+("egg-alpha-mode", EggRenderMode::AM_blend,
+ PRC_DESC("Specifies the alpha mode to apply when the alpha specification "
+          "\"on\" appears in the egg file (or when a primitive is implicitly "
+          "transparent, because of a <RGBA> that involves a non-unity alpha, "
+          "or because of a four-channel texture."));
+
 ConfigVariableInt egg_max_vertices
 ("egg-max-vertices", 65534,
  PRC_DESC("Specifies the maximum number of vertices that will be "

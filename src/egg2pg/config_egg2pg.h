@@ -17,6 +17,7 @@
 #include "pandabase.h"
 
 #include "coordinateSystem.h"
+#include "eggRenderMode.h"
 #include "notifyCategoryProxy.h"
 #include "configVariableBool.h"
 #include "configVariableDouble.h"
@@ -45,6 +46,7 @@ extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_load_old_curves;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_load_classic_nurbs_curves;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_accept_errors;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_suppress_hidden;
+extern EXPCL_PANDA_EGG2PG ConfigVariableEnum<EggRenderMode::AlphaMode> egg_alpha_mode;
 extern EXPCL_PANDA_EGG2PG ConfigVariableInt egg_max_vertices;
 extern EXPCL_PANDA_EGG2PG ConfigVariableInt egg_max_indices;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_preload_simple_textures;
