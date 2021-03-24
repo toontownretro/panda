@@ -21,6 +21,7 @@
 #include "configVariableEnum.h"
 #include "configVariableDouble.h"
 #include "configVariableInt.h"
+#include "configVariableList.h"
 #include "bamEnums.h"
 #include "dconfig.h"
 
@@ -52,6 +53,8 @@ extern EXPCL_PANDA_PUTIL ConfigVariableBool preload_textures;
 extern EXPCL_PANDA_PUTIL ConfigVariableBool preload_simple_textures;
 extern EXPCL_PANDA_PUTIL ConfigVariableBool compressed_textures;
 extern EXPCL_PANDA_PUTIL ConfigVariableBool cache_check_timestamps;
+
+extern EXPCL_PANDA_PUTIL ConfigVariableList model_index;
 
 extern EXPCL_PANDA_PUTIL void init_libputil();
 

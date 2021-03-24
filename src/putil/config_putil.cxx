@@ -45,6 +45,7 @@
 #include "writableParam.h"
 #include "keyboardButton.h"
 #include "mouseButton.h"
+#include "modelIndex.h"
 
 #include "dconfig.h"
 
@@ -180,6 +181,12 @@ ConfigVariableBool cache_check_timestamps
           "to on-disk caching via model-cache-dir, which always checks the "
           "timestamps."));
 
+ConfigVariableList model_index
+("model-index",
+ PRC_DESC("Set this to the index file(s) of the model tree(s) you are using so "
+          "the Egg loader can locate materials and textures referenced by the "
+          "egg file."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -243,6 +250,7 @@ init_libputil() {
   TypedWritableReferenceCount::init_type();
   WritableConfigurable::init_type();
   WritableParam::init_type();
+  ModelIndex::Tree::init_type();
 
   GamepadButton::init_gamepad_buttons();
   KeyboardButton::init_keyboard_buttons();
@@ -265,4 +273,5 @@ init_libputil() {
   ParamVecBase4f::register_with_read_factory();
   ParamVecBase4i::register_with_read_factory();
   ParamWstring::register_with_read_factory();
+  ModelIndex::Tree::register_with_read_factory();
 }
