@@ -91,6 +91,7 @@
 #include "texGenAttrib.h"
 #include "transformState.h"
 #include "transparencyAttrib.h"
+#include "materialAttrib.h"
 
 #include "dconfig.h"
 
@@ -465,6 +466,7 @@ init_libpgraph() {
   LoaderFileType::init_type();
   LoaderFileTypeBam::init_type();
   LogicOpAttrib::init_type();
+  MaterialAttrib::init_type();
   ModelFlattenRequest::init_type();
   ModelLoadRequest::init_type();
   ModelSaveRequest::init_type();
@@ -529,6 +531,7 @@ init_libpgraph() {
   LightAttrib::register_with_read_factory();
   LightRampAttrib::register_with_read_factory();
   LogicOpAttrib::register_with_read_factory();
+  MaterialAttrib::register_with_read_factory();
   ModelNode::register_with_read_factory();
   ModelRoot::register_with_read_factory();
   PandaNode::register_with_read_factory();
