@@ -128,7 +128,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     // Use the shader associated with the material type.
     TypeHandle material_type = (!mattr->is_off() && material != nullptr)
       ? material->get_type() : TypeHandle::none();
-    MaterialShaders::const_iterator msi = _material_shaders.find(material->get_type());
+    MaterialShaders::const_iterator msi = _material_shaders.find(material_type);
     if (msi != _material_shaders.end()) {
       shader = (*msi).second;
     }
