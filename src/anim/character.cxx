@@ -511,6 +511,11 @@ apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thre
   }
   ap_update_net_transform_nodes.stop();
 
+  // Also update slider values... this is temporary.
+  for (size_t i = 0; i < _sliders.size(); i++) {
+    _sliders[i].update(current_thread);
+  }
+
   return true;
 }
 

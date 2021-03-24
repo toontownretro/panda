@@ -184,6 +184,16 @@ get_num_sliders() const {
 }
 
 /**
+ * Sets the value of the indicated slider.
+ */
+INLINE void Character::
+set_slider_value(int n, PN_stdfloat value) {
+  nassertv(n >= 0 && n < (int)_sliders.size());
+
+  _sliders[n].set_value(value);
+}
+
+/**
  * Returns the index of the slider with the indicated name, or -1 if no such
  * slider exists.
  */

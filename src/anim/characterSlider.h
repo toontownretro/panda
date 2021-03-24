@@ -39,9 +39,17 @@ private:
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
 
+  void set_value(PN_stdfloat value);
+  bool is_val_changed() const;
+  void clear_val_changed();
+
+  void update(Thread *current_thread);
+
 public:
   PN_stdfloat _value;
   PN_stdfloat _default_value;
+
+  bool _val_changed;
 
   CharacterVertexSlider *_vertex_slider;
 

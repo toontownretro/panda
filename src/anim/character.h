@@ -90,6 +90,7 @@ PUBLISHED:
   INLINE const std::string &get_joint_name(int n) const;
 
   INLINE int get_num_sliders() const;
+  INLINE void set_slider_value(int n, PN_stdfloat value);
   INLINE int find_slider(const std::string &name) const;
   INLINE PN_stdfloat get_slider_value(int n) const;
   INLINE const std::string &get_slider_name(int n) const;
