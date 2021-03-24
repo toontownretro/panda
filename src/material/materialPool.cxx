@@ -60,6 +60,9 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
 
   PT(Material) material;
 
+  material_cat.info()
+    << "Loading material " << fullpath << "\n";
+
   if (fullpath.get_extension() == "pmat") {
     // Keyvalues material file.
 
