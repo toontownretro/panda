@@ -30,6 +30,7 @@ void egg_init_lexer_state(EggLexerState &state, std::istream &in, const std::str
 void egg_cleanup_lexer_state(EggLexerState &state);
 
 void egg_start_group_body(EggLexerState &state);
+void egg_start_texture_body(EggLexerState &state);
 void egg_start_primitive_body(EggLexerState &state);
 
 // These functions are declared by flex.

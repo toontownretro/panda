@@ -27,6 +27,7 @@
 #include "plist.h"
 #include "bamCacheRecord.h"
 
+class EggTextureCollection;
 class EggMaterialCollection;
 class EggPolygon;
 class EggVertex;
@@ -127,6 +128,7 @@ PUBLISHED:
 
   bool recompute_tangent_binormal(const GlobPattern &uv_name);
   bool recompute_tangent_binormal(const vector_string &names);
+  bool recompute_tangent_binormal_auto();
 
   enum TriangulateFlags {
     T_polygon     = 0x001,
@@ -168,11 +170,12 @@ protected:
   virtual void r_transform_vertices(const LMatrix4d &mat);
   virtual void r_mark_coordsys(CoordinateSystem cs);
   virtual void r_flatten_transforms();
+  virtual void r_apply_texmats(EggTextureCollection &textures);
 
 
   CoordinateSystem find_coordsys_entry();
+  int find_textures(EggTextureCollection *collection);
   int find_materials(EggMaterialCollection *collection);
-  //int find_textures(EggTextureCollection *collection);
   bool r_load_externals(const DSearchPath &searchpath,
                         CoordinateSystem coordsys,
                         BamCacheRecord *record);
@@ -245,6 +248,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class EggTextureCollection;
   friend class EggMaterialCollection;
 };
 

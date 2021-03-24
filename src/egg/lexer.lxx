@@ -53,6 +53,11 @@ egg_start_group_body(EggLexerState &state) {
 }
 
 void
+egg_start_texture_body(EggLexerState &state) {
+  state._initial_token = START_TEXTURE_BODY;
+}
+
+void
 egg_start_primitive_body(EggLexerState &state) {
   state._initial_token = START_PRIMITIVE_BODY;
 }
@@ -326,6 +331,10 @@ NUMERIC         ([+-]?(([0-9]+[.]?)|([0-9]*[.][0-9]+))([eE][+-]?[0-9]+)?)
   accept();
   return BEZIERCURVE;
 }
+"<BFACE>" {
+  accept();
+  return BFACE;
+}
 "<BILLBOARD>" {
   accept();
   return BILLBOARD;
@@ -397,6 +406,10 @@ NUMERIC         ([+-]?(([0-9]+[.]?)|([0-9]*[.][0-9]+))([eE][+-]?[0-9]+)?)
 "<DISTANCE>" {
   accept();
   return DISTANCE;
+}
+"<DTREF>" {
+  accept();
+  return DTREF;
 }
 "<DYNAMICVERTEXPOOL>" {
   accept();
@@ -562,6 +575,14 @@ NUMERIC         ([+-]?(([0-9]+[.]?)|([0-9]*[.][0-9]+))([eE][+-]?[0-9]+)?)
   accept();
   return TANGENT;
 }
+"<TEXLIST>" {
+  accept();
+  return TEXLIST;
+}
+"<TEXTURE>" {
+  accept();
+  return TEXTURE;
+}
 "<TLENGTHS>" {
   accept();
   return TLENGTHS;
@@ -573,6 +594,10 @@ NUMERIC         ([+-]?(([0-9]+[.]?)|([0-9]*[.][0-9]+))([eE][+-]?[0-9]+)?)
 "<TRANSLATE>" {
   accept();
   return TRANSLATE;
+}
+"<TREF>" {
+  accept();
+  return TREF;
 }
 "<TRIANGLEFAN>" {
   accept();

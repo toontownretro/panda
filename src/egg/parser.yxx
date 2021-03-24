@@ -4,7 +4,7 @@
  * @date 1999-01-16
  */
 
-%define api.pure full
+%pure-parser
 %locations
 %parse-param {EggParserState &state}
 %parse-param {yyscan_t scanner}
@@ -34,6 +34,7 @@
 #include "eggSAnimData.h"
 #include "eggXfmSAnim.h"
 #include "eggXfmAnimData.h"
+#include "eggTexture.h"
 #include "eggMaterial.h"
 #include "eggComment.h"
 #include "eggCoordinateSystem.h"
@@ -41,6 +42,7 @@
 #include "eggData.h"
 #include "eggAnimPreload.h"
 #include "eggTransform.h"
+#include "pt_EggTexture.h"
 #include "pt_EggMaterial.h"
 
 #include "string_utils.h"
@@ -65,6 +67,7 @@ using std::string;
 
 typedef pvector< PT(EggObject)> EggStack;
 typedef pmap<std::string, PT(EggVertexPool)> VertexPools;
+typedef pmap<std::string, PT_EggTexture> Textures;
 typedef pmap<std::string, PT_EggMaterial> Materials;
 typedef pmap<std::string, PT(EggGroup)> Groups;
 
@@ -86,6 +89,9 @@ struct EggParserState {
 
   // We need a table mapping vertex pool names to vertex pools.
   VertexPools vertex_pools;
+
+  // And another one mapping texture names to state.textures.
+  Textures textures;
 
   // And again for material names to state.materials.
   Materials materials;
@@ -166,10 +172,10 @@ eggyywarning(YYLTYPE *loc, EggParserState &state, yyscan_t scanner, const string
 %token <_string> EGG_STRING
 
 %token ANIMPRELOAD
-%token BEZIERCURVE BILLBOARD BILLBOARDCENTER BINORMAL BUNDLE CLOSED
+%token BEZIERCURVE BFACE BILLBOARD BILLBOARDCENTER BINORMAL BUNDLE CLOSED
 %token COLLIDE COMMENT COMPONENT
 %token COORDSYSTEM CV DART
-%token DNORMAL DRGBA DUV DXYZ DCS DISTANCE
+%token DNORMAL DRGBA DUV DXYZ DCS DISTANCE DTREF
 %token DYNAMICVERTEXPOOL EXTERNAL_FILE
 %token GROUP DEFAULTPOSE
 %token JOINT KNOTS INCLUDE
@@ -177,8 +183,8 @@ eggyywarning(YYLTYPE *loc, EggParserState &state, yyscan_t scanner, const string
 %token NURBSCURVE NURBSSURFACE OBJECTTYPE ORDER
 %token OUTTANGENT PATCH POINTLIGHT POLYGON REF RGBA ROTATE ROTX ROTY ROTZ
 %token SANIM SCALAR SCALE SEQUENCE SHADING SWITCH SWITCHCONDITION
-%token TABLE TABLE_V TAG TANGENT TLENGTHS TRANSFORM TRANSLATE
-%token TRIANGLEFAN TRIANGLESTRIP
+%token TABLE TABLE_V TAG TANGENT TEXLIST TEXTURE TLENGTHS TRANSFORM TRANSLATE
+%token TREF TRIANGLEFAN TRIANGLESTRIP
 %token TRIM TXT UKNOTS UV AUX VKNOTS VERTEX VERTEXANIM
 %token VERTEXPOOL VERTEXREF
 %token XFMANIM XFMSANIM
@@ -188,11 +194,13 @@ eggyywarning(YYLTYPE *loc, EggParserState &state, yyscan_t scanner, const string
    of the input stream. */
 %token START_EGG
 %token START_GROUP_BODY
+%token START_TEXTURE_BODY
 %token START_PRIMITIVE_BODY
 
 %type <_egg> node
 %type <_egg> coordsystem
 %type <_egg> comment
+%type <_egg> texture
 %type <_egg> material
 %type <_egg> external_reference
 %type <_egg> vertex_pool
@@ -221,6 +229,7 @@ eggyywarning(YYLTYPE *loc, EggParserState &state, yyscan_t scanner, const string
 %type <_number> group_vertex_membership
 %type <_number_list> integer_list
 %type <_number_list> real_list
+%type <_egg> texture_name
 %type <_egg> material_name
 %type <_egg> vertex_pool_name
 %type <_egg> group_name
@@ -235,6 +244,7 @@ eggyywarning(YYLTYPE *loc, EggParserState &state, yyscan_t scanner, const string
 grammar:
         START_EGG egg
         | START_GROUP_BODY group_body
+        | START_TEXTURE_BODY texture_body
         | START_PRIMITIVE_BODY primitive_body
         ;
 
@@ -265,6 +275,7 @@ egg:
 node:
         coordsystem
         | comment
+        | texture
         | material
         | external_reference
         | vertex_pool
@@ -321,6 +332,401 @@ comment:
         ;
 
 /*
+ * texture
+ *
+ * enter:
+ * exit: returns a new EggTexture.
+ *
+ */
+texture:
+        TEXTURE required_name '{' required_string
+{
+  string tref_name = $2;
+  Filename filename = $4;
+  EggTexture *texture = new EggTexture(tref_name, filename);
+
+  if (state.textures.find(tref_name) != state.textures.end()) {
+    eggyywarning(&@2, scanner, "Duplicate texture name " + tref_name);
+  }
+  state.textures[tref_name] = texture;
+
+  state.stack.push_back(texture);
+}
+        texture_body '}'
+{
+  $$ = state.stack.back();
+  state.stack.pop_back();
+}
+        ;
+
+/*
+ * texture_body
+ *
+ * enter: TOS is EggTexture; filename has already been read.
+ * exit: texture contents have been filled.
+ *
+ */
+texture_body:
+        empty
+        | texture_body SCALAR required_name '{' real_or_string '}'
+{
+  EggTexture *texture = DCAST(EggTexture, state.stack.back());
+  string name = $3;
+  double value = $<_number>5;
+  string strval = $<_string>5;
+
+  if (cmp_nocase_uh(name, "type") == 0) {
+    EggTexture::TextureType tt = EggTexture::string_texture_type(strval);
+    if (tt == EggTexture::TT_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture texture_type " + strval);
+    } else {
+      texture->set_texture_type(tt);
+    }
+
+  } else if (cmp_nocase_uh(name, "format") == 0) {
+    EggTexture::Format f = EggTexture::string_format(strval);
+    if (f == EggTexture::F_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture format " + strval);
+    } else {
+      texture->set_format(f);
+    }
+
+  } else if (cmp_nocase_uh(name, "compression") == 0) {
+    EggTexture::CompressionMode w = EggTexture::string_compression_mode(strval);
+    if (w == EggTexture::CM_default) {
+      eggyywarning(&@5, scanner, "Unknown texture compression mode " + strval);
+    } else {
+      texture->set_compression_mode(w);
+    }
+
+  } else if (cmp_nocase_uh(name, "wrap") == 0) {
+    EggTexture::WrapMode w = EggTexture::string_wrap_mode(strval);
+    if (w == EggTexture::WM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture wrap mode " + strval);
+    } else {
+      texture->set_wrap_mode(w);
+    }
+
+  } else if (cmp_nocase_uh(name, "wrapu") == 0) {
+    EggTexture::WrapMode w = EggTexture::string_wrap_mode(strval);
+    if (w == EggTexture::WM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture wrap mode " + strval);
+    } else {
+      texture->set_wrap_u(w);
+    }
+
+  } else if (cmp_nocase_uh(name, "wrapv") == 0) {
+    EggTexture::WrapMode w = EggTexture::string_wrap_mode(strval);
+    if (w == EggTexture::WM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture wrap mode " + strval);
+    } else {
+      texture->set_wrap_v(w);
+    }
+
+  } else if (cmp_nocase_uh(name, "minfilter") == 0) {
+    EggTexture::FilterType f = EggTexture::string_filter_type(strval);
+    if (f == EggTexture::FT_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture filter type " + strval);
+    } else {
+      texture->set_minfilter(f);
+    }
+
+  } else if (cmp_nocase_uh(name, "magfilter") == 0) {
+    EggTexture::FilterType f = EggTexture::string_filter_type(strval);
+    if (f == EggTexture::FT_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture filter type " + strval);
+    } else {
+      texture->set_magfilter(f);
+    }
+
+  } else if (cmp_nocase_uh(name, "anisotropic_degree") == 0) {
+    texture->set_anisotropic_degree((int)value);
+
+  } else if (cmp_nocase_uh(name, "envtype") == 0) {
+    EggTexture::EnvType e = EggTexture::string_env_type(strval);
+    if (e == EggTexture::ET_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown texture env type " + strval);
+    } else {
+      texture->set_env_type(e);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb") == 0) {
+    EggTexture::CombineMode cm = EggTexture::string_combine_mode(strval);
+    if (cm == EggTexture::CM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine mode " + strval);
+    } else {
+      texture->set_combine_mode(EggTexture::CC_rgb, cm);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-source0") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_rgb, 0, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-operand0") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_rgb, 0, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-source1") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_rgb, 1, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-operand1") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_rgb, 1, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-source2") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_rgb, 2, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-rgb-operand2") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_rgb, 2, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha") == 0) {
+    EggTexture::CombineMode cm = EggTexture::string_combine_mode(strval);
+    if (cm == EggTexture::CM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine mode " + strval);
+    } else {
+      texture->set_combine_mode(EggTexture::CC_alpha, cm);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-source0") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_alpha, 0, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-operand0") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_alpha, 0, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-source1") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_alpha, 1, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-operand1") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_alpha, 1, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-source2") == 0) {
+    EggTexture::CombineSource cs = EggTexture::string_combine_source(strval);
+    if (cs == EggTexture::CS_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine source " + strval);
+    } else {
+      texture->set_combine_source(EggTexture::CC_alpha, 2, cs);
+    }
+
+  } else if (cmp_nocase_uh(name, "combine-alpha-operand2") == 0) {
+    EggTexture::CombineOperand co = EggTexture::string_combine_operand(strval);
+    if (co == EggTexture::CO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown combine operand " + strval);
+    } else {
+      texture->set_combine_operand(EggTexture::CC_alpha, 2, co);
+    }
+
+  } else if (cmp_nocase_uh(name, "saved_result") == 0) {
+    texture->set_saved_result(((int)value) != 0);
+
+  } else if (cmp_nocase_uh(name, "tex_gen") == 0) {
+    EggTexture::TexGen tex_gen = EggTexture::string_tex_gen(strval);
+    if (tex_gen == EggTexture::TG_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown tex-gen " + strval);
+    } else {
+      texture->set_tex_gen(tex_gen);
+    }
+
+  } else if (cmp_nocase_uh(name, "quality_level") == 0) {
+    EggTexture::QualityLevel quality_level = EggTexture::string_quality_level(strval);
+    if (quality_level == EggTexture::QL_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown quality-level " + strval);
+    } else {
+      texture->set_quality_level(quality_level);
+    }
+
+  } else if (cmp_nocase_uh(name, "stage_name") == 0) {
+    texture->set_stage_name(strval);
+
+  } else if (cmp_nocase_uh(name, "priority") == 0) {
+    texture->set_priority((int)value);
+
+  } else if (cmp_nocase_uh(name, "multiview") == 0) {
+    texture->set_multiview(((int)value) != 0);
+
+  } else if (cmp_nocase_uh(name, "num_views") == 0) {
+    int int_value = (int)value;
+    if (int_value < 1) {
+      eggyyerror(&@5, scanner, "Invalid num-views value " + strval);
+    } else {
+      texture->set_num_views(int_value);
+    }
+
+  } else if (cmp_nocase_uh(name, "blendr") == 0) {
+    LColor color = texture->get_color();
+    color[0] = value;
+    texture->set_color(color);
+
+  } else if (cmp_nocase_uh(name, "blendg") == 0) {
+    LColor color = texture->get_color();
+    color[1] = value;
+    texture->set_color(color);
+
+  } else if (cmp_nocase_uh(name, "blendb") == 0) {
+    LColor color = texture->get_color();
+    color[2] = value;
+    texture->set_color(color);
+
+  } else if (cmp_nocase_uh(name, "blenda") == 0) {
+    LColor color = texture->get_color();
+    color[3] = value;
+    texture->set_color(color);
+
+  } else if (cmp_nocase_uh(name, "borderr") == 0) {
+    LColor border_color = texture->get_border_color();
+    border_color[0] = value;
+    texture->set_border_color(border_color);
+
+  } else if (cmp_nocase_uh(name, "borderg") == 0) {
+    LColor border_color = texture->get_border_color();
+    border_color[1] = value;
+    texture->set_border_color(border_color);
+
+  } else if (cmp_nocase_uh(name, "borderb") == 0) {
+    LColor border_color = texture->get_border_color();
+    border_color[2] = value;
+    texture->set_border_color(border_color);
+
+  } else if (cmp_nocase_uh(name, "bordera") == 0) {
+    LColor border_color = texture->get_border_color();
+    border_color[3] = value;
+    texture->set_border_color(border_color);
+
+  } else if (cmp_nocase_uh(name, "uv_name") == 0) {
+    texture->set_uv_name(strval);
+
+  } else if (cmp_nocase_uh(name, "rgb_scale") == 0) {
+    int int_value = (int)value;
+    if (int_value != 1 && int_value != 2 && int_value != 4) {
+      eggyyerror(&@5, scanner, "Invalid rgb-scale value " + strval);
+    } else {
+      texture->set_rgb_scale(int_value);
+    }
+
+  } else if (cmp_nocase_uh(name, "alpha_scale") == 0) {
+    int int_value = (int)value;
+    if (int_value != 1 && int_value != 2 && int_value != 4) {
+      eggyyerror(&@5, scanner, "Invalid alpha-scale value " + strval);
+    } else {
+      texture->set_alpha_scale(int_value);
+    }
+
+  } else if (cmp_nocase_uh(name, "alpha") == 0) {
+    EggRenderMode::AlphaMode a = EggRenderMode::string_alpha_mode(strval);
+    if (a == EggRenderMode::AM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown alpha mode " + strval);
+    } else {
+      texture->set_alpha_mode(a);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_write") == 0) {
+    EggRenderMode::DepthWriteMode m =
+      EggRenderMode::string_depth_write_mode(strval);
+    if (m == EggRenderMode::DWM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-write mode " + strval);
+    } else {
+      texture->set_depth_write_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_test") == 0) {
+    EggRenderMode::DepthTestMode m =
+      EggRenderMode::string_depth_test_mode(strval);
+    if (m == EggRenderMode::DTM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-test mode " + strval);
+    } else {
+      texture->set_depth_test_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "visibility") == 0) {
+    EggRenderMode::VisibilityMode m =
+      EggRenderMode::string_visibility_mode(strval);
+    if (m == EggRenderMode::VM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown visibility mode " + strval);
+    } else {
+      texture->set_visibility_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_offset") == 0) {
+    texture->set_depth_offset((int)value);
+
+  } else if (cmp_nocase_uh(name, "draw_order") == 0) {
+    texture->set_draw_order((int)value);
+
+  } else if (cmp_nocase_uh(name, "bin") == 0) {
+    texture->set_bin(strval);
+
+  } else if (cmp_nocase_uh(name, "alpha_file") == 0) {
+    texture->set_alpha_filename(strval);
+
+  } else if (cmp_nocase_uh(name, "alpha_file_channel") == 0) {
+    texture->set_alpha_file_channel((int)value);
+
+  } else if (cmp_nocase_uh(name, "read_mipmaps") == 0) {
+    texture->set_read_mipmaps(((int)value) != 0);
+
+  } else if (cmp_nocase_uh(name, "min_lod") == 0) {
+    texture->set_min_lod(value);
+
+  } else if (cmp_nocase_uh(name, "max_lod") == 0) {
+    texture->set_max_lod(value);
+
+  } else if (cmp_nocase_uh(name, "lod_bias") == 0) {
+    texture->set_lod_bias(value);
+
+  } else {
+    eggyywarning(&@2, scanner, "Unsupported texture scalar: " + name);
+  }
+}
+        | texture_body transform
+        ;
+
+/*
  * material
  *
  * enter:
@@ -328,20 +734,146 @@ comment:
  *
  */
 material:
-        MATERIAL required_name '{' required_string '}'
+        MATERIAL required_name '{'
 {
   string mref_name = $2;
-  Filename mat_filename = $4;
-  EggMaterial *material = new EggMaterial(mref_name, mat_filename);
+  EggMaterial *material = new EggMaterial(mref_name);
 
   if (state.materials.find(mref_name) != state.materials.end()) {
     eggyywarning(&@2, scanner, "Duplicate material name " + mref_name);
   }
   state.materials[mref_name] = material;
 
-  $$ = material;
+  state.stack.push_back(material);
+}
+        material_body '}'
+{
+  $$ = state.stack.back();
+  state.stack.pop_back();
 }
         ;
+
+/*
+ * material_body
+ *
+ * enter: TOS is EggMaterial; filename has already been read.
+ * exit: material contents have been filled.
+ *
+ */
+material_body:
+        empty
+        | material_body SCALAR required_name '{' real_or_string '}'
+{
+  EggMaterial *material = DCAST(EggMaterial, state.stack.back());
+  string name = $3;
+  double value = $<_number>5;
+
+  if (cmp_nocase_uh(name, "baser") == 0) {
+    LColor base = material->get_base();
+    base[0] = value;
+    material->set_base(base);
+  } else if (cmp_nocase_uh(name, "baseg") == 0) {
+    LColor base = material->get_base();
+    base[1] = value;
+    material->set_base(base);
+  } else if (cmp_nocase_uh(name, "baseb") == 0) {
+    LColor base = material->get_base();
+    base[2] = value;
+    material->set_base(base);
+  } else if (cmp_nocase_uh(name, "basea") == 0) {
+    LColor base = material->get_base();
+    base[3] = value;
+    material->set_base(base);
+
+  } else if (cmp_nocase_uh(name, "diffr") == 0) {
+    LColor diff = material->get_diff();
+    diff[0] = value;
+    material->set_diff(diff);
+  } else if (cmp_nocase_uh(name, "diffg") == 0) {
+    LColor diff = material->get_diff();
+    diff[1] = value;
+    material->set_diff(diff);
+  } else if (cmp_nocase_uh(name, "diffb") == 0) {
+    LColor diff = material->get_diff();
+    diff[2] = value;
+    material->set_diff(diff);
+  } else if (cmp_nocase_uh(name, "diffa") == 0) {
+    LColor diff = material->get_diff();
+    diff[3] = value;
+    material->set_diff(diff);
+
+  } else if (cmp_nocase_uh(name, "ambr") == 0) {
+    LColor amb = material->get_amb();
+    amb[0] = value;
+    material->set_amb(amb);
+  } else if (cmp_nocase_uh(name, "ambg") == 0) {
+    LColor amb = material->get_amb();
+    amb[1] = value;
+    material->set_amb(amb);
+  } else if (cmp_nocase_uh(name, "ambb") == 0) {
+    LColor amb = material->get_amb();
+    amb[2] = value;
+    material->set_amb(amb);
+  } else if (cmp_nocase_uh(name, "amba") == 0) {
+    LColor amb = material->get_amb();
+    amb[3] = value;
+    material->set_amb(amb);
+
+  } else if (cmp_nocase_uh(name, "emitr") == 0) {
+    LColor emit = material->get_emit();
+    emit[0] = value;
+    material->set_emit(emit);
+  } else if (cmp_nocase_uh(name, "emitg") == 0) {
+    LColor emit = material->get_emit();
+    emit[1] = value;
+    material->set_emit(emit);
+  } else if (cmp_nocase_uh(name, "emitb") == 0) {
+    LColor emit = material->get_emit();
+    emit[2] = value;
+    material->set_emit(emit);
+  } else if (cmp_nocase_uh(name, "emita") == 0) {
+    LColor emit = material->get_emit();
+    emit[3] = value;
+    material->set_emit(emit);
+
+  } else if (cmp_nocase_uh(name, "specr") == 0) {
+    LColor spec = material->get_spec();
+    spec[0] = value;
+    material->set_spec(spec);
+  } else if (cmp_nocase_uh(name, "specg") == 0) {
+    LColor spec = material->get_spec();
+    spec[1] = value;
+    material->set_spec(spec);
+  } else if (cmp_nocase_uh(name, "specb") == 0) {
+    LColor spec = material->get_spec();
+    spec[2] = value;
+    material->set_spec(spec);
+  } else if (cmp_nocase_uh(name, "speca") == 0) {
+    LColor spec = material->get_spec();
+    spec[3] = value;
+    material->set_spec(spec);
+
+  } else if (cmp_nocase_uh(name, "shininess") == 0) {
+    material->set_shininess(value);
+
+  } else if (cmp_nocase_uh(name, "roughness") == 0) {
+    material->set_roughness(value);
+
+  } else if (cmp_nocase_uh(name, "metallic") == 0) {
+    material->set_metallic(value);
+
+  } else if (cmp_nocase_uh(name, "ior") == 0) {
+    material->set_ior(value);
+
+  } else if (cmp_nocase_uh(name, "local") == 0) {
+    material->set_local(value != 0.0);
+
+  } else {
+    eggyywarning(&@3, scanner, "Unsupported material scalar: " + name);
+  }
+}
+        ;
+
 
 /*
  * external_reference
@@ -793,13 +1325,42 @@ group_body:
   if (cmp_nocase_uh(name, "fps") == 0) {
     group->set_switch_fps(value);
 
+  } else if (cmp_nocase_uh(name, "no_fog") == 0) {
+    group->set_nofog_flag(value != 0);
+
   } else if (cmp_nocase_uh(name, "decal") == 0) {
     group->set_decal_flag(value != 0);
 
   } else if (cmp_nocase_uh(name, "direct") == 0) {
     group->set_direct_flag(value != 0);
 
-  } /*else if (cmp_nocase_uh(name, "visibility") == 0) {
+  } else if (cmp_nocase_uh(name, "alpha") == 0) {
+    EggRenderMode::AlphaMode a = EggRenderMode::string_alpha_mode(strval);
+    if (a == EggRenderMode::AM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown alpha mode " + strval);
+    } else {
+      group->set_alpha_mode(a);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_write") == 0) {
+    EggRenderMode::DepthWriteMode m =
+      EggRenderMode::string_depth_write_mode(strval);
+    if (m == EggRenderMode::DWM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-write mode " + strval);
+    } else {
+      group->set_depth_write_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_test") == 0) {
+    EggRenderMode::DepthTestMode m =
+      EggRenderMode::string_depth_test_mode(strval);
+    if (m == EggRenderMode::DTM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-test mode " + strval);
+    } else {
+      group->set_depth_test_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "visibility") == 0) {
     EggRenderMode::VisibilityMode m =
       EggRenderMode::string_visibility_mode(strval);
     if (m == EggRenderMode::VM_unspecified) {
@@ -808,7 +1369,16 @@ group_body:
       group->set_visibility_mode(m);
     }
 
-  }*/ else if (cmp_nocase_uh(name, "collide_mask") == 0) {
+  } else if (cmp_nocase_uh(name, "depth_offset") == 0) {
+    group->set_depth_offset(ulong_value);
+
+  } else if (cmp_nocase_uh(name, "draw_order") == 0) {
+    group->set_draw_order(ulong_value);
+
+  } else if (cmp_nocase_uh(name, "bin") == 0) {
+    group->set_bin(strval);
+
+  } else if (cmp_nocase_uh(name, "collide_mask") == 0) {
     group->set_collide_mask(group->get_collide_mask() | ulong_value);
 
   } else if (cmp_nocase_uh(name, "from_collide_mask") == 0) {
@@ -840,6 +1410,53 @@ group_body:
 
   } else if (cmp_nocase_uh(name, "scroll_r") == 0) {
     group->set_scroll_r(value);
+
+  } else if (cmp_nocase_uh(name, "blend") == 0) {
+    EggGroup::BlendMode blend_mode =
+      EggGroup::string_blend_mode(strval);
+    if (blend_mode == EggGroup::BM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown blend mode " + strval);
+    } else {
+      group->set_blend_mode(blend_mode);
+    }
+
+  } else if (cmp_nocase_uh(name, "blendop_a") == 0) {
+    EggGroup::BlendOperand blend_operand =
+      EggGroup::string_blend_operand(strval);
+    if (blend_operand == EggGroup::BO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown blend operand " + strval);
+    } else {
+      group->set_blend_operand_a(blend_operand);
+    }
+
+  } else if (cmp_nocase_uh(name, "blendop_b") == 0) {
+    EggGroup::BlendOperand blend_operand =
+      EggGroup::string_blend_operand(strval);
+    if (blend_operand == EggGroup::BO_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown blend operand " + strval);
+    } else {
+      group->set_blend_operand_b(blend_operand);
+    }
+
+  } else if (cmp_nocase_uh(name, "blendr") == 0) {
+    LColor color = group->get_blend_color();
+    color[0] = value;
+    group->set_blend_color(color);
+
+  } else if (cmp_nocase_uh(name, "blendg") == 0) {
+    LColor color = group->get_blend_color();
+    color[1] = value;
+    group->set_blend_color(color);
+
+  } else if (cmp_nocase_uh(name, "blendb") == 0) {
+    LColor color = group->get_blend_color();
+    color[2] = value;
+    group->set_blend_color(color);
+
+  } else if (cmp_nocase_uh(name, "blenda") == 0) {
+    LColor color = group->get_blend_color();
+    color[3] = value;
+    group->set_blend_color(color);
 
   } else {
     eggyywarning(&@3, scanner, "Unknown group scalar " + name);
@@ -930,6 +1547,12 @@ group_body:
 {
   EggGroup *group = DCAST(EggGroup, state.stack.back());
   group->set_tag($3, $5);
+}
+        | group_body TEXLIST '{' integer '}'
+{
+  EggGroup *group = DCAST(EggGroup, state.stack.back());
+  int value = (int)$4;
+  group->set_texlist_flag(value!=0);
 }
         | group_body transform
         | group_body default_pose
@@ -1462,10 +2085,13 @@ primitive_body:
   PT(EggCompositePrimitive) comp = DCAST(EggCompositePrimitive, state.stack.back());
   comp->set_component((int)$3, prim);
 }
+        | primitive_body TREF '{' primitive_tref_body '}'
+        | primitive_body TEXTURE '{' primitive_texture_body '}'
         | primitive_body MREF '{' primitive_material_body '}'
         | primitive_body primitive_vertex_ref
         | primitive_body NORMAL '{' primitive_normal_body '}'
         | primitive_body RGBA '{' primitive_color_body '}'
+        | primitive_body BFACE '{' primitive_bface_body '}'
         | primitive_body SCALAR required_name '{' real_or_string '}'
 {
   EggPrimitive *primitive = DCAST(EggPrimitive, state.stack.back());
@@ -1473,7 +2099,32 @@ primitive_body:
   double value = $<_number>5;
   string strval = $<_string>5;
 
-  /*if (cmp_nocase_uh(name, "visibility") == 0) {
+  if (cmp_nocase_uh(name, "alpha") == 0) {
+    EggRenderMode::AlphaMode a = EggRenderMode::string_alpha_mode(strval);
+    if (a == EggRenderMode::AM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown alpha mode " + strval);
+    } else {
+      primitive->set_alpha_mode(a);
+    }
+  } else if (cmp_nocase_uh(name, "depth_write") == 0) {
+    EggRenderMode::DepthWriteMode m =
+      EggRenderMode::string_depth_write_mode(strval);
+    if (m == EggRenderMode::DWM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-write mode " + strval);
+    } else {
+      primitive->set_depth_write_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_test") == 0) {
+    EggRenderMode::DepthTestMode m =
+      EggRenderMode::string_depth_test_mode(strval);
+    if (m == EggRenderMode::DTM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-test mode " + strval);
+    } else {
+      primitive->set_depth_test_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "visibility") == 0) {
     EggRenderMode::VisibilityMode m =
       EggRenderMode::string_visibility_mode(strval);
     if (m == EggRenderMode::VM_unspecified) {
@@ -1482,7 +2133,13 @@ primitive_body:
       primitive->set_visibility_mode(m);
     }
 
-  } else*/ if (cmp_nocase_uh(name, "thick") == 0) {
+  } else if (cmp_nocase_uh(name, "depth_offset") == 0) {
+    primitive->set_depth_offset((int)value);
+  } else if (cmp_nocase_uh(name, "draw_order") == 0) {
+    primitive->set_draw_order((int)value);
+  } else if (cmp_nocase_uh(name, "bin") == 0) {
+    primitive->set_bin(strval);
+  } else if (cmp_nocase_uh(name, "thick") == 0) {
     if (primitive->is_of_type(EggLine::get_class_type())) {
       DCAST(EggLine, primitive)->set_thick(value);
     } else if (primitive->is_of_type(EggPoint::get_class_type())) {
@@ -1511,10 +2168,13 @@ primitive_body:
  */
 nurbs_surface_body:
         empty
+        | nurbs_surface_body TREF '{' primitive_tref_body '}'
+        | nurbs_surface_body TEXTURE '{' primitive_texture_body '}'
         | nurbs_surface_body MREF '{' primitive_material_body '}'
         | nurbs_surface_body primitive_vertex_ref
         | nurbs_surface_body NORMAL '{' primitive_normal_body '}'
         | nurbs_surface_body RGBA '{' primitive_color_body '}'
+        | nurbs_surface_body BFACE '{' primitive_bface_body '}'
         | nurbs_surface_body ORDER '{' nurbs_surface_order_body '}'
         | nurbs_surface_body UKNOTS '{' nurbs_surface_uknots_body '}'
         | nurbs_surface_body VKNOTS '{' nurbs_surface_vknots_body '}'
@@ -1532,7 +2192,32 @@ nurbs_surface_body:
   double value = $<_number>5;
   string strval = $<_string>5;
 
-  /*if (cmp_nocase_uh(name, "visibility") == 0) {
+  if (cmp_nocase_uh(name, "alpha") == 0) {
+    EggRenderMode::AlphaMode a = EggRenderMode::string_alpha_mode(strval);
+    if (a == EggRenderMode::AM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown alpha mode " + strval);
+    } else {
+      primitive->set_alpha_mode(a);
+    }
+  } else if (cmp_nocase_uh(name, "depth_write") == 0) {
+    EggRenderMode::DepthWriteMode m =
+      EggRenderMode::string_depth_write_mode(strval);
+    if (m == EggRenderMode::DWM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-write mode " + strval);
+    } else {
+      primitive->set_depth_write_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_test") == 0) {
+    EggRenderMode::DepthTestMode m =
+      EggRenderMode::string_depth_test_mode(strval);
+    if (m == EggRenderMode::DTM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-test mode " + strval);
+    } else {
+      primitive->set_depth_test_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "visibility") == 0) {
     EggRenderMode::VisibilityMode m =
       EggRenderMode::string_visibility_mode(strval);
     if (m == EggRenderMode::VM_unspecified) {
@@ -1541,7 +2226,13 @@ nurbs_surface_body:
       primitive->set_visibility_mode(m);
     }
 
-  } else*/ if (cmp_nocase_uh(name, "u_subdiv") == 0) {
+  } else if (cmp_nocase_uh(name, "depth_offset") == 0) {
+    primitive->set_depth_offset((int)value);
+  } else if (cmp_nocase_uh(name, "draw_order") == 0) {
+    primitive->set_draw_order((int)value);
+  } else if (cmp_nocase_uh(name, "bin") == 0) {
+    primitive->set_bin(strval);
+  } else if (cmp_nocase_uh(name, "u_subdiv") == 0) {
     primitive->set_u_subdiv((int)value);
   } else if (cmp_nocase_uh(name, "v_subdiv") == 0) {
     primitive->set_v_subdiv((int)value);
@@ -1561,10 +2252,13 @@ nurbs_surface_body:
  */
 nurbs_curve_body:
         empty
+        | nurbs_curve_body TREF '{' primitive_tref_body '}'
+        | nurbs_curve_body TEXTURE '{' primitive_texture_body '}'
         | nurbs_curve_body MREF '{' primitive_material_body '}'
         | nurbs_curve_body primitive_vertex_ref
         | nurbs_curve_body NORMAL '{' primitive_normal_body '}'
         | nurbs_curve_body RGBA '{' primitive_color_body '}'
+        | nurbs_curve_body BFACE '{' primitive_bface_body '}'
         | nurbs_curve_body ORDER '{' nurbs_curve_order_body '}'
         | nurbs_curve_body KNOTS '{' nurbs_curve_knots_body '}'
         | nurbs_curve_body SCALAR required_name '{' real_or_string '}'
@@ -1574,7 +2268,32 @@ nurbs_curve_body:
   double value = $<_number>5;
   string strval = $<_string>5;
 
-  /*if (cmp_nocase_uh(name, "visibility") == 0) {
+  if (cmp_nocase_uh(name, "alpha") == 0) {
+    EggRenderMode::AlphaMode a = EggRenderMode::string_alpha_mode(strval);
+    if (a == EggRenderMode::AM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown alpha mode " + strval);
+    } else {
+      primitive->set_alpha_mode(a);
+    }
+  } else if (cmp_nocase_uh(name, "depth_write") == 0) {
+    EggRenderMode::DepthWriteMode m =
+      EggRenderMode::string_depth_write_mode(strval);
+    if (m == EggRenderMode::DWM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-write mode " + strval);
+    } else {
+      primitive->set_depth_write_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "depth_test") == 0) {
+    EggRenderMode::DepthTestMode m =
+      EggRenderMode::string_depth_test_mode(strval);
+    if (m == EggRenderMode::DTM_unspecified) {
+      eggyywarning(&@5, scanner, "Unknown depth-test mode " + strval);
+    } else {
+      primitive->set_depth_test_mode(m);
+    }
+
+  } else if (cmp_nocase_uh(name, "visibility") == 0) {
     EggRenderMode::VisibilityMode m =
       EggRenderMode::string_visibility_mode(strval);
     if (m == EggRenderMode::VM_unspecified) {
@@ -1583,7 +2302,13 @@ nurbs_curve_body:
       primitive->set_visibility_mode(m);
     }
 
-  } else*/ if (cmp_nocase_uh(name, "subdiv") == 0) {
+  } else if (cmp_nocase_uh(name, "depth_offset") == 0) {
+    primitive->set_depth_offset((int)value);
+  } else if (cmp_nocase_uh(name, "draw_order") == 0) {
+    primitive->set_draw_order((int)value);
+  } else if (cmp_nocase_uh(name, "bin") == 0) {
+    primitive->set_bin(strval);
+  } else if (cmp_nocase_uh(name, "subdiv") == 0) {
     primitive->set_subdiv((int)value);
   } else if (cmp_nocase_uh(name, "type") == 0) {
     EggCurve::CurveType a = EggCurve::string_curve_type(strval);
@@ -1596,6 +2321,63 @@ nurbs_curve_body:
   } else {
     eggyywarning(&@3, scanner, "Unknown scalar " + name);
   }
+}
+        ;
+
+/*
+ * primitive_tref_body
+ *
+ * enter: TOS is EggPrimitive.
+ * exit: primitive TREF value has been filled.
+ *
+ */
+primitive_tref_body:
+        texture_name
+{
+  if ($1 != nullptr) {
+    EggTexture *texture = DCAST(EggTexture, $1);
+    DCAST(EggPrimitive, state.stack.back())->add_texture(texture);
+  }
+}
+        ;
+
+/*
+ * primitive_texture_body
+ *
+ * enter: TOS is EggPrimitive.
+ * exit: primitive texture value has been filled.
+ *
+ */
+primitive_texture_body:
+        required_name
+{
+  EggTexture *texture = nullptr;
+
+  // Defining a texture on-the-fly.
+  Filename filename = $1;
+  string tref_name = filename.get_basename();
+
+  Textures::iterator vpi = state.textures.find(tref_name);
+  if (vpi == state.textures.end()) {
+    // The texture was not yet defined.  Define it.
+    texture = new EggTexture(tref_name, filename);
+    state.textures[tref_name] = texture;
+
+    if (state.top_node != nullptr) {
+      state.top_node->add_child(texture);
+    }
+
+  } else {
+    // The texture already existed.  Use it.
+    texture = (*vpi).second;
+    if (filename != texture->get_filename()) {
+      eggyywarning(&@1, scanner, string("Using previous path: ") +
+                   texture->get_filename().get_fullpath());
+    }
+  }
+
+  nassertr(texture != nullptr, 0);
+  DCAST(EggPrimitive, state.stack.back())->add_texture(texture);
 }
         ;
 
@@ -1673,6 +2455,22 @@ primitive_color_body:
   if (!inserted) {
     eggyywarning(&@4, scanner, "Ignoring repeated morph name " + $4);
   }
+}
+        ;
+
+/*
+ * primitive_bface_body
+ *
+ * enter: TOS is EggPrimitive.
+ * exit: primitive BFace value has been filled.
+ *
+ */
+primitive_bface_body:
+        integer
+{
+  EggPrimitive *primitive = DCAST(EggPrimitive, state.stack.back());
+  int value = (int)$1;
+  primitive->set_bface_flag(value!=0);
 }
         ;
 
@@ -2151,6 +2949,27 @@ real_list:
         | real_list real
 {
   $$.push_back($2);
+}
+        ;
+
+/*
+ * texture_name
+ *
+ * enter:
+ * exit: Returns an EggTexture pointer, or NULL.
+ *
+ */
+texture_name:
+        required_name
+{
+  string name = $1;
+  Textures::iterator vpi = state.textures.find(name);
+  if (vpi == state.textures.end()) {
+    eggyyerror(&@1, scanner, "Unknown texture " + name);
+    $$ = PT(EggObject)();
+  } else {
+    $$ = (*vpi).second;
+  }
 }
         ;
 

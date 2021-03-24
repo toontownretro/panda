@@ -14,6 +14,7 @@
 #include "eggPrimitive.h"
 #include "eggVertexPool.h"
 #include "eggMiscFuncs.h"
+#include "eggTextureCollection.h"
 #include "lexerDefs.h"
 #include "config_egg.h"
 
@@ -21,6 +22,185 @@
 #include "vector_int.h"
 
 TypeHandle EggPrimitive::_type_handle;
+
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this primitive that has an
+ * alpha_mode other than AM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_alpha_mode() {
+  if (get_alpha_mode() != AM_unspecified) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_alpha_mode();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      EggTexture *egg_tex = get_texture(i);
+
+      // We only want to consider the alpha mode on those textures that can
+      // affect the transparency of the polygon.  This mostly depends on the
+      // envtype flag.
+      if (egg_tex->affects_polygon_alpha()) {
+        // This texture might affect the polygon alpha, so it gets to decide
+        // the polygon transparency mode.
+        if (egg_tex->get_alpha_mode() != AM_unspecified) {
+          result = get_texture(i);
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * depth_write_mode other than DWM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_depth_write_mode() {
+  if (get_depth_write_mode() != DWM_unspecified) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_depth_write_mode();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->get_depth_write_mode() != DWM_unspecified) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * depth_test_mode other than DTM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_depth_test_mode() {
+  if (get_depth_test_mode() != DTM_unspecified) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_depth_test_mode();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->get_depth_test_mode() != DTM_unspecified) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * visibility_mode other than VM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_visibility_mode() {
+  if (get_visibility_mode() != VM_unspecified) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_visibility_mode();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->get_visibility_mode() != VM_unspecified) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this primitive that has a
+ * depth_offset specified.  Returns a valid EggRenderMode pointer if one is
+ * found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_depth_offset() {
+  if (has_depth_offset()) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_depth_offset();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->has_depth_offset()) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this primitive that has a
+ * draw_order specified.  Returns a valid EggRenderMode pointer if one is
+ * found, or NULL otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_draw_order() {
+  if (has_draw_order()) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_draw_order();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->has_draw_order()) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this primitive that has a bin
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggPrimitive::
+determine_bin() {
+  if (has_bin()) {
+    return this;
+  }
+
+  EggRenderMode *result = EggNode::determine_bin();
+  if (result == nullptr) {
+    int num_textures = get_num_textures();
+    for (int i = 0; i < num_textures && result == nullptr; i++) {
+      if (get_texture(i)->has_bin()) {
+        result = get_texture(i);
+      }
+    }
+  }
+  return result;
+}
+
 
 /**
  * Returns the shading properties apparent on this particular primitive.  This
@@ -92,7 +272,9 @@ copy_attributes(const EggAttributes &other) {
 void EggPrimitive::
 copy_attributes(const EggPrimitive &other) {
   EggAttributes::operator = (other);
+  _textures = other._textures;
   set_material(other.get_material());
+  set_bface_flag(other.get_bface_flag());
 }
 
 /**
@@ -643,6 +825,16 @@ write_body(std::ostream &out, int indent_level) const {
   test_vref_integrity();
 
   EggAttributes::write(out, indent_level);
+  EggRenderMode::write(out, indent_level);
+
+  int num_textures = get_num_textures();
+  for (int i = 0; i < num_textures; i++) {
+    EggTexture *texture = get_texture(i);
+
+    indent(out, indent_level) << "<TRef> { ";
+    enquote_string(out, texture->get_name())
+      << " }\n";
+  }
 
   if (has_material()) {
     EggMaterial *material = get_material();
@@ -650,6 +842,10 @@ write_body(std::ostream &out, int indent_level) const {
     indent(out, indent_level) << "<MRef> { ";
     enquote_string(out, material->get_name())
       << " }\n";
+  }
+
+  if (get_bface_flag()) {
+    indent(out, indent_level) << "<BFace> { 1 }\n";
   }
 
   if (!empty()) {
@@ -751,6 +947,67 @@ r_flatten_transforms() {
       set_vertex(i, unique);
     }
   }
+}
+
+/**
+ * The recursive implementation of apply_texmats().
+ */
+void EggPrimitive::
+r_apply_texmats(EggTextureCollection &textures) {
+  Textures new_textures;
+  Textures::const_iterator ti;
+  for (ti = _textures.begin(); ti != _textures.end(); ++ti) {
+    EggTexture *texture = (*ti);
+
+    if (!texture->has_transform()) {
+      new_textures.push_back(texture);
+
+    } else if (texture->transform_is_identity()) {
+      // Now, what's the point of a texture with an identity transform?
+      texture->clear_transform();
+      new_textures.push_back(texture);
+
+    } else {
+
+      // We've got a texture with a matrix applied.  Save the matrix, and get
+      // a new texture without the matrix.
+      LMatrix4d mat = texture->get_transform3d();
+      EggTexture new_texture(*texture);
+      new_texture.clear_transform();
+      EggTexture *unique = textures.create_unique_texture(new_texture, ~0);
+
+      new_textures.push_back(unique);
+      std::string uv_name = unique->get_uv_name();
+
+      // Now apply the matrix to the vertex UV's.  Create new vertices as
+      // necessary.
+      size_t num_vertices = size();
+      for (size_t i = 0; i < num_vertices; i++) {
+        EggVertex *vertex = get_vertex(i);
+
+        const EggVertexUV *uv_obj = vertex->get_uv_obj(uv_name);
+        if (uv_obj != nullptr) {
+          EggVertex new_vertex(*vertex);
+          PT(EggVertexUV) new_uv_obj = new EggVertexUV(*uv_obj);
+          LTexCoord3d uvw = uv_obj->get_uvw() * mat;
+          if (uv_obj->has_w() || texture->has_transform3d()) {
+            new_uv_obj->set_uvw(uvw);
+          } else {
+            new_uv_obj->set_uv(LTexCoordd(uvw[0], uvw[1]));
+          }
+          new_vertex.set_uv_obj(new_uv_obj);
+
+          EggVertexPool *pool = vertex->get_pool();
+          EggVertex *unique = pool->create_unique_vertex(new_vertex);
+          unique->copy_grefs_from(*vertex);
+
+          set_vertex(i, unique);
+        }
+      }
+    }
+  }
+
+  _textures.swap(new_textures);
 }
 
 /**

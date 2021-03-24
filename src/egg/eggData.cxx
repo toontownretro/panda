@@ -13,6 +13,7 @@
 
 #include "eggData.h"
 #include "eggCoordinateSystem.h"
+#include "eggTextureCollection.h"
 #include "eggMaterialCollection.h"
 #include "eggComment.h"
 #include "eggPoolUniquifier.h"
@@ -176,6 +177,20 @@ load_externals(const DSearchPath &searchpath, BamCacheRecord *record) {
 }
 
 /**
+ * Removes duplicate references to the same texture image with the same
+ * properties.  Considers two texture references with identical properties,
+ * but different tref names, to be equivalent, and collapses them, choosing
+ * one tref name to keep arbitrarily.  Returns the number of textures removed.
+ */
+int EggData::
+collapse_equivalent_textures() {
+  EggTextureCollection textures;
+  textures.find_used_textures(this);
+  return
+    textures.collapse_equivalent_textures(~EggTexture::E_tref_name, this);
+}
+
+/**
  * Removes duplicate references to the same material with the same properties.
  * Considers two material references with identical properties, but different
  * mref names, to be equivalent, and collapses them, choosing one mref name to
@@ -313,9 +328,24 @@ post_read() {
  */
 void EggData::
 pre_write() {
-  // Pull out all of the material definitions in the file and massage them a
+  // Pull out all of the texture definitions in the file and massage them a
   // bit.
+  EggTextureCollection textures;
+  textures.extract_textures(this);
 
+  // Remove any textures that aren't being used.
+  textures.remove_unused_textures(this);
+
+  // Collapse out any textures that are completely equivalent.  For this
+  // purpose, we consider two textures with identical properties but different
+  // tref names to be different.
+  textures.collapse_equivalent_textures(~0, this);
+
+  // Make sure all of the textures have unique TRef names.
+  textures.uniquify_trefs();
+  textures.sort_by_tref();
+
+  // Do the same thing with the materials.
   EggMaterialCollection materials;
   materials.extract_materials(this);
   materials.remove_unused_materials(this);
@@ -329,7 +359,7 @@ pre_write() {
   while (ci != end() && (*ci)->is_of_type(EggComment::get_class_type())) {
     ++ci;
   }
-
+  textures.insert_textures(this, ci);
   materials.insert_materials(this, ci);
 
   // Also make sure that the vertex pools are uniquely named.  This also

@@ -312,6 +312,46 @@ get_model_flag() const {
  *
  */
 INLINE void EggGroup::
+set_texlist_flag(bool flag) {
+  if (flag) {
+    _flags |= F_texlist_flag;
+  } else {
+    _flags &= ~F_texlist_flag;
+  }
+}
+
+/**
+ *
+ */
+INLINE bool EggGroup::
+get_texlist_flag() const {
+  return ((_flags & F_texlist_flag) != 0);
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
+set_nofog_flag(bool flag) {
+  if (flag) {
+    _flags |= F_nofog_flag;
+  } else {
+    _flags &= ~F_nofog_flag;
+  }
+}
+
+/**
+ *
+ */
+INLINE bool EggGroup::
+get_nofog_flag() const {
+  return ((_flags & F_nofog_flag) != 0);
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
 set_decal_flag(bool flag) {
   if (flag) {
     _flags |= F_decal_flag;
@@ -548,6 +588,89 @@ has_into_collide_mask() const {
 INLINE CollideMask EggGroup::
 get_into_collide_mask() const {
   return _into_collide_mask;
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
+set_blend_mode(EggGroup::BlendMode blend_mode) {
+  _blend_mode = blend_mode;
+}
+
+/**
+ *
+ */
+INLINE EggGroup::BlendMode EggGroup::
+get_blend_mode() const {
+  return _blend_mode;
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
+set_blend_operand_a(EggGroup::BlendOperand blend_operand_a) {
+  _blend_operand_a = blend_operand_a;
+}
+
+/**
+ *
+ */
+INLINE EggGroup::BlendOperand EggGroup::
+get_blend_operand_a() const {
+  return _blend_operand_a;
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
+set_blend_operand_b(EggGroup::BlendOperand blend_operand_b) {
+  _blend_operand_b = blend_operand_b;
+}
+
+/**
+ *
+ */
+INLINE EggGroup::BlendOperand EggGroup::
+get_blend_operand_b() const {
+  return _blend_operand_b;
+}
+
+/**
+ *
+ */
+INLINE void EggGroup::
+set_blend_color(const LColor &blend_color) {
+  _blend_color = blend_color;
+  _flags2 |= F2_has_blend_color;
+}
+
+/**
+ * Removes the blend color specification.
+ */
+INLINE void EggGroup::
+clear_blend_color() {
+  _blend_color = LColor::zero();
+  _flags2 &= ~F2_has_blend_color;
+}
+
+/**
+ * Returns true if the blend color has been specified, false otherwise.
+ */
+INLINE bool EggGroup::
+has_blend_color() const {
+  return (_flags2 & F2_has_blend_color) != 0;
+}
+
+/**
+ * Returns the blend color if one has been specified, or (0, 0, 0, 0) if one
+ * has not.
+ */
+INLINE const LColor &EggGroup::
+get_blend_color() const {
+  return _blend_color;
 }
 
 /**

@@ -49,6 +49,7 @@ PUBLISHED:
 
   bool load_externals(const DSearchPath &searchpath = DSearchPath());
   bool load_externals(const DSearchPath &searchpath, BamCacheRecord *record);
+  int collapse_equivalent_textures();
   int collapse_equivalent_materials();
 
   bool write_egg(Filename filename);

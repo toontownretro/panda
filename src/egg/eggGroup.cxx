@@ -36,6 +36,10 @@ EggGroup(const string &name) : EggGroupNode(name) {
   _flags = 0;
   _flags2 = 0;
   _fps = 0.0;
+  _blend_mode = BM_unspecified;
+  _blend_operand_a = BO_unspecified;
+  _blend_operand_b = BO_unspecified;
+  _blend_color = LColor::zero();
   _u_speed = 0;
   _v_speed = 0;
   _w_speed = 0;
@@ -66,6 +70,10 @@ operator = (const EggGroup &copy) {
   _collision_name = copy._collision_name;
   _fps = copy._fps;
   _lod = copy._lod;
+  _blend_mode = copy._blend_mode;
+  _blend_operand_a = copy._blend_operand_a;
+  _blend_operand_b = copy._blend_operand_b;
+  _blend_color = copy._blend_color;
   _tag_data = copy._tag_data;
   _u_speed = copy._u_speed;
   _v_speed = copy._v_speed;
@@ -92,6 +100,7 @@ operator = (const EggGroup &copy) {
   // force an update_under().  Therefore, we can't call it until all the
   // attributes that affect adjust_under() are in place.
   EggGroupNode::operator = (copy);
+  EggRenderMode::operator = (copy);
 
   return *this;
 }
@@ -236,7 +245,7 @@ write(ostream &out, int indent_level) const {
   write_object_types(out, indent_level + 2);
   write_decal_flags(out, indent_level + 2);
   write_tags(out, indent_level + 2);
-  //write_render_mode(out, indent_level + 2);
+  write_render_mode(out, indent_level + 2);
 
   if (get_portal_flag()) {
     indent(out, indent_level + 2) << "<Scalar> portal { 1 }\n";
@@ -253,6 +262,33 @@ write(ostream &out, int indent_level) const {
   if (has_indexed_flag()) {
     indent(out, indent_level + 2)
       << "<Scalar> indexed { " << get_indexed_flag() << " }\n";
+  }
+
+  if (get_blend_mode() != BM_unspecified) {
+    indent(out, indent_level + 2)
+      << "<Scalar> blend { " << get_blend_mode() << " }\n";
+  }
+
+  if (get_blend_operand_a() != BO_unspecified) {
+    indent(out, indent_level + 2)
+      << "<Scalar> blendop-a { " << get_blend_operand_a() << " }\n";
+  }
+
+  if (get_blend_operand_b() != BO_unspecified) {
+    indent(out, indent_level + 2)
+      << "<Scalar> blendop-b { " << get_blend_operand_b() << " }\n";
+  }
+
+  if (has_blend_color()) {
+    const LColor &c = get_blend_color();
+    indent(out, indent_level + 2)
+      << "<Scalar> blendr { " << c[0] << " }\n";
+    indent(out, indent_level + 2)
+      << "<Scalar> blendg { " << c[1] << " }\n";
+    indent(out, indent_level + 2)
+      << "<Scalar> blendb { " << c[2] << " }\n";
+    indent(out, indent_level + 2)
+      << "<Scalar> blenda { " << c[3] << " }\n";
   }
 
   GroupRefs::const_iterator gri;
@@ -347,6 +383,10 @@ write_model_flags(ostream &out, int indent_level) const {
     indent(out, indent_level) << "<Model> { 1 }\n";
   }
 
+  if (get_texlist_flag()) {
+    indent(out, indent_level) << "<TexList> { 1 }\n";
+  }
+
   if (get_direct_flag()) {
     indent(out, indent_level) << "<Scalar> direct { 1 }\n";
   }
@@ -407,6 +447,19 @@ write_tags(ostream &out, int indent_level) const {
 }
 
 /**
+ * Writes the flags inherited from EggRenderMode and similar flags that
+ * control obscure render effects.
+ */
+void EggGroup::
+write_render_mode(ostream &out, int indent_level) const {
+  EggRenderMode::write(out, indent_level);
+
+  if (get_nofog_flag()) {
+    indent(out, indent_level) << "<Scalar> no-fog { 1 }\n";
+  }
+}
+
+/**
  * Returns true if this particular node represents a <Joint> entry or not.
  * This is a handy thing to know since Joints are sorted to the end of their
  * sibling list when writing an egg file.  See EggGroupNode::write().
@@ -416,7 +469,48 @@ is_joint() const {
   return (get_group_type() == GT_joint);
 }
 
-#if 0
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has an alpha_mode
+ * other than AM_unspecified.  Returns a valid EggRenderMode pointer if one is
+ * found, or NULL otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_alpha_mode() {
+  if (get_alpha_mode() != AM_unspecified) {
+    return this;
+  }
+  return EggGroupNode::determine_alpha_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has a
+ * depth_write_mode other than DWM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_depth_write_mode() {
+  if (get_depth_write_mode() != DWM_unspecified) {
+    return this;
+  }
+  return EggGroupNode::determine_depth_write_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has a
+ * depth_test_mode other than DTM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_depth_test_mode() {
+  if (get_depth_test_mode() != DTM_unspecified) {
+    return this;
+  }
+  return EggGroupNode::determine_depth_test_mode();
+}
+
 /**
  * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
  * some such object at this level or above this group that has a
@@ -430,7 +524,48 @@ determine_visibility_mode() {
   }
   return EggGroupNode::determine_visibility_mode();
 }
-#endif
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has a depth_offset
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_depth_offset() {
+  if (has_depth_offset()) {
+    return this;
+  }
+  return EggGroupNode::determine_depth_offset();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has a draw_order
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_draw_order() {
+  if (has_draw_order()) {
+    return this;
+  }
+  return EggGroupNode::determine_draw_order();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this group that has a bin
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggGroup::
+determine_bin() {
+  if (has_bin()) {
+    return this;
+  }
+  return EggGroupNode::determine_bin();
+}
 
 /**
  * Walks back up the hierarchy, looking for an EggGroup at this level or above
@@ -799,6 +934,80 @@ string_collide_flags(const string &strval) {
     return CF_level;
   } else {
     return CF_none;
+  }
+}
+
+/**
+ * Returns the BlendMode value associated with the given string
+ * representation, or BM_none if the string does not match any known
+ * BlendMode.
+ */
+EggGroup::BlendMode EggGroup::
+string_blend_mode(const string &strval) {
+  if (cmp_nocase_uh(strval, "none") == 0) {
+    return BM_none;
+  } else if (cmp_nocase_uh(strval, "add") == 0) {
+    return BM_add;
+  } else if (cmp_nocase_uh(strval, "subtract") == 0) {
+    return BM_subtract;
+  } else if (cmp_nocase_uh(strval, "inv_subtract") == 0) {
+    return BM_inv_subtract;
+  } else if (cmp_nocase_uh(strval, "min") == 0) {
+    return BM_min;
+  } else if (cmp_nocase_uh(strval, "max") == 0) {
+    return BM_max;
+  } else {
+    return BM_unspecified;
+  }
+}
+
+/**
+ * Returns the BlendOperand value associated with the given string
+ * representation, or BO_none if the string does not match any known
+ * BlendOperand.
+ */
+EggGroup::BlendOperand EggGroup::
+string_blend_operand(const string &strval) {
+  if (cmp_nocase_uh(strval, "zero") == 0) {
+    return BO_zero;
+  } else if (cmp_nocase_uh(strval, "one") == 0) {
+    return BO_one;
+  } else if (cmp_nocase_uh(strval, "incoming_color") == 0) {
+    return BO_incoming_color;
+  } else if (cmp_nocase_uh(strval, "one_minus_incoming_color") == 0) {
+    return BO_one_minus_incoming_color;
+  } else if (cmp_nocase_uh(strval, "fbuffer_color") == 0) {
+    return BO_fbuffer_color;
+  } else if (cmp_nocase_uh(strval, "one_minus_fbuffer_color") == 0) {
+    return BO_one_minus_fbuffer_color;
+  } else if (cmp_nocase_uh(strval, "incoming_alpha") == 0) {
+    return BO_incoming_alpha;
+  } else if (cmp_nocase_uh(strval, "one_minus_incoming_alpha") == 0) {
+    return BO_one_minus_incoming_alpha;
+  } else if (cmp_nocase_uh(strval, "fbuffer_alpha") == 0) {
+    return BO_fbuffer_alpha;
+  } else if (cmp_nocase_uh(strval, "one_minus_fbuffer_alpha") == 0) {
+    return BO_one_minus_fbuffer_alpha;
+  } else if (cmp_nocase_uh(strval, "constant_color") == 0) {
+    return BO_constant_color;
+  } else if (cmp_nocase_uh(strval, "one_minus_constant_color") == 0) {
+    return BO_one_minus_constant_color;
+  } else if (cmp_nocase_uh(strval, "constant_alpha") == 0) {
+    return BO_constant_alpha;
+  } else if (cmp_nocase_uh(strval, "one_minus_constant_alpha") == 0) {
+    return BO_one_minus_constant_alpha;
+  } else if (cmp_nocase_uh(strval, "incoming_color_saturate") == 0) {
+    return BO_incoming_color_saturate;
+  } else if (cmp_nocase_uh(strval, "color_scale") == 0) {
+    return BO_color_scale;
+  } else if (cmp_nocase_uh(strval, "one_minus_color_scale") == 0) {
+    return BO_one_minus_color_scale;
+  } else if (cmp_nocase_uh(strval, "alpha_scale") == 0) {
+    return BO_alpha_scale;
+  } else if (cmp_nocase_uh(strval, "one_minus_alpha_scale") == 0) {
+    return BO_one_minus_alpha_scale;
+  } else {
+    return BO_unspecified;
   }
 }
 
@@ -1197,4 +1406,105 @@ ostream &operator << (ostream &out, EggGroup::CollideFlags t) {
     space = " ";
   }
   return out;
+}
+
+/**
+ *
+ */
+ostream &
+operator << (ostream &out, EggGroup::BlendMode t) {
+  switch (t) {
+  case EggGroup::BM_unspecified:
+    return out << "unspecified";
+
+  case EggGroup::BM_none:
+    return out << "none";
+
+  case EggGroup::BM_add:
+    return out << "add";
+
+  case EggGroup::BM_subtract:
+    return out << "subtract";
+
+  case EggGroup::BM_inv_subtract:
+    return out << "inv_subtract";
+
+  case EggGroup::BM_min:
+    return out << "min";
+
+  case EggGroup::BM_max:
+    return out << "max";
+  }
+
+  return out << "**invalid EggGroup::BlendMode(" << (int)t << ")**";
+}
+
+/**
+ *
+ */
+ostream &
+operator << (ostream &out, EggGroup::BlendOperand t) {
+  switch (t) {
+  case EggGroup::BO_unspecified:
+    return out << "unspecified";
+
+  case EggGroup::BO_zero:
+    return out << "zero";
+
+  case EggGroup::BO_one:
+    return out << "one";
+
+  case EggGroup::BO_incoming_color:
+    return out << "incomfing_color";
+
+  case EggGroup::BO_one_minus_incoming_color:
+    return out << "one_minus_incoming_color";
+
+  case EggGroup::BO_fbuffer_color:
+    return out << "fbuffer_color";
+
+  case EggGroup::BO_one_minus_fbuffer_color:
+    return out << "one_minus_fbuffer_color";
+
+  case EggGroup::BO_incoming_alpha:
+    return out << "incoming_alpha";
+
+  case EggGroup::BO_one_minus_incoming_alpha:
+    return out << "one_minus_incoming_alpha";
+
+  case EggGroup::BO_fbuffer_alpha:
+    return out << "fbuffer_alpha";
+
+  case EggGroup::BO_one_minus_fbuffer_alpha:
+    return out << "one_minus_fbuffer_alpha";
+
+  case EggGroup::BO_constant_color:
+    return out << "constant_color";
+
+  case EggGroup::BO_one_minus_constant_color:
+    return out << "one_minus_constant_color";
+
+  case EggGroup::BO_constant_alpha:
+    return out << "constant_alpha";
+
+  case EggGroup::BO_one_minus_constant_alpha:
+    return out << "one_minus_constant_alpha";
+
+  case EggGroup::BO_incoming_color_saturate:
+    return out << "incoming_color_saturate";
+
+  case EggGroup::BO_color_scale:
+    return out << "color_scale";
+
+  case EggGroup::BO_one_minus_color_scale:
+    return out << "one_minus_color_scale";
+
+  case EggGroup::BO_alpha_scale:
+    return out << "alpha_scale";
+
+  case EggGroup::BO_one_minus_alpha_scale:
+    return out << "one_minus_alpha_scale";
+  }
+
+  return out << "**invalid EggGroup::BlendOperand(" << (int)t << ")**";
 }

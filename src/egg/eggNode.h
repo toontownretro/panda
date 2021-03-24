@@ -25,6 +25,8 @@
 #include "extension.h"
 
 class EggGroupNode;
+class EggRenderMode;
+class EggTextureCollection;
 
 struct EggLexerState;
 
@@ -65,13 +67,20 @@ PUBLISHED:
   INLINE void transform(const LMatrix4d &mat);
   INLINE void transform_vertices_only(const LMatrix4d &mat);
   INLINE void flatten_transforms();
+  void apply_texmats();
 
   int rename_node(vector_string strip_prefix);
 
   virtual bool is_joint() const;
   virtual bool is_anim_matrix() const;
 
-  //virtual EggRenderMode *determine_visibility_mode();
+  virtual EggRenderMode *determine_alpha_mode();
+  virtual EggRenderMode *determine_depth_write_mode();
+  virtual EggRenderMode *determine_depth_test_mode();
+  virtual EggRenderMode *determine_visibility_mode();
+  virtual EggRenderMode *determine_depth_offset();
+  virtual EggRenderMode *determine_draw_order();
+  virtual EggRenderMode *determine_bin();
   virtual bool determine_indexed();
   virtual bool determine_decal();
 
@@ -106,6 +115,7 @@ protected:
   virtual void r_transform_vertices(const LMatrix4d &mat);
   virtual void r_mark_coordsys(CoordinateSystem cs);
   virtual void r_flatten_transforms();
+  virtual void r_apply_texmats(EggTextureCollection &textures);
 
   // These members are updated automatically by prepare_add_child(),
   // prepare_remove_child(), and update_under().  Other functions shouldn't be

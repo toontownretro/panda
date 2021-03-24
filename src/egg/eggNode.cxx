@@ -15,6 +15,7 @@
 #include "eggGroupNode.h"
 #include "lightMutexHolder.h"
 #include "config_egg.h"
+#include "eggTextureCollection.h"
 #include "dcast.h"
 
 #include <algorithm>
@@ -45,6 +46,17 @@ rename_node(vector_string strip_prefix) {
 }
 
 /**
+ * Applies the texture matrices to the UV's of the vertices that reference
+ * them, and then removes the texture matrices from the textures themselves.
+ */
+void EggNode::
+apply_texmats() {
+  EggTextureCollection textures;
+  textures.find_used_textures(this);
+  r_apply_texmats(textures);
+}
+
+/**
  * Returns true if this particular node represents a <Joint> entry or not.
  * This is a handy thing to know since Joints are sorted to the end of their
  * sibling list when writing an egg file.  See EggGroupNode::write().
@@ -61,6 +73,110 @@ is_joint() const {
 bool EggNode::
 is_anim_matrix() const {
   return false;
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has an alpha_mode
+ * other than AM_unspecified.  Returns a valid EggRenderMode pointer if one is
+ * found, or NULL otherwise.
+ */
+EggRenderMode *EggNode::
+determine_alpha_mode() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_alpha_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * depth_write_mode other than DWM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggNode::
+determine_depth_write_mode() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_depth_write_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * depth_test_mode other than DTM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggNode::
+determine_depth_test_mode() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_depth_test_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a
+ * visibility_mode other than VM_unspecified.  Returns a valid EggRenderMode
+ * pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggNode::
+determine_visibility_mode() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_visibility_mode();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a depth_offset
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggNode::
+determine_depth_offset() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_depth_offset();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a draw_order
+ * specified.  Returns a valid EggRenderMode pointer if one is found, or NULL
+ * otherwise.
+ */
+EggRenderMode *EggNode::
+determine_draw_order() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_draw_order();
+}
+
+/**
+ * Walks back up the hierarchy, looking for an EggGroup or EggPrimitive or
+ * some such object at this level or above this node that has a bin specified.
+ * Returns a valid EggRenderMode pointer if one is found, or NULL otherwise.
+ */
+EggRenderMode *EggNode::
+determine_bin() {
+  if (_parent == nullptr) {
+    // Too bad; we're done.
+    return nullptr;
+  }
+  return _parent->determine_bin();
 }
 
 /**
@@ -287,4 +403,11 @@ r_mark_coordsys(CoordinateSystem) {
  */
 void EggNode::
 r_flatten_transforms() {
+}
+
+/**
+ * The recursive implementation of apply_texmats().
+ */
+void EggNode::
+r_apply_texmats(EggTextureCollection &textures) {
 }

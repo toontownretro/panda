@@ -17,6 +17,7 @@
 #include "pandabase.h"
 
 #include "eggGroupNode.h"
+#include "eggRenderMode.h"
 #include "eggTransform.h"
 #include "eggVertex.h"
 #include "eggSwitchCondition.h"
@@ -30,7 +31,7 @@
  * The main glue of the egg hierarchy, this corresponds to the <Group>,
  * <Instance>, and <Joint> type nodes.
  */
-class EXPCL_PANDA_EGG EggGroup : public EggGroupNode, public EggTransform {
+class EXPCL_PANDA_EGG EggGroup : public EggGroupNode, public EggRenderMode, public EggTransform {
 PUBLISHED:
   typedef pmap<PT_EggVertex, double> VertexRef;
   typedef pmap<std::string, std::string> TagData;
@@ -95,6 +96,42 @@ PUBLISHED:
     DT_default               = 0x40000000,
   };
 
+
+  // These correspond to ColorBlendAttrib::Mode (but not numerically).
+  enum BlendMode {
+    BM_unspecified,
+    BM_none,
+    BM_add,
+    BM_subtract,
+    BM_inv_subtract,
+    BM_min,
+    BM_max
+  };
+
+  // These correspond to ColorBlendAttrib::Operand (but not numerically).
+  enum BlendOperand {
+    BO_unspecified,
+    BO_zero,
+    BO_one,
+    BO_incoming_color,
+    BO_one_minus_incoming_color,
+    BO_fbuffer_color,
+    BO_one_minus_fbuffer_color,
+    BO_incoming_alpha,
+    BO_one_minus_incoming_alpha,
+    BO_fbuffer_alpha,
+    BO_one_minus_fbuffer_alpha,
+    BO_constant_color,
+    BO_one_minus_constant_color,
+    BO_constant_alpha,
+    BO_one_minus_constant_alpha,
+    BO_incoming_color_saturate,
+    BO_color_scale,
+    BO_one_minus_color_scale,
+    BO_alpha_scale,
+    BO_one_minus_alpha_scale,
+  };
+
   explicit EggGroup(const std::string &name = "");
   EggGroup(const EggGroup &copy);
   EggGroup &operator = (const EggGroup &copy);
@@ -108,10 +145,17 @@ PUBLISHED:
   void write_object_types(std::ostream &out, int indent_level) const;
   void write_decal_flags(std::ostream &out, int indent_level) const;
   void write_tags(std::ostream &out, int indent_level) const;
+  void write_render_mode(std::ostream &out, int indent_level) const;
 
   virtual bool is_joint() const;
 
-  //virtual EggRenderMode *determine_visibility_mode();
+  virtual EggRenderMode *determine_alpha_mode();
+  virtual EggRenderMode *determine_depth_write_mode();
+  virtual EggRenderMode *determine_depth_test_mode();
+  virtual EggRenderMode *determine_visibility_mode();
+  virtual EggRenderMode *determine_depth_offset();
+  virtual EggRenderMode *determine_draw_order();
+  virtual EggRenderMode *determine_bin();
   virtual bool determine_indexed();
   virtual bool determine_decal();
 
@@ -162,6 +206,12 @@ PUBLISHED:
   INLINE void set_model_flag(bool flag);
   INLINE bool get_model_flag() const;
 
+  INLINE void set_texlist_flag(bool flag);
+  INLINE bool get_texlist_flag() const;
+
+  INLINE void set_nofog_flag(bool flag);
+  INLINE bool get_nofog_flag() const;
+
   INLINE void set_decal_flag(bool flag);
   INLINE bool get_decal_flag() const;
 
@@ -196,6 +246,17 @@ PUBLISHED:
   INLINE void clear_into_collide_mask();
   INLINE bool has_into_collide_mask() const;
   INLINE CollideMask get_into_collide_mask() const;
+
+  INLINE void set_blend_mode(BlendMode blend_mode);
+  INLINE BlendMode get_blend_mode() const;
+  INLINE void set_blend_operand_a(BlendOperand blend_operand_a);
+  INLINE BlendOperand get_blend_operand_a() const;
+  INLINE void set_blend_operand_b(BlendOperand blend_operand_b);
+  INLINE BlendOperand get_blend_operand_b() const;
+  INLINE void set_blend_color(const LColor &blend_color);
+  INLINE void clear_blend_color();
+  INLINE bool has_blend_color() const;
+  INLINE const LColor &get_blend_color() const;
 
   INLINE void set_lod(const EggSwitchCondition &lod);
   INLINE void clear_lod();
@@ -236,6 +297,8 @@ PUBLISHED:
   MAKE_PROPERTY(switch_fps, get_switch_fps, set_switch_fps);
   MAKE_SEQ_PROPERTY(object_types, get_num_object_types, get_object_type);
   MAKE_PROPERTY(model_flag, get_model_flag, set_model_flag);
+  MAKE_PROPERTY(texlist_flag, get_texlist_flag, set_texlist_flag);
+  MAKE_PROPERTY(nofog_flag, get_nofog_flag, set_nofog_flag);
   MAKE_PROPERTY(decal_flag, get_decal_flag, set_decal_flag);
   MAKE_PROPERTY(direct_flag, get_direct_flag, set_direct_flag);
   MAKE_PROPERTY(portal_flag, get_portal_flag, set_portal_flag);
@@ -248,6 +311,11 @@ PUBLISHED:
                                     set_from_collide_mask, clear_from_collide_mask);
   MAKE_PROPERTY2(into_collide_mask, has_into_collide_mask, get_into_collide_mask,
                                     set_into_collide_mask, clear_into_collide_mask);
+  MAKE_PROPERTY(blend_mode, get_blend_mode, set_blend_mode);
+  MAKE_PROPERTY(blend_operand_a, get_blend_operand_a, set_blend_operand_a);
+  MAKE_PROPERTY(blend_operand_b, get_blend_operand_b, set_blend_operand_b);
+  MAKE_PROPERTY2(blend_color, has_blend_color, get_blend_color,
+                              set_blend_color, clear_blend_color);
   MAKE_PROPERTY2(lod, has_lod, get_lod, set_lod, clear_lod);
   MAKE_PROPERTY(default_pose, get_default_pose, set_default_pose);
   MAKE_PROPERTY(scroll_u, get_scroll_u, set_scroll_u);
@@ -293,6 +361,8 @@ PUBLISHED:
   static BillboardType string_billboard_type(const std::string &strval);
   static CollisionSolidType string_cs_type(const std::string &strval);
   static CollideFlags string_collide_flags(const std::string &strval);
+  static BlendMode string_blend_mode(const std::string &strval);
+  static BlendOperand string_blend_operand(const std::string &strval);
 
 public:
   virtual EggTransform *as_transform();
@@ -315,6 +385,8 @@ private:
     F_billboard_type         = 0x000000e0,
     F_switch_flag            = 0x00000100,
     F_model_flag             = 0x00000400,
+    F_texlist_flag           = 0x00000800,
+    F_nofog_flag             = 0x00001000,
     F_decal_flag             = 0x00002000,
     F_direct_flag            = 0x00004000,
     F_cs_type                = 0x000f0000,
@@ -339,6 +411,10 @@ private:
   int _flags;
   int _flags2;
   CollideMask _collide_mask, _from_collide_mask, _into_collide_mask;
+  BlendMode _blend_mode;
+  BlendOperand _blend_operand_a;
+  BlendOperand _blend_operand_b;
+  LColor _blend_color;
   LPoint3d _billboard_center;
   vector_string _object_types;
   std::string _collision_name;
@@ -369,8 +445,10 @@ public:
   }
   static void init_type() {
     EggGroupNode::init_type();
+    EggRenderMode::init_type();
     register_type(_type_handle, "EggGroup",
-                  EggGroupNode::get_class_type());
+                  EggGroupNode::get_class_type(),
+                  EggRenderMode::get_class_type());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -387,6 +465,8 @@ std::ostream &operator << (std::ostream &out, EggGroup::DCSType t);
 std::ostream &operator << (std::ostream &out, EggGroup::BillboardType t);
 std::ostream &operator << (std::ostream &out, EggGroup::CollisionSolidType t);
 std::ostream &operator << (std::ostream &out, EggGroup::CollideFlags t);
+std::ostream &operator << (std::ostream &out, EggGroup::BlendMode t);
+std::ostream &operator << (std::ostream &out, EggGroup::BlendOperand t);
 
 
 #include "eggGroup.I"

@@ -41,8 +41,11 @@
      eggPoint.I eggPoint.h eggPolygon.I  \
      eggPolygon.h eggPolysetMaker.h eggPoolUniquifier.h \
      eggPrimitive.I eggPrimitive.h \
+     eggRenderMode.I eggRenderMode.h \
      eggSAnimData.I eggSAnimData.h eggSurface.I eggSurface.h  \
      eggSwitchCondition.h eggTable.I eggTable.h \
+     eggTexture.I eggTexture.h \
+     eggTextureCollection.I eggTextureCollection.h \
      eggTriangleFan.I eggTriangleFan.h \
      eggTriangleStrip.I eggTriangleStrip.h \
      eggTransform.I eggTransform.h \
@@ -56,7 +59,8 @@
      eggXfmAnimData.h eggXfmSAnim.I eggXfmSAnim.h parserDefs.h  \
      parser.yxx lexerDefs.h lexer.lxx  \
      pt_EggMaterial.h vector_PT_EggMaterial.h \
-     pt_EggVertex.h vector_PT_EggVertex.h
+     pt_EggTexture.h vector_PT_EggTexture.h \
+     pt_EggVertex.h vector_PT_EggVertex.h \
 
   #define COMPOSITE_SOURCES \
      config_egg.cxx eggAnimData.cxx \
@@ -82,8 +86,11 @@
      eggPatch.cxx \
      eggPoint.cxx eggPolygon.cxx eggPolysetMaker.cxx  \
      eggPoolUniquifier.cxx eggPrimitive.cxx  \
+     eggRenderMode.cxx  \
      eggSAnimData.cxx eggSurface.cxx eggSwitchCondition.cxx  \
      eggTable.cxx  \
+     eggTexture.cxx  \
+     eggTextureCollection.cxx \
      eggTransform.cxx \
      eggTriangleFan.cxx \
      eggTriangleStrip.cxx \
@@ -93,9 +100,11 @@
      eggVertexPool.cxx eggVertexUV.cxx \
      eggXfmAnimData.cxx eggXfmSAnim.cxx  \
      pt_EggMaterial.cxx \
+     pt_EggTexture.cxx \
      pt_EggVertex.cxx  \
      vector_PT_EggMaterial.cxx \
-     vector_PT_EggVertex.cxx
+     vector_PT_EggTexture.cxx \
+     vector_PT_EggVertex.cxx \
 
   #define INSTALL_HEADERS \
      config_egg.h eggAnimData.I eggAnimData.h \
@@ -126,9 +135,11 @@
      eggPoint.I eggPoint.h eggPolygon.I  \
      eggPolygon.h eggPolysetMaker.h eggPoolUniquifier.h \
      eggPrimitive.I eggPrimitive.h \
-     //eggRenderMode.I eggRenderMode.h  \
+     eggRenderMode.I eggRenderMode.h \
      eggSAnimData.I eggSAnimData.h eggSurface.I eggSurface.h  \
-     eggSwitchCondition.h eggTable.I eggTable.h  \
+     eggSwitchCondition.h eggTable.I eggTable.h \
+     eggTexture.I eggTexture.h \
+     eggTextureCollection.I eggTextureCollection.h \
      eggTriangleFan.I eggTriangleFan.h \
      eggTriangleStrip.I eggTriangleStrip.h \
      eggTransform.I eggTransform.h \
@@ -142,7 +153,8 @@
      eggXfmAnimData.h eggXfmSAnim.I eggXfmSAnim.h parserDefs.h  \
      parser.yxx lexerDefs.h lexer.lxx  \
      pt_EggMaterial.h vector_PT_EggMaterial.h \
-     pt_EggVertex.h vector_PT_EggVertex.h
+     pt_EggTexture.h vector_PT_EggTexture.h \
+     pt_EggVertex.h vector_PT_EggVertex.h \
 
   #define IGATESCAN all
   #define IGATEEXT \
