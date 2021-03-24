@@ -567,4 +567,14 @@ void CharacterNode::
 fillin(DatagramIterator &scan, BamReader *manager) {
   PandaNode::fillin(scan, manager);
   manager->read_pointer(scan);
+
+#ifdef DO_PSTATS
+  // Reinitialize our collectors with our name, now that we know it.
+  if (has_name()) {
+    _joints_pcollector =
+      PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Joints");
+    _skinning_pcollector =
+      PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Vertices");
+  }
+#endif
 }
