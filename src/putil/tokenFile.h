@@ -28,7 +28,8 @@ NotifyCategoryDecl(tokenfile, EXPCL_PANDA_PUTIL, EXPTP_PANDA_PUTIL);
  */
 class EXPCL_PANDA_PUTIL TokenFile : public ReferenceCount {
 PUBLISHED:
-  struct Token : public ReferenceCount {
+  class Token : public ReferenceCount {
+  public:
     INLINE Token();
 
     std::string _data;

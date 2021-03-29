@@ -143,17 +143,21 @@ tokenize(std::istream &is) {
       line_escape = false;
     }
 
-    if (c == '\n') {
-      // Skip over the carriage return if that's the next character.
-      if (is.tellg() < length) {
-        const char next = reader.get_int8();
-        if (next != '\r') {
-          // If the next character is not a carriage return, the file is not
-          // CLRF, so we should return to where we were.
-          is.seekg((std::streamoff)-1, std::ios::cur);
+    if (c == '\r' || c == '\n') {
+
+      if (c == '\r') {
+        // We got a carriage return, indicating a line break.  Skip over the
+        // line feed if that's the next character.
+
+        if (is.tellg() < length) {
+          const char next = reader.get_int8();
+          if (next != '\n') {
+            // If the next character is not a line feed, so we should return to
+            // where we were.
+            is.seekg((std::streamoff)-1, std::ios::cur);
+          }
         }
       }
-
       // Line break.
       if (comment) {
         // Line break always ends a comment.
@@ -212,7 +216,7 @@ tokenize(std::istream &is) {
       quoted_string = false;
       quote_character = 0;
 
-    } else if (!quoted_string && c == '\'' || c == '"') {
+    } else if (!quoted_string && c == '"') {
       // Beginning of a quoted string.  Quotes don't get added to the token.
       quoted_string = true;
       quote_character = c;
