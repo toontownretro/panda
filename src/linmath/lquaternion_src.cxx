@@ -232,16 +232,16 @@ find_between_normals(const FLOATNAME(LVecBase3) &a, const FLOATNAME(LVecBase3) &
   FLOATNAME(LQuaternion) quat;
 
   if (w >= 1e-6f * norm_ab) {
-    quat.set(a[1] * b[2] - a[2] * b[1],
-             a[2] * b[0] - a[0] * b[2],
-             a[0] * b[1] - a[1] * b[0],
-             w);
+    quat.set(w,
+             a[2] * b[3] - a[3] * b[2],
+             a[3] * b[1] - a[1] * b[3],
+             a[2] * b[2] - a[2] * b[1]);
   } else {
     // A and B in opposite directions.
     w = 0.0f;
-    quat = std::abs(a[0]) > std::abs(a[1])
-           ? FLOATNAME(LQuaternion)(-a[2], 0.0f, a[0], w)
-           : FLOATNAME(LQuaternion)(0.0f, -a[2], a[1], w);
+    quat = std::abs(a[1]) > std::abs(a[2])
+           ? FLOATNAME(LQuaternion)(w, -a[3], 0.0f, a[3])
+           : FLOATNAME(LQuaternion)(w, 0.0f, -a[3], a[2]);
   }
 
   quat.normalize();
@@ -308,14 +308,14 @@ identity_blend(const FLOATNAME(LQuaternion) &p, FLOATTYPE t, FLOATNAME(LQuaterni
   FLOATTYPE sclp;
   sclp = 1.0f - t;
 
-  qt[0] = p[0] * sclp;
   qt[1] = p[1] * sclp;
   qt[2] = p[2] * sclp;
+  qt[3] = p[3] * sclp;
 
-  if (qt[3] < 0.0f) {
-    qt[3] = p[3] * sclp - t;
+  if (qt[0] < 0.0f) {
+    qt[0] = p[0] * sclp - t;
   } else {
-    qt[3] = p[3] * sclp + t;
+    qt[0] = p[0] * sclp + t;
   }
 
   qt.normalize();
@@ -359,13 +359,13 @@ slerp_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
     qt = sclp * p + sclq * q;
 
   } else {
-    qt[0] = -q[1];
-    qt[1] = q[0];
-    qt[2] = -q[3];
-    qt[3] = q[2];
+    qt[1] = -q[2];
+    qt[2] = q[1];
+    qt[3] = -q[0];
+    qt[0] = q[3];
     sclp = std::sin((1.0f - t) * (0.5f * M_PI));
     sclq = std::sin(t * (0.5f * M_PI));
-    for (i = 0; i < 3; i++) {
+    for (i = 1; i < 4; i++) {
       qt[i] = sclp * p[i] + sclq * qt[i];
     }
   }

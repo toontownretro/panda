@@ -378,6 +378,14 @@ get_k() const {
 /**
  *
  */
+INLINE_LINMATH FLOATNAME(LVecBase3) FLOATNAME(LQuaternion)::
+get_ijk() const {
+  return FLOATNAME(LVecBase3)(_v(1), _v(2), _v(3));
+}
+
+/**
+ *
+ */
 INLINE_LINMATH void FLOATNAME(LQuaternion)::
 set_r(FLOATTYPE r) {
   _v(0) = r;

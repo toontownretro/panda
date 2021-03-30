@@ -12,7 +12,7 @@
  */
 
 /**
- * This is the base quaternion class
+ * This is the base quaternion class in the form (real,i,j,k).
  */
 class EXPCL_PANDA_LINMATH FLOATNAME(LQuaternion) : public FLOATNAME(LVecBase4) {
 PUBLISHED:
@@ -112,6 +112,8 @@ PUBLISHED:
   INLINE_LINMATH FLOATTYPE get_i() const;
   INLINE_LINMATH FLOATTYPE get_j() const;
   INLINE_LINMATH FLOATTYPE get_k() const;
+
+  INLINE_LINMATH FLOATNAME(LVecBase3) get_ijk() const;
 
   INLINE_LINMATH void set_r(FLOATTYPE r);
   INLINE_LINMATH void set_i(FLOATTYPE i);
