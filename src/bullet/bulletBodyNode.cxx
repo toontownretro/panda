@@ -690,6 +690,17 @@ is_deactivation_enabled() const {
 }
 
 /**
+ * Enables or disables a collision check against this specific node.
+ */
+void BulletBodyNode::
+set_ignore_collision_check(PandaNode *node, bool enable) {
+  btCollisionObject *obj = BulletWorld::get_collision_object(node);
+  if (obj != nullptr) {
+    get_object()->setIgnoreCollisionCheck(obj, enable);
+  }
+}
+
+/**
  *
  */
 bool BulletBodyNode::
@@ -743,7 +754,7 @@ has_contact_response() const {
 PN_stdfloat BulletBodyNode::
 get_contact_processing_threshold() const {
   LightMutexHolder holder(BulletWorld::get_global_lock());
-  
+
   return get_object()->getContactProcessingThreshold();
 }
 

@@ -87,6 +87,8 @@ PUBLISHED:
   void set_deactivation_enabled(bool enabled);
   bool is_deactivation_enabled() const;
 
+  void set_ignore_collision_check(PandaNode *node, bool enable);
+
   // Debug Visualisation
   INLINE void set_debug_enabled(const bool enabled);
   INLINE bool is_debug_enabled() const;
