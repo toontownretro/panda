@@ -20,7 +20,9 @@
  */
 CharacterJoint::
 CharacterJoint() :
-  CharacterPart() {
+  CharacterPart(),
+  _has_forced_value(false),
+  _forced_value(LMatrix4::ident_mat()) {
 }
 
 /**
@@ -32,7 +34,9 @@ CharacterJoint(const CharacterJoint &other) :
   _parent(other._parent),
   _children(other._children),
   //_vertex_transforms(other._vertex_transforms),
-  _default_value(other._default_value)
+  _default_value(other._default_value),
+  _forced_value(other._forced_value),
+  _has_forced_value(other._has_forced_value)
 {
 }
 
@@ -45,7 +49,9 @@ CharacterJoint(CharacterJoint &&other) :
   _parent(std::move(other._parent)),
   _children(std::move(other._children)),
   //_vertex_transforms(std::move(other._vertex_transforms)),
-  _default_value(std::move(other._default_value))
+  _default_value(std::move(other._default_value)),
+  _forced_value(std::move(other._forced_value)),
+  _has_forced_value(std::move(other._has_forced_value))
 {
 }
 
@@ -57,6 +63,8 @@ CharacterJoint(const std::string &name) :
   CharacterPart(name)
 {
   _default_value = LMatrix4::ident_mat();
+  _forced_value = LMatrix4::ident_mat();
+  _has_forced_value = false;
 }
 
 /**

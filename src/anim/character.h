@@ -85,6 +85,9 @@ PUBLISHED:
                              const LMatrix4 &default_value = LMatrix4::ident_mat());
   int make_slider(const std::string &name, PN_stdfloat default_value = 0.0f);
 
+  INLINE void set_joint_forced_value(int n, const LMatrix4 &value);
+  INLINE void clear_joint_forced_value(int n);
+
   INLINE int get_num_joints() const;
   INLINE int find_joint(const std::string &name) const;
   INLINE const std::string &get_joint_name(int n) const;
@@ -97,9 +100,12 @@ PUBLISHED:
   INLINE void set_vertex_slider(int n, CharacterVertexSlider *slider);
 
   INLINE void set_joint_default_value(int n, const LMatrix4 &value);
+  INLINE int get_joint_parent(int n) const;
   INLINE const LMatrix4 &get_joint_skinning_matrix(int n) const;
   INLINE const LMatrix4 &get_joint_net_transform(int n) const;
   INLINE const LMatrix4 &get_joint_transform(int n) const;
+  INLINE const LMatrix4 &get_joint_initial_net_transform_inverse(int n) const;
+  INLINE const LMatrix4 &get_joint_default_value(int n) const;
 
   void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
 

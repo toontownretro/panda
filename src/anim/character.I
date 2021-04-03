@@ -145,6 +145,27 @@ get_node(int n) const {
 }
 
 /**
+ * Applies a forced override value to the specified joint.  All animation to
+ * this joint will be overridden by this value.  This is used for procedurally
+ * animating joints.  The value is assumed to be in the joint's local
+ * coordinate space, relative to the joint's parent.
+ */
+INLINE void Character::
+set_joint_forced_value(int n, const LMatrix4 &value) {
+  _joints[n]._forced_value = value;
+  _joints[n]._has_forced_value = true;
+}
+
+/**
+ * Clears the forced override value on the specified joint.  From this point
+ * on, the joint's animation will be driven by the animation tables.
+ */
+INLINE void Character::
+clear_joint_forced_value(int n) {
+  _joints[n]._has_forced_value = false;
+}
+
+/**
  * Returns the number of joints in the Character.
  */
 INLINE int Character::
@@ -243,6 +264,14 @@ set_joint_default_value(int n, const LMatrix4 &value) {
 }
 
 /**
+ * Returns the index of the parent of the specified joint.
+ */
+INLINE int Character::
+get_joint_parent(int n) const {
+  return _joints[n]._parent;
+}
+
+/**
  * Returns the current skinning matrix of the specified joint.
  */
 INLINE const LMatrix4 &Character::
@@ -264,6 +293,23 @@ get_joint_net_transform(int n) const {
 INLINE const LMatrix4 &Character::
 get_joint_transform(int n) const {
   return _joint_values[n];
+}
+
+/**
+ * Returns the matrix needed to transform coordinates from character space to
+ * the local space of this joint, from the resting pose.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_initial_net_transform_inverse(int n) const {
+  return _joint_initial_net_transform_inverse[n];
+}
+
+/**
+ * Returns resting pose of the specified joint.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_default_value(int n) const {
+  return _joints[n]._default_value;
 }
 
 /**

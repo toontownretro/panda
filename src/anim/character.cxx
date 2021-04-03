@@ -464,10 +464,16 @@ apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thre
 
   ap_compose_collector.start();
   for (size_t i = 0; i < joint_count; i++) {
-    const JointTransform &xform = context._joints[i];
+    // Check for a forced joint override value.
+    // FIXME: No point in evaluating anim graph for joints with forced values.
+    if (_joints[i]._has_forced_value) {
+      _joint_values[i] = _joints[i]._forced_value;
 
-    _joint_values[i] = LMatrix4::scale_mat(xform._scale) * xform._rotation;
-    _joint_values[i].set_row(3, xform._position);
+    } else {
+      const JointTransform &xform = context._joints[i];
+      _joint_values[i] = LMatrix4::scale_mat(xform._scale) * xform._rotation;
+      _joint_values[i].set_row(3, xform._position);
+    }
   }
   ap_compose_collector.stop();
 
