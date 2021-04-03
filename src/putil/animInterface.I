@@ -255,6 +255,69 @@ set_num_frames(int num_frames) {
 }
 
 /**
+ *
+ */
+INLINE AnimInterface::PlayMode AnimInterface::
+get_play_mode() const {
+  CDReader cdata(_cycler);
+  return cdata->_play_mode;
+}
+
+/**
+ *
+ */
+INLINE double AnimInterface::
+get_start_time() const {
+  CDReader cdata(_cycler);
+  return cdata->_start_time;
+}
+
+/**
+ *
+ */
+INLINE double AnimInterface::
+get_start_frame() const {
+  CDReader cdata(_cycler);
+  return cdata->_start_frame;
+}
+
+/**
+ *
+ */
+INLINE double AnimInterface::
+get_play_frames() const {
+  CDReader cdata(_cycler);
+  return cdata->_play_frames;
+}
+
+/**
+ *
+ */
+INLINE int AnimInterface::
+get_from_frame() const {
+  CDReader cdata(_cycler);
+  return cdata->_from_frame;
+}
+
+/**
+ *
+ */
+INLINE int AnimInterface::
+get_to_frame() const {
+  CDReader cdata(_cycler);
+  return cdata->_to_frame;
+}
+
+/**
+ *
+ */
+INLINE bool AnimInterface::
+get_restart() const {
+  CDReader cdata(_cycler);
+  return cdata->_restart;
+}
+
+/**
  * Returns the fractional part of the current frame.  Normally, this is in the
  * range 0.0 <= f < 1.0, but in the one special case of an animation playing
  * to its end frame and stopping, it might exactly equal 1.0.

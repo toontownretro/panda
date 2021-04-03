@@ -80,13 +80,21 @@ protected:
   virtual void animation_activated();
   virtual void animation_deactivated();
 
-private:
+protected:
   enum PlayMode {
     PM_pose,
     PM_play,
     PM_loop,
     PM_pingpong,
   };
+
+  INLINE PlayMode get_play_mode() const;
+  INLINE double get_start_time() const;
+  INLINE double get_start_frame() const;
+  INLINE double get_play_frames() const;
+  INLINE int get_from_frame() const;
+  INLINE int get_to_frame() const;
+  INLINE bool get_restart() const;
 
   // This data is not cycled, because it is a semi-permanent part of the
   // interface.  Also, some derivatives of AnimInterface don't even use it.
@@ -132,6 +140,8 @@ private:
     double _effective_frame_rate;
     bool _paused;
     double _paused_f;
+
+    bool _restart;
   };
 
   PipelineCycler<CData> _cycler;

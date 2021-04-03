@@ -120,7 +120,8 @@ CData() :
   _play_rate(1.0),
   _effective_frame_rate(0.0),
   _paused(true),
-  _paused_f(0.0)
+  _paused_f(0.0),
+  _restart(false)
 {
 }
 
@@ -139,7 +140,8 @@ CData(const AnimInterface::CData &copy) :
   _play_rate(copy._play_rate),
   _effective_frame_rate(copy._effective_frame_rate),
   _paused(copy._paused),
-  _paused_f(copy._paused_f)
+  _paused_f(copy._paused_f),
+  _restart(copy._restart)
 {
 }
 
@@ -210,6 +212,7 @@ play(double from, double to) {
   _from_frame = (int)floor(from);
   _to_frame = (int)floor(to);
   _paused_f = 0.0;
+  _restart = false;
 
   if (_effective_frame_rate < 0.0) {
     // If we'll be playing backward, start at the end.
@@ -238,6 +241,7 @@ loop(bool restart, double from, double to) {
   _from_frame = (int)floor(from);
   _to_frame = (int)floor(to);
   _paused_f = 0.0;
+  _restart = restart;
 
   if (!restart) {
     fframe = min(max(fframe, from), to);
@@ -269,6 +273,7 @@ pingpong(bool restart, double from, double to) {
   _from_frame = (int)floor(from);
   _to_frame = (int)floor(to);
   _paused_f = 0.0;
+  _restart = restart;
 
   if (!restart) {
     fframe = min(max(fframe, from), to);
@@ -292,6 +297,7 @@ pose(double frame) {
   _from_frame = (int)floor(frame);
   _to_frame = (int)floor(frame);
   _paused_f = 0.0;
+  _restart = false;
 }
 
 /**
