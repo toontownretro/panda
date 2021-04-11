@@ -33,6 +33,8 @@ public:
   CharacterSlider(const CharacterSlider &other);
   CharacterSlider(CharacterSlider &&other);
 
+  void operator = (const CharacterSlider &other);
+
 private:
   CharacterSlider(const std::string &name);
 

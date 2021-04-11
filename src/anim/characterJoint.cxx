@@ -58,6 +58,19 @@ CharacterJoint(CharacterJoint &&other) :
 /**
  *
  */
+void CharacterJoint::
+operator=(const CharacterJoint &other) {
+  CharacterPart::operator=(other);
+  _parent = other._parent;
+  _children = other._children;
+  _default_value = other._default_value;
+  _forced_value = other._forced_value;
+  _has_forced_value = other._has_forced_value;
+}
+
+/**
+ *
+ */
 CharacterJoint::
 CharacterJoint(const std::string &name) :
   CharacterPart(name)

@@ -10,6 +10,7 @@
 #include "plane.h"
 
 #include <xmmintrin.h>
+#include <emmintrin.h>
 
 #include "config_ssemath.h"
 

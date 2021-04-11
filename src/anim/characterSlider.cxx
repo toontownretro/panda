@@ -55,6 +55,18 @@ CharacterSlider(CharacterSlider &&other) :
 /**
  *
  */
+void CharacterSlider::
+operator=(const CharacterSlider &other) {
+  CharacterPart::operator = (other);
+  _value = other._value;
+  _default_value = other._default_value;
+  _vertex_slider = other._vertex_slider;
+  _val_changed = other._val_changed;
+}
+
+/**
+ *
+ */
 CharacterSlider::
 CharacterSlider(const std::string &name) :
   CharacterPart(name),

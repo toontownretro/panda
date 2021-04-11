@@ -66,6 +66,12 @@ PUBLISHED:
     pos = std::move(other.pos);
     scale = std::move(other.scale);
   }
+
+  void operator = (const JointFrame &other) {
+    quat = other.quat;
+    pos = other.pos;
+    scale = other.scale;
+  }
 };
 typedef pvector<JointFrame> JointFrames;
 

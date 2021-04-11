@@ -29,6 +29,7 @@ public:
   CharacterPart();
   CharacterPart(const CharacterPart &other);
   CharacterPart(CharacterPart &&other);
+  void operator = (const CharacterPart &other);
 
 protected:
   CharacterPart(const std::string &name);

@@ -48,6 +48,16 @@ CharacterPart(CharacterPart &&other) :
 /**
  *
  */
+void CharacterPart::
+operator=(const CharacterPart &other) {
+  set_name(other.get_name());
+  _index = other._index;
+  _channels = other._channels;
+}
+
+/**
+ *
+ */
 CharacterPart::
 CharacterPart(const std::string &name) :
   Namable(name),

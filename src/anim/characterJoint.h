@@ -36,6 +36,8 @@ public:
   CharacterJoint(const CharacterJoint &other);
   CharacterJoint(CharacterJoint &&other);
 
+  void operator = (const CharacterJoint &other);
+
 private:
   CharacterJoint(const std::string &name);
 
