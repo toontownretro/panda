@@ -24,7 +24,7 @@ class PandaNode;
  * This class converts a high-level model description from a .pmdl file into a
  * scene graph suitable for rendering or saving to a Bam file.
  */
-class PMDLLoader {
+class EXPCL_PANDA_EGG2PG PMDLLoader {
 PUBLISHED:
   PMDLLoader(PMDLData *data);
 

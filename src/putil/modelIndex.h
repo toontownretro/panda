@@ -30,7 +30,7 @@ class DatagramIterator;
  */
 class EXPCL_PANDA_PUTIL ModelIndex {
 PUBLISHED:
-  class Asset : public ReferenceCount {
+  class EXPCL_PANDA_PUTIL Asset : public ReferenceCount {
   public:
     std::string _name;
     Filename _src;
@@ -40,7 +40,7 @@ PUBLISHED:
     void read_datagram(DatagramIterator &dgi);
   };
 
-  class AssetIndex : public ReferenceCount {
+  class EXPCL_PANDA_PUTIL AssetIndex : public ReferenceCount {
   public:
     std::string _type;
 
@@ -51,7 +51,7 @@ PUBLISHED:
     void read_datagram(DatagramIterator &dgi);
   };
 
-  class Tree : public TypedWritableReferenceCount {
+  class EXPCL_PANDA_PUTIL Tree : public TypedWritableReferenceCount {
   public:
     std::string _name;
     Filename _install_dir;
