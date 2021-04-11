@@ -26,7 +26,7 @@ class Material;
  * can instantiate one by name or by TypeHandle.  Each material type should
  * register itself with this class.
  */
-class MaterialRegistry {
+class EXPCL_PANDA_MATERIAL MaterialRegistry {
 private:
   MaterialRegistry();
 

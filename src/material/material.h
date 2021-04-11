@@ -33,7 +33,7 @@
  * named parameters.  It is up to derived material types to expose the
  * parameters that can be set for that particular material.
  */
-class EXPCL_PANDA_GOBJ Material : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_MATERIAL Material : public TypedWritableReferenceCount, public Namable {
 public:
   Material(const std::string &name);
 

@@ -21,7 +21,7 @@
 /**
  * A color material parameter.
  */
-class MaterialParamColor final : public MaterialParamBase {
+class EXPCL_PANDA_MATERIAL MaterialParamColor final : public MaterialParamBase {
 PUBLISHED:
   INLINE MaterialParamColor(const std::string &name, const LColor &default_value = LColor(1));
 

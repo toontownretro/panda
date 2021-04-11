@@ -19,7 +19,7 @@
 /**
  * A boolean material parameter.
  */
-class MaterialParamBool final : public MaterialParamBase {
+class EXPCL_PANDA_MATERIAL MaterialParamBool final : public MaterialParamBase {
 PUBLISHED:
   INLINE MaterialParamBool(const std::string &name, bool default_value = false);
 

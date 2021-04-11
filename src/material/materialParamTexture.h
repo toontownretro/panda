@@ -20,7 +20,7 @@
 /**
  * A texture material parameter.
  */
-class MaterialParamTexture final : public MaterialParamBase {
+class EXPCL_PANDA_MATERIAL MaterialParamTexture final : public MaterialParamBase {
 PUBLISHED:
   INLINE MaterialParamTexture(const std::string &name, Texture *default_value = nullptr);
 

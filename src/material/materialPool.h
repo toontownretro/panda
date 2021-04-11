@@ -23,7 +23,7 @@
  * This class keeps references to loaded or created materials and can unify
  * identical filenames or materials to the same pointer.
  */
-class MaterialPool {
+class EXPCL_PANDA_MATERIAL MaterialPool {
 private:
   MaterialPool();
 

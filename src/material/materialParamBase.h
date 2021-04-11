@@ -26,7 +26,7 @@
 /**
  * Base material parameter class.
  */
-class MaterialParamBase : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_MATERIAL MaterialParamBase : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
   INLINE MaterialParamBase(const std::string &name);
 

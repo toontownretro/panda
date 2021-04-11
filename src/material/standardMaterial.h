@@ -23,7 +23,7 @@
  * Standard material with all the fundamental parameters (base texture, normal
  * map, etc), with a few common fancy parameters (rim light, lightwarp, etc).
  */
-class EXPCL_PANDA_GOBJ StandardMaterial : public Material {
+class EXPCL_PANDA_MATERIAL StandardMaterial : public Material {
 PUBLISHED:
   StandardMaterial(const std::string &name = "");
 

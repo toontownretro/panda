@@ -19,7 +19,7 @@
 /**
  * A scalar material parameter.
  */
-class MaterialParamFloat final : public MaterialParamBase {
+class EXPCL_PANDA_MATERIAL MaterialParamFloat final : public MaterialParamBase {
 PUBLISHED:
   INLINE MaterialParamFloat(const std::string &name, PN_stdfloat default_value = 0.0f);
 

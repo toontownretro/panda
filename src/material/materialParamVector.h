@@ -20,7 +20,7 @@
 /**
  * A 3-component vector material parameter.
  */
-class MaterialParamVector final : public MaterialParamBase {
+class EXPCL_PANDA_MATERIAL MaterialParamVector final : public MaterialParamBase {
 PUBLISHED:
   INLINE MaterialParamVector(const std::string &name, const LVector3 &default_value = LVector3());
 
