@@ -1148,7 +1148,7 @@ open_read_subfile(Subfile *subfile) {
       // Compressed data
 
       int propsize = *(unsigned short *)(compressed_buffer + 2);
-      char properties[propsize];
+      char *properties = (char *)alloca(propsize);
       for (int i = 0; i < propsize; i++) {
         properties[i] = compressed_buffer[i + 4];
       }
