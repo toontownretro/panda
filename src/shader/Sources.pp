@@ -10,6 +10,7 @@
     config_shader.h \
     csmDepthShader.h csmDepthShader.I \
     depthShader.h depthShader.I \
+    eyeRefractShader.h eyeRefractShader.I \
     //lightmappedShader.h lightmappedShader.I \
     noMatShader.h noMatShader.I \
     shaderBase.h shaderBase.I shaderBase.T \
@@ -27,6 +28,7 @@
     config_shader.cxx \
     csmDepthShader.cxx \
     depthShader.cxx \
+    eyeRefractShader.cxx \
     //lightmappedShader.cxx \
     noMatShader.cxx \
     shaderBase.cxx \

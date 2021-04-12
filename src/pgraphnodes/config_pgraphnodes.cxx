@@ -34,6 +34,7 @@
 #include "spotlight.h"
 #include "switchNode.h"
 #include "uvScrollNode.h"
+#include "eyeballNode.h"
 
 #include "dconfig.h"
 
@@ -186,6 +187,7 @@ init_libpgraphnodes() {
   CascadeLight::init_type();
   ComputeNode::init_type();
   DirectionalLight::init_type();
+  EyeballNode::init_type();
   FadeLODNode::init_type();
   FadeLODNodeData::init_type();
   LightLensNode::init_type();

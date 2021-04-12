@@ -19,6 +19,7 @@
 #include "csmDepthShader.h"
 #include "vertexLitShader.h"
 #include "noMatShader.h"
+#include "eyeRefractShader.h"
 //#include "lightmappedShader.h"
 
 ConfigureDef(config_shader);
@@ -76,6 +77,7 @@ init_libshader() {
   CSMDepthShader::init_type();
   VertexLitShader::init_type();
   NoMatShader::init_type();
+  EyeRefractShader::init_type();
   //LightmappedShader::init_type();
 
   ShaderObject::init_type();

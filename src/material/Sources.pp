@@ -6,6 +6,7 @@
 
   #define SOURCES \
     config_material.h \
+    eyeRefractMaterial.I eyeRefractMaterial.h \
     material.I material.h \
     materialParamBase.I materialParamBase.h \
     materialParamBool.I materialParamBool.h \
@@ -19,6 +20,7 @@
 
   #define COMPOSITE_SOURCES \
     config_material.cxx \
+    eyeRefractMaterial.cxx \
     material.cxx \
     materialParamBase.cxx \
     materialParamBool.cxx \

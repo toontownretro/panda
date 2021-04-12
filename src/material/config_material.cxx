@@ -19,6 +19,7 @@
 #include "materialParamTexture.h"
 #include "materialParamVector.h"
 #include "standardMaterial.h"
+#include "eyeRefractMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -55,4 +56,7 @@ init_libmaterial() {
 
   StandardMaterial::init_type();
   StandardMaterial::register_with_read_factory();
+
+  EyeRefractMaterial::init_type();
+  EyeRefractMaterial::register_with_read_factory();
 }
