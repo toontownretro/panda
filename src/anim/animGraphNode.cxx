@@ -49,3 +49,29 @@ AnimGraphNode(const std::string &name) :
   Namable(name)
 {
 }
+
+/**
+ * Notes a new child/input linking to this node.
+ */
+void AnimGraphNode::
+add_child(AnimGraphNode *child) {
+  Children::const_iterator it = std::find(_children.begin(), _children.end(), child);
+  if (it != _children.end()) {
+    return;
+  }
+
+  _children.push_back(child);
+}
+
+/**
+ * Removes an existing child/input linking to this node.
+ */
+void AnimGraphNode::
+remove_child(AnimGraphNode *child) {
+  Children::iterator it = std::find(_children.begin(), _children.end(), child);
+  if (it == _children.end()) {
+    return;
+  }
+
+  _children.erase(it);
+}

@@ -15,6 +15,80 @@
 
 TypeHandle AnimAddNode::_type_handle;
 
+void
+quaternion_scale(const LQuaternion &p, float t, LQuaternion &q) {
+  float r;
+
+  float sinom = std::sqrt(p.get_ijk().dot(p.get_ijk()));
+  sinom = std::min(sinom, 1.0f);
+
+  float sinsom = std::sin(std::asin(sinom) * t);
+
+  t = sinsom / (sinom + FLT_EPSILON);
+
+  q[1] = p[1] * t;
+  q[2] = p[2] * t;
+  q[3] = p[3] * t;
+
+  r = 1.0f - sinsom * sinsom;
+
+  if (r < 0.0f) {
+    r = 0.0f;
+  }
+
+  r = std::sqrt(r);
+
+  // Keep sign of rotation
+  if (p[0] < 0) {
+    q[0] = -r;
+  } else {
+    q[0] = r;
+  }
+}
+
+void
+quaternion_mult(const LQuaternion &p, const LQuaternion &q, LQuaternion &qt) {
+  if (&p == &qt) {
+    LQuaternion p2 = p;
+    quaternion_mult(p2, q, qt);
+    return;
+  }
+
+  LQuaternion q2;
+  LQuaternion::align(p, q, q2);
+
+  // Method of quaternion multiplication taken from Source engine, needed to
+  // correctly layer delta animations decompiled from Source.
+  qt[1] =  p[1] * q2[0] + p[2] * q2[3] - p[3] * q2[2] + p[0] * q2[1];
+	qt[2] = -p[1] * q2[3] + p[2] * q2[0] + p[3] * q2[1] + p[0] * q2[2];
+	qt[3] =  p[1] * q2[2] - p[2] * q2[1] + p[3] * q2[0] + p[0] * q2[3];
+	qt[0] = -p[1] * q2[1] - p[2] * q2[2] - p[3] * q2[3] + p[0] * q2[0];
+
+  //qt = p * q2;
+}
+
+void
+quaternion_sm(float s, const LQuaternion &p, const LQuaternion &q, LQuaternion &qt) {
+  LQuaternion p1, q1;
+
+  quaternion_scale(p, s, p1);
+  quaternion_mult(p1, q, q1);
+  q1.normalize();
+
+  qt = q1;
+}
+
+void
+quaternion_ma(const LQuaternion &p, float s, const LQuaternion &q, LQuaternion &qt) {
+  LQuaternion p1, q1;
+
+  quaternion_scale(q, s, q1);
+  quaternion_mult(p, q1, p1);
+  p1.normalize();
+
+  qt = p1;
+}
+
 /**
  *
  */
@@ -48,9 +122,7 @@ evaluate(AnimGraphEvalContext &context) {
       JointTransform &add_joint = add_ctx._joints[i];
 
       joint._position = base_joint._position + (add_joint._position * _alpha);
-      LQuaternion add_quat = LQuaternion::ident_quat();
-      LQuaternion::blend(add_quat, add_joint._rotation, _alpha, add_quat);
-      joint._rotation = base_joint._rotation * add_quat;
+      quaternion_ma(base_joint._rotation, _alpha, add_joint._rotation, joint._rotation);
 
       // Not adding scale.
       joint._scale = base_joint._scale;

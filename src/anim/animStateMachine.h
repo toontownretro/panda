@@ -15,6 +15,7 @@
 #define ANIMSTATEMACHINE_H
 
 #include "animGraphNode.h"
+//#include "animSequence.h"
 #include "pmap.h"
 
 /**
@@ -25,10 +26,11 @@ class EXPCL_PANDA_ANIM AnimStateMachine final : public AnimGraphNode {
 PUBLISHED:
   AnimStateMachine(const std::string &name);
 
-  void set_state(const std::string &state);
+  void set_state(const std::string &state, int snap = -1, int loop = -1);
 
   void add_state(const std::string &name, AnimGraphNode *graph,
-                 PN_stdfloat fade_in = 0.2f, PN_stdfloat fade_out = 0.2f);
+                 bool looping = true, PN_stdfloat fade_in = 0.2f,
+                 PN_stdfloat fade_out = 0.2f);
 
 protected:
   virtual void evaluate(AnimGraphEvalContext &context) override;
@@ -41,6 +43,8 @@ private:
     PN_stdfloat _fade_in;
     // The time to transition out of this state into another state.
     PN_stdfloat _fade_out;
+
+    bool _looping;
 
     PN_stdfloat _weight;
 

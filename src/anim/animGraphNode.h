@@ -131,8 +131,19 @@ class EXPCL_PANDA_ANIM AnimGraphNode : public TypedWritableReferenceCount, publi
 PUBLISHED:
   AnimGraphNode(const std::string &name);
 
+  INLINE int get_num_children() const;
+  INLINE AnimGraphNode *get_child(int n) const;
+
+protected:
+  void add_child(AnimGraphNode *child);
+  void remove_child(AnimGraphNode *child);
+
 public:
   virtual void evaluate(AnimGraphEvalContext &context) = 0;
+
+private:
+  typedef pvector<PT(AnimGraphNode)> Children;
+  Children _children;
 
 public:
   virtual TypeHandle get_type() const {

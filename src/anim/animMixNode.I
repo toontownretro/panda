@@ -16,7 +16,12 @@
  */
 INLINE void AnimMixNode::
 set_a(AnimGraphNode *a) {
+  if (_a != nullptr) {
+    remove_child(_a);
+  }
+
   _a = a;
+  add_child(_a);
 }
 
 /**
@@ -32,7 +37,12 @@ get_a() const {
  */
 INLINE void AnimMixNode::
 set_b(AnimGraphNode *b) {
+  if (_b != nullptr) {
+    remove_child(_b);
+  }
+
   _b = b;
+  add_child(_b);
 }
 
 /**

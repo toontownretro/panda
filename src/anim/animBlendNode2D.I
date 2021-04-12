@@ -25,6 +25,8 @@ add_input(AnimGraphNode *node, const LPoint2 &point) {
   input._weight = 0.0f;
   _inputs.push_back(std::move(input));
 
+  add_child(node);
+
   _has_triangles = false;
 }
 

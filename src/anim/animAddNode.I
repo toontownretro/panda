@@ -16,7 +16,12 @@
  */
 INLINE void AnimAddNode::
 set_base(AnimGraphNode *base) {
+  if (_base != nullptr) {
+    remove_child(_base);
+  }
+
   _base = base;
+  add_child(_base);
 }
 
 /**
@@ -32,7 +37,12 @@ get_base() const {
  */
 INLINE void AnimAddNode::
 set_add(AnimGraphNode *add) {
+  if (_add != nullptr) {
+    remove_child(_add);
+  }
+
   _add = add;
+  add_child(_add);
 }
 
 /**

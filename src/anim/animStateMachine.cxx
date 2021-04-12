@@ -30,7 +30,7 @@ AnimStateMachine(const std::string &name):
  * Sets the active animation state.
  */
 void AnimStateMachine::
-set_state(const std::string &name) {
+set_state(const std::string &name, int snap, int loop) {
   States::iterator si = _states.find(name);
   if (si == _states.end()) {
     return;
@@ -43,25 +43,43 @@ set_state(const std::string &name) {
     return;
   }
 
+  // This can happen if we change state while in the process of fading out
+  // a different state.
+  //if (_last_state != nullptr) {
+  //  _last_state->_graph->stop();
+  //}
+
   _last_state = _current_state;
   _current_state = state;
 
+  //if (state->_looping || loop > 0) {
+  //  state->_graph->loop(true);
+
+  //} else {
+  //  state->_graph->play();
+  //}
+
   ClockObject *clock = ClockObject::get_global_clock();
   _state_change_time = clock->get_frame_time();
+  if (snap > 0) {
+    _state_change_time -= state->_fade_in;
+  }
 }
 
 /**
  * Adds a new state.
  */
 void AnimStateMachine::
-add_state(const std::string &name, AnimGraphNode *graph, PN_stdfloat fade_in,
-          PN_stdfloat fade_out) {
+add_state(const std::string &name, AnimGraphNode *graph, bool looping,
+          PN_stdfloat fade_in, PN_stdfloat fade_out) {
   State state;
   state._graph = graph;
   state._name = name;
   state._fade_in = fade_in;
   state._fade_out = fade_out;
   state._weight = 1.0f;
+
+  add_child(graph);
 
   _states[name] = std::move(state);
 }
@@ -90,6 +108,11 @@ evaluate(AnimGraphEvalContext &context) {
   }
 
   if (!_last_state || _current_state->_weight == 1.0f) {
+    //if (_last_state != nullptr) {
+    //  _last_state->_graph->stop();
+    //  _last_state = nullptr;
+    //}
+
     _current_state->_graph->evaluate(context);
 
   } else if (_last_state) {
