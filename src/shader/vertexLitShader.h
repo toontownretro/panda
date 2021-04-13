@@ -37,6 +37,8 @@ public:
     ShaderBase::init_type();
     register_type(_type_handle, "VertexLitShader",
                   ShaderBase::get_class_type());
+
+    StandardMaterial::init_type();
     register_shader(new VertexLitShader, StandardMaterial::get_class_type());
   }
   virtual TypeHandle get_type() const {

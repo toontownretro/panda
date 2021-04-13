@@ -38,6 +38,8 @@ public:
     ShaderBase::init_type();
     register_type(_type_handle, "EyeRefractShader",
                   ShaderBase::get_class_type());
+
+    EyeRefractMaterial::init_type();
     register_shader(new EyeRefractShader, EyeRefractMaterial::get_class_type());
   }
   virtual TypeHandle get_type() const {
