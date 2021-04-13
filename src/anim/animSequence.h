@@ -39,7 +39,18 @@ PUBLISHED:
   void pingpong(bool restart, double from, double to);
   void stop();
   void pose(double frame);
+
   void set_play_rate(double play_rate);
+  double get_play_rate() const;
+  double get_frame_rate() const;
+  int get_num_frames() const;
+
+  int get_frame() const;
+  int get_next_frame() const;
+  double get_frac() const;
+  int get_full_frame() const;
+  double get_full_fframe() const;
+  bool is_playing() const;
 
   INLINE AnimControl *get_effective_control() const;
 

@@ -117,7 +117,97 @@ set_play_rate(double play_rate) {
 }
 
 /**
- * 
+ *
+ */
+double AnimSequence::
+get_play_rate() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_play_rate();
+}
+
+/**
+ *
+ */
+double AnimSequence::
+get_frame_rate() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_frame_rate();
+}
+
+/**
+ *
+ */
+int AnimSequence::
+get_num_frames() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_num_frames();
+}
+
+/**
+ *
+ */
+int AnimSequence::
+get_frame() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_frame();
+}
+
+/**
+ *
+ */
+int AnimSequence::
+get_next_frame() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_next_frame();
+}
+
+/**
+ *
+ */
+double AnimSequence::
+get_frac() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_frac();
+}
+
+/**
+ *
+ */
+int AnimSequence::
+get_full_frame() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_full_frame();
+}
+
+/**
+ *
+ */
+double AnimSequence::
+get_full_fframe() const {
+  nassertr(_effective_control != nullptr, 0);
+
+  return _effective_control->get_full_fframe();
+}
+
+/**
+ *
+ */
+bool AnimSequence::
+is_playing() const {
+  nassertr(_effective_control != nullptr, false);
+
+  return _effective_control->is_playing();
+}
+
+/**
+ *
  */
 void AnimSequence::
 evaluate(AnimGraphEvalContext &context) {
@@ -138,7 +228,7 @@ compute_effective_control() {
 }
 
 /**
- * 
+ *
  */
 void AnimSequence::
 r_compute_effective_control(AnimGraphNode *node) {
