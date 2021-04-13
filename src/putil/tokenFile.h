@@ -28,7 +28,7 @@ NotifyCategoryDecl(tokenfile, EXPCL_PANDA_PUTIL, EXPTP_PANDA_PUTIL);
  */
 class EXPCL_PANDA_PUTIL TokenFile : public ReferenceCount {
 PUBLISHED:
-  class Token : public ReferenceCount {
+  class Token {
   public:
     INLINE Token();
 
@@ -37,10 +37,11 @@ PUBLISHED:
     bool _newline;
     int _line_number;
 
-    PT(Token) _next;
+    Token *_next;
   };
 
   INLINE TokenFile();
+  ~TokenFile();
 
   bool read(Filename filename, const DSearchPath &search_path = get_model_path());
   bool tokenize(std::istream &stream);
@@ -59,7 +60,7 @@ private:
 
 private:
   // Head of linked list.
-  PT(Token) _tokens;
+  Token *_tokens;
 
   Token *_token;
   int _num_tokens;

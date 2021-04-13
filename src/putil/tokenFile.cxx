@@ -19,6 +19,20 @@
 NotifyCategoryDef(tokenfile, "util");
 
 /**
+ *
+ */
+TokenFile::
+~TokenFile() {
+  // Free all of our tokens.
+  Token *token = _tokens;
+  while (token != nullptr) {
+    Token *tmp = token;
+    token = token->_next;
+    delete tmp;
+  }
+}
+
+/**
  * Reads and tokenizes script file at the indicated filename.
  *
  * Returns true on success, or false if the file could not be read.
@@ -120,7 +134,7 @@ tokenize(std::istream &is) {
 
         // The beginning of a comment ends the current token.
         if (current_token.length() != 0) {
-          PT(Token) tok = new Token;
+          Token *tok = new Token;
           tok->_data = current_token;
           tok->_newline = new_line;
           tok->_line_number = line_number;
@@ -171,7 +185,7 @@ tokenize(std::istream &is) {
 
       } else if (current_token.length() != 0) {
         // End of a token.
-        PT(Token) tok = new Token;
+        Token *tok = new Token;
         tok->_data = current_token;
         tok->_newline = new_line;
         tok->_line_number = line_number;
@@ -195,7 +209,7 @@ tokenize(std::istream &is) {
 
       } else if (current_token.length() != 0) {
         // End of a token.
-        PT(Token) tok = new Token;
+        Token *tok = new Token;
         tok->_data = current_token;
         tok->_newline = new_line;
         tok->_line_number = line_number;
@@ -206,7 +220,7 @@ tokenize(std::istream &is) {
 
     } else if (quoted_string && c == quote_character) {
       // End of a quoted string, end of the token.
-      PT(Token) tok = new Token;
+      Token *tok = new Token;
       tok->_data = current_token;
       tok->_newline = new_line;
       tok->_line_number = line_number;
@@ -223,7 +237,7 @@ tokenize(std::istream &is) {
 
       // Should also end the current token.
       if (current_token.length() != 0) {
-        PT(Token) tok = new Token;
+        Token *tok = new Token;
         tok->_data = current_token;
         tok->_newline = new_line;
         tok->_line_number = line_number;
