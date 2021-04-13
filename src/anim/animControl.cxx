@@ -28,7 +28,7 @@ TypeHandle AnimControl::_type_handle;
 AnimControl::
 AnimControl(const std::string &name, Character *part,
             double frame_rate, int num_frames) :
-  Namable(name),
+  AnimGraphNode(name),
   _pending_lock(name),
   _pending_cvar(_pending_lock),
   _bound_joints(BitArray::all_on()),
@@ -94,6 +94,62 @@ fail_anim(Character *part) {
   _pending_cvar.notify_all();
   if (!_pending_done_event.empty()) {
     throw_event(_pending_done_event);
+  }
+}
+
+/**
+ *
+ */
+void AnimControl::
+evaluate(AnimGraphEvalContext &context) {
+  int frame = get_frame();
+  int next_frame = get_next_frame();
+
+  AnimBundle *anim = get_anim();
+
+  int channel_index = get_channel_index();
+  if (channel_index < 0) {
+    return;
+  }
+
+  if (!context._frame_blend || frame == next_frame) {
+    // Hold the current frame until the next one is ready.
+    for (int i = 0; i < context._num_joints; i++) {
+      JointTransform &xform = context._joints[i];
+      CharacterJoint &joint = context._parts[i];
+      int bound = joint.get_bound(channel_index);
+      if (bound == -1) {
+        continue;
+      }
+      const JointFrame &jframe = anim->get_joint_frame(bound, frame);
+
+      xform._rotation = jframe.quat;
+      xform._position = jframe.pos;
+      xform._scale = jframe.scale;
+    }
+
+  } else {
+    // Frame blending is enabled.  Need to blend between successive frames.
+
+    PN_stdfloat frac = (PN_stdfloat)get_frac();
+    PN_stdfloat e0 = 1.0f - frac;
+
+    for (int i = 0; i < context._num_joints; i++) {
+      JointTransform &t = context._joints[i];
+      CharacterJoint &j = context._parts[i];
+      int bound = j.get_bound(channel_index);
+      if (bound == -1) {
+        continue;
+      }
+
+      const JointEntry &je = anim->get_joint_entry(bound);
+      const JointFrame &jf = anim->get_joint_frame(je, frame);
+      const JointFrame &jf_next = anim->get_joint_frame(je, next_frame);
+
+      t._position = (jf.pos * e0) + (jf_next.pos * frac);
+      t._scale = (jf.scale * e0) + (jf_next.scale * frac);
+      LQuaternion::blend(jf.quat, jf_next.quat, frac, t._rotation);
+    }
   }
 }
 

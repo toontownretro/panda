@@ -24,6 +24,7 @@
 #include "namable.h"
 #include "pmutex.h"
 #include "conditionVar.h"
+#include "animGraphNode.h"
 
 class Character;
 
@@ -33,7 +34,7 @@ class Character;
  * animation: whether started, stopped, or looping, and the current frame
  * number and play rate.
  */
-class EXPCL_PANDA_ANIM AnimControl : public TypedReferenceCount, public AnimInterface, public Namable {
+class EXPCL_PANDA_ANIM AnimControl : public AnimInterface, public AnimGraphNode {
 public:
   AnimControl(const std::string &name, Character *part,
               double frame_rate, int num_frames);
@@ -43,6 +44,8 @@ public:
                   const BitArray &bound_joints);
   void set_bound_joints(const BitArray &bound_joints);
   void fail_anim(Character *part);
+
+  virtual void evaluate(AnimGraphEvalContext &context) override;
 
 PUBLISHED:
   virtual ~AnimControl();
@@ -108,11 +111,11 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    TypedReferenceCount::init_type();
     AnimInterface::init_type();
+    AnimGraphNode::init_type();
     register_type(_type_handle, "AnimControl",
-                  TypedReferenceCount::get_class_type(),
-                  AnimInterface::get_class_type());
+                  AnimInterface::get_class_type(),
+                  AnimGraphNode::get_class_type());
   }
 
 private:

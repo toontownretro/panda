@@ -130,6 +130,7 @@ public:
 class EXPCL_PANDA_ANIM AnimGraphNode : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
   AnimGraphNode(const std::string &name);
+  virtual ~AnimGraphNode();
 
   INLINE int get_num_children() const;
   INLINE AnimGraphNode *get_child(int n) const;

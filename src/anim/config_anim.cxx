@@ -30,7 +30,7 @@
 #include "animAddNode.h"
 #include "animBlendNode2D.h"
 #include "animMixNode.h"
-#include "animSampleNode.h"
+#include "animSequence.h"
 #include "animStateMachine.h"
 
 #include "luse.h"
@@ -133,7 +133,7 @@ init_libanim() {
   AnimGraphNode::init_type();
   AnimMixNode::init_type();
   AnimPreloadTable::init_type();
-  AnimSampleNode::init_type();
+  AnimSequence::init_type();
   AnimStateMachine::init_type();
   BindAnimRequest::init_type();
 

@@ -45,19 +45,19 @@ set_state(const std::string &name, int snap, int loop) {
 
   // This can happen if we change state while in the process of fading out
   // a different state.
-  //if (_last_state != nullptr) {
-  //  _last_state->_graph->stop();
-  //}
+  if (_last_state != nullptr) {
+    _last_state->_graph->stop();
+  }
 
   _last_state = _current_state;
   _current_state = state;
 
-  //if (state->_looping || loop > 0) {
-  //  state->_graph->loop(true);
+  if (state->_looping || loop > 0) {
+    state->_graph->loop(true);
 
-  //} else {
-  //  state->_graph->play();
-  //}
+  } else {
+    state->_graph->play();
+  }
 
   ClockObject *clock = ClockObject::get_global_clock();
   _state_change_time = clock->get_frame_time();
@@ -70,7 +70,7 @@ set_state(const std::string &name, int snap, int loop) {
  * Adds a new state.
  */
 void AnimStateMachine::
-add_state(const std::string &name, AnimGraphNode *graph, bool looping,
+add_state(const std::string &name, AnimSequence *graph, bool looping,
           PN_stdfloat fade_in, PN_stdfloat fade_out) {
   State state;
   state._graph = graph;
@@ -108,10 +108,10 @@ evaluate(AnimGraphEvalContext &context) {
   }
 
   if (!_last_state || _current_state->_weight == 1.0f) {
-    //if (_last_state != nullptr) {
-    //  _last_state->_graph->stop();
-    //  _last_state = nullptr;
-    //}
+    if (_last_state != nullptr) {
+      _last_state->_graph->stop();
+      _last_state = nullptr;
+    }
 
     _current_state->_graph->evaluate(context);
 

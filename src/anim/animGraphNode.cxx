@@ -51,6 +51,13 @@ AnimGraphNode(const std::string &name) :
 }
 
 /**
+ * 
+ */
+AnimGraphNode::
+~AnimGraphNode() {
+}
+
+/**
  * Notes a new child/input linking to this node.
  */
 void AnimGraphNode::

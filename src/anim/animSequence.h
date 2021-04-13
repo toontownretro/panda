@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "animGraphNode.h"
+#include "animControl.h"
 #include "cycleData.h"
 #include "pipelineCycler.h"
 #include "cycleDataWriter.h"
@@ -24,17 +25,12 @@
 /**
  *
  */
-class AnimSequence final : public AnimGraphNode {
+class EXPCL_PANDA_ANIM AnimSequence final : public AnimGraphNode {
 PUBLISHED:
-  enum PlayMode {
-    PM_pose,
-    PM_play,
-    PM_loop,
-    PM_pingpong,
-  };
+  INLINE AnimSequence(const std::string &name, AnimGraphNode *base = nullptr);
 
-  INLINE AnimSequence(const std::string &name);
-
+  // Replication of AnimControl interfaces that simply call into the
+  // AnimControl.
   void play();
   void play(double from, double to);
   void loop(bool restart);
@@ -43,6 +39,9 @@ PUBLISHED:
   void pingpong(bool restart, double from, double to);
   void stop();
   void pose(double frame);
+  void set_play_rate(double play_rate);
+
+  INLINE AnimControl *get_effective_control() const;
 
   INLINE void set_base(AnimGraphNode *base);
   INLINE void add_layer(AnimGraphNode *layer);
@@ -51,22 +50,19 @@ public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
-  void compute_effective_num_frames();
-  void r_compute_effective_num_frames(AnimGraphNode *node);
+  void compute_effective_control();
+  void r_compute_effective_control(AnimGraphNode *node);
 
 private:
+  // The effective control is the AnimControl below us with the highest frame
+  // count.  This control will be used to determine frame-based logic such as
+  // events and IK rules.
+  AnimControl *_effective_control;
 
-  // Animation playing/timing variables.
-  PN_stdfloat _play_rate;
-  double _start_time;
-  double _start_frame;
-  double _end_frame;
-  bool _restart;
-  PlayMode _play_mode;
-
-  // This is the *effective* number of frames in the sequence.  That is, the
-  // maximum number of frames of all the AnimBundles underneath this sequence.
-  int _effective_num_frames;
+  // All of the AnimControl nodes below this node.  Used to propagate all
+  // play/loop/stop calls on the sequence to all the AnimControls below.
+  typedef pvector<AnimControl *> AnimControls;
+  AnimControls _controls;
 
   // Node to get the base pose from.
   PT(AnimGraphNode) _base;
@@ -77,6 +73,23 @@ private:
 
   // IK Locks
 
+public:
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    AnimGraphNode::init_type();
+    register_type(_type_handle, "AnimSequence",
+                  AnimGraphNode::get_class_type());
+  }
+
+private:
+  static TypeHandle _type_handle;
 };
 
 #include "animSequence.I"

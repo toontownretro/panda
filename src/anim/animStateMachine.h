@@ -15,7 +15,7 @@
 #define ANIMSTATEMACHINE_H
 
 #include "animGraphNode.h"
-//#include "animSequence.h"
+#include "animSequence.h"
 #include "pmap.h"
 
 /**
@@ -28,7 +28,7 @@ PUBLISHED:
 
   void set_state(const std::string &state, int snap = -1, int loop = -1);
 
-  void add_state(const std::string &name, AnimGraphNode *graph,
+  void add_state(const std::string &name, AnimSequence *seq,
                  bool looping = true, PN_stdfloat fade_in = 0.2f,
                  PN_stdfloat fade_out = 0.2f);
 
@@ -38,7 +38,7 @@ protected:
 private:
   class State {
   public:
-    PT(AnimGraphNode) _graph;
+    PT(AnimSequence) _graph;
     // The time to transition into this state from another state.
     PN_stdfloat _fade_in;
     // The time to transition out of this state into another state.

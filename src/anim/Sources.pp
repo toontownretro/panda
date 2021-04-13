@@ -18,7 +18,7 @@
     animGraphNode.h animGraphNode.I \
     animMixNode.h animMixNode.I \
     animPreloadTable.h animPreloadTable.I \
-    animSampleNode.h animSampleNode.I \
+    animSequence.h animSequence.I \
     animStateMachine.h animStateMachine.I \
     auto_bind.h \
     bindAnimRequest.h bindAnimRequest.I \
@@ -44,7 +44,7 @@
     animGraphNode.cxx \
     animMixNode.cxx \
     animPreloadTable.cxx \
-    animSampleNode.cxx \
+    animSequence.cxx \
     animStateMachine.cxx \
     auto_bind.cxx \
     bindAnimRequest.cxx \
