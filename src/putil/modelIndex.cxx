@@ -265,7 +265,8 @@ write_boo_index(int n, const Filename &filename) {
 void ModelIndex::
 read_config_trees() {
   for (size_t i = 0; i < model_index.get_num_unique_values(); i++) {
-    Filename filename = ExecutionEnvironment::expand_string(model_index.get_unique_value(i));
+    Filename filename = Filename::from_os_specific(
+      ExecutionEnvironment::expand_string(model_index.get_unique_value(i)));
     read_index(filename);
   }
 }
