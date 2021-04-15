@@ -16,6 +16,8 @@
 
 #include "nodePath.h"
 
+TypeHandle PhysRigidActorNode::_type_handle;
+
 /**
  *
  */

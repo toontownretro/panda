@@ -14,6 +14,7 @@
 #include "physRigidStaticNode.h"
 #include "physSystem.h"
 
+TypeHandle PhysRigidStaticNode::_type_handle;
 
 /**
  *

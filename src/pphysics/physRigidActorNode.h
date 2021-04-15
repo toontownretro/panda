@@ -58,6 +58,23 @@ private:
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    PandaNode::init_type();
+    register_type(_type_handle, "PhysRigidActorNode",
+                  PandaNode::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 

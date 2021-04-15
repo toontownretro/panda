@@ -13,6 +13,8 @@
 
 #include "physRigidBodyNode.h"
 
+TypeHandle PhysRigidBodyNode::_type_handle;
+
 /**
  *
  */

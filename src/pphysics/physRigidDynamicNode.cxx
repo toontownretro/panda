@@ -17,6 +17,8 @@
 
 #include "physx_includes.h"
 
+TypeHandle PhysRigidDynamicNode::_type_handle;
+
 /**
  *
  */

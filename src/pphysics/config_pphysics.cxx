@@ -12,6 +12,10 @@
  */
 
 #include "config_pphysics.h"
+#include "physRigidActorNode.h"
+#include "physRigidBodyNode.h"
+#include "physRigidDynamicNode.h"
+#include "physRigidStaticNode.h"
 
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
@@ -60,4 +64,9 @@ init_libpphysics() {
   }
 
   initialized = true;
+
+  PhysRigidActorNode::init_type();
+  PhysRigidBodyNode::init_type();
+  PhysRigidDynamicNode::init_type();
+  PhysRigidStaticNode::init_type();
 }

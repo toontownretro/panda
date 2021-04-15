@@ -54,6 +54,23 @@ protected:
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const override;
   virtual physx::PxRigidBody *get_rigid_body() const = 0;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    PhysRigidActorNode::init_type();
+    register_type(_type_handle, "PhysRigidBodyNode",
+                  PhysRigidActorNode::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 #include "physRigidBodyNode.I"
