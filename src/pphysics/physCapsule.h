@@ -26,6 +26,7 @@
 class EXPCL_PANDA_PPHYSICS PhysCapsule final : public PhysGeometry {
 PUBLISHED:
   PhysCapsule(PN_stdfloat radius = 1.0f, PN_stdfloat half_height = 1.0f);
+  ~PhysCapsule() = default;
 
   INLINE void set_radius(PN_stdfloat radius);
   INLINE PN_stdfloat get_radius() const;

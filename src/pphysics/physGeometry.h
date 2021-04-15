@@ -23,6 +23,9 @@
  */
 class EXPCL_PANDA_PPHYSICS PhysGeometry {
 PUBLISHED:
+  PhysGeometry() = default;
+  ~PhysGeometry() = default;
+
   virtual physx::PxGeometry *get_geometry() = 0;
 };
 

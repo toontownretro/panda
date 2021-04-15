@@ -28,6 +28,7 @@ class EXPCL_PANDA_PPHYSICS PhysBox final : public PhysGeometry {
 PUBLISHED:
   PhysBox(const LVector3 &half_extents);
   PhysBox(PN_stdfloat hx, PN_stdfloat hy, PN_stdfloat hz);
+  ~PhysBox() = default;
 
   INLINE void set_half_extents(const LVector3 &half_extents);
   INLINE void set_half_extents(PN_stdfloat hx, PN_stdfloat hy, PN_stdfloat hz);

@@ -26,6 +26,7 @@
 class EXPCL_PANDA_PPHYSICS PhysSphere final : public PhysGeometry {
 PUBLISHED:
   PhysSphere(PN_stdfloat radius = 1.0f);
+  ~PhysSphere() = default;
 
   INLINE void set_radius(PN_stdfloat radius);
   INLINE PN_stdfloat get_radius() const;

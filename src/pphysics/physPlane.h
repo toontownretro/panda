@@ -26,6 +26,7 @@
 class EXPCL_PANDA_PPHYSICS PhysPlane final : public PhysGeometry {
 PUBLISHED:
   PhysPlane(const LPlane &plane);
+  ~PhysPlane() = default;
 
   INLINE void set_plane(const LPlane &plane);
   INLINE const LPlane &get_plane() const;
