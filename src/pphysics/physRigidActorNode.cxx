@@ -14,12 +14,15 @@
 #include "physRigidActorNode.h"
 #include "physScene.h"
 
+#include "nodePath.h"
+
 /**
  *
  */
 PhysRigidActorNode::
 PhysRigidActorNode(const std::string &name) :
-  PandaNode(name)
+  PandaNode(name),
+  _sync_enabled(true)
 {
 }
 
@@ -37,4 +40,46 @@ add_to_scene(PhysScene *scene) {
 void PhysRigidActorNode::
 remove_from_scene(PhysScene *scene) {
   scene->get_scene()->removeActor(*get_rigid_actor());
+}
+
+/**
+ *
+ */
+void PhysRigidActorNode::
+parents_changed() {
+  if (get_num_parents() > 0) {
+    do_transform_changed();
+  }
+}
+
+/**
+ *
+ */
+void PhysRigidActorNode::
+transform_changed() {
+  do_transform_changed();
+}
+
+/**
+ * Called when something other than the PhysX simulation caused the transform
+ * of the node to change.  Synchronizes the node's new transform with the
+ * associated PhysX actor.
+ */
+void PhysRigidActorNode::
+do_transform_changed() {
+  if (!_sync_enabled) {
+    return;
+  }
+
+  NodePath np = NodePath::any_path((PandaNode *)this);
+
+  CPT(TransformState) net_transform = np.get_net_transform();
+  const LPoint3 &pos = net_transform->get_pos();
+  const LQuaternion &quat = net_transform->get_quat();
+
+  physx::PxTransform pose(
+    physx::PxVec3(pos[0], pos[1], pos[2]),
+    physx::PxQuat(quat[1], quat[2], quat[3], quat[0]));
+
+  get_rigid_actor()->setGlobalPose(pose);
 }

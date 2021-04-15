@@ -113,6 +113,11 @@ simulate(double dt) {
       continue;
     }
 
+    // Disable automatic syncing with PhysX when the node's transform changes.
+    // We are doing the exact opposite here, synchronizing PhysX's transform
+    // with the node.
+    node->set_sync_enabled(false);
+
     NodePath np(node);
 
     physx::PxTransform global_pose = rigid_actor->getGlobalPose();
@@ -151,6 +156,8 @@ simulate(double dt) {
 
       node->set_transform(local_ts);
     }
+
+    node->set_sync_enabled(true);
   }
 
   return num_substeps;

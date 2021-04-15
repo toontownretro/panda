@@ -12,7 +12,7 @@
  */
 
 #include "physRigidDynamicNode.h"
-
+#include "nodePath.h"
 #include "physSystem.h"
 
 #include "physx_includes.h"
@@ -46,6 +46,36 @@ PhysRigidDynamicNode::
     _rigid_dynamic->release();
     _rigid_dynamic = nullptr;
   }
+}
+
+/**
+ * Called when something other than the PhysX simulation caused the transform
+ * of the node to change.  Synchronizes the node's new transform with the
+ * associated PhysX actor.
+ */
+void PhysRigidDynamicNode::
+do_transform_changed() {
+  if (!is_kinematic()) {
+    // Not a kinematic actor, just use the default behavior.
+    PhysRigidBodyNode::do_transform_changed();
+    return;
+  }
+
+  if (!get_sync_enabled()) {
+    return;
+  }
+
+  NodePath np = NodePath::any_path((PandaNode *)this);
+
+  CPT(TransformState) net_transform = np.get_net_transform();
+  const LPoint3 &pos = net_transform->get_pos();
+  const LQuaternion &quat = net_transform->get_quat();
+
+  physx::PxTransform pose(
+    physx::PxVec3(pos[0], pos[1], pos[2]),
+    physx::PxQuat(quat[1], quat[2], quat[3], quat[0]));
+
+  _rigid_dynamic->setKinematicTarget(pose);
 }
 
 /**

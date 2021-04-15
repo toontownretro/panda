@@ -39,8 +39,22 @@ PUBLISHED:
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
 
+public:
+  INLINE void set_sync_enabled(bool flag);
+  INLINE bool get_sync_enabled() const;
+
 protected:
   PhysRigidActorNode(const std::string &name);
+
+  virtual void parents_changed() override;
+  virtual void transform_changed() override;
+
+  virtual void do_transform_changed();
+
+private:
+  // Set by the PhysScene when applying the simulation result onto the node.
+  // Stops transform_changed() from being called while doing it.
+  bool _sync_enabled;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;

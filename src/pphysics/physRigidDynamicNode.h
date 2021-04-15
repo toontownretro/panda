@@ -36,6 +36,9 @@ PUBLISHED:
   INLINE void set_stabilization_threshold(PN_stdfloat threshold);
   INLINE PN_stdfloat get_stabilization_threshold() const;
 
+protected:
+  virtual void do_transform_changed() override;
+
 public:
   virtual physx::PxRigidBody *get_rigid_body() const override;
 

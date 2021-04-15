@@ -50,3 +50,20 @@ get_shape(size_t n) const {
 
   return (PhysShape *)shape->userData;
 }
+
+/**
+ * Sets whether or not a change to the node's transform should be automatically
+ * synchronized with the associated PhysX actor.
+ */
+INLINE void PhysRigidActorNode::
+set_sync_enabled(bool flag) {
+  _sync_enabled = flag;
+}
+
+/**
+ *
+ */
+INLINE bool PhysRigidActorNode::
+get_sync_enabled() const {
+  return _sync_enabled;
+}
