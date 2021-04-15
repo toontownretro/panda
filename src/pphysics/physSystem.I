@@ -106,6 +106,14 @@ get_pvd() const {
 /**
  *
  */
+INLINE physx::PxCpuDispatcher *PhysSystem::
+get_cpu_dispatcher() const {
+  return _cpu_dispatcher;
+}
+
+/**
+ *
+ */
 INLINE const physx::PxTolerancesScale &PhysSystem::
 get_scale() const {
   return _scale;

@@ -14,7 +14,7 @@
 #ifndef PHYSXALLOCATOR_H
 #define PHYSXALLOCATOR_H
 
-#include "foundation/PxAllocatorCallback.h"
+#include "physx_includes.h"
 
 /**
  * Allocator implementation for PhysX usage.  Calls into Panda's allocator.

@@ -20,12 +20,7 @@
 #include "physXErrorCallback.h"
 
 // PhysX includes.
-#include "PxFoundation.h"
-#include "PxPhysics.h"
-#include "pvd/PxPvd.h"
-#include "pvd/PxPvdTransport.h"
-#include "cooking/PxCooking.h"
-#include "PxPhysicsVersion.h"
+#include "physx_includes.h"
 
 /**
  *
@@ -54,6 +49,7 @@ public:
   INLINE physx::PxPhysics *get_physics() const;
   INLINE physx::PxCooking *get_cooking() const;
   INLINE physx::PxPvd *get_pvd() const;
+  INLINE physx::PxCpuDispatcher *get_cpu_dispatcher() const;
   INLINE const physx::PxTolerancesScale &get_scale() const;
 
 private:
@@ -66,6 +62,7 @@ private:
   physx::PxPhysics *_physics;
   physx::PxCooking *_cooking;
   physx::PxPvd *_pvd;
+  physx::PxCpuDispatcher *_cpu_dispatcher;
 
   PhysXAllocator _allocator;
   PhysXErrorCallback _error_callback;

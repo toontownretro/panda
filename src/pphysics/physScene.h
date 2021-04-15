@@ -18,8 +18,7 @@
 #include "referenceCount.h"
 #include "luse.h"
 
-#include "PxScene.h"
-#include "geometry/PxPlaneGeometry.h"
+#include "physx_includes.h"
 
 /**
  * A scene is a collection of bodies and constraints which can interact.

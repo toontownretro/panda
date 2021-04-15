@@ -6,24 +6,23 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file physGeometry.h
+ * @file physPlane.cxx
  * @author brian
  * @date 2021-04-14
  */
 
-#ifndef PHYSGEOMETRY_H
-#define PHYSGEOMETRY_H
+#include "physPlane.h"
 
-#include "pandabase.h"
-
-#include "physx_includes.h"
+PhysPlane::
+PhysPlane(const LPlane &plane) :
+  _plane(plane)
+{
+}
 
 /**
- * Base physics geometry class.
+ *
  */
-class EXPCL_PANDA_PPHYSICS PhysGeometry {
-PUBLISHED:
-  virtual physx::PxGeometry *get_geometry() = 0;
-};
-
-#endif // PHYSGEOMETRY_H
+physx::PxGeometry *PhysPlane::
+get_geometry() {
+  return &_geom;
+}

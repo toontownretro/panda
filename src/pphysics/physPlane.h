@@ -6,32 +6,29 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file physCapsule.h
+ * @file physPlane.h
  * @author brian
  * @date 2021-04-14
  */
 
-#ifndef PHYSCAPSULE_H
-#define PHYSCAPSULE_H
+#ifndef PHYSPLANE_H
+#define PHYSPLANE_H
 
 #include "pandabase.h"
-#include "numeric_types.h"
+#include "plane.h"
 #include "physGeometry.h"
 
 #include "physx_includes.h"
 
 /**
- * A capsule shape.
+ * A plane shape.
  */
-class EXPCL_PANDA_PPHYSICS PhysCapsule final : public PhysGeometry {
+class EXPCL_PANDA_PPHYSICS PhysPlane final : public PhysGeometry {
 PUBLISHED:
-  PhysCapsule(PN_stdfloat radius = 1.0f, PN_stdfloat half_height = 1.0f);
+  PhysPlane(const LPlane &plane);
 
-  INLINE void set_radius(PN_stdfloat radius);
-  INLINE PN_stdfloat get_radius() const;
-
-  INLINE void set_half_height(PN_stdfloat half_height);
-  INLINE PN_stdfloat get_half_height() const;
+  INLINE void set_plane(const LPlane &plane);
+  INLINE const LPlane &get_plane() const;
 
   INLINE bool is_valid() const;
 
@@ -39,9 +36,10 @@ public:
   virtual physx::PxGeometry *get_geometry() override;
 
 private:
-  physx::PxCapsuleGeometry _geom;
+  physx::PxPlaneGeometry _geom;
+  LPlane _plane;
 };
 
-#include "physCapsule.I"
+#include "physPlane.I"
 
-#endif // PHYSCAPSULE_H
+#endif // PHYSPLANE_H

@@ -18,7 +18,7 @@
 #include "numeric_types.h"
 #include "physGeometry.h"
 
-#include "geometry/PxSphereGeometry.h"
+#include "physx_includes.h"
 
 /**
  * A sphere with a radius.

@@ -14,7 +14,7 @@
 #ifndef PHYSXERRORCALLBACK_H
 #define PHYSXERRORCALLBACK_H
 
-#include "foundation/PxErrorCallback.h"
+#include "physx_includes.h"
 
 /**
  * Custom PhysX error callback implementation.  Outputs error information

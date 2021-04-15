@@ -6,24 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file physGeometry.h
+ * @file physRigidStaticNode.I
  * @author brian
  * @date 2021-04-14
  */
-
-#ifndef PHYSGEOMETRY_H
-#define PHYSGEOMETRY_H
-
-#include "pandabase.h"
-
-#include "physx_includes.h"
-
-/**
- * Base physics geometry class.
- */
-class EXPCL_PANDA_PPHYSICS PhysGeometry {
-PUBLISHED:
-  virtual physx::PxGeometry *get_geometry() = 0;
-};
-
-#endif // PHYSGEOMETRY_H

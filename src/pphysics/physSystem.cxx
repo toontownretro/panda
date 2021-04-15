@@ -14,9 +14,6 @@
 #include "config_pphysics.h"
 #include "physSystem.h"
 
-#include "PxPhysicsVersion.h"
-#include "extensions/PxExtensionsAPI.h"
-
 PhysSystem *PhysSystem::_ptr = nullptr;
 
 /**
@@ -28,6 +25,7 @@ PhysSystem() {
   _physics = nullptr;
   _cooking = nullptr;
   _pvd = nullptr;
+  _cpu_dispatcher = nullptr;
   _initialized = false;
 }
 
@@ -101,6 +99,13 @@ initialize() {
   if (!PxInitExtensions(*_physics, _pvd)) {
     pphysics_cat.error()
       << "Failed to initialize PxExtensions!\n";
+    return false;
+  }
+
+  _cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(1);
+  if (_cpu_dispatcher == nullptr) {
+    pphysics_cat.error()
+      << "Failed to initialize PxCpuDispatcher!\n";
     return false;
   }
 

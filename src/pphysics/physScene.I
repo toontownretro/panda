@@ -26,7 +26,7 @@ set_gravity(const LVector3 &gravity) {
  */
 INLINE LVector3 PhysScene::
 get_gravity() const {
-  nassertv(_scene != nullptr);
+  nassertr(_scene != nullptr, LVector3());
 
   physx::PxVec3 gravity = _scene->getGravity();
   return LVector3(gravity.x, gravity.y, gravity.z);

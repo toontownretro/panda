@@ -6,24 +6,31 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file physGeometry.h
+ * @file physPlane.I
  * @author brian
  * @date 2021-04-14
  */
 
-#ifndef PHYSGEOMETRY_H
-#define PHYSGEOMETRY_H
-
-#include "pandabase.h"
-
-#include "physx_includes.h"
+/**
+ *
+ */
+INLINE void PhysPlane::
+set_plane(const LPlane &plane) {
+  _plane = plane;
+}
 
 /**
- * Base physics geometry class.
+ *
  */
-class EXPCL_PANDA_PPHYSICS PhysGeometry {
-PUBLISHED:
-  virtual physx::PxGeometry *get_geometry() = 0;
-};
+INLINE const LPlane &PhysPlane::
+get_plane() const {
+  return _plane;
+}
 
-#endif // PHYSGEOMETRY_H
+/**
+ *
+ */
+INLINE bool PhysPlane::
+is_valid() const {
+  return _geom.isValid();
+}
