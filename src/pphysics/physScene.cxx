@@ -24,7 +24,8 @@ PhysScene::
 PhysScene() :
   _local_time(0.0),
   _max_substeps(10),
-  _fixed_timestep(1 / 60.0)
+  _fixed_timestep(1 / 60.0),
+  _debug_vis_enabled(false)
 {
   PhysSystem *sys = PhysSystem::ptr();
   physx::PxSceneDesc desc(sys->get_scale());

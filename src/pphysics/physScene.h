@@ -53,6 +53,8 @@ private:
   double _fixed_timestep;
 
   physx::PxScene *_scene;
+
+  bool _debug_vis_enabled;
 };
 
 #include "physScene.I"

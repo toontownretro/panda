@@ -45,6 +45,33 @@ PUBLISHED:
   INLINE void set_max_angular_velocity(PN_stdfloat max);
   INLINE PN_stdfloat get_max_angular_velocity() const;
 
+  INLINE void add_force(const LVector3 &force, bool auto_wake = true);
+  INLINE void clear_force();
+
+  INLINE void add_impulse_force(const LVector3 &force, bool auto_wake = true);
+  INLINE void clear_impulse_force();
+
+  INLINE void add_torque(const LVector3 &torque, bool auto_wake = true);
+  INLINE void clear_torque();
+
+  INLINE void add_impulse_torque(const LVector3 &torque, bool auto_wake = true);
+  INLINE void clear_impulse_torque();
+
+  INLINE void set_min_ccd_advance_coefficient(PN_stdfloat coef);
+  INLINE PN_stdfloat get_min_ccd_advance_coefficient() const;
+
+  INLINE void set_max_depenetration_velocity(PN_stdfloat bias_clamp);
+  INLINE PN_stdfloat get_max_depenetration_velocity() const;
+
+  INLINE void set_max_contact_impulse(PN_stdfloat max);
+  INLINE PN_stdfloat get_max_contact_impulse() const;
+
+  INLINE void set_ccd_enabled(bool flag);
+  INLINE bool get_ccd_enabled() const;
+
+  INLINE void set_retain_accelerations(bool flag);
+  INLINE bool get_retain_accelerations() const;
+
   INLINE void set_kinematic(bool flag);
   INLINE bool is_kinematic() const;
 
