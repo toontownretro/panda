@@ -17,6 +17,10 @@
 INLINE void PhysRigidActorNode::
 add_shape(PhysShape *shape) {
   nassertv(shape->get_shape() != nullptr);
+  physx::PxFilterData data;
+  data.word0 = get_into_collide_mask().get_word();
+  shape->get_shape()->setSimulationFilterData(data);
+  shape->get_shape()->setQueryFilterData(data);
   get_rigid_actor()->attachShape(*shape->get_shape());
 }
 
@@ -46,7 +50,7 @@ get_shape(size_t n) const {
   nassertr(n < actor->getNbShapes(), nullptr);
 
   physx::PxShape *shape;
-  actor->getShapes(&shape, sizeof(physx::PxShape *), n);
+  actor->getShapes(&shape, 1, n);
 
   return (PhysShape *)shape->userData;
 }

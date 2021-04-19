@@ -29,6 +29,29 @@ PhysRigidActorNode(const std::string &name) :
 }
 
 /**
+ * Changes the collision mask of the node.  Each bit represents a collision
+ * group.
+ */
+void PhysRigidActorNode::
+set_into_collide_mask(CollideMask mask) {
+  PandaNode::set_into_collide_mask(mask);
+
+  // Update all shapes to contain the new collision mask.
+  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
+  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
+  get_rigid_actor()->getShapes(shapes, num_shapes);
+  for (physx::PxU32 i = 0; i < num_shapes; i++) {
+    physx::PxShape *shape = shapes[i];
+    physx::PxFilterData data = shape->getSimulationFilterData();
+    physx::PxFilterData qdata = shape->getQueryFilterData();
+    data.word0 = mask.get_word();
+    qdata.word0 = mask.get_word();
+    shape->setSimulationFilterData(data);
+    shape->setQueryFilterData(data);
+  }
+}
+
+/**
  * Adds this node into the indicated PhysScene.
  */
 void PhysRigidActorNode::
@@ -42,6 +65,14 @@ add_to_scene(PhysScene *scene) {
 void PhysRigidActorNode::
 remove_from_scene(PhysScene *scene) {
   scene->get_scene()->removeActor(*get_rigid_actor());
+}
+
+/**
+ *
+ */
+CollideMask PhysRigidActorNode::
+get_legal_collide_mask() const {
+  return CollideMask::all_on();
 }
 
 /**

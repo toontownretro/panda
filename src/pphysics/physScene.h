@@ -17,8 +17,12 @@
 #include "pandabase.h"
 #include "referenceCount.h"
 #include "luse.h"
+#include "collideMask.h"
+#include "physx_shaders.h"
 
 #include "physx_includes.h"
+
+class PhysRayCastResult;
 
 /**
  * A scene is a collection of bodies and constraints which can interact.
@@ -43,6 +47,14 @@ PUBLISHED:
 
   INLINE void set_max_substeps(int count);
   INLINE int get_max_substeps() const;
+
+  INLINE void set_group_collision_flag(int a, int b, bool enable);
+  INLINE bool get_group_collision_flag(int a, int b) const;
+
+  bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
+               const LVector3 &direction, PN_stdfloat distance,
+               CollideMask block_mask = CollideMask::all_on(),
+               CollideMask touch_mask = CollideMask::all_off()) const;
 
 public:
   INLINE physx::PxScene *get_scene() const;

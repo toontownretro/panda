@@ -23,7 +23,7 @@ PhysShape(PhysGeometry &geometry, PhysMaterial *material) {
   PhysSystem *sys = PhysSystem::ptr();
 
   _shape = sys->get_physics()->createShape(*geometry.get_geometry(),
-                                           *material->get_material());
+                                           *material->get_material(), true);
   _shape->userData = this;
 
   // Handle PhysX's peculiar way of specifying plane geometry.

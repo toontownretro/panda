@@ -14,6 +14,7 @@
     physGeometry.h \
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
+    physRayCastResult.h physRayCastResult.I \
     physRigidActorNode.h physRigidActorNode.I \
     physRigidBodyNode.h physRigidBodyNode.I \
     physRigidDynamicNode.h physRigidDynamicNode.I \
@@ -23,6 +24,7 @@
     physSphere.h physSphere.I \
     physSystem.h physSystem.I \
     physx_includes.h \
+    physx_shaders.h physx_shaders.I \
     physXAllocator.h \
     physXErrorCallback.h
 
@@ -32,6 +34,7 @@
     physCapsule.cxx \
     physMaterial.cxx \
     physPlane.cxx \
+    physRayCastResult.cxx \
     physRigidActorNode.cxx \
     physRigidBodyNode.cxx \
     physRigidDynamicNode.cxx \
@@ -40,6 +43,7 @@
     physShape.cxx \
     physSphere.cxx \
     physSystem.cxx \
+    physx_shaders.cxx \
     physXAllocator.cxx \
     physXErrorCallback.cxx
 

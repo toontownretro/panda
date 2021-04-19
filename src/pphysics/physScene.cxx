@@ -16,6 +16,7 @@
 #include "physSystem.h"
 #include "physRigidActorNode.h"
 #include "nodePath.h"
+#include "physRayCastResult.h"
 
 /**
  *
@@ -33,7 +34,7 @@ PhysScene() :
   // Enable this flag so we know which actors changed each time we simulate, so
   // we can update the transform of the associated nodes.
   desc.flags = desc.flags | physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
-  desc.filterShader = physx::PxDefaultSimulationFilterShader;
+  desc.filterShader = PandaSimulationFilterShader::filter;
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;
 }
@@ -162,4 +163,32 @@ simulate(double dt) {
   }
 
   return num_substeps;
+}
+
+/**
+ * Casts a ray into the scene and records the intersections that were found.
+ *
+ * block_mask is the bitmask of collision groups that should prevent the ray
+ * from continuing, while touch_mask is the bitmask of collision groups that
+ * should allow the ray to continue (but still record an intersection).
+ */
+bool PhysScene::
+raycast(PhysRayCastResult &result, const LPoint3 &origin,
+        const LVector3 &direction, PN_stdfloat distance,
+        CollideMask block_mask, CollideMask touch_mask) const {
+  physx::PxQueryFilterData data;
+  data.flags |= physx::PxQueryFlag::ePREFILTER;
+  // word0 is used during the fixed-function filtering.
+  data.data.word0 = (block_mask | touch_mask).get_word();
+  data.data.word1 = block_mask.get_word();
+  data.data.word2 = touch_mask.get_word();
+
+  return _scene->raycast(
+    physx::PxVec3(origin[0], origin[1], origin[2]),
+    physx::PxVec3(direction[0], direction[1], direction[2]),
+    distance,
+    result.get_buffer(),
+    physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+    data,
+    PandaQueryFilterCallback::ptr());
 }

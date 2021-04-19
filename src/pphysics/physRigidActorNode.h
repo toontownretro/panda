@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "pandaNode.h"
 #include "physShape.h"
+#include "collideMask.h"
 
 class PhysScene;
 
@@ -33,6 +34,8 @@ PUBLISHED:
   INLINE size_t get_num_shapes() const;
   INLINE PhysShape *get_shape(size_t n) const;
 
+  void set_into_collide_mask(CollideMask mask);
+
   void add_to_scene(PhysScene *scene);
   void remove_from_scene(PhysScene *scene);
 
@@ -40,6 +43,8 @@ PUBLISHED:
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
 
 public:
+  virtual CollideMask get_legal_collide_mask() const override;
+
   INLINE void set_sync_enabled(bool flag);
   INLINE bool get_sync_enabled() const;
 
