@@ -36,6 +36,15 @@ PUBLISHED:
   INLINE LPoint3 get_local_pos() const;
   INLINE LVecBase3 get_local_hpr() const;
 
+  INLINE void set_simulation_shape(bool flag);
+  INLINE bool is_simulation_shape() const;
+
+  INLINE void set_scene_query_shape(bool flag);
+  INLINE bool is_scene_query_shape() const;
+
+  INLINE void set_trigger_shape(bool flag);
+  INLINE bool is_trigger_shape() const;
+
 public:
   INLINE physx::PxShape *get_shape() const;
 

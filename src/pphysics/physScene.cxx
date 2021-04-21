@@ -17,6 +17,7 @@
 #include "physRigidActorNode.h"
 #include "nodePath.h"
 #include "physRayCastResult.h"
+#include "physXSimulationEventCallback.h"
 
 /**
  *
@@ -35,6 +36,7 @@ PhysScene() :
   // we can update the transform of the associated nodes.
   desc.flags = desc.flags | physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
   desc.filterShader = PandaSimulationFilterShader::filter;
+  desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;
 }
@@ -45,6 +47,7 @@ PhysScene() :
 PhysScene::
 ~PhysScene() {
   if (_scene != nullptr) {
+    delete _scene->getSimulationEventCallback();
     _scene->release();
     _scene = nullptr;
   }
@@ -162,6 +165,8 @@ simulate(double dt) {
     node->set_sync_enabled(true);
   }
 
+  run_callbacks();
+
   return num_substeps;
 }
 
@@ -191,4 +196,18 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
     physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
     data,
     PandaQueryFilterCallback::ptr());
+}
+
+/**
+ *
+ */
+void PhysScene::
+run_callbacks() {
+  for (CallbackQueue::iterator it = _callbacks.begin();
+       it != _callbacks.end(); ++it) {
+    const Callback &clbk = *it;
+    clbk._callback->do_callback(clbk._data);
+    delete clbk._data;
+  }
+  _callbacks.clear();
 }

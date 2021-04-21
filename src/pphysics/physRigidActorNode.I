@@ -56,6 +56,98 @@ get_shape(size_t n) const {
 }
 
 /**
+ * Sets the callback to be executed when this node wakes up.
+ */
+INLINE void PhysRigidActorNode::
+set_wake_callback(CallbackObject *obj) {
+  _wake_callback = obj;
+  get_rigid_actor()->setActorFlag(
+    physx::PxActorFlag::eSEND_SLEEP_NOTIFIES,
+    (_wake_callback != nullptr) || (_sleep_callback != nullptr));
+}
+
+/**
+ * Returns the callback to be executed when this node wakes up.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_wake_callback() const {
+  return _wake_callback;
+}
+
+/**
+ * Sets the callback to be executed when this node falls asleep.
+ */
+INLINE void PhysRigidActorNode::
+set_sleep_callback(CallbackObject *obj) {
+  _sleep_callback = obj;
+  get_rigid_actor()->setActorFlag(
+    physx::PxActorFlag::eSEND_SLEEP_NOTIFIES,
+    (_wake_callback != nullptr) || (_sleep_callback != nullptr));
+}
+
+/**
+ * Returns the callback to be executed when this node falls asleep.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_sleep_callback() const {
+  return _wake_callback;
+}
+
+/**
+ * Sets the callback to be executed when another actor enters or exits this
+ * node's trigger volume.
+ */
+INLINE void PhysRigidActorNode::
+set_trigger_callback(CallbackObject *obj) {
+  _trigger_callback = obj;
+}
+
+/**
+ * Returns the callback to be executed when another actor enters or exits this
+ * node's trigger volume.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_trigger_callback() const {
+  return _trigger_callback;
+}
+
+/**
+ * Sets the callback to be executed when another actor comes in contact with
+ * this node.
+ */
+INLINE void PhysRigidActorNode::
+set_contact_callback(CallbackObject *obj) {
+  _contact_callback = obj;
+}
+
+/**
+ * Returns the callback to be executed when another actor comes in contact with
+ * this node.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_contact_callback() const {
+  return _contact_callback;
+}
+
+/**
+ * Sets the callback to be executed when this node moves through space during
+ * the simulation.
+ */
+INLINE void PhysRigidActorNode::
+set_advance_callback(CallbackObject *obj) {
+  _advance_callback = obj;
+}
+
+/**
+ * Returns the callback to be executed when this node moves through space
+ * during the simulation.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_advance_callback() const {
+  return _advance_callback;
+}
+
+/**
  * Sets whether or not a change to the node's transform should be automatically
  * synchronized with the associated PhysX actor.
  */

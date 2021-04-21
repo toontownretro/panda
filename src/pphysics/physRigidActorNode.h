@@ -18,6 +18,7 @@
 #include "pandaNode.h"
 #include "physShape.h"
 #include "collideMask.h"
+#include "callbackObject.h"
 
 class PhysScene;
 
@@ -38,6 +39,21 @@ PUBLISHED:
 
   void add_to_scene(PhysScene *scene);
   void remove_from_scene(PhysScene *scene);
+
+  INLINE void set_wake_callback(CallbackObject *callback);
+  INLINE CallbackObject *get_wake_callback() const;
+
+  INLINE void set_sleep_callback(CallbackObject *callback);
+  INLINE CallbackObject *get_sleep_callback() const;
+
+  INLINE void set_trigger_callback(CallbackObject *callback);
+  INLINE CallbackObject *get_trigger_callback() const;
+
+  INLINE void set_contact_callback(CallbackObject *callback);
+  INLINE CallbackObject *get_contact_callback() const;
+
+  INLINE void set_advance_callback(CallbackObject *callback);
+  INLINE CallbackObject *get_advance_callback() const;
 
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
@@ -60,6 +76,12 @@ private:
   // Set by the PhysScene when applying the simulation result onto the node.
   // Stops transform_changed() from being called while doing it.
   bool _sync_enabled;
+
+  PT(CallbackObject) _wake_callback;
+  PT(CallbackObject) _sleep_callback;
+  PT(CallbackObject) _trigger_callback;
+  PT(CallbackObject) _contact_callback;
+  PT(CallbackObject) _advance_callback;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;

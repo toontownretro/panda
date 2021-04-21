@@ -81,6 +81,54 @@ get_local_hpr() const {
 /**
  *
  */
+INLINE void PhysShape::
+set_simulation_shape(bool flag) {
+  _shape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, flag);
+}
+
+/**
+ *
+ */
+INLINE bool PhysShape::
+is_simulation_shape() const {
+  return _shape->getFlags().isSet(physx::PxShapeFlag::eSIMULATION_SHAPE);
+}
+
+/**
+ *
+ */
+INLINE void PhysShape::
+set_scene_query_shape(bool flag) {
+  _shape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, flag);
+}
+
+/**
+ *
+ */
+INLINE bool PhysShape::
+is_scene_query_shape() const {
+  return _shape->getFlags().isSet(physx::PxShapeFlag::eSCENE_QUERY_SHAPE);
+}
+
+/**
+ *
+ */
+INLINE void PhysShape::
+set_trigger_shape(bool flag) {
+  _shape->setFlag(physx::PxShapeFlag::eTRIGGER_SHAPE, flag);
+}
+
+/**
+ *
+ */
+INLINE bool PhysShape::
+is_trigger_shape() const {
+  return _shape->getFlags().isSet(physx::PxShapeFlag::eTRIGGER_SHAPE);
+}
+
+/**
+ *
+ */
 INLINE physx::PxShape *PhysShape::
 get_shape() const {
   return _shape;

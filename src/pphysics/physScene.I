@@ -100,6 +100,17 @@ get_group_collision_flag(int a, int b) const {
 }
 
 /**
+ *
+ */
+void PhysScene::
+enqueue_callback(CallbackObject *obj, CallbackData *data) {
+  Callback clbk;
+  clbk._callback = obj;
+  clbk._data = data;
+  _callbacks.push_back(clbk);
+}
+
+/**
  * Returns the underlying PxScene object.
  */
 INLINE physx::PxScene *PhysScene::

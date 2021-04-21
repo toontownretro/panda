@@ -18,7 +18,10 @@
 #include "referenceCount.h"
 #include "luse.h"
 #include "collideMask.h"
+#include "pdeque.h"
 #include "physx_shaders.h"
+#include "callbackData.h"
+#include "callbackObject.h"
 
 #include "physx_includes.h"
 
@@ -57,9 +60,22 @@ PUBLISHED:
                CollideMask touch_mask = CollideMask::all_off()) const;
 
 public:
+  INLINE void enqueue_callback(CallbackObject *obj, CallbackData *data);
+
   INLINE physx::PxScene *get_scene() const;
 
 private:
+  void run_callbacks();
+
+private:
+  class Callback {
+  public:
+    CallbackData *_data;
+    PT(CallbackObject) _callback;
+  };
+  typedef pdeque<Callback> CallbackQueue;
+  CallbackQueue _callbacks;
+
   double _local_time;
   int _max_substeps;
   double _fixed_timestep;

@@ -21,12 +21,15 @@
     physRigidStaticNode.h physRigidStaticNode.I \
     physScene.h physScene.I \
     physShape.h physShape.I \
+    physSleepStateCallbackData.h physSleepStateCallbackData.I \
     physSphere.h physSphere.I \
     physSystem.h physSystem.I \
+    physTriggerCallbackData.h physTriggerCallbackData.I \
     physx_includes.h \
     physx_shaders.h physx_shaders.I \
     physXAllocator.h \
-    physXErrorCallback.h
+    physXErrorCallback.h \
+    physXSimulationEventCallback.h physXSimulationEventCallback.I
 
   #define COMPOSITE_SOURCES \
     config_pphysics.cxx \
@@ -41,11 +44,14 @@
     physRigidStaticNode.cxx \
     physScene.cxx \
     physShape.cxx \
+    physSleepStateCallbackData.cxx \
     physSphere.cxx \
     physSystem.cxx \
+    physTriggerCallbackData.cxx \
     physx_shaders.cxx \
     physXAllocator.cxx \
-    physXErrorCallback.cxx
+    physXErrorCallback.cxx \
+    physXSimulationEventCallback.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

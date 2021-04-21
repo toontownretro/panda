@@ -16,6 +16,8 @@
 #include "physRigidBodyNode.h"
 #include "physRigidDynamicNode.h"
 #include "physRigidStaticNode.h"
+#include "physTriggerCallbackData.h"
+#include "physSleepStateCallbackData.h"
 
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
@@ -69,4 +71,6 @@ init_libpphysics() {
   PhysRigidBodyNode::init_type();
   PhysRigidDynamicNode::init_type();
   PhysRigidStaticNode::init_type();
+  PhysTriggerCallbackData::init_type();
+  PhysSleepStateCallbackData::init_type();
 }
