@@ -11,10 +11,16 @@
     config_pphysics.h \
     physBox.h physBox.I \
     physCapsule.h physCapsule.I \
+    physFixedJoint.h physFixedJoint.I \
     physGeometry.h \
+    physJoint.h physJoint.I \
+    physJointLimit.h physJointLimit.I \
+    physJointLimitAngularPair.h physJointLimitAngularPair.I \
+    physJointLimitCone.h physJointLimitCone.I \
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
     physRayCastResult.h physRayCastResult.I \
+    physRevoluteJoint.h physRevoluteJoint.I \
     physRigidActorNode.h physRigidActorNode.I \
     physRigidBodyNode.h physRigidBodyNode.I \
     physRigidDynamicNode.h physRigidDynamicNode.I \
@@ -23,10 +29,12 @@
     physShape.h physShape.I \
     physSleepStateCallbackData.h physSleepStateCallbackData.I \
     physSphere.h physSphere.I \
+    physSphericalJoint.h physSphericalJoint.I \
     physSystem.h physSystem.I \
     physTriggerCallbackData.h physTriggerCallbackData.I \
     physx_includes.h \
     physx_shaders.h physx_shaders.I \
+    physx_utils.h physx_utils.I \
     physXAllocator.h \
     physXErrorCallback.h \
     physXSimulationEventCallback.h physXSimulationEventCallback.I
@@ -35,9 +43,15 @@
     config_pphysics.cxx \
     physBox.cxx \
     physCapsule.cxx \
+    physFixedJoint.cxx \
+    physJoint.cxx \
+    physJointLimit.cxx \
+    physJointLimitAngularPair.cxx \
+    physJointLimitCone.cxx \
     physMaterial.cxx \
     physPlane.cxx \
     physRayCastResult.cxx \
+    physRevoluteJoint.cxx \
     physRigidActorNode.cxx \
     physRigidBodyNode.cxx \
     physRigidDynamicNode.cxx \
@@ -46,6 +60,7 @@
     physShape.cxx \
     physSleepStateCallbackData.cxx \
     physSphere.cxx \
+    physSphericalJoint.cxx \
     physSystem.cxx \
     physTriggerCallbackData.cxx \
     physx_shaders.cxx \
