@@ -11,6 +11,7 @@
     config_pphysics.h \
     physBox.h physBox.I \
     physCapsule.h physCapsule.I \
+    physD6Joint.h physD6Joint.I \
     physDistanceJoint.h physDistanceJoint.I \
     physFixedJoint.h physFixedJoint.I \
     physGeometry.h \
@@ -46,6 +47,7 @@
     config_pphysics.cxx \
     physBox.cxx \
     physCapsule.cxx \
+    physD6Joint.cxx \
     physDistanceJoint.cxx \
     physFixedJoint.cxx \
     physJoint.cxx \
