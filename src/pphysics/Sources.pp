@@ -17,8 +17,10 @@
     physJointLimit.h physJointLimit.I \
     physJointLimitAngularPair.h physJointLimitAngularPair.I \
     physJointLimitCone.h physJointLimitCone.I \
+    physJointLimitLinearPair.h physJointLimitLinearPair.I \
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
+    physPrismaticJoint.h physPrismaticJoint.I \
     physRayCastResult.h physRayCastResult.I \
     physRevoluteJoint.h physRevoluteJoint.I \
     physRigidActorNode.h physRigidActorNode.I \
@@ -48,8 +50,10 @@
     physJointLimit.cxx \
     physJointLimitAngularPair.cxx \
     physJointLimitCone.cxx \
+    physJointLimitLinearPair.cxx \
     physMaterial.cxx \
     physPlane.cxx \
+    physPrismaticJoint.cxx \
     physRayCastResult.cxx \
     physRevoluteJoint.cxx \
     physRigidActorNode.cxx \
