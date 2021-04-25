@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_PHYSX]
 
-#define LOCAL_LIBS pgraph linmath mathutil
+#define LOCAL_LIBS pgraph linmath mathutil anim
 #define USE_PACKAGES physx
 
 #begin lib_target
@@ -26,6 +26,7 @@
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
     physPrismaticJoint.h physPrismaticJoint.I \
+    physRagdoll.h physRagdoll.I \
     physRayCastResult.h physRayCastResult.I \
     physRevoluteJoint.h physRevoluteJoint.I \
     physRigidActorNode.h physRigidActorNode.I \
@@ -64,6 +65,7 @@
     physMaterial.cxx \
     physPlane.cxx \
     physPrismaticJoint.cxx \
+    physRagdoll.cxx \
     physRayCastResult.cxx \
     physRevoluteJoint.cxx \
     physRigidActorNode.cxx \
