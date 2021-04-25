@@ -39,6 +39,14 @@ PhysScene() :
   desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;
+
+  physx::PxPvdSceneClient *pvd_client = _scene->getScenePvdClient();
+  if (pvd_client != nullptr) {
+    pvd_client->setScenePvdFlags(
+      physx::PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS |
+      physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS |
+      physx::PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES);
+  }
 }
 
 /**
