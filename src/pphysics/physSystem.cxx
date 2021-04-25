@@ -77,8 +77,8 @@ initialize() {
 
   // Panda uses feet as its unit of measurement, so adjust the tolerance scales
   // accordingly.
-  _scale.length = phys_tolerance_scale.get_value();
-  _scale.speed = _scale.length * 10;
+  _scale.length = phys_tolerance_length.get_value();
+  _scale.speed = phys_tolerance_speed.get_value();
 
   _physics = PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation,
                              _scale, phys_track_allocations.get_value(), _pvd);

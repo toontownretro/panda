@@ -41,8 +41,14 @@ ConfigVariableInt phys_pvd_port
  PRC_DESC("Specifies the port number of the PhysX Visual Debugger application "
           "(PVD)."));
 
-ConfigVariableDouble phys_tolerance_scale
-("phys-tolerance-scale", 3.28084,
+ConfigVariableDouble phys_tolerance_length
+("phys-tolerance-length", 1,
+ PRC_DESC("Controls the scale at which the physics simulation runs.  The "
+          "default value is set up for a simulation that is done in feet, "
+          "Panda's default unit of measurement."));
+
+ConfigVariableDouble phys_tolerance_speed
+("phys-tolerance-speed", 10,
  PRC_DESC("Controls the scale at which the physics simulation runs.  The "
           "default value is set up for a simulation that is done in feet, "
           "Panda's default unit of measurement."));
