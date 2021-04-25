@@ -13,6 +13,7 @@
 
 #include "physx_shaders.h"
 #include "config_pphysics.h"
+#include "physRigidActorNode.h"
 
 #include "bitMask.h"
 
@@ -89,12 +90,12 @@ filter(physx::PxFilterObjectAttributes attributes0,
   // Handle triggers.
   if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1)) {
     pair_flags = physx::PxPairFlag::eTRIGGER_DEFAULT;
-    return physx::PxFilterFlags();
+    return physx::PxFilterFlag::eDEFAULT;
   }
 
   pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT;
 
-  return physx::PxFilterFlags();
+  return physx::PxFilterFlag::eCALLBACK;
 }
 
 PandaQueryFilterCallback *PandaQueryFilterCallback::_ptr = nullptr;
@@ -161,6 +162,68 @@ PandaQueryFilterCallback *PandaQueryFilterCallback::
 ptr() {
   if (_ptr == nullptr) {
     _ptr = new PandaQueryFilterCallback;
+  }
+
+  return _ptr;
+}
+
+PandaSimulationFilterCallback *PandaSimulationFilterCallback::_ptr = nullptr;
+
+
+/**
+ *
+ */
+physx::PxFilterFlags PandaSimulationFilterCallback::
+pairFound(physx::PxU32 pair_id, physx::PxFilterObjectAttributes attributes0,
+          physx::PxFilterData filter_data0, const physx::PxActor *a0,
+          const physx::PxShape *shape0,
+          physx::PxFilterObjectAttributes attributes1,
+          physx::PxFilterData filter_data1, const physx::PxActor *a1,
+          const physx::PxShape *shape1,
+          physx::PxPairFlags &pair_flags) {
+
+  if (a0->userData == nullptr || a1->userData == nullptr) {
+    return physx::PxFilterFlag::eDEFAULT;
+  }
+
+  PhysRigidActorNode *node0 = (PhysRigidActorNode *)a0->userData;
+  PhysRigidActorNode *node1 = (PhysRigidActorNode *)a1->userData;
+
+  if (node0->has_no_collide_with(node1)) {
+    return physx::PxFilterFlag::eSUPPRESS;
+  }
+
+  return physx::PxFilterFlag::eDEFAULT;
+}
+
+/**
+ *
+ */
+void PandaSimulationFilterCallback::
+pairLost(physx::PxU32 pairID,
+         physx::PxFilterObjectAttributes attributes0,
+         physx::PxFilterData filterData0,
+         physx::PxFilterObjectAttributes attributes1,
+         physx::PxFilterData filterData1,
+         bool objectRemoved) {
+}
+
+/**
+ *
+ */
+bool PandaSimulationFilterCallback::
+statusChange(physx::PxU32& pairID, physx::PxPairFlags& pairFlags,
+             physx::PxFilterFlags& filterFlags) {
+  return false;
+}
+
+/**
+ *
+ */
+PandaSimulationFilterCallback *PandaSimulationFilterCallback::
+ptr() {
+  if (_ptr == nullptr) {
+    _ptr = new PandaSimulationFilterCallback;
   }
 
   return _ptr;

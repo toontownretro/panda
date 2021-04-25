@@ -70,6 +70,34 @@ remove_from_scene(PhysScene *scene) {
 /**
  *
  */
+void PhysRigidActorNode::
+set_collide_with(PhysRigidActorNode *other, bool flag) {
+  do_set_collide_with(other, flag);
+  other->do_set_collide_with(this, flag);
+}
+
+/**
+ *
+ */
+void PhysRigidActorNode::
+do_set_collide_with(PhysRigidActorNode *other, bool flag) {
+  if (!flag) {
+    Actors::const_iterator it = std::find(_no_collisions.begin(), _no_collisions.end(), other);
+    if (it == _no_collisions.end()) {
+      _no_collisions.push_back(other);
+    }
+
+  } else {
+    Actors::const_iterator it = std::find(_no_collisions.begin(), _no_collisions.end(), other);
+    if (it != _no_collisions.end()) {
+      _no_collisions.erase(it);
+    }
+  }
+}
+
+/**
+ *
+ */
 CollideMask PhysRigidActorNode::
 get_legal_collide_mask() const {
   return CollideMask::all_on();

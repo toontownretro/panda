@@ -36,6 +36,7 @@ PhysScene() :
   // we can update the transform of the associated nodes.
   desc.flags = desc.flags | physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
   desc.filterShader = PandaSimulationFilterShader::filter;
+  desc.filterCallback = PandaSimulationFilterCallback::ptr();
   desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;

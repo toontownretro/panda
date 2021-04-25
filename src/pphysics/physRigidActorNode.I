@@ -148,6 +148,14 @@ get_advance_callback() const {
 }
 
 /**
+ *
+ */
+INLINE bool PhysRigidActorNode::
+has_no_collide_with(PhysRigidActorNode *other) const {
+  return std::find(_no_collisions.begin(), _no_collisions.end(), other) != _no_collisions.end();
+}
+
+/**
  * Sets whether or not a change to the node's transform should be automatically
  * synchronized with the associated PhysX actor.
  */

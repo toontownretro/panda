@@ -19,6 +19,7 @@
 #include "physShape.h"
 #include "collideMask.h"
 #include "callbackObject.h"
+#include "pvector.h"
 
 class PhysScene;
 
@@ -55,6 +56,9 @@ PUBLISHED:
   INLINE void set_advance_callback(CallbackObject *callback);
   INLINE CallbackObject *get_advance_callback() const;
 
+  void set_collide_with(PhysRigidActorNode *other, bool flag);
+  INLINE bool has_no_collide_with(PhysRigidActorNode *other) const;
+
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
 
@@ -73,6 +77,8 @@ protected:
   virtual void do_transform_changed();
 
 private:
+  void do_set_collide_with(PhysRigidActorNode *other, bool flag);
+
   // Set by the PhysScene when applying the simulation result onto the node.
   // Stops transform_changed() from being called while doing it.
   bool _sync_enabled;
@@ -82,6 +88,9 @@ private:
   PT(CallbackObject) _trigger_callback;
   PT(CallbackObject) _contact_callback;
   PT(CallbackObject) _advance_callback;
+
+  typedef pvector<PhysRigidActorNode *> Actors;
+  Actors _no_collisions;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;
