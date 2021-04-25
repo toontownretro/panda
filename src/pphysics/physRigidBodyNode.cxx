@@ -25,6 +25,21 @@ PhysRigidBodyNode(const std::string &name) :
 }
 
 /**
+ * Automatically computes the mass, center of mass, and inertia tensor of the
+ * rigid body from the attached shapes.
+ */
+void PhysRigidBodyNode::
+compute_mass_properties() {
+  physx::PxU32 num_shapes = get_rigid_body()->getNbShapes();
+  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
+  get_rigid_body()->getShapes(shapes, num_shapes);
+  physx::PxMassProperties props = physx::PxRigidBodyExt::computeMassPropertiesFromShapes(shapes, num_shapes);
+  get_rigid_body()->setCMassLocalPose(physx::PxTransform(props.centerOfMass));
+  get_rigid_body()->setMass(props.mass);
+  get_rigid_body()->setMassSpaceInertiaTensor(physx::PxMassProperties::getMassSpaceInertia(props.inertiaTensor, physx::PxQuat()));
+}
+
+/**
  *
  */
 physx::PxRigidActor *PhysRigidBodyNode::

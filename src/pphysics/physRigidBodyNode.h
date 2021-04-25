@@ -75,6 +75,8 @@ PUBLISHED:
   INLINE void set_kinematic(bool flag);
   INLINE bool is_kinematic() const;
 
+  void compute_mass_properties();
+
 protected:
   PhysRigidBodyNode(const std::string &name);
 
