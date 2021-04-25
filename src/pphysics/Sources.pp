@@ -11,6 +11,8 @@
     config_pphysics.h \
     physBox.h physBox.I \
     physCapsule.h physCapsule.I \
+    physConvexMesh.h physConvexMesh.I \
+    physConvexMeshData.h physConvexMeshData.I \
     physD6Joint.h physD6Joint.I \
     physDistanceJoint.h physDistanceJoint.I \
     physFixedJoint.h physFixedJoint.I \
@@ -48,6 +50,8 @@
     config_pphysics.cxx \
     physBox.cxx \
     physCapsule.cxx \
+    physConvexMesh.cxx \
+    physConvexMeshData.cxx \
     physD6Joint.cxx \
     physDistanceJoint.cxx \
     physFixedJoint.cxx \
