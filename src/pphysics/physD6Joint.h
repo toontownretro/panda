@@ -19,6 +19,7 @@
 #include "physJointLimitLinearPair.h"
 #include "physJointLimitAngularPair.h"
 #include "physJointLimitCone.h"
+#include "physJointLimitPyramid.h"
 
 /**
  *
@@ -55,6 +56,9 @@ PUBLISHED:
 
   INLINE void set_swing_limit(const PhysJointLimitCone &limit);
   INLINE PhysJointLimitCone get_swing_limit() const;
+
+  INLINE void set_pyramid_swing_limit(const PhysJointLimitPyramid &limit);
+  INLINE PhysJointLimitPyramid get_pyramid_swing_limit() const;
 
   INLINE PN_stdfloat get_angle(Axis axis) const;
 

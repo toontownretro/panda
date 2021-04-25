@@ -20,6 +20,7 @@
     physJointLimitAngularPair.h physJointLimitAngularPair.I \
     physJointLimitCone.h physJointLimitCone.I \
     physJointLimitLinearPair.h physJointLimitLinearPair.I \
+    physJointLimitPyramid.h physJointLimitPyramid.I \
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
     physPrismaticJoint.h physPrismaticJoint.I \
@@ -55,6 +56,7 @@
     physJointLimitAngularPair.cxx \
     physJointLimitCone.cxx \
     physJointLimitLinearPair.cxx \
+    physJointLimitPyramid.cxx \
     physMaterial.cxx \
     physPlane.cxx \
     physPrismaticJoint.cxx \

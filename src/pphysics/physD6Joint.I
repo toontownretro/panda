@@ -94,6 +94,22 @@ get_swing_limit() const {
 /**
  *
  */
+INLINE void PhysD6Joint::
+set_pyramid_swing_limit(const PhysJointLimitPyramid &limit) {
+  _joint->setPyramidSwingLimit(limit.get_limit_pyramid());
+}
+
+/**
+ *
+ */
+INLINE PhysJointLimitPyramid PhysD6Joint::
+get_pyramid_swing_limit() const {
+  return PhysJointLimitPyramid(_joint->getPyramidSwingLimit());
+}
+
+/**
+ *
+ */
 INLINE PN_stdfloat PhysD6Joint::
 get_angle(Axis axis) const {
   switch (axis) {
