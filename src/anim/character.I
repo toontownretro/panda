@@ -154,6 +154,13 @@ INLINE void Character::
 set_joint_forced_value(int n, const LMatrix4 &value) {
   _joints[n]._forced_value = value;
   _joints[n]._has_forced_value = true;
+  const CharacterJoint &joint = _joints[n];
+  if (joint._parent != -1) {
+    _joint_net_transforms[n] = value * _joint_net_transforms[joint._parent];
+
+  } else {
+    _joint_net_transforms[n] = value * get_root_xform();
+  }
 }
 
 /**
