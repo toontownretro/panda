@@ -20,6 +20,7 @@
 #include "physTriggerCallbackData.h"
 #include "physScene.h"
 #include "physSleepStateCallbackData.h"
+#include "physContactCallbackData.h"
 
 /**
  *
@@ -77,6 +78,26 @@ onSleep(physx::PxActor **actors, physx::PxU32 count) {
 void PhysXSimulationEventCallback::
 onContact(const physx::PxContactPairHeader &pair_header,
           const physx::PxContactPair *pairs, physx::PxU32 num_pairs) {
+  if (pair_header.flags.isSet(physx::PxContactPairHeaderFlag::eREMOVED_ACTOR_0) ||
+      pair_header.flags.isSet(physx::PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) {
+    return;
+  }
+
+  PhysRigidActorNode *node_a = (PhysRigidActorNode *)pair_header.actors[0]->userData;
+  PhysRigidActorNode *node_b = (PhysRigidActorNode *)pair_header.actors[1]->userData;
+
+  if (node_a->get_contact_callback() != nullptr ||
+      node_b->get_contact_callback() != nullptr) {
+    PhysContactCallbackData *cbdata = new PhysContactCallbackData(pair_header);
+
+    if (node_a->get_contact_callback() != nullptr) {
+      _scene->enqueue_callback(node_a->get_contact_callback(), cbdata);
+    }
+
+    if (node_b->get_contact_callback() != nullptr) {
+      _scene->enqueue_callback(node_b->get_contact_callback(), cbdata);
+    }
+  }
 }
 
 /**

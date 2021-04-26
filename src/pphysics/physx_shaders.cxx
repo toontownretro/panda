@@ -93,7 +93,7 @@ filter(physx::PxFilterObjectAttributes attributes0,
     return physx::PxFilterFlag::eDEFAULT;
   }
 
-  pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT;
+  pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT | physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 
   return physx::PxFilterFlag::eCALLBACK;
 }

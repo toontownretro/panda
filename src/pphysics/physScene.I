@@ -103,7 +103,7 @@ get_group_collision_flag(int a, int b) const {
  *
  */
 void PhysScene::
-enqueue_callback(CallbackObject *obj, CallbackData *data) {
+enqueue_callback(CallbackObject *obj, RefCallbackData *data) {
   Callback clbk;
   clbk._callback = obj;
   clbk._data = data;

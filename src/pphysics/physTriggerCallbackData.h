@@ -15,7 +15,7 @@
 #define PHYSTRIGGERCALLBACKDATA_H
 
 #include "pandabase.h"
-#include "callbackData.h"
+#include "refCallbackData.h"
 
 #include "physx_includes.h"
 
@@ -25,7 +25,7 @@ class PhysShape;
 /**
  * Trigger event callback data.
  */
-class EXPCL_PANDA_PPHYSICS PhysTriggerCallbackData : public CallbackData {
+class EXPCL_PANDA_PPHYSICS PhysTriggerCallbackData : public RefCallbackData {
 PUBLISHED:
   enum Touch {
     T_none,
@@ -53,9 +53,9 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    CallbackData::init_type();
+    RefCallbackData::init_type();
     register_type(_type_handle, "PhysTriggerCallbackData",
-                  CallbackData::get_class_type());
+                  RefCallbackData::get_class_type());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();

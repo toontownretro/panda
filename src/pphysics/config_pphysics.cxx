@@ -16,8 +16,10 @@
 #include "physRigidBodyNode.h"
 #include "physRigidDynamicNode.h"
 #include "physRigidStaticNode.h"
+#include "refCallbackData.h"
 #include "physTriggerCallbackData.h"
 #include "physSleepStateCallbackData.h"
+#include "physContactCallbackData.h"
 
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
@@ -73,10 +75,12 @@ init_libpphysics() {
 
   initialized = true;
 
+  RefCallbackData::init_type();
   PhysRigidActorNode::init_type();
   PhysRigidBodyNode::init_type();
   PhysRigidDynamicNode::init_type();
   PhysRigidStaticNode::init_type();
   PhysTriggerCallbackData::init_type();
   PhysSleepStateCallbackData::init_type();
+  PhysContactCallbackData::init_type();
 }

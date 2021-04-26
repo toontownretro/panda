@@ -20,7 +20,7 @@
 #include "collideMask.h"
 #include "pdeque.h"
 #include "physx_shaders.h"
-#include "callbackData.h"
+#include "refCallbackData.h"
 #include "callbackObject.h"
 
 #include "physx_includes.h"
@@ -60,7 +60,7 @@ PUBLISHED:
                CollideMask touch_mask = CollideMask::all_off()) const;
 
 public:
-  INLINE void enqueue_callback(CallbackObject *obj, CallbackData *data);
+  INLINE void enqueue_callback(CallbackObject *obj, RefCallbackData *data);
 
   INLINE physx::PxScene *get_scene() const;
 
@@ -70,7 +70,7 @@ private:
 private:
   class Callback {
   public:
-    CallbackData *_data;
+    PT(RefCallbackData) _data;
     PT(CallbackObject) _callback;
   };
   typedef pdeque<Callback> CallbackQueue;

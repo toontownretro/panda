@@ -212,11 +212,11 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
  */
 void PhysScene::
 run_callbacks() {
-  for (CallbackQueue::iterator it = _callbacks.begin();
+  for (CallbackQueue::const_iterator it = _callbacks.begin();
        it != _callbacks.end(); ++it) {
     const Callback &clbk = *it;
     clbk._callback->do_callback(clbk._data);
-    delete clbk._data;
   }
+
   _callbacks.clear();
 }

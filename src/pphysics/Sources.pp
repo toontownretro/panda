@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_PHYSX]
 
-#define LOCAL_LIBS pgraph linmath mathutil anim
+#define LOCAL_LIBS pgraph linmath mathutil anim audio
 #define USE_PACKAGES physx
 
 #begin lib_target
@@ -11,10 +11,12 @@
     config_pphysics.h \
     physBox.h physBox.I \
     physCapsule.h physCapsule.I \
+    physContactCallbackData.h physContactCallbackData.I \
     physConvexMesh.h physConvexMesh.I \
     physConvexMeshData.h physConvexMeshData.I \
     physD6Joint.h physD6Joint.I \
     physDistanceJoint.h physDistanceJoint.I \
+    physEnums.h \
     physFixedJoint.h physFixedJoint.I \
     physGeometry.h \
     physJoint.h physJoint.I \
@@ -45,12 +47,14 @@
     physx_utils.h physx_utils.I \
     physXAllocator.h \
     physXErrorCallback.h \
-    physXSimulationEventCallback.h physXSimulationEventCallback.I
+    physXSimulationEventCallback.h physXSimulationEventCallback.I \
+    refCallbackData.h refCallbackData.I \
 
   #define COMPOSITE_SOURCES \
     config_pphysics.cxx \
     physBox.cxx \
     physCapsule.cxx \
+    physContactCallbackData.cxx \
     physConvexMesh.cxx \
     physConvexMeshData.cxx \
     physD6Joint.cxx \
@@ -82,7 +86,8 @@
     physx_shaders.cxx \
     physXAllocator.cxx \
     physXErrorCallback.cxx \
-    physXSimulationEventCallback.cxx
+    physXSimulationEventCallback.cxx \
+    refCallbackData.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

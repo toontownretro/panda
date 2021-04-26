@@ -15,7 +15,7 @@
 #define PHYSSLEEPSTATECALLBACKDATA_H
 
 #include "pandabase.h"
-#include "callbackData.h"
+#include "refCallbackData.h"
 
 #include "physx_includes.h"
 
@@ -24,7 +24,7 @@ class PhysRigidActorNode;
 /**
  * Callback data for when an wakes up or goes to sleep.
  */
-class EXPCL_PANDA_PPHYSICS PhysSleepStateCallbackData : public CallbackData {
+class EXPCL_PANDA_PPHYSICS PhysSleepStateCallbackData : public RefCallbackData {
 PUBLISHED:
   enum State {
     S_awake,
@@ -50,9 +50,9 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    CallbackData::init_type();
+    RefCallbackData::init_type();
     register_type(_type_handle, "PhysSleepStateCallbackData",
-                  CallbackData::get_class_type());
+                  RefCallbackData::get_class_type());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
