@@ -68,6 +68,7 @@
 #include "audioSound.h"
 #include "reMutex.h"
 #include "fmodAudioManager.h"
+#include "fmodSoundCache.h"
 
 #include <fmod.hpp>
 #include <fmod_errors.h>
@@ -144,6 +145,7 @@ public:
 
 private:
   PT(FMODAudioManager) _manager;
+  PT(FMODSoundHandle) _sound_handle;
   FMOD::Sound      *_sound;
   FMOD::Channel    *_channel;
 
@@ -184,20 +186,6 @@ private:
   bool _is_midi;
 
   std::string _finished_event;
-
-  static FMOD_RESULT F_CALLBACK
-  open_callback(const char *name, unsigned int *file_size,
-                void **handle, void *user_data);
-
-  static FMOD_RESULT F_CALLBACK
-  close_callback(void *handle, void *user_data);
-
-  static FMOD_RESULT F_CALLBACK
-  read_callback(void *handle, void *buffer, unsigned int size_bytes,
-                unsigned int *bytes_read, void *user_data);
-
-  static FMOD_RESULT F_CALLBACK
-  seek_callback(void *handle, unsigned int pos, void *user_data);
 
  public:
   static TypeHandle get_class_type() {

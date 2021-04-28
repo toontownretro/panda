@@ -91,6 +91,7 @@ extern void _fmod_audio_errcheck(const char *context, FMOD_RESULT n);
 
 class EXPCL_FMOD_AUDIO FMODAudioManager : public AudioManager {
   friend class FMODAudioSound;
+  friend class FMODSoundCache;
 
 public:
   FMODAudioManager();

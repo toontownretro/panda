@@ -39,10 +39,14 @@
   #define SOURCES \
       config_fmodAudio.h \
       fmodAudioManager.h \
-      fmodAudioSound.I fmodAudioSound.h
+      fmodAudioSound.I fmodAudioSound.h \
+      fmodSoundCache.I fmodSoundCache.h
 
   #define COMPOSITE_SOURCES \
-      config_fmodAudio.cxx fmodAudioManager.cxx fmodAudioSound.cxx
+      config_fmodAudio.cxx \
+      fmodAudioManager.cxx \
+      fmodAudioSound.cxx \
+      fmodSoundCache.cxx
 
 #end lib_target
 
