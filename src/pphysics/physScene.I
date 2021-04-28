@@ -117,3 +117,11 @@ INLINE physx::PxScene *PhysScene::
 get_scene() const {
   return _scene;
 }
+
+/**
+ * Returns the PhysX controller manager for the scene.
+ */
+INLINE physx::PxControllerManager *PhysScene::
+get_controller_manager() const {
+  return _controller_mgr;
+}

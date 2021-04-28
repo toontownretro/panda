@@ -38,6 +38,7 @@ PhysScene() :
   desc.filterShader = PandaSimulationFilterShader::filter;
   desc.filterCallback = PandaSimulationFilterCallback::ptr();
   desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
+  desc.solverType = physx::PxSolverType::eTGS;
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;
 
@@ -48,6 +49,8 @@ PhysScene() :
       physx::PxPvdSceneFlag::eTRANSMIT_CONTACTS |
       physx::PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES);
   }
+
+  _controller_mgr = PxCreateControllerManager(*_scene);
 }
 
 /**
@@ -55,6 +58,11 @@ PhysScene() :
  */
 PhysScene::
 ~PhysScene() {
+  if (_controller_mgr != nullptr) {
+    _controller_mgr->release();
+    _controller_mgr = nullptr;
+  }
+
   if (_scene != nullptr) {
     delete _scene->getSimulationEventCallback();
     _scene->release();

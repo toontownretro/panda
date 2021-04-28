@@ -22,6 +22,9 @@
 INLINE LVecBase3 PxVec3_to_Vec3(const physx::PxVec3 &vec);
 INLINE physx::PxVec3 Vec3_to_PxVec3(const LVecBase3 &vec);
 
+INLINE LVecBase3 PxExVec3_to_Vec3(const physx::PxExtendedVec3 &vec);
+INLINE physx::PxExtendedVec3 Vec3_to_PxExVec3(const LVecBase3 &vec);
+
 INLINE LQuaternion PxQuat_to_Quat(const physx::PxQuat &quat);
 INLINE physx::PxQuat Quat_to_PxQuat(const LQuaternion &quat);
 

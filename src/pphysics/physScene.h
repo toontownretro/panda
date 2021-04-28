@@ -63,6 +63,7 @@ public:
   INLINE void enqueue_callback(CallbackObject *obj, RefCallbackData *data);
 
   INLINE physx::PxScene *get_scene() const;
+  INLINE physx::PxControllerManager *get_controller_manager() const;
 
 private:
   void run_callbacks();
@@ -81,6 +82,7 @@ private:
   double _fixed_timestep;
 
   physx::PxScene *_scene;
+  physx::PxControllerManager *_controller_mgr;
 
   bool _debug_vis_enabled;
 };

@@ -10,8 +10,10 @@
   #define SOURCES \
     config_pphysics.h \
     physBox.h physBox.I \
+    physBoxController.h physBoxController.I \
     physCapsule.h physCapsule.I \
     physContactCallbackData.h physContactCallbackData.I \
+    physController.h physController.I \
     physConvexMesh.h physConvexMesh.I \
     physConvexMeshData.h physConvexMeshData.I \
     physD6Joint.h physD6Joint.I \
@@ -53,8 +55,10 @@
   #define COMPOSITE_SOURCES \
     config_pphysics.cxx \
     physBox.cxx \
+    physBoxController.cxx \
     physCapsule.cxx \
     physContactCallbackData.cxx \
+    physController.cxx \
     physConvexMesh.cxx \
     physConvexMeshData.cxx \
     physD6Joint.cxx \

@@ -14,7 +14,7 @@
 /**
  *
  */
-INLINE LVecBase3
+INLINE LVecBase3f
 PxVec3_to_Vec3(const physx::PxVec3 &vec) {
   return LVecBase3(vec.x, vec.y, vec.z);
 }
@@ -23,8 +23,24 @@ PxVec3_to_Vec3(const physx::PxVec3 &vec) {
  *
  */
 INLINE physx::PxVec3
-Vec3_to_PxVec3(const LVecBase3 &vec) {
+Vec3_to_PxVec3(const LVecBase3f &vec) {
   return physx::PxVec3(vec[0], vec[1], vec[2]);
+}
+
+/**
+ *
+ */
+INLINE LVecBase3
+PxExVec3_to_Vec3(const physx::PxExtendedVec3 &vec) {
+  return LVecBase3(vec.x, vec.y, vec.z);
+}
+
+/**
+ *
+ */
+INLINE physx::PxExtendedVec3
+Vec3_to_PxExVec3(const LVecBase3 &vec) {
+  return physx::PxExtendedVec3(vec[0], vec[1], vec[2]);
 }
 
 /**
