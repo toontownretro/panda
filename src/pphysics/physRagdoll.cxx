@@ -15,6 +15,9 @@
 #include "physSystem.h"
 #include "look_at.h"
 #include "loader.h"
+#include "physContactCallbackData.h"
+#include "physEnums.h"
+#include "randomizer.h"
 
 #define METERS_PER_INCH					(0.0254f)
 #define CUBIC_METERS_PER_CUBIC_INCH		(METERS_PER_INCH*METERS_PER_INCH*METERS_PER_INCH)
@@ -161,6 +164,9 @@ PhysRagdoll(const NodePath &character_np) {
   _total_mass = 0.0f;
   _total_volume = 0.0f;
 
+  _soft_impact_force = 100;
+  _hard_impact_force = 500;
+
   _debug = false;
   _debug_scale = 1.0f;
 
@@ -168,6 +174,8 @@ PhysRagdoll(const NodePath &character_np) {
   for (size_t i = 0; i < _char_joints.size(); i++) {
     _char_joints[i] = nullptr;
   }
+
+  _contact_callback = new LimbContactCallback(this);
 }
 
 /**
@@ -288,8 +296,9 @@ create_joints() {
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
     joint->actor->set_transform(joint_pose);
+    joint->actor->set_contact_callback(_contact_callback);
     physx::PxRigidDynamic *dyn = (physx::PxRigidDynamic *)joint->actor->get_rigid_body();
-    dyn->setSolverIterationCounts(16, 16);
+    dyn->setSolverIterationCounts(20, 20);
 
     if (joint->parent != nullptr) {
       CPT(TransformState) parent_pose = joint_default_net_transform(joint->parent->joint)->invert_compose(joint_pose);
@@ -300,8 +309,8 @@ create_joints() {
       djoint->set_linear_motion(PhysD6Joint::A_y, PhysD6Joint::M_locked);
       djoint->set_linear_motion(PhysD6Joint::A_z, PhysD6Joint::M_locked);
       //djoint->set_projection_enabled(true);
-      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionLinearTolerance(4);
-      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionAngularTolerance(0.35);
+      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionLinearTolerance(0.2f);
+      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionAngularTolerance(0.4f);
       djoint->set_collision_enabled(false);
 
       if (joint->limit_x[0] == 0 && joint->limit_x[1] == 0) {
@@ -312,13 +321,13 @@ create_joints() {
 
       } else {
         djoint->set_angular_motion(PhysD6Joint::A_x, PhysD6Joint::M_limited);
-        djoint->set_twist_limit(PhysJointLimitAngularPair(joint->limit_x[0], joint->limit_x[1]));
+        djoint->set_twist_limit(PhysJointLimitAngularPair(joint->limit_x[0], joint->limit_x[1], joint->limit_x[1]));
       }
 
       djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_limited);
       djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_limited);
       djoint->set_pyramid_swing_limit(
-        PhysJointLimitPyramid(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1]));
+        PhysJointLimitPyramid(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1], std::max(joint->limit_y[1], joint->limit_z[1])));
 
       joint->djoint = djoint;
     }
@@ -475,5 +484,59 @@ update() {
       limb->debug.set_transform(limb->actor->get_transform());
       limb->debug.set_scale(_debug_scale);
     }
+  }
+}
+
+/**
+ *
+ */
+void PhysRagdoll::
+set_impact_forces(PN_stdfloat soft, PN_stdfloat hard) {
+  _soft_impact_force = soft;
+  _hard_impact_force = hard;
+}
+
+/**
+ *
+ */
+void PhysRagdoll::
+add_hard_impact_sound(AudioSound *sound) {
+  _hard_impact_sounds.push_back(sound);
+}
+
+/**
+ *
+ */
+void PhysRagdoll::
+add_soft_impact_sound(AudioSound *sound) {
+  _soft_impact_sounds.push_back(sound);
+}
+
+/**
+ *
+ */
+void PhysRagdoll::LimbContactCallback::
+do_callback(CallbackData *cbdata) {
+  PhysContactCallbackData *data = (PhysContactCallbackData *)cbdata;
+
+  const PhysContactPair *pair = data->get_contact_pair(0);
+  if (!pair->is_contact_type(PhysEnums::CT_found)) {
+    return;
+  }
+  PhysContactPoint point = pair->get_contact_point(0);
+
+  LVector3 force = point.get_impulse() / 0.015;
+  PN_stdfloat force_magnitude = force.length();
+
+  std::cout << "Ragdoll contact between " << NodePath(data->get_actor_a()) << " and " << NodePath(data->get_actor_b()) << " force " << force_magnitude << "\n";
+
+  Randomizer random;
+
+  if (force_magnitude >= _ragdoll->_hard_impact_force) {
+    int index = random.random_int(_ragdoll->_hard_impact_sounds.size());
+    _ragdoll->_hard_impact_sounds[index]->play();
+  } else if (force_magnitude >= _ragdoll->_soft_impact_force) {
+    int index = random.random_int(_ragdoll->_soft_impact_sounds.size());
+    _ragdoll->_soft_impact_sounds[index]->play();
   }
 }

@@ -25,6 +25,7 @@
 #include "character.h"
 #include "pmap.h"
 #include "physScene.h"
+#include "audioSound.h"
 
 #include "physx_includes.h"
 
@@ -33,6 +34,18 @@
  */
 class EXPCL_PANDA_PPHYSICS PhysRagdoll : public ReferenceCount {
 PUBLISHED:
+  class EXPCL_PANDA_PPHYSICS LimbContactCallback : public CallbackObject {
+  public:
+    ALLOC_DELETED_CHAIN(LimbContactCallback);
+
+    INLINE LimbContactCallback(PhysRagdoll *ragdoll) { _ragdoll = ragdoll; }
+
+    virtual void do_callback(CallbackData *cbdata) override;
+
+  private:
+    PhysRagdoll *_ragdoll;
+  };
+
   class Joint : public ReferenceCount {
   public:
     Joint *parent;
@@ -87,10 +100,25 @@ PUBLISHED:
   void set_total_mass(PN_stdfloat mass);
   void set_debug(bool flag, PN_stdfloat scale = 1.0f);
 
+  void set_impact_forces(PN_stdfloat soft, PN_stdfloat hard);
+
+  void add_hard_impact_sound(AudioSound *blah);
+
+  void add_soft_impact_sound(AudioSound *blah);
+
 private:
   CPT(TransformState) joint_default_net_transform(int joint);
 
 private:
+
+  PT(LimbContactCallback) _contact_callback;
+
+  typedef pvector<PT(AudioSound)> Sounds;
+  Sounds _hard_impact_sounds;
+  Sounds _soft_impact_sounds;
+
+  PN_stdfloat _hard_impact_force;
+  PN_stdfloat _soft_impact_force;
 
   physx::PxAggregate *_aggregate;
 
@@ -115,6 +143,8 @@ private:
   NodePath _char_np;
   CharacterNode *_char_node;
   Character *_char;
+
+  friend class LimbContactCallback;
 };
 
 #include "physRagdoll.I"
