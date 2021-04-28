@@ -136,75 +136,98 @@ get_max_angular_velocity() const {
 }
 
 /**
- *
+ * Applies a force defined global coordinates to the rigid body's center of
+ * mass.
  */
 INLINE void PhysRigidBodyNode::
-add_force(const LVector3 &force, bool auto_wake) {
+add_force(const LVector3 &global_force, ForceType type, bool auto_wake) {
   get_rigid_body()->addForce(
-    physx::PxVec3(force[0], force[1], force[2]),
-    physx::PxForceMode::eFORCE, auto_wake);
+    Vec3_to_PxVec3(global_force),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
 }
 
 /**
- *
+ * Applies a torque defined in global coordinates to the rigid body.
  */
 INLINE void PhysRigidBodyNode::
-clear_force() {
-  get_rigid_body()->clearForce(physx::PxForceMode::eFORCE);
-}
-
-/**
- *
- */
-INLINE void PhysRigidBodyNode::
-add_impulse_force(const LVector3 &force, bool auto_wake) {
-  get_rigid_body()->addForce(
-    physx::PxVec3(force[0], force[1], force[2]),
-    physx::PxForceMode::eIMPULSE, auto_wake);
-}
-
-/**
- *
- */
-INLINE void PhysRigidBodyNode::
-clear_impulse_force() {
-  get_rigid_body()->clearForce(physx::PxForceMode::eIMPULSE);
-}
-
-/**
- *
- */
-INLINE void PhysRigidBodyNode::
-add_torque(const LVector3 &torque, bool auto_wake) {
+add_torque(const LVector3 &global_torque, ForceType type, bool auto_wake) {
   get_rigid_body()->addTorque(
-    physx::PxVec3(torque[0], torque[1], torque[2]),
-    physx::PxForceMode::eFORCE, auto_wake);
+    Vec3_to_PxVec3(global_torque),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
 }
 
 /**
  *
  */
 INLINE void PhysRigidBodyNode::
-clear_torque() {
-  get_rigid_body()->clearTorque(physx::PxForceMode::eFORCE);
+add_local_force_at_local_pos(const LVector3 &local_force, const LPoint3 &local_pos,
+                             ForceType type, bool auto_wake) {
+  physx::PxRigidBodyExt::addLocalForceAtLocalPos(
+    *get_rigid_body(),
+    Vec3_to_PxVec3(local_force),
+    Vec3_to_PxVec3(local_pos),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
 }
 
 /**
  *
  */
 INLINE void PhysRigidBodyNode::
-add_impulse_torque(const LVector3 &torque, bool auto_wake) {
-  get_rigid_body()->addTorque(
-    physx::PxVec3(torque[0], torque[1], torque[2]),
-    physx::PxForceMode::eIMPULSE, auto_wake);
+add_local_force_at_pos(const LVector3 &local_force, const LPoint3 &global_pos,
+                       ForceType type, bool auto_wake) {
+  physx::PxRigidBodyExt::addLocalForceAtPos(
+    *get_rigid_body(),
+    Vec3_to_PxVec3(local_force),
+    Vec3_to_PxVec3(global_pos),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
 }
 
 /**
  *
  */
 INLINE void PhysRigidBodyNode::
-clear_impulse_torque() {
-  get_rigid_body()->clearTorque(physx::PxForceMode::eIMPULSE);
+add_force_at_local_pos(const LVector3 &global_force, const LPoint3 &local_pos,
+                       ForceType type, bool auto_wake) {
+  physx::PxRigidBodyExt::addForceAtLocalPos(
+    *get_rigid_body(),
+    Vec3_to_PxVec3(global_force),
+    Vec3_to_PxVec3(local_pos),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
+}
+
+/**
+ *
+ */
+INLINE void PhysRigidBodyNode::
+add_force_at_pos(const LVector3 &global_force, const LPoint3 &global_pos,
+                 ForceType type, bool auto_wake) {
+  physx::PxRigidBodyExt::addForceAtPos(
+    *get_rigid_body(),
+    Vec3_to_PxVec3(global_force),
+    Vec3_to_PxVec3(global_pos),
+    (physx::PxForceMode::Enum)type,
+    auto_wake);
+}
+
+/**
+ *
+ */
+INLINE void PhysRigidBodyNode::
+clear_force(ForceType type) {
+  get_rigid_body()->clearForce((physx::PxForceMode::Enum)type);
+}
+
+/**
+ *
+ */
+INLINE void PhysRigidBodyNode::
+clear_torque(ForceType type) {
+  get_rigid_body()->clearTorque((physx::PxForceMode::Enum)type);
 }
 
 /**

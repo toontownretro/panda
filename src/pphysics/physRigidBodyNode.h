@@ -17,11 +17,18 @@
 #include "pandabase.h"
 #include "physRigidActorNode.h"
 
+#include "physx_utils.h"
+
 /**
  * Base class for PhysRigidDynamicNode.  A rigid body with mass and velocity.
  */
 class EXPCL_PANDA_PPHYSICS PhysRigidBodyNode : public PhysRigidActorNode {
 PUBLISHED:
+  enum ForceType {
+    FT_force,
+    FT_impulse,
+  };
+
   INLINE void set_mass(PN_stdfloat mass);
   INLINE PN_stdfloat get_mass() const;
 
@@ -45,17 +52,20 @@ PUBLISHED:
   INLINE void set_max_angular_velocity(PN_stdfloat max);
   INLINE PN_stdfloat get_max_angular_velocity() const;
 
-  INLINE void add_force(const LVector3 &force, bool auto_wake = true);
-  INLINE void clear_force();
+  INLINE void add_force(const LVector3 &global_force, ForceType type = FT_force, bool auto_wake = true);
+  INLINE void add_torque(const LVector3 &global_torque, ForceType type = FT_force, bool auto_wake = true);
 
-  INLINE void add_impulse_force(const LVector3 &force, bool auto_wake = true);
-  INLINE void clear_impulse_force();
+  INLINE void add_local_force_at_local_pos(const LVector3 &local_force, const LPoint3 &local_pos,
+                                           ForceType type = FT_force, bool auto_wake = true);
+  INLINE void add_local_force_at_pos(const LVector3 &local_force, const LPoint3 &global_pos,
+                                     ForceType type = FT_force, bool auto_wake = true);
+  INLINE void add_force_at_local_pos(const LVector3 &global_force, const LPoint3 &local_pos,
+                                     ForceType type = FT_force, bool auto_wake = true);
+  INLINE void add_force_at_pos(const LVector3 &global_force, const LPoint3 &global_pos,
+                               ForceType type = FT_force, bool auto_wake = true);
 
-  INLINE void add_torque(const LVector3 &torque, bool auto_wake = true);
-  INLINE void clear_torque();
-
-  INLINE void add_impulse_torque(const LVector3 &torque, bool auto_wake = true);
-  INLINE void clear_impulse_torque();
+  INLINE void clear_force(ForceType type = FT_force);
+  INLINE void clear_torque(ForceType type = FT_force);
 
   INLINE void set_min_ccd_advance_coefficient(PN_stdfloat coef);
   INLINE PN_stdfloat get_min_ccd_advance_coefficient() const;
