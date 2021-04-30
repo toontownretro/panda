@@ -56,7 +56,7 @@ SteamNetworkConnectionHandle SteamNetworkSystem::
 connect_by_IP_address(const NetAddress &addr) {
   SteamNetworkingIPAddr steam_addr;
   steam_addr.Clear();
-  
+
   SteamNetworkingIPAddr_ParseString(
     &steam_addr, addr.get_addr().get_ip_port().c_str());
 
@@ -64,7 +64,7 @@ connect_by_IP_address(const NetAddress &addr) {
   opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
              (void *)OnSteamNetConnectionStatusChanged);
 
-  SteamNetworkConnectionHandle handle = _interface->ConnectByIPAddress(steam_addr, 0, &opt);
+  SteamNetworkConnectionHandle handle = _interface->ConnectByIPAddress(steam_addr, 1, &opt);
   _client_connection = handle;
   _is_client = true;
 
@@ -208,7 +208,7 @@ create_listen_socket(int port) {
   opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged,
              (void *)OnSteamNetConnectionStatusChanged);
 
-  return _interface->CreateListenSocketIP(steam_addr, 0, &opt);
+  return _interface->CreateListenSocketIP(steam_addr, 1, &opt);
 }
 
 /**
