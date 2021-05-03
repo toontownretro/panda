@@ -29,6 +29,7 @@
 #include "reMutexHolder.h"
 #include "virtualFileSystem.h"
 #include "fmodSoundCache.h"
+#include "throw_event.h"
 #include "vector_uchar.h"
 
 TypeHandle FMODAudioSound::_type_handle;
@@ -742,24 +743,27 @@ void FMODAudioSound::
 finished() {
   ReMutexHolder holder(FMODAudioManager::_lock);
 
+  if (!get_finished_event().empty()) {
+    throw_event(get_finished_event(), EventParameter(this));
+  }
+
   stop();
 }
 
 /**
- * NOT USED ANYMORE!!! Assign a string for the finished event to be referenced
- * by in python by an accept method
+ * Assign a string for the finished event to be referenced
+ * by in python by an accept method.
  *
  */
 void FMODAudioSound::
 set_finished_event(const std::string& event) {
-  audio_error("set_finished_event: not implemented under FMOD");
+  _finished_event = event;
 }
 
 /**
- * NOT USED ANYMORE!!! Return the string the finished event is referenced by
+ * Return the string the finished event is referenced by.
  */
 const std::string& FMODAudioSound::
 get_finished_event() const {
-  audio_error("get_finished_event: not implemented under FMOD");
   return _finished_event;
 }
