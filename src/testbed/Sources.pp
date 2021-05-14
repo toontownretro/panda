@@ -10,7 +10,7 @@
     linmath pstatclient panda
 
 #begin bin_target
-  #define TARGET pview
+  #define TARGET pviewer
 
   #define SOURCES \
     pview.cxx
