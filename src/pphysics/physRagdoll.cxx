@@ -528,15 +528,21 @@ do_callback(CallbackData *cbdata) {
   LVector3 force = point.get_impulse() / 0.015;
   PN_stdfloat force_magnitude = force.length();
 
-  std::cout << "Ragdoll contact between " << NodePath(data->get_actor_a()) << " and " << NodePath(data->get_actor_b()) << " force " << force_magnitude << "\n";
+  LPoint3 position = point.get_position();
+
+  //std::cout << "Ragdoll contact between " << NodePath(data->get_actor_a()) << " and " << NodePath(data->get_actor_b()) << " force " << force_magnitude << "\n";
 
   Randomizer random;
 
   if (force_magnitude >= _ragdoll->_hard_impact_force) {
     int index = random.random_int(_ragdoll->_hard_impact_sounds.size());
+    _ragdoll->_hard_impact_sounds[index]->set_3d_attributes(
+      position[0], position[1], position[2], 0.0, 0.0, 0.0);
     _ragdoll->_hard_impact_sounds[index]->play();
   } else if (force_magnitude >= _ragdoll->_soft_impact_force) {
     int index = random.random_int(_ragdoll->_soft_impact_sounds.size());
+    _ragdoll->_soft_impact_sounds[index]->set_3d_attributes(
+      position[0], position[1], position[2], 0.0, 0.0, 0.0);
     _ragdoll->_soft_impact_sounds[index]->play();
   }
 }
