@@ -54,20 +54,14 @@ get_input_point(int n) const {
  * Sets the input X coordinate.
  */
 INLINE void AnimBlendNode2D::
-set_input_x(PN_stdfloat x) {
-  if (x != _input_coord[0]) {
-    _input_coord_changed = true;
-  }
-  _input_coord[0] = x;
+set_input_x(PoseParameter *param) {
+  _x_param = param;
 }
 
 /**
  * Sets the input Y coordinate.
  */
 INLINE void AnimBlendNode2D::
-set_input_y(PN_stdfloat y) {
-  if (y != _input_coord[1]) {
-    _input_coord_changed = true;
-  }
-  _input_coord[1] = y;
+set_input_y(PoseParameter *param) {
+  _y_param = param;
 }

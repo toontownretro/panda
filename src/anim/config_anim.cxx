@@ -32,6 +32,9 @@
 #include "animMixNode.h"
 #include "animSequence.h"
 #include "animStateMachine.h"
+#include "poseParameter.h"
+#include "weightList.h"
+#include "animOverlayNode.h"
 
 #include "luse.h"
 
@@ -132,10 +135,13 @@ init_libanim() {
   AnimControl::init_type();
   AnimGraphNode::init_type();
   AnimMixNode::init_type();
+  AnimOverlayNode::init_type();
   AnimPreloadTable::init_type();
   AnimSequence::init_type();
   AnimStateMachine::init_type();
   BindAnimRequest::init_type();
+  PoseParameter::init_type();
+  WeightList::init_type();
 
   Character::init_type();
   CharacterNode::init_type();

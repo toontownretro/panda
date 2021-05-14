@@ -54,6 +54,9 @@ public:
   bool _has_forced_value;
 
   LMatrix4 _default_value;
+  LVecBase3 _default_pos;
+  LVecBase3 _default_scale;
+  LQuaternion _default_quat;
 
   friend class Character;
 };

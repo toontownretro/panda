@@ -17,6 +17,7 @@
     animControlCollection.h animControlCollection.I \
     animGraphNode.h animGraphNode.I \
     animMixNode.h animMixNode.I \
+    animOverlayNode.h animOverlayNode.I \
     animPreloadTable.h animPreloadTable.I \
     animSequence.h animSequence.I \
     animStateMachine.h animStateMachine.I \
@@ -32,7 +33,9 @@
     config_anim.h \
     ikSolver.h \
     jointVertexTransform.h jointVertexTransform.I \
-    partSubset.h partSubset.I
+    partSubset.h partSubset.I \
+    poseParameter.h poseParameter.I \
+    weightList.h weightList.I
 
   #define COMPOSITE_SOURCES \
     animAddNode.cxx \
@@ -43,6 +46,7 @@
     animControlCollection.cxx \
     animGraphNode.cxx \
     animMixNode.cxx \
+    animOverlayNode.cxx \
     animPreloadTable.cxx \
     animSequence.cxx \
     animStateMachine.cxx \
@@ -58,7 +62,9 @@
     config_anim.cxx \
     ikSolver.cxx \
     jointVertexTransform.cxx \
-    partSubset.cxx
+    partSubset.cxx \
+    poseParameter.cxx \
+    weightList.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

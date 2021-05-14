@@ -16,6 +16,7 @@
 
 #include "animGraphNode.h"
 #include "vector_stdfloat.h"
+#include "poseParameter.h"
 
 /**
  * Animation graph node that assigns each input node to a 2D location on a
@@ -34,8 +35,8 @@ PUBLISHED:
 
   void compute_weights();
 
-  INLINE void set_input_x(PN_stdfloat x);
-  INLINE void set_input_y(PN_stdfloat y);
+  INLINE void set_input_x(PoseParameter *param);
+  INLINE void set_input_y(PoseParameter *param);
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
@@ -72,8 +73,9 @@ private:
 
   Triangle *_active_tri;
 
+  PT(PoseParameter) _x_param;
+  PT(PoseParameter) _y_param;
   LPoint2 _input_coord;
-  bool _input_coord_changed;
 
   bool _has_triangles;
 

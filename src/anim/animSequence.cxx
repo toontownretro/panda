@@ -13,6 +13,11 @@
 
 #include "animSequence.h"
 #include "clockObject.h"
+#include "bitArray.h"
+
+// For some reason delta animations have a 90 degree rotation on the root
+// joint.  This quaternion reverses that.
+static LQuaternion root_delta_fixup = LQuaternion(0.707107, 0, 0, 0.707107);
 
 #define OPEN_FOR_EACH_CONTROL \
   for (AnimControls::const_iterator aci = _controls.begin(); \
@@ -27,6 +32,75 @@
   CLOSE_FOR_EACH_CONTROL
 
 TypeHandle AnimSequence::_type_handle;
+
+void
+quaternion_scale_seq(const LQuaternion &p, float t, LQuaternion &q) {
+  float r;
+
+  float sinom = std::sqrt(p.get_ijk().dot(p.get_ijk()));
+  sinom = std::min(sinom, 1.0f);
+
+  float sinsom = std::sin(std::asin(sinom) * t);
+
+  t = sinsom / (sinom + FLT_EPSILON);
+
+  q[1] = p[1] * t;
+  q[2] = p[2] * t;
+  q[3] = p[3] * t;
+
+  r = 1.0f - sinsom * sinsom;
+
+  if (r < 0.0f) {
+    r = 0.0f;
+  }
+
+  r = std::sqrt(r);
+
+  // Keep sign of rotation
+  if (p[0] < 0) {
+    q[0] = -r;
+  } else {
+    q[0] = r;
+  }
+}
+
+void
+quaternion_mult_seq(const LQuaternion &p, const LQuaternion &q, LQuaternion &qt) {
+  if (&p == &qt) {
+    LQuaternion p2 = p;
+    quaternion_mult_seq(p2, q, qt);
+    return;
+  }
+
+  LQuaternion q2;
+  LQuaternion::align(p, q, q2);
+
+  // Method of quaternion multiplication taken from Source engine, needed to
+  // correctly layer delta animations decompiled from Source.
+  qt[1] =  p[1] * q2[0] + p[2] * q2[3] - p[3] * q2[2] + p[0] * q2[1];
+	qt[2] = -p[1] * q2[3] + p[2] * q2[0] + p[3] * q2[1] + p[0] * q2[2];
+	qt[3] =  p[1] * q2[2] - p[2] * q2[1] + p[3] * q2[0] + p[0] * q2[3];
+	qt[0] = -p[1] * q2[1] - p[2] * q2[2] - p[3] * q2[3] + p[0] * q2[0];
+
+  //qt = p * q2;
+}
+
+void
+quaternion_ma_seq(const LQuaternion &p, float s, const LQuaternion &q, LQuaternion &qt) {
+  LQuaternion p1, q1;
+
+  quaternion_scale_seq(q, s, q1);
+  quaternion_mult_seq(p, q1, p1);
+  p1.normalize();
+
+  qt = p1;
+}
+
+PN_stdfloat
+simple_spline(PN_stdfloat s) {
+  PN_stdfloat val_squared = s * s;
+  return (3 * val_squared - 2 * val_squared * s);
+}
 
 /**
  * Runs the entire animation from beginning to end and stops.
@@ -211,9 +285,176 @@ is_playing() const {
  */
 void AnimSequence::
 evaluate(AnimGraphEvalContext &context) {
-  nassertv(_base != nullptr);
+  if (_base != nullptr) {
+    AnimGraphEvalContext base_ctx(context);
+    _base->evaluate(base_ctx);
 
-  _base->evaluate(context);
+    // Zero out requested root translational axes.  This is done when a
+    // locomotion animation has movement part of the root joint of the
+    // animation, but the character needs to remain stationary so it can be
+    // moved around with game code.
+    if (has_flags(F_zero_root_x)) {
+      base_ctx._joints[0]._position[0] = 0.0f;
+    }
+    if (has_flags(F_zero_root_y)) {
+      base_ctx._joints[0]._position[1] = 0.0f;
+    }
+    if (has_flags(F_zero_root_z)) {
+      base_ctx._joints[0]._position[2] = 0.0f;
+    }
+
+    blend(context, base_ctx, context._weight);
+  }
+
+  if (_layers.empty()) {
+    return;
+  }
+
+  PN_stdfloat frame = _effective_control->get_full_fframe();
+
+  //std::cout << "Sequence frame: " << frame << "\n";
+
+  // Add our layers.
+  for (size_t i = 0; i < _layers.size(); i++) {
+    const Layer &layer = _layers[i];
+
+    PN_stdfloat start, peak, tail, end;
+
+    start = layer._start_frame != -1 ? layer._start_frame : 0;
+    peak = layer._peak_frame != -1 ? layer._peak_frame : start;
+    end = layer._end_frame != -1 ? layer._end_frame : _effective_control->get_num_frames();
+    tail = layer._tail_frame != -1 ? layer._tail_frame : end;
+
+    if (frame < start || frame >= end) {
+      // Not in the frame range.
+      continue;
+    }
+
+    PN_stdfloat scale = 1.0f;
+    PN_stdfloat layer_weight;
+
+    if (frame < peak && start != peak) {
+      // On the way up.
+      scale = (frame - start) / (peak - start);
+
+    } else if (frame > tail && end != tail) {
+      // On the way down.
+      scale = (end - frame) / (end - tail);
+    }
+
+    if (layer._spline) {
+      // Spline blend.
+      scale = simple_spline(scale);
+    }
+
+    if (layer._no_blend) {
+      layer_weight = scale;
+    } else {
+      layer_weight = context._weight * scale;
+    }
+
+    if (layer_weight <= 0.001f) {
+      // Negligible weight.
+      continue;
+    }
+
+    //std::cout << "Layer " << i << " weight: " << layer_weight << "\n";
+
+    context._weight = layer_weight;
+    layer._seq->evaluate(context);
+  }
+}
+
+/**
+ * Initializes the joint poses of the given context for this sequence.  Sets
+ * each joint to its bind pose.
+ */
+void AnimSequence::
+init_pose(AnimGraphEvalContext &context) {
+  for (int i = 0; i < context._num_joints; i++) {
+    context._joints[i]._position = context._parts[i]._default_pos;
+    context._joints[i]._rotation = context._parts[i]._default_quat;
+    context._joints[i]._scale = context._parts[i]._default_scale;
+  }
+}
+
+/**
+ * Blends together context A with context B.  Result is stored in context A.
+ * Weight of 1 returns B, 0 returns A.
+ */
+void AnimSequence::
+blend(AnimGraphEvalContext &a, AnimGraphEvalContext &b, PN_stdfloat weight) {
+  if (weight <= 0.0f) {
+    return;
+  }
+
+  if (weight >= 1.0f) {
+    weight = 1.0f;
+  }
+
+  int num_joints = b._num_joints;
+  int i;
+  PN_stdfloat s1, s2;
+
+  // Build per-joint weight list.
+  PN_stdfloat *weights = (PN_stdfloat *)alloca(num_joints * sizeof(PN_stdfloat));
+  for (i = 0; i < num_joints; i++) {
+    if (_weights != nullptr) {
+      weights[i] = weight * _weights->get_weight(i);
+    } else {
+      weights[i] = weight;
+    }
+  }
+
+  if (has_flags(F_delta)) {
+    for (i = 0; i < num_joints; i++) {
+      s2 = weights[i];
+      if (s2 <= 0.0f) {
+        continue;
+      }
+
+      if (has_flags(F_post)) {
+        // Overlay delta.
+        LQuaternion b_rot;
+        if (i == 0) {
+          // Apply the stupid rotation fix for the root joint of delta animations.
+          b_rot = b._joints[i]._rotation * root_delta_fixup;
+        } else {
+          b_rot = b._joints[i]._rotation;
+        }
+        quaternion_ma_seq(a._joints[i]._rotation, s2, b_rot, a._joints[i]._rotation);
+        a._joints[i]._position = a._joints[i]._position + (b._joints[i]._position * s2);
+        // Not doing scale.
+
+      } else {
+        // Underlay delta.
+
+        // FIXME: Should be quaternion SM, not implemented yet.
+        quaternion_ma_seq(a._joints[i]._rotation, s2, b._joints[i]._rotation, a._joints[i]._rotation);
+        a._joints[i]._position = a._joints[i]._position + (b._joints[i]._position * s2);
+        // Not doing scale.
+      }
+    }
+
+    return;
+  }
+
+  LQuaternion q3;
+  for (i = 0; i < num_joints; i++) {
+    s2 = weights[i];
+    if (s2 <= 0.0f) {
+      continue;
+    }
+
+    s1 = 1.0f - s2;
+
+    //LQuaternion::blend(b._joints[i]._rotation, a._joints[i]._rotation, s1, q3);
+    LQuaternion::slerp(b._joints[i]._rotation, a._joints[i]._rotation, s1, q3);
+
+    a._joints[i]._rotation = q3;
+    a._joints[i]._position = (a._joints[i]._position * s1) + (b._joints[i]._position * s2);
+    a._joints[i]._scale = (a._joints[i]._scale * s1) + (b._joints[i]._scale * s2);
+  }
 }
 
 /**

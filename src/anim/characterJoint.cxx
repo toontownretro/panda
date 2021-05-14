@@ -22,7 +22,9 @@ CharacterJoint::
 CharacterJoint() :
   CharacterPart(),
   _has_forced_value(false),
-  _forced_value(LMatrix4::ident_mat()) {
+  _forced_value(LMatrix4::ident_mat()),
+  _default_scale(1),
+  _default_quat(LQuaternion::ident_quat()) {
 }
 
 /**
@@ -35,6 +37,9 @@ CharacterJoint(const CharacterJoint &other) :
   _children(other._children),
   //_vertex_transforms(other._vertex_transforms),
   _default_value(other._default_value),
+  _default_pos(other._default_pos),
+  _default_scale(other._default_scale),
+  _default_quat(other._default_quat),
   _forced_value(other._forced_value),
   _has_forced_value(other._has_forced_value)
 {
@@ -50,6 +55,9 @@ CharacterJoint(CharacterJoint &&other) :
   _children(std::move(other._children)),
   //_vertex_transforms(std::move(other._vertex_transforms)),
   _default_value(std::move(other._default_value)),
+  _default_pos(std::move(other._default_pos)),
+  _default_scale(std::move(other._default_scale)),
+  _default_quat(std::move(other._default_quat)),
   _forced_value(std::move(other._forced_value)),
   _has_forced_value(std::move(other._has_forced_value))
 {
@@ -64,6 +72,9 @@ operator=(const CharacterJoint &other) {
   _parent = other._parent;
   _children = other._children;
   _default_value = other._default_value;
+  _default_pos = other._default_pos;
+  _default_scale = other._default_scale;
+  _default_quat = other._default_quat;
   _forced_value = other._forced_value;
   _has_forced_value = other._has_forced_value;
 }
@@ -76,6 +87,8 @@ CharacterJoint(const std::string &name) :
   CharacterPart(name)
 {
   _default_value = LMatrix4::ident_mat();
+  _default_scale = LVecBase3(1);
+  _default_quat = LQuaternion::ident_quat();
   _forced_value = LMatrix4::ident_mat();
   _has_forced_value = false;
 }
@@ -96,6 +109,9 @@ write_datagram(Datagram &dg) {
 
   //_value.write_datagram(dg);
   _default_value.write_datagram(dg);
+  _default_pos.write_datagram(dg);
+  _default_scale.write_datagram(dg);
+  _default_quat.write_datagram(dg);
   //_initial_net_transform_inverse.write_datagram(dg);
 }
 
@@ -115,6 +131,9 @@ read_datagram(DatagramIterator &dgi) {
 
   //_value.read_datagram(dgi);
   _default_value.read_datagram(dgi);
+  _default_pos.read_datagram(dgi);
+  _default_scale.read_datagram(dgi);
+  _default_quat.read_datagram(dgi);
   //_initial_net_transform_inverse.read_datagram(dgi);
 }
 

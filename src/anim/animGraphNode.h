@@ -54,7 +54,12 @@ private:
 
 class JointTransform {
 public:
-  JointTransform() = default;
+  JointTransform() {
+    _rotation = LQuaternion::ident_quat();
+    _scale = LVector3(1);
+    _has_value = false;
+  }
+
   JointTransform(const JointTransform &copy) :
     _position(copy._position),
     _rotation(copy._rotation),
@@ -69,6 +74,13 @@ public:
   {
   }
 
+  void clear() {
+    _has_value = false;
+    _position = LVector3(0);
+    _rotation = LQuaternion::ident_quat();
+    _scale = LVector3(1);
+  }
+
   void operator = (JointTransform &&other) {
     _position = std::move(other._position);
     _rotation = std::move(other._rotation);
@@ -78,6 +90,7 @@ public:
   LVector3 _position;
   LQuaternion _rotation;
   LVector3 _scale;
+  bool _has_value;
 };
 
 typedef MemoryPool<JointTransform, max_joints> JointTransformPool;
@@ -89,16 +102,28 @@ public:
                        bool frame_blend_flag) {
     _joints = joint_transform_pool.alloc();
     _num_joints = num_parts;
+    clear();
     _parts = parts;
     _frame_blend = frame_blend_flag;
+    _weight = 1.0f;
+    _cycle = 0.0f;
   }
 
   AnimGraphEvalContext(const AnimGraphEvalContext &copy) :
     _frame_blend(copy._frame_blend),
     _parts(copy._parts),
-    _num_joints(copy._num_joints)
+    _num_joints(copy._num_joints),
+    _cycle(copy._cycle)
   {
     _joints = joint_transform_pool.alloc();
+    _weight = 1.0f;
+    clear();
+  }
+
+  void clear() {
+    for (int i = 0; i < _num_joints; i++) {
+      _joints[i].clear();
+    }
   }
 
   void steal(AnimGraphEvalContext &other) {
@@ -116,6 +141,9 @@ public:
 
   JointTransform *_joints;
   int _num_joints;
+
+  PN_stdfloat _weight;
+  PN_stdfloat _cycle;
 
   bool _frame_blend;
 

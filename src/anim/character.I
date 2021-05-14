@@ -47,6 +47,28 @@ clear_anim_preload() {
 }
 
 /**
+ * Adds a new pose parameter to the character.  This can be used by animation
+ * blend nodes to control the blend result.
+ */
+INLINE void Character::
+add_pose_parameter(PoseParameter *param) {
+  _pose_parameters[param->get_name()] = param;
+}
+
+/**
+ * Returns the pose parameter assigned to the character with the indicated
+ * name, or NULL if there is no such pose parameter.
+ */
+INLINE PoseParameter *Character::
+get_pose_parameter(const std::string &name) const {
+  PoseParameters::const_iterator it = _pose_parameters.find(name);
+  if (it == _pose_parameters.end()) {
+    return nullptr;
+  }
+  return (*it).second;
+}
+
+/**
  * Sets the animation graph that the character should evaluate to determine
  * a final pose for a frame of animation.
  */
@@ -268,6 +290,10 @@ INLINE void Character::
 set_joint_default_value(int n, const LMatrix4 &value) {
   _joint_values[n] = value;
   _joints[n]._default_value = value;
+  // Break out the components as well.
+  LVecBase3 hpr, shear;
+  decompose_matrix(value, _joints[n]._default_scale, shear, hpr, _joints[n]._default_pos);
+  _joints[n]._default_quat.set_hpr(hpr);
 }
 
 /**
@@ -276,6 +302,22 @@ set_joint_default_value(int n, const LMatrix4 &value) {
 INLINE int Character::
 get_joint_parent(int n) const {
   return _joints[n]._parent;
+}
+
+/**
+ * Returns the number of joints that are children of the specified joint.
+ */
+INLINE int Character::
+get_joint_num_children(int n) const {
+  return _joints[n]._children.size();
+}
+
+/**
+ * Returns the nth children of the specified joint.
+ */
+INLINE int Character::
+get_joint_child(int joint, int child) const {
+  return _joints[joint]._children[child];
 }
 
 /**

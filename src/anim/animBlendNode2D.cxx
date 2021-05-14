@@ -25,7 +25,6 @@ AnimBlendNode2D::
 AnimBlendNode2D(const std::string &name) :
   AnimGraphNode(name),
   _has_triangles(false),
-  _input_coord_changed(true),
   _active_tri(nullptr)
 {
 }
@@ -132,9 +131,16 @@ compute_weights() {
  */
 void AnimBlendNode2D::
 evaluate(AnimGraphEvalContext &context) {
-  if (_input_coord_changed || !_has_triangles) {
+  LPoint2 input(0);
+  if (_x_param) {
+    input[0] = _x_param->get_value();
+  }
+  if (_y_param) {
+    input[1] = _y_param->get_value();
+  }
+  if ((input != _input_coord) || !_has_triangles) {
     compute_weights();
-    _input_coord_changed = false;
+    _input_coord = input;
     _has_triangles = true;
   }
 

@@ -30,6 +30,7 @@
 #include "partSubset.h"
 #include "animPreloadTable.h"
 #include "animGraphNode.h"
+#include "poseParameter.h"
 
 class FactoryParams;
 class AnimBundle;
@@ -62,6 +63,9 @@ PUBLISHED:
   INLINE void set_anim_preload(AnimPreloadTable *table);
   INLINE void clear_anim_preload();
   void merge_anim_preloads(const Character *other);
+
+  INLINE void add_pose_parameter(PoseParameter *param);
+  INLINE PoseParameter *get_pose_parameter(const std::string &name) const;
 
   INLINE void set_anim_graph(AnimGraphNode *graph);
   INLINE AnimGraphNode *get_anim_graph() const;
@@ -101,6 +105,8 @@ PUBLISHED:
 
   INLINE void set_joint_default_value(int n, const LMatrix4 &value);
   INLINE int get_joint_parent(int n) const;
+  INLINE int get_joint_num_children(int n) const;
+  INLINE int get_joint_child(int joint, int child) const;
   INLINE const LMatrix4 &get_joint_skinning_matrix(int n) const;
   INLINE const LMatrix4 &get_joint_net_transform(int n) const;
   INLINE const LMatrix4 &get_joint_transform(int n) const;
@@ -159,6 +165,9 @@ private:
   typedef pvector<CharacterJoint> Joints;
   typedef ov_set<PT(PandaNode)> NodeList;
   typedef pvector<NodeList> NodeLists;
+  typedef pmap<std::string, PT(PoseParameter)> PoseParameters;
+
+  PoseParameters _pose_parameters;
 
   // These are filled in as the joint animates.
   Matrices _joint_values;

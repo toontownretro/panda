@@ -21,12 +21,29 @@
 #include "pipelineCycler.h"
 #include "cycleDataWriter.h"
 #include "cycleDataReader.h"
+#include "weightList.h"
 
 /**
  *
  */
 class EXPCL_PANDA_ANIM AnimSequence final : public AnimGraphNode {
 PUBLISHED:
+  enum Flags {
+    F_none = 0,
+
+    F_delta = 1 << 0,
+    // Overlay delta.
+    F_post = 1 << 1,
+    F_all_zeros = 1 << 2,
+
+    // Override X value of root joint with zero.
+    F_zero_root_x = 1 << 3,
+    // Override Y value of root joint with zero.
+    F_zero_root_y = 1 << 4,
+    // Override Z value of root joint with zero.
+    F_zero_root_z = 1 << 5,
+  };
+
   INLINE AnimSequence(const std::string &name, AnimGraphNode *base = nullptr);
 
   // Replication of AnimControl interfaces that simply call into the
@@ -52,19 +69,41 @@ PUBLISHED:
   double get_full_fframe() const;
   bool is_playing() const;
 
+  INLINE void set_flags(unsigned int flags);
+  INLINE bool has_flags(unsigned int flags) const;
+  INLINE unsigned int get_flags() const;
+  INLINE void clear_flags(unsigned int flags);
+
+  INLINE void set_weight_list(WeightList *list);
+  INLINE WeightList *get_weight_list() const;
+
   INLINE AnimControl *get_effective_control() const;
 
   INLINE void set_base(AnimGraphNode *base);
-  INLINE void add_layer(AnimGraphNode *layer);
+  INLINE void add_layer(AnimGraphNode *layer, int start_frame = -1, int peak_frame = -1,
+                        int tail_frame = -1, int end_frame = -1, bool spline = false,
+                        bool no_blend = true);
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
+  void init_pose(AnimGraphEvalContext &context);
+  void blend(AnimGraphEvalContext &a, AnimGraphEvalContext &b, PN_stdfloat weight);
 
 private:
   void compute_effective_control();
   void r_compute_effective_control(AnimGraphNode *node);
 
 private:
+  class Layer {
+  public:
+    PT(AnimGraphNode) _seq;
+    PN_stdfloat _start_frame;
+    PN_stdfloat _peak_frame;
+    PN_stdfloat _tail_frame;
+    PN_stdfloat _end_frame;
+    bool _spline;
+    bool _no_blend;
+  };
   // The effective control is the AnimControl below us with the highest frame
   // count.  This control will be used to determine frame-based logic such as
   // events and IK rules.
@@ -79,8 +118,13 @@ private:
   PT(AnimGraphNode) _base;
 
   // Additive layers on top of base pose.
-  typedef pvector<PT(AnimGraphNode)> AnimNodes;
-  AnimNodes _add_layers;
+  typedef pvector<Layer> Layers;
+  Layers _layers;
+
+  // Controls per-joint weighting of the evaluated pose.
+  PT(WeightList) _weights;
+
+  unsigned int _flags;
 
   // IK Locks
 

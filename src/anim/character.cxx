@@ -95,6 +95,10 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   joint._parent = parent;
   joint._index = index;
   joint._default_value = default_value;
+  // Break out the components as well.
+  LVecBase3 hpr, shear;
+  decompose_matrix(default_value, joint._default_scale, shear, hpr, joint._default_pos);
+  joint._default_quat.set_hpr(hpr);
 
   if (parent != -1) {
     _joints[parent]._children.push_back(joint._index);
@@ -262,6 +266,12 @@ update() {
   if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
 
     AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
+    // Apply the bind poses of each joint as the starting point.
+    for (int i = 0; i < ctx._num_joints; i++) {
+      ctx._joints[i]._position = _joints[i]._default_pos;
+      ctx._joints[i]._rotation = _joints[i]._default_quat;
+      ctx._joints[i]._scale = _joints[i]._default_scale;
+    }
     cdata->_anim_graph->evaluate(ctx);
 
     any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);
@@ -289,6 +299,12 @@ force_update() {
   double now = ClockObject::get_global_clock()->get_frame_time();
 
   AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
+  // Apply the bind poses of each joint as the starting point.
+  for (int i = 0; i < ctx._num_joints; i++) {
+    ctx._joints[i]._position = _joints[i]._default_pos;
+    ctx._joints[i]._rotation = _joints[i]._default_quat;
+    ctx._joints[i]._scale = _joints[i]._default_scale;
+  }
   cdata->_anim_graph->evaluate(ctx);
 
   bool any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);

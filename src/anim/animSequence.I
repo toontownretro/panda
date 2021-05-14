@@ -16,11 +16,62 @@
  */
 INLINE AnimSequence::
 AnimSequence(const std::string &name, AnimGraphNode *base) :
-  AnimGraphNode(name)
+  AnimGraphNode(name),
+  _flags(F_none)
 {
   if (base != nullptr) {
     set_base(base);
   }
+}
+
+/**
+ *
+ */
+INLINE void AnimSequence::
+set_flags(unsigned int flags) {
+  _flags |= flags;
+}
+
+/**
+ *
+ */
+INLINE bool AnimSequence::
+has_flags(unsigned int flags) const {
+  return (_flags & flags) != 0;
+}
+
+/**
+ *
+ */
+INLINE unsigned int AnimSequence::
+get_flags() const {
+  return _flags;
+}
+
+/**
+ *
+ */
+INLINE void AnimSequence::
+clear_flags(unsigned int flags) {
+  _flags &= (~flags);
+}
+
+/**
+ * Sets a list of per-joint weights to use for the evaluated pose of this
+ * sequence.
+ */
+INLINE void AnimSequence::
+set_weight_list(WeightList *list) {
+  _weights = list;
+}
+
+/**
+ * Returns the list of per-joint weights being used for the evaluated pose of
+ * this sequence.
+ */
+INLINE WeightList *AnimSequence::
+get_weight_list() const {
+  return _weights;
 }
 
 /**
@@ -49,13 +100,25 @@ set_base(AnimGraphNode *node) {
 }
 
 /**
- * Adds a sub-graph that should be treated as an additive layer onto the base
- * pose of this sequence.
+ * Adds a sub-graph that should be treated as an additive or blended layer
+ * onto the base pose of this sequence.
  */
 INLINE void AnimSequence::
-add_layer(AnimGraphNode *node) {
-  _add_layers.push_back(node);
-  add_child(node);
+add_layer(AnimGraphNode *seq, int start_frame, int peak_frame,
+          int tail_frame, int end_frame, bool spline,
+          bool no_blend) {
+  Layer layer;
+  layer._seq = seq;
+  layer._start_frame = start_frame;
+  layer._peak_frame = peak_frame;
+  layer._tail_frame = tail_frame;
+  layer._end_frame = end_frame;
+  layer._spline = spline;
+  layer._no_blend = no_blend;
+
+  _layers.push_back(layer);
+
+  add_child(layer._seq);
 
   compute_effective_control();
 }
