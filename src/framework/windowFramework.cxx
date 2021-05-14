@@ -52,6 +52,7 @@
 #include "bamFile.h"
 #include "staticTextFont.h"
 #include "mouseButton.h"
+#include "animStateMachine.h"
 
 // This is generated data for the standard texture we apply to the blue
 // triangle.
@@ -711,7 +712,31 @@ loop_animations(int hierarchy_match_flags) {
   // animation file, attempt to bind them together now and start the
   // animations looping.
   auto_bind(get_render().node(), _anim_controls, hierarchy_match_flags);
-  _anim_controls.loop_all(true);
+
+  // Build a unique list of all characters.  We need a state machine for each
+  // character.
+  pset<Character *> characters;
+  for (int i = 0; i < _anim_controls.get_num_anims(); i++) {
+    Character *character = _anim_controls.get_anim(i)->get_part();
+    AnimControl *control = _anim_controls.get_anim(i);
+    std::string name = _anim_controls.get_anim_name(i);
+    auto it = characters.insert(character);
+
+    PT(AnimStateMachine) state_machine;
+    if (it.second) {
+      state_machine = new AnimStateMachine("fsm");
+      character->set_anim_graph(state_machine);
+    } else {
+      state_machine = DCAST(AnimStateMachine, character->get_anim_graph());
+    }
+
+    PT(AnimSequence) seq = new AnimSequence(name, control);
+    state_machine->add_state(name, seq);
+
+    if (it.second) {
+      state_machine->set_state(name);
+    }
+  }
 }
 
 /**
