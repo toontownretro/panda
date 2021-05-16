@@ -85,6 +85,18 @@ PUBLISHED:
 	void add_camera( const NodePath &camera, int lens, int sort = 0 );
 	void remove_camera( const NodePath &camera, int lens = -1 );
 
+	INLINE void push_output_pipe(const std::string &identifier, Texture *texture) {
+		_output_pipes[identifier] = texture;
+	}
+
+	INLINE Texture *get_output_pipe(const std::string &identifier) const {
+		int itr = _output_pipes.find(identifier);
+		if (itr != -1) {
+			return _output_pipes.get_data(itr);
+		}
+		return nullptr;
+	}
+
 	INLINE void add_effect( PostProcessEffect *effect )
 	{
 		_effects[effect->get_name()] = effect;
@@ -167,6 +179,8 @@ private:
 
 	SimpleHashMap<std::string, PT( PostProcessEffect ), string_hash> _effects;
 	GraphicsOutput *_output;
+
+	SimpleHashMap<std::string, PT(Texture), string_hash> _output_pipes;
 
 	PT( DisplayRegion ) _output_display_region;
 

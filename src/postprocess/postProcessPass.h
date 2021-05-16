@@ -37,8 +37,8 @@ PUBLISHED:
 			 const FrameBufferProperties &fbprops = PostProcessPass::get_default_fbprops(),
 			 bool force_size = false, const LVector2i &forced_size = LVector2i::zero(), bool div_size = false, int div = 1 );
 
-	void add_color_output();
-	void add_depth_output();
+	virtual void add_color_output();
+	virtual void add_depth_output();
 	virtual void add_aux_output( int n );
 
 	INLINE NodePath get_quad() const
@@ -69,6 +69,10 @@ PUBLISHED:
 	INLINE void set_framebuffer_properties( const FrameBufferProperties &fbprops )
 	{
 		_fbprops = fbprops;
+	}
+
+	INLINE const FrameBufferProperties &get_framebuffer_properties() const {
+		return _fbprops;
 	}
 
 	LVector2i get_corrected_size( const LVector2i &size );

@@ -12,7 +12,7 @@
  */
 
 /**
- * Returns the current log-average luminance of the scene.
+ * Returns the current average luminance of the scene.
  * Note: This is the time-averaged value, not instantaneous.
  */
 INLINE float HDRPass::
@@ -58,4 +58,13 @@ get_max_luminance() const {
 INLINE float HDRPass::
 get_exposure() const {
   return _exposure;
+}
+
+/**
+ * Returns the current camera exposure value expressed in EV units (exp2 of
+ * linear exposure).
+ */
+INLINE float HDRPass::
+get_exposure_value() const {
+  return _exposure_value;
 }

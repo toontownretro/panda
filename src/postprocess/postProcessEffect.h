@@ -46,7 +46,7 @@ PUBLISHED:
 
 	virtual void setup();
 	virtual void update();
-	void window_event( GraphicsOutput *win );
+	virtual void window_event( GraphicsOutput *win );
 
 	virtual void shutdown();
 

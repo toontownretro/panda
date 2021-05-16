@@ -35,7 +35,7 @@ PostProcessScenePass::PostProcessScenePass( PostProcess *pp ) :
 	//_fbprops.set_float_depth(false);
 	_fbprops.set_depth_bits(32);
 	// We don't need more than 8 bits for RGB, and we don't need alpha.
-	//_fbprops.set_rgba_bits(16, 16, 16, 0);
+	_fbprops.set_rgba_bits(16, 16, 16, 0);
 	_fbprops.set_rgb_color(true);
 	_fbprops.set_float_color(true);
 	// Always render with hardware.
@@ -49,6 +49,18 @@ PostProcessScenePass::PostProcessScenePass( PostProcess *pp ) :
 	// Enable our auxiliary framebuffer attachments.  Some of them are needed as
 	// inputs to post processing passes.
 	_fbprops.set_aux_rgba(AUXTEXTURE_COUNT);
+}
+
+void PostProcessScenePass::add_color_output() {
+	PostProcessPass::add_color_output();
+
+	_pp->push_output_pipe("scene_color", get_color_texture());
+}
+
+void PostProcessScenePass::add_depth_output() {
+	PostProcessPass::add_depth_output();
+
+	_pp->push_output_pipe("scene_depth", get_depth_texture());
 }
 
 void PostProcessScenePass::add_aux_output( int n )
@@ -73,6 +85,8 @@ void PostProcessScenePass::add_aux_output( int n )
 			_buffer->set_clear_active(GraphicsBuffer::RTP_aux_rgba_0 + n, true);
 			_buffer->set_clear_value(GraphicsBuffer::RTP_aux_rgba_0 + n, get_aux_clear_value(n));
 		}
+
+		_pp->push_output_pipe(get_aux_identifier(n), _aux_textures[n]);
 
 		_cam_state = _cam_state->remove_attrib( AuxBitplaneAttrib::get_class_slot() );
 		if ( _aux_bits )
@@ -112,6 +126,23 @@ needs_aux_clear(int n) const {
 		return true;
 	default:
 		return false;
+	}
+}
+
+/**
+ *
+ */
+std::string PostProcessScenePass::
+get_aux_identifier(int n) const {
+	switch (n) {
+	case AUXTEXTURE_ARME:
+		return "scene_arme";
+	case AUXTEXTURE_BLOOM:
+		return "scene_bloom_mask";
+	case AUXTEXTURE_NORMAL:
+		return "scene_normals";
+	default:
+		return "";
 	}
 }
 

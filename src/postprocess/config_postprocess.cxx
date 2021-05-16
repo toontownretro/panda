@@ -20,6 +20,7 @@
 #include "postProcessEffect.h"
 #include "postProcessPass.h"
 #include "ssao.h"
+#include "toneMapping.h"
 
 NotifyCategoryDef(postprocess, "")
 
@@ -53,4 +54,5 @@ init_libpostprocess() {
   HDRPass::init_type();
   HDREffect::init_type();
   SSAO_Effect::init_type();
+  ToneMappingEffect::init_type();
 }

@@ -18,7 +18,8 @@
     postProcessEffect.h \
     postProcessPass.h \
     postProcessScenePass.h \
-    ssao.h
+    ssao.h \
+    toneMapping.h toneMapping.I
 
   #define COMPOSITE_SOURCES \
     bloom.cxx \
@@ -30,7 +31,8 @@
     postProcessEffect.cxx \
     postProcessPass.cxx \
     postProcessScenePass.cxx \
-    ssao.cxx
+    ssao.cxx \
+    toneMapping.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

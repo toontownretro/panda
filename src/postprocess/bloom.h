@@ -19,17 +19,21 @@
 class Texture;
 class PostProcess;
 
-class EXPCL_PANDA_POSTPROCESS BloomEffect : public PostProcessEffect
-{
-	DECLARE_CLASS( BloomEffect, PostProcessEffect );
+class EXPCL_PANDA_POSTPROCESS BloomEffect : public PostProcessEffect {
+	DECLARE_CLASS(BloomEffect, PostProcessEffect);
 
 PUBLISHED:
-	BloomEffect( PostProcess *pp );
+	BloomEffect(PostProcess *pp);
 
 	virtual Texture *get_final_texture();
+	virtual void window_event(GraphicsOutput *output) override;
 
 private:
-	Texture *_final_texture;
+	// Just the bloom.
+	PT(Texture) _bloom_texture;
+
+	// Bloom added onto scene color.
+	PT(Texture) _bloom_combine_texture;
 };
 
 #endif

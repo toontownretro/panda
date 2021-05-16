@@ -21,6 +21,7 @@ public:
 	FXAA_Pass( PostProcess *pp ) :
 		PostProcessPass( pp, "fxaa-pass" )
 	{
+		_fbprops.set_rgba_bits(16, 16, 16, 0);
 	}
 
 	virtual void setup()
@@ -33,7 +34,7 @@ public:
 				"shaders/postprocess/fxaa.frag.glsl"
 			)
 		);
-		get_quad().set_shader_input( "sceneTexture", _pp->get_scene_color_texture() );
+		get_quad().set_shader_input( "sceneTexture", _pp->get_output_pipe("scene_color") );
 	}
 };
 
@@ -45,6 +46,7 @@ FXAA_Effect::FXAA_Effect( PostProcess *pp ) :
 	PT( FXAA_Pass ) pass = new FXAA_Pass( pp );
 	pass->setup();
 	pass->add_color_output();
+	pp->push_output_pipe("scene_color", pass->get_color_texture());
 
 	add_pass( pass );
 }

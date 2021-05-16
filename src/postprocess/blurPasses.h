@@ -18,7 +18,7 @@
 class BlurX : public PostProcessPass
 {
 public:
-	BlurX( PostProcess *pp, Texture *blur_input ) :
+	BlurX( PostProcess *pp, Texture *blur_input, float div_size = 1.0f ) :
 		PostProcessPass( pp, "blurX" ),
 		_vs_tap_offsets( PTA_LVecBase2f::empty_array( 3 ) ),
 		_ps_tap_offsets( PTA_LVecBase2f::empty_array( 3 ) ),

@@ -20,28 +20,13 @@
 #include "geom.h"
 #include "renderState.h"
 #include "callbackObject.h"
+#include "computeNode.h"
 #include "occlusionQueryContext.h"
 #include "pta_float.h"
 #include "configVariableBool.h"
 #include "pvector.h"
 
 extern EXPCL_PANDA_POSTPROCESS ConfigVariableBool hdr_auto_exposure;
-
-class hdrbucket_t
-{
-public:
-	float luminance_min;
-	float luminance_max;
-
-	int pixels;
-
-	PT(OcclusionQueryContext) ctx;
-
-	CPT(RenderState) state;
-};
-
-extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_num_buckets;
-extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_num_ldr_buckets;
 
 class EXPCL_PANDA_POSTPROCESS HDRPass : public PostProcessPass
 {
@@ -61,9 +46,6 @@ PUBLISHED:
 
 	HDRPass( PostProcess *pp );
 
-	virtual void setup_quad();
-	virtual void setup_region();
-
 	virtual void setup();
 
 	virtual void update();
@@ -74,16 +56,9 @@ PUBLISHED:
 	INLINE float get_iso() const;
 	INLINE float get_max_luminance() const;
 	INLINE float get_exposure() const;
-
-public:
-	void draw( CallbackData *data );
+	INLINE float get_exposure_value() const;
 
 private:
-	float find_location_of_percent_bright_pixels(
-		float percent_bright_pixels, float same_bin_snap,
-		int total_pixel_count );
-
-	float get_average_histogram_luminance(int total_pixel_count) const;
 
 	float compute_iso(float aperature, float shutter_speed, float iso) const;
 	float compute_ev(float aperature, float shutter_speed, float iso) const;
@@ -108,6 +83,11 @@ private:
 private:
 	CPT(Geom) _quad_geom;
 
+	PT(ComputeNode) _histogram_node;
+	PT(ComputeNode) _luminance_node;
+	PT(Texture) _histogram_buffer_texture;
+	PT(Texture) _luminance_output_texture;
+
 	// Calculated luminance based on histogram
 	float _luminance;
 
@@ -117,9 +97,8 @@ private:
 	float _iso;
 	float _max_luminance;
 	float _exposure;
-
-	int _current_bucket;
-	pvector<hdrbucket_t> _buckets;
+	// exp2 of _exposure.
+	float _exposure_value;
 };
 
 class EXPCL_PANDA_POSTPROCESS HDREffect : public PostProcessEffect

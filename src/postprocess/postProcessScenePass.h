@@ -28,10 +28,13 @@ PUBLISHED:
 	virtual void setup_camera();
 	virtual void setup_quad();
 	virtual bool setup_buffer();
+	virtual void add_color_output();
+	virtual void add_depth_output();
 	virtual void add_aux_output( int n );
 
 	LColor get_aux_clear_value(int n) const;
 	bool needs_aux_clear(int n) const;
+	std::string get_aux_identifier(int n) const;
 
 	void setup_scene_camera( int i, int sort = 0 );
 
