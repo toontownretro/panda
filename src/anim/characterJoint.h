@@ -58,6 +58,13 @@ public:
   LVecBase3 _default_scale;
   LQuaternion _default_quat;
 
+  // Should the joint be used to merge with the corresponding joint on a child
+  // character?
+  bool _merge;
+
+  // Index of joint on the character that this joint should be merged with.
+  int _merge_joint;
+
   friend class Character;
 };
 

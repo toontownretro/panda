@@ -24,7 +24,9 @@ CharacterJoint() :
   _has_forced_value(false),
   _forced_value(LMatrix4::ident_mat()),
   _default_scale(1),
-  _default_quat(LQuaternion::ident_quat()) {
+  _default_quat(LQuaternion::ident_quat()),
+  _merge(false),
+  _merge_joint(-1) {
 }
 
 /**
@@ -41,7 +43,9 @@ CharacterJoint(const CharacterJoint &other) :
   _default_scale(other._default_scale),
   _default_quat(other._default_quat),
   _forced_value(other._forced_value),
-  _has_forced_value(other._has_forced_value)
+  _has_forced_value(other._has_forced_value),
+  _merge(other._merge),
+  _merge_joint(other._merge_joint)
 {
 }
 
@@ -59,7 +63,9 @@ CharacterJoint(CharacterJoint &&other) :
   _default_scale(std::move(other._default_scale)),
   _default_quat(std::move(other._default_quat)),
   _forced_value(std::move(other._forced_value)),
-  _has_forced_value(std::move(other._has_forced_value))
+  _has_forced_value(std::move(other._has_forced_value)),
+  _merge(std::move(other._merge)),
+  _merge_joint(std::move(other._merge_joint))
 {
 }
 
@@ -77,6 +83,8 @@ operator=(const CharacterJoint &other) {
   _default_quat = other._default_quat;
   _forced_value = other._forced_value;
   _has_forced_value = other._has_forced_value;
+  _merge = other._merge;
+  _merge_joint = other._merge_joint;
 }
 
 /**
@@ -91,6 +99,8 @@ CharacterJoint(const std::string &name) :
   _default_quat = LQuaternion::ident_quat();
   _forced_value = LMatrix4::ident_mat();
   _has_forced_value = false;
+  _merge = false;
+  _merge_joint = -1;
 }
 
 /**
@@ -112,6 +122,8 @@ write_datagram(Datagram &dg) {
   _default_pos.write_datagram(dg);
   _default_scale.write_datagram(dg);
   _default_quat.write_datagram(dg);
+
+  dg.add_bool(_merge);
   //_initial_net_transform_inverse.write_datagram(dg);
 }
 
@@ -134,6 +146,8 @@ read_datagram(DatagramIterator &dgi) {
   _default_pos.read_datagram(dgi);
   _default_scale.read_datagram(dgi);
   _default_quat.read_datagram(dgi);
+
+  _merge = dgi.get_bool();
   //_initial_net_transform_inverse.read_datagram(dgi);
 }
 

@@ -274,7 +274,7 @@ update() {
     }
     cdata->_anim_graph->evaluate(ctx);
 
-    any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);
+    any_changed = apply_pose(cdata, cdata->_root_xform, ctx, current_thread);
 
     cdata->_anim_changed = false;
     cdata->_last_update = now;
@@ -307,7 +307,7 @@ force_update() {
   }
   cdata->_anim_graph->evaluate(ctx);
 
-  bool any_changed = apply_pose(cdata->_root_xform, ctx, current_thread);
+  bool any_changed = apply_pose(cdata, cdata->_root_xform, ctx, current_thread);
 
   cdata->_anim_changed = false;
   cdata->_last_update = now;
@@ -473,17 +473,35 @@ copy_subgraph() const {
  * Applies the final pose computed by the animation graph to each joint.
  */
 bool Character::
-apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread) {
+apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread) {
   PStatTimer timer(apply_pose_collector);
 
   size_t joint_count = _joints.size();
 
+  Character *merge_char = cdata->_joint_merge_character;
+
   ap_compose_collector.start();
   for (size_t i = 0; i < joint_count; i++) {
+    CharacterJoint &joint = _joints[i];
+
     // Check for a forced joint override value.
     // FIXME: No point in evaluating anim graph for joints with forced values.
-    if (_joints[i]._has_forced_value) {
-      _joint_values[i] = _joints[i]._forced_value;
+    if (joint._has_forced_value) {
+      _joint_values[i] = joint._forced_value;
+
+    } else if (joint._merge_joint != -1) {
+      // Use the transform of the parent merge joint.
+
+      // Take the net transform and re-interpret it.
+      _joint_net_transforms[i] = merge_char->_joint_net_transforms[joint._merge_joint];
+      if (joint._parent != -1) {
+        LMatrix4 parent_inverse = _joint_net_transforms[joint._parent];
+        parent_inverse.invert_in_place();
+        _joint_values[i] = _joint_net_transforms[i] * parent_inverse;
+
+      } else {
+        _joint_values[i] = _joint_net_transforms[i];
+      }
 
     } else {
       const JointTransform &xform = context._joints[i];
@@ -497,11 +515,14 @@ apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thre
   for (size_t i = 0; i < joint_count; i++) {
     CharacterJoint &joint = _joints[i];
 
-    if (joint._parent != -1) {
-      _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
+    // If it's a merged joint, we already computed the net transform above.
+    if (joint._merge_joint == -1) {
+      if (joint._parent != -1) {
+        _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
 
-    } else {
-      _joint_net_transforms[i] = _joint_values[i] * root_xform;
+      } else {
+        _joint_net_transforms[i] = _joint_values[i] * root_xform;
+      }
     }
 
     _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
@@ -567,6 +588,42 @@ remove_node(CharacterNode *node) {
 
   if (get_num_nodes() > 0) {
     update_active_owner(_active_owner, get_node(get_num_nodes() - 1));
+  }
+}
+
+/**
+ * Builds the mapping of parent joints with joint merge enabled to the
+ * corresponding joints on this character.
+ */
+void Character::
+build_joint_merge_map(Character *merge_char) {
+  if (merge_char == nullptr) {
+    for (size_t i = 0; i < _joints.size(); i++) {
+      _joints[i]._merge_joint = -1;
+    }
+
+  } else {
+    for (size_t i = 0; i < _joints.size(); i++) {
+      CharacterJoint &joint = _joints[i];
+
+      // See if the parent character has a joint with this name.
+      int parent_joint_idx = merge_char->find_joint(joint.get_name());
+      if (parent_joint_idx == -1) {
+        joint._merge_joint = -1;
+        continue;
+      }
+
+      // It does, see if joint merge is enabled on the parent joint.
+      CharacterJoint &parent_joint = merge_char->_joints[parent_joint_idx];
+
+      if (parent_joint._merge) {
+        // Joint merge is enabled, so our joint will take the transform from
+        // the parent character's joint.
+        joint._merge_joint = parent_joint_idx;
+      } else {
+        joint._merge_joint = -1;
+      }
+    }
   }
 }
 
@@ -985,7 +1042,8 @@ CData() :
   _anim_changed(false),
   _last_update(0.0),
   _root_xform(LMatrix4::ident_mat()),
-  _anim_graph(nullptr)
+  _anim_graph(nullptr),
+  _joint_merge_character(nullptr)
 {
 }
 
@@ -998,7 +1056,8 @@ CData(const Character::CData &copy) :
   _root_xform(copy._root_xform),
   _anim_changed(copy._anim_changed),
   _last_update(copy._last_update),
-  _anim_graph(copy._anim_graph)
+  _anim_graph(copy._anim_graph),
+  _joint_merge_character(copy._joint_merge_character)
 {
   // Note that this copy constructor is not used by the PartBundle copy
   // constructor!  Any elements that must be copied between PartBundles should

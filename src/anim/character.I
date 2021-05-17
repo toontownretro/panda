@@ -282,6 +282,26 @@ set_vertex_slider(int n, CharacterVertexSlider *slider) {
   _sliders[n]._vertex_slider = slider;
 }
 
+/**
+ * Sets the joint merge character; the character that will be used to merge
+ * our joints with theirs.
+ */
+INLINE void Character::
+set_joint_merge_character(Character *character) {
+  build_joint_merge_map(character);
+
+  CDWriter cdata(_cycler);
+  cdata->_joint_merge_character = character;
+}
+
+/**
+ * Returns the joint merge character.  See set_joint_merge_character().
+ */
+INLINE Character *Character::
+get_joint_merge_character() const {
+  CDReader cdata(_cycler);
+  return cdata->_joint_merge_character;
+}
 
 /**
  * Sets the default pose of the specified joint.
@@ -294,6 +314,22 @@ set_joint_default_value(int n, const LMatrix4 &value) {
   LVecBase3 hpr, shear;
   decompose_matrix(value, _joints[n]._default_scale, shear, hpr, _joints[n]._default_pos);
   _joints[n]._default_quat.set_hpr(hpr);
+}
+
+/**
+ * Enable joint merge on the indicated joint.
+ */
+INLINE void Character::
+set_joint_merge(int n, bool enable) {
+  _joints[n]._merge = enable;
+}
+
+/**
+ * Returns true if the joint has joint merge enabled, false otherwise.
+ */
+INLINE bool Character::
+get_joint_merge(int n) const {
+  return _joints[n]._merge;
 }
 
 /**

@@ -44,6 +44,8 @@ class CharacterNode;
  */
 class EXPCL_PANDA_ANIM Character final : public TypedWritableReferenceCount, public Namable {
 private:
+  class CData;
+
   Character(const Character &copy);
 
 PUBLISHED:
@@ -103,7 +105,12 @@ PUBLISHED:
   INLINE const std::string &get_slider_name(int n) const;
   INLINE void set_vertex_slider(int n, CharacterVertexSlider *slider);
 
+  INLINE void set_joint_merge_character(Character *character);
+  INLINE Character *get_joint_merge_character() const;
+
   INLINE void set_joint_default_value(int n, const LMatrix4 &value);
+  INLINE void set_joint_merge(int n, bool merge);
+  INLINE bool get_joint_merge(int n) const;
   INLINE int get_joint_parent(int n) const;
   INLINE int get_joint_num_children(int n) const;
   INLINE int get_joint_child(int joint, int child) const;
@@ -149,6 +156,8 @@ public:
   INLINE void set_update_delay(double delay);
 
 private:
+  void build_joint_merge_map(Character *merge_char);
+
   void update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner);
 
   bool check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const;
@@ -157,7 +166,8 @@ private:
   void bind_hierarchy(const AnimBundle *anim, int n, int channel_index,
                       bool is_included, BitArray &bound_joints, const PartSubset &subset);
 
-  bool apply_pose(const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread);
+  bool apply_pose(CData *cdata, const LMatrix4 &root_xform,
+                  const AnimGraphEvalContext &context, Thread *current_thread);
 
 private:
   typedef pvector<LMatrix4> Matrices;
@@ -213,6 +223,7 @@ private:
     bool _frame_blend_flag;
     LMatrix4 _root_xform;
     PT(AnimGraphNode) _anim_graph;
+    PT(Character) _joint_merge_character;
     bool _anim_changed;
     double _last_update;
   };
