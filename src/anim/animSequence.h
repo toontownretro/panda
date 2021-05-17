@@ -42,6 +42,10 @@ PUBLISHED:
     F_zero_root_y = 1 << 4,
     // Override Z value of root joint with zero.
     F_zero_root_z = 1 << 5,
+
+    F_looping = 1 << 6,
+
+    F_snap = 1 << 7,
   };
 
   INLINE AnimSequence(const std::string &name, AnimGraphNode *base = nullptr);
@@ -68,6 +72,14 @@ PUBLISHED:
   int get_full_frame() const;
   double get_full_fframe() const;
   bool is_playing() const;
+
+  INLINE PN_stdfloat get_length() const;
+
+  INLINE void set_fade_in(PN_stdfloat time);
+  INLINE PN_stdfloat get_fade_in() const;
+
+  INLINE void set_fade_out(PN_stdfloat time);
+  INLINE PN_stdfloat get_fade_out() const;
 
   INLINE void set_flags(unsigned int flags);
   INLINE bool has_flags(unsigned int flags) const;
@@ -125,6 +137,9 @@ private:
   PT(WeightList) _weights;
 
   unsigned int _flags;
+
+  PN_stdfloat _fade_in;
+  PN_stdfloat _fade_out;
 
   // IK Locks
 

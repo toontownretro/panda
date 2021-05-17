@@ -17,11 +17,58 @@
 INLINE AnimSequence::
 AnimSequence(const std::string &name, AnimGraphNode *base) :
   AnimGraphNode(name),
-  _flags(F_none)
+  _flags(F_none),
+  _fade_in(0.2f),
+  _fade_out(0.2f)
 {
   if (base != nullptr) {
     set_base(base);
   }
+}
+
+/**
+ * Returns the length of the sequence in seconds.
+ */
+INLINE PN_stdfloat AnimSequence::
+get_length() const {
+  if (_effective_control == nullptr) {
+    return 0.0f;
+  }
+
+  return (PN_stdfloat)_effective_control->get_num_frames() /
+    (_effective_control->get_anim()->get_base_frame_rate() * _effective_control->get_play_rate());
+}
+
+/**
+ *
+ */
+INLINE void AnimSequence::
+set_fade_in(PN_stdfloat time) {
+  _fade_in = time;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat AnimSequence::
+get_fade_in() const {
+  return _fade_in;
+}
+
+/**
+ *
+ */
+INLINE void AnimSequence::
+set_fade_out(PN_stdfloat time) {
+  _fade_out = time;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat AnimSequence::
+get_fade_out() const {
+  return _fade_out;
 }
 
 /**

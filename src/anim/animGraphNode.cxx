@@ -37,7 +37,7 @@ mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat fr
 
     joint._position = (a_joint._position * e0) + (b_joint._position * frac);
     joint._scale = (a_joint._scale * e0) + (b_joint._scale * frac);
-    LQuaternion::blend(a_joint._rotation, b_joint._rotation, frac, joint._rotation);
+    LQuaternion::slerp(a_joint._rotation, b_joint._rotation, frac, joint._rotation);
   }
 }
 
@@ -51,7 +51,7 @@ AnimGraphNode(const std::string &name) :
 }
 
 /**
- * 
+ *
  */
 AnimGraphNode::
 ~AnimGraphNode() {

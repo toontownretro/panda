@@ -26,11 +26,12 @@ class EXPCL_PANDA_ANIM AnimStateMachine final : public AnimGraphNode {
 PUBLISHED:
   AnimStateMachine(const std::string &name);
 
-  void set_state(const std::string &state, int snap = -1, int loop = -1);
+  bool set_state(const std::string &name);
+  bool set_state(int n);
 
-  void add_state(const std::string &name, AnimSequence *seq,
-                 bool looping = true, PN_stdfloat fade_in = 0.2f,
-                 PN_stdfloat fade_out = 0.2f);
+  int get_state(const std::string &name) const;
+
+  int add_state(const std::string &name, AnimSequence *seq);
 
 protected:
   virtual void evaluate(AnimGraphEvalContext &context) override;
@@ -39,19 +40,11 @@ private:
   class State {
   public:
     PT(AnimSequence) _graph;
-    // The time to transition into this state from another state.
-    PN_stdfloat _fade_in;
-    // The time to transition out of this state into another state.
-    PN_stdfloat _fade_out;
-
-    bool _looping;
-
     PN_stdfloat _weight;
-
     std::string _name;
   };
 
-  typedef pmap<std::string, State> States;
+  typedef pvector<State> States;
   States _states;
 
   State *_current_state;

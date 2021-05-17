@@ -27,20 +27,28 @@ AnimStateMachine(const std::string &name):
 }
 
 /**
- * Sets the active animation state.
+ *
  */
-void AnimStateMachine::
-set_state(const std::string &name, int snap, int loop) {
-  States::iterator si = _states.find(name);
-  if (si == _states.end()) {
-    return;
+bool AnimStateMachine::
+set_state(const std::string &name) {
+  int state = get_state(name);
+  if (state == -1) {
+    return false;
   }
 
-  State *state = &(*si).second;
+  return set_state(state);
+}
+
+/**
+ * Sets the active animation state.
+ */
+bool AnimStateMachine::
+set_state(int n) {
+  State *state = &_states[n];
 
   if (state == _current_state) {
     // Already the active state, do nothing.
-    return;
+    return false;
   }
 
   // This can happen if we change state while in the process of fading out
@@ -52,7 +60,9 @@ set_state(const std::string &name, int snap, int loop) {
   _last_state = _current_state;
   _current_state = state;
 
-  if (state->_looping || loop > 0) {
+  AnimSequence *seq = state->_graph;
+
+  if (seq->has_flags(AnimSequence::F_looping)) {
     state->_graph->loop(true);
 
   } else {
@@ -61,27 +71,43 @@ set_state(const std::string &name, int snap, int loop) {
 
   ClockObject *clock = ClockObject::get_global_clock();
   _state_change_time = clock->get_frame_time();
-  if (snap > 0) {
-    _state_change_time -= state->_fade_in;
+  if (seq->has_flags(AnimSequence::F_snap)) {
+    _state_change_time -= seq->get_fade_out();
   }
+
+  return true;
+}
+
+/**
+ *
+ */
+int AnimStateMachine::
+get_state(const std::string &name) const {
+  for (int i = 0; i < (int)_states.size(); i++) {
+    if (_states[i]._name == name) {
+      return i;
+    }
+  }
+
+  return -1;
 }
 
 /**
  * Adds a new state.
  */
-void AnimStateMachine::
-add_state(const std::string &name, AnimSequence *graph, bool looping,
-          PN_stdfloat fade_in, PN_stdfloat fade_out) {
+int AnimStateMachine::
+add_state(const std::string &name, AnimSequence *graph) {
   State state;
   state._graph = graph;
   state._name = name;
-  state._fade_in = fade_in;
-  state._fade_out = fade_out;
   state._weight = 1.0f;
 
   add_child(graph);
 
-  _states[name] = std::move(state);
+  int index = (int)_states.size();
+  _states.push_back(std::move(state));
+
+  return index;
 }
 
 /**
@@ -100,8 +126,14 @@ evaluate(AnimGraphEvalContext &context) {
   ClockObject *clock = ClockObject::get_global_clock();
   PN_stdfloat transition_elapsed = clock->get_frame_time() - _state_change_time;
 
-  if (transition_elapsed < _current_state->_fade_in) {
-    PN_stdfloat frac = std::min(1.0f, transition_elapsed / _current_state->_fade_in);
+  AnimSequence *seq = _current_state->_graph;
+
+  if (transition_elapsed < seq->get_fade_out()) {
+    PN_stdfloat frac = std::min(1.0f, transition_elapsed / seq->get_fade_out());
+    if (frac > 0 && frac <= 1.0) {
+      // Do a nice spline curve.
+      frac = 3 * frac * frac - 2 * frac * frac * frac;
+    }
     _current_state->_weight = frac;
   } else {
     _current_state->_weight = 1.0f;
