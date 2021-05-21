@@ -72,6 +72,8 @@ public:
   typedef pmap<std::string, std::string> StringMap;
   StringMap _exposes;
 
+  vector_string _joint_merges;
+
   PN_stdfloat _scale;
 
   // Miscellaneous key-values assigned to the model.

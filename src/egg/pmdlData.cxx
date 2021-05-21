@@ -62,6 +62,16 @@ do_read(TokenFile *tokens, const DSearchPath &search_path) {
         return false;
       }
 
+    } else if (token == "$jointmerge" || token == "$bonemerge") {
+      if (!tokens->token_available()) {
+        pmdl_cat.error()
+          << "$jointmerge/$bonemerge: missing joint name\n";
+        return false;
+      }
+
+      tokens->next_token();
+      _joint_merges.push_back(tokens->get_token());
+
     } else if (token == "$materialgroup") {
       if (!process_texturegroup(tokens)) {
         return false;

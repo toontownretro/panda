@@ -30,6 +30,7 @@
 #include "animBundleNode.h"
 #include "animBundle.h"
 #include "characterJointEffect.h"
+#include "materialPool.h"
 
 /**
  *
@@ -75,17 +76,15 @@ build_graph() {
   }
 
   // MATERIAL GROUPS
-  #if 0
   for (size_t i = 0; i < _data->_texture_groups.size(); i++) {
     PMDLTextureGroup *group = _data->_texture_groups[i];
-    PT(MaterialGroup) mat_group = new MaterialGroup;
+    MaterialCollection coll;
     for (size_t j = 0; j < group->get_num_materials(); j++) {
       Filename mat_fname = group->get_material(j);
-      mat_group->add_material(RenderStatePool::load_state(mat_fname));
+      coll.add_material(MaterialPool::load_material(mat_fname, search_path));
     }
-    mdl_root->add_material_group(mat_group);
+    mdl_root->add_material_group(coll);
   }
-  #endif
 
   // LODs
   if (_data->_lod_switches.size() > (size_t)1) {
@@ -147,6 +146,19 @@ build_graph() {
   if (!char_np.is_empty()) {
     CharacterNode *char_node = DCAST(CharacterNode, char_np.node());
     Character *part_bundle = DCAST(Character, char_node->get_character());
+
+    // JOINT MERGES
+    for (size_t i = 0; i < _data->_joint_merges.size(); i++) {
+      int joint_idx = part_bundle->find_joint(_data->_joint_merges[i]);
+      if (joint_idx == -1) {
+        egg2pg_cat.error()
+          << "Joint merge requested on a joint named " << _data->_joint_merges[i]
+          << " but it does not exist in the character.\n";
+        continue;
+      }
+
+      part_bundle->set_joint_merge(joint_idx, true);
+    }
 
 #if 0
     // IK CHAINS
