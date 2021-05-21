@@ -30,7 +30,6 @@ MaterialRegistry() {
  */
 void MaterialRegistry::
 register_material(const TypeHandle &type, CreateMaterialFunc create_func) {
-  nassertv(_registered_materials.find(type) == _registered_materials.end());
   nassertv(type.is_derived_from(Material::get_class_type()));
 
   _registered_materials[type] = create_func;
