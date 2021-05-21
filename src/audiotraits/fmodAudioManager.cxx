@@ -855,6 +855,8 @@ create_fmod_dsp(DSP *panda_dsp) {
   result = _system->createDSPByType(type, &dsp);
   fmod_audio_errcheck("_sytem->createDSPByType()", result);
 
+  dsp->setUserData(panda_dsp);
+
   // Apply the current parameters while we're at it.
   configure_dsp(panda_dsp, dsp);
   panda_dsp->clear_dirty();
@@ -1128,6 +1130,12 @@ release_sound(FMODAudioSound *sound) {
 void FMODAudioManager::
 update_sounds() {
   ReMutexHolder holder(_lock);
+
+  // Update any dirty DSPs applied to our sounds.
+  for (AllSounds::iterator it = _all_sounds.begin(); it != _all_sounds.end();
+       ++it) {
+    (*it)->update();
+  }
 
   // See if any of our playing sounds have ended we must first collect a
   // seperate list of finished sounds and then iterated over those again

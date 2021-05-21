@@ -31,8 +31,11 @@
 #include "fmodSoundCache.h"
 #include "throw_event.h"
 #include "vector_uchar.h"
+#include "clockObject.h"
 
 TypeHandle FMODAudioSound::_type_handle;
+
+#define CHANNEL_INVALID(result) (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN)
 
 /**
  * Constructor All sound will DEFAULT load as a 2D sound unless otherwise
@@ -52,6 +55,7 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   _playrate = 1.0;
   _is_midi = false;
   _length = 0;
+  _last_update_frame = 0;
 
   // 3D attributes of the sound.
   _location.x = 0;
@@ -98,7 +102,6 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
 
   result = _sound->getDefaults(&_sample_frequency, &_priority);
   fmod_audio_errcheck("_sound->getDefaults()", result);
-  result = _channel->getVolume(&_volume);
 
   // Store off the original length of the sound without any play rate changes
   // applied.  We need this to figure out the loop points of MIDIs that have
@@ -118,6 +121,14 @@ FMODAudioSound::
 
   audio_debug("Released FMODAudioSound\n");
 
+  for (int i = 0; i < (int)_dsps.size(); i++) {
+    if (_dsps[i] != nullptr) {
+      result = _dsps[i]->release();
+      fmod_audio_errcheck("release dsp on destruct", result);
+    }
+  }
+  _dsps.clear();
+
   _manager->release_sound(this);
 }
 
@@ -135,16 +146,17 @@ play() {
 void FMODAudioSound::
 stop() {
   ReMutexHolder holder(FMODAudioManager::_lock);
+
   FMOD_RESULT result;
 
-  if (_channel) {
-    result =_channel->stop();
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
-      _channel = nullptr;
-    } else {
+  if (_channel != nullptr) {
+    result = _channel->stop();
+    if (!CHANNEL_INVALID(result)) {
       fmod_audio_errcheck("_channel->stop()", result);
     }
+    _channel = nullptr;
   }
+
   _start_time = 0.0;
   _paused = false;
 
@@ -242,15 +254,17 @@ get_time() const {
   FMOD_RESULT result;
   unsigned int current_time_ms;
 
-  if (!_channel) {
+  if (_channel == nullptr) {
     return 0.0f;
   }
 
   result = _channel->getPosition(&current_time_ms, FMOD_TIMEUNIT_MS);
-  if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+  if (CHANNEL_INVALID(result)) {
+    ((FMODAudioSound *)this)->_channel = nullptr;
     return 0.0f;
+  } else {
+    fmod_audio_errcheck("_channel->getPosition()", result);
   }
-  fmod_audio_errcheck("_channel->getPosition()", result);
 
   return current_time_ms * 0.001;
 }
@@ -290,40 +304,44 @@ start_playing() {
 
   int start_time_ms = (int)(_start_time * 1000);
 
-  if (_channel) {
+  if (_channel != nullptr) {
     // try backing up current sound.
     result = _channel->setPosition(start_time_ms, FMOD_TIMEUNIT_MS);
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+    if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
-
     } else {
       fmod_audio_errcheck("_channel->setPosition()", result);
 
-      bool playing;
-      result = _channel->isPlaying(&playing);
-      fmod_audio_errcheck("_channel->isPlaying()", result);
-      if (result != FMOD_OK || !playing) {
-        _channel = nullptr;
-      }
+      result = _channel->setPaused(false);
+      fmod_audio_errcheck("_channel->setPaused()", result);
     }
   }
 
-  if (!_channel) {
+  if (_channel == nullptr) {
     result = _manager->_system->playSound(_sound, _manager->_channelgroup, true, &_channel);
-    fmod_audio_errcheck("_system->playSound()", result);
-    result = _channel->setPosition(start_time_ms , FMOD_TIMEUNIT_MS);
+    fmod_audio_errcheck("playSound()", result);
+    nassertv(_channel != nullptr);
+
+    result = _channel->setPosition(start_time_ms, FMOD_TIMEUNIT_MS);
     fmod_audio_errcheck("_channel->setPosition()", result);
 
     set_volume_on_channel();
     set_play_rate_on_channel();
     set_speaker_mix_or_balance_on_channel();
     set_3d_attributes_on_channel();
+    set_dsps_on_channel();
 
     result = _channel->setPaused(false);
     fmod_audio_errcheck("_channel->setPaused()", result);
   }
 
+  bool playing = false;
+  result = _channel->isPlaying(&playing);
+  fmod_audio_errcheck("_channel->isPlaying()", result);
+
   _start_time = 0.0;
+
+  nassertv(playing);
 }
 
 /**
@@ -334,9 +352,9 @@ set_volume_on_channel() {
   ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
-  if (_channel) {
+  if (_channel != nullptr) {
     result = _channel->setVolume(_volume);
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+    if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
     } else {
       fmod_audio_errcheck("_channel->setVolume()", result);
@@ -404,13 +422,12 @@ set_play_rate_on_channel() {
     result = _sound->setLoopPoints(0, FMOD_TIMEUNIT_MS, _length / _playrate, FMOD_TIMEUNIT_MS);
     fmod_audio_errcheck("_sound->setLoopPoints()", result);
 
-  } else if (_channel) {
+  } else if (_channel != nullptr) {
     // We have to adjust the frequency for non-sequence sounds.  The sound will
     // play faster, but will also have an increase in pitch.
 
-    PN_stdfloat frequency = _sample_frequency * _playrate;
-    result = _channel->setFrequency(frequency);
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+    result = _channel->setPitch(_playrate);
+    if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
     } else {
       fmod_audio_errcheck("_channel->setFrequency()", result);
@@ -427,18 +444,24 @@ get_name() const {
 }
 
 /**
- * Get length FMOD returns the time in MS  so we have to convert to seconds.
+ * Returns the length of the sound in seconds.  Factors in the current play
+ * rate.
  */
 PN_stdfloat FMODAudioSound::
 length() const {
   ReMutexHolder holder(FMODAudioManager::_lock);
+
+  if (_playrate == 0.0f) {
+    return 0.0f;
+  }
+
   FMOD_RESULT result;
   unsigned int length;
 
   result = _sound->getLength(&length, FMOD_TIMEUNIT_MS);
   fmod_audio_errcheck("_sound->getLength()", result);
 
-  return ((double)length) / 1000.0;
+  return (((double)length) / 1000.0) / _playrate;
 }
 
 /**
@@ -478,9 +501,9 @@ set_3d_attributes_on_channel() {
   result = _sound->getMode(&soundMode);
   fmod_audio_errcheck("_sound->getMode()", result);
 
-  if ((_channel) && (soundMode & FMOD_3D)) {
+  if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
     result = _channel->set3DAttributes(&_location, &_velocity);
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+    if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
     } else {
       fmod_audio_errcheck("_channel->set3DAttributes()", result);
@@ -554,7 +577,8 @@ get_3d_max_distance() const {
 PN_stdfloat FMODAudioSound::
 get_speaker_mix(int speaker) {
   ReMutexHolder holder(FMODAudioManager::_lock);
-  if (!_channel || speaker < 0 || speaker >= AudioManager::SPK_COUNT) {
+
+  if (_channel == nullptr || speaker < 0 || speaker >= AudioManager::SPK_COUNT) {
     return 0.0;
   }
 
@@ -563,12 +587,19 @@ get_speaker_mix(int speaker) {
   FMOD_RESULT result;
   // First query the number of output speakers and input channels
   result = _channel->getMixMatrix(nullptr, &out, &in, 32);
-  fmod_audio_errcheck("_channel->getMixMatrix()", result);
-  // Now get the actual mix matrix
-  result = _channel->getMixMatrix((float *)mix, &out, &in, 32);
-  fmod_audio_errcheck("_channel->getMixMatrix()", result);
+  if (CHANNEL_INVALID(result)) {
+    _channel = nullptr;
+    return 0.0;
 
-  return mix[speaker][0];
+  } else {
+    fmod_audio_errcheck("_channel->getMixMatrix()", result);
+
+    // Now get the actual mix matrix
+    result = _channel->getMixMatrix((float *)mix, &out, &in, 32);
+    fmod_audio_errcheck("_channel->getMixMatrix()", result);
+
+    return mix[speaker][0];
+  }
 }
 
 /**
@@ -624,7 +655,7 @@ set_speaker_mix_or_balance_on_channel() {
   result = _sound->getMode(&soundMode);
   fmod_audio_errcheck("_sound->getMode()", result);
 
-  if (_channel && (( soundMode & FMOD_3D ) == 0)) {
+  if ((_channel != nullptr) && (soundMode & FMOD_3D) == 0) {
     if (_speakermode == FMOD_SPEAKERMODE_STEREO) {
       result = _channel->setPan(_balance);
     } else {
@@ -638,7 +669,7 @@ set_speaker_mix_or_balance_on_channel() {
         _mix[AudioManager::SPK_back_left],
         _mix[AudioManager::SPK_back_right]);
     }
-    if (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN) {
+    if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
     } else {
       fmod_audio_errcheck("_channel->setSpeakerMix()/setPan()", result);
@@ -683,12 +714,15 @@ status() const {
   FMOD_RESULT result;
   bool playingState;
 
-  if (!_channel) {
+  if (_channel == nullptr) {
     return READY;
   }
 
   result = _channel->isPlaying(&playingState);
-  if ((result == FMOD_OK) && (playingState == true)) {
+  if (CHANNEL_INVALID(result)) {
+    ((FMODAudioSound *)this)->_channel = nullptr;
+    return READY;
+  } else if ((result == FMOD_OK) && (playingState == true)) {
     return PLAYING;
   } else {
     return READY;
@@ -734,6 +768,192 @@ set_active(bool active) {
 bool FMODAudioSound::
 get_active() const {
   return _active;
+}
+
+/**
+ * Inserts the specified DSP filter into the DSP chain at the specified index.
+ * Returns true if the DSP filter is supported by the audio implementation,
+ * false otherwise.
+ */
+bool FMODAudioSound::
+insert_dsp(int index, DSP *panda_dsp) {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+
+  // If it's already in there, take it out and put it in the new spot.
+  remove_dsp(panda_dsp);
+
+  FMOD::DSP *dsp = _manager->create_fmod_dsp(panda_dsp);
+  if (!dsp) {
+    fmodAudio_cat.warning()
+      << panda_dsp->get_type().get_name()
+      << " unsupported by FMOD audio implementation.\n";
+    return false;
+  }
+
+  // Keep track of our DSPs.
+  _dsps.push_back(dsp);
+
+  set_dsps_on_channel();
+
+  return true;
+}
+
+/**
+ * Removes the specified DSP filter from the DSP chain. Returns true if the
+ * filter was in the DSP chain and was removed, false otherwise.
+ */
+bool FMODAudioSound::
+remove_dsp(DSP *panda_dsp) {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+
+  FMOD_RESULT ret;
+  FMOD::DSP *dsp = nullptr;
+  int index = -1;
+  for (size_t i = 0; i < _dsps.size(); i++) {
+    DSP *panda_dsp_check = nullptr;
+    ret = _dsps[i]->getUserData((void **)&panda_dsp_check);
+    if (ret == FMOD_OK && panda_dsp_check == panda_dsp) {
+      dsp = _dsps[i];
+      index = i;
+      break;
+    }
+  }
+
+  if (dsp == nullptr || index == -1) {
+    return false;
+  }
+
+  ret = dsp->release();
+  fmod_audio_errcheck("dsp->release()", ret);
+
+  _dsps.erase(_dsps.begin() + index);
+
+  set_dsps_on_channel();
+
+  return true;
+}
+
+/**
+ * Removes all DSP filters from the DSP chain.
+ */
+void FMODAudioSound::
+remove_all_dsps() {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+
+  FMOD_RESULT ret;
+
+  for (size_t i = 0; i < _dsps.size(); i++) {
+    if (_dsps[i] == nullptr) {
+      continue;
+    }
+
+    ret = _dsps[i]->release();
+    fmod_audio_errcheck("_dsps[i]->release()", ret);
+  }
+
+  _dsps.clear();
+
+  set_dsps_on_channel();
+}
+
+/**
+ * Returns the number of DSP filters present in the DSP chain.
+ */
+int FMODAudioSound::
+get_num_dsps() const {
+  // Can't use _channel->getNumDSPs() because that includes DSPs that are
+  // created internally by FMOD.  We want to return the number of user-created
+  // DSPs.
+
+  return (int)_dsps.size();
+}
+
+/**
+ *
+ */
+void FMODAudioSound::
+set_dsps_on_channel() {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+
+  if (_channel == nullptr) {
+    return;
+  }
+
+  FMOD_RESULT ret;
+
+  // First clear out existing ones.
+  int num_chan_dsps = 0;
+  ret = _channel->getNumDSPs(&num_chan_dsps);
+  if (CHANNEL_INVALID(ret)) {
+    _channel = nullptr;
+    return;
+  } else {
+    fmod_audio_errcheck("_channel->getNumDSPs()", ret);
+  }
+
+  for (int i = num_chan_dsps - 1; i >= 0; i--) {
+    FMOD::DSP *dsp = nullptr;
+    ret = _channel->getDSP(i, &dsp);
+    fmod_audio_errcheck("_channel->getDSP()", ret);
+
+    if (ret != FMOD_OK || dsp == nullptr) {
+      continue;
+    }
+
+    void *user_data = nullptr;
+    ret = dsp->getUserData(&user_data);
+    if (ret == FMOD_OK && user_data != nullptr) {
+      // This is a DSP created by us, remove it.
+      ret = _channel->removeDSP(dsp);
+      fmod_audio_errcheck("_channel->removeDSP()", ret);
+    }
+  }
+
+  // Now add ours in.
+  for (int i = 0; i < (int)_dsps.size(); i++) {
+    FMOD::DSP *dsp = _dsps[i];
+    if (dsp == nullptr) {
+      continue;
+    }
+
+    // Make sure the FMOD DSP is synchronized with the Panda descriptor.
+    DSP *panda_dsp = nullptr;
+    ret = dsp->getUserData((void **)&panda_dsp);
+    fmod_audio_errcheck("dsp->getUserData()", ret);
+    if (ret == FMOD_OK && panda_dsp != nullptr && panda_dsp->is_dirty()) {
+      _manager->configure_dsp(panda_dsp, dsp);
+      panda_dsp->clear_dirty();
+    }
+
+    ret = _channel->addDSP(i, dsp);
+    fmod_audio_errcheck("_channel->addDSP()", ret);
+  }
+}
+
+/**
+ *
+ */
+void FMODAudioSound::
+update() {
+  // Update any DSPs that are dirty.
+  FMOD_RESULT ret;
+  int current_frame = ClockObject::get_global_clock()->get_frame_count();
+  if (current_frame != _last_update_frame) {
+    for (FMODDSPs::const_iterator it = _dsps.begin(); it != _dsps.end(); ++it) {
+      FMOD::DSP *dsp = *it;
+      if (dsp == nullptr) {
+        continue;
+      }
+      DSP *panda_dsp = nullptr;
+      ret = dsp->getUserData((void **)&panda_dsp);
+      fmod_audio_errcheck("dsp->getUserData()", ret);
+      if (ret == FMOD_OK && panda_dsp != nullptr && panda_dsp->is_dirty()) {
+        _manager->configure_dsp(panda_dsp, dsp);
+        panda_dsp->clear_dirty();
+      }
+    }
+    _last_update_frame = current_frame;
+  }
 }
 
 /**

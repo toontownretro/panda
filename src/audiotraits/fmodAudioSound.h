@@ -69,6 +69,7 @@
 #include "reMutex.h"
 #include "fmodAudioManager.h"
 #include "fmodSoundCache.h"
+#include "dsp.h"
 
 #include <fmod.hpp>
 #include <fmod_errors.h>
@@ -139,6 +140,14 @@ public:
   void set_active(bool active=true);
   bool get_active() const;
 
+  // DSP methods
+  virtual bool insert_dsp(int index, DSP *dsp);
+  virtual bool remove_dsp(DSP *dsp);
+  virtual void remove_all_dsps();
+  virtual int get_num_dsps() const;
+
+  void update();
+
   void finished();
   void set_finished_event(const std::string& event);
   const std::string& get_finished_event() const;
@@ -148,6 +157,10 @@ private:
   PT(FMODSoundHandle) _sound_handle;
   FMOD::Sound      *_sound;
   FMOD::Channel    *_channel;
+
+  // Mapping of Panda DSP instance to FMOD DSP instance.
+  typedef pvector<FMOD::DSP *> FMODDSPs;
+  FMODDSPs _dsps;
 
   Filename _file_name;
 
@@ -173,8 +186,8 @@ private:
   void set_balance_on_channel();
   void set_play_rate_on_channel();
   void set_3d_attributes_on_channel();
-  // void add_dsp_on_channel();
   void set_speaker_mix_or_balance_on_channel();
+  void set_dsps_on_channel();
 
   virtual int get_priority();
   virtual void set_priority(int priority);
@@ -184,6 +197,8 @@ private:
   PN_stdfloat _start_time;
 
   bool _is_midi;
+
+  int _last_update_frame;
 
   std::string _finished_event;
 
