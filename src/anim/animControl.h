@@ -46,6 +46,7 @@ public:
   void fail_anim(Character *part);
 
   virtual void evaluate(AnimGraphEvalContext &context) override;
+  virtual void evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f) override;
 
 PUBLISHED:
   virtual ~AnimControl();

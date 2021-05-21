@@ -102,8 +102,21 @@ fail_anim(Character *part) {
  */
 void AnimControl::
 evaluate(AnimGraphEvalContext &context) {
-  int frame = get_frame();
-  int next_frame = get_next_frame();
+  // Make sure cycle is within 0-1 range.
+  PN_stdfloat cycle = std::max(0.0f, std::min(0.999f, context._cycle));
+  int num_frames = get_num_frames();
+  // Calculate the floating-point frame.
+  PN_stdfloat fframe = cycle * num_frames;
+  // Snap to integer frame.
+  int frame = (int)floor(fframe);
+  int next_frame;
+  if (context._looping) {
+    next_frame = cmod(frame + 1, num_frames);
+  } else {
+    next_frame = std::max(0, std::min(num_frames - 1, frame + 1));
+  }
+
+  PN_stdfloat frac = fframe - frame;
 
   AnimBundle *anim = get_anim();
 
@@ -131,7 +144,6 @@ evaluate(AnimGraphEvalContext &context) {
   } else {
     // Frame blending is enabled.  Need to blend between successive frames.
 
-    PN_stdfloat frac = (PN_stdfloat)get_frac();
     PN_stdfloat e0 = 1.0f - frac;
 
     for (int i = 0; i < context._num_joints; i++) {
@@ -151,6 +163,15 @@ evaluate(AnimGraphEvalContext &context) {
       LQuaternion::blend(jf.quat, jf_next.quat, frac, t._rotation);
     }
   }
+}
+
+/**
+ *
+ */
+void AnimControl::
+evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
+  anims.push_back(this);
+  weights.push_back(this_weight);
 }
 
 /**

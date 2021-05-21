@@ -14,6 +14,7 @@
 #include "animSequence.h"
 #include "clockObject.h"
 #include "bitArray.h"
+#include "animControl.h"
 
 // For some reason delta animations have a 90 degree rotation on the root
 // joint.  This quaternion reverses that.
@@ -203,11 +204,48 @@ get_play_rate() const {
 /**
  *
  */
+void AnimSequence::
+set_frame_rate(int fps) {
+  _frame_rate = fps;
+  set_flags(F_frame_rate);
+}
+
+/**
+ *
+ */
+void AnimSequence::
+clear_frame_rate() {
+  clear_flags(F_frame_rate);
+}
+
+/**
+ *
+ */
 double AnimSequence::
 get_frame_rate() const {
-  nassertr(_effective_control != nullptr, 0);
+  if (has_flags(F_frame_rate)) {
+    return _frame_rate;
+  }
 
+  nassertr(_effective_control != nullptr, 30);
   return _effective_control->get_frame_rate();
+}
+
+/**
+ *
+ */
+void AnimSequence::
+set_num_frames(int num_frames) {
+  _num_frames = num_frames;
+  set_flags(F_num_frames | F_frame_rate);
+}
+
+/**
+ *
+ */
+void AnimSequence::
+clear_num_frames() {
+  clear_flags(F_num_frames);
 }
 
 /**
@@ -215,8 +253,11 @@ get_frame_rate() const {
  */
 int AnimSequence::
 get_num_frames() const {
-  nassertr(_effective_control != nullptr, 0);
+  if (has_flags(F_num_frames)) {
+    return _num_frames;
+  }
 
+  nassertr(_effective_control != nullptr, 1);
   return _effective_control->get_num_frames();
 }
 
@@ -283,10 +324,52 @@ is_playing() const {
 /**
  *
  */
+PN_stdfloat AnimSequence::
+get_length() {
+  pvector<AnimControl *> anims;
+  vector_stdfloat weights;
+  evaluate_anims(anims, weights);
+
+  PN_stdfloat length = 0;
+  for (size_t i = 0; i < anims.size(); i++) {
+    AnimControl *anim = anims[i];
+    length += ((anim->get_num_frames() - 1) / anim->get_frame_rate()) * weights[i];
+  }
+
+  return length;
+}
+
+/**
+ *
+ */
+PN_stdfloat AnimSequence::
+get_cycles_per_second() {
+  PN_stdfloat length = get_length();
+  if (length == 0.0f) {
+    return 0.0f;
+  }
+
+  return 1.0f / length;
+}
+
+/**
+ *
+ */
+void AnimSequence::
+add_event(int type, int event, int frame, const std::string &options) {
+  PN_stdfloat cycle = (PN_stdfloat)frame / (PN_stdfloat)get_num_frames();
+  AnimEvent ae(type, event, cycle, options);
+  _events.push_back(std::move(ae));
+}
+
+/**
+ *
+ */
 void AnimSequence::
 evaluate(AnimGraphEvalContext &context) {
   if (_base != nullptr) {
     AnimGraphEvalContext base_ctx(context);
+    base_ctx._looping = has_flags(F_looping);
     _base->evaluate(base_ctx);
 
     // Zero out requested root translational axes.  This is done when a
@@ -310,36 +393,37 @@ evaluate(AnimGraphEvalContext &context) {
     return;
   }
 
-  PN_stdfloat frame = _effective_control->get_full_fframe();
-
-  //std::cout << "Sequence frame: " << frame << "\n";
+  PN_stdfloat cycle = context._cycle;
+  PN_stdfloat weight = context._weight;
 
   // Add our layers.
   for (size_t i = 0; i < _layers.size(); i++) {
     const Layer &layer = _layers[i];
 
+    PN_stdfloat index = cycle;
     PN_stdfloat start, peak, tail, end;
 
-    start = layer._start_frame != -1 ? layer._start_frame : 0;
-    peak = layer._peak_frame != -1 ? layer._peak_frame : start;
-    end = layer._end_frame != -1 ? layer._end_frame : _effective_control->get_num_frames();
-    tail = layer._tail_frame != -1 ? layer._tail_frame : end;
+    start = layer._start >= 0.0f ? layer._start : 0.0f;
+    peak = layer._peak >= 0.0f ? layer._peak : start;
+    end = layer._end >= 0.0f ? layer._end : 1.0f;
+    tail = layer._tail >= 0.0f ? layer._tail : end;
 
-    if (frame < start || frame >= end) {
+    if (index < start || index >= end) {
       // Not in the frame range.
       continue;
     }
 
     PN_stdfloat scale = 1.0f;
-    PN_stdfloat layer_weight;
+    PN_stdfloat layer_weight = weight;
+    PN_stdfloat layer_cycle;
 
-    if (frame < peak && start != peak) {
+    if (index < peak && start != peak) {
       // On the way up.
-      scale = (frame - start) / (peak - start);
+      scale = (index - start) / (peak - start);
 
-    } else if (frame > tail && end != tail) {
+    } else if (index > tail && end != tail) {
       // On the way down.
-      scale = (end - frame) / (end - tail);
+      scale = (end - index) / (end - tail);
     }
 
     if (layer._spline) {
@@ -350,8 +434,10 @@ evaluate(AnimGraphEvalContext &context) {
     if (layer._no_blend) {
       layer_weight = scale;
     } else {
-      layer_weight = context._weight * scale;
+      layer_weight = weight * scale;
     }
+
+    layer_cycle = (cycle - start) / (end - start);
 
     if (layer_weight <= 0.001f) {
       // Negligible weight.
@@ -361,6 +447,7 @@ evaluate(AnimGraphEvalContext &context) {
     //std::cout << "Layer " << i << " weight: " << layer_weight << "\n";
 
     context._weight = layer_weight;
+    context._cycle = layer_cycle;
     layer._seq->evaluate(context);
   }
 }

@@ -20,6 +20,7 @@
     animOverlayNode.h animOverlayNode.I \
     animPreloadTable.h animPreloadTable.I \
     animSequence.h animSequence.I \
+    animSequencePlayer.h animSequencePlayer.I \
     animStateMachine.h animStateMachine.I \
     auto_bind.h \
     bindAnimRequest.h bindAnimRequest.I \
@@ -49,6 +50,7 @@
     animOverlayNode.cxx \
     animPreloadTable.cxx \
     animSequence.cxx \
+    animSequencePlayer.cxx \
     animStateMachine.cxx \
     auto_bind.cxx \
     bindAnimRequest.cxx \

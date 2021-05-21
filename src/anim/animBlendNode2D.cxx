@@ -127,10 +127,10 @@ compute_weights() {
 }
 
 /**
- *
+ * Builds triangles and computes weights if something changed.
  */
 void AnimBlendNode2D::
-evaluate(AnimGraphEvalContext &context) {
+compute_weights_if_necessary() {
   LPoint2 input(0);
   if (_x_param) {
     input[0] = _x_param->get_value();
@@ -139,10 +139,18 @@ evaluate(AnimGraphEvalContext &context) {
     input[1] = _y_param->get_value();
   }
   if ((input != _input_coord) || !_has_triangles) {
-    compute_weights();
     _input_coord = input;
+    compute_weights();
     _has_triangles = true;
   }
+}
+
+/**
+ *
+ */
+void AnimBlendNode2D::
+evaluate(AnimGraphEvalContext &context) {
+  compute_weights_if_necessary();
 
   if (_active_tri == nullptr) {
     return;
@@ -213,6 +221,30 @@ evaluate(AnimGraphEvalContext &context) {
       }
     }
   }
+}
+
+/**
+ *
+ */
+void AnimBlendNode2D::
+evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
+  compute_weights_if_necessary();
+
+  if (_active_tri == nullptr) {
+    return;
+  }
+
+  AnimGraphNode *i0 = _inputs[_active_tri->a]._node;
+  AnimGraphNode *i1 = _inputs[_active_tri->b]._node;
+  AnimGraphNode *i2 = _inputs[_active_tri->c]._node;
+
+  PN_stdfloat w0 = _inputs[_active_tri->a]._weight;
+  PN_stdfloat w1 = _inputs[_active_tri->b]._weight;
+  PN_stdfloat w2 = _inputs[_active_tri->c]._weight;
+
+  i0->evaluate_anims(anims, weights, this_weight * w0);
+  i1->evaluate_anims(anims, weights, this_weight * w1);
+  i2->evaluate_anims(anims, weights, this_weight * w2);
 }
 
 /**

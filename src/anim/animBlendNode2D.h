@@ -18,6 +18,8 @@
 #include "vector_stdfloat.h"
 #include "poseParameter.h"
 
+class AnimControl;
+
 /**
  * Animation graph node that assigns each input node to a 2D location on a
  * grid, and uses an input coordinate to blend between the 3 closest input
@@ -34,12 +36,14 @@ PUBLISHED:
   INLINE LPoint2 get_input_point(int n) const;
 
   void compute_weights();
+  void compute_weights_if_necessary();
 
   INLINE void set_input_x(PoseParameter *param);
   INLINE void set_input_y(PoseParameter *param);
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
+  virtual void evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f) override;
 
 private:
   void blend_triangle(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c,

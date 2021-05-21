@@ -22,6 +22,9 @@
 #include "pvector.h"
 #include "plist.h"
 #include "characterJoint.h"
+#include "vector_stdfloat.h"
+
+class AnimControl;
 
 static constexpr int max_joints = 256;
 
@@ -106,14 +109,18 @@ public:
     _parts = parts;
     _frame_blend = frame_blend_flag;
     _weight = 1.0f;
+    _anim_time = 0.0f;
     _cycle = 0.0f;
+    _looping = false;
   }
 
   AnimGraphEvalContext(const AnimGraphEvalContext &copy) :
     _frame_blend(copy._frame_blend),
     _parts(copy._parts),
     _num_joints(copy._num_joints),
-    _cycle(copy._cycle)
+    _cycle(copy._cycle),
+    _anim_time(copy._anim_time),
+    _looping(copy._looping)
   {
     _joints = joint_transform_pool.alloc();
     _weight = 1.0f;
@@ -144,6 +151,9 @@ public:
 
   PN_stdfloat _weight;
   PN_stdfloat _cycle;
+  PN_stdfloat _anim_time;
+
+  bool _looping;
 
   bool _frame_blend;
 
@@ -169,6 +179,7 @@ protected:
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) = 0;
+  virtual void evaluate_anims(pvector<AnimControl *> &controls, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f);
 
 private:
   typedef pvector<PT(AnimGraphNode)> Children;

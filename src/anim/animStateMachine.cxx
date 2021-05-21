@@ -46,11 +46,6 @@ bool AnimStateMachine::
 set_state(int n) {
   State *state = &_states[n];
 
-  if (state == _current_state) {
-    // Already the active state, do nothing.
-    return false;
-  }
-
   // This can happen if we change state while in the process of fading out
   // a different state.
   if (_last_state != nullptr) {
@@ -63,9 +58,13 @@ set_state(int n) {
   AnimSequence *seq = state->_graph;
 
   if (seq->has_flags(AnimSequence::F_looping)) {
-    state->_graph->loop(true);
-
+    // Assume that a looping sequence should not restart if it's already the
+    // active one.
+    if (_last_state != _current_state) {
+      state->_graph->loop(true);
+    }
   } else {
+    // A non-looping sequence always restarts even if it's the active one.
     state->_graph->play();
   }
 
@@ -128,7 +127,7 @@ evaluate(AnimGraphEvalContext &context) {
 
   AnimSequence *seq = _current_state->_graph;
 
-  if (transition_elapsed < seq->get_fade_out()) {
+  if (transition_elapsed < seq->get_fade_out() && (_current_state != _last_state)) {
     PN_stdfloat frac = std::min(1.0f, transition_elapsed / seq->get_fade_out());
     if (frac > 0 && frac <= 1.0) {
       // Do a nice spline curve.

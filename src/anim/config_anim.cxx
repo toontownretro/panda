@@ -35,6 +35,7 @@
 #include "poseParameter.h"
 #include "weightList.h"
 #include "animOverlayNode.h"
+#include "animSequencePlayer.h"
 
 #include "luse.h"
 
@@ -138,6 +139,7 @@ init_libanim() {
   AnimOverlayNode::init_type();
   AnimPreloadTable::init_type();
   AnimSequence::init_type();
+  AnimSequencePlayer::init_type();
   AnimStateMachine::init_type();
   BindAnimRequest::init_type();
   PoseParameter::init_type();

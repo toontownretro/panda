@@ -19,7 +19,11 @@ AnimSequence(const std::string &name, AnimGraphNode *base) :
   AnimGraphNode(name),
   _flags(F_none),
   _fade_in(0.2f),
-  _fade_out(0.2f)
+  _fade_out(0.2f),
+  _activity(0),
+  _activity_weight(1.0f),
+  _num_frames(1),
+  _frame_rate(30)
 {
   if (base != nullptr) {
     set_base(base);
@@ -27,16 +31,19 @@ AnimSequence(const std::string &name, AnimGraphNode *base) :
 }
 
 /**
- * Returns the length of the sequence in seconds.
+ * Returns the number of events in the sequence.
  */
-INLINE PN_stdfloat AnimSequence::
-get_length() const {
-  if (_effective_control == nullptr) {
-    return 0.0f;
-  }
+INLINE int AnimSequence::
+get_num_events() const {
+  return (int)_events.size();
+}
 
-  return (PN_stdfloat)_effective_control->get_num_frames() /
-    (_effective_control->get_anim()->get_base_frame_rate() * _effective_control->get_play_rate());
+/**
+ * Returns the nth event of the sequence.
+ */
+INLINE const AnimSequence::AnimEvent &AnimSequence::
+get_event(int n) const {
+  return _events[n];
 }
 
 /**
@@ -104,6 +111,33 @@ clear_flags(unsigned int flags) {
 }
 
 /**
+ * Sets the activity index associated with this sequence.  The animation system
+ * doesn't make use of this, the activity is intended to be interpreted by
+ * game code, but it's stored on the sequence for convenience.
+ */
+INLINE void AnimSequence::
+set_activity(int activity, PN_stdfloat weight) {
+  _activity = activity;
+  _activity_weight = weight;
+}
+
+/**
+ * Returns the activity index associated with the sequence.
+ */
+INLINE int AnimSequence::
+get_activity() const {
+  return _activity;
+}
+
+/**
+ * Returns the weight of the activity associated with the sequence.
+ */
+INLINE PN_stdfloat AnimSequence::
+get_activity_weight() const {
+  return _activity_weight;
+}
+
+/**
  * Sets a list of per-joint weights to use for the evaluated pose of this
  * sequence.
  */
@@ -154,18 +188,15 @@ INLINE void AnimSequence::
 add_layer(AnimGraphNode *seq, int start_frame, int peak_frame,
           int tail_frame, int end_frame, bool spline,
           bool no_blend) {
+  PN_stdfloat num_frames = get_num_frames();
   Layer layer;
   layer._seq = seq;
-  layer._start_frame = start_frame;
-  layer._peak_frame = peak_frame;
-  layer._tail_frame = tail_frame;
-  layer._end_frame = end_frame;
+  layer._start = start_frame / num_frames;
+  layer._peak = peak_frame / num_frames;
+  layer._tail = tail_frame / num_frames;
+  layer._end = end_frame / num_frames;
   layer._spline = spline;
   layer._no_blend = no_blend;
 
   _layers.push_back(layer);
-
-  add_child(layer._seq);
-
-  compute_effective_control();
 }
