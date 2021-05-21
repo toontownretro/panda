@@ -75,6 +75,9 @@ PUBLISHED:
   void set_emission_tint(const LVecBase3 &tint);
   LVecBase3 get_emission_tint() const;
 
+  void set_specular_texture(Texture *texture);
+  Texture *get_specular_texture() const;
+
 public:
   virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path) override;
 

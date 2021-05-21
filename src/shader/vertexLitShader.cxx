@@ -189,6 +189,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("armeParams", LVector4f(ao, roughness, metalness, emission)));
   }
 
+  Texture *spec_tex = material->get_specular_texture();
+  if (spec_tex != nullptr) {
+    set_pixel_shader_define("SPECULAR_MAP");
+    set_input(ShaderInput("specularSampler", spec_tex));
+  }
+
   Texture *lw_tex = material->get_lightwarp_texture();
   if (lw_tex != nullptr) {
     set_pixel_shader_define("LIGHTWARP");

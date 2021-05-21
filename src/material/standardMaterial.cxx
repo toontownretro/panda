@@ -64,6 +64,11 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
       tex->from_string(value, search_path);
       set_param(tex);
 
+    } else if (key == "$specularmap" || key == "$speculartexture") {
+      PT(MaterialParamTexture) tex = new MaterialParamTexture("$speculartexture");
+      tex->from_string(value, search_path);
+      set_param(tex);
+
     } else if (key == "$arme" || key == "$armemap" || key == "$armetexture") {
       PT(MaterialParamTexture) tex = new MaterialParamTexture("$armetexture");
       tex->from_string(value, search_path);
@@ -498,4 +503,25 @@ get_emission_tint() const {
   }
 
   return DCAST(MaterialParamVector, param)->get_value();
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+set_specular_texture(Texture *texture) {
+  set_param(new MaterialParamTexture("$speculartexture", texture));
+}
+
+/**
+ *
+ */
+Texture *StandardMaterial::
+get_specular_texture() const {
+  MaterialParamBase *param = get_param("$speculartexture");
+  if (param == nullptr) {
+    return nullptr;
+  }
+
+  return DCAST(MaterialParamTexture, param)->get_value();
 }
