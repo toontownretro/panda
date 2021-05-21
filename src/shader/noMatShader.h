@@ -15,6 +15,7 @@
 #define NOMATSHADER_H
 
 #include "pandabase.h"
+#include "config_shader.h"
 #include "shaderBase.h"
 
 /**
@@ -39,7 +40,10 @@ public:
     ShaderBase::init_type();
     register_type(_type_handle, "NoMatShader",
                   ShaderBase::get_class_type());
-    register_shader(new NoMatShader, TypeHandle::none());
+    if (!config_get_use_vertex_lit_for_no_material()) {
+      // Not using VertexLit for no material, so register ourselves.
+      register_shader(new NoMatShader, TypeHandle::none());
+    }
   }
   virtual TypeHandle get_type() const {
     return get_class_type();

@@ -15,6 +15,7 @@
 #define VERTEXLITSHADER_H
 
 #include "shaderBase.h"
+#include "config_shader.h"
 #include "standardMaterial.h"
 
 /**
@@ -39,7 +40,13 @@ public:
                   ShaderBase::get_class_type());
 
     StandardMaterial::init_type();
-    register_shader(new VertexLitShader, StandardMaterial::get_class_type());
+    VertexLitShader *shader = new VertexLitShader;
+    register_shader(shader, StandardMaterial::get_class_type());
+    if (config_get_use_vertex_lit_for_no_material()) {
+      // In this case, also register it under TypeHandle::none(), which
+      // indicates no material.
+      register_shader(shader, TypeHandle::none());
+    }
   }
   virtual TypeHandle get_type() const {
     return get_class_type();

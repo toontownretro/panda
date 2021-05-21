@@ -37,7 +37,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_vertex_shader("shaders/vertexLitGeneric_PBR.vert.glsl");
   set_pixel_shader("shaders/vertexLitGeneric_PBR.frag.glsl");
 
-  StandardMaterial *material = DCAST(StandardMaterial, material_base);
+  StandardMaterial *material = nullptr;
+  if (material_base != nullptr) {
+    material = DCAST(StandardMaterial, material_base);
+  }
 
   bool need_tbn = true;
   bool need_world_position = true;
@@ -116,31 +119,86 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
   }
 
-  // Are we self-illuminating?
-  if (material->get_emission_enabled()) {
-    // Selfillum is enabled.
-    set_pixel_shader_define("SELFILLUM");
-    set_input(ShaderInput("selfillumTint", material->get_emission_tint()));
-  }
-
-  // Rimlight?
-  if (material->get_rim_light() && ConfigVariableBool("mat_rimlight", true)) {
-    float boost = material->get_rim_light_boost();
-    float exponent = material->get_rim_light_exponent();
-
-    set_pixel_shader_define("RIMLIGHT");
-    set_input(ShaderInput("rimlightParams", LVector2(boost, exponent)));
-  }
-
-  // Half-lambert?
-  if (material->get_half_lambert()) {
-    set_pixel_shader_define("HALFLAMBERT");
-  }
-
-  // The material might want to use the cubemap selected from the environment
-  // or a custom cubemap.
-  bool env_cubemap = material->get_env_cubemap();
+  bool env_cubemap = false;
   Texture *cubemap_tex = nullptr;
+
+  if (material != nullptr) {
+    // We have a material, so take in the parameters from that.
+
+    // Are we self-illuminating?
+    if (material->get_emission_enabled()) {
+      // Selfillum is enabled.
+      set_pixel_shader_define("SELFILLUM");
+      set_input(ShaderInput("selfillumTint", material->get_emission_tint()));
+    }
+
+    // Rimlight?
+    if (material->get_rim_light() && ConfigVariableBool("mat_rimlight", true)) {
+      float boost = material->get_rim_light_boost();
+      float exponent = material->get_rim_light_exponent();
+
+      set_pixel_shader_define("RIMLIGHT");
+      set_input(ShaderInput("rimlightParams", LVector2(boost, exponent)));
+    }
+
+    // Half-lambert?
+    if (material->get_half_lambert()) {
+      set_pixel_shader_define("HALFLAMBERT");
+    }
+
+    Texture *base_tex = material->get_base_texture();
+    if (base_tex != nullptr) {
+      set_pixel_shader_define("BASETEXTURE");
+      set_input(ShaderInput("baseTextureSampler", base_tex));
+
+    } else {
+      set_pixel_shader_define("BASECOLOR");
+      set_input(ShaderInput("baseColor", material->get_base_color()));
+    }
+
+    // The material might want to use the cubemap selected from the environment
+    // or a custom cubemap.
+    env_cubemap = material->get_env_cubemap();
+
+    Texture *normal_tex = material->get_normal_texture();
+    if (normal_tex != nullptr) {
+      set_pixel_shader_define("BUMPMAP");
+      set_input(ShaderInput("bumpSampler", normal_tex));
+    }
+
+    Texture *arme_tex = material->get_arme_texture();
+    if (arme_tex != nullptr) {
+      set_pixel_shader_define("ARME");
+      set_input(ShaderInput("armeSampler", arme_tex));
+
+    } else {
+      float ao = 1.0f;
+      float roughness = material->get_roughness();
+      float metalness = material->get_metalness();
+      float emission = material->get_emission();
+      set_input(ShaderInput("armeParams", LVector4f(ao, roughness, metalness, emission)));
+    }
+
+    Texture *spec_tex = material->get_specular_texture();
+    if (spec_tex != nullptr) {
+      set_pixel_shader_define("SPECULAR_MAP");
+      set_input(ShaderInput("specularSampler", spec_tex));
+    }
+
+    Texture *lw_tex = material->get_lightwarp_texture();
+    if (lw_tex != nullptr) {
+      set_pixel_shader_define("LIGHTWARP");
+      set_input(ShaderInput("lightwarpSampler", lw_tex));
+    }
+
+    if (!env_cubemap) {
+      cubemap_tex = material->get_envmap_texture();
+    }
+
+  } else {
+    // No material, use a default set of ARME parameters.
+    set_input(ShaderInput("armeParams", LVecBase4f(1.0f, 1.0f, 0.0f, 0.0f)));
+  }
 
   // Find the textures in use.
   const TextureAttrib *ta;
@@ -150,7 +208,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     TextureStage *stage = ta->get_on_stage(i);
     const std::string &stage_name = stage->get_name();
 
-    if (stage_name == "reflection") {
+    if (material == nullptr && stage == TextureStage::get_default()) {
+      // No material and we have a base texture through the default texture stage.
+      set_pixel_shader_define("BASETEXTURE");
+      set_vertex_shader_define("BASETEXTURE_INDEX", i);
+      set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+
+    } else if (stage_name == "reflection") {
       set_pixel_shader_define("PLANAR_REFLECTION");
       set_vertex_shader_define("PLANAR_REFLECTION");
       set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
@@ -158,51 +222,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     } else if (env_cubemap && stage_name == "envmap") {
       cubemap_tex = ta->get_on_texture(stage);
     }
-  }
-
-  Texture *base_tex = material->get_base_texture();
-  if (base_tex != nullptr) {
-    set_pixel_shader_define("BASETEXTURE");
-    set_input(ShaderInput("baseTextureSampler", base_tex));
-
-  } else {
-    set_pixel_shader_define("BASECOLOR");
-    set_input(ShaderInput("baseColor", material->get_base_color()));
-  }
-
-  Texture *normal_tex = material->get_normal_texture();
-  if (normal_tex != nullptr) {
-    set_pixel_shader_define("BUMPMAP");
-    set_input(ShaderInput("bumpSampler", normal_tex));
-  }
-
-  Texture *arme_tex = material->get_arme_texture();
-  if (arme_tex != nullptr) {
-    set_pixel_shader_define("ARME");
-    set_input(ShaderInput("armeSampler", arme_tex));
-
-  } else {
-    float ao = 1.0f;
-    float roughness = material->get_roughness();
-    float metalness = material->get_metalness();
-    float emission = material->get_emission();
-    set_input(ShaderInput("armeParams", LVector4f(ao, roughness, metalness, emission)));
-  }
-
-  Texture *spec_tex = material->get_specular_texture();
-  if (spec_tex != nullptr) {
-    set_pixel_shader_define("SPECULAR_MAP");
-    set_input(ShaderInput("specularSampler", spec_tex));
-  }
-
-  Texture *lw_tex = material->get_lightwarp_texture();
-  if (lw_tex != nullptr) {
-    set_pixel_shader_define("LIGHTWARP");
-    set_input(ShaderInput("lightwarpSampler", lw_tex));
-  }
-
-  if (!env_cubemap) {
-    cubemap_tex = material->get_envmap_texture();
   }
 
   if (cubemap_tex) {

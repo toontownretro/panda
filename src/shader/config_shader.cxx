@@ -48,11 +48,28 @@ config_get_shader_quality() {
     shader_quality = new ConfigVariableEnum<ShaderEnums::ShaderQuality>
       ("shader-quality", ShaderEnums::SQ_high,
       PRC_DESC("Sets the default quality level for all shaders.  This may not have "
-                "any meaning to certain shaders.  It is up to the shader "
-                "implementation to respect the chosen quality level."));
+               "any meaning to certain shaders.  It is up to the shader "
+               "implementation to respect the chosen quality level."));
   }
 
   return *shader_quality;
+}
+
+ConfigVariableBool &
+config_get_use_vertex_lit_for_no_material() {
+  static ConfigVariableBool *use_vertex_lit_for_no_material = nullptr;
+  if (use_vertex_lit_for_no_material == nullptr) {
+    use_vertex_lit_for_no_material = new ConfigVariableBool
+      ("use-vertex-lit-for-no-material", false,
+       PRC_DESC("If true, uses the VertexLit shader for RenderStates with no "
+                "material applied.  This allows for games that don't use Materials "
+                "to still have lighting and shadows, albeit with almost no "
+                "configurability.  When this is false, RenderStates without "
+                "Materials use the NoMat shader, which renders a single unlit "
+                "texture."));
+  }
+
+  return *use_vertex_lit_for_no_material;
 }
 
 /**
@@ -75,8 +92,8 @@ init_libshader() {
 
   DepthShader::init_type();
   CSMDepthShader::init_type();
-  VertexLitShader::init_type();
   NoMatShader::init_type();
+  VertexLitShader::init_type();
   EyeRefractShader::init_type();
   //LightmappedShader::init_type();
 
