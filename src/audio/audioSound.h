@@ -21,6 +21,7 @@
 #include "filterProperties.h"
 
 class AudioManager;
+class DSP;
 
 class EXPCL_PANDA_AUDIO AudioSound : public TypedReferenceCount {
 PUBLISHED:
@@ -118,6 +119,14 @@ PUBLISHED:
 
   virtual int get_priority();
   virtual void set_priority(int priority);
+
+  // DSP methods
+  INLINE bool add_dsp_to_head(DSP *dsp);
+  INLINE bool add_dsp_to_tail(DSP *dsp);
+  virtual bool insert_dsp(int index, DSP *dsp);
+  virtual bool remove_dsp(DSP *dsp);
+  virtual void remove_all_dsps();
+  virtual int get_num_dsps() const;
 
   enum SoundStatus { BAD, READY, PLAYING };
   virtual SoundStatus status() const = 0;

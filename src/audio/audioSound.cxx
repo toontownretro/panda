@@ -33,7 +33,6 @@ AudioSound() {
   // Intentionally blank.
 }
 
-
 void AudioSound::
 set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz) {
   // Intentionally blank.
@@ -109,6 +108,43 @@ get_priority() {
 void AudioSound::
 set_priority(int priority) {
   // intentionally blank
+}
+
+/**
+ * Inserts the specified DSP filter into the DSP chain at the specified index.
+ * Returns true if the DSP filter is supported by the audio implementation,
+ * false otherwise.
+ */
+bool AudioSound::
+insert_dsp(int index, DSP *dsp) {
+  // Must be implemented by audio implementation.
+  return false;
+}
+
+/**
+ * Removes the specified DSP filter from the DSP chain. Returns true if the
+ * filter was in the DSP chain and was removed, false otherwise.
+ */
+bool AudioSound::
+remove_dsp(DSP *dsp) {
+  // Must be implemented by audio implementation.
+  return false;
+}
+
+/**
+ * Removes all DSP filters from the DSP chain.
+ */
+void AudioSound::
+remove_all_dsps() {
+  // Must be implemented in audio implementation.
+}
+
+/**
+ * Returns the number of DSP filters present in the DSP chain.
+ */
+int AudioSound::
+get_num_dsps() const {
+  return 0;
 }
 
 /**
