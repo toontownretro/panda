@@ -118,7 +118,25 @@ get_slope_limit() const {
 /**
  *
  */
-void PhysController::
+INLINE void PhysController::
 resize(PN_stdfloat size) {
   get_controller()->resize(size);
+}
+
+/**
+ * Sets the collision group mask of the controller.  The controller will
+ * collide with other groups that have collisions enabled between the group and
+ * the controller's group.
+ */
+INLINE void PhysController::
+set_collide_mask(CollideMask mask) {
+  _group_mask = mask;
+}
+
+/**
+ * Returns the collision group mask of the controller.
+ */
+INLINE CollideMask PhysController::
+get_collide_mask() const {
+  return _group_mask;
 }

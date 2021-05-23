@@ -18,6 +18,7 @@
 #include "referenceCount.h"
 #include "nodePath.h"
 #include "luse.h"
+#include "collideMask.h"
 
 #include "physx_includes.h"
 #include "physx_utils.h"
@@ -60,6 +61,9 @@ PUBLISHED:
 
   INLINE void resize(PN_stdfloat size);
 
+  INLINE void set_collide_mask(CollideMask mask);
+  INLINE CollideMask get_collide_mask() const;
+
   CollisionFlags move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance);
 
 protected:
@@ -67,6 +71,8 @@ protected:
 
   // The node that gets controlled.
   NodePath _np;
+
+  CollideMask _group_mask;
 };
 
 #include "physController.I"
