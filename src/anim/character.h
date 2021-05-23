@@ -119,6 +119,7 @@ PUBLISHED:
   INLINE const LMatrix4 &get_joint_transform(int n) const;
   INLINE const LMatrix4 &get_joint_initial_net_transform_inverse(int n) const;
   INLINE const LMatrix4 &get_joint_default_value(int n) const;
+  INLINE const LMatrix4 &get_joint_value(int n) const;
 
   void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
 

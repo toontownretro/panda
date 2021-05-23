@@ -398,6 +398,14 @@ get_joint_default_value(int n) const {
 }
 
 /**
+ * Returns the current local-space pose of the specified joint.
+ */
+INLINE const LMatrix4 &Character::
+get_joint_value(int n) const {
+  return _joint_values[n];
+}
+
+/**
  * Specifies the minimum amount of time, in seconds, that should elapse
  * between any two consecutive updates.  This is normally used by
  * Character::set_lod_animation(), and should not be called directly.
