@@ -18,6 +18,7 @@
 #include "nodePath.h"
 #include "physRayCastResult.h"
 #include "physXSimulationEventCallback.h"
+#include "physQueryFilter.h"
 
 /**
  *
@@ -197,7 +198,9 @@ simulate(double dt) {
 bool PhysScene::
 raycast(PhysRayCastResult &result, const LPoint3 &origin,
         const LVector3 &direction, PN_stdfloat distance,
-        CollideMask block_mask, CollideMask touch_mask) const {
+        CollideMask block_mask, CollideMask touch_mask,
+        PhysBaseQueryFilter *filter) const {
+
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
   // word0 is used during the fixed-function filtering.
@@ -205,14 +208,29 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
   data.data.word1 = block_mask.get_word();
   data.data.word2 = touch_mask.get_word();
 
-  return _scene->raycast(
-    physx::PxVec3(origin[0], origin[1], origin[2]),
-    physx::PxVec3(direction[0], direction[1], direction[2]),
-    distance,
-    result.get_buffer(),
-    physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
-    data,
-    PandaQueryFilterCallback::ptr());
+  if (filter == nullptr) {
+    // Use the base filter that just checks for common block or touch bits.
+    PhysBaseQueryFilter default_filter;
+    return _scene->raycast(
+      physx::PxVec3(origin[0], origin[1], origin[2]),
+      physx::PxVec3(direction[0], direction[1], direction[2]),
+      distance,
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      &default_filter);
+
+  } else {
+    // Explicit filter was specified.
+    return _scene->raycast(
+      physx::PxVec3(origin[0], origin[1], origin[2]),
+      physx::PxVec3(direction[0], direction[1], direction[2]),
+      distance,
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      filter);
+  }
 }
 
 /**

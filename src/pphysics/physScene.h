@@ -26,6 +26,7 @@
 #include "physx_includes.h"
 
 class PhysRayCastResult;
+class PhysBaseQueryFilter;
 
 /**
  * A scene is a collection of bodies and constraints which can interact.
@@ -57,7 +58,8 @@ PUBLISHED:
   bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
                const LVector3 &direction, PN_stdfloat distance,
                CollideMask block_mask = CollideMask::all_on(),
-               CollideMask touch_mask = CollideMask::all_off()) const;
+               CollideMask touch_mask = CollideMask::all_off(),
+               PhysBaseQueryFilter *filter = nullptr) const;
 
 public:
   INLINE void enqueue_callback(CallbackObject *obj, RefCallbackData *data);

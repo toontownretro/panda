@@ -83,8 +83,16 @@ onContact(const physx::PxContactPairHeader &pair_header,
     return;
   }
 
+  if (pairs == nullptr) {
+    return;
+  }
+
   PhysRigidActorNode *node_a = (PhysRigidActorNode *)pair_header.actors[0]->userData;
   PhysRigidActorNode *node_b = (PhysRigidActorNode *)pair_header.actors[1]->userData;
+
+  if (node_a == nullptr || node_b == nullptr) {
+    return;
+  }
 
   if (node_a->get_contact_callback() != nullptr ||
       node_b->get_contact_callback() != nullptr) {

@@ -30,6 +30,7 @@
     physMaterial.h physMaterial.I \
     physPlane.h physPlane.I \
     physPrismaticJoint.h physPrismaticJoint.I \
+    physQueryFilter.h physQueryFilter.I \
     physRagdoll.h physRagdoll.I \
     physRayCastResult.h physRayCastResult.I \
     physRevoluteJoint.h physRevoluteJoint.I \
@@ -73,6 +74,7 @@
     physMaterial.cxx \
     physPlane.cxx \
     physPrismaticJoint.cxx \
+    physQueryFilter.cxx \
     physRagdoll.cxx \
     physRayCastResult.cxx \
     physRevoluteJoint.cxx \

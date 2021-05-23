@@ -46,25 +46,8 @@ public:
 };
 
 /**
- * Implementation of a scene query callback.
- */
-class EXPCL_PANDA_PPHYSICS PandaQueryFilterCallback : public physx::PxQueryFilterCallback {
-public:
-  virtual physx::PxQueryHitType::Enum preFilter(
-    const physx::PxFilterData &filter_data, const physx::PxShape *shape,
-    const physx::PxRigidActor *actor, physx::PxHitFlags &query_flags) override;
-
-  virtual physx::PxQueryHitType::Enum postFilter(
-    const physx::PxFilterData &filter_data, const physx::PxQueryHit &hit) override;
-
-  static PandaQueryFilterCallback *ptr();
-
-private:
-  static PandaQueryFilterCallback *_ptr;
-};
-
-/**
- *
+ * This callback allows for disabling collisions between specific pairs of
+ * actors.
  */
 class EXPCL_PANDA_PPHYSICS PandaSimulationFilterCallback : public physx::PxSimulationFilterCallback {
 public:
