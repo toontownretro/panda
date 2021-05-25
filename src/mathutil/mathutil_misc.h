@@ -272,8 +272,10 @@ solve_inverse_quadratic_monotonic(float x1, float y1, float x2, float y2,
 template <class T>
 INLINE T tlerp(float percent, T const &A, T const &B);
 
+BEGIN_PUBLISH
 INLINE float flerp(float f1, float f2, float t);
 INLINE float flerp(float f1, float f2, float i1, float i2, float x);
+END_PUBLISH
 
 // assuming the matrix is orthonormal, transform in1 by the transpose (also the inverse in this case) of in2.
 INLINE void VectorITransform(const LVector3 &in1, const LMatrix4f &in2, LVector3 &out)
