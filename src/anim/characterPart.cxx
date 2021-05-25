@@ -29,8 +29,7 @@ CharacterPart() :
 CharacterPart::
 CharacterPart(const CharacterPart &other) :
   Namable(other),
-  _index(other._index)//,
-  //_channels(other._channels)
+  _index(other._index)
 {
 }
 
@@ -40,8 +39,7 @@ CharacterPart(const CharacterPart &other) :
 CharacterPart::
 CharacterPart(CharacterPart &&other) :
   Namable(std::move(other)),
-  _index(std::move(_index)),
-  _channels(std::move(_channels))
+  _index(std::move(_index))
 {
 }
 
@@ -52,7 +50,6 @@ void CharacterPart::
 operator=(const CharacterPart &other) {
   set_name(other.get_name());
   _index = other._index;
-  _channels = other._channels;
 }
 
 /**

@@ -13,6 +13,8 @@
 
 #include "animBlendNode2D.h"
 #include "triangulatorDelaunay.h"
+#include "poseParameter.h"
+#include "character.h"
 
 static const PN_stdfloat equal_epsilon = 0.001f;
 
@@ -25,7 +27,9 @@ AnimBlendNode2D::
 AnimBlendNode2D(const std::string &name) :
   AnimGraphNode(name),
   _has_triangles(false),
-  _active_tri(nullptr)
+  _active_tri(nullptr),
+  _x_param(-1),
+  _y_param(-1)
 {
 }
 
@@ -130,13 +134,13 @@ compute_weights() {
  * Builds triangles and computes weights if something changed.
  */
 void AnimBlendNode2D::
-compute_weights_if_necessary() {
+compute_weights_if_necessary(Character *character) {
   LPoint2 input(0);
-  if (_x_param) {
-    input[0] = _x_param->get_value();
+  if (_x_param != -1) {
+    input[0] = character->get_pose_parameter(_x_param).get_value();
   }
-  if (_y_param) {
-    input[1] = _y_param->get_value();
+  if (_y_param != -1) {
+    input[1] = character->get_pose_parameter(_y_param).get_value();
   }
   if ((input != _input_coord) || !_has_triangles) {
     _input_coord = input;
@@ -150,7 +154,7 @@ compute_weights_if_necessary() {
  */
 void AnimBlendNode2D::
 evaluate(AnimGraphEvalContext &context) {
-  compute_weights_if_necessary();
+  compute_weights_if_necessary(context._character);
 
   if (_active_tri == nullptr) {
     return;
@@ -227,8 +231,8 @@ evaluate(AnimGraphEvalContext &context) {
  *
  */
 void AnimBlendNode2D::
-evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
-  compute_weights_if_necessary();
+evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
+  //compute_weights_if_necessary();
 
   if (_active_tri == nullptr) {
     return;

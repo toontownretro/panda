@@ -37,16 +37,9 @@ protected:
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
 
-public:
-  INLINE int get_max_bound() const;
-  INLINE int get_bound(int n) const;
-
 protected:
   // The index of this part into the Character's list of parts of this type.
   int _index;
-
-  // This is the vector of all channels bound to this part.
-  vector_int _channels;
 
   friend class Character;
 };

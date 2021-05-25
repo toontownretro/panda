@@ -15,12 +15,63 @@
  *
  */
 INLINE PoseParameter::
-PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max) :
+PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, bool looping) :
   Namable(name),
   _min(min),
   _max(max),
-  _value(0.0f)
+  _value(0.0f),
+  _looping(looping)
 {
+}
+
+/**
+ *
+ */
+INLINE PoseParameter::
+PoseParameter(PoseParameter &&other) :
+  Namable(std::move(other)),
+  _min(std::move(other._min)),
+  _max(std::move(other._max)),
+  _value(std::move(other._value)),
+  _looping(std::move(other._looping))
+{
+}
+
+/**
+ *
+ */
+INLINE PoseParameter::
+PoseParameter(const PoseParameter &copy) :
+  Namable(copy),
+  _min(copy._min),
+  _max(copy._max),
+  _value(copy._value),
+  _looping(copy._looping)
+{
+}
+
+/**
+ *
+ */
+INLINE void PoseParameter::
+operator = (PoseParameter &&other) {
+  Namable::operator = (std::move(other));
+  _min = std::move(other._min);
+  _max = std::move(other._max);
+  _value = std::move(other._value);
+  _looping = std::move(other._looping);
+}
+
+/**
+ *
+ */
+INLINE void PoseParameter::
+operator = (const PoseParameter &copy) {
+  Namable::operator = (copy);
+  _min = copy._min;
+  _max = copy._max;
+  _value = copy._value;
+  _looping = copy._looping;
 }
 
 /**
@@ -71,4 +122,20 @@ set_value(PN_stdfloat value) {
 INLINE PN_stdfloat PoseParameter::
 get_value() const {
   return _value;
+}
+
+/**
+ *
+ */
+INLINE void PoseParameter::
+set_looping(bool looping) {
+  _looping = looping;
+}
+
+/**
+ *
+ */
+INLINE bool PoseParameter::
+get_looping() const {
+  return _looping;
 }

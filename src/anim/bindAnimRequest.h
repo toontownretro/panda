@@ -14,6 +14,8 @@
 #ifndef BINDANIMREQUEST
 #define BINDANIMREQUEST
 
+#if 0
+
 #include "pandabase.h"
 
 #include "modelLoadRequest.h"
@@ -65,5 +67,7 @@ private:
 };
 
 #include "bindAnimRequest.I"
+
+#endif
 
 #endif

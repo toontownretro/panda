@@ -11,6 +11,8 @@
  * @date 1999-02-23
  */
 
+#if 0
+
 #include "auto_bind.h"
 #include "animBundleNode.h"
 #include "characterNode.h"
@@ -234,3 +236,5 @@ auto_bind(PandaNode *root_node, AnimControlCollection &controls,
                hierarchy_match_flags);
   }
 }
+
+#endif

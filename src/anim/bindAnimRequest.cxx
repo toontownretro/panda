@@ -11,6 +11,8 @@
  * @date 2008-08-05
  */
 
+#if 0
+
 #include "bindAnimRequest.h"
 #include "animBundleNode.h"
 #include "animControl.h"
@@ -73,3 +75,5 @@ do_task() {
 
   return DS_done;
 }
+
+#endif

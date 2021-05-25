@@ -22,9 +22,13 @@
  * A parameter used as input for animation blend nodes.  Can be shared between
  * multiple nodes.
  */
-class EXPCL_PANDA_ANIM PoseParameter : public Namable, public ReferenceCount {
+class EXPCL_PANDA_ANIM PoseParameter : public Namable {
 PUBLISHED:
-  INLINE PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max);
+  INLINE PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, bool looping = false);
+  INLINE PoseParameter(PoseParameter &&other);
+  INLINE PoseParameter(const PoseParameter &copy);
+  INLINE void operator = (const PoseParameter &copy);
+  INLINE void operator = (PoseParameter &&other);
 
   INLINE void set_min(PN_stdfloat min);
   INLINE PN_stdfloat get_min() const;
@@ -35,10 +39,14 @@ PUBLISHED:
   INLINE void set_value(PN_stdfloat value);
   INLINE PN_stdfloat get_value() const;
 
+  INLINE void set_looping(bool looping);
+  INLINE bool get_looping() const;
+
 private:
   PN_stdfloat _min;
   PN_stdfloat _max;
   PN_stdfloat _value;
+  bool _looping;
 
 public:
   static TypeHandle get_class_type() {
@@ -46,10 +54,8 @@ public:
   }
   static void init_type() {
     Namable::init_type();
-    ReferenceCount::init_type();
     register_type(_type_handle, "PoseParameter",
-                  Namable::get_class_type(),
-                  ReferenceCount::get_class_type());
+                  Namable::get_class_type());
   }
 
 private:

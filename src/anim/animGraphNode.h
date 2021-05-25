@@ -24,7 +24,8 @@
 #include "characterJoint.h"
 #include "vector_stdfloat.h"
 
-class AnimControl;
+class AnimBundle;
+class Character;
 
 static constexpr int max_joints = 256;
 
@@ -101,13 +102,14 @@ extern JointTransformPool joint_transform_pool;
 
 class AnimGraphEvalContext {
 public:
-  AnimGraphEvalContext(CharacterJoint *parts, int num_parts,
+  AnimGraphEvalContext(Character *character, CharacterJoint *parts, int num_parts,
                        bool frame_blend_flag) {
     _joints = joint_transform_pool.alloc();
     _num_joints = num_parts;
     clear();
     _parts = parts;
     _frame_blend = frame_blend_flag;
+    _character = character;
     _weight = 1.0f;
     _anim_time = 0.0f;
     _cycle = 0.0f;
@@ -120,7 +122,8 @@ public:
     _num_joints(copy._num_joints),
     _cycle(copy._cycle),
     _anim_time(copy._anim_time),
-    _looping(copy._looping)
+    _looping(copy._looping),
+    _character(copy._character)
   {
     _joints = joint_transform_pool.alloc();
     _weight = 1.0f;
@@ -146,6 +149,7 @@ public:
 
   void mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat c);
 
+  // Evaluated pose for each joint.
   JointTransform *_joints;
   int _num_joints;
 
@@ -156,6 +160,9 @@ public:
   bool _looping;
 
   bool _frame_blend;
+
+  // The character we are evaluating for.
+  Character *_character;
 
   // Character's joint list.
   CharacterJoint *_parts;
@@ -179,7 +186,7 @@ protected:
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) = 0;
-  virtual void evaluate_anims(pvector<AnimControl *> &controls, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f);
+  virtual void evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f);
 
 private:
   typedef pvector<PT(AnimGraphNode)> Children;

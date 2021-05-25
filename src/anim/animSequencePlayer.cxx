@@ -21,108 +21,10 @@ static constexpr PN_stdfloat max_anim_time_interval = 0.2f;
 /**
  *
  */
-AnimSequencePlayer::Layer::
-Layer() {
-  init(nullptr);
-}
-
-/**
- *
- */
-void AnimSequencePlayer::Layer::
-init(AnimSequencePlayer *owner) {
-  _player = owner;
-  _flags = 0;
-  _weight = 0;
-  _cycle = 0;
-  _prev_cycle = 0;
-  _sequence_finished = false;
-  _looping = false;
-  _activity = -1;
-  _sequence = 0;
-  _priority = 0;
-  _order = max_anim_layers;
-  _kill_rate = 100.0f;
-  _kill_delay = 0.0f;
-  _play_rate = 1.0f;
-  _last_access = ClockObject::get_global_clock()->get_frame_time();
-  _layer_anim_time = 0;
-  _layer_fade_out_time = 0;
-}
-
-/**
- *
- */
-bool AnimSequencePlayer::Layer::
-is_abandoned() const {
-  ClockObject *global_clock = ClockObject::get_global_clock();
-  return (is_active() && !is_autokill() && !is_killme() &&
-          _last_access > 0.0f && (global_clock->get_frame_time() - _last_access > 0.2f));
-}
-
-/**
- *
- */
-void AnimSequencePlayer::Layer::
-mark_active() {
-  _last_access = ClockObject::get_global_clock()->get_frame_time();
-}
-
-/**
- *
- */
-void AnimSequencePlayer::Layer::
-advance(PN_stdfloat interval, AnimSequencePlayer *owner) {
-  PN_stdfloat cycle_rate = owner->get_sequence_cycle_rate(_sequence);
-
-  _prev_cycle = _cycle;
-  _cycle += interval * cycle_rate * _play_rate;
-
-  if (_cycle < 0.0f) {
-    if (_looping) {
-      _cycle -= (int)_cycle;
-    } else {
-      _cycle = 0.0f;
-    }
-  } else if (_cycle >= 1.0f) {
-    _sequence_finished = true;
-    if (_looping) {
-      _cycle -= (int)_cycle;
-    } else {
-      _cycle = 1.0f;
-    }
-  }
-
-  if (is_autoramp()) {
-    _weight = 1;
-
-    // Blend in?
-    if (_blend_in != 0.0f) {
-      if (_cycle < _blend_in) {
-        _weight = _cycle / _blend_in;
-      }
-    }
-
-    // Blend out?
-    if (_blend_out != 0.0f) {
-      if (_cycle > 1.0f - _blend_out) {
-        _weight = (1.0f - _cycle) / _blend_out;
-      }
-    }
-
-    _weight = 3.0 * _weight * _weight - 2.0 * _weight * _weight * _weight;
-    if (_sequence == 0) {
-      _weight = 0;
-    }
-  }
-}
-
-/**
- *
- */
 AnimSequencePlayer::
-AnimSequencePlayer(const std::string &name) :
+AnimSequencePlayer(const std::string &name, Character *character) :
   AnimGraphNode(name),
+  _character(character),
   _prev_anim_time(ClockObject::get_global_clock()->get_frame_time()),
   _anim_time(ClockObject::get_global_clock()->get_frame_time()),
   _cycle(0.0f),
@@ -145,7 +47,7 @@ reset_sequence(int sequence) {
   bool changed = sequence != _sequence;
   set_sequence(sequence);
 
-  if (changed || !_sequences[_sequence]->has_flags(AnimSequence::F_looping)) {
+  if (changed || !_character->get_sequence(_sequence)->has_flags(AnimSequence::F_looping)) {
     reset_sequence_info();
     set_cycle(0.0f);
   }
@@ -160,7 +62,7 @@ reset_sequence_info() {
     set_sequence(0);
   }
 
-  _sequence_loops = _sequences[_sequence]->has_flags(AnimSequence::F_looping);
+  _sequence_loops = _character->get_sequence(_sequence)->has_flags(AnimSequence::F_looping);
   _sequence_finished = false;
   _play_rate = 1.0f;
 
@@ -197,7 +99,7 @@ advance() {
     return;
   }
 
-  AnimSequence *seq = _sequences[_sequence];
+  AnimSequence *seq = _character->get_sequence(_sequence);
 
   // Drive cycle.
   PN_stdfloat cycle_rate = get_sequence_cycle_rate(_sequence) * _play_rate;
@@ -220,7 +122,7 @@ advance() {
 
   // Advance our layers.
   for (int i = 0; i < (int)_layers.size(); i++) {
-    Layer *layer = &_layers[i];
+    AnimLayer *layer = &_layers[i];
 
     if (layer->is_active()) {
       if (layer->is_killme()) {
@@ -263,8 +165,8 @@ advance() {
  */
 PN_stdfloat AnimSequencePlayer::
 get_sequence_cycle_rate(int sequence) const {
-  nassertr(sequence >= 0 && sequence < get_num_sequences(), 0.0f);
-  AnimSequence *seq = _sequences[sequence];
+  nassertr(sequence >= 0 && sequence < _character->get_num_sequences(), 0.0f);
+  AnimSequence *seq = _character->get_sequence(sequence);
   PN_stdfloat t = seq->get_length();
   if (t > 0.0f) {
     return 1.0f / t;
@@ -278,9 +180,9 @@ get_sequence_cycle_rate(int sequence) const {
  */
 PN_stdfloat AnimSequencePlayer::
 get_last_visible_cycle(int sequence) const {
-  nassertr(sequence >= 0 && sequence < get_num_sequences(), 0.0f);
+  nassertr(sequence >= 0 && sequence < _character->get_num_sequences(), 0.0f);
 
-  AnimSequence *seq = _sequences[sequence];
+  AnimSequence *seq = _character->get_sequence(sequence);
   if (!seq->has_flags(AnimSequence::F_looping)) {
     return 1.0f - seq->get_fade_out() * get_sequence_cycle_rate(sequence) * _play_rate;
   } else {
@@ -346,7 +248,7 @@ int AnimSequencePlayer::
 add_gesture_sequence(int sequence, PN_stdfloat duration, bool auto_kill) {
   int i = add_layered_sequence(sequence, auto_kill);
   if (i > 0 && duration > 0) {
-    _layers[i]._play_rate = _sequences[sequence]->get_length() / duration;
+    _layers[i]._play_rate = _character->get_sequence(sequence)->get_length() / duration;
   }
   return i;
 }
@@ -355,17 +257,12 @@ add_gesture_sequence(int sequence, PN_stdfloat duration, bool auto_kill) {
  *
  */
 int AnimSequencePlayer::
-add_gesture(int activity, bool auto_kill) {
+add_gesture(int activity, int sequence, bool auto_kill) {
   if (is_playing_gesture(activity)) {
     return find_gesture_layer(activity);
   }
 
-  int seq = get_sequence_for_activity(activity);
-  if (seq < 0) {
-    return -1;
-  }
-
-  int i = add_gesture_sequence(seq, auto_kill);
+  int i = add_gesture_sequence(sequence, auto_kill);
   if (i != -1) {
     _layers[i]._activity = activity;
   }
@@ -377,8 +274,8 @@ add_gesture(int activity, bool auto_kill) {
  *
  */
 int AnimSequencePlayer::
-add_gesture(int activity, PN_stdfloat duration, bool auto_kill) {
-  int i = add_gesture(activity, auto_kill);
+add_gesture_with_duration(int activity, int sequence, PN_stdfloat duration, bool auto_kill) {
+  int i = add_gesture(activity, sequence, auto_kill);
   set_layer_duration(i, duration);
 
   return i;
@@ -390,6 +287,36 @@ add_gesture(int activity, PN_stdfloat duration, bool auto_kill) {
 bool AnimSequencePlayer::
 is_playing_gesture(int activity) const {
   return find_gesture_layer(activity) != -1;
+}
+
+/**
+ * Resets an existing layer to the specified activity.
+ */
+void AnimSequencePlayer::
+reset_layer(int layer, int activity, int sequence, bool auto_kill) {
+  nassertv(layer >= 0 && layer < (int)_layers.size());
+
+  _layers[layer]._activity = activity;
+  _layers[layer]._order = layer;
+  _layers[layer]._priority = 0;
+  _layers[layer]._cycle = 0.0f;
+  _layers[layer]._prev_cycle = 0.0f;
+  _layers[layer]._play_rate = 1.0f;
+  _layers[layer]._sequence = sequence;
+  _layers[layer]._weight = 1.0f;
+  _layers[layer]._blend_in = 0.0f;
+  _layers[layer]._blend_out = 0.0f;
+  _layers[layer]._sequence_finished = false;
+  _layers[layer]._last_event_check = ClockObject::get_global_clock()->get_frame_time();
+  _layers[layer]._looping = _character->get_sequence(sequence)->has_flags(AnimSequence::F_looping);
+  if (auto_kill) {
+    _layers[layer]._flags |= AnimLayer::F_autokill;
+  } else {
+    _layers[layer]._flags &= ~AnimLayer::F_autokill;
+  }
+  _layers[layer]._flags |= AnimLayer::F_active;
+  _layers[layer]._sequence_parity = (_layers[layer]._sequence_parity + 1) % 256;
+  _layers[layer].mark_active();
 }
 
 /**
@@ -408,6 +335,7 @@ restart_gesture(int activity, bool add_if_missing, bool auto_kill) {
   _layers[idx]._cycle = 0.0;
   _layers[idx]._prev_cycle = 0.0;
   _layers[idx]._last_event_check = 0.0;
+  _layers[idx]._sequence_parity = (_layers[idx]._sequence_parity + 1) % 256;
   _layers[idx].mark_active();
 }
 
@@ -441,7 +369,7 @@ int AnimSequencePlayer::
 add_layered_sequence(int sequence, int priority) {
   int i = allocate_layer(priority);
   if (is_valid_layer(i)) {
-    Layer *layer = &_layers[i];
+    AnimLayer *layer = &_layers[i];
     layer->_cycle = 0;
     layer->_prev_cycle = 0;
     layer->_play_rate = 1.0;
@@ -452,7 +380,8 @@ add_layered_sequence(int sequence, int priority) {
     layer->_blend_out = 0.0;
     layer->_sequence_finished = false;
     layer->_last_event_check = 0;
-    layer->_looping = _sequences[sequence]->has_flags(AnimSequence::F_looping);
+    layer->_looping = _character->get_sequence(sequence)->has_flags(AnimSequence::F_looping);
+    layer->_sequence_parity = (layer->_sequence_parity + 1) % 256;
   }
   return i;
 }
@@ -541,7 +470,7 @@ allocate_layer(int priority) {
     }
 
     open_layer = (int)_layers.size();
-    _layers.push_back(Layer());
+    _layers.push_back(AnimLayer());
     _layers[open_layer].init(this);
   }
 
@@ -549,7 +478,7 @@ allocate_layer(int priority) {
   if (num_open == 0) {
     if (_layers.size() < max_anim_layers) {
       i = (int)_layers.size();
-      _layers.push_back(Layer());
+      _layers.push_back(AnimLayer());
       _layers[i].init(this);
     }
   }
@@ -560,7 +489,7 @@ allocate_layer(int priority) {
     }
   }
 
-  _layers[open_layer]._flags = Layer::F_active;
+  _layers[open_layer]._flags = AnimLayer::F_active;
   _layers[open_layer]._order = new_order;
   _layers[open_layer]._priority = priority;
   _layers[open_layer].mark_active();
@@ -574,7 +503,7 @@ allocate_layer(int priority) {
 void AnimSequencePlayer::
 set_layer_duration(int layer, PN_stdfloat duration) {
   if (is_valid_layer(layer) && duration > 0) {
-    _layers[layer]._play_rate = _sequences[_layers[layer]._sequence]->get_length() / duration;
+    _layers[layer]._play_rate = _character->get_sequence(_layers[layer]._sequence)->get_length() / duration;
   }
 }
 
@@ -585,9 +514,9 @@ PN_stdfloat AnimSequencePlayer::
 get_layer_duration(int layer) const {
   if (is_valid_layer(layer)) {
     if (_layers[layer]._play_rate != 0.0) {
-      return (1.0f - _layers[layer]._cycle) * _sequences[_layers[layer]._sequence]->get_length() / _layers[layer]._play_rate;
+      return (1.0f - _layers[layer]._cycle) * _character->get_sequence(_layers[layer]._sequence)->get_length() / _layers[layer]._play_rate;
     }
-    return _sequences[_layers[layer]._sequence]->get_length();
+    return _character->get_sequence(_layers[layer]._sequence)->get_length();
   }
 
   return 0.0f;
@@ -800,9 +729,9 @@ set_layer_auto_kill(int layer, bool auto_kill) {
   }
 
   if (auto_kill) {
-    _layers[layer]._flags |= Layer::F_autokill;
+    _layers[layer]._flags |= AnimLayer::F_autokill;
   } else {
-    _layers[layer]._flags &= ~Layer::F_autokill;
+    _layers[layer]._flags &= ~AnimLayer::F_autokill;
   }
 }
 
@@ -815,7 +744,7 @@ get_layer_auto_kill(int layer) const {
     return false;
   }
 
-  return (_layers[layer]._flags & Layer::F_autokill) != 0;
+  return (_layers[layer]._flags & AnimLayer::F_autokill) != 0;
 }
 
 /**
@@ -852,9 +781,9 @@ set_layer_no_restore(int layer, bool no_restore) {
   }
 
   if (no_restore) {
-    _layers[layer]._flags |= Layer::F_dontrestore;
+    _layers[layer]._flags |= AnimLayer::F_dontrestore;
   } else {
-    _layers[layer]._flags &= ~Layer::F_dontrestore;
+    _layers[layer]._flags &= ~AnimLayer::F_dontrestore;
   }
 }
 
@@ -867,7 +796,7 @@ get_layer_no_resture(int layer) const {
     return false;
   }
 
-  return (_layers[layer]._flags & Layer::F_dontrestore) != 0;
+  return (_layers[layer]._flags & AnimLayer::F_dontrestore) != 0;
 }
 
 /**
@@ -879,7 +808,7 @@ mark_layer_active(int layer) {
     return;
   }
 
-  _layers[layer]._flags = Layer::F_active;
+  _layers[layer]._flags = AnimLayer::F_active;
   _layers[layer].mark_active();
 }
 
@@ -983,7 +912,7 @@ fast_remove_layer(int layer) {
 /**
  *
  */
-AnimSequencePlayer::Layer *AnimSequencePlayer::
+AnimLayer *AnimSequencePlayer::
 get_layer(int i) {
   i = std::max(0, std::min((int)_layers.size(), i));
   return &_layers[i];
@@ -1022,32 +951,20 @@ has_active_layer() const {
 /**
  *
  */
-int AnimSequencePlayer::
-get_sequence_for_activity(int activity) const {
-  for (int i = 0; i < (int)_sequences.size(); i++) {
-    if (_sequences[i]->get_activity() == activity) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
-/**
- *
- */
 void AnimSequencePlayer::
 evaluate(AnimGraphEvalContext &context) {
   if (_sequence == -1) {
     return;
   }
 
+  nassertv(context._character == _character);
+
   // If the advance mode is AM_auto, advance the cycle now.
   if (_advance_mode == AM_auto) {
     advance();
   }
 
-  AnimSequence *seq = _sequences[_sequence];
+  AnimSequence *seq = _character->get_sequence(_sequence);
   context._cycle = _cycle;
   context._weight = 1.0f;
   seq->evaluate(context);
@@ -1056,10 +973,10 @@ evaluate(AnimGraphEvalContext &context) {
     // Maintain our sequence transitions.
 
     if (_sequence_queue.empty()) {
-      _sequence_queue.push_back(Layer());
+      _sequence_queue.push_back(AnimLayer());
     }
 
-    Layer *current_blend = &_sequence_queue[_sequence_queue.size() - 1];
+    AnimLayer *current_blend = &_sequence_queue[_sequence_queue.size() - 1];
     if (current_blend->_layer_anim_time &&
         (current_blend->_sequence != _sequence || (_new_sequence_parity != _prev_sequence_parity))) {
 
@@ -1069,12 +986,12 @@ evaluate(AnimGraphEvalContext &context) {
         _sequence_queue.clear();
 
       } else {
-        AnimSequence *prev_seq = _sequences[current_blend->_sequence];
+        AnimSequence *prev_seq = _character->get_sequence(current_blend->_sequence);
         current_blend->_layer_fade_out_time = std::min(prev_seq->get_fade_out(), seq->get_fade_in());
       }
 
       // Push previously set sequence.
-      _sequence_queue.push_back(Layer());
+      _sequence_queue.push_back(AnimLayer());
       current_blend = &_sequence_queue[_sequence_queue.size() - 1];
     }
 
@@ -1101,8 +1018,8 @@ evaluate(AnimGraphEvalContext &context) {
 
     // Process previous sequences.
     for (int i = (int)_sequence_queue.size() - 2; i >= 0; i--) {
-      Layer *blend = &_sequence_queue[i];
-      AnimSequence *blend_seq = _sequences[blend->_sequence];
+      AnimLayer *blend = &_sequence_queue[i];
+      AnimSequence *blend_seq = _character->get_sequence(blend->_sequence);
       PN_stdfloat dt = (global_clock->get_frame_time() - blend->_layer_anim_time);
       PN_stdfloat cycle = blend->_cycle + dt * blend->_play_rate * get_sequence_cycle_rate(blend->_sequence);
       cycle = clamp_cycle(cycle, blend_seq->has_flags(AnimSequence::F_looping));
@@ -1121,20 +1038,20 @@ evaluate(AnimGraphEvalContext &context) {
   }
 
   for (int i = 0; i < (int)_layers.size(); i++) {
-    Layer *thelayer = &_layers[i];
+    AnimLayer *thelayer = &_layers[i];
     if ((thelayer->_weight > 0.0f) && (thelayer->is_active()) && thelayer->_order >= 0 && thelayer->_order < (int)_layers.size()) {
       layer[thelayer->_order] = i;
     }
   }
 
   for (int i = 0; i < (int)_layers.size(); i++) {
-    Layer *thelayer = &_layers[i];
+    AnimLayer *thelayer = &_layers[i];
     if ((layer[i] >= 0) && (layer[i] < (int)_layers.size()) &&
-        (thelayer->_sequence >= 0) && (thelayer->_sequence < (int)_sequences.size())) {
+        (thelayer->_sequence >= 0) && (thelayer->_sequence < (int)_character->get_num_sequences())) {
 
-      AnimSequence *seq = _sequences[thelayer->_sequence];
-      context._weight = thelayer->_weight;
-      context._cycle = thelayer->_cycle;
+      AnimSequence *seq = _character->get_sequence(thelayer->_sequence);
+      context._weight = std::min(1.0f, thelayer->_weight);
+      context._cycle = clamp_cycle(thelayer->_cycle, seq->has_flags(AnimSequence::F_looping));
       seq->evaluate(context);
     }
   }

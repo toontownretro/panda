@@ -14,6 +14,8 @@
 #ifndef AUTO_BIND_H
 #define AUTO_BIND_H
 
+#if 0
+
 #include "pandabase.h"
 
 #include "animControl.h"
@@ -33,5 +35,7 @@ EXPCL_PANDA_ANIM void
 auto_bind(PandaNode *root_node, AnimControlCollection &controls,
           int hierarchy_match_flags = 0);
 END_PUBLISH
+
+#endif
 
 #endif

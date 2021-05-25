@@ -16,7 +16,6 @@
 
 #include "pandabase.h"
 #include "animGraphNode.h"
-#include "animControl.h"
 #include "cycleData.h"
 #include "pipelineCycler.h"
 #include "cycleDataWriter.h"
@@ -77,20 +76,6 @@ PUBLISHED:
 
   INLINE AnimSequence(const std::string &name, AnimGraphNode *base = nullptr);
 
-  // Replication of AnimControl interfaces that simply call into the
-  // AnimControl.
-  void play();
-  void play(double from, double to);
-  void loop(bool restart);
-  void loop(bool restart, double from, double to);
-  void pingpong(bool restart);
-  void pingpong(bool restart, double from, double to);
-  void stop();
-  void pose(double frame);
-
-  void set_play_rate(double play_rate);
-  double get_play_rate() const;
-
   void set_frame_rate(int frame_rate);
   void clear_frame_rate();
   double get_frame_rate() const;
@@ -98,13 +83,6 @@ PUBLISHED:
   void set_num_frames(int num_frames);
   void clear_num_frames();
   int get_num_frames() const;
-
-  int get_frame() const;
-  int get_next_frame() const;
-  double get_frac() const;
-  int get_full_frame() const;
-  double get_full_fframe() const;
-  bool is_playing() const;
 
   PN_stdfloat get_length();
   PN_stdfloat get_cycles_per_second();
@@ -130,8 +108,6 @@ PUBLISHED:
 
   INLINE void set_weight_list(WeightList *list);
   INLINE WeightList *get_weight_list() const;
-
-  INLINE AnimControl *get_effective_control() const;
 
   INLINE void set_base(AnimGraphNode *base);
   INLINE void add_layer(AnimGraphNode *layer, int start_frame = -1, int peak_frame = -1,
@@ -159,15 +135,10 @@ private:
     bool _spline;
     bool _no_blend;
   };
-  // The effective control is the AnimControl below us with the highest frame
-  // count.  This control will be used to determine frame-based logic such as
-  // events and IK rules.
-  AnimControl *_effective_control;
 
-  // All of the AnimControl nodes below this node.  Used to propagate all
-  // play/loop/stop calls on the sequence to all the AnimControls below.
-  typedef pvector<AnimControl *> AnimControls;
-  AnimControls _controls;
+  // All of the animations below the sequence.
+  typedef pvector<AnimBundle *> Anims;
+  Anims _anims;
 
   // Node to get the base pose from.
   PT(AnimGraphNode) _base;

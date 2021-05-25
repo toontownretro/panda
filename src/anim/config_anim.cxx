@@ -15,9 +15,8 @@
 
 #include "animBundle.h"
 #include "animBundleNode.h"
-#include "animControl.h"
 #include "animPreloadTable.h"
-#include "bindAnimRequest.h"
+//#include "bindAnimRequest.h"
 
 #include "character.h"
 #include "characterNode.h"
@@ -133,7 +132,6 @@ init_libanim() {
   AnimBlendNode2D::init_type();
   AnimBundle::init_type();
   AnimBundleNode::init_type();
-  AnimControl::init_type();
   AnimGraphNode::init_type();
   AnimMixNode::init_type();
   AnimOverlayNode::init_type();
@@ -141,7 +139,7 @@ init_libanim() {
   AnimSequence::init_type();
   AnimSequencePlayer::init_type();
   AnimStateMachine::init_type();
-  BindAnimRequest::init_type();
+  //BindAnimRequest::init_type();
   PoseParameter::init_type();
   WeightList::init_type();
 

@@ -48,24 +48,45 @@ clear_anim_preload() {
 
 /**
  * Adds a new pose parameter to the character.  This can be used by animation
- * blend nodes to control the blend result.
+ * blend nodes to control the blend result.  Returns the index of the new pose
+ * parameter.
  */
-INLINE void Character::
-add_pose_parameter(PoseParameter *param) {
-  _pose_parameters[param->get_name()] = param;
+INLINE int Character::
+add_pose_parameter(const std::string &name, PN_stdfloat min_val, PN_stdfloat max_val, bool looping) {
+  PoseParameter param(name, min_val, max_val, looping);
+  _pose_parameters.push_back(std::move(param));
+  return (int)_pose_parameters.size() - 1;
 }
 
 /**
- * Returns the pose parameter assigned to the character with the indicated
- * name, or NULL if there is no such pose parameter.
+ * Returns the number of pose parameters stored on the character.
  */
-INLINE PoseParameter *Character::
-get_pose_parameter(const std::string &name) const {
-  PoseParameters::const_iterator it = _pose_parameters.find(name);
-  if (it == _pose_parameters.end()) {
-    return nullptr;
+INLINE int Character::
+get_num_pose_parameters() const {
+  return (int)_pose_parameters.size();
+}
+
+/**
+ * Returns the pose parameter at the indicated index.
+ */
+INLINE PoseParameter &Character::
+get_pose_parameter(int n) {
+  return _pose_parameters[n];
+}
+
+/**
+ * Returns the index of the pose parameter with the indicated name, or -1 if no
+ * such pose parameter exists.
+ */
+INLINE int Character::
+find_pose_parameter(const std::string &name) const {
+  for (int i = 0; i < (int)_pose_parameters.size(); i++) {
+    if (_pose_parameters[i].get_name() == name) {
+      return i;
+    }
   }
-  return (*it).second;
+
+  return -1;
 }
 
 /**
@@ -403,6 +424,58 @@ get_joint_default_value(int n) const {
 INLINE const LMatrix4 &Character::
 get_joint_value(int n) const {
   return _joint_values[n];
+}
+
+/**
+ * Adds a new AnimSequence to the character and returns the index of the
+ * sequence.
+ */
+INLINE int Character::
+add_sequence(AnimSequence *sequence) {
+  Sequences::const_iterator it = std::find(_sequences.begin(), _sequences.end(), sequence);
+  if (it != _sequences.end()) {
+    // Already added to the character.
+    return (int)(it - _sequences.begin());
+  }
+
+  _sequences.push_back(sequence);
+  return (int)_sequences.size() - 1;
+}
+
+/**
+ * Returns the number of sequences in the character.
+ */
+INLINE int Character::
+get_num_sequences() const {
+  return (int)_sequences.size();
+}
+
+/**
+ * Returns the sequence at the indicated index.
+ */
+INLINE AnimSequence *Character::
+get_sequence(int n) const {
+  nassertr(n >= 0 && n < (int)_sequences.size(), nullptr);
+  return _sequences[n];
+}
+
+/**
+ * Returns the number of animations in the character.  This is the number of
+ * raw frame-by-frame animations that were created and exported from the
+ * modelling package.  A sequence may be composed of multiple animations.
+ */
+INLINE int Character::
+get_num_anims() const {
+  return (int)_animations.size();
+}
+
+/**
+ * Returns the AnimBundle at the indicated index.
+ */
+INLINE AnimBundle *Character::
+get_anim(int n) const {
+  nassertr(n >= 0 && n < (int)_animations.size(), nullptr);
+  return _animations[n];
 }
 
 /**

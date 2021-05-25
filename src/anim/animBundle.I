@@ -16,16 +16,18 @@
  */
 INLINE AnimBundle::
 AnimBundle(const std::string &name, PN_stdfloat fps, int num_frames) :
-  Namable(name) {
+  AnimGraphNode(name) {
   _fps = fps;
   _num_frames = num_frames;
+  _has_character_bound = false;
 }
 
 /**
  *
  */
 INLINE AnimBundle::
-AnimBundle() {
+AnimBundle() :
+  AnimGraphNode("bundle") {
 }
 
 /**
@@ -183,4 +185,65 @@ get_num_joint_entries() const {
 INLINE int AnimBundle::
 get_num_slider_entries() const {
   return (int)_slider_entries.size();
+}
+
+/**
+ * Initializes the mapping of character joint indices to animation joint
+ * indices with the indicated number of character joints.
+ */
+INLINE void AnimBundle::
+init_joint_mapping(int num_character_joints, int num_character_sliders) {
+  _joint_map.clear();
+  _joint_map.resize(num_character_joints);
+  _slider_map.clear();
+  _slider_map.resize(num_character_sliders);
+  for (size_t i = 0; i < _joint_map.size(); i++) {
+    _joint_map[i] = -1;
+  }
+  for (size_t i = 0; i < _slider_map.size(); i++) {
+    _slider_map[i] = -1;
+  }
+  _has_character_bound = true;
+}
+
+/**
+ * Maps the indicated character joint to a corresponding animation joint.
+ */
+INLINE void AnimBundle::
+map_character_joint_to_anim_joint(int character_joint, int anim_joint) {
+  _joint_map[character_joint] = anim_joint;
+}
+
+/**
+ *
+ */
+INLINE void AnimBundle::
+map_character_slider_to_anim_slider(int character_slider, int anim_slider) {
+  _slider_map[character_slider] = anim_slider;
+}
+
+/**
+ * Returns the animation joint index associated with the indicated character
+ * joint index.
+ */
+INLINE int AnimBundle::
+get_anim_joint_for_character_joint(int character_joint) const {
+  return _joint_map[character_joint];
+}
+
+/**
+ *
+ */
+INLINE int AnimBundle::
+get_anim_slider_for_character_slider(int character_slider) const {
+  return _slider_map[character_slider];
+}
+
+/**
+ * Returns true if the AnimBundle has a valid mapping to a Character, or false
+ * otherwise.
+ */
+INLINE bool AnimBundle::
+has_mapped_character() const {
+  return _has_character_bound;
 }

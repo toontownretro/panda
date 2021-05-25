@@ -87,7 +87,7 @@ remove_child(AnimGraphNode *child) {
  *
  */
 void AnimGraphNode::
-evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
+evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
   for (Children::const_iterator it = _children.begin(); it != _children.end(); ++it) {
     (*it)->evaluate_anims(anims, weights, this_weight);
   }

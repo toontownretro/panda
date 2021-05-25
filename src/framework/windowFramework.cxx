@@ -708,6 +708,7 @@ load_default_model(const NodePath &parent) {
  */
 void WindowFramework::
 loop_animations(int hierarchy_match_flags) {
+#if 0
   // If we happened to load up both a character file and its matching
   // animation file, attempt to bind them together now and start the
   // animations looping.
@@ -737,6 +738,7 @@ loop_animations(int hierarchy_match_flags) {
       state_machine->set_state(name);
     }
   }
+#endif
 }
 
 /**
@@ -746,12 +748,12 @@ loop_animations(int hierarchy_match_flags) {
  */
 void WindowFramework::
 stagger_animations() {
-  for (int i = 0; i < _anim_controls.get_num_anims(); ++i) {
-    AnimControl *control = _anim_controls.get_anim(i);
-    double r = (double)rand() / (double)RAND_MAX;
-    r = r * 0.2 + 0.9;
-    control->set_play_rate(r);
-  }
+  //for (int i = 0; i < _anim_controls.get_num_anims(); ++i) {
+  //  AnimControl *control = _anim_controls.get_anim(i);
+  //  double r = (double)rand() / (double)RAND_MAX;
+  //  r = r * 0.2 + 0.9;
+  //  control->set_play_rate(r);
+  //}
 }
 
 /**
@@ -762,6 +764,7 @@ stagger_animations() {
  */
 void WindowFramework::
 next_anim_control() {
+#if 0
   if (_anim_controls_enabled) {
     destroy_anim_controls();
 
@@ -788,6 +791,7 @@ next_anim_control() {
       play_button();
     }
   }
+#endif
 }
 
 /**
@@ -1346,6 +1350,7 @@ void WindowFramework::
 create_anim_controls() {
   destroy_anim_controls();
 
+#if 0
   PT(PGItem) group = new PGItem("anim_controls_group");
   PGFrameStyle style;
   style.set_type(PGFrameStyle::T_flat);
@@ -1432,6 +1437,8 @@ create_anim_controls() {
 
   _update_anim_controls_task = new GenericAsyncTask("controls", st_update_anim_controls, (void *)this);
   _panda_framework->get_task_mgr().add(_update_anim_controls_task);
+
+#endif
 }
 
 /**
@@ -1455,6 +1462,7 @@ destroy_anim_controls() {
  */
 void WindowFramework::
 update_anim_controls() {
+#if 0
   AnimControl *control = _anim_controls.get_anim(_anim_index);
   nassertv(control != nullptr);
 
@@ -1471,6 +1479,7 @@ update_anim_controls() {
   }
 
   control->set_play_rate(_play_rate_slider->get_value());
+#endif
 }
 
 /**
@@ -1525,9 +1534,9 @@ setup_shuttle_button(const string &label, int index,
  */
 void WindowFramework::
 back_button() {
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
-  control->pose(control->get_frame() - 1);
+  //AnimControl *control = _anim_controls.get_anim(_anim_index);
+  //nassertv(control != nullptr);
+  ///control->pose(control->get_frame() - 1);
 }
 
 /**
@@ -1535,9 +1544,9 @@ back_button() {
  */
 void WindowFramework::
 pause_button() {
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
-  control->stop();
+  //AnimControl *control = _anim_controls.get_anim(_anim_index);
+  //nassertv(control != nullptr);
+  //control->stop();
 }
 
 /**
@@ -1545,9 +1554,9 @@ pause_button() {
  */
 void WindowFramework::
 play_button() {
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
-  control->loop(false);
+  //AnimControl *control = _anim_controls.get_anim(_anim_index);
+  //nassertv(control != nullptr);
+  //control->loop(false);
 }
 
 /**
@@ -1555,9 +1564,9 @@ play_button() {
  */
 void WindowFramework::
 forward_button() {
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
-  control->pose(control->get_frame() + 1);
+  //AnimControl *control = _anim_controls.get_anim(_anim_index);
+  //nassertv(control != nullptr);
+  //control->pose(control->get_frame() + 1);
 }
 
 

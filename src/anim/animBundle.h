@@ -20,7 +20,9 @@
 #include "namable.h"
 #include "pointerTo.h"
 #include "vector_stdfloat.h"
+#include "vector_int.h"
 #include "luse.h"
+#include "animGraphNode.h"
 
 class FactoryParams;
 
@@ -92,7 +94,7 @@ typedef pvector<SliderEntry> SliderEntries;
  * number of frames of all the channels in the hierarchy (which must all
  * match).
  */
-class EXPCL_PANDA_ANIM AnimBundle : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_ANIM AnimBundle : public AnimGraphNode {
 protected:
   AnimBundle(const AnimBundle &copy);
 
@@ -131,10 +133,21 @@ PUBLISHED:
   INLINE int get_num_joint_entries() const;
   INLINE int get_num_slider_entries() const;
 
+  INLINE void init_joint_mapping(int num_character_joints, int num_character_sliders);
+  INLINE void map_character_joint_to_anim_joint(int character_joint, int anim_joint);
+  INLINE void map_character_slider_to_anim_slider(int character_slider, int anim_slider);
+  INLINE int get_anim_joint_for_character_joint(int character_joint) const;
+  INLINE int get_anim_slider_for_character_slider(int character_slider) const;
+  INLINE bool has_mapped_character() const;
+
   MAKE_PROPERTY(base_frame_rate, get_base_frame_rate, set_base_frame_rate);
   MAKE_PROPERTY(num_frames, get_num_frames, set_num_frames);
 
   virtual void output(std::ostream &out) const;
+
+public:
+  virtual void evaluate(AnimGraphEvalContext &context) override;
+  virtual void evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f) override;
 
 protected:
   INLINE AnimBundle();
@@ -150,6 +163,16 @@ private:
 
   SliderEntries _slider_entries;
   vector_stdfloat _slider_table;
+
+  // Maps joints on the corresponding character to joints on the animation.
+  // This is needed because Egg files do not guarantee matching joint orders
+  // between characters and their animations.  I don't expect an animation to
+  // be used for multiple characters with different joint hierarchies, so a
+  // single mapping should be fine.
+  vector_int _joint_map;
+  vector_int _slider_map;
+
+  bool _has_character_bound;
 
 public:
   static void register_with_read_factory();
@@ -170,11 +193,9 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    TypedWritableReferenceCount::init_type();
-    Namable::init_type();
+    AnimGraphNode::init_type();
     register_type(_type_handle, "AnimBundle",
-                  TypedWritableReferenceCount::get_class_type(),
-                  Namable::get_class_type());
+                  AnimGraphNode::get_class_type());
   }
 
 private:

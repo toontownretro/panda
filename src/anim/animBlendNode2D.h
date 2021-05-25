@@ -16,7 +16,6 @@
 
 #include "animGraphNode.h"
 #include "vector_stdfloat.h"
-#include "poseParameter.h"
 
 class AnimControl;
 
@@ -36,14 +35,14 @@ PUBLISHED:
   INLINE LPoint2 get_input_point(int n) const;
 
   void compute_weights();
-  void compute_weights_if_necessary();
+  void compute_weights_if_necessary(Character *character);
 
-  INLINE void set_input_x(PoseParameter *param);
-  INLINE void set_input_y(PoseParameter *param);
+  INLINE void set_input_x(int param);
+  INLINE void set_input_y(int param);
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
-  virtual void evaluate_anims(pvector<AnimControl *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f) override;
+  virtual void evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight = 1.0f) override;
 
 private:
   void blend_triangle(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c,
@@ -77,8 +76,8 @@ private:
 
   Triangle *_active_tri;
 
-  PT(PoseParameter) _x_param;
-  PT(PoseParameter) _y_param;
+  int _x_param;
+  int _y_param;
   LPoint2 _input_coord;
 
   bool _has_triangles;

@@ -156,15 +156,6 @@ get_weight_list() const {
 }
 
 /**
- * Returns the effective AnimControl for this sequence.  That is, the
- * AnimControl below this node with the highest frame count.
- */
-INLINE AnimControl *AnimSequence::
-get_effective_control() const {
-  return _effective_control;
-}
-
-/**
  * Sets the animation sub-graph that should be used as the base pose for this
  * sequence.
  */

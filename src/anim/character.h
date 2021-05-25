@@ -25,12 +25,13 @@
 #include "cycleDataWriter.h"
 #include "cycleDataLockedReader.h"
 #include "cycleDataStageWriter.h"
-#include "animControl.h"
 #include "filename.h"
 #include "partSubset.h"
 #include "animPreloadTable.h"
 #include "animGraphNode.h"
 #include "poseParameter.h"
+#include "animBundle.h"
+#include "animSequence.h"
 
 class FactoryParams;
 class AnimBundle;
@@ -66,8 +67,11 @@ PUBLISHED:
   INLINE void clear_anim_preload();
   void merge_anim_preloads(const Character *other);
 
-  INLINE void add_pose_parameter(PoseParameter *param);
-  INLINE PoseParameter *get_pose_parameter(const std::string &name) const;
+  INLINE int add_pose_parameter(const std::string &name, PN_stdfloat min_val, PN_stdfloat max_val,
+                                bool looping = false);
+  INLINE int get_num_pose_parameters() const;
+  INLINE PoseParameter &get_pose_parameter(int n);
+  INLINE int find_pose_parameter(const std::string &name) const;
 
   INLINE void set_anim_graph(AnimGraphNode *graph);
   INLINE AnimGraphNode *get_anim_graph() const;
@@ -121,16 +125,19 @@ PUBLISHED:
   INLINE const LMatrix4 &get_joint_default_value(int n) const;
   INLINE const LMatrix4 &get_joint_value(int n) const;
 
+  INLINE int add_sequence(AnimSequence *sequence);
+  INLINE int get_num_sequences() const;
+  INLINE AnimSequence *get_sequence(int n) const;
+
+  int get_sequence_for_activity(int activity, int curr_sequence, unsigned long seed = 0) const;
+
   void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
 
-  PT(AnimControl) bind_anim(AnimBundle *anim,
-                            int hierarchy_match_flags = 0,
-                            const PartSubset &subset = PartSubset());
-  PT(AnimControl) load_bind_anim(Loader *loader,
-                                 const Filename &filename,
-                                 int hierarchy_match_flags,
-                                 const PartSubset &subset,
-                                 bool allow_async);
+  int bind_anim(AnimBundle *anim);
+  int load_bind_anim(Loader *loader,
+                     const Filename &filename);
+  INLINE int get_num_anims() const;
+  INLINE AnimBundle *get_anim(int n) const;
 
   bool update();
   bool force_update();
@@ -151,21 +158,12 @@ public:
   void add_node(CharacterNode *node);
   void remove_node(CharacterNode *node);
 
-  bool do_bind_anim(AnimControl *control, AnimBundle *anim,
-                    int hierarchy_match_flags, const PartSubset &subset);
-
   INLINE void set_update_delay(double delay);
 
 private:
   void build_joint_merge_map(Character *merge_char);
 
   void update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner);
-
-  bool check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const;
-  void find_bound_joints(int n, bool is_included, BitArray &bound_joints, const PartSubset &subset);
-  void pick_channel_index(int n, plist<int> &holes, int &next) const;
-  void bind_hierarchy(const AnimBundle *anim, int n, int channel_index,
-                      bool is_included, BitArray &bound_joints, const PartSubset &subset);
 
   bool apply_pose(CData *cdata, const LMatrix4 &root_xform,
                   const AnimGraphEvalContext &context, Thread *current_thread);
@@ -176,7 +174,12 @@ private:
   typedef pvector<CharacterJoint> Joints;
   typedef ov_set<PT(PandaNode)> NodeList;
   typedef pvector<NodeList> NodeLists;
-  typedef pmap<std::string, PT(PoseParameter)> PoseParameters;
+  typedef pvector<PoseParameter> PoseParameters;
+  typedef pvector<PT(AnimBundle)> Animations;
+  typedef pvector<PT(AnimSequence)> Sequences;
+
+  Animations _animations;
+  Sequences _sequences;
 
   PoseParameters _pose_parameters;
 

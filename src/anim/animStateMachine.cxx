@@ -49,7 +49,7 @@ set_state(int n) {
   // This can happen if we change state while in the process of fading out
   // a different state.
   if (_last_state != nullptr) {
-    _last_state->_graph->stop();
+    //_last_state->_graph->stop();
   }
 
   _last_state = _current_state;
@@ -61,11 +61,11 @@ set_state(int n) {
     // Assume that a looping sequence should not restart if it's already the
     // active one.
     if (_last_state != _current_state) {
-      state->_graph->loop(true);
+      //state->_graph->loop(true);
     }
   } else {
     // A non-looping sequence always restarts even if it's the active one.
-    state->_graph->play();
+    //state->_graph->play();
   }
 
   ClockObject *clock = ClockObject::get_global_clock();
@@ -140,7 +140,7 @@ evaluate(AnimGraphEvalContext &context) {
 
   if (!_last_state || _current_state->_weight == 1.0f) {
     if (_last_state != nullptr) {
-      _last_state->_graph->stop();
+      //_last_state->_graph->stop();
       _last_state = nullptr;
     }
 

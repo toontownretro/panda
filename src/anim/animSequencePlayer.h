@@ -17,8 +17,8 @@
 #include "pandabase.h"
 #include "animGraphNode.h"
 #include "animSequence.h"
-
-static const int max_anim_layers = 15;
+#include "character.h"
+#include "animLayer.h"
 
 /**
  * An anim node that plays AnimSequences.  Plays one base sequence at a time,
@@ -28,67 +28,6 @@ static const int max_anim_layers = 15;
 class EXPCL_PANDA_ANIM AnimSequencePlayer final : public AnimGraphNode {
 PUBLISHED:
 
-  class Layer {
-  public:
-    Layer();
-
-    void init(AnimSequencePlayer *player);
-
-    bool is_active() const { return (_flags & F_active) != 0; }
-    bool is_autokill() const { return (_flags & F_autokill) != 0; }
-    bool is_killme() const { return (_flags & F_killme) != 0; }
-    bool is_autoramp() const { return (_blend_in != 0.0f || _blend_out != 0.0f); }
-    void killme() { _flags |= F_killme; }
-    void dying() { _flags |= F_dying; }
-    bool is_dying() const { return (_flags & F_dying) != 0; }
-    void dead() { _flags &= ~F_dying; }
-
-    bool is_abandoned() const;
-    void mark_active();
-
-    void advance(PN_stdfloat interval, AnimSequencePlayer *owner);
-
-    INLINE PN_stdfloat get_fade_out(PN_stdfloat frame_time) const;
-
-    // Client/server.
-    int _sequence;
-    PN_stdfloat _prev_cycle;
-    PN_stdfloat _weight;
-    PN_stdfloat _play_rate;
-    PN_stdfloat _cycle;
-    int _order;
-    PN_stdfloat _layer_anim_time;
-    PN_stdfloat _layer_fade_out_time;
-
-    // Server only.
-    enum Flags {
-      F_active = 1 << 0,
-      F_autokill = 1 << 1,
-      F_killme = 1 << 2,
-      F_dontrestore = 1 << 3,
-      F_checkaccess = 1 << 4,
-      F_dying = 1 << 5,
-    };
-
-    int _flags;
-    bool _sequence_finished;
-    bool _looping;
-    PN_stdfloat _blend_in;
-    PN_stdfloat _blend_out;
-
-    PN_stdfloat _kill_rate;
-    PN_stdfloat _kill_delay;
-
-    int _activity;
-
-    int _priority;
-
-    PN_stdfloat _last_event_check;
-    PN_stdfloat _last_access;
-
-    AnimSequencePlayer *_player;
-  };
-
   enum AdvanceMode {
     // The player should automatically advance the cycle when evaluating.
     AM_auto,
@@ -96,16 +35,13 @@ PUBLISHED:
     AM_manual,
   };
 
-  AnimSequencePlayer(const std::string &name);
+  AnimSequencePlayer(const std::string &name, Character *character);
+
+  INLINE void set_character(Character *character);
+  INLINE Character *get_character() const;
 
   INLINE void set_advance_mode(AdvanceMode mode);
   INLINE AdvanceMode get_advance_mode() const;
-
-  INLINE int add_sequence(AnimSequence *seq);
-  INLINE int get_num_sequences() const;
-  INLINE AnimSequence *get_sequence(int n) const;
-  MAKE_SEQ(get_sequences, get_num_sequences, get_sequence);
-  MAKE_SEQ_PROPERTY(sequences, get_num_sequences, get_sequence);
 
   void reset_sequence(int sequence);
   void reset_sequence_info();
@@ -141,9 +77,10 @@ PUBLISHED:
 
   int add_gesture_sequence(int sequence, bool auto_kill = true);
   int add_gesture_sequence(int sequence, PN_stdfloat duration, bool auto_kill = true);
-  int add_gesture(int activity, bool auto_kill = true);
-  int add_gesture(int activity, PN_stdfloat duration, bool auto_kill = true);
+  int add_gesture(int activity, int sequence, bool auto_kill = true);
+  int add_gesture_with_duration(int activity, int sequence, PN_stdfloat duration, bool auto_kill = true);
   bool is_playing_gesture(int activity) const;
+  void reset_layer(int layer, int activity, int sequence, bool auto_kill = true);
   void restart_gesture(int activity, bool add_if_missing = true, bool auto_kill = true);
   void remove_gesture(int activity);
   void remove_all_gestures();
@@ -202,22 +139,17 @@ PUBLISHED:
   void remove_layer(int layer, PN_stdfloat kill_rate = 0.2f, PN_stdfloat kill_delay = 0.0f);
   void fast_remove_layer(int layer);
 
-  Layer *get_layer(int index);
+  AnimLayer *get_layer(int index);
   void set_num_layers(int count);
   int get_num_layers() const;
 
   bool has_active_layer() const;
 
-  int get_sequence_for_activity(int activity) const;
-
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
 
 private:
-  typedef pvector<PT(AnimSequence)> Sequences;
-  Sequences _sequences;
-
-  typedef pvector<Layer> LayerVec;
+  typedef pvector<AnimLayer> LayerVec;
 
   // Used for layered animations.
   LayerVec _layers;
@@ -235,9 +167,13 @@ private:
   int _new_sequence_parity;
   int _prev_sequence_parity;
 
+  unsigned long _seed;
+
   bool _transitions_enabled;
 
   AdvanceMode _advance_mode;
+
+  Character *_character;
 
 public:
   virtual TypeHandle get_type() const {

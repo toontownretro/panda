@@ -18,10 +18,11 @@
 #include "clockObject.h"
 #include "loader.h"
 #include "animBundleNode.h"
-#include "bindAnimRequest.h"
+//#include "bindAnimRequest.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
 #include "characterJointEffect.h"
+#include "randomizer.h"
 
 TypeHandle Character::_type_handle;
 
@@ -148,15 +149,51 @@ make_slider(const std::string &name, PN_stdfloat default_value) {
  * unbind itself when the AnimControl destructs (i.e.  its reference count
  * goes to zero).
  */
-PT(AnimControl) Character::
-bind_anim(AnimBundle *anim, int hierarchy_match_flags,
-          const PartSubset &subset) {
-  PT(AnimControl) control = new AnimControl(anim->get_name(), this, 1.0f, 0);
-  if (do_bind_anim(control, anim, hierarchy_match_flags, subset)) {
-    return control;
+int Character::
+bind_anim(AnimBundle *anim) {
+  // Check to see if the animation has already been bound.
+  Animations::const_iterator it = std::find(_animations.begin(), _animations.end(), anim);
+  if (it != _animations.end()) {
+    // Already bound.  Return the index of the existing animation.
+    return (int)(it - _animations.begin());
   }
 
-  return nullptr;
+  int index = (int)_animations.size();
+  _animations.push_back(anim);
+
+  if (anim->has_mapped_character()) {
+    // The animation has already been mapped to a Character.  We can assume
+    // that Character has the same joint hierarchy as us.
+    return index;
+  }
+
+  // We need to map our joints and sliders to joints and sliders on the
+  // animation.
+  anim->init_joint_mapping(get_num_joints(), get_num_sliders());
+  for (int joint = 0; joint < get_num_joints(); joint++) {
+    const std::string &joint_name = get_joint_name(joint);
+    int anim_joint = anim->find_joint_channel(joint_name);
+    if (anim_joint == -1) {
+      // This character joint doesn't appear in the animation.  We can deal
+      // with it, but give a warning about it, because this might be a mistake.
+      anim_cat.warning()
+        << "Character joint " << joint_name << " does not appear in animation " << anim->get_name() << "\n";
+    }
+    anim->map_character_joint_to_anim_joint(joint, anim_joint);
+  }
+  for (int slider = 0; slider < get_num_sliders(); slider++) {
+    const std::string &slider_name = get_slider_name(slider);
+    int anim_slider = anim->find_slider_channel(slider_name);
+    if (anim_slider == -1) {
+      // This character slider doesn't appear in the animation.  We can deal
+      // with it, but give a warning about it, because this might be a mistake.
+      anim_cat.warning()
+        << "Character slider " << slider_name << " does not appear in animation " << anim->get_name() << "\n";
+    }
+    anim->map_character_slider_to_anim_slider(slider, anim_slider);
+  }
+
+  return index;
 }
 
 /**
@@ -180,68 +217,60 @@ bind_anim(AnimBundle *anim, int hierarchy_match_flags,
  * when the animation finishes loading with
  * AnimControl::set_pending_done_event().
  */
-PT(AnimControl) Character::
-load_bind_anim(Loader *loader, const Filename &filename,
-               int hierarchy_match_flags, const PartSubset &subset,
-               bool allow_async) {
-  nassertr(loader != nullptr, nullptr);
+int Character::
+load_bind_anim(Loader *loader, const Filename &filename) {
+  nassertr(loader != nullptr, -1);
 
   LoaderOptions anim_options(LoaderOptions::LF_search |
                              LoaderOptions::LF_report_errors |
                              LoaderOptions::LF_convert_anim);
   std::string basename = filename.get_basename_wo_extension();
 
-  int anim_index = -1;
-  CPT(AnimPreloadTable) anim_preload = _anim_preload.get_read_pointer();
-  if (anim_preload != nullptr) {
-    anim_index = anim_preload->find_anim(basename);
-  }
+  //int anim_index = -1;
+  //CPT(AnimPreloadTable) anim_preload = _anim_preload.get_read_pointer();
+  //if (anim_preload != nullptr) {
+  //  anim_index = anim_preload->find_anim(basename);
+  //}
 
-  if (anim_index < 0 || !allow_async || !Thread::is_threading_supported()) {
+  if (true) {//anim_index < 0 || !allow_async || !Thread::is_threading_supported()) {
     // The animation is not present in the table, or allow_async is false.
     // Therefore, perform an ordinary synchronous load-and-bind.
 
     PT(PandaNode) model = loader->load_sync(filename, anim_options);
     if (model == nullptr) {
       // Couldn't load the file.
-      return nullptr;
+      return -1;
     }
     AnimBundle *anim = AnimBundleNode::find_anim_bundle(model);
     if (anim == nullptr) {
       // No anim bundle.
-      return nullptr;
+      return -1;
     }
-    PT(AnimControl) control = bind_anim(anim, hierarchy_match_flags, subset);
-    if (control == nullptr) {
-      // Couldn't bind.
-      return nullptr;
-    }
-    control->set_anim_model(model);
-    return control;
+    return bind_anim(anim);
   }
 
   // The animation is present in the table, so we can perform an asynchronous
   // load-and-bind.
-  PN_stdfloat frame_rate = anim_preload->get_base_frame_rate(anim_index);
-  int num_frames = anim_preload->get_num_frames(anim_index);
-  PT(AnimControl) control =
-    new AnimControl(basename, this, frame_rate, num_frames);
+  //PN_stdfloat frame_rate = anim_preload->get_base_frame_rate(anim_index);
+  //int num_frames = anim_preload->get_num_frames(anim_index);
+  //PT(AnimControl) control =
+  //  new AnimControl(basename, this, frame_rate, num_frames);
 
-  if (!subset.is_include_empty()) {
+  //if (!subset.is_include_empty()) {
     // Figure out the actual subset of joints to be bound.
-    BitArray bound_joints;
-    find_bound_joints(0, false, bound_joints, subset);
-    control->set_bound_joints(bound_joints);
-  }
+  //  BitArray bound_joints;
+  //  find_bound_joints(0, false, bound_joints, subset);
+  //  control->set_bound_joints(bound_joints);
+  //}
 
-  PT(BindAnimRequest) request =
-    new BindAnimRequest(std::string("bind:") + filename.get_basename(),
-                        filename, anim_options, loader, control,
-                        hierarchy_match_flags, subset);
-  request->set_priority(async_bind_priority);
-  loader->load_async(request);
+  //PT(BindAnimRequest) request =
+  //  new BindAnimRequest(std::string("bind:") + filename.get_basename(),
+  //                      filename, anim_options, loader, control,
+  //                      hierarchy_match_flags, subset);
+  //request->set_priority(async_bind_priority);
+  //loader->load_async(request);
 
-  return control;
+  return -1;
 }
 
 /**
@@ -265,7 +294,7 @@ update() {
   double now = ClockObject::get_global_clock()->get_frame_time();
   if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
 
-    AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
+    AnimGraphEvalContext ctx(this, _joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
     // Apply the bind poses of each joint as the starting point.
     for (int i = 0; i < ctx._num_joints; i++) {
       ctx._joints[i]._position = _joints[i]._default_pos;
@@ -298,7 +327,7 @@ force_update() {
 
   double now = ClockObject::get_global_clock()->get_frame_time();
 
-  AnimGraphEvalContext ctx(_joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
+  AnimGraphEvalContext ctx(this, _joints.data(), (int)_joints.size(), cdata->_frame_blend_flag);
   // Apply the bind poses of each joint as the starting point.
   for (int i = 0; i < ctx._num_joints; i++) {
     ctx._joints[i]._position = _joints[i]._default_pos;
@@ -686,224 +715,6 @@ update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner) {
 }
 
 /**
- * The internal implementation of bind_anim(), this receives a pointer to an
- * uninitialized AnimControl and fills it in if the bind is successful.
- * Returns true if successful, false otherwise.
- */
-bool Character::
-do_bind_anim(AnimControl *control, AnimBundle *anim,
-             int hierarchy_match_flags, const PartSubset &subset) {
-  nassertr(Thread::get_current_pipeline_stage() == 0, false);
-
-  // Make sure this pointer doesn't destruct during the lifetime of this
-  // method.
-  PT(AnimBundle) ptanim = anim;
-
-  if ((hierarchy_match_flags & HMF_ok_wrong_root_name) == 0) {
-    // Make sure the root names match.
-    if (get_name() != ptanim->get_name()) {
-      if (anim_cat.is_error()) {
-        anim_cat.error()
-          << "Root name of part (" << get_name()
-          << ") does not match that of anim (" << ptanim->get_name()
-          << ")\n";
-      }
-      return false;
-    }
-  }
-
-  if (!check_hierarchy(anim, hierarchy_match_flags)) {
-    return false;
-  }
-
-  plist<int> holes;
-  int channel_index = 0;
-  pick_channel_index(0, holes, channel_index);
-
-  if (!holes.empty()) {
-    channel_index = holes.front();
-  }
-
-  BitArray bound_joints;
-  if (subset.is_include_empty()) {
-    bound_joints = BitArray::all_on();
-  }
-  bind_hierarchy(ptanim, channel_index, 0,
-                 subset.is_include_empty(), bound_joints, subset);
-  control->setup_anim(this, anim, channel_index, bound_joints);
-
-  //CDReader cdata(_cycler);
-  //determine_effective_channels(cdata);
-
-  return true;
-}
-
-/**
- *
- */
-bool Character::
-check_hierarchy(const AnimBundle *anim, int hierarchy_match_flags) const {
-  Thread::consider_yield();
-
-  if (anim->get_num_joint_entries() > get_num_joints() &&
-      (hierarchy_match_flags & HMF_ok_anim_extra) == 0) {
-
-    anim_cat.error()
-      << "AnimBundle " << anim->get_name() << " has more joint channels than joints on "
-      << "Character " << get_name() << "\n";
-    return false;
-
-  } else if (get_num_joints() > anim->get_num_joint_entries() &&
-             (hierarchy_match_flags & HMF_ok_part_extra) == 0) {
-    anim_cat.error()
-      << "Character " << get_name() << " has more joints than joint channels on "
-      << "AnimBundle " << anim->get_name() << "\n";
-    return false;
-  }
-
-  for (int i = 0; i < get_num_joints(); i++) {
-    const CharacterJoint &joint = _joints[i];
-    int chan = anim->find_joint_channel(joint.get_name());
-
-    if (chan == -1) {
-      anim_cat.warning()
-        << "Joint " << joint.get_name() << " has no matching animation channel.\n";
-    }
-  }
-
-  if (anim->get_num_slider_entries() > get_num_sliders() &&
-      (hierarchy_match_flags & HMF_ok_anim_extra) == 0) {
-
-    anim_cat.error()
-      << "AnimBundle " << anim->get_name() << " has more slider channels than sliders on "
-      << "Character " << get_name() << "\n";
-    return false;
-
-  } else if (get_num_sliders() > anim->get_num_slider_entries() &&
-             (hierarchy_match_flags & HMF_ok_part_extra) == 0) {
-    anim_cat.error()
-      << "Character " << get_name() << " has more sliders than slider channels on "
-      << "AnimBundle " << anim->get_name() << "\n";
-    return false;
-  }
-
-  for (int i = 0; i < get_num_sliders(); i++) {
-    const CharacterSlider &slider = _sliders[i];
-    int chan = anim->find_slider_channel(slider.get_name());
-
-    if (chan == -1) {
-      anim_cat.warning()
-        << "Slider " << slider.get_name() << " has no matching animation channel.\n";
-    }
-  }
-
-  return true;
-}
-
-/**
- * Similar to bind_hierarchy, but does not actually perform any binding.  All
- * it does is compute the BitArray bount_joints according to the specified
- * subset.  This is useful in preparation for asynchronous binding--in this
- * case, we may need to know bound_joints immediately, without having to wait
- * for the animation itself to load and bind.
- */
-void Character::
-find_bound_joints(int n, bool is_included, BitArray &bound_joints, const PartSubset &subset) {
-  CharacterJoint &joint = _joints[n];
-
-  if (subset.matches_include(joint.get_name())) {
-    is_included = true;
-  } else if (subset.matches_exclude(joint.get_name())) {
-    is_included = false;
-  }
-
-  bound_joints.set_bit_to(n, is_included);
-
-  for (size_t i = 0; i < joint._children.size(); i++) {
-    find_bound_joints(joint._children[i], is_included, bound_joints, subset);
-  }
-}
-
-/**
- *
- */
-void Character::
-pick_channel_index(int n, plist<int> &holes, int &next) const {
-  // Verify each of the holes.
-
-  const CharacterJoint &joint = _joints[n];
-
-  plist<int>::iterator ii, ii_next;
-  ii = holes.begin();
-  while (ii != holes.end()) {
-    ii_next = ii;
-    ++ii_next;
-
-    int hole = (*ii);
-    nassertv(hole >= 0 && hole < next);
-    if (hole < (int)joint._channels.size() ||
-        joint._channels[hole] != -1) {
-      // We can't accept this hole; we're using it!
-      holes.erase(ii);
-    }
-    ii = ii_next;
-  }
-
-  // Now do we have any more to restrict?
-  if (next < (int)joint._channels.size()) {
-    int i;
-    for (i = next; i < (int)joint._channels.size(); i++) {
-      if (joint._channels[i] == -1) {
-        // Here's a hole we do have.
-        holes.push_back(i);
-      }
-    }
-    next = joint._channels.size();
-  }
-
-  for (size_t i = 0; i < joint._children.size(); i++) {
-    pick_channel_index(joint._children[i], holes, next);
-  }
-}
-
-/**
- * Binds the indicated anim hierarchy to the part hierarchy, at the given
- * channel index number.
- */
-void Character::
-bind_hierarchy(const AnimBundle *anim, int channel_index, int n,
-               bool is_included, BitArray &bound_joints, const PartSubset &subset) {
-  CharacterJoint &joint = _joints[n];
-  int chan = anim->find_joint_channel(joint.get_name());
-
-  if (subset.matches_include(joint.get_name())) {
-    is_included = true;
-  } else if (subset.matches_exclude(joint.get_name())) {
-    is_included = false;
-  }
-
-  while ((int)joint._channels.size() <= channel_index) {
-    joint._channels.push_back(-1);
-  }
-
-  nassertv(joint._channels[channel_index] == -1);
-
-  if (is_included) {
-    joint._channels[channel_index] = chan;
-
-    // Record that we have bound this joint in the bound_joints BitArray.
-    bound_joints.set_bit(n);
-  } else {
-    // Record that we have *not* bound this particular joint.
-    bound_joints.clear_bit(n);
-  }
-
-  for (size_t i = 0; i < joint._children.size(); i++) {
-    bind_hierarchy(anim, channel_index, joint._children[i], is_included, bound_joints, subset);
-  }
-}
-
-/**
  *
  */
 void Character::
@@ -1092,6 +903,47 @@ void Character::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
   _frame_blend_flag = scan.get_bool();
   _root_xform.read_datagram(scan);
+}
+
+/**
+ * Returns a suitable sequence to use for the indicated activity number.
+ * If multiple sequences are part of the same activity, the sequence is chosen
+ * at random based on assigned weight.  An explicit seed may be given for the
+ * random number generator, in case the selected sequence needs to be
+ * consistent, for instance during client-side prediction.
+ */
+int Character::
+get_sequence_for_activity(int activity, int curr_sequence, unsigned long seed) const {
+  if (get_num_sequences() == 0) {
+    return -1;
+  }
+
+  Randomizer random(seed);
+
+  int weight_total = 0;
+  int seq_idx = -1;
+  for (int i = 0; i < get_num_sequences(); i++) {
+    AnimSequence *sequence = get_sequence(i);
+    int curr_activity = sequence->get_activity();
+    int weight = sequence->get_activity_weight();
+    if (curr_activity == activity) {
+      if (curr_sequence == i && weight < 0) {
+        // If this is the current sequence and the weight is < 0, stick with
+        // this sequence.
+        seq_idx = i;
+        break;
+      }
+
+      weight_total += std::abs(weight);
+
+      int random_value = random.random_int(weight_total);
+      if (!weight_total || random_value < std::abs(weight)) {
+        seq_idx = i;
+      }
+    }
+  }
+
+  return seq_idx;
 }
 
 /**

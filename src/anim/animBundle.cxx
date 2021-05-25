@@ -28,14 +28,15 @@ TypeHandle AnimBundle::_type_handle;
  */
 AnimBundle::
 AnimBundle(const AnimBundle &copy) :
-  TypedWritableReferenceCount(copy),
-  Namable(copy),
+  AnimGraphNode(copy),
   _fps(copy._fps),
   _num_frames(copy._num_frames),
   _joint_frames(copy._joint_frames),
   _joint_entries(copy._joint_entries),
   _slider_table(copy._slider_table),
-  _slider_entries(copy._slider_entries)
+  _slider_entries(copy._slider_entries),
+  _joint_map(copy._joint_map),
+  _has_character_bound(copy._has_character_bound)
 {
 }
 
@@ -91,6 +92,80 @@ output(std::ostream &out) const {
 }
 
 /**
+ *
+ */
+void AnimBundle::
+evaluate(AnimGraphEvalContext &context) {
+  if (!has_mapped_character()) {
+    return;
+  }
+
+  // Make sure cycle is within 0-1 range.
+  PN_stdfloat cycle = std::max(0.0f, std::min(0.999f, context._cycle));
+  int num_frames = get_num_frames();
+  // Calculate the floating-point frame.
+  PN_stdfloat fframe = cycle * num_frames;
+  // Snap to integer frame.
+  int frame = (int)floor(fframe);
+  int next_frame;
+  if (context._looping) {
+    next_frame = cmod(frame + 1, num_frames);
+  } else {
+    next_frame = std::max(0, std::min(num_frames - 1, frame + 1));
+  }
+
+  PN_stdfloat frac = fframe - frame;
+
+  if (!context._frame_blend || frame == next_frame) {
+    // Hold the current frame until the next one is ready.
+    for (int i = 0; i < context._num_joints; i++) {
+      JointTransform &xform = context._joints[i];
+      CharacterJoint &joint = context._parts[i];
+      int anim_joint = get_anim_joint_for_character_joint(i);
+      if (anim_joint == -1) {
+        continue;
+      }
+      const JointFrame &jframe = get_joint_frame(anim_joint, frame);
+
+      xform._rotation = jframe.quat;
+      xform._position = jframe.pos;
+      xform._scale = jframe.scale;
+    }
+
+  } else {
+    // Frame blending is enabled.  Need to blend between successive frames.
+
+    PN_stdfloat e0 = 1.0f - frac;
+
+    for (int i = 0; i < context._num_joints; i++) {
+      JointTransform &t = context._joints[i];
+      CharacterJoint &j = context._parts[i];
+      int anim_joint = get_anim_joint_for_character_joint(i);
+      if (anim_joint == -1) {
+        continue;
+      }
+
+      const JointEntry &je = get_joint_entry(anim_joint);
+      const JointFrame &jf = get_joint_frame(je, frame);
+      const JointFrame &jf_next = get_joint_frame(je, next_frame);
+
+      t._position = (jf.pos * e0) + (jf_next.pos * frac);
+      t._scale = (jf.scale * e0) + (jf_next.scale * frac);
+      LQuaternion::blend(jf.quat, jf_next.quat, frac, t._rotation);
+    }
+  }
+}
+
+/**
+ *
+ */
+void AnimBundle::
+evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
+  anims.push_back(this);
+  weights.push_back(this_weight);
+}
+
+/**
  * Returns a copy of this object, and attaches it to the indicated parent
  * (which may be NULL only if this is an AnimBundle).  Intended to be called
  * by copy_subtree() only.
@@ -143,6 +218,16 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_stdfloat(_slider_table[i]);
   }
 
+  me.add_uint16(_joint_map.size());
+  for (size_t i = 0; i < _joint_map.size(); i++) {
+    me.add_int16(_joint_map[i]);
+  }
+
+  me.add_uint16(_slider_map.size());
+  for (size_t i = 0; i < _slider_map.size(); i++) {
+    me.add_int16(_slider_map[i]);
+  }
+
 }
 
 /**
@@ -181,6 +266,16 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _slider_table.resize(scan.get_uint16());
   for (size_t i = 0; i < _slider_table.size(); i++) {
     _slider_table[i] = scan.get_stdfloat();
+  }
+
+  _joint_map.resize(scan.get_uint16());
+  for (size_t i = 0; i < _joint_map.size(); i++) {
+    _joint_map[i] = scan.get_int16();
+  }
+
+  _slider_map.resize(scan.get_uint16());
+  for (size_t i = 0; i < _slider_map.size(); i++) {
+    _slider_map[i] = scan.get_int16();
   }
 }
 

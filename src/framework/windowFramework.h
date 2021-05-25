@@ -19,7 +19,7 @@
 #include "camera.h"
 #include "graphicsOutput.h"
 #include "graphicsWindow.h"
-#include "animControlCollection.h"
+//#include "animControlCollection.h"
 #include "trackball.h"
 #include "filename.h"
 #include "frameRateMeter.h"
@@ -174,7 +174,7 @@ private:
   NodePath _aspect_2d;
   NodePath _pixel_2d;
 
-  AnimControlCollection _anim_controls;
+  //AnimControlCollection _anim_controls;
   bool _anim_controls_enabled;
   int _anim_index;
   NodePath _anim_controls_group;

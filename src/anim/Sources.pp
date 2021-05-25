@@ -13,9 +13,8 @@
     animBlendNode2D.h animBlendNode2D.I \
     animBundle.h animBundle.I \
     animBundleNode.h animBundleNode.I \
-    animControl.h animControl.I \
-    animControlCollection.h animControlCollection.I \
     animGraphNode.h animGraphNode.I \
+    animLayer.h animLayer.I \
     animMixNode.h animMixNode.I \
     animOverlayNode.h animOverlayNode.I \
     animPreloadTable.h animPreloadTable.I \
@@ -43,9 +42,8 @@
     animBlendNode2D.cxx \
     animBundle.cxx \
     animBundleNode.cxx \
-    animControl.cxx \
-    animControlCollection.cxx \
     animGraphNode.cxx \
+    animLayer.cxx \
     animMixNode.cxx \
     animOverlayNode.cxx \
     animPreloadTable.cxx \

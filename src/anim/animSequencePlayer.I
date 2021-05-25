@@ -12,26 +12,23 @@
  */
 
 /**
- *
+ * Sets the Character that the player should play sequences from.
  */
-INLINE PN_stdfloat AnimSequencePlayer::Layer::
-get_fade_out(PN_stdfloat frame_time) const {
-  PN_stdfloat s;
-  if (_layer_fade_out_time <= 0.0f) {
-    s = 0.0f;
+INLINE void AnimSequencePlayer::
+set_character(Character *character) {
+  nassertv(character->get_num_sequences() > 0);
+  _character = character;
+  // Reset the sequences and layers.
+  reset_sequence(0);
+  remove_all_gestures();
+}
 
-  } else {
-    // Blend in over 0.2 seconds.
-    s = 1.0f - (frame_time - _layer_anim_time) / _layer_fade_out_time;
-    if (s > 0.0f && s <= 1.0f) {
-      // Do a nice spline curve.
-      s = 3 * s * s - 2 * s * s * s;
-    } else if (s > 1.0f) {
-      // Shouldn't happen, but maybe frame_time is behind anim_time?
-      s = 1.0f;
-    }
-  }
-  return s;
+/**
+ * Returns the Character that the player is playing sequences from.
+ */
+INLINE Character *AnimSequencePlayer::
+get_character() const {
+  return _character;
 }
 
 /**
@@ -52,41 +49,6 @@ set_advance_mode(AdvanceMode mode) {
 INLINE AnimSequencePlayer::AdvanceMode AnimSequencePlayer::
 get_advance_mode() const {
   return _advance_mode;
-}
-
-/**
- * Adds a new sequence to the player.  Returns the index of the added sequence.
- * If the given sequence was already added to the player, returns the already
- * existing index.
- */
-INLINE int AnimSequencePlayer::
-add_sequence(AnimSequence *seq) {
-  Sequences::const_iterator it = std::find(_sequences.begin(), _sequences.end(), seq);
-  if (it != _sequences.end()) {
-    // Already in there.
-    return (int)(it - _sequences.begin());
-  }
-
-  int index = (int)_sequences.size();
-  _sequences.push_back(seq);
-  return index;
-}
-
-/**
- * Returns the number of sequences in the player.
- */
-INLINE int AnimSequencePlayer::
-get_num_sequences() const {
-  return (int)_sequences.size();
-}
-
-/**
- * Returns the nth sequence in the player.
- */
-INLINE AnimSequence *AnimSequencePlayer::
-get_sequence(int n) const {
-  nassertr(n >= 0 && n < get_num_sequences(), nullptr);
-  return _sequences[n];
 }
 
 /**
