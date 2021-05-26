@@ -12,6 +12,100 @@
  */
 
 /**
+ * Returns the PhysController that the hit pertains to.
+ */
+INLINE PhysController *PhysControllerHitData::
+get_controller() const {
+  return _controller;
+}
+
+/**
+ * Returns the world position of the hit.
+ */
+INLINE const LPoint3 &PhysControllerHitData::
+get_world_pos() const {
+  return _world_pos;
+}
+
+/**
+ * Returns the world normal of the hit.
+ */
+INLINE const LVector3 &PhysControllerHitData::
+get_world_normal() const {
+  return _world_normal;
+}
+
+/**
+ *
+ */
+INLINE const LVector3 &PhysControllerHitData::
+get_motion_dir() const {
+  return _motion_dir;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat PhysControllerHitData::
+get_motion_length() const {
+  return _motion_length;
+}
+
+/**
+ *
+ */
+INLINE PhysShape *PhysControllerShapeHitData::
+get_shape() const {
+  return _shape;
+}
+
+/**
+ *
+ */
+INLINE PhysRigidActorNode *PhysControllerShapeHitData::
+get_actor() const {
+  return _actor;
+}
+
+/**
+ *
+ */
+INLINE uint32_t PhysControllerShapeHitData::
+get_triangle_index() const {
+  return _triangle_index;
+}
+
+/**
+ *
+ */
+INLINE PhysController *PhysControllersHitData::
+get_other_controller() const {
+  return _other;
+}
+
+/**
+ *
+ */
+INLINE PhysControllerHitCallback *PhysControllerHitCallback::
+get_global_ptr() {
+  if (_global_ptr == nullptr) {
+    _global_ptr = new PhysControllerHitCallback;
+  }
+
+  return _global_ptr;
+}
+
+/**
+ *
+ */
+INLINE PhysController::
+PhysController() :
+  _collision_flags(CF_none),
+  _group_mask(CollideMask::all_on())
+{
+}
+
+/**
  *
  */
 INLINE PhysController::ShapeType PhysController::
@@ -100,19 +194,19 @@ get_up_direction() const {
 }
 
 /**
- *
+ * Sets the slope limit for the character, expressed in degrees.
  */
 INLINE void PhysController::
 set_slope_limit(PN_stdfloat limit) {
-  get_controller()->setSlopeLimit(limit);
+  get_controller()->setSlopeLimit(std::cos(deg_2_rad(limit)));
 }
 
 /**
- *
+ * Returns the slope limit for the character, expressed in degrees.
  */
 INLINE PN_stdfloat PhysController::
 get_slope_limit() const {
-  return get_controller()->getSlopeLimit();
+  return rad_2_deg(std::acos(get_controller()->getSlopeLimit()));
 }
 
 /**
@@ -139,4 +233,48 @@ set_collide_mask(CollideMask mask) {
 INLINE CollideMask PhysController::
 get_collide_mask() const {
   return _group_mask;
+}
+
+/**
+ * Returns the collision flags from the most recent move() call.
+ */
+INLINE unsigned int PhysController::
+get_collision_flags() const {
+  return _collision_flags;
+}
+
+/**
+ * Returns the number of shapes the character had collisions with in the last
+ * move() call.
+ */
+INLINE size_t PhysController::
+get_num_shape_hits() const {
+  return _shape_hits.size();
+}
+
+/**
+ * Returns the shape hit data at the indicated index.
+ */
+INLINE const PhysControllerShapeHitData *PhysController::
+get_shape_hit(size_t n) const {
+  nassertr(n >= 0 && n < _shape_hits.size(), nullptr);
+  return &_shape_hits[n];
+}
+
+/**
+ * Returns the number of other characters the character had collisions with in
+ * the last move() call.
+ */
+INLINE size_t PhysController::
+get_num_controller_hits() const {
+  return _controller_hits.size();
+}
+
+/**
+ * Returns the controller hit data at the indicated index.
+ */
+INLINE const PhysControllersHitData *PhysController::
+get_controller_hit(size_t n) const {
+  nassertr(n >= 0 && n < _controller_hits.size(), nullptr);
+  return &_controller_hits[n];
 }

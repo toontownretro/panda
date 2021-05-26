@@ -22,15 +22,17 @@ PhysBoxController::
 PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
                   PhysMaterial *material) {
   _np = node;
-  _group_mask = CollideMask::all_on();
   physx::PxBoxControllerDesc desc;
   desc.halfSideExtent = half_extents[0];
   desc.halfForwardExtent = half_extents[1];
   desc.halfHeight = half_extents[2];
   desc.material = material->get_material();
   desc.upDirection = Vec3_to_PxVec3(LVector3::up());
+  desc.reportCallback = PhysControllerHitCallback::get_global_ptr();
   _controller = (physx::PxBoxController *)scene->get_controller_manager()
     ->createController(desc);
+  nassertv(_controller != nullptr);
+  _controller->setUserData(this);
 }
 
 /**
