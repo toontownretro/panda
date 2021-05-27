@@ -24,31 +24,10 @@ TypeHandle PhysRigidActorNode::_type_handle;
 PhysRigidActorNode::
 PhysRigidActorNode(const std::string &name) :
   PandaNode(name),
-  _sync_enabled(true)
+  _sync_enabled(true),
+  _collision_group(0),
+  _contents_mask(BitMask32::all_on())
 {
-}
-
-/**
- * Changes the collision mask of the node.  Each bit represents a collision
- * group.
- */
-void PhysRigidActorNode::
-set_into_collide_mask(CollideMask mask) {
-  PandaNode::set_into_collide_mask(mask);
-
-  // Update all shapes to contain the new collision mask.
-  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
-  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
-  get_rigid_actor()->getShapes(shapes, num_shapes);
-  for (physx::PxU32 i = 0; i < num_shapes; i++) {
-    physx::PxShape *shape = shapes[i];
-    physx::PxFilterData data = shape->getSimulationFilterData();
-    physx::PxFilterData qdata = shape->getQueryFilterData();
-    data.word0 = mask.get_word();
-    qdata.word0 = mask.get_word();
-    shape->setSimulationFilterData(data);
-    shape->setQueryFilterData(data);
-  }
 }
 
 /**
@@ -77,6 +56,60 @@ set_collide_with(PhysRigidActorNode *other, bool flag) {
 }
 
 /**
+ * Changes the collision group of the node.
+ */
+void PhysRigidActorNode::
+set_collision_group(unsigned int collision_group) {
+  if (_collision_group == collision_group) {
+    return;
+  }
+
+  _collision_group = collision_group;
+
+  // Update all shapes to use the new collision group.
+  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
+  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
+  get_rigid_actor()->getShapes(shapes, num_shapes);
+  for (physx::PxU32 i = 0; i < num_shapes; i++) {
+    physx::PxShape *shape = shapes[i];
+    physx::PxFilterData data = shape->getSimulationFilterData();
+    physx::PxFilterData qdata = shape->getQueryFilterData();
+    data.word0 = _collision_group;
+    // For queries, the collision group goes on word1.  The contents mask needs
+    // to go on word0 for PhysX's fixed-function filtering.
+    qdata.word1 = _collision_group;
+    shape->setSimulationFilterData(data);
+    shape->setQueryFilterData(qdata);
+  }
+}
+
+/**
+ * Changes the contents mask of the node.
+ */
+void PhysRigidActorNode::
+set_contents_mask(BitMask32 contents_mask) {
+  if (_contents_mask == contents_mask) {
+    return;
+  }
+
+  _contents_mask = contents_mask;
+
+  // Update all shapes to use the new contents mask.
+  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
+  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
+  get_rigid_actor()->getShapes(shapes, num_shapes);
+  for (physx::PxU32 i = 0; i < num_shapes; i++) {
+    physx::PxShape *shape = shapes[i];
+    physx::PxFilterData data = shape->getSimulationFilterData();
+    physx::PxFilterData qdata = shape->getQueryFilterData();
+    data.word1 = _contents_mask.get_word();
+    qdata.word0 = _contents_mask.get_word();
+    shape->setSimulationFilterData(data);
+    shape->setQueryFilterData(qdata);
+  }
+}
+
+/**
  *
  */
 void PhysRigidActorNode::
@@ -93,14 +126,6 @@ do_set_collide_with(PhysRigidActorNode *other, bool flag) {
       _no_collisions.erase(it);
     }
   }
-}
-
-/**
- *
- */
-CollideMask PhysRigidActorNode::
-get_legal_collide_mask() const {
-  return CollideMask::all_on();
 }
 
 /**

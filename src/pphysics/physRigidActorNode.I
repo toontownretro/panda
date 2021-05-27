@@ -17,10 +17,14 @@
 INLINE void PhysRigidActorNode::
 add_shape(PhysShape *shape) {
   nassertv(shape->get_shape() != nullptr);
-  physx::PxFilterData data;
-  data.word0 = get_into_collide_mask().get_word();
-  shape->get_shape()->setSimulationFilterData(data);
-  shape->get_shape()->setQueryFilterData(data);
+  physx::PxFilterData sdata;
+  sdata.word0 = _collision_group;
+  sdata.word1 = _contents_mask.get_word();
+  physx::PxFilterData qdata;
+  qdata.word0 = _contents_mask.get_word();
+  qdata.word1 = _collision_group;
+  shape->get_shape()->setSimulationFilterData(sdata);
+  shape->get_shape()->setQueryFilterData(qdata);
   get_rigid_actor()->attachShape(*shape->get_shape());
 }
 
@@ -153,6 +157,22 @@ get_advance_callback() const {
 INLINE bool PhysRigidActorNode::
 has_no_collide_with(PhysRigidActorNode *other) const {
   return std::find(_no_collisions.begin(), _no_collisions.end(), other) != _no_collisions.end();
+}
+
+/**
+ * Returns the collision group of the actor node.
+ */
+INLINE unsigned int PhysRigidActorNode::
+get_collision_group() const {
+  return _collision_group;
+}
+
+/**
+ * Returns the contents mask of the actor node.
+ */
+INLINE BitMask32 PhysRigidActorNode::
+get_contents_mask() const {
+  return _contents_mask;
 }
 
 /**

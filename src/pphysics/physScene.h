@@ -57,8 +57,9 @@ PUBLISHED:
 
   bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
                const LVector3 &direction, PN_stdfloat distance,
-               CollideMask block_mask = CollideMask::all_on(),
+               CollideMask solid_mask = CollideMask::all_on(),
                CollideMask touch_mask = CollideMask::all_off(),
+               unsigned int collision_group = 0,
                PhysBaseQueryFilter *filter = nullptr) const;
 
 public:

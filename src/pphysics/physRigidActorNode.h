@@ -36,8 +36,6 @@ PUBLISHED:
   INLINE size_t get_num_shapes() const;
   INLINE PhysShape *get_shape(size_t n) const;
 
-  void set_into_collide_mask(CollideMask mask);
-
   void add_to_scene(PhysScene *scene);
   void remove_from_scene(PhysScene *scene);
 
@@ -59,12 +57,16 @@ PUBLISHED:
   void set_collide_with(PhysRigidActorNode *other, bool flag);
   INLINE bool has_no_collide_with(PhysRigidActorNode *other) const;
 
+  void set_collision_group(unsigned int collision_group);
+  INLINE unsigned int get_collision_group() const;
+
+  void set_contents_mask(BitMask32 contents_mask);
+  INLINE BitMask32 get_contents_mask() const;
+
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
 
 public:
-  virtual CollideMask get_legal_collide_mask() const override;
-
   INLINE void set_sync_enabled(bool flag);
   INLINE bool get_sync_enabled() const;
 
@@ -91,6 +93,9 @@ private:
 
   typedef pvector<PhysRigidActorNode *> Actors;
   Actors _no_collisions;
+
+  unsigned int _collision_group;
+  BitMask32 _contents_mask;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;

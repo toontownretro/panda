@@ -31,6 +31,10 @@ filter(physx::PxFilterObjectAttributes attributes0,
        const void *constant_block,
        physx::PxU32 constant_block_size) {
 
+  // Shape FilterData
+  // word0: collision group
+  // word1: contents mask
+
   PX_UNUSED(constant_block);
   PX_UNUSED(constant_block_size);
 
@@ -43,6 +47,15 @@ filter(physx::PxFilterObjectAttributes attributes0,
       << "Mask1: " << BitMask32(filter_data1.word0) << "\n";
   }
 
+  // Handle triggers.
+  // UNDONE: Not sure how to go about filtering triggers.  Should it use
+  // collision groups?  Contents mask?  Both?  Or should it let anything touch
+  // and just have game code decide what to do?  That's what I'm doing for now.
+  if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1)) {
+    pair_flags = physx::PxPairFlag::eTRIGGER_DEFAULT;
+    return physx::PxFilterFlag::eDEFAULT;
+  }
+
   bool enable_collisions = false;
 
   if (filter_data0.word0 == 0 || filter_data1.word0 == 0) {
@@ -51,31 +64,9 @@ filter(physx::PxFilterObjectAttributes attributes0,
     enable_collisions = true;
 
   } else {
-    // Both shapes are assigned to one or more collision groups.  Check the
-    // collision table to see if any groups have collisions enabled between
-    // them.
-    BitMask32 mask0 = filter_data0.word0;
-    int group = mask0.get_lowest_on_bit();
-    while (group >= 0) {
-      BitMask32 mask1 = filter_data1.word0;
-      int other_group = mask1.get_lowest_on_bit();
-      while (other_group >= 0) {
-        if (_collision_table[group][other_group]._enable_collisions) {
-          enable_collisions = true;
-          break;
-        }
-
-        mask1.clear_bit(other_group);
-        other_group = mask1.get_lowest_on_bit();
-      }
-
-      if (enable_collisions) {
-        break;
-      }
-
-      mask0.clear_bit(group);
-      group = mask0.get_lowest_on_bit();
-    }
+    // Both shapes are assigned to a collision group.  Check the collision
+    // table to see if the groups the shapes belong to have collisions enabled.
+    enable_collisions = _collision_table[filter_data0.word0][filter_data1.word0]._enable_collisions;
   }
 
   if (pphysics_cat.is_debug()) {
@@ -85,12 +76,6 @@ filter(physx::PxFilterObjectAttributes attributes0,
 
   if (!enable_collisions) {
     return physx::PxFilterFlag::eSUPPRESS;
-  }
-
-  // Handle triggers.
-  if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1)) {
-    pair_flags = physx::PxPairFlag::eTRIGGER_DEFAULT;
-    return physx::PxFilterFlag::eDEFAULT;
   }
 
   pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT | physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;

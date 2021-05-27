@@ -199,6 +199,7 @@ bool PhysScene::
 raycast(PhysRayCastResult &result, const LPoint3 &origin,
         const LVector3 &direction, PN_stdfloat distance,
         CollideMask block_mask, CollideMask touch_mask,
+        unsigned int collision_group,
         PhysBaseQueryFilter *filter) const {
 
   physx::PxQueryFilterData data;
@@ -207,6 +208,7 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
   data.data.word0 = (block_mask | touch_mask).get_word();
   data.data.word1 = block_mask.get_word();
   data.data.word2 = touch_mask.get_word();
+  data.data.word3 = collision_group;
 
   if (filter == nullptr) {
     // Use the base filter that just checks for common block or touch bits.

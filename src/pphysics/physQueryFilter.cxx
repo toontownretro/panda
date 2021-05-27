@@ -14,6 +14,7 @@
 #include "physQueryFilter.h"
 #include "physRigidActorNode.h"
 #include "config_pphysics.h"
+#include "physx_shaders.h"
 
 /**
  *
@@ -27,9 +28,28 @@ physx::PxQueryHitType::Enum PhysBaseQueryFilter::
 preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
           const physx::PxRigidActor *actor, physx::PxHitFlags &query_flags) {
 
-  // word1 is the block mask, word2 is the touch mask.
-
   physx::PxFilterData shape_data = shape->getQueryFilterData();
+
+  // Query FilterData
+  // word0: (block mask | touch mask)
+  // word1: block mask
+  // word2: touch mask
+  // word3: collision group
+  ////////////////////////////////////
+  // Shape FilterData
+  // word0: contents mask
+  // word1: collision group
+
+  // If the query and shape are assigned to a collision group, check that the
+  // group has collisions enabled with the shape's group.
+  if (filter_data.word3 != 0 && shape_data.word1 != 0) {
+    if (!(PandaSimulationFilterShader::_collision_table[filter_data.word3][shape_data.word1]._enable_collisions)) {
+      // Collisions not enabled between the groups.  Filter it out.
+      return physx::PxQueryHitType::eNONE;
+    }
+  }
+
+  // word1 is the block mask, word2 is the touch mask.
 
   if (pphysics_cat.is_debug()) {
     pphysics_cat.debug()
