@@ -20,6 +20,7 @@
 #include "physTriggerCallbackData.h"
 #include "physSleepStateCallbackData.h"
 #include "physContactCallbackData.h"
+#include "physShape.h"
 
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
@@ -83,4 +84,5 @@ init_libpphysics() {
   PhysTriggerCallbackData::init_type();
   PhysSleepStateCallbackData::init_type();
   PhysContactCallbackData::init_type();
+  PhysShape::init_type();
 }

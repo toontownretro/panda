@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_PHYSX]
 
-#define LOCAL_LIBS pgraph linmath mathutil anim audio
+#define LOCAL_LIBS pgraph linmath mathutil anim audio pipeline
 #define USE_PACKAGES physx
 
 #begin lib_target
@@ -99,5 +99,8 @@
     $[SOURCES]
 
   #define IGATESCAN all
+  #define IGATEEXT \
+    pythonPhysQueryFilter.h \
+    pythonPhysQueryFilter.cxx
 
 #end lib_target

@@ -15,6 +15,8 @@
 #include "physSystem.h"
 #include "physPlane.h"
 
+TypeHandle PhysShape::_type_handle;
+
 /**
  *
  */

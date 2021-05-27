@@ -15,7 +15,7 @@
 #define PHYSSHAPE_H
 
 #include "pandabase.h"
-#include "referenceCount.h"
+#include "typedReferenceCount.h"
 #include "transformState.h"
 #include "physGeometry.h"
 #include "physMaterial.h"
@@ -25,7 +25,7 @@
 /**
  *
  */
-class EXPCL_PANDA_PPHYSICS PhysShape final : public ReferenceCount {
+class EXPCL_PANDA_PPHYSICS PhysShape final : public TypedReferenceCount {
 PUBLISHED:
   PhysShape(PhysGeometry &geometry, PhysMaterial *material);
   ~PhysShape();
@@ -50,6 +50,23 @@ public:
 
 private:
   physx::PxShape *_shape;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    TypedReferenceCount::init_type();
+    register_type(_type_handle, "PhysShape",
+                  TypedReferenceCount::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 #include "physShape.I"
