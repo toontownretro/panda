@@ -101,7 +101,9 @@ get_global_ptr() {
 INLINE PhysController::
 PhysController() :
   _collision_flags(CF_none),
-  _group_mask(CollideMask::all_on())
+  _collision_group(0),
+  _solid_mask(BitMask32::all_on()),
+  _contents_mask(BitMask32::all_on())
 {
 }
 
@@ -218,21 +220,58 @@ resize(PN_stdfloat size) {
 }
 
 /**
- * Sets the collision group mask of the controller.  The controller will
- * collide with other groups that have collisions enabled between the group and
- * the controller's group.
+ * Sets the solid mask of the controller.  This is a bitmask of contents that
+ * are solid to the controller.
  */
 INLINE void PhysController::
-set_collide_mask(CollideMask mask) {
-  _group_mask = mask;
+set_solid_mask(BitMask32 mask) {
+  _solid_mask = mask;
 }
 
 /**
- * Returns the collision group mask of the controller.
+ * Returns the solid mask of the controller.  This is a bitmask of contents
+ * that are solid to the controller.
  */
-INLINE CollideMask PhysController::
-get_collide_mask() const {
-  return _group_mask;
+INLINE BitMask32 PhysController::
+get_solid_mask() const {
+  return _solid_mask;
+}
+
+/**
+ * Sets the mask of contents of the controller.  This is AND'd against the
+ * solid mask of other controllers to determine if two controllers should
+ * collide or pass through each other.
+ */
+INLINE void PhysController::
+set_contents_mask(BitMask32 mask) {
+  _contents_mask = mask;
+}
+
+/**
+ * Returns the mask of contents of the controller.  See set_contents_mask().
+ */
+INLINE BitMask32 PhysController::
+get_contents_mask() const {
+  return _contents_mask;
+}
+
+/**
+ * Sets the collision group of the controller.  If two controllers, or a
+ * controller and a shape, both belong to a collision group, they will not
+ * collide if the two groups do not have collisions enabled between them,
+ * regardless of the solid mask.
+ */
+INLINE void PhysController::
+set_collision_group(unsigned int group) {
+  _collision_group = group;
+}
+
+/**
+ * Returns the collision group of the controller.  See set_collision_group().
+ */
+INLINE unsigned int PhysController::
+get_collision_group() const {
+  return _collision_group;
 }
 
 /**

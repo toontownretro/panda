@@ -28,6 +28,7 @@
 class PhysShape;
 class PhysRigidActorNode;
 class PhysController;
+class PhysBaseQueryFilter;
 
 /**
  * Shared data for character and shape hits.
@@ -97,6 +98,14 @@ private:
 };
 
 /**
+ * Filters collisions between character controllers.
+ */
+class PhysControllerFilterCallback : public physx::PxControllerFilterCallback {
+public:
+  virtual bool filter(const physx::PxController &a, const physx::PxController &b) override;
+};
+
+/**
  * Base character controller.
  */
 class EXPCL_PANDA_PPHYSICS PhysController : public ReferenceCount {
@@ -137,10 +146,18 @@ PUBLISHED:
 
   INLINE void resize(PN_stdfloat size);
 
-  INLINE void set_collide_mask(CollideMask mask);
-  INLINE CollideMask get_collide_mask() const;
+  INLINE void set_solid_mask(BitMask32 mask);
+  INLINE BitMask32 get_solid_mask() const;
 
-  CollisionFlags move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance);
+  INLINE void set_contents_mask(BitMask32 mask);
+  INLINE BitMask32 get_contents_mask() const;
+
+  INLINE void set_collision_group(unsigned int group);
+  INLINE unsigned int get_collision_group() const;
+
+  CollisionFlags move(double dt, const LVector3 &move_vector,
+                      PN_stdfloat min_distance,
+                      PhysBaseQueryFilter *filter = nullptr);
 
   //
   // Methods to retrieve collision state after a move() call.
@@ -160,7 +177,14 @@ protected:
   // The node that gets controlled.
   NodePath _np;
 
-  CollideMask _group_mask;
+  // Mask of contents that are solid to the controller.
+  BitMask32 _solid_mask;
+
+  // Mask of contents of the controller itself.
+  BitMask32 _contents_mask;
+
+  // Collision group of the controller.
+  int _collision_group;
 
   //
   // These get cleared and filled in each move() call.
