@@ -215,7 +215,7 @@ collect_pmats() {
     } else {
       // If it's not in the model index, check in the directory of the egg
       // file.
-      Filename mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (tex_filename.get_basename() + ".pmat");
+      Filename mat_filename = (tex_filename.get_fullpath() + ".pmat");
       if (mat_filename.is_regular_file()) {
         _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
 
@@ -226,7 +226,7 @@ collect_pmats() {
           _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
 
         } else {
-          mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (tex_filename.get_basename_wo_extension() + ".pmat");
+          mat_filename = (tex_filename.get_fullpath_wo_extension() + ".pmat");
           if (mat_filename.is_regular_file()) {
             _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
           }
