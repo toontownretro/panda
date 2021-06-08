@@ -21,6 +21,9 @@
 #include "postProcessPass.h"
 #include "ssao.h"
 #include "toneMapping.h"
+#include "freezeFrame.h"
+#include "postProcessSceneStage.h"
+#include "postProcessFinalOutput.h"
 
 NotifyCategoryDef(postprocess, "")
 
@@ -50,9 +53,12 @@ init_libpostprocess() {
   PostProcessEffect::init_type();
 
   BloomEffect::init_type();
+  FreezeFrameEffect::init_type();
   FXAA_Effect::init_type();
   HDRPass::init_type();
   HDREffect::init_type();
+  PostProcessFinalOutput::init_type();
+  PostProcessSceneStage::init_type();
   SSAO_Effect::init_type();
   ToneMappingEffect::init_type();
 }

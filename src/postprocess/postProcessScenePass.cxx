@@ -159,39 +159,6 @@ bool PostProcessScenePass::setup_buffer()
 	return true;
 }
 
-void PostProcessScenePass::setup_quad()
-{
-	CardMaker cm( get_name() + "-quad" );
-	cm.set_frame_fullscreen_quad();
-	_quad_np = NodePath( cm.generate() );
-	_quad_np.set_depth_test( false );
-	_quad_np.set_depth_write( false );
-	if ( _color_texture )
-	{
-		_quad_np.set_texture( _color_texture );
-	}
-	_quad_np.set_color( 1.0f, 0.5f, 0.5, 1.0f );
-}
-
-void PostProcessScenePass::setup_camera()
-{
-	CPT( RenderState ) cam_state = RenderState::make_empty();
-	if ( _aux_bits )
-	{
-		cam_state = cam_state->set_attrib( AuxBitplaneAttrib::make( _aux_bits ) );
-	}
-	set_camera_state( cam_state );
-
-	PT( Camera ) cam = new Camera( get_name() + "-camera" );
-	PT( OrthographicLens ) lens = new OrthographicLens;
-	lens->set_film_size( 2, 2 );
-	lens->set_film_offset( 0, 0 );
-	lens->set_near_far( -1000, 1000 );
-	cam->set_lens( lens );
-	_camera_np = _quad_np.attach_new_node( cam );
-	_camera = cam;
-}
-
 void PostProcessScenePass::set_camera_state( const RenderState *state )
 {
 	_cam_state = state;
@@ -223,8 +190,22 @@ void PostProcessScenePass::setup_scene_camera( int i, int sort )
 	info->new_region = dr;
 }
 
-void PostProcessScenePass::setup_region()
-{
-	// Render into the final output display region
-	_pp->get_output_display_region()->set_camera( _camera_np );
+/**
+ *
+ */
+void PostProcessScenePass::
+setup() {
+	// We only need to set up a buffer.  We don't need to set up a default
+	// display region, screen quad, or camera.  Display regions will be created
+	// for the scene cameras that are added to the pass.
+	if (!setup_buffer()) {
+		return;
+	}
+
+	CPT( RenderState ) cam_state = RenderState::make_empty();
+	if ( _aux_bits )
+	{
+		cam_state = cam_state->set_attrib( AuxBitplaneAttrib::make( _aux_bits ) );
+	}
+	set_camera_state( cam_state );
 }

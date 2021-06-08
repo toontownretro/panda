@@ -105,9 +105,3 @@ ToneMappingEffect(PostProcess *pp) :
 
   add_pass(pass);
 }
-
-Texture *ToneMappingEffect::
-get_final_texture() {
-  // Need to remove this method.
-  return nullptr;
-}

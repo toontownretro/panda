@@ -14,6 +14,7 @@
 #include "postProcess.h"
 #include "postProcessDefines.h"
 #include "postProcessScenePass.h"
+#include "postProcessSceneStage.h"
 
 #include "graphicsEngine.h"
 #include "eventHandler.h"
@@ -31,10 +32,6 @@ PostProcess::PostProcess()
 void PostProcess::startup( GraphicsOutput *output )
 {
 	_output = output;
-	// Create the region that displays our final output image
-	_output_display_region = _output->make_display_region();
-	_output_display_region->set_sort( 0 );
-	_output_display_region->disable_clears();
 
 	_buffer_sort = _output->get_sort() - 1000;
 
@@ -43,9 +40,12 @@ void PostProcess::startup( GraphicsOutput *output )
 	// The scene pass buffer will perform clearing.
 	_output->disable_clears();
 
-	_scene_pass = new PostProcessScenePass( this );
-	_scene_pass->setup();
-	_scene_pass->add_color_output();
+	// Automatically add the stage that renders the scene into textures for
+	// future stages added by the user.  The final output stage is not added
+	// because it must come at the very end (after all of the user-added stages).
+	PT(PostProcessSceneStage) scene_stage = new PostProcessSceneStage(this);
+	_scene_pass = scene_stage->get_scene_pass();
+	add_effect(scene_stage);
 }
 
 /**
@@ -190,9 +190,6 @@ void PostProcess::update()
 	{
 		_effects.get_data( i )->update();
 	}
-
-	// Don't forget the main pass
-	_scene_pass->update();
 }
 
 void PostProcess::window_event()
@@ -205,9 +202,6 @@ void PostProcess::window_event()
 	{
 		_effects.get_data( i )->window_event( _output );
 	}
-
-	// Don't forget the main pass
-	_scene_pass->window_event( _output );
 }
 
 void PostProcess::set_window_clears( DrawableRegion *region )

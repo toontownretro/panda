@@ -26,8 +26,6 @@ class EXPCL_PANDA_POSTPROCESS ToneMappingEffect : public PostProcessEffect {
 
 PUBLISHED:
   ToneMappingEffect(PostProcess *pp);
-
-  virtual Texture *get_final_texture() override;
 };
 
 #include "toneMapping.I"

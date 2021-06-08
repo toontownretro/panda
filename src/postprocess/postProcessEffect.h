@@ -38,11 +38,11 @@ PUBLISHED:
 	{
 	}
 
-	virtual Texture *get_final_texture() = 0;
-
 	void add_pass( PostProcessPass *pass );
 	void remove_pass( PostProcessPass *pass );
 	PostProcessPass *get_pass( const std::string &name );
+	size_t get_num_passes() const;
+	PostProcessPass *get_pass(size_t n) const;
 
 	virtual void setup();
 	virtual void update();

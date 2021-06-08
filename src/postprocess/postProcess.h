@@ -114,15 +114,6 @@ PUBLISHED:
 		return _effects[name];
 	}
 
-	INLINE Texture *get_scene_color_texture() const
-	{
-		return _scene_pass->get_color_texture();
-	}
-	INLINE Texture *get_scene_depth_texture() const
-	{
-		return _scene_pass->get_depth_texture();
-	}
-
 	INLINE PostProcessScenePass *get_scene_pass() const
 	{
 		return _scene_pass;
@@ -148,17 +139,6 @@ PUBLISHED:
 		return _buffer_sort++;
 	}
 
-	INLINE DisplayRegion *get_output_display_region() const
-	{
-		return _output_display_region;
-	}
-
-	INLINE bool is_fullscreen() const
-	{
-		LVector4 dim = _output_display_region->get_dimensions();
-		return ( dim[0] == 0.0f && dim[1] == 1.0f && dim[2] == 0.0f && dim[3] == 1.0f );
-	}
-
 	void set_scene_aux_bits( int bits );
 	void set_stacked_clears( int n, DrawableRegion *region );
 	void set_window_clears( DrawableRegion *region );
@@ -182,12 +162,8 @@ private:
 
 	SimpleHashMap<std::string, PT(Texture), string_hash> _output_pipes;
 
-	PT( DisplayRegion ) _output_display_region;
-
 	// The main scene is rendered into the textures on this pass.
-	// This is also the quad that gets displayed showing the final result
-	// of all PostProcessEffects.
-	PT( PostProcessScenePass ) _scene_pass;
+	PT(PostProcessScenePass) _scene_pass;
 
 	int _buffer_sort;
 };

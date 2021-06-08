@@ -24,10 +24,8 @@ class EXPCL_PANDA_POSTPROCESS PostProcessScenePass : public PostProcessPass
 {
 PUBLISHED:
 	PostProcessScenePass( PostProcess *pp );
-	virtual void setup_region();
-	virtual void setup_camera();
-	virtual void setup_quad();
 	virtual bool setup_buffer();
+	virtual void setup();
 	virtual void add_color_output();
 	virtual void add_depth_output();
 	virtual void add_aux_output( int n );

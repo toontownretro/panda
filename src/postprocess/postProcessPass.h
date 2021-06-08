@@ -27,10 +27,15 @@
 #include "camera.h"
 
 class PostProcess;
+class DisplayRegionDrawCallbackData;
 
-class EXPCL_PANDA_POSTPROCESS PostProcessPass : public ReferenceCount, public Namable
-{
-	DECLARE_CLASS2( PostProcessPass, ReferenceCount, Namable );
+/**
+ * Base class for an onscreen/offscreen render layer.  This object doesn't
+ * necessarily have to draw anything, it can also be used to issue certain
+ * GSG commands at a specific point in the render pipeline.
+ */
+class EXPCL_PANDA_POSTPROCESS PostProcessPass : public ReferenceCount, public Namable {
+	DECLARE_CLASS2(PostProcessPass, ReferenceCount, Namable);
 
 PUBLISHED:
 	PostProcessPass( PostProcess *pp, const std::string &name = "pass",
@@ -91,6 +96,22 @@ PUBLISHED:
 		return _depth_texture;
 	}
 
+	INLINE GraphicsOutput *get_buffer() const {
+		return _buffer;
+	}
+
+	INLINE DisplayRegion *get_display_region() const {
+		return _region;
+	}
+
+	INLINE void set_window_layer(bool flag) {
+		_window_layer = flag;
+	}
+
+	INLINE bool is_window_layer() const {
+		return _window_layer;
+	}
+
 	PT( Texture ) make_texture( Texture::Format format, const std::string &suffix );
 
 	virtual bool setup_buffer();
@@ -100,7 +121,9 @@ PUBLISHED:
 	virtual void setup();
 
 	virtual void update();
-	virtual void window_event( GraphicsOutput *output );
+	virtual void window_event(GraphicsOutput *output);
+
+	virtual void on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg);
 
 	virtual void shutdown();
 
@@ -109,7 +132,11 @@ PUBLISHED:
 protected:
 	PostProcess *_pp;
 
-	PT( GraphicsBuffer ) _buffer;
+	// True if the pass is a layer/display region on the main window, rather
+	// than an offscreen buffer.
+	bool _window_layer;
+
+	PT( GraphicsOutput ) _buffer;
 	PT( DisplayRegion ) _region;
 	NodePath _camera_np;
 	PT( Camera ) _camera;

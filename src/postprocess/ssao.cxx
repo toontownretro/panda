@@ -118,7 +118,7 @@ public:
 				"shaders/postprocess/ssao.frag.glsl"
 			)
 		);
-		get_quad().set_shader_input( "depthSampler", _pp->get_scene_depth_texture() );
+		get_quad().set_shader_input( "depthSampler", _pp->get_output_pipe("scene_depth") );
 		get_quad().set_shader_input( "resolution", _dimensions );
 		get_quad().set_shader_input( "near_far_minDepth_radius", LVector4f( 1, 100, 0.3f, 5.0f ) );
 		get_quad().set_shader_input( "noiseAmount_diffArea_gDisplace_gArea", LVector4f( 0.0003f, 0.4f, 0.4f, 2.0f ) );
@@ -187,8 +187,8 @@ public:
 		);
 
 		quad.set_shader_input("camera", _pp->get_camera(0));
-		quad.set_shader_input("depthSampler", _pp->get_scene_depth_texture());
-		quad.set_shader_input("normalSampler", _pp->get_scene_pass()->get_aux_texture(AUXTEXTURE_NORMAL));
+		quad.set_shader_input("depthSampler", _pp->get_output_pipe("scene_depth"));
+		quad.set_shader_input("normalSampler", _pp->get_output_pipe("scene_normals"));
 		quad.set_shader_input("noiseSampler", _noise_texture);
 
 		update_dynamic_inputs();
@@ -263,8 +263,8 @@ SSAO_Effect::SSAO_Effect( PostProcess *pp, Mode mode ) :
 		xss << "aoWeightedBlurX-" << i;
 		PT(WeightedBlur) blur_x = new WeightedBlur(pp, xss.str());
 		blur_x->_color = _final_texture;
-		blur_x->_normals = _pp->get_scene_pass()->get_aux_texture(AUXTEXTURE_NORMAL);
-		blur_x->_depth = _pp->get_scene_depth_texture();
+		blur_x->_normals = _pp->get_output_pipe("scene_normals");
+		blur_x->_depth = _pp->get_output_pipe("scene_depth");
 		blur_x->_direction.set(1, 0);
 		blur_x->setup();
 		blur_x->add_color_output();
@@ -273,8 +273,8 @@ SSAO_Effect::SSAO_Effect( PostProcess *pp, Mode mode ) :
 		yss << "aoWeightedBlurY-" << i;
 		PT(WeightedBlur) blur_y = new WeightedBlur(pp, yss.str());
 		blur_y->_color = blur_x->get_color_texture();
-		blur_y->_normals = _pp->get_scene_pass()->get_aux_texture(AUXTEXTURE_NORMAL);
-		blur_y->_depth = _pp->get_scene_depth_texture();
+		blur_y->_normals = _pp->get_output_pipe("scene_normals");
+		blur_y->_depth = _pp->get_output_pipe("scene_depth");
 		blur_y->_direction.set(0, 1);
 		blur_y->setup();
 		blur_y->add_color_output();

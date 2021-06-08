@@ -72,3 +72,19 @@ PostProcessPass *PostProcessEffect::get_pass( const std::string &name )
 {
 	return _passes[name];
 }
+
+/**
+ * Returns the number of passes present in the effect.
+ */
+size_t PostProcessEffect::
+get_num_passes() const {
+	return _passes.size();
+}
+
+/**
+ * Returns the nth pass in the effect
+ */
+PostProcessPass *PostProcessEffect::
+get_pass(size_t n) const {
+	return _passes.get_data(n);
+}
