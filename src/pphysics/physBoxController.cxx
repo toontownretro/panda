@@ -33,6 +33,7 @@ PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
     ->createController(desc);
   nassertv(_controller != nullptr);
   _controller->setUserData(this);
+  update_shape_filter_data();
 }
 
 /**

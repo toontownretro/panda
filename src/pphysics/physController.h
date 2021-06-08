@@ -149,10 +149,10 @@ PUBLISHED:
   INLINE void set_solid_mask(BitMask32 mask);
   INLINE BitMask32 get_solid_mask() const;
 
-  INLINE void set_contents_mask(BitMask32 mask);
+  void set_contents_mask(BitMask32 mask);
   INLINE BitMask32 get_contents_mask() const;
 
-  INLINE void set_collision_group(unsigned int group);
+  void set_collision_group(unsigned int group);
   INLINE unsigned int get_collision_group() const;
 
   CollisionFlags move(double dt, const LVector3 &move_vector,
@@ -170,6 +170,9 @@ PUBLISHED:
 
   INLINE size_t get_num_controller_hits() const;
   INLINE const PhysControllersHitData *get_controller_hit(size_t n) const;
+
+public:
+  void update_shape_filter_data();
 
 protected:
   virtual physx::PxController *get_controller() const = 0;

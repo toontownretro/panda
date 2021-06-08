@@ -106,6 +106,39 @@ filter(const physx::PxController &a, const physx::PxController &b) {
 }
 
 /**
+ * Sets the mask of contents of the controller.  This is AND'd against the
+ * solid mask of other controllers to determine if two controllers should
+ * collide or pass through each other.
+ */
+void PhysController::
+set_contents_mask(BitMask32 mask) {
+  if (mask == _contents_mask) {
+    return;
+  }
+
+  _contents_mask = mask;
+
+  update_shape_filter_data();
+}
+
+/**
+ * Sets the collision group of the controller.  If two controllers, or a
+ * controller and a shape, both belong to a collision group, they will not
+ * collide if the two groups do not have collisions enabled between them,
+ * regardless of the solid mask.
+ */
+INLINE void PhysController::
+set_collision_group(unsigned int group) {
+  if (group == _collision_group) {
+    return;
+  }
+
+  _collision_group = group;
+
+  update_shape_filter_data();
+}
+
+/**
  *
  */
 PhysController::CollisionFlags PhysController::
@@ -140,4 +173,26 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
     Vec3_to_PxVec3(move_vector), min_distance, dt, filters);
   _collision_flags = flags;
   return (CollisionFlags)flags;
+}
+
+/**
+ *
+ */
+void PhysController::
+update_shape_filter_data() {
+  // Update the underlying actor shape with the character's contents mask and
+  // collision group.
+  physx::PxShape *shape = nullptr;
+  physx::PxRigidDynamic *actor = get_controller()->getActor();
+  nassertv(actor != nullptr);
+  actor->getShapes(&shape, 1);
+  nassertv(shape != nullptr);
+  physx::PxFilterData data = shape->getSimulationFilterData();
+  physx::PxFilterData qdata = shape->getQueryFilterData();
+  data.word0 = _collision_group;
+  data.word1 = _contents_mask.get_word();
+  qdata.word0 = _contents_mask.get_word();
+  qdata.word1 = _collision_group;
+  shape->setSimulationFilterData(data);
+  shape->setQueryFilterData(qdata);
 }

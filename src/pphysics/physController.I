@@ -238,32 +238,11 @@ get_solid_mask() const {
 }
 
 /**
- * Sets the mask of contents of the controller.  This is AND'd against the
- * solid mask of other controllers to determine if two controllers should
- * collide or pass through each other.
- */
-INLINE void PhysController::
-set_contents_mask(BitMask32 mask) {
-  _contents_mask = mask;
-}
-
-/**
  * Returns the mask of contents of the controller.  See set_contents_mask().
  */
 INLINE BitMask32 PhysController::
 get_contents_mask() const {
   return _contents_mask;
-}
-
-/**
- * Sets the collision group of the controller.  If two controllers, or a
- * controller and a shape, both belong to a collision group, they will not
- * collide if the two groups do not have collisions enabled between them,
- * regardless of the solid mask.
- */
-INLINE void PhysController::
-set_collision_group(unsigned int group) {
-  _collision_group = group;
 }
 
 /**
