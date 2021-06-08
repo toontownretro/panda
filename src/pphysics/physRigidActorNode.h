@@ -63,6 +63,9 @@ PUBLISHED:
   void set_contents_mask(BitMask32 contents_mask);
   INLINE BitMask32 get_contents_mask() const;
 
+  INLINE void set_simulation_disabled(bool flag);
+  INLINE bool get_simulation_disabled() const;
+
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
 

@@ -176,6 +176,22 @@ get_contents_mask() const {
 }
 
 /**
+ *
+ */
+INLINE void PhysRigidActorNode::
+set_simulation_disabled(bool flag) {
+  get_rigid_actor()->setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION, flag);
+}
+
+/**
+ *
+ */
+INLINE bool PhysRigidActorNode::
+get_simulation_disabled() const {
+  return get_rigid_actor()->getActorFlags().isSet(physx::PxActorFlag::eDISABLE_SIMULATION);
+}
+
+/**
  * Sets whether or not a change to the node's transform should be automatically
  * synchronized with the associated PhysX actor.
  */
