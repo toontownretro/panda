@@ -2125,8 +2125,10 @@ do_draw(GraphicsOutput *win, GraphicsStateGuardian *gsg, DisplayRegion *dr, Thre
     DisplayRegionDrawCallbackData cbdata(cull_result, scene_setup);
     cbobj->do_callback(&cbdata);
 
-    // We don't trust the state the callback may have left us in.
-    gsg->clear_state_and_transform();
+    if (cbdata.get_lost_state()) {
+      // Tell the GSG to forget its state.
+      gsg->clear_state_and_transform();
+    }
 
   } else if (cull_result == nullptr || scene_setup == nullptr) {
     // Nothing to see here.

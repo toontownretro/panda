@@ -29,7 +29,8 @@ TypeHandle DisplayRegionDrawCallbackData::_type_handle;
 DisplayRegionDrawCallbackData::
 DisplayRegionDrawCallbackData(CullResult *cull_result, SceneSetup *scene_setup) :
   _cull_result(cull_result),
-  _scene_setup(scene_setup)
+  _scene_setup(scene_setup),
+  _lost_state(true)
 {
 }
 
@@ -73,8 +74,10 @@ upcall() {
       << gsg->get_type() << " cannot render scene with specified lens.\n";
 
   } else {
-    // Tell the GSG to forget its state.
-    gsg->clear_state_and_transform();
+    if (_lost_state) {
+      // Tell the GSG to forget its state.
+      gsg->clear_state_and_transform();
+    }
 
     if (gsg->begin_scene()) {
       _cull_result->draw(current_thread);

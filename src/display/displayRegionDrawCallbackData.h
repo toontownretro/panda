@@ -34,11 +34,15 @@ PUBLISHED:
   INLINE CullResult *get_cull_result() const;
   INLINE SceneSetup *get_scene_setup() const;
 
+  INLINE void set_lost_state(bool lost_state);
+  INLINE bool get_lost_state() const;
+
   virtual void upcall();
 
 private:
   CullResult *_cull_result;
   SceneSetup *_scene_setup;
+  bool _lost_state;
 
 public:
   static TypeHandle get_class_type() {

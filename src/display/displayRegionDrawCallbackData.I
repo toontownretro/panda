@@ -28,3 +28,24 @@ INLINE SceneSetup *DisplayRegionDrawCallbackData::
 get_scene_setup() const {
   return _scene_setup;
 }
+
+/**
+ * Sets the lost_state flag.  If this is true, the callback does not have to
+ * be quite so careful to clean up after itself; Panda will assume that the
+ * graphics state is in an unknown state after the callback has finished, and
+ * will issue all the necessary calls to restore it.  If this is false, Panda
+ * will assume the callback will leave the graphics state exactly as it came
+ * in, and won't bother to try to restore it.  The default is true.
+ */
+INLINE void DisplayRegionDrawCallbackData::
+set_lost_state(bool lost_state) {
+  _lost_state = lost_state;
+}
+
+/**
+ * Returns the lost_state flag.  See set_lost_state().
+ */
+INLINE bool DisplayRegionDrawCallbackData::
+get_lost_state() const {
+  return _lost_state;
+}
