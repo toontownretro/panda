@@ -15,6 +15,7 @@
 #include "triangulatorDelaunay.h"
 #include "poseParameter.h"
 #include "character.h"
+#include "mathutil_misc.h"
 
 static const PN_stdfloat equal_epsilon = 0.001f;
 
@@ -137,10 +138,12 @@ void AnimBlendNode2D::
 compute_weights_if_necessary(Character *character) {
   LPoint2 input(0);
   if (_x_param != -1) {
-    input[0] = character->get_pose_parameter(_x_param).get_value();
+    const PoseParameter &x = character->get_pose_parameter(_x_param);
+    input[0] = remap_val_clamped(x.get_value(), x.get_min(), x.get_max(), -1, 1);
   }
   if (_y_param != -1) {
-    input[1] = character->get_pose_parameter(_y_param).get_value();
+    const PoseParameter &y = character->get_pose_parameter(_y_param);
+    input[1] = remap_val_clamped(y.get_value(), y.get_min(), y.get_max(), -1, 1);
   }
   if ((input != _input_coord) || !_has_triangles) {
     _input_coord = input;
