@@ -65,7 +65,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
 
   } else {
-    MaterialParamBase *param = material->get_param("$basecolor");
+    MaterialParamBase *param = material->get_param("base_color");
     if (param != nullptr) {
       if (param->is_of_type(MaterialParamTexture::get_class_type())) {
         set_pixel_shader_define("BASETEXTURE");

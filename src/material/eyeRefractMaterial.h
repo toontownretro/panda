@@ -22,7 +22,7 @@ PUBLISHED:
   EyeRefractMaterial(const std::string &name = "");
 
 public:
-  virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path) override;
+  virtual void read_pdx(PDXElement *data, const DSearchPath &search_path) override;
 
   // Bam factory methods.
   static void register_with_read_factory();

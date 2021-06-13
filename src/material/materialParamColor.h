@@ -33,8 +33,8 @@ private:
   LColor _value;
 
 public:
-  virtual bool from_string(const std::string &str, const DSearchPath &search_path) override;
-  virtual void to_string(std::string &str, const Filename &filename) override;
+  virtual bool from_pdx(const PDXValue &val, const DSearchPath &search_path) override;
+  virtual void to_pdx(PDXValue &val, const Filename &filename) override;
 
   virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
   static void register_with_read_factory();

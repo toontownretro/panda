@@ -12,7 +12,7 @@
  */
 
 #include "materialParamVector.h"
-#include "keyValues.h"
+#include "pdxList.h"
 
 TypeHandle MaterialParamVector::_type_handle;
 
@@ -20,8 +20,13 @@ TypeHandle MaterialParamVector::_type_handle;
  *
  */
 bool MaterialParamVector::
-from_string(const std::string &str, const DSearchPath &search_path) {
-  _value = KeyValues::to_3f(str);
+from_pdx(const PDXValue &val, const DSearchPath &search_path) {
+  _value = LVector3(1, 1, 1);
+
+  if (!val.to_vec3(_value)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -29,8 +34,8 @@ from_string(const std::string &str, const DSearchPath &search_path) {
  *
  */
 void MaterialParamVector::
-to_string(std::string &str, const Filename &filename) {
-  str = KeyValues::to_string(_value);
+to_pdx(PDXValue &val, const Filename &filename) {
+  val.from_vec3(_value);
 }
 
 /**

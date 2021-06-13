@@ -22,6 +22,7 @@
 #include "factoryParams.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "pdxValue.h"
 
 /**
  * Base material parameter class.
@@ -34,12 +35,12 @@ public:
   // Called when reading in the material from a keyvalues file.  The search
   // path includes the directory of the material file and the model path, so
   // texture filenames can be resolved.
-  virtual bool from_string(const std::string &str, const DSearchPath &search_path)=0;
+  virtual bool from_pdx(const PDXValue &value, const DSearchPath &search_path)=0;
 
   // Called when writing the material to a keyvalues file.  The output filename
   // of the material is used for making texture parameter pathnames relative to
   // the output filename.
-  virtual void to_string(std::string &str, const Filename &filename)=0;
+  virtual void to_pdx(PDXValue &value, const Filename &filename)=0;
 
 public:
   virtual void write_datagram(BamWriter *manager, Datagram &dg) override;

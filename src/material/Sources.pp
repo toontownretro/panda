@@ -1,4 +1,4 @@
-#define LOCAL_LIBS gobj linmath
+#define LOCAL_LIBS gobj linmath pdx
 
 #begin lib_target
   #define TARGET material

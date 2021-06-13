@@ -14,7 +14,8 @@
 #include "materialPool.h"
 #include "config_material.h"
 #include "virtualFileSystem.h"
-#include "keyValues.h"
+#include "pdxValue.h"
+#include "pdxElement.h"
 #include "materialRegistry.h"
 #include "datagramInputFile.h"
 #include "bam.h"
@@ -64,21 +65,36 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
     << "Loading material " << fullpath << "\n";
 
   if (fullpath.get_extension() == "pmat") {
-    // Keyvalues material file.
+    // PDX material file.
 
-    PT(KeyValues) kv = KeyValues::load(fullpath);
-    if (kv == nullptr) {
+    PDXValue pdx_data;
+    if (!pdx_data.read(fullpath)) {
+      material_cat.error()
+        << "Could not load material file " << fullpath << "\n";
       return nullptr;
     }
-    if (kv->get_num_children() != 1) {
+
+    if (!pdx_data.is_element()) {
+      material_cat.error()
+        << "Expected PDXElement in material file " << fullpath << "\n";
       return nullptr;
     }
 
-    KeyValues *mat_block = kv->get_child(0);
-    const std::string &material_name = mat_block->get_name();
+    PDXElement *mat_data = pdx_data.get_element();
+
+    int material_idx = mat_data->find_attribute("material");
+    if (material_idx == -1) {
+      material_cat.error()
+        << "Material file " << fullpath << " does not specify a material name.\n";
+      return nullptr;
+    }
+
+    std::string material_name = mat_data->get_attribute_value(material_idx).get_string();
 
     material = MaterialRegistry::get_global_ptr()->create_material(material_name);
     if (material == nullptr) {
+      material_cat.error()
+        << "Could not create material by name " << material_name << "\n";
       return nullptr;
     }
 
@@ -87,7 +103,7 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
     DSearchPath mat_search_path = search_path;
     mat_search_path.append_directory(fullpath.get_dirname());
 
-    material->read_keyvalues(mat_block, mat_search_path);
+    material->read_pdx(mat_data, mat_search_path);
 
   } else if (fullpath.get_extension() == "mto") {
     // Bam format material object.

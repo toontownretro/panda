@@ -14,10 +14,11 @@
 #include "material.h"
 #include "config_material.h"
 #include "virtualFileSystem.h"
-#include "keyValues.h"
 #include "bam.h"
 #include "bamWriter.h"
 #include "datagramOutputFile.h"
+#include "pdxElement.h"
+#include "pdxValue.h"
 
 TypeHandle Material::_type_handle;
 
@@ -35,7 +36,7 @@ Material(const std::string &name) :
  *
  */
 void Material::
-read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
+read_pdx(PDXElement *data, const DSearchPath &search_path) {
   // Left up to derived materials.
 }
 
@@ -43,14 +44,16 @@ read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
  *
  */
 void Material::
-write_keyvalues(KeyValues *kv, const Filename &filename) {
+write_pdx(PDXElement *data, const Filename &filename) {
+  PT(PDXElement) params = new PDXElement;
   for (size_t i = 0; i < _params.size(); i++) {
     const std::string &name = _params.get_key(i)->get_name();
-    std::string value;
-    _params.get_data(i)->to_string(value, filename);
+    PDXValue value;
+    _params.get_data(i)->to_pdx(value, filename);
 
-    kv->set_key_value(name, value);
+    params->set_attribute(name, value);
   }
+  data->set_attribute("parameters", PDXValue(params));
 }
 
 /**
@@ -58,12 +61,13 @@ write_keyvalues(KeyValues *kv, const Filename &filename) {
  */
 void Material::
 write_pmat(const Filename &filename) {
-  PT(KeyValues) kv = new KeyValues;
 
-  PT(KeyValues) mat_block = new KeyValues(get_type().get_name(), kv);
-  write_keyvalues(mat_block, filename);
+  PT(PDXElement) data = new PDXElement;
+  data->set_attribute("material", get_type().get_name());
 
-  kv->write(filename);
+  write_pdx(data, filename);
+
+  PDXValue(data).write(filename);
 }
 
 /**

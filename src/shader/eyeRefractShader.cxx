@@ -18,7 +18,7 @@
 #include "materialParamTexture.h"
 #include "materialParamFloat.h"
 #include "materialParamBool.h"
-#include "materialParamVector.h"
+#include "materialParamColor.h"
 
 TypeHandle EyeRefractShader::_type_handle;
 
@@ -62,27 +62,27 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   add_csm(state);
   add_fog(state);
 
-  MaterialParamBase *param = eye_mat->get_param("$iris");
+  MaterialParamBase *param = eye_mat->get_param("iris");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("irisSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  param = eye_mat->get_param("$corneatexture");
+  param = eye_mat->get_param("cornea_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("corneaSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  param = eye_mat->get_param("$ambientoccltexture");
+  param = eye_mat->get_param("ambient_occl_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  param = eye_mat->get_param("$envmap");
+  param = eye_mat->get_param("env_map");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  param = eye_mat->get_param("$lightwarptexture");
+  param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("lightwarpSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
@@ -91,15 +91,15 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   PN_stdfloat glossiness = 1;
   PN_stdfloat average_ambient = 1;
   PN_stdfloat cornea_bump_strength = 1;
-  param = eye_mat->get_param("$dilation");
+  param = eye_mat->get_param("dilation");
   if (param) {
     dilation = DCAST(MaterialParamFloat, param)->get_value();
   }
-  param = eye_mat->get_param("$glossiness");
+  param = eye_mat->get_param("glossiness");
   if (param) {
     glossiness = DCAST(MaterialParamFloat, param)->get_value();
   }
-  param = eye_mat->get_param("$corneabumpstrength");
+  param = eye_mat->get_param("cornea_bump_strength");
   if (param) {
     cornea_bump_strength = DCAST(MaterialParamFloat, param)->get_value();
   }
@@ -108,11 +108,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   PN_stdfloat eyeball_radius = 0;
   PN_stdfloat parallax_strength = 1;
-  param = eye_mat->get_param("$eyeballradius");
+  param = eye_mat->get_param("eyeball_radius");
   if (param) {
     eyeball_radius = DCAST(MaterialParamFloat, param)->get_value();
   }
-  param = eye_mat->get_param("$parallaxstrength");
+  param = eye_mat->get_param("parallax_strength");
   if (param) {
     parallax_strength = DCAST(MaterialParamFloat, param)->get_value();
   }
@@ -120,9 +120,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_input(ShaderInput("packedConst1", packed_const_1));
 
   LVector3 ambient_occl_color(1);
-  param = eye_mat->get_param("$ambientocclcolor");
+  param = eye_mat->get_param("ambient_occl_color");
   if (param) {
-    ambient_occl_color = DCAST(MaterialParamVector, param)->get_value();
+    ambient_occl_color = DCAST(MaterialParamColor, param)->get_value().get_xyz();
   }
   set_input(ShaderInput("ambientOcclColor", ambient_occl_color));
 

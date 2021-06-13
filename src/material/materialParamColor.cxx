@@ -12,7 +12,7 @@
  */
 
 #include "materialParamColor.h"
-#include "keyValues.h"
+#include "pdxList.h"
 
 TypeHandle MaterialParamColor::_type_handle;
 
@@ -20,8 +20,15 @@ TypeHandle MaterialParamColor::_type_handle;
  *
  */
 bool MaterialParamColor::
-from_string(const std::string &str, const DSearchPath &search_path) {
-  _value = KeyValues::to_4f(str);
+from_pdx(const PDXValue &val, const DSearchPath &search_path) {
+  _value = LColor(255, 255, 255, 255);
+
+  if (!val.to_vec4(_value)) {
+    return false;
+  }
+
+  _value /= 255;
+
   return true;
 }
 
@@ -29,8 +36,8 @@ from_string(const std::string &str, const DSearchPath &search_path) {
  *
  */
 void MaterialParamColor::
-to_string(std::string &str, const Filename &filename) {
-  str = KeyValues::to_string(_value);
+to_pdx(PDXValue &val, const Filename &filename) {
+  val.from_vec4(_value * 255);
 }
 
 /**

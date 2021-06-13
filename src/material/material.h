@@ -21,11 +21,12 @@
 #include "texture.h"
 #include "luse.h"
 #include "pmap.h"
-#include "keyValues.h"
 #include "internalName.h"
 #include "materialParamBase.h"
 #include "config_putil.h"
 #include "simpleHashMap.h"
+
+class PDXElement;
 
 /**
  * This is an abstract base class for any kind of material that can be applied
@@ -37,8 +38,8 @@ class EXPCL_PANDA_MATERIAL Material : public TypedWritableReferenceCount, public
 public:
   Material(const std::string &name);
 
-  virtual void read_keyvalues(KeyValues *kv, const DSearchPath &search_path);
-  virtual void write_keyvalues(KeyValues *kv, const Filename &filename);
+  virtual void read_pdx(PDXElement *data, const DSearchPath &search_path);
+  virtual void write_pdx(PDXElement *data, const Filename &filename);
 
 PUBLISHED:
   INLINE size_t get_num_params() const;

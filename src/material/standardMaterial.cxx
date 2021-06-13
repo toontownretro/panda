@@ -12,7 +12,7 @@
  */
 
 #include "standardMaterial.h"
-#include "keyValues.h"
+#include "pdxElement.h"
 #include "string_utils.h"
 #include "texturePool.h"
 #include "materialParamTexture.h"
@@ -38,102 +38,82 @@ StandardMaterial(const std::string &name) :
  *
  */
 void StandardMaterial::
-read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
-  for (size_t i = 0; i < kv->get_num_keys(); i++) {
-    std::string key = downcase(kv->get_key(i));
-    const std::string &value = kv->get_value(i);
+read_pdx(PDXElement *data, const DSearchPath &search_path) {
+  if (!data->has_attribute("parameters")) {
+    return;
+  }
 
-    if (key == "$basetexture" || key == "$basemap" || key == "$basecolor") {
+  PDXElement *params = data->get_attribute_value("parameters").get_element();
+  if (params == nullptr) {
+    return;
+  }
 
-      // Bad hack to determine if it's a texture or color.  Need a special
-      // syntax to easily differentiate.
-      if (value.find(".ptex") != std::string::npos) {
-        PT(MaterialParamTexture) tex = new MaterialParamTexture("$basecolor");
-        tex->from_string(value, search_path);
-        set_param(tex);
+  for (size_t i = 0; i < params->get_num_attributes(); i++) {
+    std::string key = downcase(params->get_attribute_name(i));
+    const PDXValue &value = params->get_attribute_value(i);
 
+    PT(MaterialParamBase) param;
+
+    if (key == "base_texture" || key == "base_map" || key == "base_color") {
+
+      if (value.get_value_type() == PDXValue::VT_string) {
+        param = new MaterialParamTexture("base_color");
       } else {
-        PT(MaterialParamColor) color = new MaterialParamColor("$basecolor");
-        color->from_string(value, search_path);
-        set_param(color);
+        param = new MaterialParamColor("base_color");
       }
 
-    } else if (key == "$normal" || key == "$bumpmap" ||
-               key == "$normalmap" || key == "$normaltexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$normalmap");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    } else if (key == "normal" || key == "bump_map" ||
+               key == "normal_map" || key == "normal_texture") {
+      param = new MaterialParamTexture("normal_map");
 
-    } else if (key == "$specularmap" || key == "$speculartexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$speculartexture");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    } else if (key == "specular_map" || key == "specular_texture") {
+      param = new MaterialParamTexture("specular_texture");
 
-    } else if (key == "$arme" || key == "$armemap" || key == "$armetexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$armetexture");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    } else if (key == "arme" || key == "arme_map" || key == "arme_texture") {
+      param = new MaterialParamTexture("arme_texture");
 
-    } else if (key == "$halflambert") {
-      PT(MaterialParamBool) hl = new MaterialParamBool("$halflambert");
-      hl->from_string(value, search_path);
-      set_param(hl);
+    } else if (key == "half_lambert") {
+      param = new MaterialParamBool(key);
 
-    } else if (key == "$rimlight") {
-      PT(MaterialParamBool) rl = new MaterialParamBool("$rimlight");
-      rl->from_string(value, search_path);
-      set_param(rl);
+    } else if (key == "rim_lighting") {
+      param = new MaterialParamBool(key);
 
-    } else if (key == "$rimlightboost") {
-      PT(MaterialParamFloat) rlb = new MaterialParamFloat("$rimlightboost");
-      rlb->from_string(value, search_path);
-      set_param(rlb);
+    } else if (key == "rim_lighting_boost") {
+      param = new MaterialParamFloat(key);
 
-    } else if (key == "$rimlightexponent") {
-      PT(MaterialParamFloat) rle = new MaterialParamFloat("$rimlightexponent");
-      rle->from_string(value, search_path);
-      set_param(rle);
+    } else if (key == "rim_lighting_exponent") {
+      param = new MaterialParamFloat(key);
 
-    } else if (key == "$selfillum") {
-      PT(MaterialParamBool) si = new MaterialParamBool("$selfillum");
-      si->from_string(value, search_path);
-      set_param(si);
+    } else if (key == "self_illum") {
+      param = new MaterialParamBool(key);
 
-    } else if (key == "$selfillumtint") {
-      PT(MaterialParamVector) sit = new MaterialParamVector("$selfillumtint");
-      sit->from_string(value, search_path);
-      set_param(sit);
+    } else if (key == "self_illum_tint") {
+      param = new MaterialParamColor(key);
 
-    } else if (key == "$envmap") {
-      if (value == "env_cubemap") {
-        PT(MaterialParamBool) ecm = new MaterialParamBool("$envmap", true);
-        set_param(ecm);
+    } else if (key == "env_map") {
+      if (value.get_value_type() == PDXValue::VT_string) {
+        param = new MaterialParamTexture(key);
 
       } else {
-        PT(MaterialParamTexture) tex = new MaterialParamTexture("$envmap");
-        tex->from_string(value, search_path);
-        set_param(tex);
+        param = new MaterialParamBool(key);
       }
 
-    } else if (key == "$roughness") {
-      PT(MaterialParamFloat) rough = new MaterialParamFloat("$roughness");
-      rough->from_string(value, search_path);
-      set_param(rough);
+    } else if (key == "roughness") {
+      param = new MaterialParamFloat(key);
 
-    } else if (key == "$metalness") {
-      PT(MaterialParamFloat) metal = new MaterialParamFloat("$metalness");
-      metal->from_string(value, search_path);
-      set_param(metal);
+    } else if (key == "metalness") {
+      param = new MaterialParamFloat(key);
 
-    } else if (key == "$emission") {
-      PT(MaterialParamFloat) emit = new MaterialParamFloat("$emission");
-      emit->from_string(value, search_path);
-      set_param(emit);
+    } else if (key == "emission") {
+      param = new MaterialParamFloat(key);
 
-    } else if (key == "$lightwarp" || key == "$lightwarptexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$lightwarp");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    } else if (key == "lightwarp" || key == "lightwarp_texture") {
+      param = new MaterialParamTexture("lightwarp");
+    }
+
+    if (param != nullptr) {
+      param->from_pdx(value, search_path);
+      set_param(param);
     }
   }
 }
@@ -174,7 +154,7 @@ create_StandardMaterial() {
  */
 void StandardMaterial::
 set_rim_light(bool rim_light) {
-  set_param(new MaterialParamBool("$rimlight", rim_light));
+  set_param(new MaterialParamBool("rim_lighting", rim_light));
 }
 
 /**
@@ -182,7 +162,7 @@ set_rim_light(bool rim_light) {
  */
 bool StandardMaterial::
 get_rim_light() const {
-  MaterialParamBase *param = get_param("$rimlight");
+  MaterialParamBase *param = get_param("rim_lighting");
   if (param == nullptr) {
     return false;
   }
@@ -195,7 +175,7 @@ get_rim_light() const {
  */
 void StandardMaterial::
 set_rim_light_boost(PN_stdfloat boost) {
-  set_param(new MaterialParamFloat("$rimlightboost", boost));
+  set_param(new MaterialParamFloat("rim_lighting_boost", boost));
 }
 
 /**
@@ -203,7 +183,7 @@ set_rim_light_boost(PN_stdfloat boost) {
  */
 PN_stdfloat StandardMaterial::
 get_rim_light_boost() const {
-  MaterialParamBase *param = get_param("$rimlightboost");
+  MaterialParamBase *param = get_param("rim_lighting_boost");
   if (param == nullptr) {
     return 2.0f;
   }
@@ -216,7 +196,7 @@ get_rim_light_boost() const {
  */
 void StandardMaterial::
 set_rim_light_exponent(PN_stdfloat exponent) {
-  set_param(new MaterialParamFloat("$rimlightexponent", exponent));
+  set_param(new MaterialParamFloat("rim_lighting_exponent", exponent));
 }
 
 /**
@@ -224,7 +204,7 @@ set_rim_light_exponent(PN_stdfloat exponent) {
  */
 PN_stdfloat StandardMaterial::
 get_rim_light_exponent() const {
-  MaterialParamBase *param = get_param("$rimlightexponent");
+  MaterialParamBase *param = get_param("rim_lighting_exponent");
   if (param == nullptr) {
     return 4.0f;
   }
@@ -237,7 +217,7 @@ get_rim_light_exponent() const {
  */
 void StandardMaterial::
 set_half_lambert(bool flag) {
-  set_param(new MaterialParamBool("$halflambert", flag));
+  set_param(new MaterialParamBool("half_lambert", flag));
 }
 
 /**
@@ -245,7 +225,7 @@ set_half_lambert(bool flag) {
  */
 bool StandardMaterial::
 get_half_lambert() const {
-  MaterialParamBase *param = get_param("$halflambert");
+  MaterialParamBase *param = get_param("half_lambert");
   if (param == nullptr) {
     return false;
   }
@@ -258,7 +238,7 @@ get_half_lambert() const {
  */
 void StandardMaterial::
 set_base_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("$basecolor", tex));
+  set_param(new MaterialParamTexture("base_color", tex));
 }
 
 /**
@@ -266,7 +246,7 @@ set_base_texture(Texture *tex) {
  */
 Texture *StandardMaterial::
 get_base_texture() const {
-  MaterialParamBase *param = get_param("$basecolor");
+  MaterialParamBase *param = get_param("base_color");
   if (param == nullptr || !param->is_of_type(MaterialParamTexture::get_class_type())) {
     return nullptr;
   }
@@ -279,7 +259,7 @@ get_base_texture() const {
  */
 void StandardMaterial::
 set_base_color(const LColor &color) {
-  set_param(new MaterialParamColor("$basecolor", color));
+  set_param(new MaterialParamColor("base_color", color));
 }
 
 /**
@@ -287,7 +267,7 @@ set_base_color(const LColor &color) {
  */
 LColor StandardMaterial::
 get_base_color() const {
-  MaterialParamBase *param = get_param("$basecolor");
+  MaterialParamBase *param = get_param("base_color");
   if (param == nullptr || !param->is_of_type(MaterialParamColor::get_class_type())) {
     return LColor(1, 1, 1, 1);
   }
@@ -300,7 +280,7 @@ get_base_color() const {
  */
 void StandardMaterial::
 set_normal_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("$normalmap", tex));
+  set_param(new MaterialParamTexture("normal_map", tex));
 }
 
 /**
@@ -308,7 +288,7 @@ set_normal_texture(Texture *tex) {
  */
 Texture *StandardMaterial::
 get_normal_texture() const {
-  MaterialParamBase *param = get_param("$normalmap");
+  MaterialParamBase *param = get_param("normal_map");
   if (param == nullptr) {
     return nullptr;
   }
@@ -321,7 +301,7 @@ get_normal_texture() const {
  */
 void StandardMaterial::
 set_lightwarp_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("$lightwarp", tex));
+  set_param(new MaterialParamTexture("lightwarp", tex));
 }
 
 /**
@@ -329,7 +309,7 @@ set_lightwarp_texture(Texture *tex) {
  */
 Texture *StandardMaterial::
 get_lightwarp_texture() const {
-  MaterialParamBase *param = get_param("$lightwarp");
+  MaterialParamBase *param = get_param("lightwarp");
   if (param == nullptr) {
     return nullptr;
   }
@@ -342,7 +322,7 @@ get_lightwarp_texture() const {
  */
 void StandardMaterial::
 set_envmap_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("$envmap", tex));
+  set_param(new MaterialParamTexture("env_map", tex));
 }
 
 /**
@@ -350,7 +330,7 @@ set_envmap_texture(Texture *tex) {
  */
 Texture *StandardMaterial::
 get_envmap_texture() const {
-  MaterialParamBase *param = get_param("$envmap");
+  MaterialParamBase *param = get_param("env_map");
   if (param == nullptr || !param->is_of_type(MaterialParamTexture::get_class_type())) {
     return nullptr;
   }
@@ -363,7 +343,7 @@ get_envmap_texture() const {
  */
 void StandardMaterial::
 set_env_cubemap(bool flag) {
-  set_param(new MaterialParamBool("$envmap", flag));
+  set_param(new MaterialParamBool("env_map", flag));
 }
 
 /**
@@ -371,7 +351,7 @@ set_env_cubemap(bool flag) {
  */
 bool StandardMaterial::
 get_env_cubemap() const {
-  MaterialParamBase *param = get_param("$envmap");
+  MaterialParamBase *param = get_param("env_map");
   if (param == nullptr || !param->is_of_type(MaterialParamBool::get_class_type())) {
     return false;
   }
@@ -384,7 +364,7 @@ get_env_cubemap() const {
  */
 void StandardMaterial::
 set_emission_enabled(bool enabled) {
-  set_param(new MaterialParamBool("$selfillum", enabled));
+  set_param(new MaterialParamBool("self_illum", enabled));
 }
 
 /**
@@ -392,7 +372,7 @@ set_emission_enabled(bool enabled) {
  */
 bool StandardMaterial::
 get_emission_enabled() const {
-  MaterialParamBase *param = get_param("$selfillum");
+  MaterialParamBase *param = get_param("self_illum");
   if (param == nullptr) {
     return false;
   }
@@ -405,7 +385,7 @@ get_emission_enabled() const {
  */
 void StandardMaterial::
 set_arme_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("$armetexture", tex));
+  set_param(new MaterialParamTexture("arme_texture", tex));
 }
 
 /**
@@ -413,7 +393,7 @@ set_arme_texture(Texture *tex) {
  */
 Texture *StandardMaterial::
 get_arme_texture() const {
-  MaterialParamBase *param = get_param("$armetexture");
+  MaterialParamBase *param = get_param("arme_texture");
   if (param == nullptr) {
     return nullptr;
   }
@@ -426,7 +406,7 @@ get_arme_texture() const {
  */
 void StandardMaterial::
 set_roughness(PN_stdfloat roughness) {
-  set_param(new MaterialParamFloat("$roughness", roughness));
+  set_param(new MaterialParamFloat("roughness", roughness));
 }
 
 /**
@@ -434,7 +414,7 @@ set_roughness(PN_stdfloat roughness) {
  */
 PN_stdfloat StandardMaterial::
 get_roughness() const {
-  MaterialParamBase *param = get_param("$roughness");
+  MaterialParamBase *param = get_param("roughness");
   if (param == nullptr) {
     return 1.0f;
   }
@@ -447,7 +427,7 @@ get_roughness() const {
  */
 void StandardMaterial::
 set_metalness(PN_stdfloat metalness) {
-  set_param(new MaterialParamFloat("$metalness", metalness));
+  set_param(new MaterialParamFloat("metalness", metalness));
 }
 
 /**
@@ -455,7 +435,7 @@ set_metalness(PN_stdfloat metalness) {
  */
 PN_stdfloat StandardMaterial::
 get_metalness() const {
-  MaterialParamBase *param = get_param("$metalness");
+  MaterialParamBase *param = get_param("metalness");
   if (param == nullptr) {
     return 0.0f;
   }
@@ -468,7 +448,7 @@ get_metalness() const {
  */
 void StandardMaterial::
 set_emission(PN_stdfloat emission) {
-  set_param(new MaterialParamFloat("$emission", emission));
+  set_param(new MaterialParamFloat("emission", emission));
 }
 
 /**
@@ -476,7 +456,7 @@ set_emission(PN_stdfloat emission) {
  */
 PN_stdfloat StandardMaterial::
 get_emission() const {
-  MaterialParamBase *param = get_param("$emission");
+  MaterialParamBase *param = get_param("emission");
   if (param == nullptr) {
     return 0.0f;
   }
@@ -489,7 +469,7 @@ get_emission() const {
  */
 void StandardMaterial::
 set_emission_tint(const LVecBase3 &tint) {
-  set_param(new MaterialParamVector("$selfillumtint", tint));
+  set_param(new MaterialParamVector("self_illum_tint", tint));
 }
 
 /**
@@ -497,7 +477,7 @@ set_emission_tint(const LVecBase3 &tint) {
  */
 LVecBase3 StandardMaterial::
 get_emission_tint() const {
-  MaterialParamBase *param = get_param("$selfillumtint");
+  MaterialParamBase *param = get_param("self_illum_tint");
   if (param == nullptr) {
     return LVecBase3(1);
   }
@@ -510,7 +490,7 @@ get_emission_tint() const {
  */
 void StandardMaterial::
 set_specular_texture(Texture *texture) {
-  set_param(new MaterialParamTexture("$speculartexture", texture));
+  set_param(new MaterialParamTexture("specular_texture", texture));
 }
 
 /**
@@ -518,7 +498,7 @@ set_specular_texture(Texture *texture) {
  */
 Texture *StandardMaterial::
 get_specular_texture() const {
-  MaterialParamBase *param = get_param("$speculartexture");
+  MaterialParamBase *param = get_param("specular_texture");
   if (param == nullptr) {
     return nullptr;
   }

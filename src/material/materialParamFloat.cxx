@@ -20,16 +20,17 @@ TypeHandle MaterialParamFloat::_type_handle;
  *
  */
 bool MaterialParamFloat::
-from_string(const std::string &str, const DSearchPath &search_path) {
-  return string_to_stdfloat(str, _value);
+from_pdx(const PDXValue &val, const DSearchPath &search_path) {
+  _value = val.get_float();
+  return true;
 }
 
 /**
  *
  */
 void MaterialParamFloat::
-to_string(std::string &str, const Filename &filename) {
-  str = std::to_string(_value);
+to_pdx(PDXValue &val, const Filename &filename) {
+  val.set_float(_value);
 }
 
 /**

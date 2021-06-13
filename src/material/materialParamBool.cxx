@@ -19,13 +19,8 @@ TypeHandle MaterialParamBool::_type_handle;
  *
  */
 bool MaterialParamBool::
-from_string(const std::string &str, const DSearchPath &search_path) {
-  if (str == "0" || str == "no" || str == "off" || str == "false") {
-    _value = false;
-  } else {
-    _value = true;
-  }
-
+from_pdx(const PDXValue &val, const DSearchPath &search_path) {
+  _value = val.get_bool();
   return true;
 }
 
@@ -33,12 +28,8 @@ from_string(const std::string &str, const DSearchPath &search_path) {
  *
  */
 void MaterialParamBool::
-to_string(std::string &str, const Filename &filename) {
-  if (_value) {
-    str = "1";
-  } else {
-    str = "0";
-  }
+to_pdx(PDXValue &val, const Filename &filename) {
+  val.set_bool(_value);
 }
 
 /**

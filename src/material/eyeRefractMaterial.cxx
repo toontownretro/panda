@@ -15,8 +15,9 @@
 #include "string_utils.h"
 #include "materialParamTexture.h"
 #include "materialParamBool.h"
-#include "materialParamVector.h"
+#include "materialParamColor.h"
 #include "materialParamFloat.h"
+#include "pdxElement.h"
 
 TypeHandle EyeRefractMaterial::_type_handle;
 
@@ -33,75 +34,65 @@ EyeRefractMaterial(const std::string &name) :
  *
  */
 void EyeRefractMaterial::
-read_keyvalues(KeyValues *kv, const DSearchPath &search_path) {
-  for (size_t i = 0; i < kv->get_num_keys(); i++) {
-    std::string key = downcase(kv->get_key(i));
-    const std::string &value = kv->get_value(i);
+read_pdx(PDXElement *data, const DSearchPath &search_path) {
+  if (!data->has_attribute("parameters")) {
+    return;
+  }
 
-    if (key == "$iris") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$iris");
-      tex->from_string(value, search_path);
-      set_param(tex);
+  PDXElement *params = data->get_attribute_value("parameters").get_element();
+  if (params == nullptr) {
+    return;
+  }
 
-    } else if (key == "$corneatexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$corneatexture");
-      tex->from_string(value, search_path);
-      set_param(tex);
+  for (size_t i = 0; i < params->get_num_attributes(); i++) {
+    std::string key = downcase(params->get_attribute_name(i));
+    const PDXValue &val = params->get_attribute_value(i);
 
-    } else if (key == "$ambientoccltexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$ambientoccltexture");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    PT(MaterialParamBase) param;
 
-    } else if (key == "$envmap") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$envmap");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    if (key == "iris_texture") {
+      param = new MaterialParamTexture(key);
 
-    } else if (key == "$lightwarptexture") {
-      PT(MaterialParamTexture) tex = new MaterialParamTexture("$lightwarptexture");
-      tex->from_string(value, search_path);
-      set_param(tex);
+    } else if (key == "cornea_texture") {
+      param = new MaterialParamTexture(key);
 
-    } else if (key == "$glossiness") {
-      PT(MaterialParamFloat) gloss = new MaterialParamFloat("$glossiness");
-      gloss->from_string(value, search_path);
-      set_param(gloss);
+    } else if (key == "ambient_occl_texture") {
+      param = new MaterialParamTexture(key);
 
-    } else if (key == "$spheretexkillcombo") {
-      PT(MaterialParamBool) param = new MaterialParamBool("$spheretexkillcombo");
-      param->from_string(value, search_path);
+    } else if (key == "env_map") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "lightwarp_texture") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "glossiness") {
+      param = new MaterialParamFloat(key);
+
+    } else if (key == "sphere_texkill_combo") {
+      param = new MaterialParamBool(key);
+
+    } else if (key == "ray_trace_sphere") {
+      param = new MaterialParamBool(key);
+
+    } else if (key == "parallax_strength") {
+      param = new MaterialParamFloat(key);
+
+    } else if (key == "cornea_bump_strength") {
+      param = new MaterialParamFloat(key);
+
+    } else if (key == "ambient_occl_color") {
+      param = new MaterialParamColor(key);
+
+    } else if (key == "eyeball_radius") {
+      param = new MaterialParamFloat(key);
+
+    } else if (key == "dilation") {
+      param = new MaterialParamFloat(key);
+    }
+
+    if (param != nullptr) {
+      param->from_pdx(val, search_path);
       set_param(param);
-
-    } else if (key == "$raytracesphere") {
-      PT(MaterialParamBool) param = new MaterialParamBool("$raytracesphere");
-      param->from_string(value, search_path);
-      set_param(param);
-
-    } else if (key == "$parallaxstrength") {
-      PT(MaterialParamFloat) str = new MaterialParamFloat("$parallaxstrength");
-      str->from_string(value, search_path);
-      set_param(str);
-
-    } else if (key == "$corneabumpstrength") {
-      PT(MaterialParamFloat) str = new MaterialParamFloat("$corneabumpstrength");
-      str->from_string(value, search_path);
-      set_param(str);
-
-    } else if (key == "$ambientocclcolor") {
-      PT(MaterialParamVector) col = new MaterialParamVector("$ambientocclcolor");
-      col->from_string(value, search_path);
-      set_param(col);
-
-    } else if (key == "$eyeballradius") {
-      PT(MaterialParamFloat) rad = new MaterialParamFloat("$eyeballradius");
-      rad->from_string(value, search_path);
-      set_param(rad);
-
-    } else if (key == "$dilation") {
-      PT(MaterialParamFloat) dil = new MaterialParamFloat("$dilation");
-      dil->from_string(value, search_path);
-      set_param(dil);
     }
   }
 }

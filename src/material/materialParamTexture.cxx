@@ -21,9 +21,9 @@ TypeHandle MaterialParamTexture::_type_handle;
  *
  */
 bool MaterialParamTexture::
-from_string(const std::string &str, const DSearchPath &search_path) {
+from_pdx(const PDXValue &val, const DSearchPath &search_path) {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  Filename filename = str;
+  Filename filename = val.get_string();
   if (!vfs->resolve_filename(filename, search_path)) {
     return false;
   }
@@ -36,9 +36,9 @@ from_string(const std::string &str, const DSearchPath &search_path) {
  *
  */
 void MaterialParamTexture::
-to_string(std::string &str, const Filename &filename) {
+to_pdx(PDXValue &val, const Filename &filename) {
   if (_value == nullptr) {
-    str = "__null__";
+    val.set_string("__null__");
 
   } else {
     Filename out_filename = filename;
@@ -46,7 +46,7 @@ to_string(std::string &str, const Filename &filename) {
     Filename tex_filename = _value->get_fullpath();
     tex_filename.make_canonical();
     tex_filename.make_relative_to(out_filename.get_dirname());
-    str = tex_filename.get_fullpath();
+    val.set_string(tex_filename.get_fullpath());
   }
 }
 
