@@ -321,8 +321,8 @@ struct DPrimVert {
 
 struct DFace {
   unsigned short plane_num;
-  byte side; // faces opposite to the node's plane direction
-  byte on_node; // 1 of on node, 0 if in leaf
+  PN_byte side; // faces opposite to the node's plane direction
+  PN_byte on_node; // 1 of on node, 0 if in leaf
 
   int first_edge; // we must support > 64k edges
   short num_edges;
@@ -332,7 +332,7 @@ struct DFace {
   short surface_fog_volume_id;
 
   // lighting info
-  byte styles[MAXLIGHTMAPS];
+  PN_byte styles[MAXLIGHTMAPS];
   int lightofs; // start of [numstyles*surfsize] samples
   float area;
 
@@ -417,10 +417,10 @@ struct DLeaf {
 // and a sampling position encoded as a 0.8 fraction (mins=0,maxs=255) of the leaf's bounding box
 struct DLeafAmbientLighting {
   CompressedLightCube cube;
-  byte x; // fixed point fraction of leaf bounds
-	byte y; // fixed point fraction of leaf bounds
-	byte z; // fixed point fraction of leaf bounds
-	byte pad; // unused
+  PN_byte x; // fixed point fraction of leaf bounds
+	PN_byte y; // fixed point fraction of leaf bounds
+	PN_byte z; // fixed point fraction of leaf bounds
+	PN_byte pad; // unused
 
   INLINE static size_t get_size(int version);
   void read_datagram(DatagramIterator &dgi, int version);
@@ -440,8 +440,8 @@ struct DBrushSide {
   unsigned short plane_num; // facing out of the leaf
   short texinfo;
   short dispinfo; // displacement info (BSPVERSION 7)
-  byte bevel; // is the side a bevel plane? (BSPVERSION 7)
-  byte thin; // is a thin side?
+  PN_byte bevel; // is the side a bevel plane? (BSPVERSION 7)
+  PN_byte thin; // is a thin side?
 
   INLINE static size_t get_size(int version);
   void read_datagram(DatagramIterator &dgi, int version);

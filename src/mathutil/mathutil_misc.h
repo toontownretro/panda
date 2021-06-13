@@ -246,9 +246,6 @@ INLINE LVector3 GetLVector3_2(const float *vec)
 
 INLINE void swap_floats(float &a, float &b);
 
-template <class T>
-INLINE T clamp(T const &val, T const &minVal, T const &maxVal);
-
 BEGIN_PUBLISH
 INLINE float remap_val_clamped(float val, float A, float B, float C, float D);
 END_PUBLISH

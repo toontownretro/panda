@@ -252,9 +252,9 @@ update() {
 
     // Make sure the adjustment only lessens the effect, not magnify it or reverse it
     if (yaw_diff_original < 0.0f) {
-      yaw_diff_adjusted = clamp(yaw_diff_adjusted, yaw_diff_original, 0.0f);
+      yaw_diff_adjusted = std::clamp(yaw_diff_adjusted, yaw_diff_original, 0.0f);
     } else {
-      yaw_diff_adjusted = clamp(yaw_diff_adjusted, 0.0f, yaw_diff_original);
+      yaw_diff_adjusted = std::clamp(yaw_diff_adjusted, 0.0f, yaw_diff_original);
     }
 
     // Use pitch to dampen yaw
@@ -274,9 +274,9 @@ update() {
 
     // Make sure the adjustment only lessens the effect, not magnify it or reverse it
     if (pitch_diff_original < 0.0f) {
-      pitch_diff_adjusted = clamp(pitch_diff_adjusted, pitch_diff_original, 0.0f);
+      pitch_diff_adjusted = std::clamp(pitch_diff_adjusted, pitch_diff_original, 0.0f);
     } else {
-      pitch_diff_adjusted = clamp(pitch_diff_adjusted, 0.0f, pitch_diff_original);
+      pitch_diff_adjusted = std::clamp(pitch_diff_adjusted, 0.0f, pitch_diff_original);
     }
 
     _motion_blur_params[0][1] = pitch_diff_adjusted / vertical_fov;
@@ -293,7 +293,7 @@ update() {
     }
 
     // Scale and bias values after time adjustment
-    _motion_blur_params[0][2] = clamp((std::fabs(_motion_blur_params[0][2]) - motion_blur_falling_min) / (motion_blur_falling_max - motion_blur_falling_min),
+    _motion_blur_params[0][2] = std::clamp((std::fabs(_motion_blur_params[0][2]) - motion_blur_falling_min) / (motion_blur_falling_max - motion_blur_falling_min),
                                         0.0f, 1.0f) * (_motion_blur_params[0][2] >= 0.0f ? 1.0f : -1.0f);
     _motion_blur_params[0][2] /= 30.0f; // To counter-adjust for time adjustment above
 
@@ -307,7 +307,7 @@ update() {
     static float slow_fps = 30.0f;
     static float fast_fps = 50.0f;
     float current_fps = (time_elapsed > 0.0f) ? (1.0f / time_elapsed) : 0.0f;
-    float dampen_factor = clamp(((current_fps - slow_fps) / (fast_fps - slow_fps)), 0.0f, 1.0f);
+    float dampen_factor = std::clamp(((current_fps - slow_fps) / (fast_fps - slow_fps)), 0.0f, 1.0f);
 
     _motion_blur_params[0][0] *= dampen_factor;
     _motion_blur_params[0][1] *= dampen_factor;

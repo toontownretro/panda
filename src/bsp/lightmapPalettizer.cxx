@@ -31,9 +31,9 @@ get_byte_offset(int xel_size, int row_size, int face_size, int page, int x, int 
 void
 put_xel(PTA_uchar &img, int pos, LVector3f xel, bool hdr) {
   if (!hdr) {
-    unsigned char r = clamp((int)(xel[0] + 0.5), 0, 255);
-    unsigned char g = clamp((int)(xel[1] + 0.5), 0, 255);
-    unsigned char b = clamp((int)(xel[2] + 0.5), 0, 255);
+    unsigned char r = std::clamp((int)(xel[0] + 0.5), 0, 255);
+    unsigned char g = std::clamp((int)(xel[1] + 0.5), 0, 255);
+    unsigned char b = std::clamp((int)(xel[2] + 0.5), 0, 255);
     img.set_element(pos++, b);
     img.set_element(pos++, g);
     img.set_element(pos++, r);
@@ -76,8 +76,8 @@ blit_lightmap_bits(const BSPData *data, LightmapPalette::Entry *entry,
 
       // Now determine the luxel to sample.  Clamp the X and Y to the lightmap
       // size not including the border.
-      int luxel_x = clamp(x - border, 0, width - 1);
-      int luxel_y = clamp(y - border, 0, height - 1);
+      int luxel_x = std::clamp(x - border, 0, width - 1);
+      int luxel_y = std::clamp(y - border, 0, height - 1);
       int luxel = (luxel_y * width) + luxel_x;
 
       const ColorRGBExp32 *sample;

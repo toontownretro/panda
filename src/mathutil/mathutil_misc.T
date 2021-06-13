@@ -13,18 +13,6 @@
  * Miscellaneous math utility functions.
  */
 
-template <class T>
-INLINE T
-clamp(T const &val, T const &minVal, T const &maxVal) {
-  if (val < minVal) {
-    return minVal;
-  } else if (val > maxVal) {
-    return maxVal;
-  } else {
-    return val;
-  }
-}
-
 // Returns A + (B-A)*flPercent.
 // float Lerp( float flPercent, float A, float B );
 template <class T>

@@ -166,7 +166,7 @@ apply_aperature_priority(float focal_length, float target_ev, float &aperature,
 	float ev_diff = target_ev - compute_ev(aperature, shutter_speed, iso);
 
 	// Compute the final shutter speed.
-	shutter_speed = clamp(shutter_speed * std::pow(2.0f, -ev_diff),
+	shutter_speed = std::clamp(shutter_speed * std::pow(2.0f, -ev_diff),
 											  (float)hdr_min_shutter, (float)hdr_max_shutter);
 }
 
@@ -189,7 +189,7 @@ apply_shutter_priority(float focal_length, float target_ev, float &aperature,
 	float ev_diff = target_ev - compute_ev(aperature, shutter_speed, iso);
 
 	// Compute the final aperature.
-	aperature = clamp(aperature * std::pow(std::sqrt(2.0f), ev_diff),
+	aperature = std::clamp(aperature * std::pow(std::sqrt(2.0f), ev_diff),
 										(float)hdr_min_aperature, (float)hdr_max_aperature);
 }
 
@@ -211,12 +211,12 @@ apply_program_auto(float focal_length, float target_ev, float &aperature,
 
 	// Apply half the difference in EV to the aperture.
 	float ev_diff = target_ev - compute_ev(aperature, shutter_speed, iso);
-	aperature = clamp(aperature * std::pow(std::sqrt(2.0f), ev_diff * 0.5f),
+	aperature = std::clamp(aperature * std::pow(std::sqrt(2.0f), ev_diff * 0.5f),
 										(float)hdr_min_aperature, (float)hdr_max_aperature);
 
 	// Apply the remaining difference to the shutter speed.
 	ev_diff = target_ev - compute_ev(aperature, shutter_speed, iso);
-	shutter_speed = clamp(shutter_speed * std::pow(2.0f, -ev_diff),
+	shutter_speed = std::clamp(shutter_speed * std::pow(2.0f, -ev_diff),
 											  (float)hdr_min_shutter, (float)hdr_max_shutter);
 }
 

@@ -68,8 +68,8 @@ add_block(int width, int height, int *return_x, int *return_y) {
 #ifdef ADD_ONE_TEXEL_BORDER
   width += _border * 2;
   height += _border * 2;
-  width = clamp(width, 0, _max_width);
-  height = clamp(height, 0, _max_height);
+  width = std::clamp(width, 0, _max_width);
+  height = std::clamp(height, 0, _max_height);
 #endif
 
   // If we've already determined that a block this big couldn't fit

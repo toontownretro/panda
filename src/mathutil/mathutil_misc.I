@@ -71,7 +71,7 @@ remap_val_clamped(float val, float A, float B, float C, float D) {
   }
 
   float cVal = (val - A) / (B - A);
-  cVal = clamp(cVal, 0.0f, 1.0f);
+  cVal = std::clamp(cVal, 0.0f, 1.0f);
 
   return C + (D - C) * cVal;
 }

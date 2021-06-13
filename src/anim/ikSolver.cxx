@@ -149,7 +149,7 @@ solve_ik(const LPoint3 &root_pos, const LPoint3 &joint_pos, const LPoint3 &end_p
     const PN_stdfloat scale_range = max_stretch_scale - start_stretch_ratio;
     if (scale_range > 0.01f && max_limb_length > 0.01f) {
       const PN_stdfloat reach_ratio = desired_length / max_limb_length;
-      const PN_stdfloat scaling_factor = (max_stretch_scale - 1.0f) * clamp(
+      const PN_stdfloat scaling_factor = (max_stretch_scale - 1.0f) * std::clamp(
         (reach_ratio - start_stretch_ratio) / scale_range, 0.0f, 1.0f);
 
       if (scaling_factor > 0.01f) {
