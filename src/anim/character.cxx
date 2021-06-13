@@ -495,6 +495,10 @@ copy_subgraph() const {
     copy->_sliders.push_back(_sliders[i]);
   }
 
+  copy->_animations = _animations;
+  copy->_sequences = _sequences;
+  copy->_pose_parameters = _pose_parameters;
+
   return copy;
 }
 
