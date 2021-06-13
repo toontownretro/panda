@@ -18,13 +18,18 @@
 #include "referenceCount.h"
 #include "namable.h"
 
+class BamWriter;
+class Datagram;
+class BamReader;
+class DatagramIterator;
+
 /**
  * A parameter used as input for animation blend nodes.  Can be shared between
  * multiple nodes.
  */
 class EXPCL_PANDA_ANIM PoseParameter : public Namable {
 PUBLISHED:
-  INLINE PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, bool looping = false);
+  INLINE PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, PN_stdfloat looping = 0.0f);
   INLINE PoseParameter(PoseParameter &&other);
   INLINE PoseParameter(const PoseParameter &copy);
   INLINE void operator = (const PoseParameter &copy);
@@ -39,14 +44,20 @@ PUBLISHED:
   INLINE void set_value(PN_stdfloat value);
   INLINE PN_stdfloat get_value() const;
 
-  INLINE void set_looping(bool looping);
-  INLINE bool get_looping() const;
+  INLINE void set_looping(PN_stdfloat loop);
+  INLINE PN_stdfloat get_looping() const;
+
+public:
+  PoseParameter() = default;
+
+  void write_datagram(BamWriter *manager, Datagram &dg);
+  void fillin(DatagramIterator &scan, BamReader *manager);
 
 private:
-  PN_stdfloat _min;
-  PN_stdfloat _max;
-  PN_stdfloat _value;
-  bool _looping;
+  PN_stdfloat _min = 0.0f;
+  PN_stdfloat _max = 0.0f;
+  PN_stdfloat _value = 0.0f;
+  PN_stdfloat _looping = 0.0f;
 
 public:
   static TypeHandle get_class_type() {

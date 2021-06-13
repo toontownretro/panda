@@ -13,6 +13,7 @@
 
 #include "weightList.h"
 #include "character.h"
+#include "bamReader.h"
 
 TypeHandle WeightList::_type_handle;
 
@@ -44,5 +45,51 @@ r_fill_weights(Character *character, const WeightListDesc &desc,
 
   for (int i = 0; i < character->get_joint_num_children(joint); i++) {
     r_fill_weights(character, desc, character->get_joint_child(joint, i), weight);
+  }
+}
+
+/**
+ *
+ */
+void WeightList::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+void WeightList::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  dg.add_string(get_name());
+  dg.add_uint32(_weights.size());
+  for (size_t i = 0; i < _weights.size(); i++) {
+    dg.add_stdfloat(_weights[i]);
+  }
+}
+
+/**
+ *
+ */
+TypedWritable *WeightList::
+make_from_bam(const FactoryParams &params) {
+  WeightList *wl = new WeightList;
+  BamReader *manager;
+  DatagramIterator scan;
+
+  parse_params(params, scan, manager);
+  wl->fillin(scan, manager);
+  return wl;
+}
+
+/**
+ *
+ */
+void WeightList::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  set_name(scan.get_string());
+  _weights.resize(scan.get_uint32());
+  for (size_t i = 0; i < _weights.size(); i++) {
+    _weights[i] = scan.get_stdfloat();
   }
 }

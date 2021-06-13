@@ -15,7 +15,7 @@
  *
  */
 INLINE PoseParameter::
-PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, bool looping) :
+PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, PN_stdfloat looping) :
   Namable(name),
   _min(min),
   _max(max),
@@ -128,14 +128,14 @@ get_value() const {
  *
  */
 INLINE void PoseParameter::
-set_looping(bool looping) {
+set_looping(PN_stdfloat looping) {
   _looping = looping;
 }
 
 /**
  *
  */
-INLINE bool PoseParameter::
+INLINE PN_stdfloat PoseParameter::
 get_looping() const {
   return _looping;
 }

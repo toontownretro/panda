@@ -163,4 +163,6 @@ init_libanim() {
   CharacterJointEffect::register_with_read_factory();
   CharacterVertexSlider::register_with_read_factory();
   JointVertexTransform::register_with_read_factory();
+
+  WeightList::register_with_read_factory();
 }

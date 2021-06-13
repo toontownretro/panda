@@ -228,6 +228,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_int16(_slider_map[i]);
   }
 
+  me.add_bool(_has_character_bound);
 }
 
 /**
@@ -277,6 +278,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < _slider_map.size(); i++) {
     _slider_map[i] = scan.get_int16();
   }
+
+  _has_character_bound = scan.get_bool();
 }
 
 /**

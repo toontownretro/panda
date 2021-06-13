@@ -19,8 +19,10 @@
 #include "numeric_types.h"
 #include "namable.h"
 #include "referenceCount.h"
+#include "typedWritableReferenceCount.h"
 
 class Character;
+class FactoryParams;
 
 /**
  * A descriptor for a joint weighting table.  Used to create a WeightList
@@ -34,6 +36,9 @@ PUBLISHED:
   INLINE PN_stdfloat get_weight(const std::string &joint) const;
   INLINE bool has_weight(const std::string &joint) const;
 
+public:
+  INLINE void set_weights(const pmap<std::string, PN_stdfloat> &weights);
+
 private:
   typedef pmap<std::string, PN_stdfloat> Weights;
   Weights _weights;
@@ -44,7 +49,7 @@ private:
 /**
  *
  */
-class EXPCL_PANDA_ANIM WeightList : public ReferenceCount, public Namable {
+class EXPCL_PANDA_ANIM WeightList : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
   WeightList(Character *character, const WeightListDesc &desc);
 
@@ -52,6 +57,8 @@ PUBLISHED:
   INLINE PN_stdfloat get_weight(size_t n) const;
 
 private:
+  WeightList() = default;
+
   void r_fill_weights(Character *character, const WeightListDesc &desc,
                       int joint, PN_stdfloat weight);
 
@@ -59,16 +66,28 @@ private:
   Weights _weights;
 
 public:
+  static void register_with_read_factory();
+  virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
+
+protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  void fillin(DatagramIterator &scan, BamReader *manager);
+
+public:
   static TypeHandle get_class_type() {
     return _type_handle;
   }
   static void init_type() {
+    TypedWritableReferenceCount::init_type();
     Namable::init_type();
-    ReferenceCount::init_type();
     register_type(_type_handle, "WeightList",
-                  Namable::get_class_type(),
-                  ReferenceCount::get_class_type());
+                  TypedWritableReferenceCount::get_class_type(),
+                  Namable::get_class_type());
   }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
 
 private:
   static TypeHandle _type_handle;

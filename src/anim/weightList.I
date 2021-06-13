@@ -53,6 +53,14 @@ has_weight(const std::string &name) const {
 /**
  *
  */
+INLINE void WeightListDesc::
+set_weights(const pmap<std::string, PN_stdfloat> &weights) {
+  _weights = weights;
+}
+
+/**
+ *
+ */
 INLINE size_t WeightList::
 get_num_weights() const {
   return _weights.size();

@@ -768,6 +768,21 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _sliders[i].write_datagram(me);
   }
 
+  me.add_uint8(_pose_parameters.size());
+  for (size_t i = 0; i < _pose_parameters.size(); i++) {
+    _pose_parameters[i].write_datagram(manager, me);
+  }
+
+  me.add_uint16(_animations.size());
+  for (size_t i = 0; i < _animations.size(); i++) {
+    manager->write_pointer(me, _animations[i]);
+  }
+
+  me.add_uint16(_sequences.size());
+  for (size_t i = 0; i < _sequences.size(); i++) {
+    manager->write_pointer(me, _sequences[i]);
+  }
+
   manager->write_pointer(me, _anim_preload.get_read_pointer());
 
   manager->write_cdata(me, _cycler);
@@ -789,6 +804,14 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
          ++ni) {
       (*ni) = DCAST(PandaNode, p_list[pi++]);
     }
+  }
+
+  for (size_t i = 0; i < _animations.size(); i++) {
+    _animations[i] = DCAST(AnimBundle, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _sequences.size(); i++) {
+    _sequences[i] = DCAST(AnimSequence, p_list[pi++]);
   }
 
   _anim_preload = DCAST(AnimPreloadTable, p_list[pi++]);
@@ -842,6 +865,17 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < _sliders.size(); i++) {
     _sliders[i].read_datagram(scan);
   }
+
+  _pose_parameters.resize(scan.get_uint8());
+  for (size_t i = 0; i < _pose_parameters.size(); i++) {
+    _pose_parameters[i].fillin(scan, manager);
+  }
+
+  _animations.resize(scan.get_uint16());
+  manager->read_pointers(scan, _animations.size());
+
+  _sequences.resize(scan.get_uint16());
+  manager->read_pointers(scan, _sequences.size());
 
   manager->read_pointer(scan);
 
