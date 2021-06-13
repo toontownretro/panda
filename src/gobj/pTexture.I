@@ -12,53 +12,12 @@
  */
 
 /**
- * Returns the name of the texture.  This is the basename of the filename the
- * texture originated from.
- */
-INLINE std::string PTexture::
-get_name() const {
-  return _filename.get_basename_wo_extension();
-}
-
-/**
- * Sets the filename of the texture.
- */
-INLINE void PTexture::
-set_filename(const Filename &filename) {
-  _filename = filename;
-}
-
-/**
- * Returns the filename of the texture.
- */
-INLINE const Filename &PTexture::
-get_filename() const {
-  return _filename;
-}
-
-/**
- * Sets the fullpath of the texture.
- */
-INLINE void PTexture::
-set_fullpath(const Filename &fullpath) {
-  _fullpath = fullpath;
-}
-
-/**
- * Returns the fullpath of the texture.
- */
-INLINE const Filename &PTexture::
-get_fullpath() const {
-  return _fullpath;
-}
-
-/**
  * Sets the filename of the texture image.
  */
 INLINE void PTexture::
 set_image_filename(const Filename &filename) {
   _image_filename = filename;
-  if (_texture_type == TT_3d_texture || _texture_type == TT_cube_map) {
+  if (_texture_type == Texture::TT_3d_texture || _texture_type == Texture::TT_cube_map) {
     _image_filename.set_pattern(true);
   } else {
     _image_filename.set_pattern(false);
@@ -79,7 +38,7 @@ get_image_filename() const {
 INLINE void PTexture::
 set_image_fullpath(const Filename &fullpath) {
   _image_fullpath = fullpath;
-  if (_texture_type == TT_3d_texture || _texture_type == TT_cube_map) {
+  if (_texture_type == Texture::TT_3d_texture || _texture_type == Texture::TT_cube_map) {
     _image_fullpath.set_pattern(true);
   } else {
     _image_fullpath.set_pattern(false);
@@ -139,13 +98,13 @@ has_alpha_image_filename() const {
  * Sets the texture type.
  */
 INLINE void PTexture::
-set_texture_type(TextureType type) {
+set_texture_type(Texture::TextureType type) {
   _texture_type = type;
-  if (_texture_type == TT_cube_map) {
+  if (_texture_type == Texture::TT_cube_map) {
     set_num_pages(6);
   }
 
-  if (_texture_type == TT_cube_map || _texture_type == TT_3d_texture) {
+  if (_texture_type == Texture::TT_cube_map || _texture_type == Texture::TT_3d_texture) {
     _image_filename.set_pattern(true);
     _image_fullpath.set_pattern(true);
   } else {
@@ -157,7 +116,7 @@ set_texture_type(TextureType type) {
 /**
  * Returns the texture type.
  */
-INLINE PTexture::TextureType PTexture::
+INLINE Texture::TextureType PTexture::
 get_texture_type() const {
   return _texture_type;
 }
@@ -166,14 +125,14 @@ get_texture_type() const {
  * Sets the image format of the texture.
  */
 INLINE void PTexture::
-set_format(Format format) {
+set_format(Texture::Format format) {
   _format = format;
 }
 
 /**
  * Returns the image format of the texture.
  */
-INLINE PTexture::Format PTexture::
+INLINE Texture::Format PTexture::
 get_format() const {
   return _format;
 }
@@ -182,14 +141,14 @@ get_format() const {
  * Sets the U-axis wrapping mode of the texture.
  */
 INLINE void PTexture::
-set_wrap_u(WrapMode mode) {
+set_wrap_u(Texture::WrapMode mode) {
   _wrap_u = mode;
 }
 
 /**
  * Returns the U-axis wrapping mode of the texture.
  */
-INLINE PTexture::WrapMode PTexture::
+INLINE Texture::WrapMode PTexture::
 get_wrap_u() const {
   return _wrap_u;
 }
@@ -198,14 +157,14 @@ get_wrap_u() const {
  * Sets the V-axis wrapping mode of the texture.
  */
 INLINE void PTexture::
-set_wrap_v(WrapMode mode) {
+set_wrap_v(Texture::WrapMode mode) {
   _wrap_v = mode;
 }
 
 /**
  * Returns the V-axis wrapping mode of the texture.
  */
-INLINE PTexture::WrapMode PTexture::
+INLINE Texture::WrapMode PTexture::
 get_wrap_v() const {
   return _wrap_v;
 }
@@ -214,14 +173,14 @@ get_wrap_v() const {
  * Sets the W-axis wrapping mode of the texture.
  */
 INLINE void PTexture::
-set_wrap_w(WrapMode mode) {
+set_wrap_w(Texture::WrapMode mode) {
   _wrap_w = mode;
 }
 
 /**
  * Returns the W-axis wrapping mode of the texture.
  */
-INLINE PTexture::WrapMode PTexture::
+INLINE Texture::WrapMode PTexture::
 get_wrap_w() const {
   return _wrap_w;
 }
@@ -230,14 +189,14 @@ get_wrap_w() const {
  * Sets the minfilter of the texture.
  */
 INLINE void PTexture::
-set_minfilter(FilterType type) {
+set_minfilter(Texture::FilterType type) {
   _min_filter = type;
 }
 
 /**
  * Returns the minfilter of the texture.
  */
-INLINE PTexture::FilterType PTexture::
+INLINE Texture::FilterType PTexture::
 get_minfilter() const {
   return _min_filter;
 }
@@ -246,14 +205,14 @@ get_minfilter() const {
  * Sets the magfilter of the texture.
  */
 INLINE void PTexture::
-set_magfilter(FilterType type) {
+set_magfilter(Texture::FilterType type) {
   _mag_filter = type;
 }
 
 /**
  * Returns the magfilter of the texture.
  */
-INLINE PTexture::FilterType PTexture::
+INLINE Texture::FilterType PTexture::
 get_magfilter() const {
   return _mag_filter;
 }
@@ -432,14 +391,14 @@ clear_anisotropic_degree() {
  * Sets the quality level of the texture.
  */
 INLINE void PTexture::
-set_quality(QualityLevel quality) {
+set_quality(Texture::QualityLevel quality) {
   _quality = quality;
 }
 
 /**
  * Returns the quality level of the texture.
  */
-INLINE PTexture::QualityLevel PTexture::
+INLINE Texture::QualityLevel PTexture::
 get_quality() const {
   return _quality;
 }
@@ -448,14 +407,14 @@ get_quality() const {
  * Sets the compression mode of the texture.
  */
 INLINE void PTexture::
-set_compression(CompressionMode mode) {
+set_compression(Texture::CompressionMode mode) {
   _compression = mode;
 }
 
 /**
  * Returns the compression mode of the texture.
  */
-INLINE PTexture::CompressionMode PTexture::
+INLINE Texture::CompressionMode PTexture::
 get_compression() const {
   return _compression;
 }

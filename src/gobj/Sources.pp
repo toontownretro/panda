@@ -6,7 +6,7 @@
 #begin lib_target
   #define TARGET gobj
   #define LOCAL_LIBS \
-    pstatclient event linmath mathutil pnmimage gsgbase putil
+    pstatclient event linmath mathutil pnmimage gsgbase putil pdx
 
   #define BUILDING_DLL BUILDING_PANDA_GOBJ
 
@@ -55,6 +55,7 @@
     paramTexture.I paramTexture.h \
     perspectiveLens.h \
     preparedGraphicsObjects.I preparedGraphicsObjects.h \
+    pTexture.I pTexture.h \
     queryContext.I queryContext.h \
     samplerContext.I samplerContext.h \
     samplerState.I samplerState.h \
@@ -142,6 +143,7 @@
     paramTexture.cxx \
     perspectiveLens.cxx \
     preparedGraphicsObjects.cxx \
+    pTexture.cxx \
     queryContext.cxx \
     samplerContext.cxx \
     samplerState.cxx \
@@ -230,6 +232,7 @@
     paramTexture.I paramTexture.h \
     perspectiveLens.I perspectiveLens.h \
     preparedGraphicsObjects.I preparedGraphicsObjects.h \
+    pTexture.I pTexture.h \
     queryContext.I queryContext.h \
     samplerContext.I samplerContext.h \
     samplerState.I samplerState.h \

@@ -53,7 +53,7 @@ class PreparedGraphicsObjects;
 class CullTraverser;
 class CullTraverserData;
 class TexturePeeker;
-class PTexture;
+class PDXElement;
 struct DDSHeader;
 
 /**
@@ -300,7 +300,7 @@ PUBLISHED:
   BLOCKING bool write_txo(std::ostream &out, const std::string &filename = "") const;
   BLOCKING bool read_dds(std::istream &in, const std::string &filename = "", bool header_only = false);
   BLOCKING bool read_ktx(std::istream &in, const std::string &filename = "", bool header_only = false);
-  BLOCKING bool read_ptex(PTexture *ptex, bool header_only = false);
+  BLOCKING bool read_ptex(PDXElement *data, const Filename &filename = "", bool header_only = false);
 
   BLOCKING INLINE bool load(const PNMImage &pnmimage, const LoaderOptions &options = LoaderOptions());
   BLOCKING INLINE bool load(const PNMImage &pnmimage, int z, int n, const LoaderOptions &options = LoaderOptions());
@@ -639,6 +639,7 @@ public:
   static bool has_binary_alpha(Format format);
   static bool is_srgb(Format format);
   static bool is_integer(Format format);
+  static int get_channel_count(Format format);
 
   static bool adjust_size(int &x_size, int &y_size, const std::string &name,
                           bool for_padding, AutoTextureScale auto_texture_scale = ATS_unspecified);
@@ -689,7 +690,7 @@ protected:
   bool do_read_ktx_file(CData *cdata, const Filename &fullpath, bool header_only);
   bool do_read_ktx(CData *cdata, std::istream &in, const std::string &filename, bool header_only);
   bool do_read_ptex_file(CData *cdata, const Filename &fullpath, bool header_only);
-  bool do_read_ptex(CData *cdata, PTexture *ptex, bool header_only);
+  bool do_read_ptex(CData *cdata, PDXElement *data, const Filename &fullpath, bool header_only);
 
   bool do_write(CData *cdata, const Filename &fullpath, int z, int n,
                 bool write_pages, bool write_mipmaps);

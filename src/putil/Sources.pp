@@ -66,7 +66,6 @@
     pointerData.h pointerData.I \
     portalMask.h \
     pta_ushort.h \
-    pTexture.I pTexture.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
     timedCycle.I timedCycle.h \
@@ -124,7 +123,6 @@
     pbitops.cxx \
     pointerData.cxx \
     pta_ushort.cxx \
-    pTexture.cxx \
     simpleHashMap.cxx \
     sparseArray.cxx \
     timedCycle.cxx \
@@ -192,7 +190,6 @@
     pointerData.h pointerData.I \
     portalMask.h \
     pta_ushort.h \
-    pTexture.I pTexture.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
     timedCycle.I timedCycle.h \
