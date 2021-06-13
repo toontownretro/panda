@@ -51,6 +51,8 @@ PUBLISHED:
 
     // Explicit frame rate.
     F_frame_rate = 1 << 9,
+
+    F_real_time = 1 << 10,
   };
 
   class EXPCL_PANDA_ANIM AnimEvent {

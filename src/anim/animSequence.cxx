@@ -202,6 +202,14 @@ evaluate(AnimGraphEvalContext &context) {
   if (_base != nullptr) {
     AnimGraphEvalContext base_ctx(context);
     base_ctx._looping = has_flags(F_looping);
+    if (has_flags(F_real_time)) {
+      // Compute cycle from current rendering time instead of relative to
+      // the start time of the sequence.
+      PN_stdfloat cps = get_cycles_per_second();
+      base_ctx._cycle = ClockObject::get_global_clock()->get_frame_time() * cps;
+      base_ctx._cycle -= (int)base_ctx._cycle;
+    }
+
     _base->evaluate(base_ctx);
 
     // Zero out requested root translational axes.  This is done when a
