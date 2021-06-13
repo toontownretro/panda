@@ -20,6 +20,7 @@ Token() {
   _newline = true;
   _line_number = -1;
   _next = nullptr;
+  _type = TT_invalid;
 }
 
 /**

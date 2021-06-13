@@ -42,7 +42,7 @@ main(int argc, char *argv[]) {
   }
 
   while (tokenfile->next_token(true)) {
-    std::cout << tokenfile->get_token() << "\n";
+    std::cout << tokenfile->get_token_type() << " : " << tokenfile->get_token() << "\n";
   }
 
   return 0;

@@ -23,21 +23,39 @@
 NotifyCategoryDecl(tokenfile, EXPCL_PANDA_PUTIL, EXPTP_PANDA_PUTIL);
 
 /**
- * Generic script file tokenizer with nested block support.  File is chopped
- * up into tokens that can be iterated through and interpreted as needed.
+ * Generic text file tokenizer.  File is chopped up into tokens that can be
+ * iterated through and interpreted as needed.
  */
 class EXPCL_PANDA_PUTIL TokenFile : public ReferenceCount {
 PUBLISHED:
+  enum TokenType {
+    TT_invalid = -1,
+
+    // "example?!{}[]"
+    TT_string,
+    // ? ! : { } [ ] .
+    TT_symbol,
+    // 1 2 3 -4 -5
+    TT_integer,
+    // 0.1 2.3 -4.5
+    TT_float,
+    // Non-quoted, non-spaced set of letters only.
+    TT_word,
+  };
+
   class Token {
   public:
     INLINE Token();
 
     std::string _data;
+    PN_stdfloat _numeric_data;
     // Is the token on a new line?
     bool _newline;
     int _line_number;
 
     Token *_next;
+
+    TokenType _type;
   };
 
   INLINE TokenFile();
@@ -51,6 +69,8 @@ PUBLISHED:
   bool token_available(bool cross_line = false) const;
 
   std::string get_token() const;
+  PN_stdfloat get_numeric_token() const;
+  TokenType get_token_type() const;
 
   INLINE const Filename &get_filename() const;
   INLINE const Filename &get_fullpath() const;

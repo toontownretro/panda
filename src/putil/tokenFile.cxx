@@ -18,6 +18,17 @@
 
 NotifyCategoryDef(tokenfile, "util");
 
+// Characters that are classified as symbols.
+static const char *symbols = "{}[]<>():,;=";
+
+/**
+ * Returns true if the character is a valid word character, false otherwise.
+ */
+bool
+is_word_character(char c) {
+  return strchr(symbols, c) == nullptr && c != '"';
+}
+
 /**
  *
  */
@@ -116,18 +127,17 @@ tokenize(std::istream &is) {
   StreamReader reader(&is, false);
 
   std::string current_token;
-  char quote_character = 0;
-  bool quoted_string = false;
   bool comment = false;
   bool new_line = true;
   bool line_escape = false;
+  TokenType token_type = TT_invalid;
   int line_number = 1;
 
   while (is.tellg() < length) {
     const char c = reader.get_int8();
 
     // Check for a comment.
-    if (!quoted_string && !comment && c == '/' && is.tellg() < length) {
+    if (token_type != TT_string && !comment && c == '/' && is.tellg() < length) {
       const char next = reader.get_int8();
       if (next == '/') {
         comment = true;
@@ -138,9 +148,11 @@ tokenize(std::istream &is) {
           tok->_data = current_token;
           tok->_newline = new_line;
           tok->_line_number = line_number;
+          tok->_type = token_type;
           add_token(tok);
           new_line = false;
           current_token.clear();
+          token_type = TT_invalid;
         }
 
         continue;
@@ -151,7 +163,7 @@ tokenize(std::istream &is) {
       }
     }
 
-    if (c == '\\') {
+    if (c == '\\' && token_type != TT_string) {
       line_escape = true;
     } else if (c != '\n' && c != '\r' && c != ' ' && c != '\t') {
       line_escape = false;
@@ -177,7 +189,7 @@ tokenize(std::istream &is) {
         // Line break always ends a comment.
         comment = false;
 
-      } else if (quoted_string) {
+      } else if (token_type == TT_string) {
         // Got a line break but quoted string was not closed.
         tokenfile_cat.error()
           << "Unclosed quoted string at line break (line " << line_number << ").\n";
@@ -189,8 +201,10 @@ tokenize(std::istream &is) {
         tok->_data = current_token;
         tok->_newline = new_line;
         tok->_line_number = line_number;
+        tok->_type = token_type;
         add_token(tok);
         current_token.clear();
+        token_type = TT_invalid;
       }
 
       new_line = !line_escape;
@@ -204,7 +218,7 @@ tokenize(std::istream &is) {
     } else if (c == ' ' || c == '\t') {
       // Whitespace.  If we're in a quoted string, add it to the token.
       // Otherwise, it's the end of a token.
-      if (quoted_string) {
+      if (token_type == TT_string) {
         current_token += c;
 
       } else if (current_token.length() != 0) {
@@ -213,49 +227,156 @@ tokenize(std::istream &is) {
         tok->_data = current_token;
         tok->_newline = new_line;
         tok->_line_number = line_number;
+        tok->_type = token_type;
         add_token(tok);
         new_line = false;
         current_token.clear();
+        token_type = TT_invalid;
       }
 
-    } else if (quoted_string && c == quote_character) {
-      // End of a quoted string, end of the token.
-      Token *tok = new Token;
-      tok->_data = current_token;
-      tok->_newline = new_line;
-      tok->_line_number = line_number;
-      add_token(tok);
-      new_line = false;
-      current_token.clear();
-      quoted_string = false;
-      quote_character = 0;
+    } else if (current_token.length() == 0 && token_type != TT_string) {
+      // Beginning of a token.  Determine the token type.
 
-    } else if (!quoted_string && c == '"') {
-      // Beginning of a quoted string.  Quotes don't get added to the token.
-      quoted_string = true;
-      quote_character = c;
+      if (c == '"') {
+        token_type = TT_string;
 
-      // Should also end the current token.
-      if (current_token.length() != 0) {
-        Token *tok = new Token;
-        tok->_data = current_token;
-        tok->_newline = new_line;
-        tok->_line_number = line_number;
-        add_token(tok);
-        new_line = false;
-        current_token.clear();
+      } else {
+        if (c == '+' || c == '-' || c == '.') {
+          // This might be the beginning of a numeric token.  Look ahead to
+          // confirm it.
+          bool got_numeric = false;
+
+          if (is.tellg() < length) {
+            unsigned char next = reader.get_int8();
+            if (c == '.') {
+              // If it's a dot, the next character must be a digit to be numeric.
+              if (isdigit(next)) {
+                token_type = TT_float;
+                got_numeric = true;
+              }
+
+            } else if (next == '.') {
+              // If the current character is + or -, and the next character is a dot,
+              // then the character after that must be a digit.
+              if (is.tellg() < length) {
+                unsigned char nextnext = reader.get_int8();
+                if (isdigit(nextnext)) {
+                  token_type = TT_float;
+                  got_numeric = true;
+                }
+
+                is.seekg((std::streamoff)-1, std::ios::cur);
+              }
+
+            } else if (isdigit(next)) {
+              token_type = TT_integer;
+              got_numeric = true;
+            }
+
+            is.seekg((std::streamoff)-1, std::ios::cur);
+          }
+
+          if (!got_numeric) {
+            // It's just a symbol then.
+            token_type = TT_symbol;
+          }
+
+        } else if (isdigit(c)) {
+          token_type = TT_integer;
+
+        } else if (strchr(symbols, c) == nullptr) {
+          // It's the beginning of a word
+          token_type = TT_word;
+
+        } else {
+          token_type = TT_symbol;
+        }
+
+        current_token += c;
+
+        if (token_type == TT_symbol) {
+          // Each individual symbol is a token.
+          Token *tok = new Token;
+          tok->_data = current_token;
+          tok->_newline = new_line;
+          tok->_line_number = line_number;
+          tok->_type = token_type;
+          add_token(tok);
+          new_line = false;
+          current_token.clear();
+          token_type = TT_invalid;
+        }
       }
-
     } else {
-      // Token character.
-      current_token += c;
+      assert(token_type != TT_symbol);
+
+      // In a token.
+      if (token_type == TT_string) {
+        if (c == '"') {
+          // End of the string.
+          Token *tok = new Token;
+          tok->_data = current_token;
+          tok->_newline = new_line;
+          tok->_line_number = line_number;
+          tok->_type = token_type;
+          add_token(tok);
+          new_line = false;
+          current_token.clear();
+          token_type = TT_invalid;
+        } else {
+          // Add all characters to the quoted string.
+          current_token += c;
+        }
+
+      } else if (token_type == TT_word) {
+
+        if (!is_word_character(c)) {
+          // We are in a word and this character is not a valid word character.
+          // End of word.
+          Token *tok = new Token;
+          tok->_data = current_token;
+          tok->_newline = new_line;
+          tok->_line_number = line_number;
+          tok->_type = token_type;
+          token_type = TT_invalid;
+          add_token(tok);
+          new_line = false;
+          current_token.clear();
+
+          // Move back to process this character next iteration.
+          is.seekg((std::streamoff)-1, std::ios::cur);
+        } else {
+          current_token += c;
+        }
+
+      } else if (token_type == TT_integer || token_type == TT_float) {
+        if (isdigit(c) || c == '-' || c == '+' || c == '.' || c == 'E' || c == 'e') {
+          if (c == '.') {
+            token_type = TT_float;
+          }
+          current_token += c;
+        } else {
+          Token *tok = new Token;
+          tok->_data = current_token;
+          tok->_newline = new_line;
+          tok->_line_number = line_number;
+          tok->_type = token_type;
+          token_type = TT_invalid;
+          add_token(tok);
+          new_line = false;
+          current_token.clear();
+
+          // Move back to process this character next iteration.
+          is.seekg((std::streamoff)-1, std::ios::cur);
+        }
+      }
     }
   }
 
   // Move to head of token list.
   _token = _tokens;
 
-  if (quoted_string) {
+  if (token_type == TT_string) {
     tokenfile_cat.error()
       << "Unclosed quoted string at end-of-file.\n";
     return false;
@@ -332,10 +453,39 @@ get_token() const {
 }
 
 /**
+ * Returns the numeric value of the currently stored token, or 0 if the token
+ * is not numeric or there is no current token.
+ */
+PN_stdfloat TokenFile::
+get_numeric_token() const {
+  if (_token == nullptr || (_token->_type != TT_integer && _token->_type != TT_float)) {
+    return 0.0;
+  }
+
+  return _token->_numeric_data;
+}
+
+/**
+ * Returns the type of the current token, or TT_invalid if there is no current
+ * token.
+ */
+TokenFile::TokenType TokenFile::
+get_token_type() const {
+  if (_token == nullptr) {
+    return TT_invalid;
+  }
+
+  return _token->_type;
+}
+
+/**
  *
  */
 void TokenFile::
 add_token(Token *tok) {
   _token->_next = tok;
   _token = tok;
+  if (tok->_type == TT_integer || tok->_type == TT_float) {
+    tok->_numeric_data = atof(tok->_data.c_str());
+  }
 }
