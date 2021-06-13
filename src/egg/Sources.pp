@@ -60,14 +60,7 @@
      parser.yxx lexerDefs.h lexer.lxx  \
      pt_EggMaterial.h vector_PT_EggMaterial.h \
      pt_EggTexture.h vector_PT_EggTexture.h \
-     pt_EggVertex.h vector_PT_EggVertex.h \
-     pmdlAttachment.I pmdlAttachment.h \
-     pmdlData.I pmdlData.h \
-     pmdlIKChain.I pmdlIKChain.h \
-     pmdlObject.I pmdlObject.h \
-     pmdlSequence.I pmdlSequence.h \
-     pmdlSwitch.I pmdlSwitch.h \
-     pmdlTextureGroup.I pmdlTextureGroup.h
+     pt_EggVertex.h vector_PT_EggVertex.h
 
   #define COMPOSITE_SOURCES \
      config_egg.cxx eggAnimData.cxx \
@@ -111,14 +104,7 @@
      pt_EggVertex.cxx  \
      vector_PT_EggMaterial.cxx \
      vector_PT_EggTexture.cxx \
-     vector_PT_EggVertex.cxx \
-     pmdlAttachment.cxx \
-     pmdlData.cxx \
-     pmdlIKChain.cxx \
-     pmdlObject.cxx \
-     pmdlSequence.cxx \
-     pmdlSwitch.cxx \
-     pmdlTextureGroup.cxx
+     vector_PT_EggVertex.cxx
 
   #define INSTALL_HEADERS \
      config_egg.h eggAnimData.I eggAnimData.h \
@@ -168,14 +154,7 @@
      parser.yxx lexerDefs.h lexer.lxx  \
      pt_EggMaterial.h vector_PT_EggMaterial.h \
      pt_EggTexture.h vector_PT_EggTexture.h \
-     pt_EggVertex.h vector_PT_EggVertex.h \
-     pmdlAttachment.I pmdlAttachment.h \
-     pmdlData.I pmdlData.h \
-     pmdlIKChain.I pmdlIKChain.h \
-     pmdlObject.I pmdlObject.h \
-     pmdlSequence.I pmdlSequence.h \
-     pmdlSwitch.I pmdlSwitch.h \
-     pmdlTextureGroup.I pmdlTextureGroup.h
+     pt_EggVertex.h vector_PT_EggVertex.h
 
   #define IGATESCAN all
   #define IGATEEXT \

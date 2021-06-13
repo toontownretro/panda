@@ -140,8 +140,8 @@ load_egg_data(EggData *data, CoordinateSystem cs) {
 
 PT(PandaNode)
 load_pmdl_file(const Filename &filename, CoordinateSystem cs) {
-  PT(PMDLData) data = new PMDLData;
-  if (!data->read(filename)) {
+  PT(PMDLDataDesc) data = new PMDLDataDesc;
+  if (!data->load(filename)) {
     return nullptr;
   }
 
@@ -152,7 +152,7 @@ load_pmdl_file(const Filename &filename, CoordinateSystem cs) {
  *
  */
 PT(PandaNode)
-load_pmdl_data(PMDLData *data, CoordinateSystem cs) {
+load_pmdl_data(PMDLDataDesc *data, CoordinateSystem cs) {
   PMDLLoader loader(data);
   loader.build_graph();
   return loader._root;
