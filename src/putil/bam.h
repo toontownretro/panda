@@ -24,16 +24,26 @@
 // conversion.
 static const std::string _bam_header = std::string("pbj\0\n\r", 6);
 
-static const unsigned short _bam_major_ver = 6;
+static const unsigned short _bam_major_ver = 7;
 // Bumped to major version 2 on 2000-07-06 due to major changes in Character.
 // Bumped to major version 3 on 2000-12-08 to change float64's to float32's.
 // Bumped to major version 4 on 2002-04-10 to store new scene graph.
 // Bumped to major version 5 on 2005-05-06 for new Geom implementation.
 // Bumped to major version 6 on 2006-02-11 to factor out PandaNode::CData.
+// Bumped to major version 7 on 2021-06-13 due to major animation system changes.
 
-static const unsigned short _bam_first_minor_ver = 14;
-static const unsigned short _bam_last_minor_ver = 47;
-static const unsigned short _bam_minor_ver = 47;
+static const unsigned short _bam_first_minor_ver = 0;
+static const unsigned short _bam_last_minor_ver = 0;
+static const unsigned short _bam_minor_ver = 0;
+
+//
+// BAM 7.x minor version history
+//
+
+
+//
+// BAM 6.x minor version history
+//
 // Bumped to minor version 14 on 2007-12-19 to change default ColorAttrib.
 // Bumped to minor version 15 on 2008-04-09 to add TextureAttrib::_implicit_sort.
 // Bumped to minor version 16 on 2008-05-13 to add Texture::_quality_level.
