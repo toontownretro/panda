@@ -175,6 +175,22 @@ get_material_group(size_t n) const {
 }
 
 /**
+ * Attaches a PDXElement to the model that can hold any desired user data.
+ */
+INLINE void ModelRoot::
+set_custom_data(PDXElement *data) {
+  _custom_data = data;
+}
+
+/**
+ * Returns the custom PDXElement attached to the model.
+ */
+INLINE PDXElement *ModelRoot::
+get_custom_data() const {
+  return _custom_data;
+}
+
+/**
  *
  */
 INLINE ModelRoot::

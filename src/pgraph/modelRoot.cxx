@@ -73,6 +73,13 @@ write_datagram(BamWriter *manager, Datagram &dg) {
       manager->write_pointer(dg, _material_groups[i].get_material(j));
     }
   }
+
+  if (_custom_data != nullptr) {
+    dg.add_bool(true);
+    _custom_data->to_datagram(dg);
+  } else {
+    dg.add_bool(false);
+  }
 }
 
 /**
@@ -127,5 +134,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       manager->read_pointer(scan);
       _material_groups[i].add_material(nullptr);
     }
+  }
+
+  bool has_custom_data = scan.get_bool();
+  if (has_custom_data) {
+    _custom_data = new PDXElement;
+    _custom_data->from_datagram(scan);
   }
 }

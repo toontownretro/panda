@@ -18,6 +18,7 @@
 #include "referenceCount.h"
 #include "modelNode.h"
 #include "materialCollection.h"
+#include "pdxElement.h"
 
 /**
  * A node of this type is created automatically at the root of each model file
@@ -61,6 +62,9 @@ PUBLISHED:
   MAKE_SEQ(get_material_groups, get_num_material_groups, get_material_group);
   MAKE_SEQ_PROPERTY(material_groups, get_num_material_groups, get_material_group);
 
+  INLINE void set_custom_data(PDXElement *data);
+  INLINE PDXElement *get_custom_data() const;
+
 private:
   void r_set_active_material_group(PandaNode *node, size_t n);
 
@@ -79,6 +83,9 @@ private:
   typedef pvector<MaterialCollection> MaterialGroups;
   MaterialGroups _material_groups;
   size_t _active_material_group;
+
+  // Custom PDX element attached to model.
+  PT(PDXElement) _custom_data;
 
 public:
   static void register_with_read_factory();
