@@ -381,10 +381,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _rgb_scale = scan.get_uint8();
   _alpha_scale = scan.get_uint8();
   _saved_result = scan.get_bool();
-  _tex_view_offset = 0;
-  if (manager->get_file_minor_ver() >= 26) {
-    _tex_view_offset = scan.get_int32();
-  }
+  _tex_view_offset = scan.get_int32();
 
   _combine_rgb_mode = (TextureStage::CombineMode) scan.get_uint8();
   _num_combine_rgb_operands = scan.get_uint8();
@@ -443,9 +440,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_uint8(_alpha_scale);
     me.add_bool(_saved_result);
 
-    if (manager->get_file_minor_ver() >= 26) {
-      me.add_int32(_tex_view_offset);
-    }
+    me.add_int32(_tex_view_offset);
 
     me.add_uint8(_combine_rgb_mode);
     me.add_uint8(_num_combine_rgb_operands);

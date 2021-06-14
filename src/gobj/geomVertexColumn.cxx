@@ -385,18 +385,11 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_uint8(_num_components);
   dg.add_uint8(_numeric_type);
 
-  if (_contents == C_normal && manager->get_file_minor_ver() < 38) {
-    // Panda 1.9 did not have C_normal.
-    dg.add_uint8(C_vector);
-  } else {
-    dg.add_uint8(_contents);
-  }
+  dg.add_uint8(_contents);
 
   dg.add_uint16(_start);
 
-  if (manager->get_file_minor_ver() >= 29) {
-    dg.add_uint8(_column_alignment);
-  }
+  dg.add_uint8(_column_alignment);
 }
 
 /**
@@ -408,13 +401,6 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = 0;
 
   _name = DCAST(InternalName, p_list[pi++]);
-
-  // Make sure that old .bam files are corrected to have C_normal normal
-  // columns rather than C_vector.
-  if (manager->get_file_minor_ver() < 38 &&
-      _name == InternalName::get_normal() && _contents == C_vector) {
-    _contents = C_normal;
-  }
 
   return pi;
 }
@@ -432,10 +418,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _contents = (Contents)scan.get_uint8();
   _start = scan.get_uint16();
 
-  _column_alignment = 1;
-  if (manager->get_file_minor_ver() >= 29) {
-    _column_alignment = scan.get_uint8();
-  }
+  _column_alignment = scan.get_uint8();
 
   _num_elements = 0;
   _element_stride = 0;

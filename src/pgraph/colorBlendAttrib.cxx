@@ -171,11 +171,9 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_uint8(_a);
   dg.add_uint8(_b);
 
-  if (manager->get_file_minor_ver() >= 42) {
-    dg.add_uint8(_alpha_mode);
-    dg.add_uint8(_alpha_a);
-    dg.add_uint8(_alpha_b);
-  }
+  dg.add_uint8(_alpha_mode);
+  dg.add_uint8(_alpha_a);
+  dg.add_uint8(_alpha_b);
 
   _color.write_datagram(dg);
 }
@@ -209,24 +207,9 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _a = (Operand)scan.get_uint8();
   _b = (Operand)scan.get_uint8();
 
-  if (manager->get_file_minor_ver() >= 42) {
-    _alpha_mode = (Mode)scan.get_uint8();
-    _alpha_a = (Operand)scan.get_uint8();
-    _alpha_b = (Operand)scan.get_uint8();
-  } else {
-    // Before bam 6.42, these were shifted by four.
-    if (_a >= O_incoming1_color) {
-      _a = (Operand)(_a + 4);
-    }
-    if (_b >= O_incoming1_color) {
-      _b = (Operand)(_b + 4);
-    }
-
-    // And there was only one set of blend constants for both RGB and alpha.
-    _alpha_mode = _mode;
-    _alpha_a = _a;
-    _alpha_b = _b;
-  }
+  _alpha_mode = (Mode)scan.get_uint8();
+  _alpha_a = (Operand)scan.get_uint8();
+  _alpha_b = (Operand)scan.get_uint8();
 
   _color.read_datagram(scan);
 

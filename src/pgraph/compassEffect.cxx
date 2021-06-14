@@ -321,9 +321,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   RenderEffect::write_datagram(manager, dg);
   dg.add_uint16(_properties);
 
-  if (manager->get_file_minor_ver() >= 43) {
-    _reference.write_datagram(manager, dg);
-  }
+  _reference.write_datagram(manager, dg);
 }
 
 /**
@@ -334,9 +332,7 @@ int CompassEffect::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = RenderEffect::complete_pointers(p_list, manager);
 
-  if (manager->get_file_minor_ver() >= 43) {
-    pi += _reference.complete_pointers(p_list + pi, manager);
-  }
+  pi += _reference.complete_pointers(p_list + pi, manager);
 
   return pi;
 }
@@ -367,7 +363,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   RenderEffect::fillin(scan, manager);
   _properties = scan.get_uint16();
 
-  if (manager->get_file_minor_ver() >= 43) {
-    _reference.fillin(scan, manager);
-  }
+  _reference.fillin(scan, manager);
 }

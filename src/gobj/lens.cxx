@@ -1936,10 +1936,6 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
   dg.add_stdfloat(_far_distance);
   dg.add_uint16(_user_flags);
 
-  if (manager->get_file_minor_ver() < 41) {
-    return;
-  }
-
   dg.add_stdfloat(_min_fov);
   dg.add_stdfloat(_interocular_distance);
   dg.add_stdfloat(_convergence_distance);
@@ -1983,31 +1979,29 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _far_distance = scan.get_stdfloat();
   _user_flags = scan.get_uint16();
 
-  if (manager->get_file_minor_ver() >= 41) {
-    _min_fov = scan.get_stdfloat();
-    _interocular_distance = scan.get_stdfloat();
-    _convergence_distance = scan.get_stdfloat();
+  _min_fov = scan.get_stdfloat();
+  _interocular_distance = scan.get_stdfloat();
+  _convergence_distance = scan.get_stdfloat();
 
-    if (_user_flags & UF_view_hpr) {
-      _view_hpr.read_datagram(scan);
-    }
+  if (_user_flags & UF_view_hpr) {
+    _view_hpr.read_datagram(scan);
+  }
 
-    if (_user_flags & UF_view_vector) {
-      _view_vector.read_datagram(scan);
-      _up_vector.read_datagram(scan);
-    }
+  if (_user_flags & UF_view_vector) {
+    _view_vector.read_datagram(scan);
+    _up_vector.read_datagram(scan);
+  }
 
-    if (_user_flags & UF_view_mat) {
-      _lens_mat.read_datagram(scan);
-    }
+  if (_user_flags & UF_view_mat) {
+    _lens_mat.read_datagram(scan);
+  }
 
-    if (_user_flags & UF_keystone) {
-      _keystone.read_datagram(scan);
-    }
+  if (_user_flags & UF_keystone) {
+    _keystone.read_datagram(scan);
+  }
 
-    if (_user_flags & UF_custom_film_mat) {
-      _custom_film_mat.read_datagram(scan);
-    }
+  if (_user_flags & UF_custom_film_mat) {
+    _custom_film_mat.read_datagram(scan);
   }
 
   _comp_flags = 0;

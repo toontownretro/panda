@@ -553,25 +553,14 @@ fillin(DatagramIterator &scan, BamReader *manager, void *extra_data) {
   GeomVertexArrayData *array_data = (GeomVertexArrayData *)extra_data;
   _usage_hint = (UsageHint)scan.get_uint8();
 
-  if (manager->get_file_minor_ver() < 8) {
-    // Before bam version 6.8, the array data was a PTA_uchar.
-    PTA_uchar new_data;
-    READ_PTA(manager, scan, array_data->read_raw_data, new_data);
-    _buffer.unclean_realloc(new_data.size());
-    _buffer.set_size(new_data.size());
-    memcpy(_buffer.get_write_pointer(), &new_data[0], new_data.size());
+  size_t size = scan.get_uint32();
+  _buffer.unclean_realloc(size);
+  _buffer.set_size(size);
 
-  } else {
-    // Now, the array data is just stored directly.
-    size_t size = scan.get_uint32();
-    _buffer.unclean_realloc(size);
-    _buffer.set_size(size);
-
-    const unsigned char *source_data =
-      (const unsigned char *)scan.get_datagram().get_data();
-    memcpy(_buffer.get_write_pointer(), source_data + scan.get_current_index(), size);
-    scan.skip_bytes(size);
-  }
+  const unsigned char *source_data =
+    (const unsigned char *)scan.get_datagram().get_data();
+  memcpy(_buffer.get_write_pointer(), source_data + scan.get_current_index(), size);
+  scan.skip_bytes(size);
 
   bool endian_reversed = false;
 

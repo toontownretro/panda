@@ -345,16 +345,7 @@ read_datagram(DatagramIterator &scan, BamReader *manager) {
   _anisotropic_degree = scan.get_int16();
   _border_color.read_datagram(scan);
 
-  if (manager->get_file_minor_ver() >= 36) {
-    // These were added with the introduction of SamplerState.  Since
-    // Texture::do_fillin_body calls this, we still have to preserve backward
-    // compatibility here.
-    _min_lod = scan.get_stdfloat();
-    _max_lod = scan.get_stdfloat();
-    _lod_bias = scan.get_stdfloat();
-  } else {
-    _min_lod = -1000;
-    _max_lod = 1000;
-    _lod_bias = 0;
-  }
+  _min_lod = scan.get_stdfloat();
+  _max_lod = scan.get_stdfloat();
+  _lod_bias = scan.get_stdfloat();
 }

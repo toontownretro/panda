@@ -10325,19 +10325,8 @@ do_write_datagram_header(CData *cdata, BamWriter *manager, Datagram &me, bool &h
   me.add_uint8(cdata->_primary_file_num_channels);
   me.add_uint8(cdata->_alpha_file_channel);
   me.add_bool(has_rawdata);
-
-  if (manager->get_file_minor_ver() < 25 &&
-      cdata->_texture_type == TT_cube_map) {
-    // Between Panda3D releases 1.7.2 and 1.8.0 (bam versions 6.24 and 6.25),
-    // we added TT_2d_texture_array, shifting the definition for TT_cube_map.
-    me.add_uint8(TT_2d_texture_array);
-  } else {
-    me.add_uint8(cdata->_texture_type);
-  }
-
-  if (manager->get_file_minor_ver() >= 32) {
-    me.add_bool(cdata->_has_read_mipmaps);
-  }
+  me.add_uint8(cdata->_texture_type);
+  me.add_bool(cdata->_has_read_mipmaps);
 }
 
 /**
@@ -10346,18 +10335,7 @@ do_write_datagram_header(CData *cdata, BamWriter *manager, Datagram &me, bool &h
  */
 void Texture::
 do_write_datagram_body(CData *cdata, BamWriter *manager, Datagram &me) {
-  if (manager->get_file_minor_ver() >= 36) {
-    cdata->_default_sampler.write_datagram(me);
-  } else {
-    const SamplerState &s = cdata->_default_sampler;
-    me.add_uint8(s.get_wrap_u());
-    me.add_uint8(s.get_wrap_v());
-    me.add_uint8(s.get_wrap_w());
-    me.add_uint8(s.get_minfilter());
-    me.add_uint8(s.get_magfilter());
-    me.add_int16(s.get_anisotropic_degree());
-    s.get_border_color().write_datagram(me);
-  }
+  cdata->_default_sampler.write_datagram(me);
 
   me.add_uint8(cdata->_compression);
   me.add_uint8(cdata->_quality_level);
@@ -10369,9 +10347,7 @@ do_write_datagram_body(CData *cdata, BamWriter *manager, Datagram &me) {
     me.add_uint8(cdata->_usage_hint);
   }
 
-  if (manager->get_file_minor_ver() >= 28) {
-    me.add_uint8(cdata->_auto_texture_scale);
-  }
+  me.add_uint8(cdata->_auto_texture_scale);
   me.add_uint32(cdata->_orig_file_x_size);
   me.add_uint32(cdata->_orig_file_y_size);
 
@@ -10387,11 +10363,9 @@ do_write_datagram_body(CData *cdata, BamWriter *manager, Datagram &me) {
     me.append_data(cdata->_simple_ram_image._image, cdata->_simple_ram_image._image.size());
   }
 
-  if (manager->get_file_minor_ver() >= 45) {
-    me.add_bool(cdata->_has_clear_color);
-    if (cdata->_has_clear_color) {
-      cdata->_clear_color.write_datagram(me);
-    }
+  me.add_bool(cdata->_has_clear_color);
+  if (cdata->_has_clear_color) {
+    cdata->_clear_color.write_datagram(me);
   }
 }
 
@@ -10404,43 +10378,19 @@ do_write_datagram_rawdata(CData *cdata, BamWriter *manager, Datagram &me) {
   me.add_uint32(cdata->_y_size);
   me.add_uint32(cdata->_z_size);
 
-  if (manager->get_file_minor_ver() >= 30) {
-    me.add_uint32(cdata->_pad_x_size);
-    me.add_uint32(cdata->_pad_y_size);
-    me.add_uint32(cdata->_pad_z_size);
-  }
+  me.add_uint32(cdata->_pad_x_size);
+  me.add_uint32(cdata->_pad_y_size);
+  me.add_uint32(cdata->_pad_z_size);
 
-  if (manager->get_file_minor_ver() >= 26) {
-    me.add_uint32(cdata->_num_views);
-  }
+  me.add_uint32(cdata->_num_views);
   me.add_uint8(cdata->_component_type);
   me.add_uint8(cdata->_component_width);
   me.add_uint8(cdata->_ram_image_compression);
-
-  if (cdata->_ram_images.empty() && cdata->_has_clear_color &&
-      manager->get_file_minor_ver() < 45) {
-    // For older .bam versions that don't support clear colors, make up a RAM
-    // image.
-    int image_size = do_get_expected_ram_image_size(cdata);
-    me.add_uint8(1);
-    me.add_uint32(do_get_expected_ram_page_size(cdata));
-    me.add_uint32(image_size);
-
-    // Fill the image with the clear color.
-    unsigned char pixel[16];
-    const int pixel_size = do_get_clear_data(cdata, pixel);
-    nassertv(pixel_size > 0);
-
-    for (int i = 0; i < image_size; i += pixel_size) {
-      me.append_data(pixel, pixel_size);
-    }
-  } else {
-    me.add_uint8(cdata->_ram_images.size());
-    for (size_t n = 0; n < cdata->_ram_images.size(); ++n) {
-      me.add_uint32(cdata->_ram_images[n]._page_size);
-      me.add_uint32(cdata->_ram_images[n]._image.size());
-      me.append_data(cdata->_ram_images[n]._image, cdata->_ram_images[n]._image.size());
-    }
+  me.add_uint8(cdata->_ram_images.size());
+  for (size_t n = 0; n < cdata->_ram_images.size(); ++n) {
+    me.add_uint32(cdata->_ram_images[n]._page_size);
+    me.add_uint32(cdata->_ram_images[n]._image.size());
+    me.append_data(cdata->_ram_images[n]._image, cdata->_ram_images[n]._image.size());
   }
 }
 
@@ -10481,17 +10431,8 @@ make_this_from_bam(const FactoryParams &params) {
   int alpha_file_channel = scan.get_uint8();
   bool has_rawdata = scan.get_bool();
   TextureType texture_type = (TextureType)scan.get_uint8();
-  if (manager->get_file_minor_ver() < 25) {
-    // Between Panda3D releases 1.7.2 and 1.8.0 (bam versions 6.24 and 6.25),
-    // we added TT_2d_texture_array, shifting the definition for TT_cube_map.
-    if (texture_type == TT_2d_texture_array) {
-      texture_type = TT_cube_map;
-    }
-  }
-  bool has_read_mipmaps = false;
-  if (manager->get_file_minor_ver() >= 32) {
-    has_read_mipmaps = scan.get_bool();
-  }
+
+  bool has_read_mipmaps = scan.get_bool();
 
   Texture *me = nullptr;
   if (has_rawdata) {
@@ -10608,12 +10549,8 @@ void Texture::
 do_fillin_body(CData *cdata, DatagramIterator &scan, BamReader *manager) {
   cdata->_default_sampler.read_datagram(scan, manager);
 
-  if (manager->get_file_minor_ver() >= 1) {
-    cdata->_compression = (CompressionMode)scan.get_uint8();
-  }
-  if (manager->get_file_minor_ver() >= 16) {
-    cdata->_quality_level = (QualityLevel)scan.get_uint8();
-  }
+  cdata->_compression = (CompressionMode)scan.get_uint8();
+  cdata->_quality_level = (QualityLevel)scan.get_uint8();
 
   cdata->_format = (Format)scan.get_uint8();
   cdata->_num_components = scan.get_uint8();
@@ -10624,18 +10561,13 @@ do_fillin_body(CData *cdata, DatagramIterator &scan, BamReader *manager) {
 
   cdata->inc_properties_modified();
 
-  cdata->_auto_texture_scale = ATS_unspecified;
-  if (manager->get_file_minor_ver() >= 28) {
-    cdata->_auto_texture_scale = (AutoTextureScale)scan.get_uint8();
-  }
+  cdata->_auto_texture_scale = (AutoTextureScale)scan.get_uint8();
 
   bool has_simple_ram_image = false;
-  if (manager->get_file_minor_ver() >= 18) {
-    cdata->_orig_file_x_size = scan.get_uint32();
-    cdata->_orig_file_y_size = scan.get_uint32();
+  cdata->_orig_file_x_size = scan.get_uint32();
+  cdata->_orig_file_y_size = scan.get_uint32();
 
-    has_simple_ram_image = scan.get_bool();
-  }
+  has_simple_ram_image = scan.get_bool();
 
   if (has_simple_ram_image) {
     cdata->_simple_x_size = scan.get_uint32();
@@ -10659,11 +10591,9 @@ do_fillin_body(CData *cdata, DatagramIterator &scan, BamReader *manager) {
     cdata->inc_simple_image_modified();
   }
 
-  if (manager->get_file_minor_ver() >= 45) {
-    cdata->_has_clear_color = scan.get_bool();
-    if (cdata->_has_clear_color) {
-      cdata->_clear_color.read_datagram(scan);
-    }
+  cdata->_has_clear_color = scan.get_bool();
+  if (cdata->_has_clear_color) {
+    cdata->_clear_color.read_datagram(scan);
   }
 }
 
@@ -10677,38 +10607,25 @@ do_fillin_rawdata(CData *cdata, DatagramIterator &scan, BamReader *manager) {
   cdata->_y_size = scan.get_uint32();
   cdata->_z_size = scan.get_uint32();
 
-  if (manager->get_file_minor_ver() >= 30) {
-    cdata->_pad_x_size = scan.get_uint32();
-    cdata->_pad_y_size = scan.get_uint32();
-    cdata->_pad_z_size = scan.get_uint32();
-  } else {
-    do_set_pad_size(cdata, 0, 0, 0);
-  }
+  cdata->_pad_x_size = scan.get_uint32();
+  cdata->_pad_y_size = scan.get_uint32();
+  cdata->_pad_z_size = scan.get_uint32();
 
   cdata->_num_views = 1;
-  if (manager->get_file_minor_ver() >= 26) {
-    cdata->_num_views = scan.get_uint32();
-  }
+  cdata->_num_views = scan.get_uint32();
   cdata->_component_type = (ComponentType)scan.get_uint8();
   cdata->_component_width = scan.get_uint8();
   cdata->_ram_image_compression = CM_off;
-  if (manager->get_file_minor_ver() >= 1) {
-    cdata->_ram_image_compression = (CompressionMode)scan.get_uint8();
-  }
+  cdata->_ram_image_compression = (CompressionMode)scan.get_uint8();
 
-  int num_ram_images = 1;
-  if (manager->get_file_minor_ver() >= 3) {
-    num_ram_images = scan.get_uint8();
-  }
+  int num_ram_images = scan.get_uint8();
 
   cdata->_ram_images.clear();
   cdata->_ram_images.reserve(num_ram_images);
   for (int n = 0; n < num_ram_images; ++n) {
     cdata->_ram_images.push_back(RamImage());
     cdata->_ram_images[n]._page_size = get_expected_ram_page_size();
-    if (manager->get_file_minor_ver() >= 1) {
-      cdata->_ram_images[n]._page_size = scan.get_uint32();
-    }
+    cdata->_ram_images[n]._page_size = scan.get_uint32();
 
     // fill the cdata->_image buffer with image data
     size_t u_size = scan.get_uint32();

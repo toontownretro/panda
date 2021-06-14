@@ -733,9 +733,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_uint16(_total_bytes);
   dg.add_uint8(_pad_to);
 
-  if (manager->get_file_minor_ver() > 36) {
-    dg.add_uint16(_divisor);
-  }
+  dg.add_uint16(_divisor);
 
   consider_sort_columns();
 
@@ -813,11 +811,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _stride = scan.get_uint16();
   _total_bytes = scan.get_uint16();
   _pad_to = scan.get_uint8();
-  if (manager->get_file_minor_ver() > 36) {
-    _divisor = scan.get_uint16();
-  } else {
-    _divisor = 0;
-  }
+  _divisor = scan.get_uint16();
 
   int num_columns = scan.get_uint16();
   _columns.reserve(num_columns);

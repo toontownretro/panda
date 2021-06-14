@@ -1842,10 +1842,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
   _modified = Geom::get_next_modified();
 
-  _bounds_type = BoundingVolume::BT_default;
-  if (manager->get_file_minor_ver() >= 19) {
-    _bounds_type = (BoundingVolume::BoundsType)scan.get_uint8();
-  }
+  _bounds_type = (BoundingVolume::BoundsType)scan.get_uint8();
 }
 
 /**

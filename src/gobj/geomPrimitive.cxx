@@ -2166,13 +2166,6 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   _vertices = DCAST(GeomVertexArrayData, p_list[pi++]);
 
-  if (manager->get_file_minor_ver() < 6 && !_vertices.is_null()) {
-    // Older bam files might have a meaningless number in _num_vertices if the
-    // primitive is indexed.  Nowadays, this number is always considered
-    // meaningful unless it is -1.
-    _num_vertices = -1;
-  }
-
   return pi;
 }
 

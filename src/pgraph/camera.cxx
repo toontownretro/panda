@@ -274,10 +274,8 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_bool(_active);
   dg.add_uint32(_camera_mask.get_word());
 
-  if (manager->get_file_minor_ver() >= 41) {
-    manager->write_pointer(dg, _initial_state);
-    dg.add_stdfloat(_lod_scale);
-  }
+  manager->write_pointer(dg, _initial_state);
+  dg.add_stdfloat(_lod_scale);
 }
 
 /**
@@ -288,9 +286,7 @@ int Camera::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = LensNode::complete_pointers(p_list, manager);
 
-  if (manager->get_file_minor_ver() >= 41) {
-    _initial_state = DCAST(RenderState, p_list[pi++]);
-  }
+  _initial_state = DCAST(RenderState, p_list[pi++]);
   return pi;
 }
 
@@ -322,8 +318,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _active = scan.get_bool();
   _camera_mask.set_word(scan.get_uint32());
 
-  if (manager->get_file_minor_ver() >= 41) {
-    manager->read_pointer(scan);
-    _lod_scale = scan.get_stdfloat();
-  }
+  manager->read_pointer(scan);
+  _lod_scale = scan.get_stdfloat();
 }

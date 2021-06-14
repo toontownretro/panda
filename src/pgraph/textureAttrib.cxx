@@ -801,15 +801,11 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     manager->write_pointer(dg, tex);
     dg.add_uint16((*si)._implicit_sort);
 
-    if (manager->get_file_minor_ver() >= 23) {
-      dg.add_int32((*si)._override);
-    }
+    dg.add_int32((*si)._override);
 
-    if (manager->get_file_minor_ver() >= 36) {
-      dg.add_bool((*si)._has_sampler);
-      if ((*si)._has_sampler) {
-        (*si)._sampler.write_datagram(dg);
-      }
+    dg.add_bool((*si)._has_sampler);
+    if ((*si)._has_sampler) {
+      (*si)._sampler.write_datagram(dg);
     }
   }
 }
@@ -907,27 +903,17 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (i = 0; i < num_on_stages; i++) {
     manager->read_pointer(scan);
     manager->read_pointer(scan);
-    unsigned int implicit_sort;
-    if (manager->get_file_minor_ver() >= 15) {
-      implicit_sort = scan.get_uint16();
-    } else {
-      implicit_sort = (unsigned int)i;
-    }
-    int override = 0;
-    if (manager->get_file_minor_ver() >= 23) {
-      override = scan.get_int32();
-    }
+    unsigned int implicit_sort = scan.get_uint16();
+    int override = scan.get_int32();
 
     _next_implicit_sort = std::max(_next_implicit_sort, implicit_sort + 1);
     Stages::iterator si =
       _on_stages.insert_nonunique(StageNode(nullptr, _next_implicit_sort, override));
     ++_next_implicit_sort;
 
-    if (manager->get_file_minor_ver() >= 36) {
-      (*si)._has_sampler = scan.get_bool();
-      if ((*si)._has_sampler) {
-        (*si)._sampler.read_datagram(scan, manager);
-      }
+    (*si)._has_sampler = scan.get_bool();
+    if ((*si)._has_sampler) {
+      (*si)._sampler.read_datagram(scan, manager);
     }
   }
 }

@@ -2184,25 +2184,6 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   _modified = Geom::get_next_modified();
 
-  if (!_arrays.empty() && manager->get_file_minor_ver() < 7) {
-    // Bam files prior to 6.7 did not store a SparseArray in the SliderTable
-    // or TransformBlendTable entries.  We need to make up a SparseArray for
-    // each of them that reflects the complete number of rows in the data.
-    SparseArray all_rows;
-    CPT(GeomVertexArrayData) adata = _arrays[0].get_read_pointer();
-    all_rows.set_range(0, adata->get_num_rows());
-
-    if (_slider_table != nullptr) {
-      int num_sliders = _slider_table->get_num_sliders();
-      for (int i = 0; i < num_sliders; ++i) {
-        ((SliderTable *)_slider_table.p())->set_slider_rows(i, all_rows);
-      }
-    }
-    if (!_transform_blend_table.is_null()) {
-      _transform_blend_table.get_unsafe_pointer()->set_rows(all_rows);
-    }
-  }
-
   return pi;
 }
 

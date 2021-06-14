@@ -3947,38 +3947,12 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   // Read the effects pointer.
   manager->read_pointer(scan);
 
-  if (manager->get_file_minor_ver() < 2) {
-    DrawMask draw_mask;
-    draw_mask.set_word(scan.get_uint32());
-
-    if (draw_mask == DrawMask::all_off()) {
-      // Hidden.
-      _draw_control_mask = _overall_bit;
-      _draw_show_mask = ~_overall_bit;
-
-    } else if (draw_mask == DrawMask::all_on()) {
-      // Normally visible.
-      _draw_control_mask = DrawMask::all_off();
-      _draw_show_mask = DrawMask::all_on();
-
-    } else {
-      // Some per-camera combination.
-      draw_mask &= ~_overall_bit;
-      _draw_control_mask = ~draw_mask;
-      _draw_show_mask = draw_mask;
-    }
-
-  } else {
-    _draw_control_mask.set_word(scan.get_uint32());
-    _draw_show_mask.set_word(scan.get_uint32());
-  }
+  _draw_control_mask.set_word(scan.get_uint32());
+  _draw_show_mask.set_word(scan.get_uint32());
 
   _into_collide_mask.set_word(scan.get_uint32());
 
-  _bounds_type = BoundingVolume::BT_default;
-  if (manager->get_file_minor_ver() >= 19) {
-    _bounds_type = (BoundingVolume::BoundsType)scan.get_uint8();
-  }
+  _bounds_type = (BoundingVolume::BoundsType)scan.get_uint8();
 
   // Read in the tag list.
   int num_tags = scan.get_uint32();

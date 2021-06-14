@@ -861,14 +861,8 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
   // write the off planes pointers if any
   Planes::const_iterator fi;
-  if (manager->get_file_minor_ver() < 40) {
-    for (fi = _off_planes.begin(); fi != _off_planes.end(); ++fi) {
-      manager->write_pointer(dg, fi->node());
-    }
-  } else {
-    for (fi = _off_planes.begin(); fi != _off_planes.end(); ++fi) {
-      (*fi).write_datagram(manager, dg);
-    }
+  for (fi = _off_planes.begin(); fi != _off_planes.end(); ++fi) {
+    (*fi).write_datagram(manager, dg);
   }
 
   // write the number of on planes
@@ -876,14 +870,8 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 
   // write the on planes pointers if any
   Planes::const_iterator nti;
-  if (manager->get_file_minor_ver() < 40) {
-    for (nti = _on_planes.begin(); nti != _on_planes.end(); ++nti) {
-      manager->write_pointer(dg, nti->node());
-    }
-  } else {
-    for (nti = _on_planes.begin(); nti != _on_planes.end(); ++nti) {
-      (*nti).write_datagram(manager, dg);
-    }
+  for (nti = _on_planes.begin(); nti != _on_planes.end(); ++nti) {
+    (*nti).write_datagram(manager, dg);
   }
 }
 
@@ -895,33 +883,12 @@ int ClipPlaneAttrib::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = RenderAttrib::complete_pointers(p_list, manager);
 
-  if (manager->get_file_minor_ver() >= 40) {
-    for (size_t i = 0; i < _off_planes.size(); ++i) {
-      pi += _off_planes[i].complete_pointers(p_list + pi, manager);
-    }
+  for (size_t i = 0; i < _off_planes.size(); ++i) {
+    pi += _off_planes[i].complete_pointers(p_list + pi, manager);
+  }
 
-    for (size_t i = 0; i < _on_planes.size(); ++i) {
-      pi += _on_planes[i].complete_pointers(p_list + pi, manager);
-    }
-
-  } else {
-    BamAuxData *aux = (BamAuxData *)manager->get_aux_data(this, "planes");
-    nassertr(aux != nullptr, pi);
-
-    int i;
-    aux->_off_list.reserve(aux->_num_off_planes);
-    for (i = 0; i < aux->_num_off_planes; ++i) {
-      PandaNode *node;
-      DCAST_INTO_R(node, p_list[pi++], pi);
-      aux->_off_list.push_back(node);
-    }
-
-    aux->_on_list.reserve(aux->_num_on_planes);
-    for (i = 0; i < aux->_num_on_planes; ++i) {
-      PandaNode *node;
-      DCAST_INTO_R(node, p_list[pi++], pi);
-      aux->_on_list.push_back(node);
-    }
+  for (size_t i = 0; i < _on_planes.size(); ++i) {
+    pi += _on_planes[i].complete_pointers(p_list + pi, manager);
   }
 
   return pi;
@@ -934,62 +901,23 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void ClipPlaneAttrib::
 finalize(BamReader *manager) {
-  if (manager->get_file_minor_ver() >= 40) {
-    AttribNodeRegistry *areg = AttribNodeRegistry::get_global_ptr();
+  AttribNodeRegistry *areg = AttribNodeRegistry::get_global_ptr();
 
-    // Check if any of the nodes we loaded are mentioned in the
-    // AttribNodeRegistry.  If so, replace them.
-    for (size_t i = 0; i < _off_planes.size(); ++i) {
-      int n = areg->find_node(_off_planes[i]);
-      if (n != -1) {
-        // If it's in the registry, replace it.
-        _off_planes[i] = areg->get_node(n);
-      }
+  // Check if any of the nodes we loaded are mentioned in the
+  // AttribNodeRegistry.  If so, replace them.
+  for (size_t i = 0; i < _off_planes.size(); ++i) {
+    int n = areg->find_node(_off_planes[i]);
+    if (n != -1) {
+      // If it's in the registry, replace it.
+      _off_planes[i] = areg->get_node(n);
     }
+  }
 
-    for (size_t i = 0; i < _on_planes.size(); ++i) {
-      int n = areg->find_node(_on_planes[i]);
-      if (n != -1) {
-        // If it's in the registry, replace it.
-        _on_planes[i] = areg->get_node(n);
-      }
-    }
-
-  } else {
-    // Now it's safe to convert our saved PandaNodes into NodePaths.
-    BamAuxData *aux = (BamAuxData *)manager->get_aux_data(this, "planes");
-    nassertv(aux != nullptr);
-    nassertv(aux->_num_off_planes == (int)aux->_off_list.size());
-    nassertv(aux->_num_on_planes == (int)aux->_on_list.size());
-
-    AttribNodeRegistry *areg = AttribNodeRegistry::get_global_ptr();
-
-    _off_planes.reserve(aux->_off_list.size());
-    NodeList::iterator ni;
-    for (ni = aux->_off_list.begin(); ni != aux->_off_list.end(); ++ni) {
-      PandaNode *node = (*ni);
-      int n = areg->find_node(node->get_type(), node->get_name());
-      if (n != -1) {
-        // If it's in the registry, add that NodePath.
-        _off_planes.push_back(areg->get_node(n));
-      } else {
-        // Otherwise, add any arbitrary NodePath.  Complain if it's ambiguous.
-        _off_planes.push_back(NodePath(node));
-      }
-    }
-
-    _on_planes.reserve(aux->_on_list.size());
-    for (ni = aux->_on_list.begin(); ni != aux->_on_list.end(); ++ni) {
-      PandaNode *node = (*ni);
-      int n = areg->find_node(node->get_type(), node->get_name());
-      if (n != -1) {
-        // If it's in the registry, add that NodePath.
-        _on_planes.push_back(areg->get_node(n));
-        node = _on_planes.back().node();
-      } else {
-        // Otherwise, add any arbitrary NodePath.  Complain if it's ambiguous.
-        _on_planes.push_back(NodePath(node));
-      }
+  for (size_t i = 0; i < _on_planes.size(); ++i) {
+    int n = areg->find_node(_on_planes[i]);
+    if (n != -1) {
+      // If it's in the registry, replace it.
+      _on_planes[i] = areg->get_node(n);
     }
   }
 
@@ -1027,24 +955,13 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
   _off_all_planes = scan.get_bool();
 
-  if (manager->get_file_minor_ver() >= 40) {
-    _off_planes.resize(scan.get_uint16());
-    for (size_t i = 0; i < _off_planes.size(); ++i) {
-      _off_planes[i].fillin(scan, manager);
-    }
+  _off_planes.resize(scan.get_uint16());
+  for (size_t i = 0; i < _off_planes.size(); ++i) {
+    _off_planes[i].fillin(scan, manager);
+  }
 
-    _on_planes.resize(scan.get_uint16());
-    for (size_t i = 0; i < _on_planes.size(); ++i) {
-      _on_planes[i].fillin(scan, manager);
-    }
-  } else {
-    BamAuxData *aux = new BamAuxData;
-    manager->set_aux_data(this, "planes", aux);
-
-    aux->_num_off_planes = scan.get_uint16();
-    manager->read_pointers(scan, aux->_num_off_planes);
-
-    aux->_num_on_planes = scan.get_uint16();
-    manager->read_pointers(scan, aux->_num_on_planes);
+  _on_planes.resize(scan.get_uint16());
+  for (size_t i = 0; i < _on_planes.size(); ++i) {
+    _on_planes[i].fillin(scan, manager);
   }
 }

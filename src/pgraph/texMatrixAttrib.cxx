@@ -442,9 +442,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     manager->write_pointer(dg, sn._stage);
     manager->write_pointer(dg, sn._transform);
 
-    if (manager->get_file_minor_ver() >= 24) {
-      dg.add_int32(sn._override);
-    }
+    dg.add_int32(sn._override);
   }
 }
 
@@ -501,10 +499,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < num_stages; i++) {
     manager->read_pointer(scan);
     manager->read_pointer(scan);
-    int override = 0;
-    if (manager->get_file_minor_ver() >= 24) {
-      override = scan.get_int32();
-    }
+    int override = scan.get_int32();
 
     StageNode sn(nullptr);
     sn._override = override;

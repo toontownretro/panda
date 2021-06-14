@@ -217,18 +217,12 @@ register_with_read_factory() {
 void LensNode::
 write_datagram(BamWriter *manager, Datagram &dg) {
   PandaNode::write_datagram(manager, dg);
+  dg.add_uint16(_lenses.size());
 
-  if (manager->get_file_minor_ver() < 41) {
-    // Prior to bam 6.41, we stored only one lens.
-    manager->write_pointer(dg, get_lens(0));
-  } else {
-    dg.add_uint16(_lenses.size());
-
-    Lenses::const_iterator li;
-    for (li = _lenses.begin(); li != _lenses.end(); ++li) {
-      manager->write_pointer(dg, (*li)._lens);
-      dg.add_bool((*li)._is_active);
-    }
+  Lenses::const_iterator li;
+  for (li = _lenses.begin(); li != _lenses.end(); ++li) {
+    manager->write_pointer(dg, (*li)._lens);
+    dg.add_bool((*li)._is_active);
   }
 }
 
@@ -277,17 +271,10 @@ void LensNode::
 fillin(DatagramIterator &scan, BamReader *manager) {
   PandaNode::fillin(scan, manager);
 
-  if (manager->get_file_minor_ver() < 41) {
-    // Prior to bam 6.41, we stored only one lens.
-    _lenses.resize(1);
+  _lenses.resize(scan.get_uint16());
+  Lenses::iterator li;
+  for (li = _lenses.begin(); li != _lenses.end(); ++li) {
     manager->read_pointer(scan);
-
-  } else {
-    _lenses.resize(scan.get_uint16());
-    Lenses::iterator li;
-    for (li = _lenses.begin(); li != _lenses.end(); ++li) {
-      manager->read_pointer(scan);
-      (*li)._is_active = scan.get_bool();
-    }
+    (*li)._is_active = scan.get_bool();
   }
 }

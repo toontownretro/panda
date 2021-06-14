@@ -1049,52 +1049,6 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void GeomNode::
 finalize(BamReader *manager) {
-  if (manager->get_file_minor_ver() < 14) {
-    // With version 6.14, we changed the default ColorAttrib behavior from
-    // make_vertex() to make_flat().  This means that every Geom that contains
-    // vertex colors now needs to have an explicit ColorAttrib::make_vertex()
-    // on its state.
-
-    // Since we shouldn't override a different ColorAttrib inherited from
-    // above, we create this new attrib with an override of -1.
-
-    CPT(InternalName) color = InternalName::get_color();
-    CPT(RenderAttrib) vertex_color = ColorAttrib::make_vertex();
-
-    Thread *current_thread = Thread::get_current_thread();
-    OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
-      CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
-
-      GeomList::iterator gi;
-      PT(GeomList) geoms = cdata->modify_geoms();
-      for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
-        GeomEntry &entry = (*gi);
-        CPT(Geom) geom = entry._geom.get_read_pointer();
-
-        // Force the various GeomVertexArrayFormat objects to finalize
-        // themselves.  We have to do this before we can reliably call
-        // GeomVertexData::has_column().
-        CPT(GeomVertexData) vdata = geom->get_vertex_data(current_thread);
-        CPT(GeomVertexFormat) vformat = vdata->get_format();
-        for (size_t i = 0; i < vformat->get_num_arrays(); ++i) {
-          const GeomVertexArrayFormat *varray = vformat->get_array(i);
-          manager->finalize_now((GeomVertexArrayFormat *)varray);
-        }
-
-        if (vdata->has_column(color) &&
-            !entry._state->has_attrib(ColorAttrib::get_class_slot())) {
-          // We'll be reassigning the RenderState.  Therefore, save it
-          // temporarily to increment its reference count.
-          PT(BamAuxData) aux_data = new BamAuxData;
-          aux_data->_hold_state = entry._state;
-          manager->set_aux_data((RenderState *)entry._state.p(), "hold_state", aux_data);
-
-          entry._state = entry._state->add_attrib(vertex_color, -1);
-        }
-      }
-    }
-    CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
-  }
 }
 
 /**
@@ -1110,10 +1064,6 @@ make_from_bam(const FactoryParams &params) {
 
   parse_params(params, scan, manager);
   node->fillin(scan, manager);
-
-  if (manager->get_file_minor_ver() < 14) {
-    manager->register_finalize(node);
-  }
 
   return node;
 }

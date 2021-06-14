@@ -86,16 +86,14 @@ void MatrixLens::
 write_datagram(BamWriter *manager, Datagram &dg) {
   Lens::write_datagram(manager, dg);
 
-  if (manager->get_file_minor_ver() >= 41) {
-    dg.add_uint8(_ml_flags);
-    _user_mat.write_datagram(dg);
+  dg.add_uint8(_ml_flags);
+  _user_mat.write_datagram(dg);
 
-    if (_ml_flags & MF_has_left_eye) {
-      _left_eye_mat.write_datagram(dg);
-    }
-    if (_ml_flags & MF_has_right_eye) {
-      _left_eye_mat.write_datagram(dg);
-    }
+  if (_ml_flags & MF_has_left_eye) {
+    _left_eye_mat.write_datagram(dg);
+  }
+  if (_ml_flags & MF_has_right_eye) {
+    _left_eye_mat.write_datagram(dg);
   }
 }
 
@@ -124,15 +122,13 @@ void MatrixLens::
 fillin(DatagramIterator &scan, BamReader *manager) {
   Lens::fillin(scan, manager);
 
-  if (manager->get_file_minor_ver() >= 41) {
-    _ml_flags = scan.get_uint8();
+  _ml_flags = scan.get_uint8();
 
-    _user_mat.read_datagram(scan);
-    if (_ml_flags & MF_has_left_eye) {
-      _left_eye_mat.read_datagram(scan);
-    }
-    if (_ml_flags & MF_has_right_eye) {
-      _right_eye_mat.read_datagram(scan);
-    }
+  _user_mat.read_datagram(scan);
+  if (_ml_flags & MF_has_left_eye) {
+    _left_eye_mat.read_datagram(scan);
+  }
+  if (_ml_flags & MF_has_right_eye) {
+    _right_eye_mat.read_datagram(scan);
   }
 }

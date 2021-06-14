@@ -240,13 +240,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     manager->read_pointer(scan);
     manager->read_pointer(scan);
     _sliders.push_back(SliderDef());
-    if (manager->get_file_minor_ver() >= 7) {
-      _sliders[i]._rows.read_datagram(scan, manager);
-    } else {
-      // In this case, for bam files prior to 6.7, we must define the
-      // SparseArray with the full number of vertices.  This is done in
-      // GeomVertexData::complete_pointers().
-    }
+    _sliders[i]._rows.read_datagram(scan, manager);
   }
 
   manager->read_cdata(scan, _cycler);

@@ -227,13 +227,9 @@ fill_viz_geom(GeomNode *) {
  */
 void Light::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  if (manager->get_file_minor_ver() >= 39) {
-    dg.add_bool(_has_color_temperature);
-    if (_has_color_temperature) {
-      dg.add_stdfloat(_color_temperature);
-    } else {
-      manager->write_cdata(dg, _cycler);
-    }
+  dg.add_bool(_has_color_temperature);
+  if (_has_color_temperature) {
+    dg.add_stdfloat(_color_temperature);
   } else {
     manager->write_cdata(dg, _cycler);
   }
@@ -246,11 +242,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void Light::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  if (manager->get_file_minor_ver() >= 39) {
-    _has_color_temperature = scan.get_bool();
-  } else {
-    _has_color_temperature = false;
-  }
+  _has_color_temperature = scan.get_bool();
   if (_has_color_temperature) {
     set_color_temperature(scan.get_stdfloat());
   } else {

@@ -73,17 +73,7 @@ void ParamNodePath::
 write_datagram(BamWriter *manager, Datagram &dg) {
   ParamValueBase::write_datagram(manager, dg);
 
-  if (manager->get_file_minor_ver() < 40) {
-    // Before bam 6.40, we did not support writing NodePaths.  Instaed, we
-    // write the PandaNode pointer and pray there is an unambiguous path.
-    if (_node_path.is_empty()) {
-      manager->write_pointer(dg, nullptr);
-    } else {
-      manager->write_pointer(dg, _node_path.node());
-    }
-  } else {
-    _node_path.write_datagram(manager, dg);
-  }
+  _node_path.write_datagram(manager, dg);
 }
 
 /**
@@ -94,11 +84,7 @@ int ParamNodePath::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = ParamValueBase::complete_pointers(p_list, manager);
 
-  if (manager->get_file_minor_ver() >= 40) {
-    pi += _node_path.complete_pointers(p_list + pi, manager);
-  } else {
-    _node_path = NodePath(DCAST(PandaNode, p_list[pi++]));
-  }
+  pi += _node_path.complete_pointers(p_list + pi, manager);
 
   if (!_node_path.is_empty()) {
     Light *light = _node_path.node()->as_light();
@@ -143,9 +129,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _node_path.clear();
   }
 
-  if (manager->get_file_minor_ver() >= 40) {
-    _node_path.fillin(scan, manager);
-  } else {
-    manager->read_pointer(scan);
-  }
+  _node_path.fillin(scan, manager);
 }

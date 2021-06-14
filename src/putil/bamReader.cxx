@@ -128,10 +128,7 @@ init() {
 
   _file_endian = (BamEndian)scan.get_uint8();
 
-  _file_stdfloat_double = false;
-  if (_file_minor >= 27) {
-    _file_stdfloat_double = scan.get_bool();
-  }
+  _file_stdfloat_double = scan.get_bool();
 
   if (scan.get_current_index() > header.get_length()) {
     bam_cat.error()
@@ -633,12 +630,6 @@ read_pointer(DatagramIterator &scan) {
     _created_objs.insert(CreatedObjs::value_type(object_id, new_created_obj)).second;
     */
 
-    if (get_file_minor_ver() < 21) {
-      // Prior to bam version 6.21, we expect to read an adjunct object for
-      // each non-NULL pointer we read.
-      _num_extra_objects++;
-    }
-
     return true;
   } else {
     return false;
@@ -1069,9 +1060,7 @@ p_read_object() {
   // First, read the BamObjectCode.  In bam versions prior to 6.21, there was
   // no BamObjectCode in the stream.
   BamObjectCode boc = BOC_adjunct;
-  if (get_file_minor_ver() >= 21) {
-    boc = (BamObjectCode)scan.get_uint8();
-  }
+  boc = (BamObjectCode)scan.get_uint8();
   switch (boc) {
   case BOC_push:
     ++_nesting_level;

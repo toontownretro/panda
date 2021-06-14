@@ -302,10 +302,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   PandaNode::fillin(scan, manager);
   manager->read_cdata(scan, _cycler);
   _priority = scan.get_int32();
-
-  if (manager->get_file_minor_ver() < 9) {
-    _clip_effect = ~0;
-  } else {
-    _clip_effect = scan.get_uint8();
-  }
+  _clip_effect = scan.get_uint8();
 }

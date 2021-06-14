@@ -337,10 +337,8 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_stdfloat(_offset);
   _look_at_point.write_datagram(dg);
 
-  if (manager->get_file_minor_ver() >= 43) {
-    _look_at.write_datagram(manager, dg);
-    dg.add_bool(_fixed_depth);
-  }
+  _look_at.write_datagram(manager, dg);
+  dg.add_bool(_fixed_depth);
 }
 
 /**
@@ -351,9 +349,7 @@ int BillboardEffect::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = RenderEffect::complete_pointers(p_list, manager);
 
-  if (manager->get_file_minor_ver() >= 43) {
-    pi += _look_at.complete_pointers(p_list + pi, manager);
-  }
+  pi += _look_at.complete_pointers(p_list + pi, manager);
 
   return pi;
 }
@@ -390,10 +386,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _offset = scan.get_stdfloat();
   _look_at_point.read_datagram(scan);
 
-  if (manager->get_file_minor_ver() >= 43) {
-    _look_at.fillin(scan, manager);
-    _fixed_depth = scan.get_bool();
-  } else {
-    _fixed_depth = false;
-  }
+  _look_at.fillin(scan, manager);
+  _fixed_depth = scan.get_bool();
 }

@@ -180,9 +180,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   RenderAttrib::write_datagram(manager, dg);
 
   _frame.write_datagram(dg);
-  if (manager->get_file_minor_ver() >= 34) {
-    dg.add_bool(_off);
-  }
+  dg.add_bool(_off);
 }
 
 /**
@@ -211,9 +209,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   RenderAttrib::fillin(scan, manager);
 
   _frame.read_datagram(scan);
-  _off = false;
-
-  if (manager->get_file_minor_ver() >= 34) {
-    _off = scan.get_bool();
-  }
+  _off = scan.get_bool();
 }

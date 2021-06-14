@@ -69,16 +69,19 @@ BamWriter(DatagramSink *target) :
     _file_major = bam_version[0];
     _file_minor = bam_version[1];
 
-    if (_file_major < _bam_major_ver || _file_minor < 21) {
+    if (_file_major < _bam_major_ver || _file_minor < _bam_first_minor_ver) {
       util_cat.error()
         << "bam-version is set to " << bam_version << ", but this version of "
-           "Panda3D cannot produce .bam files older than 6.21.  Set "
-           "bam-version to 6 21 in Config.prc to suppress this error, or "
+           "Panda3D cannot produce .bam files older than " << _bam_major_ver << "."
+           << _bam_first_minor_ver << ".  Set bam-version to " << _bam_major_ver <<
+           " " << _bam_first_minor_ver << " in Config.prc to suppress this error, or "
            "leave it blank to write version " << _bam_major_ver << "."
            << _bam_minor_ver << " files.\n";
-      _file_major = 6;
-      _file_minor = 21;
-      bam_version.set_string_value("6 21");
+      _file_major = _bam_major_ver;
+      _file_minor = _bam_first_minor_ver;
+      std::ostringstream ss;
+      ss << _bam_major_ver << " " << _bam_first_minor_ver;
+      bam_version.set_string_value(ss.str());
 
     } else if (_file_major > _bam_major_ver || _file_minor > _bam_last_minor_ver) {
       util_cat.error()
@@ -158,7 +161,7 @@ init() {
   _long_pta_id = false;
 
   nassertr_always(_file_major == _bam_major_ver, false);
-  nassertr_always(_file_minor <= _bam_last_minor_ver && _file_minor >= 21, false);
+  nassertr_always(_file_minor <= _bam_last_minor_ver && _file_minor >= _bam_first_minor_ver, false);
 
   _file_endian = bam_endian;
   _file_texture_mode = bam_texture_mode;
@@ -171,11 +174,7 @@ init() {
   header.add_uint16(_file_minor);
   header.add_uint8(_file_endian);
 
-  if (_file_major >= 6 || _file_minor >= 27) {
-    header.add_bool(_file_stdfloat_double);
-  } else {
-    _file_stdfloat_double = false;
-  }
+  header.add_bool(_file_stdfloat_double);
 
   if (!_target->put_datagram(header)) {
     util_cat.error()
