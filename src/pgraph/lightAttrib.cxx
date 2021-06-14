@@ -980,7 +980,6 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   for (fi = _off_lights.begin(); fi != _off_lights.end(); ++fi) {
     (*fi).write_datagram(manager, dg);
   }
-  }
 
   // write the number of on lights
   dg.add_uint16(get_num_on_lights());
