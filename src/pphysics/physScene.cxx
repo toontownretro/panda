@@ -17,8 +17,10 @@
 #include "physRigidActorNode.h"
 #include "nodePath.h"
 #include "physRayCastResult.h"
+#include "physSweepResult.h"
 #include "physXSimulationEventCallback.h"
 #include "physQueryFilter.h"
+#include "physx_utils.h"
 
 /**
  *
@@ -39,7 +41,15 @@ PhysScene() :
   desc.filterShader = PandaSimulationFilterShader::filter;
   desc.filterCallback = PandaSimulationFilterCallback::ptr();
   desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
-  desc.solverType = physx::PxSolverType::eTGS;
+  switch (phys_solver.get_value()) {
+  default:
+  case PST_pgs:
+    desc.solverType = physx::PxSolverType::ePGS;
+    break;
+  case PST_tgs:
+    desc.solverType = physx::PxSolverType::eTGS;
+    break;
+  }
   _scene = sys->get_physics()->createScene(desc);
   _scene->userData = this;
 
@@ -227,6 +237,75 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
     return _scene->raycast(
       physx::PxVec3(origin[0], origin[1], origin[2]),
       physx::PxVec3(direction[0], direction[1], direction[2]),
+      distance,
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      filter);
+  }
+}
+
+/**
+ * Casts a bounding box into the scene and records the intersections.
+ *
+ * block_mask is the bitmask of collision groups that should prevent the ray
+ * from continuing, while touch_mask is the bitmask of collision groups that
+ * should allow the ray to continue (but still record an intersection).
+ *
+ * Returns true if there was at least one intersection, false otherwise.
+ */
+bool PhysScene::
+boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
+        const LVector3 &direction, PN_stdfloat distance,
+        const LVecBase3 &hpr,
+        CollideMask solid_mask, CollideMask touch_mask,
+        unsigned int collision_group, PhysBaseQueryFilter *filter) const {
+
+  physx::PxQueryFilterData data;
+  data.flags |= physx::PxQueryFlag::ePREFILTER;
+  // word0 is used during the fixed-function filtering.
+  data.data.word0 = (solid_mask | touch_mask).get_word();
+  data.data.word1 = solid_mask.get_word();
+  data.data.word2 = touch_mask.get_word();
+  data.data.word3 = collision_group;
+
+  PN_stdfloat hx, hy, hz, cx, cy, cz;
+  hx = (maxs[0] - mins[0]) / 2.0f;
+  hy = (maxs[1] - mins[1]) / 2.0f;
+  hz = (maxs[2] - mins[2]) / 2.0f;
+  cx = (maxs[0] + mins[0]) / 2.0f;
+  cy = (maxs[1] + mins[1]) / 2.0f;
+  cz = (maxs[2] + mins[2]) / 2.0f;
+
+  physx::PxBoxGeometry box;
+  box.halfExtents.x = hx;
+  box.halfExtents.y = hy;
+  box.halfExtents.z = hz;
+  physx::PxTransform trans;
+  trans.p.x = cx;
+  trans.p.y = cy;
+  trans.p.z = cz;
+  LQuaternion quat;
+  quat.set_hpr(hpr);
+  trans.q = Quat_to_PxQuat(quat);
+
+  if (filter == nullptr) {
+    // Use the base filter that just checks for common block or touch bits.
+    PhysBaseQueryFilter default_filter;
+    return _scene->sweep(
+      box, trans,
+      Vec3_to_PxVec3(direction),
+      distance,
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      &default_filter);
+
+  } else {
+    // Explicit filter was specified.
+    return _scene->sweep(
+      box, trans,
+      Vec3_to_PxVec3(direction),
       distance,
       result.get_buffer(),
       physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),

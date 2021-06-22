@@ -26,6 +26,7 @@
 #include "physx_includes.h"
 
 class PhysRayCastResult;
+class PhysSweepResult;
 class PhysBaseQueryFilter;
 
 /**
@@ -57,6 +58,13 @@ PUBLISHED:
 
   bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
                const LVector3 &direction, PN_stdfloat distance,
+               CollideMask solid_mask = CollideMask::all_on(),
+               CollideMask touch_mask = CollideMask::all_off(),
+               unsigned int collision_group = 0,
+               PhysBaseQueryFilter *filter = nullptr) const;
+  bool boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
+               const LVector3 &direction, PN_stdfloat distance,
+               const LVecBase3 &hpr = LVecBase3(0),
                CollideMask solid_mask = CollideMask::all_on(),
                CollideMask touch_mask = CollideMask::all_off(),
                unsigned int collision_group = 0,

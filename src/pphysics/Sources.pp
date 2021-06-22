@@ -43,6 +43,7 @@
     physSleepStateCallbackData.h physSleepStateCallbackData.I \
     physSphere.h physSphere.I \
     physSphericalJoint.h physSphericalJoint.I \
+    physSweepResult.h physSweepResult.I \
     physSystem.h physSystem.I \
     physTriggerCallbackData.h physTriggerCallbackData.I \
     physx_includes.h \
@@ -87,6 +88,7 @@
     physSleepStateCallbackData.cxx \
     physSphere.cxx \
     physSphericalJoint.cxx \
+    physSweepResult.cxx \
     physSystem.cxx \
     physTriggerCallbackData.cxx \
     physx_shaders.cxx \

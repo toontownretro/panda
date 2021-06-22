@@ -21,9 +21,18 @@
 #include "configVariableInt.h"
 #include "configVariableDouble.h"
 #include "configVariableString.h"
+#include "configVariableEnum.h"
 
 ConfigureDecl(config_pphysics, EXPCL_PANDA_PPHYSICS, EXPTP_PANDA_PPHYSICS);
 NotifyCategoryDecl(pphysics, EXPCL_PANDA_PPHYSICS, EXPTP_PANDA_PPHYSICS);
+
+enum PhysSolverType {
+  PST_pgs, // Projected Gauss-Seidel
+  PST_tgs, // Temporal Gauss-Seidel
+};
+
+EXPCL_PANDA_PPHYSICS std::ostream &operator << (std::ostream &out, PhysSolverType st);
+EXPCL_PANDA_PPHYSICS std::istream &operator >> (std::istream &in, PhysSolverType &st);
 
 extern EXPCL_PANDA_PPHYSICS ConfigVariableBool phys_enable_pvd;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableString phys_pvd_host;
@@ -31,6 +40,7 @@ extern EXPCL_PANDA_PPHYSICS ConfigVariableInt phys_pvd_port;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_tolerance_length;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_tolerance_speed;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableBool phys_track_allocations;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysSolverType> phys_solver;
 
 extern EXPCL_PANDA_PPHYSICS void init_libpphysics();
 

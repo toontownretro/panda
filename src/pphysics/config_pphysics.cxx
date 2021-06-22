@@ -21,6 +21,46 @@
 #include "physSleepStateCallbackData.h"
 #include "physContactCallbackData.h"
 #include "physShape.h"
+#include "string_utils.h"
+
+/**
+ *
+ */
+std::ostream &
+operator << (std::ostream &out, PhysSolverType st) {
+  switch(st) {
+  case PST_pgs:
+    out << "pgs";
+    return out;
+  case PST_tgs:
+    out << "tgs";
+    return out;
+  default:
+    out << "**invalid** (" << (int)st << ")";
+    return out;
+  }
+}
+
+/**
+ *
+ */
+std::istream &
+operator >> (std::istream &in, PhysSolverType &st) {
+  std::string word;
+  in >> word;
+
+  if (cmp_nocase(word, "pgs") == 0) {
+    st = PST_pgs;
+  } else if (cmp_nocase(word, "tgs") == 0) {
+    st = PST_tgs;
+  } else {
+    pphysics_cat.error()
+      << "Invalid PhysSolverType: " << word << "\n";
+    st = PST_pgs;
+  }
+
+  return in;
+}
 
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
@@ -60,6 +100,11 @@ ConfigVariableBool phys_track_allocations
 ("phys-track-allocations", false,
  PRC_DESC("If true, PhysX will track its memory allocations.  Useful for "
           "debugging.  Default is false."));
+
+ConfigVariableEnum<PhysSolverType> phys_solver
+("phys-solver", PST_pgs,
+ PRC_DESC("The physics solver type to use.  Default is Projected Gauss-Seidel "
+          "(PGS)."));
 
 /**
  * Initializes the library.  This must be called at least once before any of
