@@ -20,7 +20,8 @@ ModelRoot(const std::string &name) :
   _fullpath(name),
   _timestamp(0),
   _reference(new ModelRoot::ModelReference),
-  _active_material_group(0)
+  _active_material_group(0),
+  _custom_data(nullptr)
 {
 }
 
@@ -33,7 +34,8 @@ ModelRoot(const Filename &fullpath, time_t timestamp) :
   _fullpath(fullpath),
   _timestamp(timestamp),
   _reference(new ModelRoot::ModelReference),
-  _active_material_group(0)
+  _active_material_group(0),
+  _custom_data(nullptr)
 {
 }
 
@@ -114,6 +116,26 @@ get_reference() const {
 INLINE void ModelRoot::
 set_reference(ModelRoot::ModelReference *ref) {
   _reference = ref;
+}
+
+/**
+ * Sets the collision info structure for the model.  This defines the
+ * physics/collision hull for the model, along with its mass and material
+ * properties.
+ */
+INLINE void ModelRoot::
+set_collision_info(CollisionInfo *info) {
+  _collision_info = info;
+}
+
+/**
+ * Returns the collision info structure for the model.  This defines the
+ * physics/collision hull for the model, along with its mass and material
+ * properties.
+ */
+INLINE ModelRoot::CollisionInfo *ModelRoot::
+get_collision_info() const {
+  return _collision_info;
 }
 
 /**
@@ -200,7 +222,9 @@ ModelRoot(const ModelRoot &copy) :
   _timestamp(copy._timestamp),
   _reference(copy._reference),
   _active_material_group(copy._active_material_group),
-  _material_groups(copy._material_groups)
+  _material_groups(copy._material_groups),
+  _custom_data(copy._custom_data),
+  _collision_info(copy._collision_info)
 {
 }
 
@@ -209,4 +233,79 @@ ModelRoot(const ModelRoot &copy) :
  */
 INLINE ModelRoot::ModelReference::
 ModelReference() {
+}
+
+/**
+ *
+ */
+INLINE ModelRoot::CollisionInfo::
+CollisionInfo() :
+  _mass(100.0f),
+  _damping(0.0f),
+  _rot_damping(0.0f)
+{
+}
+
+/**
+ *
+ */
+INLINE void ModelRoot::CollisionInfo::
+set_mass(PN_stdfloat mass) {
+  _mass = mass;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat ModelRoot::CollisionInfo::
+get_mass() const {
+  return _mass;
+}
+
+/**
+ *
+ */
+INLINE void ModelRoot::CollisionInfo::
+set_damping(PN_stdfloat damping) {
+  _damping = damping;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat ModelRoot::CollisionInfo::
+get_damping() const {
+  return _damping;
+}
+
+/**
+ *
+ */
+INLINE void ModelRoot::CollisionInfo::
+set_rot_damping(PN_stdfloat damping) {
+  _rot_damping = damping;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat ModelRoot::CollisionInfo::
+get_rot_damping() const {
+  return _rot_damping;
+}
+
+/**
+ *
+ */
+INLINE void ModelRoot::CollisionInfo::
+set_mesh_data(CPTA_uchar data) {
+  _mesh_data = data;
+}
+
+/**
+ *
+ */
+INLINE CPTA_uchar ModelRoot::CollisionInfo::
+get_mesh_data() const {
+  return _mesh_data;
 }

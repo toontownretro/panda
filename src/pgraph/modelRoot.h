@@ -19,6 +19,7 @@
 #include "modelNode.h"
 #include "materialCollection.h"
 #include "pdxElement.h"
+#include "pta_uchar.h"
 
 /**
  * A node of this type is created automatically at the root of each model file
@@ -42,6 +43,30 @@ PUBLISHED:
   INLINE void set_timestamp(time_t timestamp);
   MAKE_PROPERTY(timestamp, get_timestamp, set_timestamp);
 
+  // Physics/collision information for the model.
+  class CollisionInfo : public ReferenceCount {
+  PUBLISHED:
+    INLINE CollisionInfo();
+
+    INLINE void set_mass(PN_stdfloat mass);
+    INLINE PN_stdfloat get_mass() const;
+
+    INLINE void set_damping(PN_stdfloat damping);
+    INLINE PN_stdfloat get_damping() const;
+
+    INLINE void set_rot_damping(PN_stdfloat damping);
+    INLINE PN_stdfloat get_rot_damping() const;
+
+    INLINE void set_mesh_data(CPTA_uchar data);
+    INLINE CPTA_uchar get_mesh_data() const;
+
+  private:
+    PN_stdfloat _mass;
+    PN_stdfloat _damping;
+    PN_stdfloat _rot_damping;
+    CPTA_uchar _mesh_data;
+  };
+
   // This class is used to unify references to the same model.
   class ModelReference : public ReferenceCount {
   PUBLISHED:
@@ -49,8 +74,12 @@ PUBLISHED:
   };
 
   INLINE ModelReference *get_reference() const;
-  void set_reference(ModelReference *ref);
+  INLINE void set_reference(ModelReference *ref);
   MAKE_PROPERTY(reference, get_reference, set_reference);
+
+  INLINE void set_collision_info(CollisionInfo *info);
+  INLINE CollisionInfo *get_collision_info() const;
+  MAKE_PROPERTY(collision_info, get_collision_info, set_collision_info);
 
   INLINE void set_active_material_group(size_t n);
   INLINE size_t get_active_material_group() const;
@@ -78,6 +107,8 @@ private:
   Filename _fullpath;
   time_t _timestamp;
   PT(ModelReference) _reference;
+
+  PT(CollisionInfo) _collision_info;
 
   // This handles skins.
   typedef pvector<MaterialCollection> MaterialGroups;
