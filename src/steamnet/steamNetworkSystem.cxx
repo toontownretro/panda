@@ -14,10 +14,13 @@
 #include "steamNetworkSystem.h"
 #include "steamNetworkMessage.h"
 #include "steamNetworkConnectionInfo.h"
+#include "pStatCollector.h"
 
 #ifndef CPPPARSER
 #include "steam/isteamnetworkingutils.h"
 #endif
+
+static PStatCollector copy_datagram_coll("App:SteamNetworking:CopyMessageDatagram");
 
 SteamNetworkSystem *SteamNetworkSystem::_global_ptr = nullptr;
 
@@ -164,7 +167,10 @@ receive_message_on_connection(SteamNetworkConnectionHandle conn, SteamNetworkMes
     return false;
   }
 
+  copy_datagram_coll.start();
   msg.set_datagram(Datagram(in_msg->m_pData, in_msg->m_cbSize));
+  copy_datagram_coll.stop();
+
   msg.set_connection(in_msg->GetConnection());
 
   return true;
@@ -181,7 +187,10 @@ receive_message_on_poll_group(SteamNetworkPollGroupHandle poll_group, SteamNetwo
     return false;
   }
 
+  copy_datagram_coll.start();
   msg.set_datagram(Datagram(in_msg->m_pData, in_msg->m_cbSize));
+  copy_datagram_coll.stop();
+
   msg.set_connection(in_msg->GetConnection());
 
   return true;
