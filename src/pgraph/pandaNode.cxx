@@ -2419,6 +2419,14 @@ children_changed() {
 void PandaNode::
 transform_changed() {
   nassertv((_unexpected_change_flags & UC_transform) == 0);
+
+  // Recurse to children.
+  Children children = get_children();
+  int num_children = children.get_num_children();
+  for (int i = 0; i < num_children; ++i) {
+    PandaNode *child = children.get_child(i);
+    child->transform_changed();
+  }
 }
 
 /**
