@@ -21,9 +21,12 @@
 #include "vector_string.h"
 #include "luse.h"
 #include "pdxElement.h"
+#include "eggLoader.h"
+#include "eggData.h"
 
-class PMDLData;
 class PandaNode;
+class Character;
+class AnimBundle;
 
 /**
  * A single material group.
@@ -91,11 +94,11 @@ public:
 class PMDLAnim {
 public:
   PMDLAnim() { }
-  std::string _name;
+  std::string _name = "";
   // Filename of animation .egg file.
-  Filename _anim_filename;
+  Filename _anim_filename = "";
   // Frames per second of animation.
-  int _fps = -1;
+  int _fps = 30;
 };
 
 /**
@@ -118,22 +121,24 @@ public:
 class PMDLSequenceLayer {
 public:
   PMDLSequenceLayer() { }
-  std::string _sequence_name;
-  int _start_frame = -1;
-  int _peak_frame = -1;
-  int _tail_frame = -1;
-  int _end_frame = -1;
+  std::string _sequence_name = "";
+  float _start_frame = 0;
+  float _peak_frame = 0;
+  float _tail_frame = 0;
+  float _end_frame = 0;
   bool _spline = false;
   bool _no_blend = false;
+  bool _xfade = false;
+  std::string _pose_param = "";
 };
 
 class PMDLSequenceEvent {
 public:
   PMDLSequenceEvent() { }
   int _frame = 0;
-  int _event = 0;
+  std::string _event = "";
   int _type = 0;
-  std::string _options;
+  std::string _options = "";
 };
 
 class PMDLWeightList {
@@ -210,8 +215,11 @@ public:
 
   bool _real_time = false;
 
+  // If not -1, overrides the frame rate of all animations in sequence.
   int _fps = -1;
+
   int _num_frames = -1;
+
   float _fade_in = 0.2f;
   float _fade_out = 0.2f;
   std::string _weight_list_name;
@@ -221,8 +229,23 @@ public:
 
   pvector<PMDLIKLock> _ik_locks;
 
-  int _activity;
-  int _activity_weight;
+  std::string _activity = "";
+  int _activity_weight = 1;
+};
+
+class PMDLAttachmentInfluence {
+public:
+  PMDLAttachmentInfluence() {
+    _local_pos.set(0, 0, 0);
+    _local_hpr.set(0, 0, 0);
+    _weight = 1.0f;
+    _parent_joint = "";
+  }
+
+  std::string _parent_joint;
+  LPoint3 _local_pos;
+  LVecBase3 _local_hpr;
+  float _weight = 1.0f;
 };
 
 /**
@@ -231,9 +254,69 @@ public:
 class PMDLAttachment {
 public:
   std::string _name;
-  std::string _parent_joint;
-  LPoint3 _local_pos;
-  LVecBase3 _local_hpr;
+  pvector<PMDLAttachmentInfluence> _influences;
+};
+
+/**
+ *
+ */
+class PMDLEyeball {
+public:
+  PMDLEyeball() {
+    _name = "";
+    _material_name = "";
+    _parent = "";
+    _pos = LPoint3(0);
+    _eye_shift = LVecBase3(0);
+    _diameter = 1.0f;
+    _iris_size = 1.0f;
+    _eye_size = 0.0f;
+    _z_offset = 0.0f;
+  }
+  std::string _name;
+  std::string _material_name;
+  std::string _parent;
+  LPoint3 _pos;
+  LVecBase3 _eye_shift;
+  float _diameter;
+  float _iris_size;
+  float _eye_size;
+  float _z_offset;
+};
+
+/**
+ *
+ */
+class PMDLPhysicsJoint {
+public:
+  std::string _joint_name = "";
+  float _mass_bias;
+  float _rot_damping;
+  LVecBase2 _limit_x;
+  LVecBase2 _limit_y;
+  LVecBase2 _limit_z;
+};
+
+/**
+ *
+ */
+class PMDLPhysicsModel {
+public:
+  std::string _name = "";
+  // Name of Egg group that contains the physics geometry.
+  std::string _mesh_name = "";
+  // Create triangle mesh instead of convex mesh.
+  bool _use_exact_geometry = false;
+  // Automatically calculate mass from volume of mesh.
+  bool _auto_mass = true;
+  // Explicit mass if auto mass is false.
+  float _mass_override = 100.0f;
+  float _rot_damping = 0.0f;
+  float _damping = 0.0f;
+  float _density = 900.0f;
+  float _thickness = 0.0;
+
+  pvector<PMDLPhysicsJoint> _joints;
 };
 
 /**
@@ -241,13 +324,15 @@ public:
  */
 class PMDLDataDesc : public ReferenceCount {
 public:
-  PMDLDataDesc() { _scale = 1.0f; }
+  PMDLDataDesc() { _scale.set(1, 1, 1); _pos.set(0, 0, 0); _hpr.set(0, 0, 0); }
 
   bool load(const Filename &filename, const DSearchPath &search_path = get_model_path());
 
   // Filename of the .egg model file.
   Filename _model_filename; //
-  float _scale; //
+  LVecBase3 _scale; //
+  LVecBase3 _hpr; //
+  LPoint3 _pos; //
   pvector<PMDLMaterialGroup> _material_groups; //
   pvector<PMDLLODSwitch> _lod_switches; //
   pvector<PMDLIKChain> _ik_chains; // TODO
@@ -257,7 +342,10 @@ public:
   pvector<PMDLWeightList> _weight_lists; //
   pvector<PMDLHitBox> _hit_boxes;
   pvector<PMDLAttachment> _attachments;
+  pvector<PMDLEyeball> _eyeballs;
   vector_string _joint_merges; //
+
+  PMDLPhysicsModel _phy;
 
   // Custom PDX element attached to model, for game-specific data.
   PT(PDXElement) _custom_data; //
@@ -282,10 +370,15 @@ public:
 
   Character *_part_bundle = nullptr;
 
+  DSearchPath _search_path;
+
   AnimBundle *find_or_load_anim(const std::string &anim_name);
   AnimBundle *load_anim(const std::string &name, const Filename &filename);
 
   pmap<std::string, AnimBundle *> _anims_by_name;
+
+  EggLoader _egg_loader;
+  PT(EggData) _egg_data;
 };
 
 #include "pmdlLoader.I"

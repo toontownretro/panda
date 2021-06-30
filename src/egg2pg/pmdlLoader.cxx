@@ -36,6 +36,19 @@
 #include "poseParameter.h"
 #include "animBlendNode2D.h"
 #include "mathutil_misc.h"
+#include "animActivity.h"
+#include "animEvent.h"
+#include "eyeballNode.h"
+#include "omniBoundingVolume.h"
+#include "deg_2_rad.h"
+#include "geomNode.h"
+#include "materialAttrib.h"
+#include "material.h"
+#include "physConvexMesh.h"
+#include "physConvexMeshData.h"
+#include "geomVertexReader.h"
+#include "internalName.h"
+#include "physSystem.h"
 
 /**
  *
@@ -66,10 +79,6 @@ load(const Filename &filename, const DSearchPath &search_path) {
 
   } else {
     return false;
-  }
-
-  if (data->has_attribute("scale")) {
-    _scale = data->get_attribute_value("scale").get_float();
   }
 
   if (data->has_attribute("joint_merges")) {
@@ -276,6 +285,9 @@ load(const Filename &filename, const DSearchPath &search_path) {
       if (seqe->has_attribute("fps")) {
         seq._fps = seqe->get_attribute_value("fps").get_int();
       }
+      if (seqe->has_attribute("num_frames")) {
+        seq._num_frames = seqe->get_attribute_value("num_frames").get_int();
+      }
       if (seqe->has_attribute("fade_in")) {
         seq._fade_in = seqe->get_attribute_value("fade_in").get_float();
       }
@@ -286,7 +298,7 @@ load(const Filename &filename, const DSearchPath &search_path) {
         seq._weight_list_name = seqe->get_attribute_value("weight_list").get_string();
       }
       if (seqe->has_attribute("activity")) {
-        seq._activity = seqe->get_attribute_value("activity").get_int();
+        seq._activity = seqe->get_attribute_value("activity").get_string();
       }
       if (seqe->has_attribute("activity_weight")) {
         seq._activity_weight = seqe->get_attribute_value("activity_weight").get_int();
@@ -363,23 +375,29 @@ load(const Filename &filename, const DSearchPath &search_path) {
           if (layere->has_attribute("sequence")) {
             layer._sequence_name = layere->get_attribute_value("sequence").get_string();
           }
-          if (layere->has_attribute("start_frame")) {
-            layer._start_frame = layere->get_attribute_value("start_frame").get_int();
+          if (layere->has_attribute("start")) {
+            layer._start_frame = layere->get_attribute_value("start").get_float();
           }
-          if (layere->has_attribute("peak_frame")) {
-            layer._peak_frame = layere->get_attribute_value("peak_frame").get_int();
+          if (layere->has_attribute("peak")) {
+            layer._peak_frame = layere->get_attribute_value("peak").get_float();
           }
-          if (layere->has_attribute("tail_frame")) {
-            layer._tail_frame = layere->get_attribute_value("tail_frame").get_int();
+          if (layere->has_attribute("tail")) {
+            layer._tail_frame = layere->get_attribute_value("tail").get_float();
           }
-          if (layere->has_attribute("end_frame")) {
-            layer._end_frame = layere->get_attribute_value("end_frame").get_int();
+          if (layere->has_attribute("end")) {
+            layer._end_frame = layere->get_attribute_value("end").get_float();
           }
           if (layere->has_attribute("spline")) {
             layer._spline = layere->get_attribute_value("spline").get_bool();
           }
           if (layere->has_attribute("no_blend")) {
             layer._no_blend = layere->get_attribute_value("no_blend").get_bool();
+          }
+          if (layere->has_attribute("xfade")) {
+            layer._xfade = layere->get_attribute_value("xfade").get_bool();
+          }
+          if (layere->has_attribute("pose_parameter")) {
+            layer._pose_param = layere->get_attribute_value("pose_parameter").get_string();
           }
           seq._layers.push_back(layer);
         }
@@ -414,7 +432,7 @@ load(const Filename &filename, const DSearchPath &search_path) {
             event._frame = evente->get_attribute_value("frame").get_int();
           }
           if (evente->has_attribute("event")) {
-            event._event = evente->get_attribute_value("event").get_int();
+            event._event = evente->get_attribute_value("event").get_string();
           }
           if (evente->has_attribute("type")) {
             event._type = evente->get_attribute_value("type").get_int();
@@ -486,19 +504,122 @@ load(const Filename &filename, const DSearchPath &search_path) {
       if (attache->has_attribute("name")) {
         attach._name = attache->get_attribute_value("name").get_string();
       }
-      if (attache->has_attribute("parent")) {
-        attach._parent_joint = attache->get_attribute_value("parent").get_string();
+      if (attache->has_attribute("influences")) {
+        PDXList *inf_list = attache->get_attribute_value("influences").get_list();
+        nassertr(inf_list != nullptr, false);
+        for (size_t j = 0; j < inf_list->size(); j++) {
+          PDXElement *infe = inf_list->get(j).get_element();
+          nassertr(infe != nullptr, false);
+          PMDLAttachmentInfluence inf;
+          if (infe->has_attribute("parent")) {
+            inf._parent_joint = infe->get_attribute_value("parent").get_string();
+          }
+          if (infe->has_attribute("weight")) {
+            inf._weight = infe->get_attribute_value("weight").get_float();
+          }
+          if (infe->has_attribute("pos")) {
+            if (!infe->get_attribute_value("pos").to_vec3(inf._local_pos)) {
+              return false;
+            }
+          }
+          if (infe->has_attribute("hpr")) {
+            if (!infe->get_attribute_value("hpr").to_vec3(inf._local_hpr)) {
+              return false;
+            }
+          }
+          attach._influences.push_back(inf);
+        }
       }
-      if (attache->has_attribute("pos")) {
-        if (!attache->get_attribute_value("pos").to_vec3(attach._local_pos)) {
+      _attachments.push_back(attach);
+    }
+  }
+
+  if (data->has_attribute("eyeballs")) {
+    PDXList *eyes_list = data->get_attribute_value("eyeballs").get_list();
+    nassertr(eyes_list != nullptr, false);
+    for (size_t i = 0; i < eyes_list->size(); i++) {
+      PDXElement *eyee = eyes_list->get(i).get_element();
+      nassertr(eyee != nullptr, false);
+      PMDLEyeball eye;
+      if (eyee->has_attribute("name")) {
+        eye._name = eyee->get_attribute_value("name").get_string();
+      }
+      if (eyee->has_attribute("material")) {
+        eye._material_name = eyee->get_attribute_value("material").get_string();
+      }
+      if (eyee->has_attribute("parent")) {
+        eye._parent = eyee->get_attribute_value("parent").get_string();
+      }
+      if (eyee->has_attribute("shift")) {
+        if (!eyee->get_attribute_value("shift").to_vec3(eye._eye_shift)) {
           return false;
         }
       }
-      if (attache->has_attribute("hpr")) {
-        if (!attache->get_attribute_value("hpr").to_vec3(attach._local_hpr)) {
+      if (eyee->has_attribute("pos")) {
+        if (!eyee->get_attribute_value("pos").to_vec3(eye._pos)) {
           return false;
         }
       }
+      if (eyee->has_attribute("diameter")) {
+        eye._diameter = eyee->get_attribute_value("diameter").get_float();
+      }
+      if (eyee->has_attribute("iris_size")) {
+        eye._iris_size = eyee->get_attribute_value("iris_size").get_float();
+      }
+      if (eyee->has_attribute("size")) {
+        eye._eye_size = eyee->get_attribute_value("size").get_float();
+      }
+      if (eyee->has_attribute("z_offset")) {
+        eye._z_offset = eyee->get_attribute_value("z_offset").get_float();
+      }
+
+      _eyeballs.push_back(eye);
+    }
+  }
+
+  if (data->has_attribute("physics_model")) {
+    PDXElement *pme = data->get_attribute_value("physics_model").get_element();
+    nassertr(pme != nullptr, false);
+    if (pme->has_attribute("name")) {
+      _phy._name = pme->get_attribute_value("name").get_string();
+    }
+    if (pme->has_attribute("mesh")) {
+      _phy._mesh_name = pme->get_attribute_value("mesh").get_string();
+    }
+    if (pme->has_attribute("concave")) {
+      _phy._use_exact_geometry = pme->get_attribute_value("concave").get_bool();
+    }
+    if (pme->has_attribute("auto_mass")) {
+      _phy._auto_mass = pme->get_attribute_value("auto_mass").get_bool();
+    }
+    if (pme->has_attribute("mass")) {
+      // If we got explicit mass then we are not doing auto-mass.
+      _phy._auto_mass = false;
+      _phy._mass_override = pme->get_attribute_value("mass").get_float();
+    }
+    if (pme->has_attribute("rot_damping")) {
+      _phy._rot_damping = pme->get_attribute_value("rot_damping").get_float();
+    }
+    if (pme->has_attribute("damping")) {
+      _phy._damping = pme->get_attribute_value("damping").get_float();
+    }
+  }
+
+  if (data->has_attribute("pos")) {
+    if (!data->get_attribute_value("pos").to_vec3(_pos)) {
+      return false;
+    }
+  }
+
+  if (data->has_attribute("hpr")) {
+    if (!data->get_attribute_value("hpr").to_vec3(_hpr)) {
+      return false;
+    }
+  }
+
+  if (data->has_attribute("scale")) {
+    if (!data->get_attribute_value("scale").to_vec3(_scale)) {
+      return false;
     }
   }
 
@@ -524,33 +645,32 @@ void PMDLLoader::
 build_graph() {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
-  DSearchPath search_path = get_model_path();
-  search_path.append_directory(_data->_fullpath.get_dirname());
+  _search_path = get_model_path();
+  _search_path.append_directory(_data->_fullpath.get_dirname());
 
   Filename model_filename = _data->_model_filename;
-  if (!vfs->resolve_filename(model_filename, search_path)) {
+  if (!vfs->resolve_filename(model_filename, _search_path)) {
     egg2pg_cat.error()
       << "Couldn't find pmdl model file " << model_filename << " on search path "
-      << search_path << "\n";
+      << _search_path << "\n";
     return;
   }
 
   Loader *loader = Loader::get_global_ptr();
 
   _root = loader->load_sync(model_filename);
-  if (!_root) {
+  if (_root == nullptr) {
     egg2pg_cat.error()
-      << "Failed to build graph from model filename\n";
+      << "Unable to build graph from egg file " << model_filename << "\n";
     return;
   }
-
   NodePath root_np(_root);
   ModelRoot *mdl_root = DCAST(ModelRoot, _root);
 
   // SCALE
-  if (_data->_scale != 1.0) {
-    root_np.set_scale(_data->_scale);
-  }
+  root_np.set_scale(_data->_scale);
+  root_np.set_pos(_data->_pos);
+  root_np.set_hpr(_data->_hpr);
 
   // MATERIAL GROUPS
   for (size_t i = 0; i < _data->_material_groups.size(); i++) {
@@ -558,7 +678,7 @@ build_graph() {
     MaterialCollection coll;
     for (size_t j = 0; j < group->_materials.size(); j++) {
       Filename mat_fname = group->_materials[j];
-      coll.add_material(MaterialPool::load_material(mat_fname, search_path));
+      coll.add_material(MaterialPool::load_material(mat_fname, _search_path));
     }
     mdl_root->add_material_group(coll);
   }
@@ -570,7 +690,7 @@ build_graph() {
     // Figure out where to place the LODNode.  For now we'll naively use the
     // common ancestor between the first groups of the first two switches.
     NodePath group0 = root_np.find("**/" + _data->_lod_switches[0]._groups[0]);
-    NodePath group1 = root_np.find("**/" + _data->_lod_switches[1]._groups[1]);
+    NodePath group1 = root_np.find("**/" + _data->_lod_switches[1]._groups[0]);
     NodePath lod_parent = group0.get_common_ancestor(group1);
     lod_parent.node()->add_child(lod_node);
 
@@ -626,6 +746,9 @@ build_graph() {
   NodePath char_np = root_np.find("**/+CharacterNode");
   if (!char_np.is_empty()) {
     // This is an animated character.
+
+    AnimActivity *activities = AnimActivity::ptr();
+    AnimEvent *events = AnimEvent::ptr();
 
     CharacterNode *char_node = DCAST(CharacterNode, char_np.node());
     Character *part_bundle = DCAST(Character, char_node->get_character());
@@ -704,6 +827,16 @@ build_graph() {
     }
 #endif
     // SEQUENCES
+
+    // Implicitly create the "zero" sequence as the first sequence.
+    // This sequence just maintains the resting pose of the model.
+    PT(AnimSequence) zero_seq = new AnimSequence("zero");
+    zero_seq->set_flags(AnimSequence::F_all_zeros);
+    zero_seq->set_num_frames(1);
+    zero_seq->set_frame_rate(30);
+    seqs_by_name["zero"] = zero_seq;
+    part_bundle->add_sequence(zero_seq);
+
     for (size_t i = 0; i < _data->_sequences.size(); i++) {
       PMDLSequence *pmdl_seq = &_data->_sequences[i];
       PT(AnimSequence) seq = new AnimSequence(pmdl_seq->_name);
@@ -747,13 +880,17 @@ build_graph() {
         seq->set_num_frames(pmdl_seq->_num_frames);
       }
 
-      seq->set_activity(pmdl_seq->_activity, pmdl_seq->_activity_weight);
+      seq->set_activity(activities->get_value_id(pmdl_seq->_activity),
+                        pmdl_seq->_activity_weight);
 
       if (!pmdl_seq->_animation_name.empty()) {
         // Single-animation sequence.
         AnimBundle *anim_bundle = find_or_load_anim(pmdl_seq->_animation_name);
         if (anim_bundle != nullptr) {
           seq->set_base(anim_bundle);
+          if (pmdl_seq->_fps != -1) {
+            anim_bundle->set_base_frame_rate(pmdl_seq->_fps);
+          }
         }
 
       } else if (!pmdl_seq->_blend._animations.empty()) {
@@ -767,9 +904,18 @@ build_graph() {
           for (size_t col = 0; col < num_cols; col++) {
             size_t anim_index = (row * num_cols) + col;
             AnimBundle *anim_bundle = find_or_load_anim(pmdl_seq->_blend._animations[anim_index]);
-            blend_node->add_input(anim_bundle,
-              LPoint2(remap_val_clamped(col, 0, num_cols - 1, -1, 1),
-                      remap_val_clamped(row, 0, num_rows - 1, -1, 1)));
+            if (pmdl_seq->_fps != -1) {
+              anim_bundle->set_base_frame_rate(pmdl_seq->_fps);
+            }
+            if (num_rows > 1) {
+              LPoint2 pt((PN_stdfloat)col / (num_cols - 1),
+                         (PN_stdfloat)row / (num_rows - 1));
+              blend_node->add_input(anim_bundle, pt);
+            } else {
+              // Cheat until AnimBlendNode1D.
+              blend_node->add_input(anim_bundle, LPoint2((PN_stdfloat)col / (num_cols - 1), 0.0f));
+              blend_node->add_input(anim_bundle, LPoint2((PN_stdfloat)col / (num_cols - 1), 1.0f));
+            }
           }
         }
 
@@ -789,16 +935,27 @@ build_graph() {
           continue;
         }
         AnimSequence *layer_seq = (*it).second;
+        int pose_param = -1;
+        if (!pmdl_layer->_pose_param.empty()) {
+          pose_param = part_bundle->find_pose_parameter(pmdl_layer->_pose_param);
+          if (pose_param == -1) {
+            egg2pg_cat.error()
+              << "Sequence " << pmdl_seq->_name << " layer " << pmdl_layer->_sequence_name
+              << " pose parameter " << pmdl_layer->_pose_param << " not found\n";
+            continue;
+          }
+        }
         seq->add_layer(layer_seq, pmdl_layer->_start_frame,
                        pmdl_layer->_peak_frame, pmdl_layer->_tail_frame,
                        pmdl_layer->_end_frame, pmdl_layer->_spline,
-                       pmdl_layer->_no_blend);
+                       pmdl_layer->_no_blend, pmdl_layer->_xfade, pose_param);
       }
 
       // Sequence events.
       for (size_t j = 0; j < pmdl_seq->_events.size(); j++) {
         PMDLSequenceEvent *event = &pmdl_seq->_events[j];
-        seq->add_event(event->_type, event->_event, event->_frame, event->_options);
+        seq->add_event(event->_type, events->get_value_id(event->_event),
+                       event->_frame, event->_options);
       }
 
       // Per-joint weight list.
@@ -815,82 +972,190 @@ build_graph() {
       // TODO: sequence ik locks and ik rules.
 
       seqs_by_name[pmdl_seq->_name] = seq;
-      std::cout << "Ad sequence " << pmdl_seq->_name << "\n";
       part_bundle->add_sequence(seq);
     }
 
-    pmap<int, NodePath> exposed_joints;
-
-#if 0
-    // EXPOSES
-    for (PMDLData::StringMap::const_iterator ei = _data->_exposes.begin();
-         ei != _data->_exposes.end(); ++ei) {
-      int joint = part_bundle->find_joint((*ei).first);
-      if (joint == -1) {
-        egg2pg_cat.error()
-          << "expose joint " << (*ei).first << " not found.\n";
-        continue;
+    // ATTACHMENTS
+    for (size_t i = 0; i < _data->_attachments.size(); i++) {
+      PMDLAttachment *pmdl_attach = &_data->_attachments[i];
+      int index = part_bundle->add_attachment(pmdl_attach->_name);
+      for (size_t j = 0; j < pmdl_attach->_influences.size(); j++) {
+        PMDLAttachmentInfluence *pmdl_inf = &pmdl_attach->_influences[j];
+        int parent = -1;
+        if (!pmdl_inf->_parent_joint.empty()) {
+          parent = part_bundle->find_joint(pmdl_inf->_parent_joint);
+        }
+        part_bundle->add_attachment_parent(index, parent, pmdl_inf->_local_pos,
+                                           pmdl_inf->_local_hpr, pmdl_inf->_weight);
       }
-      NodePath np(new ModelNode((*ei).second));
-      part_bundle->add_net_transform(joint, np.node());
-      np.reparent_to(char_np);
-      exposed_joints[joint] = np;
+
+      // Create a node to contain the attachment's transform.
+      PT(ModelNode) attach_node = new ModelNode(pmdl_attach->_name);
+      char_node->add_child(attach_node);
+
+      // Link the node up with the attachment.
+      part_bundle->set_attachment_node(index, attach_node);
+    }
+  }
+
+  NodePathCollection all_geom_nodes = root_np.find_all_matches("**/+GeomNode");
+  NodePathCollection eye_geom_nodes;
+
+  for (size_t i = 0; i < _data->_eyeballs.size(); i++) {
+    PMDLEyeball *pmdl_eye = &_data->_eyeballs[i];
+    int parent_joint = _part_bundle->find_joint(pmdl_eye->_parent);
+    if (parent_joint == -1) {
+      egg2pg_cat.error()
+        << "Eyeball " << pmdl_eye->_name << " parent joint " << pmdl_eye->_parent << " not found\n";
+      continue;
     }
 
-    // ATTACHMENTS
-    for (PMDLData::Attachments::const_iterator ai = _data->_attachments.begin();
-         ai != _data->_attachments.end(); ++ai) {
-      PMDLAttachment *attach = (*ai).second;
+    // Need to create a copy of the eyeball for each unique parent of all eye
+    // geom nodes.
+    pmap<NodePath, NodePath> eyes_by_parent;
 
-      PT(ModelNode) mod_node = new ModelNode(attach->get_name());
-      mod_node->set_preserve_transform(ModelNode::PT_local);
-      NodePath np(mod_node);
-      np.set_pos(attach->get_pos());
-      np.set_hpr(attach->get_hpr());
-
-      if (attach->get_parent_joint().empty()) {
-        // Just a static node relative to character root.
-        np.reparent_to(char_np);
-
-      } else {
-        int joint = part_bundle->find_joint(attach->get_parent_joint());
-        if (joint == -1) {
-          egg2pg_cat.error()
-            << "attachment parent joint " << attach->get_parent_joint()
-            << " not found.\n";
+    eye_geom_nodes.clear();
+    // Find all the geoms with the material that the eyeball specifies.  If
+    // that is the only geom or all geoms in the node use the same material,
+    // the geom node is moved directly under the eye.  Otherwise, the geoms
+    // using the eyeball material are extracted into their own geom node and
+    // parented to the eye.  If two eyeball geom nodes have different parents,
+    // a copy of the eyeball is created for each unique parent.
+    for (size_t j = 0; j < all_geom_nodes.size(); j++) {
+      NodePath geom_np = all_geom_nodes[j];
+      GeomNode *geom_node = DCAST(GeomNode, geom_np.node());
+      vector_int eye_geoms;
+      for (size_t k = 0; k < geom_node->get_num_geoms(); k++) {
+        const Geom *geom = geom_node->get_geom(k);
+        const RenderState *state = geom_node->get_geom_state(k);
+        const MaterialAttrib *mattr;
+        state->get_attrib_def(mattr);
+        Material *mat = mattr->get_material();
+        if (mat == nullptr) {
           continue;
         }
-
-        np.set_effect(CharacterJointEffect::make(char_node));
-
-        auto ei = exposed_joints.find(joint);
-        if (ei != exposed_joints.end()) {
-          // We've already exposed this parent joint.
-          np.reparent_to((*ei).second);
-
-        } else {
-          // Need to expose it.
-
-          NodePath expose_np(new ModelNode(attach->get_parent_joint()));
-          expose_np.reparent_to(char_np);
-          part_bundle->add_net_transform(joint, expose_np.node());
-
-          np.reparent_to(expose_np);
-
-          exposed_joints[joint] = expose_np;
+        if (mat->get_filename().get_basename_wo_extension() == pmdl_eye->_material_name) {
+          // This is a geom for this eyeball.
+          eye_geoms.push_back(k);
         }
+      }
+
+      if (eye_geoms.size() == 0) {
+        continue;
+      }
+
+      if (eye_geoms.size() == geom_node->get_num_geoms()) {
+        // All geoms use the eye material, so just use the geom node as-is.
+        eye_geom_nodes.add_path(geom_np);
+
+      } else {
+        // Need to extract out just the eyeball geoms.
+        std::ostringstream ss;
+        ss << pmdl_eye->_material_name << "_eyeball_geom_" << eye_geom_nodes.size();
+        PT(GeomNode) eye_geom_node = new GeomNode(ss.str());
+        for (size_t k = 0; k < eye_geoms.size(); k++) {
+          CPT(Geom) geom = geom_node->get_geom(eye_geoms[k]);
+          CPT(RenderState) state = geom_node->get_geom_state(eye_geoms[k]);
+          geom_node->remove_geom(eye_geoms[k]);
+          eye_geom_node->add_geom((Geom *)geom.p(), (RenderState *)state.p());
+        }
+        geom_np.get_parent().node()->add_child(eye_geom_node);
+        eye_geom_nodes.add_path(NodePath(eye_geom_node));
       }
     }
 
-#endif
+    PT(EyeballNode) eye = new EyeballNode(pmdl_eye->_name, _part_bundle, parent_joint);
+    eye->set_radius(pmdl_eye->_diameter / 2.0f);
+    eye->set_iris_scale(1.0f / pmdl_eye->_iris_size);
+    eye->set_eye_size(pmdl_eye->_eye_size);
+    eye->set_eye_shift(pmdl_eye->_eye_shift);
+    eye->set_z_offset(std::tan(deg_2_rad(pmdl_eye->_z_offset)));
+    // Convert character-space eye position to parent joint offset.
+    CPT(TransformState) parent_joint_trans = TransformState::make_mat(
+      _part_bundle->get_joint_net_transform(parent_joint));
+    CPT(TransformState) eye_offset = parent_joint_trans->invert_compose(
+      TransformState::make_pos(pmdl_eye->_pos));
+    eye->set_eye_offset(eye_offset->get_pos());
 
+    // Create a NodePath for the purpose of copying the eye to each unique
+    // parent.
+    NodePath copy_eye_np(eye);
+
+    for (size_t k = 0; k < eye_geom_nodes.size(); k++) {
+      NodePath eye_geom_np = eye_geom_nodes[k];
+      NodePath parent = eye_geom_np.get_parent();
+      nassertv(!parent.is_empty());
+      auto it = eyes_by_parent.find(parent);
+      NodePath eye_np;
+      if (it == eyes_by_parent.end()) {
+        // Haven't created an eyeball under this parent, copy the eye there.
+        eye_np = copy_eye_np.copy_to(parent);
+        eyes_by_parent[parent] = eye_np;
+      } else {
+        // Move the eye geom node under the existing eye.
+        eye_np = (*it).second;
+      }
+      eye_geom_np.reparent_to(eye_np);
+    }
+  }
+
+  if (!_data->_phy._mesh_name.empty()) {
+    NodePath phy_mesh_np = root_np.find("**/" + _data->_phy._mesh_name);
+    nassertv(!phy_mesh_np.is_empty());
+    GeomNode *phy_mesh_node;
+    DCAST_INTO_V(phy_mesh_node, phy_mesh_np.node());
+    // Turn all the primitives into triangles.
+    phy_mesh_node->decompose();
+
+    PN_stdfloat mass = _data->_phy._mass_override;
+
+    // Fill the convex mesh.
+    PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
+    for (size_t i = 0; i < phy_mesh_node->get_num_geoms(); i++) {
+      const Geom *geom = phy_mesh_node->get_geom(i);
+      const GeomVertexData *vdata = geom->get_vertex_data();
+      GeomVertexReader reader(vdata, InternalName::get_vertex());
+      for (size_t j = 0; j < geom->get_num_primitives(); j++) {
+        const GeomPrimitive *prim = geom->get_primitive(j);
+        for (size_t k = 0; k < prim->get_num_primitives(); k++) {
+          size_t start = prim->get_primitive_start(k);
+          size_t end = prim->get_primitive_end(k);
+          for (size_t l = start; l < end; l++) {
+            reader.set_row(prim->get_vertex(l));
+            mesh_data->add_point(reader.get_data3f());
+          }
+        }
+      }
+    }
+    if (!mesh_data->cook_mesh()) {
+      egg2pg_cat.error()
+        << "Failed to build convex mesh from physics geometry\n";
+    } else if (!mesh_data->generate_mesh()) {
+      egg2pg_cat.error()
+        << "Failed to generate convex mesh\n";
+    } else {
+      if (_data->_phy._auto_mass) {
+        mesh_data->get_mass_information(&mass, nullptr, nullptr);
+      }
+    }
+
+    // Now remove the GeomNode that contained the physics geometry.
+    phy_mesh_np.remove_node();
+
+    PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
+    cinfo->set_mass(mass);
+    cinfo->set_damping(_data->_phy._damping);
+    cinfo->set_rot_damping(_data->_phy._rot_damping);
+    cinfo->set_mesh_data(mesh_data->get_mesh_data());
+    mdl_root->set_collision_info(cinfo);
   }
 
   mdl_root->set_custom_data(_data->_custom_data);
+  mdl_root->set_final(true);
 
   // Lightly flatten any extra transforms or attributes we applied to the
   // leaves.
-  root_np.flatten_light();
+  //root_np.flatten_light();
 }
 
 /**
@@ -912,25 +1177,36 @@ find_or_load_anim(const std::string &anim_name) {
 AnimBundle *PMDLLoader::
 load_anim(const std::string &anim_name, const Filename &filename) {
   Loader *loader = Loader::get_global_ptr();
-  PT(PandaNode) anim_model = loader->load_sync(filename);
+
+  Filename fullpath = filename;
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  if (!vfs->resolve_filename(fullpath, _search_path)) {
+    egg2pg_cat.error()
+      << "Could not find animation model " << filename << "\n";
+    return nullptr;
+  }
+
+  PT(PandaNode) anim_model = loader->load_sync(fullpath);
   if (anim_model == nullptr) {
     egg2pg_cat.error()
-      << "Failed to load animation model " << filename << "\n";
+      << "Failed to load animation model " << fullpath << "\n";
     return nullptr;
   }
   NodePath anim_np(anim_model);
   NodePath anim_bundle_np = anim_np.find("**/+AnimBundleNode");
   if (anim_bundle_np.is_empty()) {
     egg2pg_cat.error()
-      << "Model " << filename << " is not an animation!\n";
+      << "Model " << fullpath << " is not an animation!\n";
     return nullptr;
   }
   AnimBundleNode *anim_bundle_node = DCAST(AnimBundleNode, anim_bundle_np.node());
   AnimBundle *anim_bundle = anim_bundle_node->get_bundle();
+  anim_bundle->set_base_frame_rate(30);
+  anim_bundle->set_name(anim_name);
   int anim_index = _part_bundle->bind_anim(anim_bundle);
   if (anim_index == -1) {
     egg2pg_cat.error()
-      << "Failed to bind anim " << filename << " to character " << _part_bundle->get_name() << "\n";
+      << "Failed to bind anim " << fullpath << " to character " << _part_bundle->get_name() << "\n";
     return nullptr;
   }
   _anims_by_name[anim_name] = anim_bundle;
