@@ -64,6 +64,14 @@ get_sound(MovieAudio *sound, bool positional, int mode) {
 /**
  *
  */
+PT(AudioSound) NullAudioManager::
+get_sound(AudioSound *sound) {
+  return get_null_sound();
+}
+
+/**
+ *
+ */
 void NullAudioManager::
 uncache_sound(const Filename &) {
   // intentionally blank.

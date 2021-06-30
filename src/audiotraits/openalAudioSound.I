@@ -11,6 +11,30 @@
  */
 
 /**
+ * Returns the MovieAudio pointer that the sound references.
+ */
+INLINE MovieAudio *OpenALAudioSound::
+get_movie() const {
+  return _movie;
+}
+
+/**
+ * Returns true if the sound is positional, false otherwise.
+ */
+INLINE bool OpenALAudioSound::
+is_positional() const {
+  return _positional;
+}
+
+/**
+ * Returns the streaming mode of the sound.
+ */
+INLINE int OpenALAudioSound::
+get_desired_mode() const {
+  return _desired_mode;
+}
+
+/**
  * Sets the sound's calibrated clock.
  *
  * OpenAL is not very accurate at reporting how much time has elapsed within a

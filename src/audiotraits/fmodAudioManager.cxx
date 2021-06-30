@@ -29,6 +29,9 @@
 #include "filename.h"
 #include "virtualFileSystem.h"
 #include "reMutexHolder.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+#include "nullAudioSound.h"
 
 // Panda DSP types.
 #include "chorusDSP.h"
@@ -49,6 +52,12 @@
 // FMOD Headers.
 #include <fmod.hpp>
 #include <fmod_errors.h>
+
+static PStatCollector get_sound_coll("App:FMOD:GetSound");
+static PStatCollector get_sound_resolve_coll("App:FMOD:GetSound:ResolveFilename");
+static PStatCollector get_sound_get_file("App:FMOD:GetSound:GetFile");
+static PStatCollector get_sound_create_coll("App:FMOD:GetSound:CreateSound");
+static PStatCollector get_sound_insert_coll("App:FMOD:GetSound:InsertSound");
 
 TypeHandle FMODAudioManager::_type_handle;
 
@@ -376,27 +385,56 @@ is_valid() {
 PT(AudioSound) FMODAudioManager::
 get_sound(const Filename &file_name, bool positional, int) {
   ReMutexHolder holder(_lock);
+
+  PStatTimer timer(get_sound_coll);
+
   // Needed so People use Panda's Generic UNIX Style Paths for Filename.
   // path.to_os_specific() converts it back to the proper OS version later on.
 
   Filename path = file_name;
 
+  get_sound_resolve_coll.start();
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   vfs->resolve_filename(path, get_model_path());
+  get_sound_resolve_coll.stop();
 
   // Locate the file on disk.
   path.set_binary();
+  get_sound_get_file.start();
   PT(VirtualFile) file = vfs->get_file(path);
+  get_sound_get_file.stop();
   if (file != nullptr) {
     // Build a new AudioSound from the audio data.
+    get_sound_create_coll.start();
     PT(FMODAudioSound) sound = new FMODAudioSound(this, file, positional);
+    get_sound_create_coll.stop();
 
+    get_sound_insert_coll.start();
     _all_sounds.insert(sound);
+    get_sound_insert_coll.stop();
     return sound;
   } else {
     audio_error("createSound(" << path << "): File not found.");
     return get_null_sound();
   }
+}
+
+/**
+ *
+ */
+PT(AudioSound) FMODAudioManager::
+get_sound(AudioSound *source) {
+  AudioSound *null_sound = get_null_sound();
+  if (source == null_sound) {
+    return null_sound;
+  }
+
+  FMODAudioSound *fmod_source;
+  DCAST_INTO_R(fmod_source, source, null_sound);
+
+  PT(FMODAudioSound) sound = new FMODAudioSound(this, fmod_source);
+  _all_sounds.insert(sound);
+  return sound;
 }
 
 /**

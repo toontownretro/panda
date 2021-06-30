@@ -99,6 +99,12 @@ PUBLISHED:
 
   // Get a sound:
   virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, int mode=SM_heuristic) = 0;
+  /**
+   * Effectively returns a copy of the indicated AudioSound that can be
+   * manipulated independently of each other.  In the FMOD implementation, this
+   * shares the same sound data, but creates a different channel for playing.
+   */
+  virtual PT(AudioSound) get_sound(AudioSound *source) = 0;
   virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, int mode=SM_heuristic) = 0;
 
   PT(AudioSound) get_null_sound();

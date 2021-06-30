@@ -110,6 +110,69 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   fmod_audio_errcheck("_sound->getLength()", result);
 }
 
+/**
+ * Initializes an FMODAudioSound from an existing FMODAudioSound.  Shares the
+ * sound data but creates a new channel.
+ */
+FMODAudioSound::
+FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+  audio_debug("FMODAudioSound::FMODAudioSound() Creating channel from existing "
+              "sound handle");
+
+  _active = manager->get_active();
+  _paused = false;
+  _start_time = 0.0;
+  _balance = copy->_balance;
+  _volume = copy->_volume;
+  _playrate = copy->_playrate;
+  _is_midi = copy->_is_midi;
+  _length = copy->_length;
+  _last_update_frame = 0;
+
+  // 3D attributes of the sound.
+  _location.x = 0;
+  _location.y = 0;
+  _location.z = 0;
+
+  _velocity.x = 0;
+  _velocity.y = 0;
+  _velocity.z = 0;
+
+  _min_dist = copy->_min_dist;
+  _max_dist = copy->_max_dist;
+
+  _dsps = copy->_dsps;
+
+  // These set the speaker levels to a default if you are using a multichannel
+  // setup.
+  for (int i = 0; i < AudioManager::SPK_COUNT; i++) {
+    _mix[i] = copy->_mix[i];
+  }
+
+  FMOD_RESULT result;
+
+  // Assign the values we need
+  FMODAudioManager *fmanager;
+  DCAST_INTO_V(fmanager, manager);
+  _manager = fmanager;
+
+  _channel = nullptr;
+  _file_name = copy->_file_name;
+
+  // Get the Speaker Mode [Important for later on.]
+  result = _manager->get_speaker_mode(_speakermode);
+  fmod_audio_errcheck("_system->getSpeakerMode()", result);
+
+  _sound_handle = copy->_sound_handle;
+  nassertv(_sound_handle != nullptr);
+
+  _sound = _sound_handle->get_sound();
+  nassertv(_sound != nullptr);
+
+  _sample_frequency = copy->_sample_frequency;
+  _priority = copy->_priority;
+}
 
 /**
  * DESTRUCTOR!!!
@@ -986,4 +1049,12 @@ set_finished_event(const std::string& event) {
 const std::string& FMODAudioSound::
 get_finished_event() const {
   return _finished_event;
+}
+
+/**
+ * Returns the FMODSoundHandle that the sound is referencing.
+ */
+FMODSoundHandle *FMODAudioSound::
+get_sound_handle() const {
+  return _sound_handle;
 }

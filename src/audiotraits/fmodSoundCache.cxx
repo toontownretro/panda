@@ -16,6 +16,11 @@
 #include "string_utils.h"
 #include "fmodAudioManager.h"
 #include "virtualFileSystem.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector cache_lookup_coll("App:FMOD:GetSound:CacheLookup");
+static PStatCollector cache_miss_coll("App:FMOD:GetSound:CacheMiss");
 
 FMODSoundCache *FMODSoundCache::_ptr = nullptr;
 
@@ -31,7 +36,9 @@ get_sound(FMODAudioManager *mgr, VirtualFile *file, bool positional) {
       << "get_sound(): " << filename << "\n";
   }
 
+  cache_lookup_coll.start();
   Sounds::const_iterator it = _sounds.find(filename);
+  cache_lookup_coll.stop();
   if (it != _sounds.end()) {
     if (fmodAudio_cat.is_debug()) {
       fmodAudio_cat.debug()
@@ -39,6 +46,8 @@ get_sound(FMODAudioManager *mgr, VirtualFile *file, bool positional) {
     }
     return (*it).second;
   }
+
+  PStatTimer timer(cache_miss_coll);
 
   if (fmodAudio_cat.is_debug()) {
     fmodAudio_cat.debug()

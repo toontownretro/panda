@@ -525,6 +525,27 @@ get_sound(const Filename &file_name, bool positional, int mode) {
 }
 
 /**
+ *
+ */
+PT(AudioSound) OpenALAudioManager::
+get_sound(AudioSound *source) {
+  OpenALAudioSound *openal_source;
+  DCAST_INTO_R(openal_source, source, get_null_sound());
+
+  PT(OpenALAudioSound) oas =
+    new OpenALAudioSound(this, openal_source->get_movie(),
+      openal_source->is_positional(), openal_source->get_desired_mode());
+
+  if (!oas->_manager) {
+    return get_null_sound();
+  }
+
+  _all_sounds.insert(oas);
+
+  return oas;
+}
+
+/**
  * Deletes a sample from the expiration queues.  If the sound is actively in
  * use, then the sound cannot be deleted, and this function has no effect.
  */

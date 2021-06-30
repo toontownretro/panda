@@ -31,6 +31,8 @@ public:
 
   virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, int mode=SM_heuristic);
   virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(AudioSound *sound) override;
+
   virtual void uncache_sound(const Filename &);
   virtual void clear_cache();
   virtual void set_cache_limit(unsigned int);

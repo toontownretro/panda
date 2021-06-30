@@ -79,6 +79,8 @@ class VirtualFile;
 class EXPCL_FMOD_AUDIO FMODAudioSound : public AudioSound {
 public:
   FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional);
+  FMODAudioSound(AudioManager *manager, FMODAudioSound *source);
+
   virtual ~FMODAudioSound();
 
   // For best compatibility, set the loop_count, start_time, volume, and
@@ -151,6 +153,9 @@ public:
   void finished();
   void set_finished_event(const std::string& event);
   const std::string& get_finished_event() const;
+
+public:
+  FMODSoundHandle *get_sound_handle() const;
 
 private:
   PT(FMODAudioManager) _manager;

@@ -99,6 +99,10 @@ public:
 
   void finished();
 
+  INLINE MovieAudio *get_movie() const;
+  INLINE bool is_positional() const;
+  INLINE int get_desired_mode() const;
+
 private:
   OpenALAudioSound(OpenALAudioManager* manager,
                    MovieAudio *movie,
