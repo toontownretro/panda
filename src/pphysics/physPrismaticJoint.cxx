@@ -23,8 +23,10 @@ PhysPrismaticJoint(PhysRigidActorNode *a, PhysRigidActorNode *b,
   PhysSystem *sys = PhysSystem::ptr();
   _joint = physx::PxPrismaticJointCreate(
     *sys->get_physics(),
-    a->get_rigid_actor(), TransformState_to_PxTransform(frame_a),
-    b->get_rigid_actor(), TransformState_to_PxTransform(frame_b));
+    a->get_rigid_actor(), panda_trans_to_physx(frame_a),
+    b->get_rigid_actor(), panda_trans_to_physx(frame_b));
+  _a = a;
+  _b = b;
 }
 
 /**
@@ -33,6 +35,7 @@ PhysPrismaticJoint(PhysRigidActorNode *a, PhysRigidActorNode *b,
 PhysPrismaticJoint::
 ~PhysPrismaticJoint() {
   if (_joint != nullptr) {
+    _joint->userData = nullptr;
     _joint->release();
     _joint = nullptr;
   }

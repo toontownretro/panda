@@ -18,7 +18,8 @@ INLINE PhysJointLimitPyramid::
 PhysJointLimitPyramid(PN_stdfloat y_min, PN_stdfloat y_max,
                       PN_stdfloat z_min, PN_stdfloat z_max,
                       PN_stdfloat contact_dist) :
-  _limit(deg_2_rad(y_min), deg_2_rad(y_max), deg_2_rad(z_min), deg_2_rad(z_max), contact_dist)
+  _limit(deg_2_rad(y_min), deg_2_rad(y_max), deg_2_rad(z_min), deg_2_rad(z_max),
+         contact_dist != -1.0f ? panda_ang_to_physx(contact_dist) : contact_dist)
 {
 }
 

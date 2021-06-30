@@ -16,7 +16,7 @@
  */
 INLINE void PhysConvexMesh::
 set_scale(const LVecBase3 &scale) {
-  _geom.scale.scale = Vec3_to_PxVec3(scale);
+  _geom.scale.scale = panda_norm_vec_to_physx(scale);
 }
 
 /**
@@ -24,7 +24,7 @@ set_scale(const LVecBase3 &scale) {
  */
 INLINE void PhysConvexMesh::
 set_scale(PN_stdfloat sx, PN_stdfloat sy, PN_stdfloat sz) {
-  _geom.scale.scale = physx::PxVec3(sx, sy, sz);
+  _geom.scale.scale = panda_norm_vec_to_physx(LVecBase3(sx, sy, sz));
 }
 
 /**
@@ -32,7 +32,7 @@ set_scale(PN_stdfloat sx, PN_stdfloat sy, PN_stdfloat sz) {
  */
 INLINE LVecBase3 PhysConvexMesh::
 get_scale() const {
-  return PxVec3_to_Vec3(_geom.scale.scale);
+  return physx_norm_vec_to_panda(_geom.scale.scale);
 }
 
 /**

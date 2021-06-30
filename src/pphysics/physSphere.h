@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "numeric_types.h"
 #include "physGeometry.h"
+#include "physx_utils.h"
 
 #include "physx_includes.h"
 

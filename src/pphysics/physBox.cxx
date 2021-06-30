@@ -18,10 +18,7 @@
  */
 PhysBox::
 PhysBox(const LVector3 &half_extents) :
-  _geom(physx::PxVec3(
-    (physx::PxReal)half_extents[0],
-    (physx::PxReal)half_extents[1],
-    (physx::PxReal)half_extents[2]))
+  _geom(panda_vec_to_physx(half_extents))
 {
 }
 
@@ -30,7 +27,7 @@ PhysBox(const LVector3 &half_extents) :
  */
 PhysBox::
 PhysBox(PN_stdfloat hx, PN_stdfloat hy, PN_stdfloat hz) :
-  _geom((physx::PxReal)hx, (physx::PxReal)hy, (physx::PxReal)hz)
+  _geom(panda_vec_to_physx(LVecBase3(hx, hy, hz)))
 {
 }
 

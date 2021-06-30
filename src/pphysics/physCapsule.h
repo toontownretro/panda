@@ -19,6 +19,7 @@
 #include "physGeometry.h"
 
 #include "physx_includes.h"
+#include "physx_utils.h"
 
 /**
  * A capsule shape.

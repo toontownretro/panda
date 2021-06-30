@@ -16,7 +16,7 @@
  */
 INLINE void PhysSphere::
 set_radius(PN_stdfloat radius) {
-  _geom.radius = (physx::PxReal)radius;
+  _geom.radius = panda_length_to_physx(radius);
 }
 
 /**
@@ -24,7 +24,7 @@ set_radius(PN_stdfloat radius) {
  */
 INLINE PN_stdfloat PhysSphere::
 get_radius() const {
-  return (PN_stdfloat)_geom.radius;
+  return physx_length_to_panda(_geom.radius);
 }
 
 /**

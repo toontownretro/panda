@@ -24,8 +24,10 @@ PhysSphericalJoint(PhysRigidActorNode *a, PhysRigidActorNode *b,
   PhysSystem *sys = PhysSystem::ptr();
   _joint = physx::PxSphericalJointCreate(
     *sys->get_physics(),
-    a->get_rigid_actor(), TransformState_to_PxTransform(frame_a),
-    b->get_rigid_actor(), TransformState_to_PxTransform(frame_b));
+    a->get_rigid_actor(), panda_trans_to_physx(frame_a),
+    b->get_rigid_actor(), panda_trans_to_physx(frame_b));
+  _a = a;
+  _b = b;
 }
 
 /**
@@ -34,6 +36,7 @@ PhysSphericalJoint(PhysRigidActorNode *a, PhysRigidActorNode *b,
 PhysSphericalJoint::
 ~PhysSphericalJoint() {
   if (_joint != nullptr) {
+    _joint->userData = nullptr;
     _joint->release();
     _joint = nullptr;
   }

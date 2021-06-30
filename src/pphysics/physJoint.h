@@ -30,7 +30,8 @@ PUBLISHED:
   virtual ~PhysJoint() = default;
 
   INLINE void set_actors(PhysRigidActorNode *a, PhysRigidActorNode *b);
-  INLINE void get_actors(PhysRigidActorNode *&a, PhysRigidActorNode *&b) const;
+  INLINE PhysRigidActorNode *get_actor_a() const;
+  INLINE PhysRigidActorNode *get_actor_b() const;
 
   INLINE void set_frame_a(const TransformState *transform);
   INLINE CPT(TransformState) get_frame_a() const;
@@ -74,6 +75,10 @@ private:
 
 public:
   virtual physx::PxJoint *get_joint() const = 0;
+
+protected:
+  PT(PhysRigidActorNode) _a;
+  PT(PhysRigidActorNode) _b;
 };
 
 #include "physJoint.I"

@@ -19,135 +19,6 @@
 #include "physEnums.h"
 #include "randomizer.h"
 
-#define METERS_PER_INCH					(0.0254f)
-#define CUBIC_METERS_PER_CUBIC_INCH		(METERS_PER_INCH*METERS_PER_INCH*METERS_PER_INCH)
-
-static physx::PxReal
-tetrahedron_volume(const physx::PxVec3 &p0, const physx::PxVec3 &p1, const physx::PxVec3 &p2,
-                   const physx::PxVec3 &p3) {
-  physx::PxVec3 a, b, c, cross;
-  physx::PxReal volume = 1.0f / 6.0f;
-
-  a = p1 - p0;
-  b = p2 - p0;
-  c = p3 - p0;
-  cross = b.cross(c);
-
-  volume *= a.dot(cross);
-  if (volume < 0) {
-    return -volume;
-  }
-
-  return volume;
-}
-
-static physx::PxReal
-triangle_area(const physx::PxVec3 &p0, const physx::PxVec3 &p1, const physx::PxVec3 &p2) {
-  physx::PxVec3 e0 = p1 - p0;
-  physx::PxVec3 e1 = p2 - p0;
-  physx::PxVec3 cross;
-
-  cross = e0.cross(e1);
-
-  return 0.5f * cross.magnitude();
-}
-
-static physx::PxVec3
-convert(const physx::PxVec3 &p) {
-  return p;
-}
-
-/**
- *
- */
-static PN_stdfloat
-get_volume(const physx::PxConvexMeshGeometry &geom) {
-  PN_stdfloat volume = 0.0f;
-
-  physx::PxU32 num_polys = geom.convexMesh->getNbPolygons();
-  const physx::PxU8 *indices = geom.convexMesh->getIndexBuffer();
-  const physx::PxVec3 *verts = geom.convexMesh->getVertices();
-
-  physx::PxHullPolygon first_poly;
-  geom.convexMesh->getPolygonData(0, first_poly);
-  physx::PxVec3 vert = convert(verts[indices[first_poly.mIndexBase]]);
-  vert.x *= geom.scale.scale.x;
-  vert.y *= geom.scale.scale.y;
-  vert.z *= geom.scale.scale.z;
-
-  for (physx::PxU32 i = 0; i < num_polys; i++) {
-    physx::PxHullPolygon poly;
-    geom.convexMesh->getPolygonData(i, poly);
-    physx::PxU32 num_tris = poly.mNbVerts - 2;
-    for (physx::PxU32 j = 0; j < num_tris; j++) {
-      physx::PxU32 v0 = 0;
-      physx::PxU32 v1 = (j + 1) % poly.mNbVerts;
-      physx::PxU32 v2 = (j + 2) % poly.mNbVerts;
-
-      physx::PxVec3 p0 =  convert(verts[indices[poly.mIndexBase + v0]]);
-      p0.x *= geom.scale.scale.x;
-      p0.y *= geom.scale.scale.y;
-      p0.z *= geom.scale.scale.z;
-
-      physx::PxVec3 p1 =  convert(verts[indices[poly.mIndexBase + v1]]);
-      p1.x *= geom.scale.scale.x;
-      p1.y *= geom.scale.scale.y;
-      p1.z *= geom.scale.scale.z;
-
-      physx::PxVec3 p2 =  convert(verts[indices[poly.mIndexBase + v2]]);
-      p2.x *= geom.scale.scale.x;
-      p2.y *= geom.scale.scale.y;
-      p2.z *= geom.scale.scale.z;
-
-      volume += tetrahedron_volume(vert, p0, p1, p2);
-    }
-  }
-
-  return volume;
-}
-
-/**
- *
- */
-static PN_stdfloat
-get_surface_area(const physx::PxConvexMeshGeometry &geom) {
-  PN_stdfloat area = 0.0f;
-
-  physx::PxU32 num_polys = geom.convexMesh->getNbPolygons();
-  const physx::PxU8 *indices = geom.convexMesh->getIndexBuffer();
-  const physx::PxVec3 *verts = geom.convexMesh->getVertices();
-
-  for (physx::PxU32 i = 0; i < num_polys; i++) {
-    physx::PxHullPolygon poly;
-    geom.convexMesh->getPolygonData(i, poly);
-    physx::PxU32 num_tris = poly.mNbVerts - 2;
-    for (physx::PxU32 j = 0; j < num_tris; j++) {
-      physx::PxU32 v0 = 0;
-      physx::PxU32 v1 = (j + 1) % poly.mNbVerts;
-      physx::PxU32 v2 = (j + 2) % poly.mNbVerts;
-
-      physx::PxVec3 p0 =  convert(verts[indices[poly.mIndexBase + v0]]);
-      p0.x *= geom.scale.scale.x;
-      p0.y *= geom.scale.scale.y;
-      p0.z *= geom.scale.scale.z;
-
-      physx::PxVec3 p1 =  convert(verts[indices[poly.mIndexBase + v1]]);
-      p1.x *= geom.scale.scale.x;
-      p1.y *= geom.scale.scale.y;
-      p1.z *= geom.scale.scale.z;
-
-      physx::PxVec3 p2 =  convert(verts[indices[poly.mIndexBase + v2]]);
-      p2.x *= geom.scale.scale.x;
-      p2.y *= geom.scale.scale.y;
-      p2.z *= geom.scale.scale.z;
-
-      area += triangle_area(p0, p1, p2);
-    }
-  }
-
-  return area;
-}
-
 /**
  *
  */
@@ -210,6 +81,10 @@ add_joint(const std::string &parent, const std::string &child,
   nassertv(pxshape->getGeometryType() == physx::PxGeometryType::eCONVEXMESH);
   physx::PxConvexMeshGeometry geom;
   pxshape->getConvexMeshGeometry(geom);
+  physx::PxReal volume;
+  physx::PxMat33 it;
+  physx::PxVec3 com;
+  geom.convexMesh->getMassInformation(volume, it, com);
 
   PT(Joint) joint = new Joint;
   if (!parent.empty()) {
@@ -225,8 +100,8 @@ add_joint(const std::string &parent, const std::string &child,
   joint->inertia = inertia;
   joint->mass_bias = mass_bias;
   joint->density = density;
-  joint->volume = get_volume(geom);
-  joint->surface_area = get_surface_area(geom);
+  joint->volume = volume;
+  //joint->surface_area = get_surface_area(geom);
 
   joint->limit_x = limit_x;
   joint->limit_y = limit_y;
@@ -255,11 +130,11 @@ compute_mass() {
   if (_total_mass == 0.0) {
     for (size_t i = 0; i < _all_joints.size(); i++) {
       Joint *joint = _all_joints[i];
-      if (joint->thickness > 0) {
-        _total_mass += joint->surface_area * joint->thickness * CUBIC_METERS_PER_CUBIC_INCH * joint->density;
-      } else {
-        _total_mass += joint->volume * CUBIC_METERS_PER_CUBIC_INCH * joint->density;
-      }
+      //if (joint->thickness > 0) {
+      //  _total_mass += joint->surface_area * joint->thickness * CUBIC_METERS_PER_CUBIC_INCH * joint->density;
+      //} else {
+        _total_mass += joint->volume * joint->density;
+      //}
     }
   }
 
@@ -292,7 +167,7 @@ create_joints() {
 
     joint->actor = new PhysRigidDynamicNode(_char->get_joint_name(joint->joint));
     joint->actor->add_shape(joint->shape);
-    joint->actor->compute_mass_properties();
+    //joint->actor->compute_mass_properties();
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
     joint->actor->set_transform(joint_pose);
@@ -308,9 +183,9 @@ create_joints() {
       djoint->set_linear_motion(PhysD6Joint::A_x, PhysD6Joint::M_locked);
       djoint->set_linear_motion(PhysD6Joint::A_y, PhysD6Joint::M_locked);
       djoint->set_linear_motion(PhysD6Joint::A_z, PhysD6Joint::M_locked);
-      //djoint->set_projection_enabled(true);
-      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionLinearTolerance(0.2f);
-      //((physx::PxD6Joint *)djoint->get_joint())->setProjectionAngularTolerance(0.4f);
+      djoint->set_projection_enabled(true);
+      ((physx::PxD6Joint *)djoint->get_joint())->setProjectionLinearTolerance(0.1f);
+      ((physx::PxD6Joint *)djoint->get_joint())->setProjectionAngularTolerance(0.4f);
       djoint->set_collision_enabled(false);
 
       if (joint->limit_x[0] == 0 && joint->limit_x[1] == 0) {

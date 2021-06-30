@@ -12,11 +12,13 @@
  */
 
 /**
- * Sets the mass of the rigid body.
+ * Sets the mass of the rigid body.  Automatically recomputes inertia and
+ * center-of-mass.
  */
 INLINE void PhysRigidBodyNode::
 set_mass(PN_stdfloat mass) {
-  get_rigid_body()->setMass((physx::PxReal)mass);
+  physx::PxRigidBodyExt::setMassAndUpdateInertia(
+    *get_rigid_body(), panda_mass_to_physx(mass));
 }
 
 /**
@@ -24,7 +26,7 @@ set_mass(PN_stdfloat mass) {
  */
 INLINE PN_stdfloat PhysRigidBodyNode::
 get_mass() const {
-  return (PN_stdfloat)get_rigid_body()->getMass();
+  return physx_mass_to_panda(get_rigid_body()->getMass());
 }
 
 /**
@@ -73,7 +75,7 @@ get_angular_damping() const {
 INLINE void PhysRigidBodyNode::
 set_linear_velocity(const LVector3 &vel, bool auto_wake) {
   get_rigid_body()->setLinearVelocity(
-    physx::PxVec3(vel[0], vel[1], vel[2]), auto_wake);
+    panda_vec_to_physx(vel), auto_wake);
 }
 
 /**
@@ -82,7 +84,7 @@ set_linear_velocity(const LVector3 &vel, bool auto_wake) {
 INLINE LVector3 PhysRigidBodyNode::
 get_linear_velocity() const {
   physx::PxVec3 vel = get_rigid_body()->getLinearVelocity();
-  return LVector3(vel[0], vel[1], vel[2]);
+  return physx_vec_to_panda(vel);
 }
 
 /**
@@ -90,7 +92,7 @@ get_linear_velocity() const {
  */
 INLINE void PhysRigidBodyNode::
 set_max_linear_velocity(PN_stdfloat max) {
-  get_rigid_body()->setMaxLinearVelocity((physx::PxReal)max);
+  get_rigid_body()->setMaxLinearVelocity(panda_length_to_physx(max));
 }
 
 /**
@@ -98,7 +100,7 @@ set_max_linear_velocity(PN_stdfloat max) {
  */
 INLINE PN_stdfloat PhysRigidBodyNode::
 get_max_linear_velocity() const {
-  return (PN_stdfloat)get_rigid_body()->getMaxLinearVelocity();
+  return physx_length_to_panda(get_rigid_body()->getMaxLinearVelocity());
 }
 
 /**
@@ -107,7 +109,7 @@ get_max_linear_velocity() const {
 INLINE void PhysRigidBodyNode::
 set_angular_velocity(const LVector3 &vel, bool auto_wake) {
   get_rigid_body()->setAngularVelocity(
-    physx::PxVec3(vel[0], vel[1], vel[2]), auto_wake);
+    panda_ang_to_physx(vel), auto_wake);
 }
 
 /**
@@ -116,7 +118,7 @@ set_angular_velocity(const LVector3 &vel, bool auto_wake) {
 INLINE LVector3 PhysRigidBodyNode::
 get_angular_velocity() const {
   physx::PxVec3 vel = get_rigid_body()->getAngularVelocity();
-  return LVector3(vel[0], vel[1], vel[2]);
+  return physx_ang_to_panda(vel);
 }
 
 /**
@@ -142,7 +144,7 @@ get_max_angular_velocity() const {
 INLINE void PhysRigidBodyNode::
 add_force(const LVector3 &global_force, ForceType type, bool auto_wake) {
   get_rigid_body()->addForce(
-    Vec3_to_PxVec3(global_force),
+    panda_vec_to_physx(global_force),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -153,7 +155,7 @@ add_force(const LVector3 &global_force, ForceType type, bool auto_wake) {
 INLINE void PhysRigidBodyNode::
 add_torque(const LVector3 &global_torque, ForceType type, bool auto_wake) {
   get_rigid_body()->addTorque(
-    Vec3_to_PxVec3(global_torque),
+    panda_ang_to_physx(global_torque),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -166,8 +168,8 @@ add_local_force_at_local_pos(const LVector3 &local_force, const LPoint3 &local_p
                              ForceType type, bool auto_wake) {
   physx::PxRigidBodyExt::addLocalForceAtLocalPos(
     *get_rigid_body(),
-    Vec3_to_PxVec3(local_force),
-    Vec3_to_PxVec3(local_pos),
+    panda_vec_to_physx(local_force),
+    panda_vec_to_physx(local_pos),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -180,8 +182,8 @@ add_local_force_at_pos(const LVector3 &local_force, const LPoint3 &global_pos,
                        ForceType type, bool auto_wake) {
   physx::PxRigidBodyExt::addLocalForceAtPos(
     *get_rigid_body(),
-    Vec3_to_PxVec3(local_force),
-    Vec3_to_PxVec3(global_pos),
+    panda_vec_to_physx(local_force),
+    panda_vec_to_physx(global_pos),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -194,8 +196,8 @@ add_force_at_local_pos(const LVector3 &global_force, const LPoint3 &local_pos,
                        ForceType type, bool auto_wake) {
   physx::PxRigidBodyExt::addForceAtLocalPos(
     *get_rigid_body(),
-    Vec3_to_PxVec3(global_force),
-    Vec3_to_PxVec3(local_pos),
+    panda_vec_to_physx(global_force),
+    panda_vec_to_physx(local_pos),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -208,8 +210,8 @@ add_force_at_pos(const LVector3 &global_force, const LPoint3 &global_pos,
                  ForceType type, bool auto_wake) {
   physx::PxRigidBodyExt::addForceAtPos(
     *get_rigid_body(),
-    Vec3_to_PxVec3(global_force),
-    Vec3_to_PxVec3(global_pos),
+    panda_vec_to_physx(global_force),
+    panda_vec_to_physx(global_pos),
     (physx::PxForceMode::Enum)type,
     auto_wake);
 }
@@ -251,7 +253,7 @@ get_min_ccd_advance_coefficient() const {
  */
 INLINE void PhysRigidBodyNode::
 set_max_depenetration_velocity(PN_stdfloat bias_clamp) {
-  get_rigid_body()->setMaxDepenetrationVelocity(bias_clamp);
+  get_rigid_body()->setMaxDepenetrationVelocity(panda_length_to_physx(bias_clamp));
 }
 
 /**
@@ -259,7 +261,7 @@ set_max_depenetration_velocity(PN_stdfloat bias_clamp) {
  */
 INLINE PN_stdfloat PhysRigidBodyNode::
 get_max_depenetration_velocity() const {
-  return get_rigid_body()->getMaxDepenetrationVelocity();
+  return physx_length_to_panda(get_rigid_body()->getMaxDepenetrationVelocity());
 }
 
 /**
@@ -267,7 +269,7 @@ get_max_depenetration_velocity() const {
  */
 INLINE void PhysRigidBodyNode::
 set_max_contact_impulse(PN_stdfloat max) {
-  get_rigid_body()->setMaxContactImpulse(max);
+  get_rigid_body()->setMaxContactImpulse(panda_length_to_physx(max));
 }
 
 /**
@@ -275,7 +277,7 @@ set_max_contact_impulse(PN_stdfloat max) {
  */
 INLINE PN_stdfloat PhysRigidBodyNode::
 get_max_contact_impulse() const {
-  return get_rigid_body()->getMaxContactImpulse();
+  return physx_length_to_panda(get_rigid_body()->getMaxContactImpulse());
 }
 
 /**

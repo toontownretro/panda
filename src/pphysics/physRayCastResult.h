@@ -20,6 +20,7 @@
 #include "physShape.h"
 
 #include "physx_includes.h"
+#include "physx_utils.h"
 
 /**
  * Contains the resulting information of a single ray-cast intersection.

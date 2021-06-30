@@ -65,7 +65,7 @@ get_swing_z_angle() const {
  */
 INLINE void PhysSphericalJoint::
 set_projection_linear_tolerance(PN_stdfloat tolerance) {
-  _joint->setProjectionLinearTolerance(tolerance);
+  _joint->setProjectionLinearTolerance(panda_length_to_physx(tolerance));
 }
 
 /**
@@ -73,5 +73,5 @@ set_projection_linear_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysSphericalJoint::
 get_projection_linear_tolerance() const {
-  return _joint->getProjectionLinearTolerance();
+  return physx_length_to_panda(_joint->getProjectionLinearTolerance());
 }

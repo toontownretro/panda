@@ -17,15 +17,11 @@
 INLINE void PhysRigidActorNode::
 add_shape(PhysShape *shape) {
   nassertv(shape->get_shape() != nullptr);
-  physx::PxFilterData sdata;
-  sdata.word0 = _collision_group;
-  sdata.word1 = _contents_mask.get_word();
-  physx::PxFilterData qdata;
-  qdata.word0 = _contents_mask.get_word();
-  qdata.word1 = _collision_group;
-  shape->get_shape()->setSimulationFilterData(sdata);
-  shape->get_shape()->setQueryFilterData(qdata);
   get_rigid_actor()->attachShape(*shape->get_shape());
+  if (std::find(_shapes.begin(), _shapes.end(), shape) == _shapes.end()) {
+    _shapes.push_back(shape);
+    update_shape_filter_data(_shapes.size() - 1);
+  }
 }
 
 /**
@@ -35,6 +31,10 @@ INLINE void PhysRigidActorNode::
 remove_shape(PhysShape *shape) {
   nassertv(shape->get_shape() != nullptr);
   get_rigid_actor()->detachShape(*shape->get_shape());
+  auto it = std::find(_shapes.begin(), _shapes.end(), shape);
+  if (it != _shapes.end()) {
+    _shapes.erase(it);
+  }
 }
 
 /**
@@ -50,13 +50,8 @@ get_num_shapes() const {
  */
 INLINE PhysShape *PhysRigidActorNode::
 get_shape(size_t n) const {
-  physx::PxRigidActor *actor = get_rigid_actor();
-  nassertr(n < actor->getNbShapes(), nullptr);
-
-  physx::PxShape *shape;
-  actor->getShapes(&shape, 1, n);
-
-  return (PhysShape *)shape->userData;
+  nassertr(n >= 0 && n < _shapes.size(), nullptr);
+  return _shapes[n];
 }
 
 /**
@@ -173,6 +168,15 @@ get_collision_group() const {
 INLINE BitMask32 PhysRigidActorNode::
 get_contents_mask() const {
   return _contents_mask;
+}
+
+/**
+ * Returns the solid mask of the actor node.  This is a bitmask of contents
+ * that are solid to the actor.
+ */
+INLINE BitMask32 PhysRigidActorNode::
+get_solid_mask() const {
+  return _solid_mask;
 }
 
 /**

@@ -18,7 +18,7 @@ INLINE void PhysScene::
 set_gravity(const LVector3 &gravity) {
   nassertv(_scene != nullptr);
 
-  _scene->setGravity(physx::PxVec3(gravity[0], gravity[1], gravity[2]));
+  _scene->setGravity(panda_vec_to_physx(gravity));
 }
 
 /**
@@ -29,7 +29,7 @@ get_gravity() const {
   nassertr(_scene != nullptr, LVector3());
 
   physx::PxVec3 gravity = _scene->getGravity();
-  return LVector3(gravity.x, gravity.y, gravity.z);
+  return physx_vec_to_panda(gravity);
 }
 
 /**
@@ -41,7 +41,7 @@ INLINE void PhysScene::
 shift_origin(const LVector3 &shift) {
   nassertv(_scene != nullptr);
 
-  _scene->shiftOrigin(physx::PxVec3(shift[0], shift[1], shift[2]));
+  _scene->shiftOrigin(panda_vec_to_physx(shift));
 }
 
 /**

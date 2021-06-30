@@ -75,6 +75,8 @@ PhysScene::
   }
 
   if (_scene != nullptr) {
+    _scene->userData = nullptr;
+
     delete _scene->getSimulationEventCallback();
     _scene->release();
     _scene = nullptr;
@@ -90,112 +92,90 @@ PhysScene::
  */
 int PhysScene::
 simulate(double dt) {
-  int num_substeps = 0;
 
-  if (_max_substeps > 0) {
-    // Fixed timestep with interpolation.
+  // Don't simulate less than 0.1 ms or more than 1 sec.
+  if (dt < 1.0 && dt > 0.0001) {
+    if (dt > 0.1) {
+      // Cap at 100 ms.
+      dt = 0.1;
+    }
+
     _local_time += dt;
-    if (_local_time >= _fixed_timestep) {
-      num_substeps = (int)(_local_time / _fixed_timestep);
-      _local_time -= num_substeps * _fixed_timestep;
+    _scene->simulate(dt);
+    _scene->fetchResults(true);
+
+    // Now synchronize the simulation results with all of the scene nodes.
+    physx::PxU32 num_active_actors;
+    physx::PxActor **active_actors = _scene->getActiveActors(num_active_actors);
+    //if (pphysics_cat.is_debug()) {
+    //  pphysics_cat.debug()
+    //    << num_active_actors << " active actors this sim\n";
+    //}
+    for (physx::PxU32 i = 0; i < num_active_actors; i++) {
+      physx::PxActor *actor = active_actors[i];
+
+      if (!actor->is<physx::PxRigidActor>()) {
+        continue;
+      }
+
+      physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
+
+      PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
+      if (node == nullptr) {
+        continue;
+      }
+
+      // Disable automatic syncing with PhysX when the node's transform changes.
+      // We are doing the exact opposite here, synchronizing PhysX's transform
+      // with the node.
+      node->set_sync_enabled(false);
+
+      NodePath np(node);
+
+      physx::PxTransform global_pose = rigid_actor->getGlobalPose();
+
+      //if (pphysics_cat.is_debug()) {
+      //  pphysics_cat.debug()
+      //    << "Global pose for rigid actor connected to " << np << ": "
+      //    << "pos: " << global_pose.p.x << ", " << global_pose.p.y << ", " << global_pose.p.z
+      //   << " | quat: " << global_pose.q.x << ", " << global_pose.q.y << ", " << global_pose.q.z << ", " << global_pose.q.w << "\n";
+      //}
+
+      // Update the local-space transform of the node.
+      if (np.get_parent().is_empty()) {
+        // Has no parent!  Just throw the global pose on there.
+        CPT(TransformState) ts = node->get_transform();
+        ts = ts->set_pos(physx_vec_to_panda(global_pose.p));
+        ts = ts->set_quat(physx_quat_to_panda(global_pose.q));
+        node->set_transform(ts);
+
+      } else {
+        // The global pose needs to be transformed into the local coordinate
+        // space of the associate node's parent.
+        NodePath parent = np.get_parent();
+
+        CPT(TransformState) curr_ts = node->get_transform();
+
+        CPT(TransformState) global_ts = physx_trans_to_panda(global_pose);
+
+        CPT(TransformState) parent_net = parent.get_net_transform();
+
+        CPT(TransformState) local_ts = parent_net->invert_compose(global_ts);
+        local_ts = local_ts->set_scale(curr_ts->get_scale());
+        local_ts = local_ts->set_shear(curr_ts->get_shear());
+
+        node->set_transform(local_ts);
+      }
+
+      node->set_sync_enabled(true);
     }
 
-  } else {
-    // Variable timestep.
-    _local_time = dt;
-    _fixed_timestep = dt;
-    if (IS_NEARLY_ZERO(dt)) {
-      num_substeps = 0;
-      _max_substeps = 0;
+    run_callbacks();
 
-    } else {
-      num_substeps = 1;
-      _max_substeps = 1;
-    }
+    return 1;
   }
 
-  if (num_substeps > 0) {
-    // Clamp the number of substeps, to prevent simulation from grinding down
-    // to a halt if we can't keep up.
-    int clamped_substeps = (num_substeps > _max_substeps) ? _max_substeps : num_substeps;
-
-    for (int i = 0; i < clamped_substeps; i++) {
-      _scene->simulate(_fixed_timestep);
-      _scene->fetchResults(true);
-    }
-  }
-
-  // Now synchronize the simulation results with all of the scene nodes.
-  physx::PxU32 num_active_actors;
-  physx::PxActor **active_actors = _scene->getActiveActors(num_active_actors);
-  if (pphysics_cat.is_debug()) {
-    pphysics_cat.debug()
-      << num_active_actors << " active actors this sim\n";
-  }
-  for (physx::PxU32 i = 0; i < num_active_actors; i++) {
-    physx::PxActor *actor = active_actors[i];
-
-    if (!actor->is<physx::PxRigidActor>()) {
-      continue;
-    }
-
-    physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
-
-    PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
-    if (node == nullptr) {
-      continue;
-    }
-
-    // Disable automatic syncing with PhysX when the node's transform changes.
-    // We are doing the exact opposite here, synchronizing PhysX's transform
-    // with the node.
-    node->set_sync_enabled(false);
-
-    NodePath np(node);
-
-    physx::PxTransform global_pose = rigid_actor->getGlobalPose();
-
-    if (pphysics_cat.is_debug()) {
-      pphysics_cat.debug()
-        << "Global pose for rigid actor connected to " << np << ": "
-        << "pos: " << global_pose.p.x << ", " << global_pose.p.y << ", " << global_pose.p.z
-        << " | quat: " << global_pose.q.x << ", " << global_pose.q.y << ", " << global_pose.q.z << ", " << global_pose.q.w << "\n";
-    }
-
-    // Update the local-space transform of the node.
-    if (np.get_parent().is_empty()) {
-      // Has no parent!  Just throw the global pose on there.
-      CPT(TransformState) ts = node->get_transform();
-      ts = ts->set_pos(LVecBase3(global_pose.p.x, global_pose.p.y, global_pose.p.z));
-      ts = ts->set_quat(LQuaternion(global_pose.q.w, global_pose.q.x, global_pose.q.y, global_pose.q.z));
-      node->set_transform(ts);
-
-    } else {
-      // The global pose needs to be transformed into the local coordinate
-      // space of the associate node's parent.
-      NodePath parent = np.get_parent();
-
-      CPT(TransformState) curr_ts = node->get_transform();
-
-      CPT(TransformState) global_ts = TransformState::make_pos_quat(
-        LVecBase3(global_pose.p.x, global_pose.p.y, global_pose.p.z),
-        LQuaternion(global_pose.q.w, global_pose.q.x, global_pose.q.y, global_pose.q.z));
-
-      CPT(TransformState) parent_net = parent.get_net_transform();
-
-      CPT(TransformState) local_ts = parent_net->invert_compose(global_ts);
-      local_ts = local_ts->set_scale(curr_ts->get_scale());
-      local_ts = local_ts->set_shear(curr_ts->get_shear());
-
-      node->set_transform(local_ts);
-    }
-
-    node->set_sync_enabled(true);
-  }
-
-  run_callbacks();
-
-  return num_substeps;
+  return 0;
 }
 
 /**
@@ -224,9 +204,9 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
     // Use the base filter that just checks for common block or touch bits.
     PhysBaseQueryFilter default_filter;
     return _scene->raycast(
-      physx::PxVec3(origin[0], origin[1], origin[2]),
-      physx::PxVec3(direction[0], direction[1], direction[2]),
-      distance,
+      panda_vec_to_physx(origin),
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
       result.get_buffer(),
       physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
       data,
@@ -235,9 +215,9 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
   } else {
     // Explicit filter was specified.
     return _scene->raycast(
-      physx::PxVec3(origin[0], origin[1], origin[2]),
-      physx::PxVec3(direction[0], direction[1], direction[2]),
-      distance,
+      panda_vec_to_physx(origin),
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
       result.get_buffer(),
       physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
       data,
@@ -270,12 +250,12 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
   data.data.word3 = collision_group;
 
   PN_stdfloat hx, hy, hz, cx, cy, cz;
-  hx = (maxs[0] - mins[0]) / 2.0f;
-  hy = (maxs[1] - mins[1]) / 2.0f;
-  hz = (maxs[2] - mins[2]) / 2.0f;
-  cx = (maxs[0] + mins[0]) / 2.0f;
-  cy = (maxs[1] + mins[1]) / 2.0f;
-  cz = (maxs[2] + mins[2]) / 2.0f;
+  hx = panda_length_to_physx((maxs[0] - mins[0]) / 2.0f);
+  hy = panda_length_to_physx((maxs[1] - mins[1]) / 2.0f);
+  hz = panda_length_to_physx((maxs[2] - mins[2]) / 2.0f);
+  cx = panda_length_to_physx((maxs[0] + mins[0]) / 2.0f);
+  cy = panda_length_to_physx((maxs[1] + mins[1]) / 2.0f);
+  cz = panda_length_to_physx((maxs[2] + mins[2]) / 2.0f);
 
   physx::PxBoxGeometry box;
   box.halfExtents.x = hx;
@@ -287,15 +267,15 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
   trans.p.z = cz;
   LQuaternion quat;
   quat.set_hpr(hpr);
-  trans.q = Quat_to_PxQuat(quat);
+  trans.q = panda_quat_to_physx(quat);
 
   if (filter == nullptr) {
     // Use the base filter that just checks for common block or touch bits.
     PhysBaseQueryFilter default_filter;
     return _scene->sweep(
       box, trans,
-      Vec3_to_PxVec3(direction),
-      distance,
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
       result.get_buffer(),
       physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
       data,
@@ -305,8 +285,8 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
     // Explicit filter was specified.
     return _scene->sweep(
       box, trans,
-      Vec3_to_PxVec3(direction),
-      distance,
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
       result.get_buffer(),
       physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
       data,

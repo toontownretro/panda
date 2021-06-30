@@ -18,7 +18,7 @@
  */
 PhysSphere::
 PhysSphere(PN_stdfloat radius) :
-  _geom((physx::PxReal)radius)
+  _geom(panda_length_to_physx(radius))
 {
 }
 

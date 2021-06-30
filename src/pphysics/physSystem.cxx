@@ -36,6 +36,7 @@ PhysSystem *PhysSystem::
 ptr() {
   if (_ptr == nullptr) {
     _ptr = new PhysSystem;
+    _ptr->initialize();
   }
 
   return _ptr;

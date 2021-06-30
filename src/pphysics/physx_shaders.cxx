@@ -20,6 +20,34 @@
 PandaSimulationFilterShader::CollisionGroupPair PandaSimulationFilterShader::_collision_table[32][32];
 
 /**
+ * Returns true if the two collision groups have collisions enabled, false
+ * otherwise.
+ */
+static bool
+should_collision_groups_collide(int group0, int group1) {
+  if (group0 == 0 || group1 == 0) {
+    // One or both of the shapes are not assigned to any collision groups.
+    // Collisions will always occur.
+    return true;
+
+  } else {
+    // Both shapes are assigned to a collision group.  Check the collision
+    // table to see if the groups the shapes belong to have collisions enabled.
+    return PandaSimulationFilterShader::_collision_table[group0][group1]._enable_collisions;
+  }
+}
+
+/**
+ * Returns true if the two shapes should collide based on the contents and
+ * solid masks of each shape.
+ */
+static bool
+should_contents_collide(int contents0, int solid0, int contents1, int solid1) {
+  // If one of them is not solid to the other, they don't collide.
+  return ((contents0 & solid1) != 0) && ((contents1 & solid0) != 0);
+}
+
+/**
  *
  */
 physx::PxFilterFlags PandaSimulationFilterShader::
@@ -34,6 +62,7 @@ filter(physx::PxFilterObjectAttributes attributes0,
   // Shape FilterData
   // word0: collision group
   // word1: contents mask
+  // word2: solid mask
 
   PX_UNUSED(constant_block);
   PX_UNUSED(constant_block_size);
@@ -48,37 +77,42 @@ filter(physx::PxFilterObjectAttributes attributes0,
   }
 
   // Handle triggers.
-  // UNDONE: Not sure how to go about filtering triggers.  Should it use
-  // collision groups?  Contents mask?  Both?  Or should it let anything touch
-  // and just have game code decide what to do?  That's what I'm doing for now.
   if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1)) {
     pair_flags = physx::PxPairFlag::eTRIGGER_DEFAULT;
-    return physx::PxFilterFlag::eDEFAULT;
+
+    if (physx::PxFilterObjectIsTrigger(attributes0)) {
+      // Object A is a trigger, check what the trigger is solid to.
+      if ((filter_data0.word2 & filter_data1.word1) != 0) {
+        // B is solid to trigger A.
+        return physx::PxFilterFlag::eDEFAULT;
+      } else {
+        // Not solid.
+        return physx::PxFilterFlag::eSUPPRESS;
+      }
+    } else {
+      // Object B is the trigger, check what it's solid to.
+      if ((filter_data1.word2 & filter_data0.word1) != 0) {
+        // A is solid to trigger B.
+        return physx::PxFilterFlag::eDEFAULT;
+      } else {
+        // Not solid
+        return physx::PxFilterFlag::eSUPPRESS;
+      }
+    }
   }
 
-  bool enable_collisions = false;
-
-  if (filter_data0.word0 == 0 || filter_data1.word0 == 0) {
-    // One or both of the shapes are not assigned to any collision groups.
-    // Collisions will always occur.
-    enable_collisions = true;
-
-  } else {
-    // Both shapes are assigned to a collision group.  Check the collision
-    // table to see if the groups the shapes belong to have collisions enabled.
-    enable_collisions = _collision_table[filter_data0.word0][filter_data1.word0]._enable_collisions;
-  }
-
-  if (pphysics_cat.is_debug()) {
-    pphysics_cat.debug()
-      << "Collide? " << enable_collisions << "\n";
-  }
-
-  if (!enable_collisions) {
+  if (!should_collision_groups_collide(filter_data0.word0, filter_data1.word0)) {
     return physx::PxFilterFlag::eSUPPRESS;
   }
 
-  pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT | physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
+  if (!should_contents_collide(filter_data0.word1, filter_data0.word2,
+                               filter_data1.word1, filter_data1.word2)) {
+    return physx::PxFilterFlag::eSUPPRESS;
+  }
+
+  pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT |
+               physx::PxPairFlag::eNOTIFY_TOUCH_FOUND |
+               physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 
   return physx::PxFilterFlag::eCALLBACK;
 }

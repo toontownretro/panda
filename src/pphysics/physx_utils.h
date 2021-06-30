@@ -19,17 +19,48 @@
 #include "transformState.h"
 #include "physx_includes.h"
 
-INLINE LVecBase3 PxVec3_to_Vec3(const physx::PxVec3 &vec);
-INLINE physx::PxVec3 Vec3_to_PxVec3(const LVecBase3 &vec);
+INLINE float feet_to_meters(float feet);
+INLINE float meters_to_feet(float meters);
+INLINE float inches_to_meters(float inches);
+INLINE float meters_to_inches(float meters);
+INLINE float mm_to_meters(float mm);
+INLINE float meters_to_mm(float meters);
+INLINE float cm_to_meters(float cm);
+INLINE float meters_to_cm(float meters);
 
-INLINE LVecBase3 PxExVec3_to_Vec3(const physx::PxExtendedVec3 &vec);
-INLINE physx::PxExtendedVec3 Vec3_to_PxExVec3(const LVecBase3 &vec);
+INLINE float g_to_kg(float g);
+INLINE float kg_to_g(float kg);
+INLINE float mg_to_kg(float mg);
+INLINE float kg_to_mg(float kg);
+INLINE float lb_to_kg(float lb);
+INLINE float kg_to_lb(float kg);
+INLINE float oz_to_kg(float oz);
+INLINE float kg_to_oz(float kg);
 
-INLINE LQuaternion PxQuat_to_Quat(const physx::PxQuat &quat);
-INLINE physx::PxQuat Quat_to_PxQuat(const LQuaternion &quat);
+extern EXPCL_PANDA_PPHYSICS float panda_length_to_physx(float length);
+extern EXPCL_PANDA_PPHYSICS float physx_length_to_panda(float length);
 
-INLINE CPT(TransformState) PxTransform_to_TransformState(const physx::PxTransform &trans);
-INLINE physx::PxTransform TransformState_to_PxTransform(const TransformState *state);
+extern EXPCL_PANDA_PPHYSICS float panda_mass_to_physx(float mass);
+extern EXPCL_PANDA_PPHYSICS float physx_mass_to_panda(float mass);
+
+INLINE physx::PxVec3 panda_vec_to_physx(const LVecBase3 &vec);
+INLINE physx::PxExtendedVec3 panda_vec_to_physx_ex(const LVecBase3 &vec);
+INLINE LVecBase3 physx_vec_to_panda(const physx::PxVec3 &vec);
+INLINE LVecBase3 physx_ex_vec_to_panda(const physx::PxExtendedVec3 &vec);
+
+INLINE LVecBase3 physx_norm_vec_to_panda(const physx::PxVec3 &vec);
+INLINE physx::PxVec3 panda_norm_vec_to_physx(const LVecBase3 &vec);
+
+INLINE physx::PxQuat panda_quat_to_physx(const LQuaternion &quat);
+INLINE LQuaternion physx_quat_to_panda(const physx::PxQuat &quat);
+
+INLINE float panda_ang_to_physx(float ang);
+INLINE physx::PxVec3 panda_ang_to_physx(const LVecBase3 &ang);
+INLINE float physx_ang_to_panda(float ang);
+INLINE LVecBase3 physx_ang_to_panda(const physx::PxVec3 &ang);
+
+INLINE physx::PxTransform panda_trans_to_physx(const TransformState *trans);
+INLINE CPT(TransformState) physx_trans_to_panda(const physx::PxTransform &trans);
 
 #include "physx_utils.I"
 

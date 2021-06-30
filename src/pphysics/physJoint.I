@@ -17,17 +17,24 @@
 INLINE void PhysJoint::
 set_actors(PhysRigidActorNode *a, PhysRigidActorNode *b) {
   get_joint()->setActors(a->get_rigid_actor(), b->get_rigid_actor());
+  _a = a;
+  _b = b;
 }
 
 /**
  * Returns the two actor nodes constrained by this joint.
  */
-INLINE void PhysJoint::
-get_actors(PhysRigidActorNode *&a, PhysRigidActorNode *&b) const {
-  physx::PxRigidActor *pa, *pb;
-  get_joint()->getActors(pa, pb);
-  a = (PhysRigidActorNode *)pa->userData;
-  b = (PhysRigidActorNode *)pb->userData;
+INLINE PhysRigidActorNode *PhysJoint::
+get_actor_a() const {
+  return _a;
+}
+
+/**
+ * Returns the second actor associated with the joint.
+ */
+INLINE PhysRigidActorNode *PhysJoint::
+get_actor_b() const {
+  return _b;
 }
 
 /**
@@ -36,7 +43,7 @@ get_actors(PhysRigidActorNode *&a, PhysRigidActorNode *&b) const {
 INLINE void PhysJoint::
 set_frame_a(const TransformState *transform) {
   get_joint()->setLocalPose(physx::PxJointActorIndex::eACTOR0,
-                            TransformState_to_PxTransform(transform));
+                            panda_trans_to_physx(transform));
 }
 
 /**
@@ -44,7 +51,7 @@ set_frame_a(const TransformState *transform) {
  */
 INLINE CPT(TransformState) PhysJoint::
 get_frame_a() const {
-  return PxTransform_to_TransformState(
+  return physx_trans_to_panda(
     get_joint()->getLocalPose(physx::PxJointActorIndex::eACTOR0));
 }
 
@@ -54,7 +61,7 @@ get_frame_a() const {
 INLINE void PhysJoint::
 set_frame_b(const TransformState *transform) {
   get_joint()->setLocalPose(physx::PxJointActorIndex::eACTOR1,
-                            TransformState_to_PxTransform(transform));
+                            panda_trans_to_physx(transform));
 }
 
 /**
@@ -62,7 +69,7 @@ set_frame_b(const TransformState *transform) {
  */
 INLINE CPT(TransformState) PhysJoint::
 get_frame_b() const {
-  return PxTransform_to_TransformState(
+  return physx_trans_to_panda(
     get_joint()->getLocalPose(physx::PxJointActorIndex::eACTOR1));
 }
 
@@ -71,7 +78,7 @@ get_frame_b() const {
  */
 INLINE CPT(TransformState) PhysJoint::
 get_relative_transform() const {
-  return PxTransform_to_TransformState(get_joint()->getRelativeTransform());
+  return physx_trans_to_panda(get_joint()->getRelativeTransform());
 }
 
 /**
@@ -79,7 +86,7 @@ get_relative_transform() const {
  */
 INLINE LVector3 PhysJoint::
 get_relative_linear_velocity() const {
-  return PxVec3_to_Vec3(get_joint()->getRelativeLinearVelocity());
+  return physx_vec_to_panda(get_joint()->getRelativeLinearVelocity());
 }
 
 /**
@@ -87,7 +94,7 @@ get_relative_linear_velocity() const {
  */
 INLINE LVector3 PhysJoint::
 get_relative_angular_velocity() const {
-  return PxVec3_to_Vec3(get_joint()->getRelativeAngularVelocity());
+  return physx_ang_to_panda(get_joint()->getRelativeAngularVelocity());
 }
 
 /**
@@ -95,7 +102,8 @@ get_relative_angular_velocity() const {
  */
 INLINE void PhysJoint::
 set_break_force(PN_stdfloat force, PN_stdfloat torque) {
-  get_joint()->setBreakForce(force, torque);
+  get_joint()->setBreakForce(panda_length_to_physx(force),
+                             panda_length_to_physx(torque));
 }
 
 /**
@@ -106,8 +114,8 @@ get_break_force(PN_stdfloat &force, PN_stdfloat &torque) const {
   physx::PxReal pforce, ptorque;
   get_joint()->getBreakForce(pforce, ptorque);
 
-  force = pforce;
-  torque = ptorque;
+  force = physx_length_to_panda(pforce);
+  torque = physx_length_to_panda(ptorque);
 }
 
 /**

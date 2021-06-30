@@ -25,7 +25,7 @@ PhysContactPoint(const physx::PxContactPairPoint &point) :
  */
 INLINE LPoint3 PhysContactPoint::
 get_position() const {
-  return PxVec3_to_Vec3(_point.position);
+  return physx_vec_to_panda(_point.position);
 }
 
 /**
@@ -33,7 +33,7 @@ get_position() const {
  */
 INLINE PN_stdfloat PhysContactPoint::
 get_separation() const {
-  return _point.separation;
+  return physx_length_to_panda(_point.separation);
 }
 
 /**
@@ -41,7 +41,7 @@ get_separation() const {
  */
 INLINE LVector3 PhysContactPoint::
 get_normal() const {
-  return PxVec3_to_Vec3(_point.normal);
+  return physx_norm_vec_to_panda(_point.normal);
 }
 
 /**
@@ -49,7 +49,7 @@ get_normal() const {
  */
 INLINE LVector3 PhysContactPoint::
 get_impulse() const {
-  return PxVec3_to_Vec3(_point.impulse);
+  return physx_vec_to_panda(_point.impulse);
 }
 
 /**

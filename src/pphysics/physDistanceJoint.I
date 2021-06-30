@@ -16,7 +16,7 @@
  */
 INLINE PN_stdfloat PhysDistanceJoint::
 get_distance() const {
-  return _joint->getDistance();
+  return physx_length_to_panda(_joint->getDistance());
 }
 
 /**
@@ -24,7 +24,7 @@ get_distance() const {
  */
 INLINE void PhysDistanceJoint::
 set_min_distance(PN_stdfloat distance) {
-  _joint->setMinDistance(distance);
+  _joint->setMinDistance(panda_length_to_physx(distance));
   _joint->setDistanceJointFlag(physx::PxDistanceJointFlag::eMIN_DISTANCE_ENABLED, true);
 }
 
@@ -33,7 +33,7 @@ set_min_distance(PN_stdfloat distance) {
  */
 INLINE PN_stdfloat PhysDistanceJoint::
 get_min_distance() const {
-  return _joint->getMinDistance();
+  return physx_length_to_panda(_joint->getMinDistance());
 }
 
 /**
@@ -57,7 +57,7 @@ clear_min_distance() {
  */
 INLINE void PhysDistanceJoint::
 set_max_distance(PN_stdfloat distance) {
-  _joint->setMaxDistance(distance);
+  _joint->setMaxDistance(panda_length_to_physx(distance));
   _joint->setDistanceJointFlag(physx::PxDistanceJointFlag::eMAX_DISTANCE_ENABLED, true);
 }
 
@@ -66,7 +66,7 @@ set_max_distance(PN_stdfloat distance) {
  */
 INLINE PN_stdfloat PhysDistanceJoint::
 get_max_distance() const {
-  return _joint->getMaxDistance();
+  return physx_length_to_panda(_joint->getMaxDistance());
 }
 
 /**
@@ -90,7 +90,7 @@ clear_max_distance() {
  */
 INLINE void PhysDistanceJoint::
 set_tolerance(PN_stdfloat tolerance) {
-  _joint->setTolerance(tolerance);
+  _joint->setTolerance(panda_length_to_physx(tolerance));
 }
 
 /**
@@ -98,7 +98,7 @@ set_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysDistanceJoint::
 get_tolerance() const {
-  return _joint->getTolerance();
+  return physx_length_to_panda(_joint->getTolerance());
 }
 
 /**

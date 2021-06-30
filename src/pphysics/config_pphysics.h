@@ -31,8 +31,36 @@ enum PhysSolverType {
   PST_tgs, // Temporal Gauss-Seidel
 };
 
+/**
+ * The unit of measurement that Panda is using.  All values will be converted
+ * from this unit of measurement to meters when passed into PhysX.
+ */
+enum PhysPandaLengthUnit {
+  PPLU_meters,
+  PPLU_feet,
+  PPLU_inches,
+  PPLU_centimeters,
+  PPLU_millimeters,
+};
+
+/**
+ * The unit of mass that Panda is using.  All values will be converted from
+ * this unit of mass to kilograms when passed into PhysX.
+ */
+enum PhysPandaMassUnit {
+  PPMU_kilograms,
+  PPMU_grams,
+  PPMU_milligrams,
+  PPMU_pounds,
+  PPMU_ounces
+};
+
 EXPCL_PANDA_PPHYSICS std::ostream &operator << (std::ostream &out, PhysSolverType st);
 EXPCL_PANDA_PPHYSICS std::istream &operator >> (std::istream &in, PhysSolverType &st);
+EXPCL_PANDA_PPHYSICS std::ostream &operator << (std::ostream &out, PhysPandaLengthUnit pu);
+EXPCL_PANDA_PPHYSICS std::istream &operator >> (std::istream &in, PhysPandaLengthUnit &pu);
+EXPCL_PANDA_PPHYSICS std::ostream &operator << (std::ostream &out, PhysPandaMassUnit pu);
+EXPCL_PANDA_PPHYSICS std::istream &operator >> (std::istream &in, PhysPandaMassUnit &pu);
 
 extern EXPCL_PANDA_PPHYSICS ConfigVariableBool phys_enable_pvd;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableString phys_pvd_host;
@@ -41,6 +69,8 @@ extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_tolerance_length;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_tolerance_speed;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableBool phys_track_allocations;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysSolverType> phys_solver;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysPandaLengthUnit> phys_panda_length_unit;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysPandaMassUnit> phys_panda_mass_unit;
 
 extern EXPCL_PANDA_PPHYSICS void init_libpphysics();
 

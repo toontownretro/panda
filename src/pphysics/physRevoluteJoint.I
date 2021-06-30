@@ -24,7 +24,7 @@ get_angle() const {
  */
 INLINE PN_stdfloat PhysRevoluteJoint::
 get_velocity() const {
-  return _joint->getVelocity();
+  return physx_length_to_panda(_joint->getVelocity());
 }
 
 /**
@@ -97,7 +97,7 @@ get_drive_freespin() const {
  */
 INLINE void PhysRevoluteJoint::
 set_drive_velocity(PN_stdfloat vel, bool autowake) {
-  _joint->setDriveVelocity(vel, autowake);
+  _joint->setDriveVelocity(panda_length_to_physx(vel), autowake);
 }
 
 /**
@@ -113,7 +113,7 @@ get_drive_velocity() const {
  */
 INLINE void PhysRevoluteJoint::
 set_drive_force_limit(PN_stdfloat limit) {
-  _joint->setDriveForceLimit(limit);
+  _joint->setDriveForceLimit(panda_length_to_physx(limit));
 }
 
 /**
@@ -121,7 +121,7 @@ set_drive_force_limit(PN_stdfloat limit) {
  */
 INLINE PN_stdfloat PhysRevoluteJoint::
 get_drive_force_limit() const {
-  return _joint->getDriveForceLimit();
+  return physx_length_to_panda(_joint->getDriveForceLimit());
 }
 
 /**
@@ -145,7 +145,7 @@ get_drive_gear_ratio() const {
  */
 INLINE void PhysRevoluteJoint::
 set_projection_linear_tolerance(PN_stdfloat tolerance) {
-  _joint->setProjectionLinearTolerance(tolerance);
+  _joint->setProjectionLinearTolerance(panda_length_to_physx(tolerance));
 }
 
 /**
@@ -153,7 +153,7 @@ set_projection_linear_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysRevoluteJoint::
 get_projection_linear_tolerance() const {
-  return _joint->getProjectionLinearTolerance();
+  return physx_length_to_panda(_joint->getProjectionLinearTolerance());
 }
 
 /**
@@ -161,7 +161,7 @@ get_projection_linear_tolerance() const {
  */
 INLINE void PhysRevoluteJoint::
 set_projection_angular_tolerance(PN_stdfloat tolerance) {
-  _joint->setProjectionAngularTolerance(tolerance);
+  _joint->setProjectionAngularTolerance(panda_ang_to_physx(tolerance));
 }
 
 /**
@@ -169,5 +169,5 @@ set_projection_angular_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysRevoluteJoint::
 get_projection_angular_tolerance() const {
-  return _joint->getProjectionAngularTolerance();
+  return physx_ang_to_panda(_joint->getProjectionAngularTolerance());
 }

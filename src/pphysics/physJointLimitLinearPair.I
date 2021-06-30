@@ -16,7 +16,8 @@
  */
 INLINE PhysJointLimitLinearPair::
 PhysJointLimitLinearPair(PN_stdfloat lower_limit, PN_stdfloat upper_limit, PN_stdfloat contact_dist) :
-  _limit(PhysSystem::ptr()->get_scale(), lower_limit, upper_limit, contact_dist)
+  _limit(PhysSystem::ptr()->get_scale(), panda_length_to_physx(lower_limit),
+         panda_length_to_physx(upper_limit), contact_dist != -1.0f ? panda_length_to_physx(contact_dist) : contact_dist)
 {
 }
 
@@ -26,7 +27,7 @@ PhysJointLimitLinearPair(PN_stdfloat lower_limit, PN_stdfloat upper_limit, PN_st
 INLINE PhysJointLimitLinearPair::
 PhysJointLimitLinearPair(PN_stdfloat lower_limit, PN_stdfloat upper_limit,
                          PN_stdfloat stiffness, PN_stdfloat damping) :
-  _limit(lower_limit, upper_limit, physx::PxSpring(stiffness, damping))
+  _limit(panda_length_to_physx(lower_limit), panda_length_to_physx(upper_limit), physx::PxSpring(stiffness, damping))
 {
 }
 
@@ -44,7 +45,7 @@ PhysJointLimitLinearPair(const physx::PxJointLinearLimitPair &pxlimit) :
  */
 INLINE void PhysJointLimitLinearPair::
 set_upper_limit(PN_stdfloat limit) {
-  _limit.upper = limit;
+  _limit.upper = panda_length_to_physx(limit);
 }
 
 /**
@@ -52,7 +53,7 @@ set_upper_limit(PN_stdfloat limit) {
  */
 INLINE PN_stdfloat PhysJointLimitLinearPair::
 get_upper_limit() const {
-  return _limit.upper;
+  return physx_length_to_panda(_limit.upper);
 }
 
 /**
@@ -60,7 +61,7 @@ get_upper_limit() const {
  */
 INLINE void PhysJointLimitLinearPair::
 set_lower_limit(PN_stdfloat limit) {
-  _limit.lower = limit;
+  _limit.lower = panda_length_to_physx(limit);
 }
 
 /**
@@ -68,7 +69,7 @@ set_lower_limit(PN_stdfloat limit) {
  */
 INLINE PN_stdfloat PhysJointLimitLinearPair::
 get_lower_limit() const {
-  return _limit.lower;
+  return physx_length_to_panda(_limit.lower);
 }
 
 /**

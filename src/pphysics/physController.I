@@ -100,10 +100,7 @@ get_global_ptr() {
  */
 INLINE PhysController::
 PhysController() :
-  _collision_flags(CF_none),
-  _collision_group(0),
-  _solid_mask(BitMask32::all_on()),
-  _contents_mask(BitMask32::all_on())
+  _collision_flags(CF_none)
 {
 }
 
@@ -120,7 +117,7 @@ get_shape_type() const {
  */
 INLINE void PhysController::
 set_position(const LPoint3 &pos) {
-  get_controller()->setPosition(Vec3_to_PxExVec3(pos));
+  get_controller()->setPosition(panda_vec_to_physx_ex(pos));
 }
 
 /**
@@ -128,7 +125,7 @@ set_position(const LPoint3 &pos) {
  */
 INLINE LPoint3 PhysController::
 get_position() const {
-  return PxExVec3_to_Vec3(get_controller()->getPosition());
+  return physx_ex_vec_to_panda(get_controller()->getPosition());
 }
 
 /**
@@ -136,7 +133,7 @@ get_position() const {
  */
 INLINE void PhysController::
 set_foot_position(const LPoint3 &position) {
-  get_controller()->setFootPosition(Vec3_to_PxExVec3(position));
+  get_controller()->setFootPosition(panda_vec_to_physx_ex(position));
 }
 
 /**
@@ -144,7 +141,7 @@ set_foot_position(const LPoint3 &position) {
  */
 INLINE LPoint3 PhysController::
 get_foot_position() const {
-  return PxExVec3_to_Vec3(get_controller()->getFootPosition());
+  return physx_ex_vec_to_panda(get_controller()->getFootPosition());
 }
 
 /**
@@ -152,7 +149,7 @@ get_foot_position() const {
  */
 INLINE void PhysController::
 set_step_offset(PN_stdfloat offset) {
-  get_controller()->setStepOffset(offset);
+  get_controller()->setStepOffset(panda_length_to_physx(offset));
 }
 
 /**
@@ -160,7 +157,7 @@ set_step_offset(PN_stdfloat offset) {
  */
 INLINE PN_stdfloat PhysController::
 get_step_offset() const {
-  return get_controller()->getStepOffset();
+  return physx_length_to_panda(get_controller()->getStepOffset());
 }
 
 /**
@@ -168,7 +165,7 @@ get_step_offset() const {
  */
 INLINE void PhysController::
 set_contact_offset(PN_stdfloat offset) {
-  get_controller()->setContactOffset(offset);
+  get_controller()->setContactOffset(panda_length_to_physx(offset));
 }
 
 /**
@@ -176,7 +173,7 @@ set_contact_offset(PN_stdfloat offset) {
  */
 INLINE PN_stdfloat PhysController::
 get_contact_offset() const {
-  return get_controller()->getContactOffset();
+  return physx_length_to_panda(get_controller()->getContactOffset());
 }
 
 /**
@@ -184,7 +181,7 @@ get_contact_offset() const {
  */
 INLINE void PhysController::
 set_up_direction(const LVector3 &dir) {
-  get_controller()->setUpDirection(Vec3_to_PxVec3(dir));
+  get_controller()->setUpDirection(panda_norm_vec_to_physx(dir));
 }
 
 /**
@@ -192,7 +189,7 @@ set_up_direction(const LVector3 &dir) {
  */
 INLINE LVector3 PhysController::
 get_up_direction() const {
-  return PxVec3_to_Vec3(get_controller()->getUpDirection());
+  return physx_norm_vec_to_panda(get_controller()->getUpDirection());
 }
 
 /**
@@ -200,7 +197,7 @@ get_up_direction() const {
  */
 INLINE void PhysController::
 set_slope_limit(PN_stdfloat limit) {
-  get_controller()->setSlopeLimit(std::cos(deg_2_rad(limit)));
+  get_controller()->setSlopeLimit(std::cos(panda_ang_to_physx(limit)));
 }
 
 /**
@@ -208,7 +205,7 @@ set_slope_limit(PN_stdfloat limit) {
  */
 INLINE PN_stdfloat PhysController::
 get_slope_limit() const {
-  return rad_2_deg(std::acos(get_controller()->getSlopeLimit()));
+  return physx_ang_to_panda(std::acos(get_controller()->getSlopeLimit()));
 }
 
 /**
@@ -216,7 +213,7 @@ get_slope_limit() const {
  */
 INLINE void PhysController::
 resize(PN_stdfloat size) {
-  get_controller()->resize(size);
+  get_controller()->resize(panda_length_to_physx(size));
 }
 
 /**
@@ -225,7 +222,8 @@ resize(PN_stdfloat size) {
  */
 INLINE void PhysController::
 set_solid_mask(BitMask32 mask) {
-  _solid_mask = mask;
+  nassertv(_actor_node != nullptr);
+  _actor_node->set_solid_mask(mask);
 }
 
 /**
@@ -234,7 +232,8 @@ set_solid_mask(BitMask32 mask) {
  */
 INLINE BitMask32 PhysController::
 get_solid_mask() const {
-  return _solid_mask;
+  nassertr(_actor_node != nullptr, 0)
+  return _actor_node->get_solid_mask();
 }
 
 /**
@@ -242,7 +241,8 @@ get_solid_mask() const {
  */
 INLINE BitMask32 PhysController::
 get_contents_mask() const {
-  return _contents_mask;
+  nassertr(_actor_node != nullptr, 0)
+  return _actor_node->get_contents_mask();
 }
 
 /**
@@ -250,7 +250,25 @@ get_contents_mask() const {
  */
 INLINE unsigned int PhysController::
 get_collision_group() const {
-  return _collision_group;
+  nassertr(_actor_node != nullptr, 0)
+  return _actor_node->get_collision_group();
+}
+
+/**
+ * Returns the underlying actor node of the controller.
+ */
+INLINE PhysRigidDynamicNode *PhysController::
+get_actor_node() const {
+  return _actor_node;
+}
+
+/**
+ * Returns the shape of the underlying actor of the controller.
+ */
+INLINE PhysShape *PhysController::
+get_actor_shape() const {
+  nassertr(_actor_node != nullptr, nullptr);
+  return _actor_node->get_shape(0);
 }
 
 /**

@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "numeric_types.h"
 #include "physx_includes.h"
+#include "physx_utils.h"
 
 /**
  *
@@ -37,6 +38,9 @@ PUBLISHED:
 
   INLINE void set_contact_distance(PN_stdfloat dist);
   INLINE PN_stdfloat get_contact_distance() const;
+
+  INLINE void set_angle_contact_distance(PN_stdfloat dist);
+  INLINE PN_stdfloat get_angle_contact_distance() const;
 
   INLINE bool is_valid() const;
 

@@ -21,6 +21,7 @@
 #include "collideMask.h"
 #include "pvector.h"
 #include "deg_2_rad.h"
+#include "physRigidDynamicNode.h"
 
 #include "physx_includes.h"
 #include "physx_utils.h"
@@ -155,6 +156,9 @@ PUBLISHED:
   void set_collision_group(unsigned int group);
   INLINE unsigned int get_collision_group() const;
 
+  INLINE PhysRigidDynamicNode *get_actor_node() const;
+  INLINE PhysShape *get_actor_shape() const;
+
   CollisionFlags move(double dt, const LVector3 &move_vector,
                       PN_stdfloat min_distance,
                       PhysBaseQueryFilter *filter = nullptr);
@@ -171,23 +175,14 @@ PUBLISHED:
   INLINE size_t get_num_controller_hits() const;
   INLINE const PhysControllersHitData *get_controller_hit(size_t n) const;
 
-public:
-  void update_shape_filter_data();
-
 protected:
   virtual physx::PxController *get_controller() const = 0;
 
+  // Wrapper node around the internally created PxActor for the controller.
+  PT(PhysRigidDynamicNode) _actor_node;
+
   // The node that gets controlled.
   NodePath _np;
-
-  // Mask of contents that are solid to the controller.
-  BitMask32 _solid_mask;
-
-  // Mask of contents of the controller itself.
-  BitMask32 _contents_mask;
-
-  // Collision group of the controller.
-  int _collision_group;
 
   //
   // These get cleared and filled in each move() call.

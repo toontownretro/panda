@@ -38,11 +38,11 @@ onShapeHit(const physx::PxControllerShapeHit &hit) {
   data._controller = controller;
   data._actor = (PhysRigidActorNode *)(hit.actor->userData);
   data._shape = (PhysShape *)(hit.shape->userData);
-  data._motion_dir = PxVec3_to_Vec3(hit.dir);
-  data._motion_length = (PN_stdfloat)hit.length;
+  data._motion_dir = physx_norm_vec_to_panda(hit.dir);
+  data._motion_length = physx_length_to_panda(hit.length);
   data._triangle_index = (uint32_t)hit.triangleIndex;
-  data._world_normal = PxVec3_to_Vec3(hit.worldNormal);
-  data._world_pos = PxExVec3_to_Vec3(hit.worldPos);
+  data._world_normal = physx_norm_vec_to_panda(hit.worldNormal);
+  data._world_pos = physx_ex_vec_to_panda(hit.worldPos);
 
   controller->_shape_hits.push_back(std::move(data));
 }
@@ -65,10 +65,10 @@ onControllerHit(const physx::PxControllersHit &hit) {
   PhysControllersHitData data;
   data._controller = controller;
   data._other = other;
-  data._world_pos = PxExVec3_to_Vec3(hit.worldPos);
-  data._world_normal = PxVec3_to_Vec3(hit.worldNormal);
-  data._motion_dir = PxVec3_to_Vec3(hit.dir);
-  data._motion_length = (PN_stdfloat)hit.length;
+  data._world_pos = physx_ex_vec_to_panda(hit.worldPos);
+  data._world_normal = physx_norm_vec_to_panda(hit.worldNormal);
+  data._motion_dir = physx_norm_vec_to_panda(hit.dir);
+  data._motion_length = physx_length_to_panda(hit.length);
 
   controller->_controller_hits.push_back(std::move(data));
 }
@@ -92,17 +92,20 @@ filter(const physx::PxController &a, const physx::PxController &b) {
 
   PhysController *pa = (PhysController *)a.getUserData();
   PhysController *pb = (PhysController *)b.getUserData();
+  PhysRigidDynamicNode *aa = pa->get_actor_node();
+  PhysRigidDynamicNode *ab = pb->get_actor_node();
 
   // If they both belong to a collision group, check that first.
-  if (pa->get_collision_group() != 0 && pb->get_collision_group() != 0) {
-    if (!(PandaSimulationFilterShader::_collision_table[pa->get_collision_group()][pb->get_collision_group()]._enable_collisions)) {
+  if (aa->get_collision_group() != 0 && ab->get_collision_group() != 0) {
+    if (!(PandaSimulationFilterShader::_collision_table[aa->get_collision_group()][ab->get_collision_group()]._enable_collisions)) {
       // The groups don't collide with each other.
       return false;
     }
   }
 
-  // If controller B is solid to controller A, they collide.
-  return (pa->get_solid_mask() & pb->get_contents_mask()) != 0;
+  // If one of them is not solid to the other, they don't collide.
+  return ((aa->get_contents_mask() & ab->get_solid_mask()) != 0) &&
+         ((ab->get_contents_mask() & aa->get_solid_mask()) != 0);
 }
 
 /**
@@ -112,13 +115,8 @@ filter(const physx::PxController &a, const physx::PxController &b) {
  */
 void PhysController::
 set_contents_mask(BitMask32 mask) {
-  if (mask == _contents_mask) {
-    return;
-  }
-
-  _contents_mask = mask;
-
-  update_shape_filter_data();
+  nassertv(_actor_node != nullptr);
+  _actor_node->set_contents_mask(mask);
 }
 
 /**
@@ -129,13 +127,8 @@ set_contents_mask(BitMask32 mask) {
  */
 INLINE void PhysController::
 set_collision_group(unsigned int group) {
-  if (group == _collision_group) {
-    return;
-  }
-
-  _collision_group = group;
-
-  update_shape_filter_data();
+  nassertv(_actor_node != nullptr);
+  _actor_node->set_collision_group(group);
 }
 
 /**
@@ -152,10 +145,10 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
 
   // Lay out the filter data the way that PhysBaseQueryFilter expects.
   physx::PxFilterData fdata;
-  fdata.word0 = _solid_mask.get_word();
+  fdata.word0 = _actor_node->get_solid_mask().get_word();
   fdata.word1 = fdata.word0;
   fdata.word2 = 0;
-  fdata.word3 = _collision_group;
+  fdata.word3 = _actor_node->get_collision_group();
 
   physx::PxControllerFilters filters;
   PhysBaseQueryFilter default_filter;
@@ -170,29 +163,7 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
 
   // Run the move.
   uint32_t flags = get_controller()->move(
-    Vec3_to_PxVec3(move_vector), min_distance, dt, filters);
+    panda_vec_to_physx(move_vector), panda_length_to_physx(min_distance), dt, filters);
   _collision_flags = flags;
   return (CollisionFlags)flags;
-}
-
-/**
- *
- */
-void PhysController::
-update_shape_filter_data() {
-  // Update the underlying actor shape with the character's contents mask and
-  // collision group.
-  physx::PxShape *shape = nullptr;
-  physx::PxRigidDynamic *actor = get_controller()->getActor();
-  nassertv(actor != nullptr);
-  actor->getShapes(&shape, 1);
-  nassertv(shape != nullptr);
-  physx::PxFilterData data = shape->getSimulationFilterData();
-  physx::PxFilterData qdata = shape->getQueryFilterData();
-  data.word0 = _collision_group;
-  data.word1 = _contents_mask.get_word();
-  qdata.word0 = _contents_mask.get_word();
-  qdata.word1 = _collision_group;
-  shape->setSimulationFilterData(data);
-  shape->setQueryFilterData(qdata);
 }

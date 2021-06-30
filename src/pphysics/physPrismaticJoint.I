@@ -16,7 +16,7 @@
  */
 INLINE PN_stdfloat PhysPrismaticJoint::
 get_position() const {
-  return _joint->getPosition();
+  return physx_length_to_panda(_joint->getPosition());
 }
 
 /**
@@ -24,7 +24,7 @@ get_position() const {
  */
 INLINE PN_stdfloat PhysPrismaticJoint::
 get_velocity() const {
-  return _joint->getVelocity();
+  return physx_length_to_panda(_joint->getVelocity());
 }
 
 /**
@@ -65,7 +65,7 @@ clear_limit() {
  */
 INLINE void PhysPrismaticJoint::
 set_projection_linear_tolerance(PN_stdfloat tolerance) {
-  _joint->setProjectionLinearTolerance(tolerance);
+  _joint->setProjectionLinearTolerance(panda_length_to_physx(tolerance));
 }
 
 /**
@@ -73,7 +73,7 @@ set_projection_linear_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysPrismaticJoint::
 get_projection_linear_tolerance() const {
-  return _joint->getProjectionLinearTolerance();
+  return physx_length_to_panda(_joint->getProjectionLinearTolerance());
 }
 
 /**
@@ -81,7 +81,7 @@ get_projection_linear_tolerance() const {
  */
 INLINE void PhysPrismaticJoint::
 set_projection_angular_tolerance(PN_stdfloat tolerance) {
-  _joint->setProjectionAngularTolerance(tolerance);
+  _joint->setProjectionAngularTolerance(panda_ang_to_physx(tolerance));
 }
 
 /**
@@ -89,5 +89,5 @@ set_projection_angular_tolerance(PN_stdfloat tolerance) {
  */
 INLINE PN_stdfloat PhysPrismaticJoint::
 get_projection_angular_tolerance() const {
-  return _joint->getProjectionAngularTolerance();
+  return physx_ang_to_panda(_joint->getProjectionAngularTolerance());
 }

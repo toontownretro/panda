@@ -34,7 +34,18 @@ PhysMaterial(PN_stdfloat static_friction, PN_stdfloat dynamic_friction,
 PhysMaterial::
 ~PhysMaterial() {
   if (_material != nullptr) {
+    _material->userData = nullptr;
     _material->release();
     _material = nullptr;
   }
+}
+
+/**
+ *
+ */
+PhysMaterial::
+PhysMaterial(physx::PxMaterial *material) {
+  _material = material;
+  _material->userData = this;
+  _material->acquireReference();
 }

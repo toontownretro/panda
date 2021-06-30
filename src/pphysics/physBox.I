@@ -16,11 +16,7 @@
  */
 INLINE void PhysBox::
 set_half_extents(const LVector3 &half_extents) {
-  _geom.halfExtents = physx::PxVec3(
-    (physx::PxReal)half_extents[0],
-    (physx::PxReal)half_extents[1],
-    (physx::PxReal)half_extents[2]
-  );
+  _geom.halfExtents = panda_vec_to_physx(half_extents);
 }
 
 /**
@@ -28,11 +24,7 @@ set_half_extents(const LVector3 &half_extents) {
  */
 INLINE void PhysBox::
 set_half_extents(PN_stdfloat hx, PN_stdfloat hy, PN_stdfloat hz) {
-  _geom.halfExtents = physx::PxVec3(
-    (physx::PxReal)hx,
-    (physx::PxReal)hy,
-    (physx::PxReal)hz
-  );
+  _geom.halfExtents = panda_vec_to_physx(LVecBase3(hx, hy, hz));
 }
 
 /**
@@ -40,11 +32,7 @@ set_half_extents(PN_stdfloat hx, PN_stdfloat hy, PN_stdfloat hz) {
  */
 INLINE LVector3 PhysBox::
 get_half_extents() const {
-  return LVector3(
-    (PN_stdfloat)_geom.halfExtents.x,
-    (PN_stdfloat)_geom.halfExtents.y,
-    (PN_stdfloat)_geom.halfExtents.z
-  );
+  return physx_vec_to_panda(_geom.halfExtents);
 }
 
 /**

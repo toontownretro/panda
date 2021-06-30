@@ -80,7 +80,7 @@ get_damping() const {
  */
 INLINE void PhysJointLimit::
 set_contact_distance(PN_stdfloat dist) {
-  get_params().contactDistance = dist;
+  get_params().contactDistance = panda_length_to_physx(dist);
 }
 
 /**
@@ -88,7 +88,23 @@ set_contact_distance(PN_stdfloat dist) {
  */
 INLINE PN_stdfloat PhysJointLimit::
 get_contact_distance() const {
-  return get_params().contactDistance;
+  return physx_length_to_panda(get_params().contactDistance);
+}
+
+/**
+ *
+ */
+INLINE void PhysJointLimit::
+set_angle_contact_distance(PN_stdfloat dist) {
+  get_params().contactDistance = panda_ang_to_physx(dist);
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat PhysJointLimit::
+get_angle_contact_distance() const {
+  return physx_ang_to_panda(get_params().contactDistance);
 }
 
 /**

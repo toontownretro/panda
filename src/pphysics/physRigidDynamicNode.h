@@ -23,7 +23,7 @@
 class EXPCL_PANDA_PPHYSICS PhysRigidDynamicNode final : public PhysRigidBodyNode {
 PUBLISHED:
   PhysRigidDynamicNode(const std::string &name);
-  ~PhysRigidDynamicNode();
+  virtual ~PhysRigidDynamicNode();
 
   INLINE void wake_up();
 
@@ -36,14 +36,18 @@ PUBLISHED:
   INLINE void set_stabilization_threshold(PN_stdfloat threshold);
   INLINE PN_stdfloat get_stabilization_threshold() const;
 
+  virtual bool is_self_created() const override { return _self_created; }
+
 protected:
   virtual void do_transform_changed() override;
 
 public:
+  PhysRigidDynamicNode(physx::PxRigidDynamic *actor);
   virtual physx::PxRigidBody *get_rigid_body() const override;
 
 private:
   physx::PxRigidDynamic *_rigid_dynamic;
+  bool _self_created;
 
 public:
   static TypeHandle get_class_type() {

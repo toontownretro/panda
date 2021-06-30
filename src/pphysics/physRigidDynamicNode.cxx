@@ -14,6 +14,7 @@
 #include "physRigidDynamicNode.h"
 #include "nodePath.h"
 #include "physSystem.h"
+#include "physShape.h"
 
 #include "physx_includes.h"
 
@@ -30,6 +31,7 @@ PhysRigidDynamicNode(const std::string &name) :
   _rigid_dynamic = sys->get_physics()->createRigidDynamic(
     physx::PxTransform(physx::PxVec3(0, 0, 0)));
   _rigid_dynamic->userData = this;
+  _self_created = true;
 }
 
 /**
@@ -39,13 +41,18 @@ PhysRigidDynamicNode::
 ~PhysRigidDynamicNode() {
   if (_rigid_dynamic != nullptr) {
 
-    // Not sure if this is done automatically by PhysX, so I'm doing it just
-    // to be safe.
-    if (_rigid_dynamic->getScene() != nullptr) {
-      _rigid_dynamic->getScene()->removeActor(*_rigid_dynamic);
+    _rigid_dynamic->userData = nullptr;
+
+    if (_self_created) {
+      // Not sure if this is done automatically by PhysX, so I'm doing it just
+      // to be safe.
+      if (_rigid_dynamic->getScene() != nullptr) {
+        _rigid_dynamic->getScene()->removeActor(*_rigid_dynamic);
+      }
+
+      _rigid_dynamic->release();
     }
 
-    _rigid_dynamic->release();
     _rigid_dynamic = nullptr;
   }
 }
@@ -70,14 +77,31 @@ do_transform_changed() {
   NodePath np = NodePath::any_path((PandaNode *)this);
 
   CPT(TransformState) net_transform = np.get_net_transform();
-  const LPoint3 &pos = net_transform->get_pos();
-  const LQuaternion &quat = net_transform->get_quat();
+  _rigid_dynamic->setKinematicTarget(panda_trans_to_physx(net_transform));
+}
 
-  physx::PxTransform pose(
-    physx::PxVec3(pos[0], pos[1], pos[2]),
-    physx::PxQuat(quat[1], quat[2], quat[3], quat[0]));
-
-  _rigid_dynamic->setKinematicTarget(pose);
+/**
+ * Initializes a dynamic node from an existing PxActor.
+ */
+PhysRigidDynamicNode::
+PhysRigidDynamicNode(physx::PxRigidDynamic *actor) :
+  PhysRigidBodyNode("dynamic") {
+  _rigid_dynamic = actor;
+  _rigid_dynamic->userData = this;
+  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * actor->getNbShapes());
+  actor->getShapes(shapes, actor->getNbShapes());
+  for (physx::PxU32 i = 0; i < actor->getNbShapes(); i++) {
+    physx::PxShape *pxshape = shapes[i];
+    if (pxshape->userData != nullptr) {
+      _shapes.push_back((PhysShape *)pxshape->userData);
+    } else {
+      PT(PhysShape) shape = new PhysShape(pxshape);
+      _shapes.push_back(shape);
+    }
+  }
+  update_shape_filter_data();
+  //_sync_enabled = false;
+  _self_created = false;
 }
 
 /**

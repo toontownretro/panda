@@ -18,7 +18,8 @@
  */
 PhysJointLimitCone::
 PhysJointLimitCone(PN_stdfloat y_limit, PN_stdfloat z_limit, PN_stdfloat contact_distance) :
-  _limit(deg_2_rad(y_limit), deg_2_rad(z_limit), contact_distance)
+  _limit(deg_2_rad(y_limit), deg_2_rad(z_limit),
+         contact_distance != -1.0f ? panda_ang_to_physx(contact_distance) : contact_distance)
 {
 }
 

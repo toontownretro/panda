@@ -62,6 +62,114 @@ operator >> (std::istream &in, PhysSolverType &st) {
   return in;
 }
 
+/**
+ *
+ */
+std::ostream &
+operator << (std::ostream &out, PhysPandaLengthUnit st) {
+  switch(st) {
+  case PPLU_meters:
+    out << "meters";
+    return out;
+  case PPLU_feet:
+    out << "feet";
+    return out;
+  case PPLU_inches:
+    out << "inches";
+    return out;
+  case PPLU_millimeters:
+    out << "millimeters";
+    return out;
+  case PPLU_centimeters:
+    out << "centimeters";
+    return out;
+  default:
+    out << "**invalid** (" << (int)st << ")";
+    return out;
+  }
+}
+
+/**
+ *
+ */
+std::istream &
+operator >> (std::istream &in, PhysPandaLengthUnit &st) {
+  std::string word;
+  in >> word;
+
+  if (cmp_nocase(word, "meters") == 0) {
+    st = PPLU_meters;
+  } else if (cmp_nocase(word, "feet") == 0) {
+    st = PPLU_feet;
+  } else if (cmp_nocase(word, "inches") == 0) {
+    st = PPLU_inches;
+  } else if (cmp_nocase(word, "centimeters") == 0) {
+    st = PPLU_centimeters;
+  } else if (cmp_nocase(word, "millimeters") == 0) {
+    st = PPLU_centimeters;
+  } else {
+    pphysics_cat.error()
+      << "Invalid PhysPandaLengthUnit: " << word << ", defaulting to feet\n";
+    st = PPLU_feet;
+  }
+
+  return in;
+}
+
+/**
+ *
+ */
+std::ostream &
+operator << (std::ostream &out, PhysPandaMassUnit st) {
+  switch(st) {
+  case PPMU_kilograms:
+    out << "kilograms";
+    return out;
+  case PPMU_grams:
+    out << "grams";
+    return out;
+  case PPMU_milligrams:
+    out << "milligrams";
+    return out;
+  case PPMU_pounds:
+    out << "pounds";
+    return out;
+  case PPMU_ounces:
+    out << "ounces";
+    return out;
+  default:
+    out << "**invalid** (" << (int)st << ")";
+    return out;
+  }
+}
+
+/**
+ *
+ */
+std::istream &
+operator >> (std::istream &in, PhysPandaMassUnit &st) {
+  std::string word;
+  in >> word;
+
+  if (cmp_nocase(word, "kilograms") == 0) {
+    st = PPMU_kilograms;
+  } else if (cmp_nocase(word, "grams") == 0) {
+    st = PPMU_grams;
+  } else if (cmp_nocase(word, "milligrams") == 0) {
+    st = PPMU_milligrams;
+  } else if (cmp_nocase(word, "pounds") == 0) {
+    st = PPMU_pounds;
+  } else if (cmp_nocase(word, "ounces") == 0) {
+    st = PPMU_ounces;
+  } else {
+    pphysics_cat.error()
+      << "Invalid PhysPandaMassUnit: " << word << ", defaulting to kilograms\n";
+    st = PPMU_kilograms;
+  }
+
+  return in;
+}
+
 ConfigureDef(config_pphysics);
 ConfigureFn(config_pphysics) {
   init_libpphysics();
@@ -105,6 +213,18 @@ ConfigVariableEnum<PhysSolverType> phys_solver
 ("phys-solver", PST_pgs,
  PRC_DESC("The physics solver type to use.  Default is Projected Gauss-Seidel "
           "(PGS)."));
+
+ConfigVariableEnum<PhysPandaLengthUnit> phys_panda_length_unit
+("phys-panda-length-unit", PPLU_feet,
+ PRC_DESC("Specifies the unit of length that Panda/game code uses.  Lengths "
+          "will be converted from this unit to PhysX units (meters) when passed "
+          "into the API.  The default is feet."));
+
+ConfigVariableEnum<PhysPandaMassUnit> phys_panda_mass_unit
+("phys-panda-mass-unit", PPMU_kilograms,
+ PRC_DESC("Specifies the unit of mass that Panda/game code uses.  Masses will "
+          "will be converted from this unit to PhysX units (kilograms) when "
+          "passed into the API.  The default is kilograms."));
 
 /**
  * Initializes the library.  This must be called at least once before any of

@@ -16,9 +16,9 @@
  */
 INLINE void PhysBoxController::
 set_half_extents(const LVector3 &half_extents) {
-  _controller->setHalfSideExtent(half_extents[0]);
-  _controller->setHalfForwardExtent(half_extents[1]);
-  _controller->setHalfHeight(half_extents[2]);
+  _controller->setHalfSideExtent(panda_length_to_physx(half_extents[0]));
+  _controller->setHalfForwardExtent(panda_length_to_physx(half_extents[1]));
+  _controller->setHalfHeight(panda_length_to_physx(half_extents[2]));
 }
 
 /**
@@ -27,8 +27,8 @@ set_half_extents(const LVector3 &half_extents) {
 INLINE LVector3 PhysBoxController::
 get_half_extents() const {
   return LVector3(
-    _controller->getHalfSideExtent(),
-    _controller->getHalfForwardExtent(),
-    _controller->getHalfHeight()
+    physx_length_to_panda(_controller->getHalfSideExtent()),
+    physx_length_to_panda(_controller->getHalfForwardExtent()),
+    physx_length_to_panda(_controller->getHalfHeight())
   );
 }

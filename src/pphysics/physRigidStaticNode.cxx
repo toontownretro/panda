@@ -35,6 +35,8 @@ PhysRigidStaticNode(const std::string &name) :
 PhysRigidStaticNode::
 ~PhysRigidStaticNode() {
   if (_rigid_static != nullptr) {
+    _rigid_static->userData = nullptr;
+
     if (_rigid_static->getScene() != nullptr) {
       _rigid_static->getScene()->removeActor(*_rigid_static);
     }

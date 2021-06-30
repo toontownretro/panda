@@ -17,7 +17,7 @@
  */
 INLINE void PhysCapsule::
 set_radius(PN_stdfloat radius) {
-  _geom.radius = (physx::PxReal)radius;
+  _geom.radius = panda_length_to_physx(radius);
 }
 
 /**
@@ -25,7 +25,7 @@ set_radius(PN_stdfloat radius) {
  */
 INLINE PN_stdfloat PhysCapsule::
 get_radius() const {
-  return (PN_stdfloat)_geom.radius;
+  return physx_length_to_panda(_geom.radius);
 }
 
 /**
@@ -33,7 +33,7 @@ get_radius() const {
  */
 INLINE void PhysCapsule::
 set_half_height(PN_stdfloat half_height) {
-  _geom.halfHeight = (physx::PxReal)half_height;
+  _geom.halfHeight = panda_length_to_physx(half_height);
 }
 
 /**
@@ -41,7 +41,7 @@ set_half_height(PN_stdfloat half_height) {
  */
 INLINE PN_stdfloat PhysCapsule::
 get_half_height() const {
-  return (PN_stdfloat)_geom.halfHeight;
+  return physx_length_to_panda(_geom.halfHeight);
 }
 
 /**

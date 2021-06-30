@@ -24,6 +24,7 @@
 class PhysScene;
 
 #include "physx_includes.h"
+#include "physx_utils.h"
 
 /**
  * Base class for rigid (non-deformable) objects in a scene.
@@ -63,11 +64,19 @@ PUBLISHED:
   void set_contents_mask(BitMask32 contents_mask);
   INLINE BitMask32 get_contents_mask() const;
 
+  void set_solid_mask(BitMask32 solid_mask);
+  INLINE BitMask32 get_solid_mask() const;
+
   INLINE void set_simulation_disabled(bool flag);
   INLINE bool get_simulation_disabled() const;
 
   MAKE_SEQ(get_shapes, get_num_shapes, get_shape);
   MAKE_SEQ_PROPERTY(shapes, get_num_shapes, get_shape);
+
+  void update_shape_filter_data();
+  void update_shape_filter_data(size_t n);
+
+  virtual bool is_self_created() const { return true; }
 
 public:
   INLINE void set_sync_enabled(bool flag);
@@ -81,7 +90,7 @@ protected:
 
   virtual void do_transform_changed();
 
-private:
+protected:
   void do_set_collide_with(PhysRigidActorNode *other, bool flag);
 
   // Set by the PhysScene when applying the simulation result onto the node.
@@ -99,6 +108,9 @@ private:
 
   unsigned int _collision_group;
   BitMask32 _contents_mask;
+  BitMask32 _solid_mask;
+
+  pvector<PT(PhysShape)> _shapes;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;

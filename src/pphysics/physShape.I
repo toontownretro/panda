@@ -22,8 +22,8 @@ set_local_transform(const LPoint3 &pos, const LVecBase3 &hpr) {
   quat.set_hpr(hpr);
 
   physx::PxTransform trans = physx::PxTransform(
-    physx::PxVec3(pos[0], pos[1], pos[2]),
-    physx::PxQuat(quat[1], quat[2], quat[3], quat[0]));
+    panda_vec_to_physx(pos),
+    panda_quat_to_physx(quat));
 
   _shape->setLocalPose(trans);
 }
@@ -36,7 +36,7 @@ set_local_pos(const LPoint3 &pos) {
   nassertv(_shape != nullptr);
 
   physx::PxTransform trans = _shape->getLocalPose();
-  trans.p = physx::PxVec3(pos[0], pos[1], pos[2]);
+  trans.p = panda_vec_to_physx(pos);
   _shape->setLocalPose(trans);
 }
 
@@ -51,7 +51,7 @@ set_local_hpr(const LVecBase3 &hpr) {
   quat.set_hpr(hpr);
 
   physx::PxTransform trans = _shape->getLocalPose();
-  trans.q = physx::PxQuat(quat[1], quat[2], quat[3], quat[0]);
+  trans.q = panda_quat_to_physx(quat);
   _shape->setLocalPose(trans);
 }
 
@@ -63,7 +63,7 @@ get_local_pos() const {
   nassertr(_shape != nullptr, LPoint3());
 
   physx::PxTransform trans = _shape->getLocalPose();
-  return LPoint3(trans.p.x, trans.p.y, trans.p.z);
+  return physx_vec_to_panda(trans.p);
 }
 
 /**
@@ -74,7 +74,7 @@ get_local_hpr() const {
   nassertr(_shape != nullptr, LVecBase3());
 
   physx::PxTransform trans = _shape->getLocalPose();
-  LQuaternion quat(trans.q.w, trans.q.x, trans.q.y, trans.q.z);
+  LQuaternion quat = physx_quat_to_panda(trans.q);
   return quat.get_hpr();
 }
 
@@ -124,6 +124,14 @@ set_trigger_shape(bool flag) {
 INLINE bool PhysShape::
 is_trigger_shape() const {
   return _shape->getFlags().isSet(physx::PxShapeFlag::eTRIGGER_SHAPE);
+}
+
+/**
+ * Returns the material applied to the shape.
+ */
+INLINE PhysMaterial *PhysShape::
+get_material() const {
+  return _material;
 }
 
 /**

@@ -114,10 +114,10 @@ INLINE PN_stdfloat PhysD6Joint::
 get_angle(Axis axis) const {
   switch (axis) {
   case A_x:
-    return rad_2_deg(_joint->getTwistAngle());
+    return physx_ang_to_panda(_joint->getTwistAngle());
   case A_y:
-    return rad_2_deg(_joint->getSwingYAngle());
+    return physx_ang_to_panda(_joint->getSwingYAngle());
   case A_z:
-    return rad_2_deg(_joint->getSwingZAngle());
+    return physx_ang_to_panda(_joint->getSwingZAngle());
   }
 }

@@ -52,6 +52,7 @@
     physXAllocator.h \
     physXErrorCallback.h \
     physXSimulationEventCallback.h physXSimulationEventCallback.I \
+    physXStreams.h \
     refCallbackData.h refCallbackData.I \
 
   #define COMPOSITE_SOURCES \
@@ -92,9 +93,11 @@
     physSystem.cxx \
     physTriggerCallbackData.cxx \
     physx_shaders.cxx \
+    physx_utils.cxx \
     physXAllocator.cxx \
     physXErrorCallback.cxx \
     physXSimulationEventCallback.cxx \
+    physXStreams.cxx \
     refCallbackData.cxx
 
   #define INSTALL_HEADERS \

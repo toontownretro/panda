@@ -26,7 +26,8 @@ PhysRigidActorNode(const std::string &name) :
   PandaNode(name),
   _sync_enabled(true),
   _collision_group(0),
-  _contents_mask(BitMask32::all_on())
+  _contents_mask(BitMask32::all_on()),
+  _solid_mask(BitMask32::all_on())
 {
 }
 
@@ -67,20 +68,7 @@ set_collision_group(unsigned int collision_group) {
   _collision_group = collision_group;
 
   // Update all shapes to use the new collision group.
-  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
-  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
-  get_rigid_actor()->getShapes(shapes, num_shapes);
-  for (physx::PxU32 i = 0; i < num_shapes; i++) {
-    physx::PxShape *shape = shapes[i];
-    physx::PxFilterData data = shape->getSimulationFilterData();
-    physx::PxFilterData qdata = shape->getQueryFilterData();
-    data.word0 = _collision_group;
-    // For queries, the collision group goes on word1.  The contents mask needs
-    // to go on word0 for PhysX's fixed-function filtering.
-    qdata.word1 = _collision_group;
-    shape->setSimulationFilterData(data);
-    shape->setQueryFilterData(qdata);
-  }
+  update_shape_filter_data();
 }
 
 /**
@@ -95,18 +83,51 @@ set_contents_mask(BitMask32 contents_mask) {
   _contents_mask = contents_mask;
 
   // Update all shapes to use the new contents mask.
-  physx::PxU32 num_shapes = get_rigid_actor()->getNbShapes();
-  physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
-  get_rigid_actor()->getShapes(shapes, num_shapes);
-  for (physx::PxU32 i = 0; i < num_shapes; i++) {
-    physx::PxShape *shape = shapes[i];
-    physx::PxFilterData data = shape->getSimulationFilterData();
-    physx::PxFilterData qdata = shape->getQueryFilterData();
-    data.word1 = _contents_mask.get_word();
-    qdata.word0 = _contents_mask.get_word();
-    shape->setSimulationFilterData(data);
-    shape->setQueryFilterData(qdata);
+  update_shape_filter_data();
+}
+
+/**
+ * Sets the mask of contents that are solid to the node.
+ */
+void PhysRigidActorNode::
+set_solid_mask(BitMask32 solid_mask) {
+  if (_solid_mask == solid_mask) {
+    return;
   }
+
+  _solid_mask = solid_mask;
+
+  // Update all shapes to use the new solid mask.
+  update_shape_filter_data();
+}
+
+/**
+ *
+ */
+void PhysRigidActorNode::
+update_shape_filter_data() {
+  for (size_t i = 0; i < _shapes.size(); i++) {
+    update_shape_filter_data(i);
+  }
+}
+
+/**
+ *
+ */
+void PhysRigidActorNode::
+update_shape_filter_data(size_t n) {
+  physx::PxShape *shape = _shapes[n]->get_shape();
+  physx::PxFilterData data = shape->getSimulationFilterData();
+  physx::PxFilterData qdata = shape->getQueryFilterData();
+  data.word0 = _collision_group;
+  data.word1 = _contents_mask.get_word();
+  data.word2 = _solid_mask.get_word();
+  // For queries, the collision group goes on word1.  The contents mask needs
+  // to go on word0 for PhysX's fixed-function filtering.
+  qdata.word0 = _contents_mask.get_word();
+  qdata.word1 = _collision_group;
+  shape->setSimulationFilterData(data);
+  shape->setQueryFilterData(qdata);
 }
 
 /**
@@ -160,12 +181,5 @@ do_transform_changed() {
   NodePath np = NodePath::any_path((PandaNode *)this);
 
   CPT(TransformState) net_transform = np.get_net_transform();
-  const LPoint3 &pos = net_transform->get_pos();
-  const LQuaternion &quat = net_transform->get_quat();
-
-  physx::PxTransform pose(
-    physx::PxVec3(pos[0], pos[1], pos[2]),
-    physx::PxQuat(quat[1], quat[2], quat[3], quat[0]));
-
-  get_rigid_actor()->setGlobalPose(pose);
+  get_rigid_actor()->setGlobalPose(panda_trans_to_physx(net_transform));
 }

@@ -16,7 +16,19 @@
  */
 INLINE PhysConvexMeshData::
 PhysConvexMeshData() :
-  _mesh(nullptr)
+  _mesh(nullptr),
+  _has_mesh_data(false)
+{
+}
+
+/**
+ *
+ */
+INLINE PhysConvexMeshData::
+PhysConvexMeshData(CPTA_uchar mesh_data) :
+  _mesh(nullptr),
+  _mesh_data(mesh_data),
+  _has_mesh_data(true)
 {
 }
 
@@ -25,7 +37,7 @@ PhysConvexMeshData() :
  */
 INLINE void PhysConvexMeshData::
 add_point(const LPoint3 &point) {
-  _points.push_back(Vec3_to_PxVec3(point));
+  _points.push_back(panda_vec_to_physx(point));
   invalidate_mesh();
 }
 
@@ -42,7 +54,7 @@ get_num_points() const {
  */
 INLINE LPoint3 PhysConvexMeshData::
 get_point(size_t n) const {
-  return PxVec3_to_Vec3(_points[n]);
+  return physx_vec_to_panda(_points[n]);
 }
 
 /**
@@ -55,11 +67,23 @@ clear_points() {
 }
 
 /**
- *
+ * Returns true if the object contains an actual convex mesh object.  This will
+ * return true if generate_mesh() was called with cook being false, and a list
+ * of input points were filled in on the object.
  */
 INLINE bool PhysConvexMeshData::
 has_mesh() const {
   return _mesh != nullptr;
+}
+
+/**
+ * Returns true if the object contains a buffer of convex mesh data.  This will
+ * return true if the object was initialized with a buffer, or generate_mesh()
+ * was called with cook being true.
+ */
+INLINE bool PhysConvexMeshData::
+has_mesh_data() const {
+  return _has_mesh_data;
 }
 
 /**
@@ -71,6 +95,16 @@ invalidate_mesh() {
     _mesh->release();
     _mesh = nullptr;
   }
+}
+
+/**
+ * Returns the buffer containing the convex mesh data.  This buffer will only
+ * exist if the object was initialized with a buffer, or generate_mesh() was
+ * called with cook being true.
+ */
+INLINE CPTA_uchar PhysConvexMeshData::
+get_mesh_data() const {
+  return _mesh_data;
 }
 
 /**

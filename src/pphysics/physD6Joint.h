@@ -67,6 +67,8 @@ public:
 
 private:
   physx::PxD6Joint *_joint;
+  PT(PhysRigidActorNode) _a;
+  PT(PhysRigidActorNode) _b;
 };
 
 #include "physD6Joint.I"

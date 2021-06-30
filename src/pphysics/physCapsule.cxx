@@ -18,7 +18,7 @@
  */
 PhysCapsule::
 PhysCapsule(PN_stdfloat radius, PN_stdfloat half_height) :
-  _geom((physx::PxReal)radius, (physx::PxReal)half_height)
+  _geom(panda_length_to_physx(radius), panda_length_to_physx(half_height))
 {
 }
 

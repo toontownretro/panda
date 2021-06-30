@@ -14,6 +14,7 @@
 #include "physShape.h"
 #include "physSystem.h"
 #include "physPlane.h"
+#include "physx_utils.h"
 
 TypeHandle PhysShape::_type_handle;
 
@@ -34,8 +35,10 @@ PhysShape(PhysGeometry &geometry, PhysMaterial *material) {
     const LPlane &plane = ((PhysPlane &)geometry).get_plane();
     _shape->setLocalPose(
       physx::PxTransformFromPlaneEquation(
-        physx::PxPlane(plane[0], plane[1], plane[2], plane[3])));
+        physx::PxPlane(plane[0], plane[1], plane[2], panda_length_to_physx(plane[3]))));
   }
+
+  _material = material;
 }
 
 /**
@@ -44,7 +47,21 @@ PhysShape(PhysGeometry &geometry, PhysMaterial *material) {
 PhysShape::
 ~PhysShape() {
   if (_shape != nullptr) {
+    _shape->userData = nullptr;
     _shape->release();
     _shape = nullptr;
   }
+}
+
+/**
+ * Initializes a PhysShape from an existing PxShape instance.
+ */
+PhysShape::
+PhysShape(physx::PxShape *shape) {
+  _shape = shape;
+  _shape->userData = this;
+  _shape->acquireReference();
+  physx::PxMaterial *mat;
+  shape->getMaterials(&mat, 1);
+  _material = new PhysMaterial(mat);
 }

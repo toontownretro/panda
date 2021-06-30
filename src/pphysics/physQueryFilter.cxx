@@ -32,7 +32,7 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
 
   // Query FilterData
   // word0: (block mask | touch mask)
-  // word1: block mask
+  // word1: block/solid mask
   // word2: touch mask
   // word3: collision group
   ////////////////////////////////////

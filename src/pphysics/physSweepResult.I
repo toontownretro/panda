@@ -58,7 +58,7 @@ has_position() const {
  */
 INLINE LPoint3 PhysSweepHit::
 get_position() const {
-  return LPoint3(_hit->position.x, _hit->position.y, _hit->position.z);
+  return physx_vec_to_panda(_hit->position);
 }
 
 /**
@@ -74,7 +74,7 @@ has_normal() const {
  */
 INLINE LVector3 PhysSweepHit::
 get_normal() const {
-  return LVector3(_hit->normal.x, _hit->normal.y, _hit->normal.z);
+  return physx_norm_vec_to_panda(_hit->normal);
 }
 
 /**

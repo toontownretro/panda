@@ -20,6 +20,7 @@
 #include "physGeometry.h"
 
 #include "physx_includes.h"
+#include "physx_utils.h"
 
 /**
  * A box physics shape.

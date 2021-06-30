@@ -23,17 +23,18 @@ PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
                   PhysMaterial *material) {
   _np = node;
   physx::PxBoxControllerDesc desc;
-  desc.halfSideExtent = half_extents[0];
-  desc.halfForwardExtent = half_extents[1];
-  desc.halfHeight = half_extents[2];
+  desc.halfSideExtent = panda_length_to_physx(half_extents[0]);
+  desc.halfForwardExtent = panda_length_to_physx(half_extents[1]);
+  desc.halfHeight = panda_length_to_physx(half_extents[2]);
   desc.material = material->get_material();
-  desc.upDirection = Vec3_to_PxVec3(LVector3::up());
+  desc.upDirection = panda_norm_vec_to_physx(LVector3::up());
   desc.reportCallback = PhysControllerHitCallback::get_global_ptr();
+  desc.scaleCoeff = 0.9999f;
   _controller = (physx::PxBoxController *)scene->get_controller_manager()
     ->createController(desc);
   nassertv(_controller != nullptr);
   _controller->setUserData(this);
-  update_shape_filter_data();
+  _actor_node = new PhysRigidDynamicNode(_controller->getActor());
 }
 
 /**
@@ -42,6 +43,7 @@ PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
 PhysBoxController::
 ~PhysBoxController() {
   if (_controller != nullptr) {
+    _controller->setUserData(nullptr);
     _controller->release();
     _controller = nullptr;
   }

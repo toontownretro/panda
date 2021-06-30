@@ -27,7 +27,7 @@ class EXPCL_PANDA_PPHYSICS PhysMaterial final : public ReferenceCount {
 PUBLISHED:
   PhysMaterial(PN_stdfloat static_friction, PN_stdfloat dynamic_friction,
                PN_stdfloat restitution);
-  ~PhysMaterial();
+  virtual ~PhysMaterial();
 
   INLINE void set_static_friction(PN_stdfloat friction);
   INLINE PN_stdfloat get_static_friction() const;
@@ -42,6 +42,8 @@ PUBLISHED:
   MAKE_PROPERTY(restitution, get_restitution, set_restitution);
 
 public:
+  PhysMaterial(physx::PxMaterial *material);
+
   INLINE physx::PxMaterial *get_material() const;
 
 private:

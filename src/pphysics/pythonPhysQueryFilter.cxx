@@ -18,7 +18,6 @@
 
 #ifndef CPPPARSER
 extern struct Dtool_PyTypedObject Dtool_PhysRigidActorNode;
-extern struct Dtool_PyTypedObject Dtool_PhysShape;
 #endif
 
 /**
@@ -89,14 +88,12 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
     return hit_type;
   }
 
-  if (actor->userData == nullptr ||
-      shape->userData == nullptr) {
-    // This doesn't correspond to a Panda-created PhysX shape or actor.
+  if (actor->userData == nullptr) {
+    // This doesn't correspond to a Panda-created PhysX actor.
     return hit_type;
   }
 
   PhysRigidActorNode *actor_node = (PhysRigidActorNode *)actor->userData;
-  PhysShape *phys_shape = (PhysShape *)shape->userData;
 
 #if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
   // Use PyGILState to protect this asynchronous call.
@@ -104,27 +101,27 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
   gstate = PyGILState_Ensure();
 #endif
 
-  // Build up Python wrappers around the actor and shape.
+  // Build up a Python wrapper around the actor.
   PyObject *pyactor = DTool_CreatePyInstanceTyped(actor_node,
                                                   Dtool_PhysRigidActorNode,
                                                   false, false, actor_node->get_type_index());
-  PyObject *pyshape = DTool_CreatePyInstanceTyped(phys_shape,
-                                                  Dtool_PhysShape,
-                                                  false, false, phys_shape->get_type_index());
-  PyObject *args = Py_BuildValue("(O,O,I)", pyactor, pyshape, (unsigned int)hit_type);
+  PyObject *args = Py_BuildValue("(O,I,I,I)", pyactor,
+                                 (unsigned int)filter_data.word1,
+                                 (unsigned int)filter_data.word3,
+                                 (unsigned int)hit_type);
   Py_DECREF(pyactor);
-  Py_DECREF(pyshape);
 
   // Call the Python filter.
   PyObject *result = PyObject_CallObject(_method, args);
   Py_DECREF(args);
-  if (PyErr_Occurred() != PyExc_SystemExit) {
-    pphysics_cat.error()
-      << "Exception occurred in PythonPhysQueryFilter:\n";
-    PyErr_Print();
-  }
+  if (result == nullptr) {
+    if (PyErr_Occurred() != PyExc_SystemExit) {
+      pphysics_cat.error()
+        << "Exception occurred in PythonPhysQueryFilter:\n";
+      PyErr_Print();
+    }
 
-  if (result != nullptr) {
+  } else {
     // Take the hit type from return value of the Python filter.
     hit_type = (physx::PxQueryHitType::Enum)PyLong_AsUnsignedLong(result);
     Py_DECREF(result);
