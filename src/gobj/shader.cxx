@@ -1716,8 +1716,6 @@ bind_parameter(const Parameter &param) {
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
 
-      std::cout << name->get_name() << " has " << num_elements << " elements?\n";
-
       for (uint32_t i = 0; i < num_elements; ++i) {
         bind._index = i;
         cp_add_mat_spec(bind);
