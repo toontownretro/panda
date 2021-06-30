@@ -58,7 +58,6 @@ public:
 private:
   Character *make_bundle();
   void build_joint_hierarchy(EggNode *egg_node, int parent);
-  void parent_joint_nodes();
 
   void make_geometry(EggNode *egg_node);
 
@@ -67,9 +66,6 @@ private:
   typedef pmap<EggNode *, int> NodeMap;
   NodeMap _slider_map;
   NodeMap _joint_map;
-
-  typedef pmap<int, PT(ModelNode)> JointDCS;
-  JointDCS _joint_dcs;
 
   typedef pmap<int, PT(VertexTransform) > VertexTransforms;
   VertexTransforms _vertex_transforms;
