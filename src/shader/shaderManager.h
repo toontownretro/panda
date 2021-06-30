@@ -22,6 +22,7 @@
 #include "renderAttrib.h"
 #include "shaderEnums.h"
 #include "internalName.h"
+#include "texture.h"
 
 class ShaderBase;
 class RenderState;
@@ -39,6 +40,9 @@ PUBLISHED:
   INLINE void set_shader_quality(ShaderQuality quality);
   INLINE ShaderQuality get_shader_quality() const;
   MAKE_PROPERTY(shader_quality, get_shader_quality, set_shader_quality);
+
+  INLINE void set_default_cube_map(Texture *texture);
+  Texture *get_default_cube_map();
 
   INLINE static ShaderManager *get_global_ptr();
 
@@ -62,6 +66,8 @@ private:
   MaterialShaders _material_shaders;
 
   ShaderQuality _quality;
+
+  PT(Texture) _default_cubemap;
 
   static ShaderManager *_global_ptr;
 };

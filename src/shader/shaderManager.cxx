@@ -24,6 +24,7 @@
 #include "pStatTimer.h"
 #include "material.h"
 #include "materialAttrib.h"
+#include "texturePool.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -36,6 +37,18 @@ static PStatCollector cache_collector("*:Munge:GenerateShader:CacheLookup");
 typedef void (*ShaderLibInit)();
 
 ShaderManager *ShaderManager::_global_ptr = nullptr;
+
+/**
+ * Returns the default cube map texture.  Loads the texture from the config
+ * variable if it hasn't already been loaded.
+ */
+Texture *ShaderManager::
+get_default_cube_map() {
+  if (_default_cubemap == nullptr && !default_cube_map.empty()) {
+    _default_cubemap = TexturePool::load_texture(default_cube_map);
+  }
+  return _default_cubemap;
+}
 
 /**
  * Loads the shader plugin libraries specified in PRC file.

@@ -46,6 +46,19 @@ get_shader_quality() const {
 }
 
 /**
+ * Sets the default cube map texture.
+ *
+ * Changing this value forces all shaders to be regenerated.
+ */
+INLINE void ShaderManager::
+set_default_cube_map(Texture *texture) {
+  if (texture != _default_cubemap) {
+    _default_cubemap = texture;
+    GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  }
+}
+
+/**
  * Returns the global ShaderManager object.
  */
 INLINE ShaderManager *ShaderManager::

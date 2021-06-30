@@ -69,8 +69,20 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     } else if (key == "specular_map" || key == "specular_texture") {
       param = new MaterialParamTexture("specular_texture");
 
-    } else if (key == "arme" || key == "arme_map" || key == "arme_texture") {
-      param = new MaterialParamTexture("arme_texture");
+    } else if (key == "ao_texture") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "roughness_texture") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "gloss_texture") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "metalness_texture") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "emission_texture") {
+      param = new MaterialParamTexture(key);
 
     } else if (key == "half_lambert") {
       param = new MaterialParamBool(key);
@@ -384,16 +396,16 @@ get_emission_enabled() const {
  *
  */
 void StandardMaterial::
-set_arme_texture(Texture *tex) {
-  set_param(new MaterialParamTexture("arme_texture", tex));
+set_ambient_occlusion(Texture *tex) {
+  set_param(new MaterialParamTexture("ao_texture", tex));
 }
 
 /**
  *
  */
 Texture *StandardMaterial::
-get_arme_texture() const {
-  MaterialParamBase *param = get_param("arme_texture");
+get_ambient_occlusion() const {
+  MaterialParamBase *param = get_param("ao_texture");
   if (param == nullptr) {
     return nullptr;
   }
@@ -407,6 +419,27 @@ get_arme_texture() const {
 void StandardMaterial::
 set_roughness(PN_stdfloat roughness) {
   set_param(new MaterialParamFloat("roughness", roughness));
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+set_roughness(Texture *tex) {
+  set_param(new MaterialParamTexture("roughness_texture", tex));
+}
+
+/**
+ *
+ */
+Texture *StandardMaterial::
+get_roughness_texture() const {
+  MaterialParamBase *param = get_param("roughness_texture");
+  if (param == nullptr) {
+    return nullptr;
+  }
+
+  return DCAST(MaterialParamTexture, param)->get_value();
 }
 
 /**
@@ -426,8 +459,50 @@ get_roughness() const {
  *
  */
 void StandardMaterial::
+set_glossiness(Texture *tex) {
+  set_param(new MaterialParamTexture("gloss_texture", tex));
+}
+
+/**
+ *
+ */
+Texture *StandardMaterial::
+get_glossiness() const {
+  MaterialParamBase *param = get_param("gloss_texture");
+  if (param == nullptr) {
+    return nullptr;
+  }
+
+  return DCAST(MaterialParamTexture, param)->get_value();
+}
+
+/**
+ *
+ */
+void StandardMaterial::
 set_metalness(PN_stdfloat metalness) {
   set_param(new MaterialParamFloat("metalness", metalness));
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+set_metalness(Texture *tex) {
+  set_param(new MaterialParamTexture("metalness_texture", tex));
+}
+
+/**
+ *
+ */
+Texture *StandardMaterial::
+get_metalness_texture() const {
+  MaterialParamBase *param = get_param("metalness_texture");
+  if (param == nullptr) {
+    return nullptr;
+  }
+
+  return DCAST(MaterialParamTexture, param)->get_value();
 }
 
 /**
@@ -449,6 +524,27 @@ get_metalness() const {
 void StandardMaterial::
 set_emission(PN_stdfloat emission) {
   set_param(new MaterialParamFloat("emission", emission));
+}
+
+/**
+ *
+ */
+void StandardMaterial::
+set_emission(Texture *tex) {
+  set_param(new MaterialParamTexture("emission_texture", tex));
+}
+
+/**
+ *
+ */
+Texture *StandardMaterial::
+get_emission_texture() const {
+  MaterialParamBase *param = get_param("emission_texture");
+  if (param == nullptr) {
+    return nullptr;
+  }
+
+  return DCAST(MaterialParamTexture, param)->get_value();
 }
 
 /**

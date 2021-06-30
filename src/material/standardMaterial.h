@@ -60,16 +60,25 @@ PUBLISHED:
   void set_emission_enabled(bool enable);
   bool get_emission_enabled() const;
 
-  void set_arme_texture(Texture *texture);
-  Texture *get_arme_texture() const;
+  void set_ambient_occlusion(Texture *ao);
+  Texture *get_ambient_occlusion() const;
 
   void set_roughness(PN_stdfloat roughness);
+  void set_roughness(Texture *roughness);
+  Texture *get_roughness_texture() const;
   PN_stdfloat get_roughness() const;
 
+  void set_glossiness(Texture *glossiness);
+  Texture *get_glossiness() const;
+
   void set_metalness(PN_stdfloat metalness);
+  void set_metalness(Texture *metalness);
+  Texture *get_metalness_texture() const;
   PN_stdfloat get_metalness() const;
 
   void set_emission(PN_stdfloat emission);
+  void set_emission(Texture *emission);
+  Texture *get_emission_texture() const;
   PN_stdfloat get_emission() const;
 
   void set_emission_tint(const LVecBase3 &tint);

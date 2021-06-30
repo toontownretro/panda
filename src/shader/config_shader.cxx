@@ -72,6 +72,12 @@ config_get_use_vertex_lit_for_no_material() {
   return *use_vertex_lit_for_no_material;
 }
 
+ConfigVariableFilename default_cube_map
+("default-cube-map", Filename(),
+  PRC_DESC("Specifies the default cube map texture to use for a material "
+          "that requests an environmental cube map but there are no nearby "
+          "cube maps."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be

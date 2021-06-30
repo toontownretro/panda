@@ -19,6 +19,8 @@
 #include "materialParamFloat.h"
 #include "materialParamBool.h"
 #include "materialParamColor.h"
+#include "shaderManager.h"
+#include "texturePool.h"
 
 TypeHandle EyeRefractShader::_type_handle;
 
@@ -62,7 +64,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   add_csm(state);
   add_fog(state);
 
-  MaterialParamBase *param = eye_mat->get_param("iris");
+  MaterialParamBase *param = eye_mat->get_param("iris_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("irisSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
@@ -80,7 +82,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   param = eye_mat->get_param("env_map");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
     set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
+  } else {
+    set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
   }
+
+  set_input(ShaderInput("brdfLutSampler", TexturePool::load_texture("maps/brdf_lut.ptex")));
 
   param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {

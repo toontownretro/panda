@@ -20,6 +20,8 @@
 #include "keyValues.h"
 #include "lightLensNode.h"
 #include "light.h"
+#include "shaderManager.h"
+#include "texturePool.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -166,17 +168,38 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       set_input(ShaderInput("bumpSampler", normal_tex));
     }
 
-    Texture *arme_tex = material->get_arme_texture();
-    if (arme_tex != nullptr) {
-      set_pixel_shader_define("ARME");
-      set_input(ShaderInput("armeSampler", arme_tex));
+    float ao = 1.0f;
+    float roughness = material->get_roughness();
+    float metalness = material->get_metalness();
+    float emission = material->get_emission();
+    set_input(ShaderInput("u_armeParams", LVector4f(ao, roughness, metalness, emission)));
 
-    } else {
-      float ao = 1.0f;
-      float roughness = material->get_roughness();
-      float metalness = material->get_metalness();
-      float emission = material->get_emission();
-      set_input(ShaderInput("armeParams", LVector4f(ao, roughness, metalness, emission)));
+    Texture *ao_tex = material->get_ambient_occlusion();
+    if (ao_tex != nullptr) {
+      set_pixel_shader_define("AO_MAP");
+      set_input(ShaderInput("aoSampler", ao_tex));
+    }
+
+    Texture *rough_tex = material->get_roughness_texture();
+    Texture *gloss_tex = material->get_glossiness();
+    if (rough_tex != nullptr) {
+      set_pixel_shader_define("ROUGHNESS_MAP");
+      set_input(ShaderInput("roughnessSampler", rough_tex));
+    } else if (gloss_tex != nullptr) {
+      set_pixel_shader_define("GLOSS_MAP");
+      set_input(ShaderInput("glossSampler", gloss_tex));
+    }
+
+    Texture *metal_tex = material->get_metalness_texture();
+    if (metal_tex != nullptr) {
+      set_pixel_shader_define("METALNESS_MAP");
+      set_input(ShaderInput("metalnessSampler", metal_tex));
+    }
+
+    Texture *emission_tex = material->get_emission_texture();
+    if (emission_tex != nullptr) {
+      set_pixel_shader_define("EMISSION_MAP");
+      set_input(ShaderInput("emissionSampler", emission_tex));
     }
 
     Texture *spec_tex = material->get_specular_texture();
@@ -203,7 +226,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // Find the textures in use.
   const TextureAttrib *ta;
   state->get_attrib_def(ta);
+  const TexMatrixAttrib *tma;
+  state->get_attrib_def(tma);
   int num_stages = ta->get_num_on_stages();
+  //set_vertex_shader_define("NUM_TEXTURES", num_stages);
   for (int i = 0; i < num_stages; i++) {
     TextureStage *stage = ta->get_on_stage(i);
     const std::string &stage_name = stage->get_name();
@@ -211,8 +237,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (material == nullptr && stage == TextureStage::get_default()) {
       // No material and we have a base texture through the default texture stage.
       set_pixel_shader_define("BASETEXTURE");
-      set_vertex_shader_define("BASETEXTURE_INDEX", i);
+      //set_vertex_shader_define("BASETEXTURETRANSFORM");
+      //set_vertex_shader_define("BASETEXTURE_INDEX", i);
       set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+      //set_input(ShaderInput("baseTextureTransform", tma->get_transform(stage)->get_mat()));
 
     } else if (stage_name == "reflection") {
       set_pixel_shader_define("PLANAR_REFLECTION");
@@ -222,6 +250,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     } else if (env_cubemap && stage_name == "envmap") {
       cubemap_tex = ta->get_on_texture(stage);
     }
+  }
+
+  if (env_cubemap && cubemap_tex == nullptr) {
+    // Didn't get a cubemap from the environment, use the default cube map.
+    cubemap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
   }
 
   if (cubemap_tex) {
@@ -237,6 +270,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     //}
 
     set_input(ShaderInput("envmapTint", envmap_tint));
+    set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.ptex")));
   }
 
   if (add_csm(state)) {
