@@ -50,7 +50,7 @@ JointVertexTransform(Character *character, int joint) :
 JointVertexTransform::
 ~JointVertexTransform() {
   // Tell the joint to stop informing us about its motion.
-  if (_char != nullptr) {
+  if (!_char.was_deleted() && _char != nullptr) {
     _char->set_joint_vertex_transform(nullptr, _joint);
   }
 }
@@ -60,6 +60,8 @@ JointVertexTransform::
  */
 void JointVertexTransform::
 get_matrix(LMatrix4 &matrix) const {
+  nassertv(!_char.was_deleted());
+
   matrix = _char->get_joint_skinning_matrix(_joint);
 }
 
@@ -71,6 +73,8 @@ get_matrix(LMatrix4 &matrix) const {
  */
 void JointVertexTransform::
 mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
+  nassertv(!_char.was_deleted());
+
   result.multiply(_char->get_joint_skinning_matrix(_joint), previous);
 }
 
@@ -81,6 +85,8 @@ mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
  */
 void JointVertexTransform::
 accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
+  nassertv(!_char.was_deleted());
+
   accum.accumulate(_char->get_joint_skinning_matrix(_joint), weight);
 }
 
@@ -89,6 +95,8 @@ accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
  */
 void JointVertexTransform::
 output(std::ostream &out) const {
+  nassertv(!_char.was_deleted());
+
   out << _char->get_joint_name(_joint);
 }
 
@@ -108,7 +116,7 @@ void JointVertexTransform::
 write_datagram(BamWriter *manager, Datagram &dg) {
   VertexTransform::write_datagram(manager, dg);
 
-  manager->write_pointer(dg, _char);
+  manager->write_pointer(dg, _char.p());
   dg.add_int16(_joint);
 }
 

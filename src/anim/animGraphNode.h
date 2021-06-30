@@ -103,7 +103,7 @@ extern JointTransformPool joint_transform_pool;
 class AnimGraphEvalContext {
 public:
   AnimGraphEvalContext(Character *character, CharacterJoint *parts, int num_parts,
-                       bool frame_blend_flag) {
+                       bool frame_blend_flag, BitArray joint_mask) {
     _joints = joint_transform_pool.alloc();
     _num_joints = num_parts;
     clear();
@@ -114,6 +114,7 @@ public:
     _anim_time = 0.0f;
     _cycle = 0.0f;
     _looping = false;
+    _joint_mask = joint_mask;
   }
 
   AnimGraphEvalContext(const AnimGraphEvalContext &copy) :
@@ -123,7 +124,8 @@ public:
     _cycle(copy._cycle),
     _anim_time(copy._anim_time),
     _looping(copy._looping),
-    _character(copy._character)
+    _character(copy._character),
+    _joint_mask(copy._joint_mask)
   {
     _joints = joint_transform_pool.alloc();
     _weight = 1.0f;
@@ -163,6 +165,9 @@ public:
 
   // The character we are evaluating for.
   Character *_character;
+
+  // Joints we actually care about animating.
+  BitArray _joint_mask;
 
   // Character's joint list.
   CharacterJoint *_parts;

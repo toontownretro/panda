@@ -139,11 +139,11 @@ compute_weights_if_necessary(Character *character) {
   LPoint2 input(0);
   if (_x_param != -1) {
     const PoseParameter &x = character->get_pose_parameter(_x_param);
-    input[0] = remap_val_clamped(x.get_value(), x.get_min(), x.get_max(), -1, 1);
+    input[0] = x.get_norm_value();
   }
   if (_y_param != -1) {
     const PoseParameter &y = character->get_pose_parameter(_y_param);
-    input[1] = remap_val_clamped(y.get_value(), y.get_min(), y.get_max(), -1, 1);
+    input[1] = y.get_norm_value();
   }
   if ((input != _input_coord) || !_has_triangles) {
     _input_coord = input;
@@ -198,6 +198,9 @@ evaluate(AnimGraphEvalContext &context) {
 
   } else {
     for (int i = 0; i < context._num_joints; i++) {
+      if (!context._joint_mask.get_bit(i)) {
+        continue;
+      }
       JointTransform &joint = context._joints[i];
       joint._position.set(0, 0, 0);
       joint._scale.set(0, 0, 0);

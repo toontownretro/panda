@@ -58,6 +58,9 @@ INLINE void AnimSequencePlayer::
 set_sequence(int n) {
   //nassertv(n >= 0 && n < get_num_sequences());
   _sequence = n;
+  if (_sequence == -1) {
+    _sequence = 0;
+  }
 }
 
 /**

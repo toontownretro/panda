@@ -19,7 +19,7 @@ PoseParameter(const std::string &name, PN_stdfloat min, PN_stdfloat max, PN_stdf
   Namable(name),
   _min(min),
   _max(max),
-  _value(0.0f),
+  _value(0.5f),
   _looping(looping)
 {
 }
@@ -80,7 +80,6 @@ operator = (const PoseParameter &copy) {
 INLINE void PoseParameter::
 set_min(PN_stdfloat min) {
   _min = min;
-  set_value(_value);
 }
 
 /**
@@ -97,7 +96,6 @@ get_min() const {
 INLINE void PoseParameter::
 set_max(PN_stdfloat max) {
   _max = max;
-  set_value(_value);
 }
 
 /**
@@ -106,22 +104,6 @@ set_max(PN_stdfloat max) {
 INLINE PN_stdfloat PoseParameter::
 get_max() const {
   return _max;
-}
-
-/**
- *
- */
-INLINE void PoseParameter::
-set_value(PN_stdfloat value) {
-  _value = std::max(_min, std::min(_max, value));
-}
-
-/**
- *
- */
-INLINE PN_stdfloat PoseParameter::
-get_value() const {
-  return _value;
 }
 
 /**

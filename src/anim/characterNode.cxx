@@ -19,6 +19,7 @@
 #include "nodePath.h"
 #include "geom.h"
 #include "geomNode.h"
+#include "eyeballNode.h"
 
 TypeHandle CharacterNode::_type_handle;
 
@@ -315,22 +316,32 @@ copy_node_pointers(const CharacterNode::NodeMap &node_map,
                    Character *dest, const Character *source) {
   nassertv(dest != source);
 
-  for (int i = 0; i < source->get_num_joints(); i++) {
-    const Character::NodeList &nl = source->_joint_net_transform_nodes[i];
+  // First handle any nodes below the character link back up the the character.
+  for (auto it = node_map.begin(); it != node_map.end(); ++it) {
+    const PandaNode *source_node = (*it).first;
+    PandaNode *dest_node = (*it).second;
 
-    Character::NodeList::const_iterator ai;
-    for (ai = nl.begin(); ai != nl.end(); ++ai) {
-      PandaNode *source_node = (*ai);
+    if (source_node->is_of_type(EyeballNode::get_class_type())) {
+      nassertv(dest_node->is_of_type(EyeballNode::get_class_type()));
+      const EyeballNode *source_eye = DCAST(EyeballNode, source_node);
+      EyeballNode *dest_eye = DCAST(EyeballNode, dest_node);
+      // Redirect the copied eye to the new character.
+      dest_eye->set_character(dest, source_eye->get_parent_joint());
+    }
+  }
 
-      NodeMap::const_iterator mi;
-      mi = node_map.find(source_node);
-      if (mi != node_map.end()) {
-        PandaNode *dest_node = (*mi).second;
+  for (size_t i = 0; i < source->get_num_attachments(); i++) {
+    PandaNode *source_node = source->get_attachment_node(i);
+    if (source_node == nullptr) {
+      continue;
+    }
+    auto it = node_map.find(source_node);
+    if (it != node_map.end()) {
+      PandaNode *dest_node = (*it).second;
 
-        // Here's an internal joint that the source Character was animating
-        // directly.  We'll animate our corresponding joint the same way.
-        dest->add_net_transform(i, dest_node);
-      }
+      // Here's an internal joint that the source Character was animating
+      // directly.  We'll animate our corresponding joint the same way.
+      dest->set_attachment_node(i, dest_node);
     }
   }
 }

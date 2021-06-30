@@ -52,7 +52,8 @@ clear_anim_preload() {
  * parameter.
  */
 INLINE int Character::
-add_pose_parameter(const std::string &name, PN_stdfloat min_val, PN_stdfloat max_val, bool looping) {
+add_pose_parameter(const std::string &name, PN_stdfloat min_val,
+                   PN_stdfloat max_val, PN_stdfloat looping) {
   PoseParameter param(name, min_val, max_val, looping);
   _pose_parameters.push_back(std::move(param));
   return (int)_pose_parameters.size() - 1;

@@ -31,6 +31,9 @@ mix(const AnimGraphEvalContext &a, const AnimGraphEvalContext &b, PN_stdfloat fr
   PN_stdfloat e0 = 1.0f - frac;
 
   for (int i = 0; i < _num_joints; i++) {
+    if (!a._joint_mask.get_bit(i)) {
+      continue;
+    }
     JointTransform &joint = _joints[i];
     const JointTransform &a_joint = a._joints[i];
     const JointTransform &b_joint = b._joints[i];

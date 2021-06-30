@@ -296,6 +296,10 @@ void AnimSequencePlayer::
 reset_layer(int layer, int activity, int sequence, bool auto_kill) {
   nassertv(layer >= 0 && layer < (int)_layers.size());
 
+  if (sequence == -1) {
+    sequence = 0;
+  }
+
   _layers[layer]._activity = activity;
   _layers[layer]._order = layer;
   _layers[layer]._priority = 0;
@@ -374,6 +378,9 @@ add_layered_sequence(int sequence, int priority) {
     layer->_prev_cycle = 0;
     layer->_play_rate = 1.0;
     layer->_activity = -1;
+    if (sequence == -1) {
+      sequence = 0;
+    }
     layer->_sequence = sequence;
     layer->_weight = 1.0;
     layer->_blend_in = 0.0;
@@ -832,7 +839,9 @@ set_layer_sequence(int layer, int seq) {
   if (!is_valid_layer(layer)) {
     return;
   }
-
+  if (seq == -1) {
+    seq = 0;
+  }
   _layers[layer]._sequence = seq;
 }
 

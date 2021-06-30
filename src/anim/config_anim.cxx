@@ -23,6 +23,7 @@
 #include "characterJointEffect.h"
 #include "characterVertexSlider.h"
 #include "jointVertexTransform.h"
+#include "eyeballNode.h"
 
 // Anim graph objects
 #include "animGraphNode.h"
@@ -113,6 +114,16 @@ ConfigVariableBool even_animation
           "The default is to compute vertices only when they need to be "
           "computed, which can lead to an uneven frame rate."));
 
+ConfigVariableList anim_events
+("anim-events",
+ PRC_DESC("A list of filenames that contain animation event type definitions, "
+          "so both Python and C++ code have access to them."));
+
+ConfigVariableList anim_activities
+("anim-activities",
+ PRC_DESC("A list of filenames that contain animation activity type "
+          "definitions, so both Python and C++ code have access to them."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -147,6 +158,7 @@ init_libanim() {
   CharacterNode::init_type();
   CharacterJointEffect::init_type();
   CharacterVertexSlider::init_type();
+  EyeballNode::init_type();
   JointVertexTransform::init_type();
 
   // This isn't defined in this package, but it *is* essential that it be

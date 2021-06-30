@@ -112,9 +112,9 @@ PUBLISHED:
   INLINE WeightList *get_weight_list() const;
 
   INLINE void set_base(AnimGraphNode *base);
-  INLINE void add_layer(AnimGraphNode *layer, int start_frame = -1, int peak_frame = -1,
-                        int tail_frame = -1, int end_frame = -1, bool spline = false,
-                        bool no_blend = false);
+  INLINE void add_layer(AnimGraphNode *layer, PN_stdfloat start_frame = 0, PN_stdfloat peak_frame = 0,
+                        PN_stdfloat tail_frame = 0, PN_stdfloat end_frame = 0, bool spline = false,
+                        bool no_blend = false, bool xfade = false, int pose_param = -1);
 
 public:
   virtual void evaluate(AnimGraphEvalContext &context) override;
@@ -136,6 +136,8 @@ private:
     PN_stdfloat _end;
     bool _spline;
     bool _no_blend;
+    bool _xfade;
+    int _pose_parameter;
   };
 
   // All of the animations below the sequence.

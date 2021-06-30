@@ -32,6 +32,7 @@
 #include "poseParameter.h"
 #include "animBundle.h"
 #include "animSequence.h"
+#include "characterAttachment.h"
 
 class FactoryParams;
 class AnimBundle;
@@ -68,7 +69,7 @@ PUBLISHED:
   void merge_anim_preloads(const Character *other);
 
   INLINE int add_pose_parameter(const std::string &name, PN_stdfloat min_val, PN_stdfloat max_val,
-                                bool looping = false);
+                                PN_stdfloat looping = 0.0f);
   INLINE int get_num_pose_parameters() const;
   INLINE PoseParameter &get_pose_parameter(int n);
   INLINE int find_pose_parameter(const std::string &name) const;
@@ -145,11 +146,18 @@ PUBLISHED:
   void recompute_joint_net_transforms();
   void recompute_joint_net_transform(int joint);
 
-  bool add_net_transform(int joint, PandaNode *node);
-  bool remove_net_transform(int joint, PandaNode *node);
-  bool has_net_transform(int joint, PandaNode *node) const;
-  void clear_net_transforms(int joint);
-  NodePathCollection get_net_transforms(int joint);
+  int add_attachment(const std::string &name);
+  void add_attachment_parent(int attachment, int parent, const LPoint3 &local_pos = LPoint3(0),
+                             const LVecBase3 &local_hpr = LVecBase3(0), float weight = 1.0f);
+  void remove_attachment_parent(int attachment, int parent);
+  void set_attachment_node(int attachment, PandaNode *node);
+  void clear_attachment_node(int attachment);
+  PandaNode *get_attachment_node(int attachment) const;
+  const TransformState *get_attachment_transform(int attachment) const;
+  CPT(TransformState) get_attachment_net_transform(int attachment) const;
+  int get_num_attachments() const;
+  int find_attachment(const std::string &name) const;
+  void compute_attachment_transform(int index);
 
   PT(Character) make_copy() const;
   PT(Character) copy_subgraph() const;
@@ -172,16 +180,17 @@ private:
   typedef pvector<LMatrix4> Matrices;
   typedef pvector<JointVertexTransform *> VertexTransforms;
   typedef pvector<CharacterJoint> Joints;
-  typedef ov_set<PT(PandaNode)> NodeList;
-  typedef pvector<NodeList> NodeLists;
   typedef pvector<PoseParameter> PoseParameters;
   typedef pvector<PT(AnimBundle)> Animations;
   typedef pvector<PT(AnimSequence)> Sequences;
+  typedef pvector<CharacterAttachment> Attachments;
 
   Animations _animations;
   Sequences _sequences;
 
   PoseParameters _pose_parameters;
+
+  Attachments _attachments;
 
   // These are filled in as the joint animates.
   Matrices _joint_values;
@@ -192,9 +201,9 @@ private:
   // animated position.
   Matrices _joint_skinning_matrices;
   Matrices _joint_initial_net_transform_inverse;
+  BitArray _changed_joints;
   //Matrices _joint_default_values;
   VertexTransforms _joint_vertex_transforms;
-  NodeLists _joint_net_transform_nodes;
   Joints _joints;
 
   typedef pvector<CharacterSlider> Sliders;

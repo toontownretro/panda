@@ -41,8 +41,11 @@ PUBLISHED:
   INLINE void set_max(PN_stdfloat max);
   INLINE PN_stdfloat get_max() const;
 
-  INLINE void set_value(PN_stdfloat value);
-  INLINE PN_stdfloat get_value() const;
+  void set_norm_value(PN_stdfloat value);
+  PN_stdfloat get_norm_value() const;
+
+  void set_value(PN_stdfloat value);
+  PN_stdfloat get_value() const;
 
   INLINE void set_looping(PN_stdfloat loop);
   INLINE PN_stdfloat get_looping() const;

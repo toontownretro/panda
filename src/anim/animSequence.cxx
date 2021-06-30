@@ -14,6 +14,8 @@
 #include "animSequence.h"
 #include "clockObject.h"
 #include "bitArray.h"
+#include "poseParameter.h"
+#include "character.h"
 
 // For some reason delta animations have a 90 degree rotation on the root
 // joint.  This quaternion reverses that.
@@ -156,6 +158,10 @@ get_num_frames() const {
  */
 PN_stdfloat AnimSequence::
 get_length() {
+  if (_anims.size() == 0) {
+    return (get_num_frames() - 1) / get_frame_rate();
+  }
+
   pvector<AnimBundle *> anims;
   vector_stdfloat weights;
   evaluate_anims(anims, weights);
@@ -240,51 +246,68 @@ evaluate(AnimGraphEvalContext &context) {
   for (size_t i = 0; i < _layers.size(); i++) {
     const Layer &layer = _layers[i];
 
-    PN_stdfloat index = cycle;
+    PN_stdfloat layer_cycle = cycle;
+    PN_stdfloat layer_weight = weight;
+
     PN_stdfloat start, peak, tail, end;
 
-    start = layer._start >= 0.0f ? layer._start : 0.0f;
-    peak = layer._peak >= 0.0f ? layer._peak : start;
-    end = layer._end >= 0.0f ? layer._end : 1.0f;
-    tail = layer._tail >= 0.0f ? layer._tail : end;
+    start = layer._start;
+    peak = layer._peak;
+    end = layer._end;
+    tail = layer._tail;
 
-    if (index < start || index >= end) {
-      // Not in the frame range.
-      continue;
+    if (start != end) {
+      PN_stdfloat index;
+
+      if (layer._pose_parameter == -1) {
+        index = cycle;
+
+      } else {
+        // Layer driven by pose parameter.
+        const PoseParameter &pp = context._character->get_pose_parameter(layer._pose_parameter);
+        index = pp.get_value();
+      }
+
+      if (index < start || index >= end) {
+        // Not in the frame range.
+        continue;
+      }
+
+      PN_stdfloat scale = 1.0f;
+
+      if (index < peak && start != peak) {
+        // On the way up.
+        scale = (index - start) / (peak - start);
+
+      } else if (index > tail && end != tail) {
+        // On the way down.
+        scale = (end - index) / (end - tail);
+      }
+
+      if (layer._spline) {
+        // Spline blend.
+        scale = simple_spline(scale);
+      }
+
+      if (layer._xfade && (index > tail)) {
+        layer_weight = (scale * weight) / (1 - weight + scale * weight);
+
+      } else if (layer._no_blend) {
+        layer_weight = scale;
+
+      } else {
+        layer_weight = weight * scale;
+      }
+
+      if (layer._pose_parameter == -1) {
+        layer_cycle = (cycle - start) / (end - start);
+      }
     }
-
-    PN_stdfloat scale = 1.0f;
-    PN_stdfloat layer_weight = weight;
-    PN_stdfloat layer_cycle;
-
-    if (index < peak && start != peak) {
-      // On the way up.
-      scale = (index - start) / (peak - start);
-
-    } else if (index > tail && end != tail) {
-      // On the way down.
-      scale = (end - index) / (end - tail);
-    }
-
-    if (layer._spline) {
-      // Spline blend.
-      scale = simple_spline(scale);
-    }
-
-    if (layer._no_blend) {
-      layer_weight = scale;
-    } else {
-      layer_weight = weight * scale;
-    }
-
-    layer_cycle = (cycle - start) / (end - start);
 
     if (layer_weight <= 0.001f) {
       // Negligible weight.
       continue;
     }
-
-    //std::cout << "Layer " << i << " weight: " << layer_weight << "\n";
 
     context._weight = layer_weight;
     context._cycle = layer_cycle;
@@ -299,6 +322,9 @@ evaluate(AnimGraphEvalContext &context) {
 void AnimSequence::
 init_pose(AnimGraphEvalContext &context) {
   for (int i = 0; i < context._num_joints; i++) {
+    if (!context._joint_mask.get_bit(i)) {
+      continue;
+    }
     context._joints[i]._position = context._parts[i]._default_pos;
     context._joints[i]._rotation = context._parts[i]._default_quat;
     context._joints[i]._scale = context._parts[i]._default_scale;
@@ -326,8 +352,13 @@ blend(AnimGraphEvalContext &a, AnimGraphEvalContext &b, PN_stdfloat weight) {
   // Build per-joint weight list.
   PN_stdfloat *weights = (PN_stdfloat *)alloca(num_joints * sizeof(PN_stdfloat));
   for (i = 0; i < num_joints; i++) {
-    if (_weights != nullptr) {
+    if (!b._joint_mask.get_bit(i)) {
+      // Don't care about this joint.
+      weights[i] = 0.0f;
+
+    } else if (_weights != nullptr) {
       weights[i] = weight * _weights->get_weight(i);
+
     } else {
       weights[i] = weight;
     }

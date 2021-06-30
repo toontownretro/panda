@@ -16,7 +16,6 @@
     computeNode.h computeNode.I \
     config_pgraphnodes.h \
     directionalLight.h directionalLight.I \
-    eyeballNode.h eyeballNode.I \
     fadeLodNode.I fadeLodNode.h fadeLodNodeData.h \
     lightLensNode.h lightLensNode.I \
     lightNode.h lightNode.I \
@@ -39,7 +38,6 @@
     computeNode.cxx \
     config_pgraphnodes.cxx \
     directionalLight.cxx \
-    eyeballNode.cxx \
     fadeLodNode.cxx fadeLodNodeData.cxx \
     lightLensNode.cxx \
     lightNode.cxx \
@@ -62,7 +60,6 @@
     computeNode.h computeNode.I \
     config_pgraphnodes.h \
     directionalLight.h directionalLight.I \
-    eyeballNode.h eyeballNode.I \
     fadeLodNode.I fadeLodNode.h fadeLodNodeData.h \
     lightLensNode.h lightLensNode.I \
     lightNode.h lightNode.I \

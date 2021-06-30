@@ -22,6 +22,8 @@ class JointTransform;
 /**
  * Two-link inverse kinematics solver.
  *
+ * Author: Ken Perlin
+ *
  * Given a two link joint from [0,0,0] to end effector position P,
  * let link lengths be a and b, and let norm |P| = c.  Clearly a+b <= c.
  *

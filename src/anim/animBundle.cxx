@@ -119,6 +119,9 @@ evaluate(AnimGraphEvalContext &context) {
   if (!context._frame_blend || frame == next_frame) {
     // Hold the current frame until the next one is ready.
     for (int i = 0; i < context._num_joints; i++) {
+      if (!context._joint_mask.get_bit(i)) {
+        continue;
+      }
       JointTransform &xform = context._joints[i];
       CharacterJoint &joint = context._parts[i];
       int anim_joint = get_anim_joint_for_character_joint(i);
@@ -138,6 +141,9 @@ evaluate(AnimGraphEvalContext &context) {
     PN_stdfloat e0 = 1.0f - frac;
 
     for (int i = 0; i < context._num_joints; i++) {
+      if (!context._joint_mask.get_bit(i)) {
+        continue;
+      }
       JointTransform &t = context._joints[i];
       CharacterJoint &j = context._parts[i];
       int anim_joint = get_anim_joint_for_character_joint(i);

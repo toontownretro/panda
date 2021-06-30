@@ -17,18 +17,30 @@
 #include "pandaNode.h"
 #include "pta_LVecBase3.h"
 #include "pta_LVecBase4.h"
+#include "weakNodePath.h"
+#include "weakPointerTo.h"
+#include "transformState.h"
+
+class Character;
 
 /**
  * A node that represents a single eyeball of some human or creature.  Can be
  * given a look target and eye origin that is used to calculate U/V texture
  * matrices for the eyeball shader.
  */
-class EXPCL_PANDA_PGRAPHNODES EyeballNode : public PandaNode {
+class EXPCL_PANDA_ANIM EyeballNode final : public PandaNode {
 PUBLISHED:
-  EyeballNode(const std::string &name);
+  EyeballNode(const std::string &name, Character *character, int parent_joint);
   EyeballNode(const EyeballNode &copy);
 
-  INLINE void set_view_target(const LPoint3 &target);
+  INLINE void set_character(Character *character, int parent_joint);
+  INLINE int get_parent_joint() const;
+  INLINE Character *get_character() const;
+
+  INLINE void set_eye_offset(const LPoint3 &offset);
+  INLINE const TransformState *get_eye_offset() const;
+
+  INLINE void set_view_target(NodePath node, const LPoint3 &offset);
 
   INLINE void set_eye_shift(const LVector3 &shift);
   INLINE void set_z_offset(PN_stdfloat offset);
@@ -39,14 +51,22 @@ PUBLISHED:
   INLINE void set_debug_enabled(bool enable);
 
 public:
+  virtual PandaNode *make_copy() const override;
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
-  virtual bool is_renderable() const;
-  virtual bool safe_to_flatten() const;
-  virtual bool safe_to_combine() const;
+  virtual bool is_renderable() const override;
+  virtual bool safe_to_flatten() const override;
+  virtual bool safe_to_combine() const override;
 
 private:
+  WPT(Character) _character;
+  int _parent_joint;
+
+  // Offset of eye from parent joint.
+  CPT(TransformState) _eye_offset;
+
   // World-space position of view target -- what the eye should look at.
-  LPoint3 _view_target;
+  WeakNodePath _view_target;
+  CPT(TransformState) _view_offset;
 
   // This is what gets calculated and passed to the shader.
 

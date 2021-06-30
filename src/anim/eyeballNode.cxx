@@ -25,6 +25,8 @@
 #include "cullHandler.h"
 #include "cullableObject.h"
 #include "look_at.h"
+#include "character.h"
+#include "randomizer.h"
 
 TypeHandle EyeballNode::_type_handle;
 
@@ -32,10 +34,11 @@ TypeHandle EyeballNode::_type_handle;
  *
  */
 EyeballNode::
-EyeballNode(const std::string &name) :
-  PandaNode(name)
+EyeballNode(const std::string &name, Character *character, int parent_joint) :
+  PandaNode(name),
+  _view_target(NodePath())
 {
-  _view_target = LPoint3(0, 0, 0);
+  _view_offset = TransformState::make_pos(LVecBase3(0));
   _z_offset = 0;
   _radius = 0;
   _iris_scale = 1;
@@ -46,6 +49,8 @@ EyeballNode(const std::string &name) :
   _iris_projection_u = PTA_LVecBase4::empty_array(1, get_class_type());
   _iris_projection_v = PTA_LVecBase4::empty_array(1, get_class_type());
   _debug_enabled = false;
+  _character = character;
+  _parent_joint = parent_joint;
 
   CPT(RenderState) state = get_state();
   CPT(RenderAttrib) sha = state->get_attrib(ShaderAttrib::get_class_slot());
@@ -67,10 +72,15 @@ EyeballNode(const std::string &name) :
  */
 EyeballNode::
 EyeballNode(const EyeballNode &copy) :
-  PandaNode(copy)
+  PandaNode(copy),
+  _view_target(copy._view_target)
 {
-  _view_target = copy._view_target;
+  _view_offset = copy._view_offset;
+  _parent_joint = copy._parent_joint;
+  _character = copy._character;
+  _eye_offset = copy._eye_offset;
   _z_offset = copy._z_offset;
+  _iris_scale = copy._iris_scale;
   _radius = copy._radius;
   _eye_size = copy._eye_size;
   _eye_shift = copy._eye_shift;
@@ -99,6 +109,14 @@ EyeballNode(const EyeballNode &copy) :
   set_state(state->set_attrib(sha));
 
   set_cull_callback();
+}
+
+/**
+ *
+ */
+PandaNode *EyeballNode::
+make_copy() const {
+  return new EyeballNode(*this);
 }
 
 /**
@@ -138,7 +156,15 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   _last_update_frame = clock->get_frame_count();
 
-  const TransformState *net_trans = data.get_net_transform(trav);
+  if (_character.was_deleted()) {
+    return true;
+  }
+
+  // Bring the parent joint into world coordinates and apply the eye offset to
+  // get the current world space transform of the eye.
+  CPT(TransformState) net_trans = TransformState::make_mat(_character->get_joint_net_transform(_parent_joint));
+  net_trans = data.get_net_transform(trav)->compose(net_trans);
+  net_trans = net_trans->compose(_eye_offset);
 
   LPoint3 origin = net_trans->get_pos();
   LQuaternion quat = net_trans->get_quat();
@@ -147,7 +173,16 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   LVector3 right = quat.get_right();
 
   // Look directly at target.
-  LVector3 look_forward = _view_target - origin;
+  LPoint3 view_target;
+  if (_view_target.is_empty()) {
+    // Just look forward if we have no view target.
+    LVector3 node_fwd = data.get_net_transform(trav)->get_quat().get_forward();
+    view_target = origin + (node_fwd * 128);
+  } else {
+    CPT(TransformState) view_target_net = _view_target.get_node_path().get_net_transform();
+    view_target = view_target_net->compose(_view_offset)->get_pos();
+  }
+  LVector3 look_forward = view_target - origin;
   look_forward.normalize();
 
   LQuaternion look_quat;
@@ -156,16 +191,23 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   LVector3 look_right = look_quat.get_right();
   LVector3 look_up = look_quat.get_up();
 
-#if 0
+#if 1
   // Shift N degrees off of the target
   PN_stdfloat dz = _z_offset;
 
   look_forward += look_right * (_z_offset + dz);
+  // Add random jitter
+  //Randomizer random;
+  //look_forward += look_right * (random.random_real(0.05) - 0.02);
+  //look_forward += look_up * (random.random_real(0.05) - 0.02);
   look_forward.normalize();
 
   // Re-aim eyes
-  look_right = look_forward.cross(up);
+  look_right = look_forward.cross(look_up);
   look_right.normalize();
+
+  look_up = look_right.cross(look_forward);
+  look_up.normalize();
 #endif
 
   PN_stdfloat scale = (1.0f / _iris_scale) + _eye_size;
@@ -181,7 +223,6 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   _iris_projection_v[0] = LVecBase4(v_xyz, -(origin.dot(v_xyz)) + 0.5f);
 
   _eye_origin[0] = origin;
-
 
   if (_debug_enabled) {
     PT(GeomVertexData) vdata = new GeomVertexData("eyeball-debug", GeomVertexFormat::get_v3c4(), GeomEnums::UH_static);

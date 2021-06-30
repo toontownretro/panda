@@ -176,18 +176,30 @@ set_base(AnimGraphNode *node) {
  * onto the base pose of this sequence.
  */
 INLINE void AnimSequence::
-add_layer(AnimGraphNode *seq, int start_frame, int peak_frame,
-          int tail_frame, int end_frame, bool spline,
-          bool no_blend) {
-  PN_stdfloat num_frames = get_num_frames();
+add_layer(AnimGraphNode *seq, PN_stdfloat start_frame, PN_stdfloat peak_frame,
+          PN_stdfloat tail_frame, PN_stdfloat end_frame, bool spline,
+          bool no_blend, bool xfade, int pose_param) {
   Layer layer;
   layer._seq = seq;
-  layer._start = start_frame / num_frames;
-  layer._peak = peak_frame / num_frames;
-  layer._tail = tail_frame / num_frames;
-  layer._end = end_frame / num_frames;
+
+  if (pose_param == -1) {
+    PN_stdfloat num_frames = std::max(1.0f, get_num_frames() - 1.0f);
+    layer._start = start_frame / num_frames;
+    layer._peak = peak_frame / num_frames;
+    layer._tail = tail_frame / num_frames;
+    layer._end = end_frame / num_frames;
+
+  } else {
+    layer._start = start_frame;
+    layer._peak = peak_frame;
+    layer._tail = tail_frame;
+    layer._end = end_frame;
+  }
+
   layer._spline = spline;
   layer._no_blend = no_blend;
+  layer._xfade = xfade;
+  layer._pose_parameter = pose_param;
 
   _layers.push_back(layer);
 }

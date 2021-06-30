@@ -17,7 +17,7 @@
  */
 void AnimBlendNode2D::
 add_input(AnimGraphNode *node, const LPoint2 &point) {
-  nassertv(point[0] >= -1 && point[0] <= 1 && point[1] >= -1 && point[1] <= 1);
+  nassertv(point[0] >= 0 && point[0] <= 1 && point[1] >= 0 && point[1] <= 1);
 
   Input input;
   input._node = node;

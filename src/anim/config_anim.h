@@ -19,6 +19,7 @@
 #include "dconfig.h"
 #include "configVariableBool.h"
 #include "configVariableInt.h"
+#include "configVariableList.h"
 
 ConfigureDecl(config_anim, EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM);
 NotifyCategoryDecl(anim, EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM);
@@ -30,6 +31,8 @@ EXPCL_PANDA_ANIM extern ConfigVariableBool interpolate_frames;
 EXPCL_PANDA_ANIM extern ConfigVariableBool restore_initial_pose;
 EXPCL_PANDA_ANIM extern ConfigVariableInt async_bind_priority;
 EXPCL_PANDA_ANIM extern ConfigVariableBool even_animation;
+EXPCL_PANDA_ANIM extern ConfigVariableList anim_events;
+EXPCL_PANDA_ANIM extern ConfigVariableList anim_activities;
 
 extern EXPCL_PANDA_ANIM void init_libanim();
 
