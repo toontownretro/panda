@@ -636,9 +636,9 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext 
 
       // Take the net transform and re-interpret it.
       const LMatrix4 &parent_net = merge_char->_joint_net_transforms[joint._merge_joint];
-      //if (parent_net != _joint_net_transforms[i]) {
+      if (parent_net != _joint_net_transforms[i]) {
         _changed_joints.set_bit(i);
-      //}
+      }
       _joint_net_transforms[i] = parent_net;
       if (joint._parent != -1) {
         LMatrix4 parent_inverse = _joint_net_transforms[joint._parent];
@@ -661,8 +661,10 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext 
   for (size_t i = 0; i < joint_count; i++) {
     CharacterJoint &joint = _joints[i];
 
-    // If it's a merged joint, we already computed the net transform above.
-    if (joint._merge_joint == -1) {
+    // If it's a merged joint, we already computed the net transform above.  If
+    // it has a forced value, we computed the net transform when the forced
+    // value was set.
+    if (joint._merge_joint == -1 && !joint._has_forced_value) {
       LMatrix4 old_net = _joint_net_transforms[i];
 
       if (joint._parent != -1) {
@@ -672,17 +674,21 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext 
         _joint_net_transforms[i] = _joint_values[i] * root_xform;
       }
 
-      //if (_joint_net_transforms[i] != old_net) {
+      if (_joint_net_transforms[i] != old_net) {
         _changed_joints.set_bit(i);
-      //}
+      }
     }
-
-    _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
+    if (_changed_joints.get_bit(i)) {
+      _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
+    }
   }
   ap_net_collector.stop();
 
   ap_mark_jvt_collector.start();
   for (size_t i = 0; i < joint_count; i++) {
+    if (!_changed_joints.get_bit(i)) {
+      continue;
+    }
     JointVertexTransform *trans = _joint_vertex_transforms[i];
     if (trans != nullptr) {
       trans->mark_modified(current_thread);

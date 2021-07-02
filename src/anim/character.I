@@ -196,14 +196,21 @@ get_node(int n) const {
  */
 INLINE void Character::
 set_joint_forced_value(int n, const LMatrix4 &value) {
+  nassertv(n >= 0 && n < (int)_joints.size());
+
   _joints[n]._forced_value = value;
   _joints[n]._has_forced_value = true;
   const CharacterJoint &joint = _joints[n];
+  LMatrix4 old_net = _joint_net_transforms[n];
   if (joint._parent != -1) {
     _joint_net_transforms[n] = value * _joint_net_transforms[joint._parent];
 
   } else {
     _joint_net_transforms[n] = value * get_root_xform();
+  }
+
+  if (!_changed_joints.get_bit(n) && _joint_net_transforms[n] != old_net) {
+    _changed_joints.set_bit(n);
   }
 }
 
@@ -213,7 +220,10 @@ set_joint_forced_value(int n, const LMatrix4 &value) {
  */
 INLINE void Character::
 clear_joint_forced_value(int n) {
+  nassertv(n >= 0 && n < (int)_joints.size());
+
   _joints[n]._has_forced_value = false;
+  _changed_joints.set_bit(n);
 }
 
 /**
