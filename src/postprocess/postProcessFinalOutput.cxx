@@ -26,10 +26,9 @@ PostProcessFinalOutput(PostProcess *pp) :
 
   PT(PostProcessPass) layer = new PostProcessPass(pp, "final-output-layer");
   // We are a display region of the output window.
-  layer->set_window_layer(true);
-  layer->setup();
   // Make sure this is the first display region rendered to the window.
-  layer->get_display_region()->set_sort(-1000);
+  layer->set_window_layer(true, pp->get_output(), -1000);
+  layer->setup();
 
   NodePath quad = layer->get_quad();
   quad.set_shader(

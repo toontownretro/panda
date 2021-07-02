@@ -24,6 +24,7 @@
 #include "freezeFrame.h"
 #include "postProcessSceneStage.h"
 #include "postProcessFinalOutput.h"
+#include "motionBlur.h"
 
 NotifyCategoryDef(postprocess, "")
 
@@ -61,4 +62,5 @@ init_libpostprocess() {
   PostProcessSceneStage::init_type();
   SSAO_Effect::init_type();
   ToneMappingEffect::init_type();
+  MotionBlur::init_type();
 }

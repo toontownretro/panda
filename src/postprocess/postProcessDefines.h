@@ -30,7 +30,7 @@ enum AuxTextures
         AUXTEXTURE_ARME,
         AUXTEXTURE_BLOOM,
 
-        AUXTEXTURE_COUNT = 4,
+        AUXTEXTURE_COUNT,
 };
 END_PUBLISH
 

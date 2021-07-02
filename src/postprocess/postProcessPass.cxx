@@ -121,6 +121,8 @@ PostProcessPass(PostProcess *pp, const std::string &name,
 	_div_size(div_size),
 	_div(div),
 	_window_layer(false),
+	_layer_window(nullptr),
+	_layer_sort(0),
 	_color_texture(nullptr),
 	_depth_texture(nullptr)
 {
@@ -229,7 +231,10 @@ setup_buffer() {
 
 	if (is_window_layer()) {
 		// We're a display region of the main window, no offscreen buffer needed.
-		_buffer = window;
+		if (_layer_window == nullptr) {
+			_layer_window = window;
+		}
+		_buffer = _layer_window;
 		return true;
 	}
 
@@ -312,6 +317,9 @@ setup_region() {
 	dr->set_camera(_camera_np);
 	dr->set_active(true);
 	dr->set_scissor_enabled(is_window_layer());
+	if (is_window_layer()) {
+		dr->set_sort(_layer_sort);
+	}
 	_region = dr;
 }
 

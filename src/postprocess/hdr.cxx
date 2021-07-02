@@ -28,7 +28,7 @@
 #include "graphicsStateGuardian.h"
 #include "geomDrawCallbackData.h"
 #include "lens.h"
-#include "motionBlur.h"
+//#include "motionBlur.h"
 #include "graphicsEngine.h"
 
 static constexpr int hdr_num_buckets = 256;
@@ -329,7 +329,7 @@ void HDRPass::update()
 	_shutter_speed = shutter_speed;
 	_iso = iso;
 
-	mat_motion_blur_strength = _shutter_speed * 2;
+	//mat_motion_blur_strength = _shutter_speed * 2;
 
 	// Apply the exposure scale to our pass's lens.
 	lens = DCAST(Camera, get_camera().node())->get_lens();
@@ -374,6 +374,8 @@ void HDRPass::setup()
 
 	_luminance_output_texture = new Texture("hdr-luminance-output");
 	_luminance_output_texture->setup_1d_texture(1, Texture::T_float, Texture::F_r32);
+	_luminance_output_texture->set_minfilter(SamplerState::FT_nearest);
+	_luminance_output_texture->set_magfilter(SamplerState::FT_nearest);
 
 	CPT(RenderAttrib) lum_shattr = ShaderAttrib::make(calc_lum_shader);
 	lum_shattr = DCAST(ShaderAttrib, lum_shattr)->

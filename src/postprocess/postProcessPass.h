@@ -104,8 +104,10 @@ PUBLISHED:
 		return _region;
 	}
 
-	INLINE void set_window_layer(bool flag) {
+	INLINE void set_window_layer(bool flag, GraphicsOutput *window = nullptr, int sort = 0) {
 		_window_layer = flag;
+		_layer_window = window;
+		_layer_sort = sort;
 	}
 
 	INLINE bool is_window_layer() const {
@@ -135,6 +137,8 @@ protected:
 	// True if the pass is a layer/display region on the main window, rather
 	// than an offscreen buffer.
 	bool _window_layer;
+	PT(GraphicsOutput) _layer_window;
+	int _layer_sort;
 
 	PT( GraphicsOutput ) _buffer;
 	PT( DisplayRegion ) _region;

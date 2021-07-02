@@ -113,13 +113,14 @@ FreezeFrameEffect(PostProcess *pp) :
   _take_freeze_frame = false;
   _freeze_frame_texture = new Texture("freeze-frame");
   _freeze_frame_texture->set_match_framebuffer_format(true);
+  _freeze_frame_texture->set_minfilter(SamplerState::FT_linear);
+  _freeze_frame_texture->set_magfilter(SamplerState::FT_linear);
 
   PT(FreezeFrameLayer) layer = new FreezeFrameLayer(pp, this);
   // We render directly to the window, not offscreen.
-  layer->set_window_layer(true);
+  // Sort of -999 to render directly after the final output, which is sort -1000.
+  layer->set_window_layer(true, pp->get_output(), -999);
   layer->setup();
-  // Render directly after the final output, which is sort -1000.
-  layer->get_display_region()->set_sort(-999);
   add_pass(layer);
 }
 
