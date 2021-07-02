@@ -12,11 +12,9 @@
  */
 
 #include "cullableObject.h"
-#include "lightAttrib.h"
 #include "nodePath.h"
 #include "colorAttrib.h"
 #include "texGenAttrib.h"
-#include "textureAttrib.h"
 #include "shaderAttrib.h"
 #include "renderState.h"
 #include "clockObject.h"
@@ -151,6 +149,33 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
     }
 
+    // If there is any animation left in the vertex data after it has been
+    // munged--that is, we couldn't arrange to handle the animation in
+    // hardware--then we have to calculate that animation now.
+    bool cpu_animated = false;
+
+    CPT(GeomVertexData) animated_vertices =
+      _munged_data->animate_vertices(force, current_thread);
+    if (animated_vertices != _munged_data) {
+      cpu_animated = true;
+      std::swap(_munged_data, animated_vertices);
+    }
+
+#ifndef NDEBUG
+    if (show_vertex_animation) {
+      GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
+      bool hardware_animated = (data_reader.get_format()->get_animation().get_animation_type() == Geom::AT_hardware);
+      if (cpu_animated || hardware_animated) {
+        // These vertices were animated, so flash them red or blue.
+        static const double flash_rate = 1.0;  // 1 state change per second
+        int cycle = (int)(ClockObject::get_global_clock()->get_frame_time() * flash_rate);
+        if ((cycle & 1) == 0) {
+          _state = _state->compose(cpu_animated ? get_flash_cpu_state() : get_flash_hardware_state());
+        }
+      }
+    }
+#endif
+
     // If we have prepared it for skinning via the shader generator, mark a
     // flag on the state so that the shader generator will do this.  We should
     // probably find a cleaner way to do this.
@@ -178,18 +203,6 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
     }
 
-    // If there is any animation left in the vertex data after it has been
-    // munged--that is, we couldn't arrange to handle the animation in
-    // hardware--then we have to calculate that animation now.
-    bool cpu_animated = false;
-
-    CPT(GeomVertexData) animated_vertices =
-      _munged_data->animate_vertices(force, current_thread);
-    if (animated_vertices != _munged_data) {
-      cpu_animated = true;
-      std::swap(_munged_data, animated_vertices);
-    }
-
     if (sattr != nullptr) {
       if (_instances != nullptr &&
           sattr->get_flag(ShaderAttrib::F_hardware_instancing)) {
@@ -206,21 +219,6 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     } else {
       _num_instances = 1;
     }
-
-#ifndef NDEBUG
-    if (show_vertex_animation) {
-      GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
-      bool hardware_animated = (data_reader.get_format()->get_animation().get_animation_type() == Geom::AT_hardware);
-      if (cpu_animated || hardware_animated) {
-        // These vertices were animated, so flash them red or blue.
-        static const double flash_rate = 1.0;  // 1 state change per second
-        int cycle = (int)(ClockObject::get_global_clock()->get_frame_time() * flash_rate);
-        if ((cycle & 1) == 0) {
-          _state = cpu_animated ? get_flash_cpu_state() : get_flash_hardware_state();
-        }
-      }
-    }
-#endif
   }
 
   return true;
@@ -710,9 +708,7 @@ get_flash_cpu_state() {
   static CPT(RenderState) flash_cpu_state = nullptr;
   if (flash_cpu_state == nullptr) {
     flash_cpu_state = RenderState::make
-      (LightAttrib::make_all_off(),
-       TextureAttrib::make_off(),
-       ColorAttrib::make_flat(flash_cpu_color));
+      (ColorAttrib::make_flat(flash_cpu_color));
   }
 
   return flash_cpu_state;
@@ -731,9 +727,7 @@ get_flash_hardware_state() {
   static CPT(RenderState) flash_hardware_state = nullptr;
   if (flash_hardware_state == nullptr) {
     flash_hardware_state = RenderState::make
-      (LightAttrib::make_all_off(),
-       TextureAttrib::make_off(),
-       ColorAttrib::make_flat(flash_hardware_color));
+      (ColorAttrib::make_flat(flash_hardware_color));
   }
 
   return flash_hardware_state;
