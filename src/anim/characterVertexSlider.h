@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "vertexSlider.h"
 #include "pointerTo.h"
+#include "weakPointerTo.h"
 
 class FactoryParams;
 class Character;
@@ -39,7 +40,7 @@ PUBLISHED:
   virtual PN_stdfloat get_slider() const;
 
 private:
-  Character *_char;
+  WPT(Character) _char;
   int _slider;
 
 public:

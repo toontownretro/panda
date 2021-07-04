@@ -50,7 +50,7 @@ CharacterVertexSlider(Character *character, int slider) :
 CharacterVertexSlider::
 ~CharacterVertexSlider() {
   // Tell the char_slider to stop informing us about its motion.
-  if (_char != nullptr) {
+  if (_char.is_valid_pointer()) {
     _char->set_vertex_slider(_slider, nullptr);
   }
 }
@@ -60,6 +60,8 @@ CharacterVertexSlider::
  */
 PN_stdfloat CharacterVertexSlider::
 get_slider() const {
+  nassertr(_char.is_valid_pointer(), 0.0f);
+
   return _char->get_slider_value(_slider);
 }
 
@@ -79,7 +81,7 @@ void CharacterVertexSlider::
 write_datagram(BamWriter *manager, Datagram &dg) {
   VertexSlider::write_datagram(manager, dg);
 
-  manager->write_pointer(dg, _char);
+  manager->write_pointer(dg, _char.p());
   dg.add_int16(_slider);
 }
 

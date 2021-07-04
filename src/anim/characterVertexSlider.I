@@ -16,7 +16,7 @@
  */
 INLINE const Character *CharacterVertexSlider::
 get_character() const {
-  return _char;
+  return _char.p();
 }
 
 /**
