@@ -291,7 +291,6 @@ void FLOATNAME(LQuaternion)::
 blend_no_align(const FLOATNAME(LQuaternion) &p, const FLOATNAME(LQuaternion) &q,
                FLOATTYPE t, FLOATNAME(LQuaternion) &qt) {
   FLOATTYPE sclp, sclq;
-  int i;
 
   // 0.0 returns p, 1.0 returns q.
   sclp = 1.0f - t;
