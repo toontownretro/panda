@@ -18,6 +18,8 @@
 #include "physContactCallbackData.h"
 #include "physEnums.h"
 #include "randomizer.h"
+#include "config_pphysics.h"
+#include "clockObject.h"
 
 /**
  *
@@ -172,8 +174,9 @@ create_joints() {
     joint->actor->set_angular_damping(joint->angular_damping);
     joint->actor->set_transform(joint_pose);
     joint->actor->set_contact_callback(_contact_callback);
-    physx::PxRigidDynamic *dyn = (physx::PxRigidDynamic *)joint->actor->get_rigid_body();
-    dyn->setSolverIterationCounts(20, 20);
+    joint->actor->set_max_depenetration_velocity(phys_ragdoll_max_depenetration_vel);
+    joint->actor->set_num_position_iterations(phys_ragdoll_pos_iterations);
+    joint->actor->set_num_velocity_iterations(phys_ragdoll_vel_iterations);
 
     if (joint->parent != nullptr) {
       CPT(TransformState) parent_pose = joint_default_net_transform(joint->parent->joint)->invert_compose(joint_pose);
@@ -183,9 +186,11 @@ create_joints() {
       djoint->set_linear_motion(PhysD6Joint::A_x, PhysD6Joint::M_locked);
       djoint->set_linear_motion(PhysD6Joint::A_y, PhysD6Joint::M_locked);
       djoint->set_linear_motion(PhysD6Joint::A_z, PhysD6Joint::M_locked);
-      djoint->set_projection_enabled(true);
-      ((physx::PxD6Joint *)djoint->get_joint())->setProjectionLinearTolerance(0.1f);
-      ((physx::PxD6Joint *)djoint->get_joint())->setProjectionAngularTolerance(0.4f);
+      djoint->set_projection_enabled(phys_ragdoll_projection);
+      if (phys_ragdoll_projection) {
+        djoint->set_projection_angular_tolerance(phys_ragdoll_projection_angular_tolerance);
+        djoint->set_projection_linear_tolerance(phys_ragdoll_projection_linear_tolerance);
+      }
       djoint->set_collision_enabled(false);
 
       if (joint->limit_x[0] == 0 && joint->limit_x[1] == 0) {
@@ -196,13 +201,36 @@ create_joints() {
 
       } else {
         djoint->set_angular_motion(PhysD6Joint::A_x, PhysD6Joint::M_limited);
-        djoint->set_twist_limit(PhysJointLimitAngularPair(joint->limit_x[0], joint->limit_x[1], joint->limit_x[1]));
+        djoint->set_twist_limit(
+          PhysJointLimitAngularPair(joint->limit_x[0], joint->limit_x[1],
+            (joint->limit_x[1] - joint->limit_x[0]) * phys_ragdoll_contact_distance_ratio));
       }
 
-      djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_limited);
-      djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_limited);
-      djoint->set_pyramid_swing_limit(
-        PhysJointLimitPyramid(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1], std::max(joint->limit_y[1], joint->limit_z[1])));
+      bool y_locked = false;
+      bool z_locked = false;
+
+      if (joint->limit_y[0] == 0 && joint->limit_y[1] == 0) {
+        djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_locked);
+        y_locked = true;
+
+      } else {
+        djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_limited);
+      }
+
+      if (joint->limit_z[0] == 0 && joint->limit_z[1] == 0) {
+        djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_locked);
+        z_locked = true;
+
+      } else {
+        djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_limited);
+      }
+
+      if (!y_locked || !z_locked) {
+        PN_stdfloat dist_y = (joint->limit_y[1] - joint->limit_y[0]) * phys_ragdoll_contact_distance_ratio;
+        PN_stdfloat dist_z = (joint->limit_z[1] - joint->limit_z[0]) * phys_ragdoll_contact_distance_ratio;
+        djoint->set_pyramid_swing_limit(
+          PhysJointLimitPyramid(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1], std::max(dist_y, dist_z)));
+      }
 
       joint->djoint = djoint;
     }
@@ -400,8 +428,17 @@ do_callback(CallbackData *cbdata) {
   }
   PhysContactPoint point = pair->get_contact_point(0);
 
-  LVector3 force = point.get_impulse() / 0.015;
-  PN_stdfloat force_magnitude = force.length();
+  ClockObject *clock = ClockObject::get_global_clock();
+  double dt = clock->get_dt();
+
+  if (dt > 0.1) {
+    return;
+  }
+
+  PN_stdfloat speed = point.get_impulse().length();
+  if (speed < 70.0f) {
+    return;
+  }
 
   LPoint3 position = point.get_position();
 
@@ -409,13 +446,18 @@ do_callback(CallbackData *cbdata) {
 
   Randomizer random;
 
-  if (force_magnitude >= _ragdoll->_hard_impact_force) {
+  float volume = speed * speed * (1.0f / (320.0f * 320.0f));
+  volume = std::min(1.0f, volume);
+
+  if (speed >= _ragdoll->_hard_impact_force) {
     int index = random.random_int(_ragdoll->_hard_impact_sounds.size());
+    _ragdoll->_hard_impact_sounds[index]->set_volume(volume);
     _ragdoll->_hard_impact_sounds[index]->set_3d_attributes(
       position[0], position[1], position[2], 0.0, 0.0, 0.0);
     _ragdoll->_hard_impact_sounds[index]->play();
-  } else if (force_magnitude >= _ragdoll->_soft_impact_force) {
+  } else if (speed >= _ragdoll->_soft_impact_force) {
     int index = random.random_int(_ragdoll->_soft_impact_sounds.size());
+    _ragdoll->_soft_impact_sounds[index]->set_volume(volume);
     _ragdoll->_soft_impact_sounds[index]->set_3d_attributes(
       position[0], position[1], position[2], 0.0, 0.0, 0.0);
     _ragdoll->_soft_impact_sounds[index]->play();

@@ -36,6 +36,11 @@ PUBLISHED:
   INLINE void set_stabilization_threshold(PN_stdfloat threshold);
   INLINE PN_stdfloat get_stabilization_threshold() const;
 
+  INLINE void set_num_position_iterations(unsigned int count);
+  INLINE unsigned int get_num_position_iterations() const;
+  INLINE void set_num_velocity_iterations(unsigned int count);
+  INLINE unsigned int get_num_velocity_iterations() const;
+
   virtual bool is_self_created() const override { return _self_created; }
 
 protected:

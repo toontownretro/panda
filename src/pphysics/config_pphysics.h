@@ -72,6 +72,14 @@ extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysSolverType> phys_solver;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysPandaLengthUnit> phys_panda_length_unit;
 extern EXPCL_PANDA_PPHYSICS ConfigVariableEnum<PhysPandaMassUnit> phys_panda_mass_unit;
 
+extern EXPCL_PANDA_PPHYSICS ConfigVariableBool phys_ragdoll_projection;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_ragdoll_contact_distance_ratio;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_ragdoll_projection_linear_tolerance;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_ragdoll_projection_angular_tolerance;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableInt phys_ragdoll_pos_iterations;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableInt phys_ragdoll_vel_iterations;
+extern EXPCL_PANDA_PPHYSICS ConfigVariableDouble phys_ragdoll_max_depenetration_vel;
+
 extern EXPCL_PANDA_PPHYSICS void init_libpphysics();
 
 #endif // CONFIG_PPHYSICS_H

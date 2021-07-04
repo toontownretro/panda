@@ -226,6 +226,34 @@ ConfigVariableEnum<PhysPandaMassUnit> phys_panda_mass_unit
           "will be converted from this unit to PhysX units (kilograms) when "
           "passed into the API.  The default is kilograms."));
 
+ConfigVariableBool phys_ragdoll_projection
+("phys-ragdoll-projection", true,
+ PRC_DESC("If true, enables projection on ragdoll joints."));
+
+ConfigVariableDouble phys_ragdoll_contact_distance_ratio
+("phys-ragdoll-contact-distance-ratio", 0.99,
+ PRC_DESC("Ragdoll joint contact distance ratio."));
+
+ConfigVariableDouble phys_ragdoll_projection_angular_tolerance
+("phys-ragdoll-projection-angular-tolerance", 15.0,
+ PRC_DESC("Ragdoll joint angular projection threshold (in degrees)."));
+
+ConfigVariableDouble phys_ragdoll_projection_linear_tolerance
+("phys-ragdoll-projection-linear-tolerance", 8.0,
+ PRC_DESC("Ragdoll joint linear projection threshold (in Panda units)."));
+
+ConfigVariableInt phys_ragdoll_pos_iterations
+("phys-ragdoll-pos-iterations", 20,
+ PRC_DESC("Number of ragdoll limb solver position iterations."));
+
+ConfigVariableInt phys_ragdoll_vel_iterations
+("phys-ragdoll-vel-iterations", 20,
+ PRC_DESC("Number of ragdoll limb solver velocity iterations."));
+
+ConfigVariableDouble phys_ragdoll_max_depenetration_vel
+("phys-ragdoll-max-depenetration-vel", 1000.0,
+ PRC_DESC("Max ragdoll limb depenetration velocity (in Panda units)."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be

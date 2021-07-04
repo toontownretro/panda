@@ -18,7 +18,7 @@ INLINE PhysJointLimitAngularPair::
 PhysJointLimitAngularPair(PN_stdfloat lower_limit, PN_stdfloat upper_limit,
                           PN_stdfloat contact_dist) :
   _limit(deg_2_rad(lower_limit), deg_2_rad(upper_limit),
-         contact_dist != -1.0f ? panda_ang_to_physx(contact_dist) : contact_dist)
+         contact_dist != -1.0f ? deg_2_rad(contact_dist) : contact_dist)
 {
 }
 

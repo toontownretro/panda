@@ -60,6 +60,12 @@ PUBLISHED:
   INLINE void set_pyramid_swing_limit(const PhysJointLimitPyramid &limit);
   INLINE PhysJointLimitPyramid get_pyramid_swing_limit() const;
 
+  INLINE void set_projection_linear_tolerance(PN_stdfloat tolerance);
+  INLINE PN_stdfloat get_projection_linear_tolerance() const;
+
+  INLINE void set_projection_angular_tolerance(PN_stdfloat tolerance);
+  INLINE PN_stdfloat get_projection_angular_tolerance() const;
+
   INLINE PN_stdfloat get_angle(Axis axis) const;
 
 public:

@@ -110,6 +110,38 @@ get_pyramid_swing_limit() const {
 /**
  *
  */
+INLINE void PhysD6Joint::
+set_projection_linear_tolerance(PN_stdfloat tolerance) {
+  _joint->setProjectionLinearTolerance(panda_length_to_physx(tolerance));
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat PhysD6Joint::
+get_projection_linear_tolerance() const {
+  return physx_length_to_panda(_joint->getProjectionLinearTolerance());
+}
+
+/**
+ *
+ */
+INLINE void PhysD6Joint::
+set_projection_angular_tolerance(PN_stdfloat tolerance) {
+  _joint->setProjectionAngularTolerance(panda_ang_to_physx(tolerance));
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat PhysD6Joint::
+get_projection_angular_tolerance() const {
+  return physx_ang_to_panda(_joint->getProjectionAngularTolerance());
+}
+
+/**
+ *
+ */
 INLINE PN_stdfloat PhysD6Joint::
 get_angle(Axis axis) const {
   switch (axis) {

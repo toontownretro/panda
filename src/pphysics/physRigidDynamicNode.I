@@ -66,3 +66,39 @@ INLINE PN_stdfloat PhysRigidDynamicNode::
 get_stabilization_threshold() const {
   return (PN_stdfloat)_rigid_dynamic->getStabilizationThreshold();
 }
+
+/**
+ *
+ */
+INLINE void PhysRigidDynamicNode::
+set_num_position_iterations(unsigned int count) {
+  _rigid_dynamic->setSolverIterationCounts(count, get_num_velocity_iterations());
+}
+
+/**
+ *
+ */
+INLINE unsigned int PhysRigidDynamicNode::
+get_num_position_iterations() const {
+  physx::PxU32 pos, vel;
+  _rigid_dynamic->getSolverIterationCounts(pos, vel);
+  return pos;
+}
+
+/**
+ *
+ */
+INLINE void PhysRigidDynamicNode::
+set_num_velocity_iterations(unsigned int count) {
+  _rigid_dynamic->setSolverIterationCounts(get_num_position_iterations(), count);
+}
+
+/**
+ *
+ */
+INLINE unsigned int PhysRigidDynamicNode::
+get_num_velocity_iterations() const {
+  physx::PxU32 pos, vel;
+  _rigid_dynamic->getSolverIterationCounts(pos, vel);
+  return vel;
+}
