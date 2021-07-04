@@ -35,6 +35,7 @@
     characterVertexSlider.h characterVertexSlider.I \
     config_anim.h \
     eyeballNode.h eyeballNode.I \
+    ikChain.h ikChain.I \
     ikSolver.h \
     jointVertexTransform.h jointVertexTransform.I \
     partSubset.h partSubset.I \
@@ -69,6 +70,7 @@
     characterVertexSlider.cxx \
     config_anim.cxx \
     eyeballNode.cxx \
+    ikChain.cxx \
     ikSolver.cxx \
     jointVertexTransform.cxx \
     partSubset.cxx \

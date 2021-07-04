@@ -33,6 +33,7 @@
 #include "animBundle.h"
 #include "animSequence.h"
 #include "characterAttachment.h"
+#include "ikChain.h"
 
 class FactoryParams;
 class AnimBundle;
@@ -159,6 +160,17 @@ PUBLISHED:
   int find_attachment(const std::string &name) const;
   void compute_attachment_transform(int index);
 
+  int add_ik_chain(const std::string &name,
+                   int top_joint, int middle_joint, int end_joint,
+                   const LVector3 &middle_joint_dir = LVector3::forward(),
+                   const LPoint3 &center = LPoint3(0),
+                   PN_stdfloat height = 0.0f, PN_stdfloat floor = 0.0f,
+                   PN_stdfloat pad = 0.0f);
+  int add_ik_chain(const IKChain &chain);
+  int add_ik_chain(IKChain &&chain);
+  INLINE int get_num_ik_chains() const;
+  INLINE IKChain *get_ik_chain(int n);
+
   PT(Character) make_copy() const;
   PT(Character) copy_subgraph() const;
 
@@ -184,6 +196,9 @@ private:
   typedef pvector<PT(AnimBundle)> Animations;
   typedef pvector<PT(AnimSequence)> Sequences;
   typedef pvector<CharacterAttachment> Attachments;
+  typedef pvector<IKChain> IKChains;
+
+  IKChains _ik_chains;
 
   Animations _animations;
   Sequences _sequences;

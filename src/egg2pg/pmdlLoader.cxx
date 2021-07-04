@@ -12,23 +12,18 @@
  */
 
 #include "pmdlLoader.h"
-#include "load_egg_file.h"
 #include "config_egg2pg.h"
 #include "modelNode.h"
 #include "modelRoot.h"
-//#include "materialGroup.h"
-//#include "renderStatePool.h"
 #include "loader.h"
 #include "lodNode.h"
 #include "nodePath.h"
 #include "characterNode.h"
 #include "character.h"
-//#include "characterJointBundle.h"
 #include "virtualFileSystem.h"
-//#include "ikChain.h"
+#include "ikChain.h"
 #include "animBundleNode.h"
 #include "animBundle.h"
-#include "characterJointEffect.h"
 #include "materialPool.h"
 #include "pdxList.h"
 #include "animSequence.h"
@@ -39,16 +34,13 @@
 #include "animActivity.h"
 #include "animEvent.h"
 #include "eyeballNode.h"
-#include "omniBoundingVolume.h"
 #include "deg_2_rad.h"
 #include "geomNode.h"
 #include "materialAttrib.h"
 #include "material.h"
-#include "physConvexMesh.h"
 #include "physConvexMeshData.h"
 #include "geomVertexReader.h"
 #include "internalName.h"
-#include "physSystem.h"
 
 /**
  *
@@ -797,35 +789,41 @@ build_graph() {
       }
     }
 
-#if 0
     // IK CHAINS
-    for (PMDLData::IKChains::const_iterator ici = _data->_ik_chains.begin();
-         ici != _data->_ik_chains.end(); ++ici) {
-      PMDLIKChain *pmdl_chain = (*ici).second;
+    for (size_t i = 0; i < _data->_ik_chains.size(); i++) {
+      PMDLIKChain *chain = &_data->_ik_chains[i];
 
-      PartGroup *group = part_bundle->find_child(pmdl_chain->get_foot_joint());
-      if (!group->is_of_type(CharacterJoint::get_class_type())) {
+      int end_joint = part_bundle->find_joint(chain->_end_joint);
+      if (end_joint == -1) {
         egg2pg_cat.error()
-          << "foot joint " << pmdl_chain->get_foot_joint() << " of ik chain "
-          << pmdl_chain->get_name() << " is not of type CharacterJoint!\n";
+          << "IK chain " << chain->_name << ": end joint " << chain->_end_joint << " not found\n";
         continue;
       }
 
-      CharacterJoint *foot = DCAST(CharacterJoint, group);
+      int middle_joint = part_bundle->get_joint_parent(end_joint);
+      if (middle_joint == -1) {
+        egg2pg_cat.error()
+          << "IK chain " << chain->_name << ": end joint " << chain->_end_joint << " must have a parent\n";
+        continue;
+      }
 
-      PT(IKChain) chain = new IKChain(pmdl_chain->get_name(), foot);
-      chain->set_knee_direction(pmdl_chain->get_knee_direction());
-      chain->set_center(pmdl_chain->get_center());
-      chain->set_floor(pmdl_chain->get_floor());
-      chain->set_height(pmdl_chain->get_height());
-      chain->set_pad(pmdl_chain->get_pad());
+      int top_joint = part_bundle->get_joint_parent(middle_joint);
+      if (top_joint == -1) {
+        egg2pg_cat.error()
+          << "IK chain " << chain->_name << ": middle joint " << part_bundle->get_joint_name(middle_joint)
+          << " must have a parent\n";
+        continue;
+      }
 
-      part_bundle->add_ik_chain(chain);
+      part_bundle->add_ik_chain(
+        chain->_name, top_joint, middle_joint, end_joint,
+        chain->_middle_joint_dir, chain->_center,
+        chain->_height, chain->_floor, chain->_pad);
 
       egg2pg_cat.debug()
-        << "Added ik chain " << pmdl_chain->get_name() << "\n";
+        << "Added ik chain " << chain->_name << "\n";
     }
-#endif
+
     // SEQUENCES
 
     // Implicitly create the "zero" sequence as the first sequence.

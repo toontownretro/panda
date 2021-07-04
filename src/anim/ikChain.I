@@ -16,47 +16,28 @@
  */
 INLINE IKChain::
 IKChain() {
-  _foot = nullptr;
-  _knee = nullptr;
-  _hip = nullptr;
+  _end_joint = -1;
+  _middle_joint = -1;
+  _top_joint = -1;
   _height = 0.0;
   _floor = 0.0;
   _pad = 0.0;
-  _enabled = false;
-}
-
-/**
- * Sets whether or not the IKChain should be solved when animating the
- * character.
- */
-INLINE void IKChain::
-set_enabled(bool enabled) {
-  _enabled = enabled;
-}
-
-/**
- * Returns whether or not the IKChain is enabled; whether or not the chain
- * should be solved when animating the character.
- */
-INLINE bool IKChain::
-get_enabled() const {
-  return _enabled;
 }
 
 /**
  * Sets the direction of the knee/elbow joint.
  */
 INLINE void IKChain::
-set_knee_direction(const LVector3 &dir) {
-  _knee_direction = dir;
+set_middle_joint_direction(const LVector3 &dir) {
+  _middle_direction = dir;
 }
 
 /**
  * Returns the direction of the knee/elbow joint.
  */
 INLINE const LVector3 &IKChain::
-get_knee_direction() const {
-  return _knee_direction;
+get_middle_joint_direction() const {
+  return _middle_direction;
 }
 
 /**
@@ -124,25 +105,25 @@ get_pad() const {
 }
 
 /**
- * Returns the foot/hand joint.
+ * Returns the foot/hand joint index.
  */
-INLINE MovingPartMatrix *IKChain::
-get_foot() const {
-  return _foot;
+INLINE int IKChain::
+get_end_joint() const {
+  return _end_joint;
 }
 
 /**
  * Returns the knee/elbow joint.
  */
-INLINE MovingPartMatrix *IKChain::
-get_knee() const {
-  return _knee;
+INLINE int IKChain::
+get_middle_joint() const {
+  return _middle_joint;
 }
 
 /**
  * Returns the hip/shoulder joint.
  */
-INLINE MovingPartMatrix *IKChain::
-get_hip() const {
-  return _hip;
+INLINE int IKChain::
+get_top_joint() const {
+  return _top_joint;
 }

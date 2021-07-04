@@ -11,16 +11,15 @@
  * @date 2021-02-11
  */
 
-#if 0
 #ifndef IKCHAIN_H
 #define IKCHAIN_H
 
 #include "pandabase.h"
-#include "typedWritableReferenceCount.h"
 #include "namable.h"
-#include "nodePath.h"
+#include "luse.h"
 
-class MovingPartMatrix;
+class BamWriter;
+class BamReader;
 
 /**
  * This class represents a chain of joints that should receive inverse kinematics.
@@ -28,17 +27,16 @@ class MovingPartMatrix;
  * Currently, this only supports a hip-knee-foot set up as it is easy to
  * compute and the most common use of IK in a video game.
  */
-class EXPCL_PANDA_ANIM IKChain : public TypedWritableReferenceCount, public Namable {
+class EXPCL_PANDA_ANIM IKChain : public Namable {
 PUBLISHED:
-  IKChain(const std::string &name, MovingPartMatrix *foot);
+  IKChain(const std::string &name, int top_joint, int middle_joint, int end_joint);
+  IKChain(const IKChain &copy);
+  IKChain(IKChain &&other);
+  void operator = (const IKChain &copy);
+  void operator = (IKChain &&other);
 
-  bool solve_ik();
-
-  INLINE void set_enabled(bool enable);
-  INLINE bool get_enabled() const;
-
-  INLINE void set_knee_direction(const LVector3 &dir);
-  INLINE const LVector3 &get_knee_direction() const;
+  INLINE void set_middle_joint_direction(const LVector3 &dir);
+  INLINE const LVector3 &get_middle_joint_direction() const;
 
   INLINE void set_center(const LPoint3 &center);
   INLINE const LPoint3 &get_center() const;
@@ -52,60 +50,30 @@ PUBLISHED:
   INLINE void set_pad(PN_stdfloat pad);
   INLINE PN_stdfloat get_pad() const;
 
-  INLINE MovingPartMatrix *get_foot() const;
-  INLINE MovingPartMatrix *get_knee() const;
-  INLINE MovingPartMatrix *get_hip() const;
+  INLINE int get_end_joint() const;
+  INLINE int get_middle_joint() const;
+  INLINE int get_top_joint() const;
 
-private:
+public:
   INLINE IKChain();
 
 private:
-  MovingPartMatrix *_foot;
-  MovingPartMatrix *_knee;
-  MovingPartMatrix *_hip;
+  // Joint indices.
+  int _end_joint;
+  int _middle_joint;
+  int _top_joint;
 
-  // NodePath that feeds the IK solver the desired foot placement location.
-  NodePath _foot_locator;
-
-  LVector3 _knee_direction;
+  LVector3 _middle_direction;
   LPoint3 _center;
   PN_stdfloat _height;
   PN_stdfloat _floor;
   PN_stdfloat _pad;
 
-  bool _enabled;
-
 public:
-  static void register_with_read_factory();
-  virtual void write_datagram(BamWriter *manager, Datagram &dg);
-  virtual int complete_pointers(TypedWritable **p_list,
-                                BamReader *manager);
-
-protected:
-  static TypedWritable *make_from_bam(const FactoryParams &params);
+  void write_datagram(BamWriter *manager, Datagram &dg);
   void fillin(DatagramIterator &scan, BamReader *manager);
-
-public:
-
-  virtual TypeHandle get_type() const {
-    return get_class_type();
-  }
-  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
-  static TypeHandle get_class_type() {
-    return _type_handle;
-  }
-  static void init_type() {
-    TypedWritableReferenceCount::init_type();
-    register_type(_type_handle, "IKChain",
-                  TypedWritableReferenceCount::get_class_type());
-  }
-
-private:
-  static TypeHandle _type_handle;
 };
 
 #include "ikChain.I"
 
 #endif // IKCHAIN_H
-
-#endif

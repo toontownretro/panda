@@ -21,8 +21,6 @@
 #include "vector_string.h"
 #include "luse.h"
 #include "pdxElement.h"
-#include "eggLoader.h"
-#include "eggData.h"
 
 class PandaNode;
 class Character;
@@ -376,9 +374,6 @@ public:
   AnimBundle *load_anim(const std::string &name, const Filename &filename);
 
   pmap<std::string, AnimBundle *> _anims_by_name;
-
-  EggLoader _egg_loader;
-  PT(EggData) _egg_data;
 };
 
 #include "pmdlLoader.I"

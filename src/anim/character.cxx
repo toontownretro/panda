@@ -575,6 +575,45 @@ compute_attachment_transform(int index) {
 }
 
 /**
+ * Adds a new IK chain to the character and returns the index of the chain.
+ */
+int Character::
+add_ik_chain(const std::string &name, int top_joint, int middle_joint,
+             int end_joint, const LVector3 &middle_dir,
+             const LPoint3 &center, PN_stdfloat height,
+             PN_stdfloat floor, PN_stdfloat pad) {
+  IKChain chain(name, top_joint, middle_joint, end_joint);
+  chain.set_middle_joint_direction(middle_dir);
+  chain.set_center(center);
+  chain.set_height(height);
+  chain.set_floor(floor);
+  chain.set_pad(pad);
+  return add_ik_chain(std::move(chain));
+}
+
+/**
+ * Copies the indicated IK chain to the character and returns the index of the
+ * chain.
+ */
+int Character::
+add_ik_chain(const IKChain &chain) {
+  int index = (int)_ik_chains.size();
+  _ik_chains.push_back(chain);
+  return index;
+}
+
+/**
+ * Moves the indicated IK chain to the character and returns the index of the
+ * chain.
+ */
+int Character::
+add_ik_chain(IKChain &&chain) {
+  int index = (int)_ik_chains.size();
+  _ik_chains.push_back(std::move(chain));
+  return index;
+}
+
+/**
  *
  */
 PT(Character) Character::
@@ -608,6 +647,7 @@ copy_subgraph() const {
   copy->_sequences = _sequences;
   copy->_pose_parameters = _pose_parameters;
   copy->_attachments = _attachments;
+  copy->_ik_chains = _ik_chains;
 
   return copy;
 }
@@ -869,6 +909,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _attachments[i].write_datagram(manager, me);
   }
 
+  me.add_uint8(_ik_chains.size());
+  for (size_t i = 0; i < _ik_chains.size(); i++) {
+    _ik_chains[i].write_datagram(manager, me);
+  }
+
   manager->write_pointer(me, _anim_preload.get_read_pointer());
 
   manager->write_cdata(me, _cycler);
@@ -956,6 +1001,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _attachments.resize(scan.get_uint8());
   for (size_t i = 0; i < _attachments.size(); i++) {
     _attachments[i].fillin(scan, manager);
+  }
+
+  _ik_chains.resize(scan.get_uint8());
+  for (size_t i = 0; i < _ik_chains.size(); i++) {
+    _ik_chains[i].fillin(scan, manager);
   }
 
   manager->read_pointer(scan);

@@ -11,49 +11,81 @@
  * @date 2021-02-11
  */
 
-#if 0
-
 #include "ikChain.h"
-#include "partGroup.h"
 #include "config_anim.h"
-#include "movingPartMatrix.h"
-
-TypeHandle IKChain::_type_handle;
 
 /**
  *
  */
 IKChain::
-IKChain(const std::string &name, MovingPartMatrix *foot) :
+IKChain(const std::string &name, int top_joint, int middle_joint, int end_joint) :
   Namable(name) {
 
-  _foot = foot;
-  _knee = (MovingPartMatrix *)_foot->get_parent();
-  _hip = (MovingPartMatrix *)_knee->get_parent();
+  _top_joint = top_joint;
+  _middle_joint = middle_joint;
+  _end_joint = end_joint;
 
   _height = 0.0;
   _floor = 0.0;
   _pad = 0.0;
-
-  _enabled = false;
 }
 
 /**
- * Executes an IK pass on all joints in the chain.  Calculates and applies a
- * suitable transform to each joint given the current end effector transform
- * and current transform of each joint in the chain.
+ *
  */
-bool IKChain::
-solve_ik() {
-
+IKChain::
+IKChain(const IKChain &copy) :
+  Namable(copy),
+  _top_joint(copy._top_joint),
+  _middle_joint(copy._middle_joint),
+  _end_joint(copy._end_joint),
+  _height(copy._height),
+  _floor(copy._floor),
+  _pad(copy._pad)
+{
 }
 
 /**
- * Factory method to generate an IKChain object
+ *
+ */
+IKChain::
+IKChain(IKChain &&other) :
+  Namable(std::move(other)),
+  _top_joint(std::move(other._top_joint)),
+  _middle_joint(std::move(other._middle_joint)),
+  _end_joint(std::move(other._end_joint)),
+  _height(std::move(other._height)),
+  _floor(std::move(other._floor)),
+  _pad(std::move(other._pad))
+{
+}
+
+/**
+ *
  */
 void IKChain::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
+operator = (const IKChain &copy) {
+  Namable::operator = (copy);
+  _top_joint = copy._top_joint;
+  _middle_joint = copy._middle_joint;
+  _end_joint = copy._middle_joint;
+  _height = copy._height;
+  _floor = copy._floor;
+  _pad = copy._pad;
+}
+
+/**
+ *
+ */
+void IKChain::
+operator = (IKChain &&other) {
+  Namable::operator = (std::move(other));
+  _top_joint = std::move(other._top_joint);
+  _middle_joint = std::move(other._middle_joint);
+  _end_joint = std::move(other._end_joint);
+  _height = std::move(other._height);
+  _floor = std::move(other._floor);
+  _pad = std::move(other._pad);
 }
 
 /**
@@ -63,43 +95,14 @@ register_with_read_factory() {
 void IKChain::
 write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
-  manager->write_pointer(me, _hip);
-  manager->write_pointer(me, _knee);
-  manager->write_pointer(me, _foot);
-  _knee_direction.write_datagram(me);
+  me.add_int16(_top_joint);
+  me.add_int16(_middle_joint);
+  me.add_int16(_end_joint);
+  _middle_direction.write_datagram(me);
   _center.write_datagram(me);
   me.add_stdfloat(_height);
   me.add_stdfloat(_floor);
   me.add_stdfloat(_pad);
-}
-
-/**
- * Takes in a vector of pointes to TypedWritable objects that correspond to
- * all the requests for pointers that this object made to BamReader.
- */
-int IKChain::
-complete_pointers(TypedWritable **p_list, BamReader *manager) {
-  int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
-
-  _hip = DCAST(MovingPartMatrix, p_list[pi++]);
-  _knee = DCAST(MovingPartMatrix, p_list[pi++]);
-  _foot = DCAST(MovingPartMatrix, p_list[pi++]);
-
-  return pi;
-}
-
-/**
- * Factory method to generate a IKChain object
- */
-TypedWritable *IKChain::
-make_from_bam(const FactoryParams &params) {
-  IKChain *me = new IKChain;
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  me->fillin(scan, manager);
-  return me;
 }
 
 /**
@@ -110,12 +113,12 @@ make_from_bam(const FactoryParams &params) {
 void IKChain::
 fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
-  manager->read_pointers(scan, 3);
-  _knee_direction.read_datagram(scan);
+  _top_joint = scan.get_int16();
+  _middle_joint = scan.get_int16();
+  _end_joint = scan.get_int16();
+  _middle_direction.read_datagram(scan);
   _center.read_datagram(scan);
   _height = scan.get_stdfloat();
   _floor = scan.get_stdfloat();
   _pad = scan.get_stdfloat();
 }
-
-#endif

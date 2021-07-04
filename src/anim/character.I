@@ -490,6 +490,25 @@ get_anim(int n) const {
 }
 
 /**
+ * Returns the number of IK chains present in the character.
+ */
+INLINE int Character::
+get_num_ik_chains() const {
+  return (int)_ik_chains.size();
+}
+
+/**
+ * Returns the nth IK chain of the character.  Use the return value for
+ * temporary access to the chain.  The returned pointer may be invalidated
+ * if new IK chains are added to the character or the character is deleted.
+ */
+INLINE IKChain *Character::
+get_ik_chain(int n) {
+  nassertr(n >= 0 && n < (int)_ik_chains.size(), nullptr);
+  return &_ik_chains[n];
+}
+
+/**
  * Specifies the minimum amount of time, in seconds, that should elapse
  * between any two consecutive updates.  This is normally used by
  * Character::set_lod_animation(), and should not be called directly.
