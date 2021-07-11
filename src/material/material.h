@@ -25,6 +25,8 @@
 #include "materialParamBase.h"
 #include "config_putil.h"
 #include "simpleHashMap.h"
+#include "vector_string.h"
+#include "pvector.h"
 
 class PDXElement;
 
@@ -54,10 +56,16 @@ PUBLISHED:
   INLINE const Filename &get_fullpath() const;
   MAKE_PROPERTY(fullpath, get_fullpath, set_fullpath);
 
+  INLINE void add_tag(const std::string &tag);
+  INLINE void clear_tag(const std::string &tag);
+  INLINE void clear_tag(int n);
+  INLINE bool has_tag(const std::string &tag) const;
+  INLINE int get_num_tags() const;
+  INLINE std::string get_tag(int n) const;
+
   void write_pmat(const Filename &filename);
   bool write_mto(const Filename &filename);
 
-protected:
   INLINE void set_param(MaterialParamBase *param);
   INLINE void clear_param(MaterialParamBase *param);
 
@@ -67,6 +75,8 @@ protected:
 
   typedef SimpleHashMap<CPT_InternalName, PT(MaterialParamBase)> Params;
   Params _params;
+
+  vector_string _tags;
 
 private:
   // Only used during Bam reading.

@@ -74,6 +74,62 @@ get_fullpath() const {
 }
 
 /**
+ * Adds a tag to the material.
+ */
+INLINE void Material::
+add_tag(const std::string &tag) {
+  if (std::find(_tags.begin(), _tags.end(), tag) == _tags.end()) {
+    _tags.push_back(tag);
+  }
+}
+
+/**
+ * Removes the indicated tag from the material.
+ */
+INLINE void Material::
+clear_tag(const std::string &tag) {
+  auto it = std::find(_tags.begin(), _tags.end(), tag);
+  if (it != _tags.end()) {
+    _tags.erase(it);
+  }
+}
+
+/**
+ * Removes the tag with the indicated index from the material.
+ */
+INLINE void Material::
+clear_tag(int n) {
+  nassertv(n >= 0 && n < (int)_tags.size());
+  _tags.erase(_tags.begin() + n);
+}
+
+/**
+ * Returns true if the material has the indicated tag, false otherwise.
+ */
+INLINE bool Material::
+has_tag(const std::string &tag) const {
+  auto it = std::find(_tags.begin(), _tags.end(), tag);
+  return it != _tags.end();
+}
+
+/**
+ * Returns the number of tags on the material.
+ */
+INLINE int Material::
+get_num_tags() const {
+  return (int)_tags.size();
+}
+
+/**
+ * Returns the material's nth tag.
+ */
+INLINE std::string Material::
+get_tag(int n) const {
+  nassertr(n >= 0 && n < (int)_tags.size(), std::string());
+  return _tags[n];
+}
+
+/**
  * Sets a new parameter on the material.  Replaces any existing parameter with
  * the same name.
  */

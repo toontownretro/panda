@@ -18,6 +18,7 @@
 #include "bamWriter.h"
 #include "datagramOutputFile.h"
 #include "pdxElement.h"
+#include "pdxList.h"
 #include "pdxValue.h"
 
 TypeHandle Material::_type_handle;
@@ -37,7 +38,15 @@ Material(const std::string &name) :
  */
 void Material::
 read_pdx(PDXElement *data, const DSearchPath &search_path) {
-  // Left up to derived materials.
+  // Reading parameters is up to derived materials.
+
+  if (data->has_attribute("tags")) {
+    PDXList *tags = data->get_attribute_value("tags").get_list();
+    nassertv(tags != nullptr);
+    for (size_t i = 0; i < tags->size(); i++) {
+      _tags.push_back(tags->get(i).get_string());
+    }
+  }
 }
 
 /**
@@ -54,6 +63,12 @@ write_pdx(PDXElement *data, const Filename &filename) {
     params->set_attribute(name, value);
   }
   data->set_attribute("parameters", PDXValue(params));
+
+  PT(PDXList) tags = new PDXList;
+  for (size_t i = 0; i < _tags.size(); i++) {
+    tags->append(_tags[i]);
+  }
+  data->set_attribute("tags", PDXValue(tags));
 }
 
 /**
