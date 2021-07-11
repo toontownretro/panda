@@ -45,6 +45,8 @@
     physSphericalJoint.h physSphericalJoint.I \
     physSweepResult.h physSweepResult.I \
     physSystem.h physSystem.I \
+    physTriangleMesh.h physTriangleMesh.I \
+    physTriangleMeshData.h physTriangleMeshData.I \
     physTriggerCallbackData.h physTriggerCallbackData.I \
     physx_includes.h \
     physx_shaders.h physx_shaders.I \
@@ -91,6 +93,8 @@
     physSphericalJoint.cxx \
     physSweepResult.cxx \
     physSystem.cxx \
+    physTriangleMesh.cxx \
+    physTriangleMeshData.cxx \
     physTriggerCallbackData.cxx \
     physx_shaders.cxx \
     physx_utils.cxx \
