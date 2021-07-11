@@ -69,7 +69,7 @@ LightLensNode(const std::string &name, Lens *lens) :
   state = state->set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off), 100);
   state = state->set_attrib(CullBinAttrib::make_default(), 100);
   // Backface culling helps eliminate artifacts.
-  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_unchanged), 100);
+  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_counter_clockwise), 100);
   state = state->set_attrib(FogAttrib::make_off(), 100);
   // Render it using the depth-only shader.
   state = state->set_attrib(ShaderAttrib::make("Depth"), 100);
