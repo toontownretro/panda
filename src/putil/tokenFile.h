@@ -61,6 +61,8 @@ PUBLISHED:
   INLINE TokenFile();
   ~TokenFile();
 
+  void set_symbols(const std::string &symbols);
+
   bool read(Filename filename, const DSearchPath &search_path = get_model_path());
   bool tokenize(std::istream &stream);
 
@@ -78,12 +80,16 @@ PUBLISHED:
 private:
   void add_token(Token *token);
 
+  bool is_word_character(char c) const;
+
 private:
   // Head of linked list.
   Token *_tokens;
 
   Token *_token;
   int _num_tokens;
+
+  std::string _symbols;
 
   Filename _filename;
   Filename _fullpath;

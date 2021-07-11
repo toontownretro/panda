@@ -18,15 +18,12 @@
 
 NotifyCategoryDef(tokenfile, "util");
 
-// Characters that are classified as symbols.
-static const char *symbols = "{}[]<>():,;=";
-
 /**
  * Returns true if the character is a valid word character, false otherwise.
  */
-bool
-is_word_character(char c) {
-  return strchr(symbols, c) == nullptr && c != '"';
+bool TokenFile::
+is_word_character(char c) const {
+  return strchr(_symbols.c_str(), c) == nullptr && c != '"';
 }
 
 /**
@@ -41,6 +38,14 @@ TokenFile::
     token = token->_next;
     delete tmp;
   }
+}
+
+/**
+ * Sets the string of characters that should be interpreted as symbol tokens.
+ */
+void TokenFile::
+set_symbols(const std::string &symbols) {
+  _symbols = symbols;
 }
 
 /**
@@ -284,7 +289,7 @@ tokenize(std::istream &is) {
         } else if (isdigit(c)) {
           token_type = TT_integer;
 
-        } else if (strchr(symbols, c) == nullptr) {
+        } else if (strchr(_symbols.c_str(), c) == nullptr) {
           // It's the beginning of a word
           token_type = TT_word;
 

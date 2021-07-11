@@ -30,6 +30,7 @@ INLINE TokenFile::
 TokenFile() {
   _num_tokens = 0;
   _token = nullptr;
+  _symbols = "{}[]<>():,;=";
 }
 
 /**

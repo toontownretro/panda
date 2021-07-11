@@ -27,6 +27,8 @@
 
 TypeHandle KeyValues::_type_handle;
 
+static const std::string kv_symbols = "{}";
+
 NotifyCategoryDeclNoExport(keyvalues);
 NotifyCategoryDef(keyvalues, "");
 
@@ -174,6 +176,8 @@ KeyValues::load(const Filename &filename) {
 
   TokenFile tokens;
   tokens.local_object();
+  tokens.set_symbols(kv_symbols);
+
   if (!tokens.read(load_filename)) {
     return nullptr;
   }
@@ -195,6 +199,7 @@ from_string(const std::string &buffer) {
 
   TokenFile tokens;
   tokens.local_object();
+  tokens.set_symbols(kv_symbols);
   if (!tokens.tokenize(iss)) {
     return nullptr;
   }
