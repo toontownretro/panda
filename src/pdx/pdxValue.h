@@ -20,6 +20,7 @@
 #include "filename.h"
 #include "dSearchPath.h"
 #include "luse.h"
+#include "string_utils.h"
 
 #include <variant>
 

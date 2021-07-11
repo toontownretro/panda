@@ -75,9 +75,16 @@ get_float() const {
     return std::get<int>(_value);
   case VT_boolean:
     return std::get<bool>(_value) ? 1.0f : 0.0f;
+  case VT_string: {
+    float value = 0.0f;
+    if (!string_to_float(std::get<std::string>(_value), value)) {
+      return 0.0f;
+    }
+    return value;
+  }
   default:
 #ifndef NDEBUG
-    nassert_raise("PDXValue::get_float(): Value type is not int, float, or boolean");
+    nassert_raise("PDXValue::get_float(): Value type is not int, float, boolean, or string");
 #endif
     return 0.0f;
   }
@@ -104,9 +111,16 @@ get_int() const {
     return std::get<float>(_value);
   case VT_boolean:
     return std::get<bool>(_value) ? 1 : 0;
+  case VT_string: {
+    int value = 0;
+    if (!string_to_int(std::get<std::string>(_value), value)) {
+      return 0;
+    }
+    return value;
+  }
   default:
 #ifndef NDEBUG
-    nassert_raise("PDXValue::get_int(): Value type is not int, float, or boolean");
+    nassert_raise("PDXValue::get_int(): Value type is not int, float, boolean, or string");
 #endif
     return 0;
   }
