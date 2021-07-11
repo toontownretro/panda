@@ -173,28 +173,48 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   shader->generate_shader(gsg, state, material, anim_spec);
   synthesize_source_collector.stop();
 
+  PT(Shader) shader_obj;
   CPT(RenderAttrib) generated_attr;
 
   cache_collector.start();
-  // Now see if we've already created a shader with the same setup.
-  ShaderBase::SetupCache::const_iterator it = shader->_cache.find(shader->_setup);
+  // See if we need to create a new Shader object for the setup.
+  ShaderBase::ObjectSetupCache::const_iterator oit = shader->_obj_cache.find(shader->_obj_setup);
   cache_collector.stop();
-  if (it != shader->_cache.end()) {
-    // We have!  Just use that.
-    generated_attr = (*it).second;
+  if (oit != shader->_obj_cache.end()) {
+    shader_obj = (*oit).second;
 
   } else {
     make_shader_collector.start();
-    PT(Shader) shader_obj = Shader::make(
+    shader_obj = Shader::make(
       shader->get_language(),
       shader->get_stage(ShaderBase::S_vertex).get_final_source(),
       shader->get_stage(ShaderBase::S_pixel).get_final_source(),
       shader->get_stage(ShaderBase::S_geometry).get_final_source(),
       shader->get_stage(ShaderBase::S_tess).get_final_source(),
       shader->get_stage(ShaderBase::S_tess_eval).get_final_source());
-
     make_shader_collector.stop();
 
+    // Throw it in the cache.
+    shader->_obj_cache.insert(
+      ShaderBase::ObjectSetupCache::value_type(shader->_obj_setup, shader_obj));
+  }
+
+  cache_collector.start();
+  // Now see if we've already created a shader attrib with the same setup.
+  ShaderBase::SetupCache::const_iterator it = shader->_cache.find(shader->_setup);
+  cache_collector.stop();
+
+  if (it != shader->_cache.end()) {
+    // We have!  Just use that.
+    generated_attr = (*it).second;
+
+    // Make sure the attribute uses the correct Shader object.
+    CPT(ShaderAttrib) shattr = DCAST(ShaderAttrib, generated_attr);
+    if (shattr->get_shader() != shader_obj) {
+      generated_attr = shattr->set_shader(shader_obj);
+    }
+
+  } else {
     make_attrib_collector.start();
 
     generated_attr = ShaderAttrib::make(shader_obj);

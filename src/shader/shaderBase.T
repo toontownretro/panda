@@ -17,7 +17,7 @@
 template <class T>
 INLINE void ShaderBase::
 set_vertex_shader_define(const std::string &name, const T &value) {
-  _setup._stages[S_vertex].set_define(name, value);
+  _obj_setup._stages[S_vertex].set_define(name, value);
 }
 
 /**
@@ -26,7 +26,7 @@ set_vertex_shader_define(const std::string &name, const T &value) {
 template <class T>
 INLINE void ShaderBase::
 set_pixel_shader_define(const std::string &name, const T &value) {
-  _setup._stages[S_pixel].set_define(name, value);
+  _obj_setup._stages[S_pixel].set_define(name, value);
 }
 
 /**
@@ -35,7 +35,7 @@ set_pixel_shader_define(const std::string &name, const T &value) {
 template <class T>
 INLINE void ShaderBase::
 set_geometry_shader_define(const std::string &name, const T &value) {
-  _setup._stages[S_geometry].set_define(name, value);
+  _obj_setup._stages[S_geometry].set_define(name, value);
 }
 
 /**
@@ -44,7 +44,7 @@ set_geometry_shader_define(const std::string &name, const T &value) {
 template <class T>
 INLINE void ShaderBase::
 set_tess_shader_define(const std::string &name, const T &value) {
-  _setup._stages[S_tess].set_define(name, value);
+  _obj_setup._stages[S_tess].set_define(name, value);
 }
 
 /**
@@ -53,5 +53,5 @@ set_tess_shader_define(const std::string &name, const T &value) {
 template <class T>
 INLINE void ShaderBase::
 set_tess_eval_shader_define(const std::string &name, const T &value) {
-  _setup._stages[S_tess_eval].set_define(name, value);
+  _obj_setup._stages[S_tess_eval].set_define(name, value);
 }

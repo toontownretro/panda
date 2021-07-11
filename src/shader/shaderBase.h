@@ -24,6 +24,7 @@
 #include "shader.h"
 #include "pmap.h"
 #include "string_utils.h"
+#include "stl_compares.h"
 
 class GraphicsStateGuardianBase;
 class RenderState;
@@ -55,17 +56,32 @@ public:
     SF_all = (SF_vertex | SF_pixel | SF_geometry | SF_tess | SF_tess_eval),
   };
 
-  class ShaderSetup {
+  // Setup specific to the generated Shader object.
+  class ShaderObjectSetup {
   public:
     BitMask32 _stage_flags;
     ShaderStage _stages[S_COUNT];
+    Shader::ShaderLanguage _language;
 
+    INLINE ShaderObjectSetup();
+    INLINE ShaderObjectSetup(const ShaderObjectSetup &other);
+
+    INLINE void clear();
+    INLINE size_t get_hash() const;
+
+    INLINE bool operator < (const ShaderObjectSetup &other) const;
+    INLINE bool operator == (const ShaderObjectSetup &other) const;
+    bool operator != (const ShaderObjectSetup &other) const {
+      return !operator ==(other);
+    }
+  };
+
+  // Setup specific to the generated ShaderAttrib.
+  class ShaderSetup {
+  public:
     int _flags;
     pvector<ShaderInput> _inputs;
-
     int _instance_count;
-
-    Shader::ShaderLanguage _language;
 
     INLINE ShaderSetup();
     INLINE ShaderSetup(const ShaderSetup &other);
@@ -93,6 +109,8 @@ public:
   INLINE Shader::ShaderLanguage get_language() const;
 
   INLINE void reset();
+
+  //INLINE int get_num_defines() const;
 
   INLINE void add_alias(const std::string &alias);
   INLINE size_t get_num_aliases() const;
@@ -166,10 +184,17 @@ protected:
 
 protected:
   ShaderSetup _setup;
+  ShaderObjectSetup _obj_setup;
+
+  int _num_defines;
 
 private:
-  typedef pmap<ShaderSetup, CPT(RenderAttrib)> SetupCache;
+  typedef phash_map<ShaderObjectSetup, PT(Shader)> ObjectSetupCache;
+  typedef phash_map<ShaderSetup, CPT(RenderAttrib)> SetupCache;
+  ObjectSetupCache _obj_cache;
   SetupCache _cache;
+
+  //int _num-
 
   vector_string _aliases;
 

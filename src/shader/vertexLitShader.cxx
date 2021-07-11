@@ -220,7 +220,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   } else {
     // No material, use a default set of ARME parameters.
-    set_input(ShaderInput("armeParams", LVecBase4f(1.0f, 1.0f, 0.0f, 0.0f)));
+    set_input(ShaderInput("u_armeParams", LVecBase4f(1.0f, 1.0f, 0.0f, 0.0f)));
   }
 
   // Find the textures in use.

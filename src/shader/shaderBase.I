@@ -14,28 +14,23 @@
 /**
  *
  */
-INLINE ShaderBase::ShaderSetup::
-ShaderSetup() {
-  _inputs.reserve(32);
+INLINE ShaderBase::ShaderObjectSetup::
+ShaderObjectSetup() {
   clear();
 }
 
 /**
  *
  */
-INLINE ShaderBase::ShaderSetup::
-ShaderSetup(const ShaderBase::ShaderSetup &copy) :
+INLINE ShaderBase::ShaderObjectSetup::
+ShaderObjectSetup(const ShaderObjectSetup &copy) :
   _language(copy._language),
-  _flags(copy._flags),
-  _instance_count(copy._instance_count),
-  _inputs(copy._inputs),
-  _stage_flags(copy._stage_flags) {
-
+  _stage_flags(copy._stage_flags)
+{
   BitMask32 mask = _stage_flags;
   int index = mask.get_lowest_on_bit();
   while (index >= 0) {
     _stages[index] = copy._stages[index];
-
     mask.clear_bit(index);
     index = mask.get_lowest_on_bit();
   }
@@ -44,12 +39,9 @@ ShaderSetup(const ShaderBase::ShaderSetup &copy) :
 /**
  *
  */
-INLINE void ShaderBase::ShaderSetup::
+INLINE void ShaderBase::ShaderObjectSetup::
 clear() {
   _language = Shader::SL_none;
-  _flags = 0;
-  _instance_count = 0;
-  _inputs.clear();
 
   BitMask32 mask = _stage_flags;
   int index = mask.get_lowest_on_bit();
@@ -64,16 +56,14 @@ clear() {
 }
 
 /**
- * Returns a hash for the shader setup.
+ *
  */
-INLINE size_t ShaderBase::ShaderSetup::
+INLINE size_t ShaderBase::ShaderObjectSetup::
 get_hash() const {
   size_t hash = 0u;
 
   hash = integer_hash<uint32_t>::add_hash(hash, _stage_flags.get_word());
-  hash = int_hash::add_hash(hash, _flags);
-  hash = int_hash::add_hash(hash, _instance_count);
-
+  hash = integer_hash<Shader::ShaderLanguage>::add_hash(hash, _language);
   BitMask32 mask = _stage_flags;
   int index = mask.get_lowest_on_bit();
   while (index >= 0) {
@@ -83,39 +73,20 @@ get_hash() const {
     index = mask.get_lowest_on_bit();
   }
 
-  hash = size_t_hash::add_hash(hash, _inputs.size());
-  for (size_t i = 0; i < _inputs.size(); i++) {
-    hash = _inputs[i].add_hash(hash);
-  }
-
   return hash;
 }
 
 /**
  *
  */
-INLINE bool ShaderBase::ShaderSetup::
-operator < (const ShaderBase::ShaderSetup &other) const {
+INLINE bool ShaderBase::ShaderObjectSetup::
+operator < (const ShaderObjectSetup &other) const {
+  if (_language != other._language) {
+    return (_language < other._language);
+  }
+
   if (_stage_flags != other._stage_flags) {
     return (_stage_flags < other._stage_flags);
-  }
-
-  if (_flags != other._flags) {
-    return (_flags < other._flags);
-  }
-
-  if (_instance_count != other._instance_count) {
-    return (_instance_count < other._instance_count);
-  }
-
-  if (_inputs.size() != other._inputs.size()) {
-    return (_inputs.size() < other._inputs.size());
-  }
-
-  for (size_t i = 0; i < _inputs.size(); i++) {
-    if (_inputs[i] != other._inputs[i]) {
-      return (_inputs[i] < other._inputs[i]);
-    }
   }
 
   BitMask32 mask = _stage_flags;
@@ -135,28 +106,14 @@ operator < (const ShaderBase::ShaderSetup &other) const {
 /**
  *
  */
-INLINE bool ShaderBase::ShaderSetup::
-operator ==(const ShaderBase::ShaderSetup &other) const {
+INLINE bool ShaderBase::ShaderObjectSetup::
+operator == (const ShaderObjectSetup &other) const {
+  if (_language != other._language) {
+    return false;
+  }
+
   if (_stage_flags != other._stage_flags) {
     return false;
-  }
-
-  if (_flags != other._flags) {
-    return false;
-  }
-
-  if (_instance_count != other._instance_count) {
-    return false;
-  }
-
-  if (_inputs.size() != other._inputs.size()) {
-    return false;
-  }
-
-  for (size_t i = 0; i < _inputs.size(); i++) {
-    if (_inputs[i] != other._inputs[i]) {
-      return false;
-    }
   }
 
   BitMask32 mask = _stage_flags;
@@ -176,6 +133,106 @@ operator ==(const ShaderBase::ShaderSetup &other) const {
 /**
  *
  */
+INLINE ShaderBase::ShaderSetup::
+ShaderSetup() {
+  _inputs.reserve(32);
+  clear();
+}
+
+/**
+ *
+ */
+INLINE ShaderBase::ShaderSetup::
+ShaderSetup(const ShaderBase::ShaderSetup &copy) :
+  _flags(copy._flags),
+  _instance_count(copy._instance_count),
+  _inputs(copy._inputs)
+{
+}
+
+/**
+ *
+ */
+INLINE void ShaderBase::ShaderSetup::
+clear() {
+  _flags = 0;
+  _instance_count = 0;
+  _inputs.clear();
+}
+
+/**
+ * Returns a hash for the shader setup.
+ */
+INLINE size_t ShaderBase::ShaderSetup::
+get_hash() const {
+  size_t hash = 0u;
+
+  hash = int_hash::add_hash(hash, _flags);
+  hash = int_hash::add_hash(hash, _instance_count);
+
+  hash = size_t_hash::add_hash(hash, _inputs.size());
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    hash = _inputs[i].add_hash(hash);
+  }
+
+  return hash;
+}
+
+/**
+ *
+ */
+INLINE bool ShaderBase::ShaderSetup::
+operator < (const ShaderBase::ShaderSetup &other) const {
+  if (_flags != other._flags) {
+    return (_flags < other._flags);
+  }
+
+  if (_instance_count != other._instance_count) {
+    return (_instance_count < other._instance_count);
+  }
+
+  if (_inputs.size() != other._inputs.size()) {
+    return (_inputs.size() < other._inputs.size());
+  }
+
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    if (_inputs[i] != other._inputs[i]) {
+      return (_inputs[i] < other._inputs[i]);
+    }
+  }
+
+  return false;
+}
+
+/**
+ *
+ */
+INLINE bool ShaderBase::ShaderSetup::
+operator == (const ShaderBase::ShaderSetup &other) const {
+  if (_flags != other._flags) {
+    return false;
+  }
+
+  if (_instance_count != other._instance_count) {
+    return false;
+  }
+
+  if (_inputs.size() != other._inputs.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < _inputs.size(); i++) {
+    if (_inputs[i] != other._inputs[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ *
+ */
 INLINE ShaderBase::
 ShaderBase(const std::string &name) :
   Namable(downcase(name)) {
@@ -186,8 +243,8 @@ ShaderBase(const std::string &name) :
  */
 INLINE void ShaderBase::
 set_vertex_shader(const Filename &filename) {
-  _setup._stages[S_vertex].set_source_filename(filename);
-  _setup._stage_flags |= SF_vertex;
+  _obj_setup._stages[S_vertex].set_source_filename(filename);
+  _obj_setup._stage_flags |= SF_vertex;
 }
 
 /**
@@ -195,8 +252,8 @@ set_vertex_shader(const Filename &filename) {
  */
 INLINE void ShaderBase::
 set_vertex_shader_source(const std::string &source) {
-  _setup._stages[S_vertex].set_source_raw(source);
-  _setup._stage_flags |= SF_vertex;
+  _obj_setup._stages[S_vertex].set_source_raw(source);
+  _obj_setup._stage_flags |= SF_vertex;
 }
 
 /**
@@ -204,7 +261,7 @@ set_vertex_shader_source(const std::string &source) {
  */
 INLINE void ShaderBase::
 set_vertex_shader_define(const std::string &name, const std::string &value) {
-  _setup._stages[S_vertex].set_define(name, value);
+  _obj_setup._stages[S_vertex].set_define(name, value);
 }
 
 /**
@@ -212,8 +269,8 @@ set_vertex_shader_define(const std::string &name, const std::string &value) {
  */
 INLINE void ShaderBase::
 set_pixel_shader(const Filename &filename) {
-  _setup._stages[S_pixel].set_source_filename(filename);
-  _setup._stage_flags |= SF_pixel;
+  _obj_setup._stages[S_pixel].set_source_filename(filename);
+  _obj_setup._stage_flags |= SF_pixel;
 }
 
 /**
@@ -221,8 +278,8 @@ set_pixel_shader(const Filename &filename) {
  */
 INLINE void ShaderBase::
 set_pixel_shader_source(const std::string &source) {
-  _setup._stages[S_pixel].set_source_raw(source);
-  _setup._stage_flags |= SF_pixel;
+  _obj_setup._stages[S_pixel].set_source_raw(source);
+  _obj_setup._stage_flags |= SF_pixel;
 }
 
 /**
@@ -230,7 +287,7 @@ set_pixel_shader_source(const std::string &source) {
  */
 INLINE void ShaderBase::
 set_pixel_shader_define(const std::string &name, const std::string &value) {
-  _setup._stages[S_pixel].set_define(name, value);
+  _obj_setup._stages[S_pixel].set_define(name, value);
 }
 
 /**
@@ -238,8 +295,8 @@ set_pixel_shader_define(const std::string &name, const std::string &value) {
  */
 INLINE void ShaderBase::
 set_geometry_shader(const Filename &filename) {
-  _setup._stages[S_geometry].set_source_filename(filename);
-  _setup._stage_flags |= SF_geometry;
+  _obj_setup._stages[S_geometry].set_source_filename(filename);
+  _obj_setup._stage_flags |= SF_geometry;
 }
 
 /**
@@ -247,8 +304,8 @@ set_geometry_shader(const Filename &filename) {
  */
 INLINE void ShaderBase::
 set_geometry_shader_source(const std::string &source) {
-  _setup._stages[S_geometry].set_source_raw(source);
-  _setup._stage_flags |= SF_geometry;
+  _obj_setup._stages[S_geometry].set_source_raw(source);
+  _obj_setup._stage_flags |= SF_geometry;
 }
 
 /**
@@ -256,7 +313,7 @@ set_geometry_shader_source(const std::string &source) {
  */
 INLINE void ShaderBase::
 set_geometry_shader_define(const std::string &name, const std::string &value) {
-  _setup._stages[S_geometry].set_define(name, value);
+  _obj_setup._stages[S_geometry].set_define(name, value);
 }
 
 /**
@@ -264,8 +321,8 @@ set_geometry_shader_define(const std::string &name, const std::string &value) {
  */
 INLINE void ShaderBase::
 set_tess_shader(const Filename &filename) {
-  _setup._stages[S_tess].set_source_filename(filename);
-  _setup._stage_flags |= SF_tess;
+  _obj_setup._stages[S_tess].set_source_filename(filename);
+  _obj_setup._stage_flags |= SF_tess;
 }
 
 /**
@@ -273,8 +330,8 @@ set_tess_shader(const Filename &filename) {
  */
 INLINE void ShaderBase::
 set_tess_shader_source(const std::string &source) {
-  _setup._stages[S_tess].set_source_raw(source);
-  _setup._stage_flags |= SF_tess;
+  _obj_setup._stages[S_tess].set_source_raw(source);
+  _obj_setup._stage_flags |= SF_tess;
 }
 
 /**
@@ -282,7 +339,7 @@ set_tess_shader_source(const std::string &source) {
  */
 INLINE void ShaderBase::
 set_tess_shader_define(const std::string &name, const std::string &value) {
-  _setup._stages[S_tess].set_define(name, value);
+  _obj_setup._stages[S_tess].set_define(name, value);
 }
 
 /**
@@ -290,8 +347,8 @@ set_tess_shader_define(const std::string &name, const std::string &value) {
  */
 INLINE void ShaderBase::
 set_tess_eval_shader(const Filename &filename) {
-  _setup._stages[S_tess_eval].set_source_filename(filename);
-  _setup._stage_flags |= SF_tess_eval;
+  _obj_setup._stages[S_tess_eval].set_source_filename(filename);
+  _obj_setup._stage_flags |= SF_tess_eval;
 }
 
 /**
@@ -299,8 +356,8 @@ set_tess_eval_shader(const Filename &filename) {
  */
 INLINE void ShaderBase::
 set_tess_eval_shader_source(const std::string &source) {
-  _setup._stages[S_tess_eval].set_source_raw(source);
-  _setup._stage_flags |= SF_tess_eval;
+  _obj_setup._stages[S_tess_eval].set_source_raw(source);
+  _obj_setup._stage_flags |= SF_tess_eval;
 }
 
 /**
@@ -308,7 +365,7 @@ set_tess_eval_shader_source(const std::string &source) {
  */
 INLINE void ShaderBase::
 set_tess_eval_shader_define(const std::string &name, const std::string &value) {
-  _setup._stages[S_tess_eval].set_define(name, value);
+  _obj_setup._stages[S_tess_eval].set_define(name, value);
 }
 
 /**
@@ -316,7 +373,7 @@ set_tess_eval_shader_define(const std::string &name, const std::string &value) {
  */
 INLINE ShaderStage &ShaderBase::
 get_stage(ShaderBase::Stage stage) {
-  return _setup._stages[stage];
+  return _obj_setup._stages[stage];
 }
 
 /**
@@ -324,7 +381,7 @@ get_stage(ShaderBase::Stage stage) {
  */
 INLINE bool ShaderBase::
 has_stage(StageFlags flags) const {
-  return (_setup._stage_flags & flags) != 0;
+  return (_obj_setup._stage_flags & flags) != 0;
 }
 
 /**
@@ -396,7 +453,7 @@ get_instance_count() const {
  */
 INLINE void ShaderBase::
 set_language(Shader::ShaderLanguage language) {
-  _setup._language = language;
+  _obj_setup._language = language;
 }
 
 /**
@@ -404,7 +461,7 @@ set_language(Shader::ShaderLanguage language) {
  */
 INLINE Shader::ShaderLanguage ShaderBase::
 get_language() const {
-  return _setup._language;
+  return _obj_setup._language;
 }
 
 /**
@@ -413,6 +470,7 @@ get_language() const {
 INLINE void ShaderBase::
 reset() {
   _setup.clear();
+  _obj_setup.clear();
 }
 
 /**

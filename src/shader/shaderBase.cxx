@@ -254,12 +254,12 @@ add_shader_quality(ShaderBase::StageFlags stages) {
   ShaderManager *mgr = ShaderManager::get_global_ptr();
 
   BitMask32 add_mask(stages);
-  BitMask32 stage_mask(_setup._stage_flags);
+  BitMask32 stage_mask(_obj_setup._stage_flags);
 
   int index = stage_mask.get_lowest_on_bit();
   while (index >= 0) {
     if (add_mask.get_bit(index)) {
-      _setup._stages[index].set_define("SHADER_QUALITY",
+      _obj_setup._stages[index].set_define("SHADER_QUALITY",
         (int)mgr->get_shader_quality());
     }
 
