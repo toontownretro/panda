@@ -36,6 +36,7 @@ PUBLISHED:
   FLOATNAME(LMatrix4) get_reflection_mat() const;
 
   INLINE_MATHUTIL FLOATNAME(LVector3) get_normal() const;
+  INLINE_MATHUTIL FLOATTYPE get_distance() const;
   FLOATNAME(LPoint3) get_point() const;
 
   INLINE_MATHUTIL FLOATTYPE dist_to_plane(const FLOATNAME(LPoint3) &point) const;

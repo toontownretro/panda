@@ -126,6 +126,14 @@ get_normal() const {
 }
 
 /**
+ * Returns the distance of the plane along the surface normal.
+ */
+INLINE_MATHUTIL FLOATTYPE FLOATNAME(LPlane)::
+get_distance() const {
+  return -_v(3);
+}
+
+/**
  * Returns the straight-line shortest distance from the point to the plane.
  * The returned value is positive if the point is in front of the plane (on
  * the side with the normal), or negative in the point is behind the plane (on
