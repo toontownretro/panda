@@ -297,7 +297,7 @@ fill_state(EggPrimitive *egg_prim) {
     // See if we should apply an implicit alpha based on the $basecolor of the
     // material.
     Material *mat = DCAST(MaterialAttrib, pmat_material)->get_material();
-    MaterialParamBase *param = mat->get_param("base_color");
+    MaterialParamBase *param = mat->get_param("$basecolor");
     if (param != nullptr) {
       if (param->is_of_type(MaterialParamTexture::get_class_type())) {
         Texture *tex = DCAST(MaterialParamTexture, param)->get_value();

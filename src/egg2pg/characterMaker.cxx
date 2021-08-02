@@ -182,6 +182,8 @@ make_bundle() {
   }
   //_bundle->sort_descendants();
 
+  parent_joint_nodes();
+
   // Now call update() one more time, to ensure that all of the joints have
   // their correct transform (since we might have modified the default
   // transform after construction).
@@ -250,6 +252,16 @@ build_joint_hierarchy(EggNode *egg_node, int parent) {
         _bundle->set_joint_default_value(index, matf);
       }
 
+      if (egg_group->has_dcs_type()) {
+        // If the joint requested an explicit DCS, create a node for it.
+        PT(ModelNode) geom_node = new ModelNode(egg_group->get_name());
+
+        // To prevent flattening from messing with geometry on exposed joints
+        geom_node->set_preserve_transform(ModelNode::PT_net);
+
+        _joint_dcs[index] = geom_node;
+      }
+
       //part = joint;
     }
 
@@ -257,6 +269,22 @@ build_joint_hierarchy(EggNode *egg_node, int parent) {
     for (ci = egg_group->begin(); ci != egg_group->end(); ++ci) {
       build_joint_hierarchy((*ci), parent);
     }
+  }
+}
+
+/**
+ * Walks the joint hierarchy, and parents any explicit nodes created for the
+ * joints under the character node.
+ */
+void CharacterMaker::
+parent_joint_nodes() {
+  for (JointDCS::const_iterator jdi = _joint_dcs.begin(); jdi != _joint_dcs.end(); ++jdi) {
+    int joint = (*jdi).first;
+    ModelNode *joint_node = (*jdi).second;
+    _character_node->add_child(joint_node);
+    _bundle->add_net_transform(joint, joint_node);
+    joint_node->set_transform(
+      TransformState::make_mat(_bundle->get_joint_net_transform(joint)));
   }
 }
 
