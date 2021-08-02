@@ -22,6 +22,7 @@
 #include "lightAttrib.h"
 #include "boundingSphere.h"
 #include "cullFaceAttrib.h"
+#include "boundingBox.h"
 
 TypeHandle CascadeLight::_type_handle;
 
@@ -233,6 +234,9 @@ compute_pssm_splits(const LMatrix4 &transform, float max_distance,
   NodePath root = trav->get_scene()->get_scene_root().get_parent();
   NodePath light_np = NodePath(this);
 
+  LPoint3 min_point(FLT_MAX);
+  LPoint3 max_point(FLT_MIN);
+
   // Compute the positions of all cascades
   for (int i = 0; i < _num_cascades; i++) {
     Cascade &c = _cascades[i];
@@ -328,7 +332,24 @@ compute_pssm_splits(const LMatrix4 &transform, float max_distance,
       CDWriter cdata(_cycler);
       cdata->_cascade_mvps[i] = mvp;
     }
+
+    PT(BoundingHexahedron) bounds = DCAST(BoundingHexahedron, c.lens->make_bounds());
+    for (int j = 0; j < bounds->get_num_points(); j++) {
+      LPoint3 b_point = bounds->get_point(j);
+      // Move into space of the light node itself.
+      b_point = c.node.get_mat().xform_point(b_point);
+      min_point[0] = std::min(b_point[0], min_point[0]);
+      min_point[1] = std::min(b_point[1], min_point[1]);
+      min_point[2] = std::min(b_point[2], min_point[2]);
+      max_point[0] = std::max(b_point[0], max_point[0]);
+      max_point[1] = std::max(b_point[1], max_point[1]);
+      max_point[2] = std::max(b_point[2], max_point[2]);
+    }
   }
+
+  // Use a bounding box that encloses the frusta of each cascade lens.
+  set_cull_bounds(new BoundingBox(min_point, max_point));
+  set_bounds(get_cull_bounds());
 }
 
 /**
