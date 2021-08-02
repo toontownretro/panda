@@ -1155,6 +1155,8 @@ make_camera() {
     }
   }
 
+  lens->set_min_fov(fov / (4./3.));
+
   camera->set_lens(lens);
 
   return camera_np;

@@ -29,6 +29,7 @@ extern ConfigVariableBool show_frame_rate_meter;
 extern ConfigVariableBool show_scene_graph_analyzer_meter;
 extern ConfigVariableBool print_pipe_types;
 extern ConfigVariableString window_type;
+extern ConfigVariableDouble fov;
 
 extern ConfigVariableString record_session;
 extern ConfigVariableString playback_session;

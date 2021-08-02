@@ -33,6 +33,8 @@ ConfigVariableBool print_pipe_types
 ("print-pipe-types", true);
 ConfigVariableString window_type
 ("window-type", "onscreen");
+ConfigVariableDouble fov
+("fov", 75.0);
 
 ConfigVariableString record_session
 ("record-session", "");
