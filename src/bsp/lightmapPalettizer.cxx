@@ -99,6 +99,7 @@ PT(LightmapPaletteDirectory) LightmapPalettizer::
 palettize_lightmaps() {
   PT(LightmapPaletteDirectory) dir = new LightmapPaletteDirectory;
   dir->face_palette_entries.resize(_data->dfaces.size());
+  memset(dir->face_palette_entries.data(), 0, sizeof(LightmapPalette::Entry *) * dir->face_palette_entries.size());
 
   // Put each face in one or more palettes
   for (int facenum = 0; facenum < _data->dfaces.size(); facenum++) {
@@ -110,6 +111,7 @@ palettize_lightmaps() {
 
     PT(LightmapPalette::Entry) entry = new LightmapPalette::Entry;
     entry->facenum = facenum;
+    entry->palette = nullptr;
 
     // Find or create a palette to put this face's lightmap in
 

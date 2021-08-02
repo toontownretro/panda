@@ -18,6 +18,7 @@
 #include "datagram.h"
 #include "datagramIterator.h"
 #include "bspLoader.h"
+#include "datagramInputFile.h"
 
 /**
  * A convenience function; the primary interface to this package.  Loads up the

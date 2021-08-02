@@ -36,7 +36,8 @@
 #include "colorRGBExp32.h"
 #include "luse.h"
 
-struct DFlagsLump {
+class DFlagsLump {
+public:
   uint32_t level_flags; // LVLFLAGS_xxx
 
   INLINE static size_t get_size(int version);
@@ -44,7 +45,8 @@ struct DFlagsLump {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DGameLump {
+class DGameLump {
+public:
   GameLumpId id;
   unsigned short flags;
   unsigned short version;
@@ -56,7 +58,8 @@ struct DGameLump {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DModel {
+class DModel {
+public:
   LVector3f mins;
   LVector3f maxs;
   // for sounds or lights
@@ -71,7 +74,8 @@ struct DModel {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DPhysModel {
+class DPhysModel {
+public:
   int model_index;
   int data_size;
   int keydata_size;
@@ -83,7 +87,8 @@ struct DPhysModel {
 };
 
 // contains the binary blob for each displacement surface's virtual hull
-struct DPhysDisp {
+class DPhysDisp {
+public:
   unsigned short num_displacements;
 
   INLINE static size_t get_size(int version);
@@ -91,7 +96,8 @@ struct DPhysDisp {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DVertex {
+class DVertex {
+public:
   LVector3f point;
 
   INLINE static size_t get_size(int version);
@@ -100,7 +106,8 @@ struct DVertex {
 };
 
 // planes (x&~1) and (x&~1)+1 are always opposites
-struct DPlane {
+class DPlane {
+public:
   LVector3f normal;
   float dist;
   int type; // PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
@@ -112,7 +119,8 @@ struct DPlane {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DNode {
+class DNode {
+public:
   int plane_num;
   int children[2]; // negative numbers are -(leafs+1), not nodes
   short mins[3]; // for frustom culling
@@ -123,12 +131,15 @@ struct DNode {
   // this is the area index. If not, this is -1.
   short area;
 
+  short padding;
+
   INLINE static size_t get_size(int version);
   void read_datagram(DatagramIterator &dgi, int version);
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct TexInfo {
+class TexInfo {
+public:
   float texture_vecs[2][4]; // [s/t][xyz offset]
   float lightmap_vecs[2][4]; // [s/t][xyz offset]
   int flags; // miptex flags + overrides
@@ -139,7 +150,8 @@ struct TexInfo {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DTexData {
+class DTexData {
+public:
   LVector3f reflectivity;
   // index into g_StringTable for the texture name
   int name_string_table_id;
@@ -157,7 +169,8 @@ struct DTexData {
 /**
  * Occluders are simply polygons.
  */
-struct DOccluderData {
+class DOccluderData {
+public:
   int flags;
   int first_poly; // index into doccluderpolys
   int poly_count;
@@ -172,7 +185,8 @@ struct DOccluderData {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DOccluderPolyData {
+class DOccluderPolyData {
+public:
   int first_vertex_index;
   int vertex_count;
   int plane_num;
@@ -183,7 +197,8 @@ struct DOccluderPolyData {
 };
 
 // NOTE: see the section above titled "displacement neighbor rules".
-struct DispSubNeighbor {
+class DispSubNeighbor {
+public:
   INLINE bool is_valid() const { return neighbor != 0xFFFF; }
   INLINE void set_invalid() { neighbor = 0xFFFF; }
 
@@ -201,7 +216,8 @@ struct DispSubNeighbor {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DispNeighbor {
+class DispNeighbor {
+public:
   INLINE void set_invalid() {
     sub_neighbors[0].set_invalid();
     sub_neighbors[1].set_invalid();
@@ -221,7 +237,8 @@ struct DispNeighbor {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DispCornerNeighbors {
+class DispCornerNeighbors {
+public:
   void set_invalid() { num_neighbors = 0; }
 
   unsigned short neighbors[MAX_DISP_CORNER_NEIGHBORS];
@@ -232,7 +249,8 @@ struct DispCornerNeighbors {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DispVert {
+class DispVert {
+public:
   LVector3f vector;
   float dist;
   float alpha;
@@ -242,7 +260,8 @@ struct DispVert {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DispTri {
+class DispTri {
+public:
   unsigned short tags;
 
   INLINE static size_t get_size(int version);
@@ -250,7 +269,8 @@ struct DispTri {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DispMultiBlend {
+class DispMultiBlend {
+public:
   LVector4f multi_blend;
   LVector4f alpha_blend;
   LVector3f multi_blend_colors[MAX_DISP_MULTIBLEND_CHANNELS];
@@ -260,7 +280,8 @@ struct DispMultiBlend {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DDispInfo {
+class DDispInfo {
+public:
   INLINE int get_num_verts() const { return NUM_DISP_POWER_VERTS(power); }
   INLINE int get_num_tris() const { return NUM_DISP_POWER_TRIS(power); }
 
@@ -291,7 +312,8 @@ struct DDispInfo {
 
 // note that edge 0 is never used, because negative edge nums are used for
 // counterclockwise use of the edge in a face
-struct DEdge {
+class DEdge {
+public:
   unsigned short v[2]; // vertex numbers
 
   INLINE static size_t get_size(int version);
@@ -299,7 +321,8 @@ struct DEdge {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DPrimitive {
+class DPrimitive {
+public:
   unsigned char type;
   unsigned short first_index;
   unsigned short index_count;
@@ -311,7 +334,8 @@ struct DPrimitive {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DPrimVert {
+class DPrimVert {
+public:
   LVector3f pos;
 
   INLINE static size_t get_size(int version);
@@ -319,7 +343,8 @@ struct DPrimVert {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DFace {
+class DFace {
+public:
   unsigned short plane_num;
   PN_byte side; // faces opposite to the node's plane direction
   PN_byte on_node; // 1 of on node, 0 if in leaf
@@ -359,7 +384,8 @@ public:
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DFaceID {
+class DFaceID {
+public:
   unsigned short hammer_face_id;
 
   INLINE static size_t get_size(int version);
@@ -367,7 +393,8 @@ struct DFaceID {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DFaceBrushList {
+class DFaceBrushList {
+public:
   // number of brushes that contributed a side to this face
   unsigned short face_brush_count;
   // first brush. NOTE: if m_nFaceBrushCount is 1, this is a brush index!
@@ -379,7 +406,8 @@ struct DFaceBrushList {
 };
 
 // version 1
-struct DLeaf {
+class DLeaf {
+public:
   int contents; // OR of all brushes (not needed?)
 
   short cluster;
@@ -403,6 +431,8 @@ struct DLeaf {
 
   short leaf_water_data_id;
 
+  short padding;
+
   // NOTE: removed this for version 1 and moved into separate lump "LUMP_LEAF_AMBIENT_LIGHTING" or "LUMP_LEAF_AMBIENT_LIGHTING_HDR"
   // Precaculated light info for entities.
 	CompressedLightCube ambient_lighting;
@@ -415,7 +445,8 @@ struct DLeaf {
 // each leaf contains N samples of the ambient lighting
 // each sample contains a cube of ambient light projected on to each axis
 // and a sampling position encoded as a 0.8 fraction (mins=0,maxs=255) of the leaf's bounding box
-struct DLeafAmbientLighting {
+class DLeafAmbientLighting {
+public:
   CompressedLightCube cube;
   PN_byte x; // fixed point fraction of leaf bounds
 	PN_byte y; // fixed point fraction of leaf bounds
@@ -427,7 +458,8 @@ struct DLeafAmbientLighting {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DLeafAmbientIndex {
+class DLeafAmbientIndex {
+public:
   unsigned short ambient_sample_count;
   unsigned short first_ambient_sample;
 
@@ -436,7 +468,8 @@ struct DLeafAmbientIndex {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DBrushSide {
+class DBrushSide {
+public:
   unsigned short plane_num; // facing out of the leaf
   short texinfo;
   short dispinfo; // displacement info (BSPVERSION 7)
@@ -448,7 +481,8 @@ struct DBrushSide {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DBrush {
+class DBrush {
+public:
   int first_side;
   int num_sides;
   int contents;
@@ -459,9 +493,10 @@ struct DBrush {
 };
 
 // the visibility lump consists of a header with a count, then
-// byte offsets for the PVS and PHS of each cluster, then the raw
+// byte offsets for the PVS and PAS of each cluster, then the raw
 // compressed bit vectors
-struct DVis {
+class DVis {
+public:
   int num_clusters;
   int bitofs[8][2];
 
@@ -473,7 +508,8 @@ struct DVis {
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
 // hearable even if the vis info says that it should be
-struct DAreaPortal {
+class DAreaPortal {
+public:
   unsigned short portal_key;
   unsigned short other_area; // The area this portal looks into.
   unsigned short first_clip_portal_vert; // Portal geometry.
@@ -485,7 +521,8 @@ struct DAreaPortal {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DArea {
+class DArea {
+public:
   int num_area_portals;
   int first_area_portal;
 
@@ -494,7 +531,8 @@ struct DArea {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DLeafWaterData {
+class DLeafWaterData {
+public:
   float surface_z;
   float min_z;
   short surface_texinfo_id;
@@ -504,7 +542,8 @@ struct DLeafWaterData {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct FaceMacroTextureInfo {
+class FaceMacroTextureInfo {
+public:
   // This looks up into g_TexDataStringTable, which looks up into g_TexDataStringData.
 	// 0xFFFF if the face has no macro texture.
   unsigned short macro_texture_name_id;
@@ -514,7 +553,8 @@ struct FaceMacroTextureInfo {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DWorldlight {
+class DWorldlight {
+public:
   LVector3f origin;
   LVector3f intensity;
   LVector3f normal; // for surfaces and spotlights
@@ -543,7 +583,8 @@ struct DWorldlight {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DCubeMapSample {
+class DCubeMapSample {
+public:
   int origin[3]; // position of light snapped to the nearest integer
   // 0 - default
   // otherwise, 1<<(size-1)
@@ -554,7 +595,8 @@ struct DCubeMapSample {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DOverlay {
+class DOverlay {
+public:
   int id;
   short texinfo;
 
@@ -580,7 +622,8 @@ public:
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DOverlayFade {
+class DOverlayFade {
+public:
   float fade_dist_min_sq;
   float fade_dist_max_sq;
 
@@ -589,7 +632,8 @@ struct DOverlayFade {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DOverlaySystemLevel {
+class DOverlaySystemLevel {
+public:
   unsigned char min_cpu_level;
   unsigned char max_cpu_level;
   unsigned char min_gpu_level;
@@ -600,7 +644,8 @@ struct DOverlaySystemLevel {
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct DWaterOverlay {
+class DWaterOverlay {
+public:
   int id;
   short texinfo;
 
@@ -626,7 +671,8 @@ public:
   void write_datagram(Datagram &dg, int version) const;
 };
 
-struct EPair {
+class EPair {
+public:
   EPair *next;
   char *key;
   char *value;
@@ -634,7 +680,8 @@ struct EPair {
 
 class Portal;
 
-struct Entity {
+class Entity {
+public:
   INLINE Entity();
 
   LVector3f origin;

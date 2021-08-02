@@ -7,12 +7,14 @@
   #define SOURCES \
     config_bsp.h \
     bsp.h \
+    bspClusterVisibility.h bspClusterVisibility.I \
     bspData.h bspData.I bspData.T \
     bspEnums.h \
     bspFlags.h \
     bspLoader.h bspLoader.I \
     bspLumps.h bspLumps.I \
     bspRoot.h bspRoot.I \
+    bspWorld.h bspWorld.I \
     imagePacker.h \
     lightmapPalettizer.h \
     load_bsp_file.h \
@@ -24,6 +26,7 @@
     bspLoader.cxx \
     bspLumps.cxx \
     bspRoot.cxx \
+    bspWorld.cxx \
     imagePacker.cxx \
     lightmapPalettizer.cxx \
     load_bsp_file.cxx \
@@ -35,3 +38,10 @@
   #define IGATESCAN all
 
 #end lib_target
+
+#begin test_bin_target
+  #define LOCAL_LIBS bsp
+  #define TARGET extract-bsp-mat-names
+  #define BUILD_TESTS 1
+  #define SOURCES extract_bsp_mat_names.cxx
+#end test_bin_target

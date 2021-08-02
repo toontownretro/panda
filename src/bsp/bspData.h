@@ -22,6 +22,8 @@
 #include "bspEnums.h"
 #include "lzmaDecoder.h"
 #include "zipArchive.h"
+#include "pta_ushort.h"
+#include "bspClusterVisibility.h"
 
 /**
  * The root object in the BSP file.
@@ -92,6 +94,8 @@ PUBLISHED:
   std::string get_string(int id) const;
   int add_or_find_string(const std::string &str);
 
+  int get_leaf_containing_point(const LPoint3 &point, int head_node = 0) const;
+
 PUBLISHED:
   bool read_datagram(DatagramIterator &dgi);
   bool read_header(DatagramIterator &dgi);
@@ -123,6 +127,10 @@ public:
 
   pvector<uint8_t> dvisdata;
   DVis *dvis;
+
+  // Decompressed per-cluster visibility data.  One entry for each cluster
+  // index.
+  pvector<BSPClusterVisibility> cluster_vis;
 
   pvector<uint8_t> dlightdata_hdr;
   pvector<uint8_t> dlightdata_ldr;

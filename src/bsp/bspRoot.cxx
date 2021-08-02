@@ -16,6 +16,24 @@
 TypeHandle BSPRoot::_type_handle;
 
 /**
+ *
+ */
+BSPRoot::
+BSPRoot(const BSPRoot &copy) :
+  PandaNode(copy),
+  _data(copy._data)
+{
+}
+
+/**
+ *
+ */
+PandaNode *BSPRoot::
+make_copy() const {
+  return new BSPRoot(*this);
+}
+
+/**
  * Returns true if it is generally safe to flatten out this particular kind of
  * PandaNode by duplicating instances (by calling dupe_for_flatten()), false
  * otherwise (for instance, a Camera cannot be safely flattened, because the

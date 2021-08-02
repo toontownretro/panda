@@ -14,6 +14,7 @@
 #include "config_bsp.h"
 #include "bspData.h"
 #include "bspRoot.h"
+#include "bspWorld.h"
 #include "loaderFileTypeBSP.h"
 #include "loaderFileTypeRegistry.h"
 
@@ -42,6 +43,7 @@ init_libbsp() {
   BSPData::init_type();
   BSPRoot::init_type();
   LoaderFileTypeBSP::init_type();
+  BSPWorld::init_type();
 
   LoaderFileTypeRegistry *reg = LoaderFileTypeRegistry::get_global_ptr();
   reg->register_type(new LoaderFileTypeBSP);

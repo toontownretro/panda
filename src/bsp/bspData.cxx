@@ -21,6 +21,57 @@
 TypeHandle BSPData::_type_handle;
 
 /**
+ * Decompresses the PVS/PAS data for the indicated cluster and fills the
+ * indicated output buffer.  Returns true on success or false on failure,
+ * which means that all other clusters should be visible/audible.
+ */
+static bool
+decompress_vis(BSPData *data, uint8_t *out, int len, int cluster, int type) {
+  if (cluster < 0 || cluster >= data->dvis->num_clusters) {
+    return false;
+  }
+
+  int offset = data->dvis->bitofs[cluster][type];
+  if (offset < 0) {
+    return false;
+  }
+
+  if (offset >= (int)data->dvisdata.size()) {
+    return false;
+  }
+
+  uint8_t *in = data->dvisdata.data() + offset;
+  if (in == nullptr) {
+    return false;
+  }
+
+  uint8_t *out_p = out;
+
+  do {
+    if (*in) {
+      *out_p++ = *in++;
+      continue;
+    }
+
+    int c = in[1];
+    in += 2;
+    if ((out_p - out) + c > (int)len) {
+      bsp_cat.warning()
+        << "Vis decompression overrun, len is " << len << ", out_p - out is "
+        << out_p - out << ", c is " << c << "\n";
+      c = len - (out_p - out);
+    }
+
+    while (c) {
+      *out_p++ = 0;
+      c--;
+    }
+  } while (out_p - out < (int)len);
+
+  return true;
+}
+
+/**
  * Returns the nth vertex of the given face.
  */
 DVertex *BSPData::
@@ -84,6 +135,27 @@ add_or_find_string(const std::string &str) {
   tex_data_string_table.push_back(out_offset);
 
   return out_index;
+}
+
+/**
+ * Returns the index of the leaf containing the indicated point.
+ */
+int BSPData::
+get_leaf_containing_point(const LPoint3 &point, int head_node) const {
+  int i = head_node;
+
+  while (i >= 0) {
+    const DNode &node = dnodes[i];
+    const DPlane &plane = dplanes[node.plane_num];
+    float distance = plane.normal.dot(point) - plane.dist;
+    if (distance >= 0.0f) {
+      i = node.children[0];
+    } else {
+      i = node.children[1];
+    }
+  }
+
+  return ~i;
 }
 
 /**
@@ -196,10 +268,6 @@ read_lumps(const Datagram &dg) {
     return false;
   }
 
-  if (!copy_lump(F_uint8, LUMP_VISIBILITY, dvisdata, dg)) {
-    return false;
-  }
-
   if (!copy_lump(LUMP_NODES, dnodes, dg)) {
     return false;
   }
@@ -222,9 +290,72 @@ read_lumps(const Datagram &dg) {
     }
   }
 
-
   if (!copy_lump(LUMP_LEAFS, dleafs, dg)) {
     return false;
+  }
+
+  if (!copy_lump(F_uint8, LUMP_VISIBILITY, dvisdata, dg)) {
+    return false;
+  }
+  dvis = (DVis *)dvisdata.data();
+
+  if (bsp_cat.is_debug()) {
+    bsp_cat.debug()
+      << dvis->num_clusters << " vis clusters\n";
+  }
+
+  cluster_vis.resize(dvis->num_clusters);
+  size_t num_cluster_bytes = (dvis->num_clusters + 7) >> 3;
+  uint8_t *vis_scratch = (uint8_t *)alloca(num_cluster_bytes);
+  for (int c = 0; c < dvis->num_clusters; c++) {
+    BSPClusterVisibility &bvis = cluster_vis[c];
+    bvis._cluster_index = c;
+
+    memset(vis_scratch, 0, num_cluster_bytes);
+
+    // First do the visible set.
+    bool ret = decompress_vis(this, vis_scratch, num_cluster_bytes, c, 0);
+    if (!ret) {
+      bvis._is_all_visible = true;
+
+    } else {
+      // Fill up the indices of all clusters visible from this one.
+      for (int oc = 0; oc < dvis->num_clusters; oc++) {
+        if (oc == c) {
+          continue;
+        }
+        if (vis_scratch[oc >> 3] & (1 << (oc & 7))) {
+          if (bsp_cat.is_debug()) {
+            bsp_cat.debug()
+              << "Cluster " << oc << " visible from " << c << "\n";
+          }
+          bvis._visible_clusters.push_back(oc);
+        }
+      }
+    }
+
+    memset(vis_scratch, 0, num_cluster_bytes);
+
+    // Now do audible set.
+    ret = decompress_vis(this, vis_scratch, num_cluster_bytes, c, 1);
+    if (!ret) {
+      bvis._is_all_audible = true;
+
+    } else {
+      // Fill up the indices of all clusters audible from this one.
+      for (int oc = 0; oc < dvis->num_clusters; oc++) {
+        if (oc == c) {
+          continue;
+        }
+        if (vis_scratch[oc >> 3] & (1 << (oc & 7))) {
+          if (bsp_cat.is_debug()) {
+            bsp_cat.debug()
+              << "Cluster " << oc << " audible from " << c << "\n";
+          }
+          bvis._audible_clusters.push_back(oc);
+        }
+      }
+    }
   }
 
   if (!copy_lump(LUMP_FACEIDS, dfaceids, dg)) {

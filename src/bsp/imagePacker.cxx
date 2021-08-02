@@ -80,7 +80,7 @@ add_block(int width, int height, int *return_x, int *return_y) {
 
   int best_x = -1;
   int max_y_idx;
-  int outer_x;
+  int outer_x = 0;
   int outer_min_y = _max_height;
   int last_x = _max_width - width;
   int last_max_y_val = -2;

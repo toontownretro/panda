@@ -20,6 +20,7 @@ BSPData() {
   _version = 0;
   _map_revision = 0;
   _valid = false;
+  dvis = nullptr;
 }
 
 /**

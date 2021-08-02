@@ -32,9 +32,14 @@ PUBLISHED:
   INLINE BSPData *get_bsp_data() const;
   MAKE_PROPERTY(bsp_data, get_bsp_data, set_bsp_data);
 
+  virtual PandaNode *make_copy() const override;
+
+protected:
+  BSPRoot(const BSPRoot &copy);
+
 public:
-  virtual bool safe_to_flatten() const;
-  virtual bool safe_to_combine() const;
+  virtual bool safe_to_flatten() const override;
+  virtual bool safe_to_combine() const override;
 
 private:
   PT(BSPData) _data;
@@ -55,6 +60,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class BSPLoader;
 };
 
 #include "bspRoot.I"

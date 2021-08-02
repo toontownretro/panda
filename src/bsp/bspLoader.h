@@ -25,7 +25,7 @@
  */
 class EXPCL_PANDA_BSP BSPLoader {
 PUBLISHED:
-  INLINE BSPLoader(BSPData *data, float scale_factor = 0.0625f);
+  INLINE BSPLoader(BSPData *data, float scale_factor = 1.0f);
 
   PT(BSPRoot) load();
 
@@ -40,6 +40,12 @@ private:
     LightmapPalette::Entry *palette_entry;
   };
 
+  struct FaceGeom {
+    PT(Geom) geom;
+    CPT(RenderState) state;
+    int cluster;
+  };
+
   void load_models();
   void load_model_faces(size_t model, PandaNode *model_node);
   void load_displacement(int face_num, GeomNode *geom_node);
@@ -50,6 +56,7 @@ private:
 
   LTexCoordf get_vertex_uv(const TexInfo *tinfo, const DVertex *vertex);
   LTexCoordf get_lightcoords(int face_num, const LVector3f &point);
+
 private:
   PT(BSPData) _data;
   PT(BSPRoot) _top_node;
@@ -57,6 +64,9 @@ private:
   PT(LightmapPaletteDirectory) _lightmap_dir;
   pvector<DFaceLightmapInfo> _face_lightmap_info;
   vector_int _face_first_vert_normal;
+
+  // Geoms created for each dface.
+  pvector<FaceGeom> _face_geoms;
 
   static CPT(GeomVertexFormat) _face_format;
 };

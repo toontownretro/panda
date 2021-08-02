@@ -175,6 +175,8 @@ read_datagram(DatagramIterator &dgi, int version) {
   num_faces = dgi.get_uint16();
 
   area = dgi.get_int16();
+
+  padding = dgi.get_int16();
 }
 
 /**
@@ -199,6 +201,8 @@ write_datagram(Datagram &dg, int version) const {
   dg.add_uint16(num_faces);
 
   dg.add_int16(area);
+
+  dg.add_int16(0); // padding
 }
 
 /**
@@ -702,6 +706,9 @@ read_datagram(DatagramIterator &dgi, int version) {
 
   leaf_water_data_id = dgi.get_int16();
 
+  // Yuck
+  padding = dgi.get_int16();
+
   if (version < 1) {
     ambient_lighting.read_datagram(dgi);
   }
@@ -733,6 +740,9 @@ write_datagram(Datagram &dg, int version) const {
   dg.add_uint16(num_leaf_brushes);
 
   dg.add_int16(leaf_water_data_id);
+
+  // Padding.. ugh
+  dg.add_int16(0);
 
   if (version < 1) {
     ambient_lighting.write_datagram(dg);

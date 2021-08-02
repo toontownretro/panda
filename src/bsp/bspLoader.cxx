@@ -30,6 +30,10 @@
 #include "materialAttrib.h"
 #include "material.h"
 #include "materialPool.h"
+#include "modelNode.h"
+#include "bspWorld.h"
+#include "nodePath.h"
+#include "materialParamTexture.h"
 
 CPT(GeomVertexFormat) BSPLoader::_face_format = nullptr;
 
@@ -98,50 +102,28 @@ get_face_format() {
  */
 void BSPLoader::
 load_models() {
-  for (size_t i = 0; i < _data->dmodels.size(); i++)  {
-    DModel &model = _data->dmodels[i];
+  _face_geoms.clear();
+  _face_geoms.resize(_data->dfaces.size());
 
-    std::ostringstream name_ss;
-    name_ss << "model-" << i;
-    PT(PandaNode) model_node = new PandaNode(name_ss.str());
-    //model_node->set_transform(TransformState::make_pos(model.origin * _scale_factor));
-
-    _top_node->add_child(model_node);
-
-    // Load the faces of the model.
-    load_model_faces(i, model_node);
-  }
-}
-
-/**
- * Converts the DFaces of a given DModel to scene graph geometry.
- */
-void BSPLoader::
-load_model_faces(size_t model_num, PandaNode *model_node) {
-  DModel &model = _data->dmodels[model_num];
-
-  bool hdr = (_data->pdlightdata == &(_data->dlightdata_hdr));
-
-  // Stuff all the faces in a single GeomNode.
-  PT(GeomNode) geom_node = new GeomNode("geometry");
-  model_node->add_child(geom_node);
-  PT(GeomVertexData) vertex_data = new
-    GeomVertexData("model-vertices", get_face_format(),
-                   GeomEnums::UH_static);
-  int num_verts = 0;
-
-  for (int i = 0; i < model.num_faces; i++) {
-    int face_num = model.first_face + i;
+  // First load each face into a geom/state pair.
+  for (size_t i = 0; i < _data->dfaces.size(); i++) {
+    size_t face_num = i;
     DFace &face = _data->dfaces[face_num];
 
     DFaceLightmapInfo lminfo;
     init_dface_lightmap_info(&lminfo, face_num);
     _face_lightmap_info[face_num] = lminfo;
 
+    int num_verts = 0;
+
+    PT(GeomVertexData) vertex_data = new
+    GeomVertexData("face-vertices", get_face_format(),
+                  GeomEnums::UH_static);
+
     if (face.dispinfo != -1) {
       // This is a displacement face.
-      load_displacement(face_num, geom_node);
-      continue;
+      //load_displacement(face_num, geom_node);
+      //continue;
     }
 
     pmap<DVertex *, int> prim_vert_indices;
@@ -177,13 +159,45 @@ load_model_faces(size_t model_num, PandaNode *model_node) {
 
     geom->add_primitive(triangles);
 
-    // Look up the material for the face.
-    const TexInfo *tinfo = &_data->texinfo[face.texinfo];
-    const DTexData *tdata = &_data->dtexdata[tinfo->texdata];
-    std::string tex_name = _data->get_string(tdata->name_string_table_id);
-
     CPT(RenderState) state = RenderState::make_empty();
-    state = state->set_attrib(MaterialAttrib::make(MaterialPool::load_material(tex_name)));
+
+    // Look up the material for the face.
+    if (face.texinfo >= 0 && face.texinfo < (int)_data->texinfo.size()) {
+      const TexInfo *tinfo = &_data->texinfo[face.texinfo];
+      if (tinfo->flags & (SURF_SKY | SURF_SKY2D | SURF_SKIP | SURF_NODRAW)) {
+        FaceGeom face_geom;
+        face_geom.geom = new Geom(vertex_data);
+        face_geom.state = state;
+        face_geom.cluster = -1;
+        _face_geoms[face_num] = std::move(face_geom);
+        continue;
+      }
+      if (tinfo->texdata >= 0 && tinfo->texdata < (int)_data->dtexdata.size()) {
+        const DTexData *tdata = &_data->dtexdata[tinfo->texdata];
+        std::string tex_name = _data->get_string(tdata->name_string_table_id);
+        tex_name = downcase(tex_name);
+        tex_name += ".pmat";
+        Filename tex_filename = Filename::from_os_specific(tex_name);
+        PT(Material) mat = MaterialPool::load_material(tex_filename);
+        if (mat != nullptr) {
+          state = state->set_attrib(MaterialAttrib::make(mat));
+          MaterialParamBase *base_p = mat->get_param("base_color");
+          if (base_p != nullptr && base_p->is_of_type(MaterialParamTexture::get_class_type())) {
+            MaterialParamTexture *base_tex_p = DCAST(MaterialParamTexture, base_p);
+            Texture *base_tex = base_tex_p->get_value();
+            if (base_tex != nullptr && Texture::has_alpha(base_tex->get_format())) {
+              state = state->set_attrib(TransparencyAttrib::make(TransparencyAttrib::M_dual));
+            }
+          }
+        }
+
+      } else {
+        std::cout << "Bad texdata index " << tinfo->texdata << "\n";
+      }
+    } else {
+      std::cout << "Bad texinfo index " << face.texinfo << "\n";
+    }
+
     CPT(RenderAttrib) tattr = state->get_attrib_def(TextureAttrib::get_class_slot());
     // Tack on the lightmap texture.
     if (face.lightofs != -1) {
@@ -194,9 +208,109 @@ load_model_faces(size_t model_num, PandaNode *model_node) {
     }
     state = state->set_attrib(tattr);
 
-    //state->write(std::cout, 0);
+    FaceGeom face_geom;
+    face_geom.geom = geom;
+    face_geom.state = state;
+    face_geom.cluster = -1;
+    _face_geoms[face_num] = std::move(face_geom);
+  }
 
-    geom_node->add_geom(geom, state);
+
+  // Now associate the faces with clusters.
+  for (size_t leaf_num = 0; leaf_num < _data->dleafs.size(); leaf_num++) {
+    const DLeaf &leaf = _data->dleafs[leaf_num];
+    for (size_t i = 0; i < leaf.num_leaf_faces; i++) {
+      size_t leaf_face = leaf.first_leaf_face + i;
+      size_t face_num = _data->dleaffaces[leaf_face];
+
+      if (face_num >= (int)_data->dfaces.size()) {
+        continue;
+      }
+
+      FaceGeom &face_geom = _face_geoms[face_num];
+      face_geom.cluster = leaf.cluster;
+    }
+  }
+
+  for (size_t i = 0; i < _data->dmodels.size(); i++)  {
+    DModel &model = _data->dmodels[i];
+
+    PT(PandaNode) model_node;
+    if (i == 0) {
+      model_node = new BSPWorld(_data);
+
+    } else {
+      std::ostringstream name_ss;
+      name_ss << "model-" << i;
+      model_node = new ModelNode(name_ss.str());
+    }
+
+    _top_node->add_child(model_node);
+
+    // Load the faces of the model.
+    load_model_faces(i, model_node);
+  }
+}
+
+/**
+ * Converts the DFaces of a given DModel to scene graph geometry.
+ */
+void BSPLoader::
+load_model_faces(size_t model_num, PandaNode *model_node) {
+  DModel &model = _data->dmodels[model_num];
+
+  bool hdr = (_data->pdlightdata == &(_data->dlightdata_hdr));
+
+  if (model_num == 0) {
+    BSPWorld *bsp_world = DCAST(BSPWorld, model_node);
+
+    // For the world, the faces for each cluster goes in it's own GeomNode, and
+    // the Geoms in each cluster are flattened together.
+
+    pmap<int, PT(GeomNode)> cluster_gn_map;
+    for (int i = 0; i < model.num_faces; i++) {
+      int face_num = model.first_face + i;
+      const FaceGeom &face_geom = _face_geoms[face_num];
+      int face_cluster = face_geom.cluster;
+      if (face_cluster == -1) {
+        continue;
+      }
+      auto it = cluster_gn_map.find(face_cluster);
+
+      PT(GeomNode) geom_node;
+      if (it == cluster_gn_map.end()) {
+        // Create a new GeomNode for this cluster.
+        std::ostringstream ss;
+        ss << "cluster-" << face_cluster << "-geometry";
+        geom_node = new GeomNode(ss.str());
+        cluster_gn_map[face_cluster] = geom_node;
+      } else {
+        geom_node = (*it).second;
+      }
+
+      // Add the face geom to the cluster geom node.
+      geom_node->add_geom(face_geom.geom, face_geom.state);
+    }
+
+    // Now flatten together the Geoms in each leaf GeomNode and add it to the
+    // world node for rendering.
+    for (auto it = cluster_gn_map.begin(); it != cluster_gn_map.end(); ++it) {
+      int cluster_num = (*it).first;
+      GeomNode *geom_node = (*it).second;
+      NodePath(geom_node).flatten_strong();
+      bsp_world->set_cluster_geom_node(cluster_num, geom_node);
+    }
+
+  } else {
+    // Stuff all non-world faces into a single GeomNode.
+    PT(GeomNode) geom_node = new GeomNode("geometry");
+    for (int i = 0; i < model.num_faces; i++) {
+      int face_num = model.first_face + i;
+      const FaceGeom &face_geom = _face_geoms[face_num];
+      geom_node->add_geom(face_geom.geom, face_geom.state);
+    }
+    NodePath(geom_node).flatten_strong();
+    model_node->add_child(geom_node);
   }
 }
 
@@ -313,7 +427,7 @@ get_vertex_uv(const TexInfo *tinfo, const DVertex *vertex) {
 
   LTexCoordf uv(s_vec.dot(vertex->point) + s_dist, t_vec.dot(vertex->point) + t_dist);
   uv[0] /= tdata->width;
-  uv[1] /= tdata->height;
+  uv[1] /= -tdata->height;
 
   return uv;
 }
