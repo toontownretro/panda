@@ -1,4 +1,4 @@
-#define BUILD_DIRECTORY
+#define BUILD_DIRECTORY $[HAVE_EMBREE]
 
 #define USE_PACKAGES embree
 #define LOCAL_LIBS ssemath pgraph putil gobj
@@ -22,6 +22,9 @@
     rayTraceGeometry.cxx \
     rayTraceScene.cxx \
     rayTraceTriangleMesh.cxx
+
+  #define INSTALL_HEADERS \
+    $[SOURCES]
 
   #define IGATESCAN all
 

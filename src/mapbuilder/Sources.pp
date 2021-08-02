@@ -1,3 +1,5 @@
+#define BUILD_DIRECTORY $[HAVE_EMBREE]
+
 #define LOCAL_LIBS map pgraph pphysics grutil raytrace
 
 #begin lib_target
