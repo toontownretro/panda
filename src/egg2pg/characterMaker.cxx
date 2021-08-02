@@ -281,10 +281,13 @@ parent_joint_nodes() {
   for (JointDCS::const_iterator jdi = _joint_dcs.begin(); jdi != _joint_dcs.end(); ++jdi) {
     int joint = (*jdi).first;
     ModelNode *joint_node = (*jdi).second;
+
     _character_node->add_child(joint_node);
-    _bundle->add_net_transform(joint, joint_node);
-    joint_node->set_transform(
-      TransformState::make_mat(_bundle->get_joint_net_transform(joint)));
+
+    int attachment = _bundle->add_attachment(joint_node->get_name());
+    // Parent the attachment to the joint.
+    _bundle->add_attachment_parent(attachment, joint);
+    _bundle->set_attachment_node(attachment, joint_node);
   }
 }
 
