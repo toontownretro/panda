@@ -156,6 +156,20 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     shadermgr_cat.error()
       << "Could not determine shader to use for state: ";
     state->output(shadermgr_cat.error(false));
+    shadermgr_cat.error(false) << "\n";
+    if (material == nullptr) {
+      shadermgr_cat.error()
+        << "No material\n";
+    } else {
+      shadermgr_cat.error()
+        << material->get_type() << "\n";
+    }
+    shadermgr_cat.error()
+      << "Currently registered shaders:\n";
+    for (auto it = _material_shaders.begin(); it != _material_shaders.end(); ++it) {
+      shadermgr_cat.error(false)
+        << "\t" << (*it).first << " : " << (*it).second->get_name() << "\n";
+    }
     return ShaderAttrib::make();
   }
 

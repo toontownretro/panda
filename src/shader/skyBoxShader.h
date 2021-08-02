@@ -6,30 +6,30 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file vertexLitShader.h
- * @author lachbr
- * @date 2020-10-30
+ * @file skyBoxShader.h
+ * @author brian
+ * @date 2021-07-13
  */
 
-#ifndef VERTEXLITSHADER_H
-#define VERTEXLITSHADER_H
+#ifndef SKYBOXSHADER_H
+#define SKYBOXSHADER_H
 
+#include "pandabase.h"
 #include "shaderBase.h"
-#include "config_shader.h"
-#include "standardMaterial.h"
+#include "skyBoxMaterial.h"
 
 /**
- * Shader that renders the StandardMaterial type.  This should really be
- * called the StandardShader.
+ * Generates a shader for rendering skybox materials.
  */
-class EXPCL_PANDA_SHADER VertexLitShader : public ShaderBase {
+class SkyBoxShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
-                               Material *material,
+                               Material *params,
                                const GeomVertexAnimationSpec &anim_spec) override;
+
 protected:
-  INLINE VertexLitShader();
+  INLINE SkyBoxShader();
 
 public:
   static TypeHandle get_class_type() {
@@ -37,17 +37,10 @@ public:
   }
   static void init_type() {
     ShaderBase::init_type();
-    register_type(_type_handle, "VertexLitShader",
+    register_type(_type_handle, "SkyBoxShader",
                   ShaderBase::get_class_type());
-
-    StandardMaterial::init_type();
-    VertexLitShader *shader = new VertexLitShader;
-    register_shader(shader, StandardMaterial::get_class_type());
-    if (config_get_use_vertex_lit_for_no_material()) {
-      // In this case, also register it under TypeHandle::none(), which
-      // indicates no material.
-      register_shader(shader, TypeHandle::none());
-    }
+    SkyBoxMaterial::init_type();
+    register_shader(new SkyBoxShader, SkyBoxMaterial::get_class_type());
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
@@ -58,6 +51,6 @@ private:
   static TypeHandle _type_handle;
 };
 
-#include "vertexLitShader.I"
+#include "skyBoxShader.I"
 
-#endif // VERTEXLITGENERICSHADER_H
+#endif // SKYBOXSHADER_H
