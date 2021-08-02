@@ -17,8 +17,7 @@
 #include "config_postprocess.h"
 #include "postProcessDefines.h"
 
-#include "typedObject.h"
-#include "referenceCount.h"
+#include "typedReferenceCount.h"
 #include "namable.h"
 #include "frameBufferProperties.h"
 #include "nodePath.h"
@@ -34,13 +33,15 @@ class DisplayRegionDrawCallbackData;
  * necessarily have to draw anything, it can also be used to issue certain
  * GSG commands at a specific point in the render pipeline.
  */
-class EXPCL_PANDA_POSTPROCESS PostProcessPass : public ReferenceCount, public Namable {
-	DECLARE_CLASS2(PostProcessPass, ReferenceCount, Namable);
+class EXPCL_PANDA_POSTPROCESS PostProcessPass : public TypedReferenceCount, public Namable {
+	DECLARE_CLASS2(PostProcessPass, TypedReferenceCount, Namable);
 
 PUBLISHED:
 	PostProcessPass( PostProcess *pp, const std::string &name = "pass",
 			 const FrameBufferProperties &fbprops = PostProcessPass::get_default_fbprops(),
 			 bool force_size = false, const LVector2i &forced_size = LVector2i::zero(), bool div_size = false, int div = 1 );
+
+	virtual ~PostProcessPass() {};
 
 	virtual void add_color_output();
 	virtual void add_depth_output();

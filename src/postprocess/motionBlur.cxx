@@ -33,6 +33,8 @@ ConfigVariableDouble mat_motion_blur_strength("mat_motion_blur_strength", 1.0);
 ConfigVariableDouble mat_motion_blur_percent_of_screen_max("mat_motion_blur_percent_of_screen_max", 4.0);
 
 class MotionBlurPass : public PostProcessPass {
+  DECLARE_CLASS(MotionBlurPass, PostProcessPass);
+
 public:
   MotionBlurPass(PostProcess *pp, Texture *fb_tex);
   virtual void on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) override;
@@ -40,6 +42,8 @@ public:
 private:
   Texture *_fb_tex;
 };
+
+IMPLEMENT_CLASS(MotionBlurPass);
 
 /**
  *
@@ -73,7 +77,7 @@ MotionBlur(PostProcess *pp) :
   PostProcessEffect(pp, "motion-blur") {
 
   _framebuffer_texture = new Texture("motion-blur-fb-copy");
-  _framebuffer_texture->set_format(Texture::F_r11_g11_b10);
+  _framebuffer_texture->set_format(Texture::F_rgba16);
   _framebuffer_texture->set_minfilter(SamplerState::FT_linear);
   _framebuffer_texture->set_magfilter(SamplerState::FT_linear);
   _framebuffer_texture->set_wrap_u(SamplerState::WM_clamp);

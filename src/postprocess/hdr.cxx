@@ -37,6 +37,13 @@ static constexpr int hdr_work_group_size = 16;
 ConfigVariableBool hdr_auto_exposure
 ("hdr-auto-exposure", true);
 
+ConfigVariableInt hdr_luminance_buffers
+("hdr-luminance-buffers", 2,
+ PRC_DESC("The number of buffers in the luminance compute swap-chain.  Setting "
+          "this value higher may reduce pipeline stall from reading in the "
+					"results of the luminance compute shader, but the results will be "
+					"more delayed."));
+
 // Physically-based camera settings.
 
 static ConfigVariableDouble hdr_min_shutter
@@ -100,6 +107,7 @@ static ConfigVariableDouble hdr_luminance_adapation_rate
  PRC_DESC("Rate at which the average luminance is smoothly adjusted.  Higher "
           "is faster."));
 
+IMPLEMENT_CLASS(HDREffect);
 IMPLEMENT_CLASS( HDRPass );
 
 HDRPass::HDRPass( PostProcess *pp ) :
@@ -111,13 +119,14 @@ HDRPass::HDRPass( PostProcess *pp ) :
 	_iso(800.0f),
 	_max_luminance(1.0f),
 	_exposure(1.0f),
-	_exposure_value(2.0f)
+	_exposure_value(0.0f),
+	_last_target_ev(0.0f)
 {
 	// This pass replaces the scene color pipe, so we need to use the same
 	// color format.
 	_fbprops.set_rgb_color(true);
 	_fbprops.set_float_color(true);
-	_fbprops.set_rgba_bits(16, 16, 16, 0);
+	_fbprops.set_rgba_bits(16, 16, 16, 1);
 }
 
 /**
@@ -249,16 +258,15 @@ void HDRPass::update()
 
 	ClockObject *global_clock = ClockObject::get_global_clock();
 
-	// Make sure the compute dimensions are up to date with the current
-	// backbuffer size.
-	LVector2i dim = get_back_buffer_dimensions();
-	_histogram_node->set_dispatch(0, LVecBase3i(dim[0] / hdr_work_group_size, dim[0] / hdr_work_group_size, 1));
-
 	float target_ev;
 	// Read in the luminance value computed by the shader.
-	if (_luminance_output_texture->get_resident(_buffer->get_gsg()->get_prepared_objects())) {
+	// Read from the texture that we are going to compute to next, which would be
+	// the oldest un-read texture.
+	_luminance_buffer_index = (_luminance_buffer_index + 1) % hdr_luminance_buffers;
+	Texture *tex = _luminance_buffers[_luminance_buffer_index]._result_texture;
+	if (tex->get_resident(_buffer->get_gsg()->get_prepared_objects())) {
 		GraphicsEngine *engine = GraphicsEngine::get_global_ptr();
-		engine->extract_texture_data(_luminance_output_texture, _buffer->get_gsg());
+		engine->extract_texture_data(tex, _buffer->get_gsg());
 		//engine->extract_texture_data(_histogram_buffer_texture, _buffer->get_gsg());
 
 		//CPTA_uchar hist_image = _histogram_buffer_texture->get_ram_image();
@@ -268,14 +276,20 @@ void HDRPass::update()
 		//	std::cout << "Bucket " << i << ": " << pixels << " pixels\n";
 		//}
 
-		CPTA_uchar image = _luminance_output_texture->get_ram_image();
+		CPTA_uchar image = tex->get_ram_image();
 		target_ev = *(float *)(image.v().data());
-		target_ev = std::max(0.0001f, target_ev);
+
+		// Time average it.
+		target_ev = _last_target_ev + (target_ev - _last_target_ev) *
+			(1 - std::exp(-global_clock->get_dt() * hdr_luminance_adapation_rate));
+
 		//target_ev = 1.0f;
 
 	} else {
-		target_ev = 1.0f;
+		target_ev = _last_target_ev;
 	}
+
+	_last_target_ev = target_ev;
 
 	//std::cout << "Target ev: " << target_ev << "\n";
 
@@ -347,7 +361,6 @@ void HDRPass::setup()
 	get_quad().set_shader_input("sceneTexture", _pp->get_output_pipe("scene_color"));
 
 	PN_stdfloat ev_range = hdr_max_ev - hdr_min_ev;
-	LVector2i dim = get_back_buffer_dimensions();
 
 	PT(Shader) histogram_shader = Shader::load_compute(
 		Shader::SL_GLSL, "shaders/postprocess/build_histogram.compute.glsl");
@@ -363,38 +376,54 @@ void HDRPass::setup()
 		set_shader_input("histogram", _histogram_buffer_texture);
 	histogram_shattr = DCAST(ShaderAttrib, histogram_shattr)->
 		set_shader_input("minLogLum_ooLogLumRange", LVecBase2(hdr_min_ev, 1.0f / ev_range));
-
-	PT(ComputeNode) histogram_node = new ComputeNode("hdr-histogram-compute");
-	histogram_node->add_dispatch(dim[0] / hdr_work_group_size, dim[1] / hdr_work_group_size, 1);
-	histogram_node->set_attrib(histogram_shattr);
-	_histogram_node = histogram_node;
+	_histogram_compute_state = RenderState::make(histogram_shattr);
 
 	PT(Shader) calc_lum_shader = Shader::load_compute(
 		Shader::SL_GLSL, "shaders/postprocess/calc_luminance.compute.glsl");
-
-	_luminance_output_texture = new Texture("hdr-luminance-output");
-	_luminance_output_texture->setup_1d_texture(1, Texture::T_float, Texture::F_r32);
-	_luminance_output_texture->set_minfilter(SamplerState::FT_nearest);
-	_luminance_output_texture->set_magfilter(SamplerState::FT_nearest);
-
 	CPT(RenderAttrib) lum_shattr = ShaderAttrib::make(calc_lum_shader);
 	lum_shattr = DCAST(ShaderAttrib, lum_shattr)->
 		set_shader_input("sceneImage", _pp->get_output_pipe("scene_color"));
 	lum_shattr = DCAST(ShaderAttrib, lum_shattr)->
 		set_shader_input("histogram", _histogram_buffer_texture);
 	lum_shattr = DCAST(ShaderAttrib, lum_shattr)->
-		set_shader_input("luminanceOutput", _luminance_output_texture);
-	lum_shattr = DCAST(ShaderAttrib, lum_shattr)->
-		set_shader_input("minLogLum_logLumRange_tau", LVecBase3(hdr_min_ev, ev_range, hdr_luminance_adapation_rate));
+		set_shader_input("minLogLum_logLumRange", LVecBase2(hdr_min_ev, ev_range));
 
-	PT(ComputeNode) lum_node = new ComputeNode("hdr-luminance-compute");
-	lum_node->add_dispatch(1, 1, 1);
-	lum_node->set_attrib(lum_shattr);
-	_luminance_node = lum_node;
+	_luminance_buffers.resize(hdr_luminance_buffers);
+	for (int i = 0; i < hdr_luminance_buffers; i++) {
+		PT(Texture) tex = new Texture("hdr-luminance-output");
+		tex->setup_1d_texture(1, Texture::T_float, Texture::F_r32);
+		tex->set_minfilter(SamplerState::FT_nearest);
+		tex->set_magfilter(SamplerState::FT_nearest);
+		CPT(RenderState) state = RenderState::make(
+			DCAST(ShaderAttrib, lum_shattr)->
+				set_shader_input("luminanceOutput", tex));
+		_luminance_buffers[i]._compute_state = state;
+		_luminance_buffers[i]._result_texture = tex;
+	}
+	_luminance_buffer_index = 0;
+}
 
-	// Attach our compute nodes to the quad so they get executed.
-	_quad_np.attach_new_node(_histogram_node, 1);
-	_quad_np.attach_new_node(_luminance_node, 2);
+/**
+ *
+ */
+void HDRPass::
+on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) {
+	LVector2i dim = get_back_buffer_dimensions();
+
+	// Clear out current histogram.
+	_histogram_buffer_texture->clear_image();
+
+	// Build the luminance histogram.
+	gsg->set_state_and_transform(_histogram_compute_state,
+															 TransformState::make_identity());
+	gsg->dispatch_compute(dim[0] / hdr_work_group_size, dim[1] / hdr_work_group_size, 1);
+
+	// Compute the luminance value.
+	gsg->set_state_and_transform(_luminance_buffers[_luminance_buffer_index]._compute_state,
+															 TransformState::make_identity());
+	gsg->dispatch_compute(1, 1, 1);
+
+	PostProcessPass::on_draw(cbdata, gsg);
 }
 
 HDREffect::HDREffect( PostProcess *pp ) :

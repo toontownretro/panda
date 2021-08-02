@@ -26,6 +26,7 @@
 #include "configVariableBool.h"
 #include "pvector.h"
 
+extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_luminance_buffers;
 extern EXPCL_PANDA_POSTPROCESS ConfigVariableBool hdr_auto_exposure;
 
 class EXPCL_PANDA_POSTPROCESS HDRPass : public PostProcessPass
@@ -49,6 +50,8 @@ PUBLISHED:
 	virtual void setup();
 
 	virtual void update();
+
+	virtual void on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) override;
 
 	INLINE float get_luminance() const;
 	INLINE float get_aperature() const;
@@ -83,10 +86,21 @@ private:
 private:
 	CPT(Geom) _quad_geom;
 
-	PT(ComputeNode) _histogram_node;
-	PT(ComputeNode) _luminance_node;
+	CPT(RenderState) _histogram_compute_state;
 	PT(Texture) _histogram_buffer_texture;
-	PT(Texture) _luminance_output_texture;
+
+	/**
+	 * Maintain a swap-chain of output textures for the luminance compute shader
+	 * to minimize pipeline stalling when reading from the texture.
+	 */
+	class LuminanceBuffer {
+	public:
+		CPT(RenderState) _compute_state;
+		PT(Texture) _result_texture;
+	};
+	typedef pvector<LuminanceBuffer> LuminanceBuffers;
+	LuminanceBuffers _luminance_buffers;
+	int _luminance_buffer_index;
 
 	// Calculated luminance based on histogram
 	float _luminance;
@@ -99,10 +113,12 @@ private:
 	float _exposure;
 	// exp2 of _exposure.
 	float _exposure_value;
+	float _last_target_ev;
 };
 
 class EXPCL_PANDA_POSTPROCESS HDREffect : public PostProcessEffect
 {
+	DECLARE_CLASS(HDREffect, PostProcessPass);
 PUBLISHED:
 	HDREffect( PostProcess *pp );
 

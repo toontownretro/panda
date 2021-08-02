@@ -97,17 +97,8 @@ PUBLISHED:
 		return nullptr;
 	}
 
-	INLINE void add_effect( PostProcessEffect *effect )
-	{
-		_effects[effect->get_name()] = effect;
-	}
-
-	INLINE void remove_effect( PostProcessEffect *effect )
-	{
-		int itr = _effects.find( effect->get_name() );
-		if ( itr != -1 )
-			_effects.remove_element( itr );
-	}
+	void add_effect(PostProcessEffect *effect);
+	void remove_effect(PostProcessEffect *effect);
 
 	INLINE PostProcessEffect *get_effect( const std::string &name )
 	{
@@ -157,7 +148,9 @@ private:
 	void set_clears( DrawableRegion *region, const ClearInfoArray &info );
 	void set_stacked_clears( DrawableRegion *region, const ClearInfoArray &a, const ClearInfoArray &b );
 
-	SimpleHashMap<std::string, PT( PostProcessEffect ), string_hash> _effects;
+	typedef SimpleHashMap<std::string, PT(PostProcessEffect), string_hash> PPEffects;
+	PPEffects _effects;
+
 	GraphicsOutput *_output;
 
 	SimpleHashMap<std::string, PT(Texture), string_hash> _output_pipes;

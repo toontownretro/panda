@@ -33,7 +33,7 @@ void PostProcessEffect::shutdown()
 	{
 		_passes.get_data( i )->shutdown();
 	}
-	_passes.clear();
+	//_passes.clear();
 
 	_pp = nullptr;
 }

@@ -22,6 +22,8 @@ class PostProcess;
 
 class EXPCL_PANDA_POSTPROCESS PostProcessScenePass : public PostProcessPass
 {
+	DECLARE_CLASS(PostProcessScenePass, PostProcessPass);
+
 PUBLISHED:
 	PostProcessScenePass( PostProcess *pp );
 	virtual bool setup_buffer();

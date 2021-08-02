@@ -113,6 +113,24 @@ void PostProcess::remove_camera( const NodePath &camera, int lens )
 	_camera_info.erase( std::find( _camera_info.begin(), _camera_info.end(), info ) );
 }
 
+/**
+ *
+ */
+void PostProcess::
+add_effect(PostProcessEffect *effect) {
+	_effects[effect->get_name()] = effect;
+}
+
+/**
+ *
+ */
+void PostProcess::
+remove_effect(PostProcessEffect *effect) {
+	int itr = _effects.find(effect->get_name());
+	if ( itr != -1 )
+		_effects.remove_element(itr);
+}
+
 void PostProcess::get_clears( DrawableRegion *region, PostProcess::ClearInfoArray &info )
 {
 	info.clear();
@@ -168,9 +186,7 @@ void PostProcess::shutdown()
 	{
 		_effects.get_data( i )->shutdown();
 	}
-	_effects.clear();
 
-	_scene_pass->shutdown();
 	_scene_pass = nullptr;
 
 	_output = nullptr;
@@ -180,7 +196,6 @@ void PostProcess::shutdown()
 		camerainfo_t *info = _camera_info[i];
 		DCAST( Camera, info->camera.node() )->set_initial_state( info->original_state );
 	}
-	_camera_info.clear();
 }
 
 void PostProcess::update()

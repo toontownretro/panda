@@ -180,7 +180,7 @@ public:
 		_scene_tex(scene_tex),
 		_bloom_tex(bloom_tex)
 	{
-		_fbprops.set_rgba_bits(16, 16, 16, 0);
+		_fbprops.set_rgba_bits(16, 16, 16, 16);
 		_fbprops.set_float_color(true);
 	}
 

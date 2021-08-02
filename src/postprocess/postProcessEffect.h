@@ -16,20 +16,19 @@
 
 #include "config_postprocess.h"
 
-#include "typedObject.h"
-#include "referenceCount.h"
+#include "typedReferenceCount.h"
 #include "namable.h"
 #include "simpleHashMap.h"
 #include "pointerTo.h"
+#include "postProcessPass.h"
 
-class PostProcessPass;
 class PostProcess;
 class GraphicsOutput;
 class Texture;
 
-class EXPCL_PANDA_POSTPROCESS PostProcessEffect : public ReferenceCount, public Namable
+class EXPCL_PANDA_POSTPROCESS PostProcessEffect : public TypedReferenceCount, public Namable
 {
-	DECLARE_CLASS2( PostProcessEffect, ReferenceCount, Namable );
+	DECLARE_CLASS2( PostProcessEffect, TypedReferenceCount, Namable );
 
 PUBLISHED:
 	INLINE PostProcessEffect( PostProcess *pp, const std::string &name = "effect" ) :
@@ -37,6 +36,8 @@ PUBLISHED:
 		_pp( pp )
 	{
 	}
+
+	virtual ~PostProcessEffect() {};
 
 	void add_pass( PostProcessPass *pass );
 	void remove_pass( PostProcessPass *pass );

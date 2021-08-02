@@ -17,11 +17,13 @@
 
 class FXAA_Pass : public PostProcessPass
 {
+	DECLARE_CLASS(FXAA_Pass, PostProcessPass);
+
 public:
 	FXAA_Pass( PostProcess *pp ) :
 		PostProcessPass( pp, "fxaa-pass" )
 	{
-		_fbprops.set_rgba_bits(16, 16, 16, 0);
+		_fbprops.set_rgba_bits(16, 16, 16, 16);
 	}
 
 	virtual void setup()
@@ -38,11 +40,14 @@ public:
 	}
 };
 
+IMPLEMENT_CLASS(FXAA_Pass);
 IMPLEMENT_CLASS( FXAA_Effect );
 
 FXAA_Effect::FXAA_Effect( PostProcess *pp ) :
 	PostProcessEffect( pp, "fxaa" )
 {
+	FXAA_Pass::init_type();
+
 	PT( FXAA_Pass ) pass = new FXAA_Pass( pp );
 	pass->setup();
 	pass->add_color_output();

@@ -73,7 +73,7 @@ ToneMappingEffect(PostProcess *pp) :
   PT(PostProcessPass) pass = new PostProcessPass(pp, "tone-mapping-apply");
 
   FrameBufferProperties fbprops = pass->get_framebuffer_properties();
-  fbprops.set_rgba_bits(16, 16, 16, 0);
+  fbprops.set_rgba_bits(16, 16, 16, 16);
   pass->set_framebuffer_properties(fbprops);
 
   pass->setup();

@@ -173,7 +173,9 @@ add_color_output() {
 	nassertv(!is_window_layer());
 	nassertv(_buffer != nullptr);
 	if (!_color_texture) {
-		_color_texture = make_texture(Texture::F_rgb16, "color");
+		_color_texture = make_texture(Texture::F_rgba16, "color");
+		_color_texture->set_clear_color(LColor(0, 0, 0, 0));
+		_color_texture->clear_image();
 		_buffer->add_render_texture(_color_texture, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_color);
 	}
 }
@@ -215,6 +217,8 @@ make_texture(Texture::Format format, const std::string &suffix) {
 	PT(Texture) tex = new Texture(get_name() + "-" + suffix);
 	tex->set_wrap_u(SamplerState::WM_clamp);
 	tex->set_wrap_v(SamplerState::WM_clamp);
+	tex->set_minfilter(SamplerState::FT_linear);
+	tex->set_magfilter(SamplerState::FT_linear);
 	tex->set_anisotropic_degree(1);
 	return tex;
 }
@@ -256,7 +260,7 @@ setup_buffer() {
 	nassertr(output != nullptr, false);
 
 	_buffer = DCAST(GraphicsBuffer, output);
-	_buffer->disable_clears();
+	_buffer->set_clear_color_active(true);
 
 	return true;
 }
@@ -273,6 +277,7 @@ setup_quad() {
 	_quad_np = NodePath(cm.generate());
 	_quad_np.set_depth_test(false);
 	_quad_np.set_depth_write(false);
+	//_quad_np.set_transparency(TransparencyAttrib::M_alpha);
 }
 
 /**
@@ -387,6 +392,10 @@ on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) {
  */
 void PostProcessPass::
 shutdown() {
+	if (_buffer == nullptr) {
+		return;
+	}
+
 	if (_region != nullptr) {
 		_buffer->remove_display_region(_region);
 	}

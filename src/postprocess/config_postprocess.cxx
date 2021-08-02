@@ -23,6 +23,7 @@
 #include "toneMapping.h"
 #include "freezeFrame.h"
 #include "postProcessSceneStage.h"
+#include "postProcessScenePass.h"
 #include "postProcessFinalOutput.h"
 #include "motionBlur.h"
 
@@ -60,6 +61,7 @@ init_libpostprocess() {
   HDREffect::init_type();
   PostProcessFinalOutput::init_type();
   PostProcessSceneStage::init_type();
+  PostProcessScenePass::init_type();
   SSAO_Effect::init_type();
   ToneMappingEffect::init_type();
   MotionBlur::init_type();

@@ -21,6 +21,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 // PostProcessScenePass
 
+IMPLEMENT_CLASS(PostProcessScenePass);
+
 PostProcessScenePass::PostProcessScenePass( PostProcess *pp ) :
 	PostProcessPass( pp, "scene_pass", pp->get_output()->get_fb_properties() ),
 	_aux_bits( 0 ),
@@ -35,8 +37,9 @@ PostProcessScenePass::PostProcessScenePass( PostProcess *pp ) :
 	//_fbprops.set_float_depth(false);
 	_fbprops.set_depth_bits(32);
 	// We don't need more than 8 bits for RGB, and we don't need alpha.
-	_fbprops.set_rgba_bits(16, 16, 16, 0);
+	_fbprops.set_rgba_bits(16, 16, 16, 1);
 	_fbprops.set_rgb_color(true);
+	_fbprops.set_alpha_bits(1);
 	_fbprops.set_float_color(true);
 	// Always render with hardware.
 	_fbprops.set_force_hardware(true);
