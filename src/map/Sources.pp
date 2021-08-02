@@ -5,13 +5,25 @@
   #define LOCAL_LIBS pgraph linmath
 
   #define SOURCES \
-    config_map.h
+    aabbTree.h aabbTree.I \
+    config_map.h \
+    kdTree.h kdTree.I \
+    mapData.h mapData.I \
+    mapEntity.h mapEntity.I \
+    mapModel.h mapModel.I \
+    mapRoot.h mapRoot.I
 
   #define COMPOSITE_SOURCES \
-    config_map.cxx
+    aabbTree.cxx \
+    config_map.cxx \
+    kdTree.cxx \
+    mapData.cxx \
+    mapEntity.cxx \
+    mapModel.cxx \
+    mapRoot.cxx
 
   #define INSTALL_HEADERS \
-    config_map.h
+    $[SOURCES]
 
   #define IGATESCAN all
 

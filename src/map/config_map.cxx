@@ -13,6 +13,9 @@
 
 #include "config_map.h"
 #include "loaderFileTypeRegistry.h"
+#include "mapData.h"
+#include "mapEntity.h"
+#include "mapRoot.h"
 
 NotifyCategoryDef(map, "");
 
@@ -29,4 +32,12 @@ init_libmap() {
   }
 
   initialized = true;
+
+  MapData::init_type();
+  MapEntity::init_type();
+  MapRoot::init_type();
+
+  MapData::register_with_read_factory();
+  MapEntity::register_with_read_factory();
+  MapRoot::register_with_read_factory();
 }

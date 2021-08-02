@@ -20,6 +20,7 @@
 #include "materialParamVector.h"
 #include "standardMaterial.h"
 #include "eyeRefractMaterial.h"
+#include "skyBoxMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -59,4 +60,7 @@ init_libmaterial() {
 
   EyeRefractMaterial::init_type();
   EyeRefractMaterial::register_with_read_factory();
+
+  SkyBoxMaterial::init_type();
+  SkyBoxMaterial::register_with_read_factory();
 }
