@@ -18,6 +18,7 @@
 #include "filename.h"
 #include "material.h"
 #include "pmap.h"
+#include "lightMutex.h"
 
 /**
  * This class keeps references to loaded or created materials and can unify
@@ -43,6 +44,8 @@ private:
   typedef pmap<Filename, PT(Material)> Materials;
   Materials _materials;
   Materials _fullpath_materials;
+
+  LightMutex _lock;
 
   static MaterialPool *_global_ptr;
 };

@@ -20,6 +20,7 @@
 #include "datagramInputFile.h"
 #include "bam.h"
 #include "bamReader.h"
+#include "lightMutexHolder.h"
 
 MaterialPool *MaterialPool::_global_ptr = nullptr;
 
@@ -36,10 +37,12 @@ MaterialPool() {
 PT(Material) MaterialPool::
 ns_load_material(const Filename &filename, const DSearchPath &search_path) {
   Materials::const_iterator it;
-
-  it = _materials.find(filename);
-  if (it != _materials.end()) {
-    return (*it).second;
+  {
+    LightMutexHolder holder(_lock);
+    it = _materials.find(filename);
+    if (it != _materials.end()) {
+      return (*it).second;
+    }
   }
 
   Filename fullpath = filename;
@@ -52,9 +55,12 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
     return nullptr;
   }
 
-  it = _fullpath_materials.find(fullpath);
-  if (it != _fullpath_materials.end()) {
-    return (*it).second;
+  {
+    LightMutexHolder holder(_lock);
+    it = _fullpath_materials.find(fullpath);
+    if (it != _fullpath_materials.end()) {
+      return (*it).second;
+    }
   }
 
   // Not in cache, load it up.
@@ -152,8 +158,11 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
   material->set_filename(filename);
   material->set_fullpath(fullpath);
 
-  _materials[filename] = material;
-  _fullpath_materials[fullpath] = material;
+  {
+    LightMutexHolder holder(_lock);
+    _materials[filename] = material;
+    _fullpath_materials[fullpath] = material;
+  }
 
   return material;
 }
@@ -163,6 +172,8 @@ ns_load_material(const Filename &filename, const DSearchPath &search_path) {
  */
 void MaterialPool::
 ns_release_all_materials() {
+  LightMutexHolder holder(_lock);
+
   _materials.clear();
   _fullpath_materials.clear();
 }
@@ -172,6 +183,8 @@ ns_release_all_materials() {
  */
 Material *MaterialPool::
 ns_find_material(const Filename &filename) const {
+  LightMutexHolder holder(_lock);
+
   Materials::const_iterator it;
 
   it = _materials.find(filename);

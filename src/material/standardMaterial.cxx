@@ -39,6 +39,8 @@ StandardMaterial(const std::string &name) :
  */
 void StandardMaterial::
 read_pdx(PDXElement *data, const DSearchPath &search_path) {
+  Material::read_pdx(data, search_path);
+
   if (!data->has_attribute("parameters")) {
     return;
   }
@@ -159,7 +161,6 @@ Material *StandardMaterial::
 create_StandardMaterial() {
   return new StandardMaterial;
 }
-
 
 /**
  *

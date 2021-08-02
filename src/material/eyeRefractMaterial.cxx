@@ -35,6 +35,8 @@ EyeRefractMaterial(const std::string &name) :
  */
 void EyeRefractMaterial::
 read_pdx(PDXElement *data, const DSearchPath &search_path) {
+  Material::read_pdx(data, search_path);
+
   if (!data->has_attribute("parameters")) {
     return;
   }

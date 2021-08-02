@@ -16,6 +16,7 @@
     materialParamVector.I materialParamVector.h \
     materialPool.I materialPool.h \
     materialRegistry.I materialRegistry.h \
+    skyBoxMaterial.I skyBoxMaterial.h \
     standardMaterial.I standardMaterial.h
 
   #define COMPOSITE_SOURCES \
@@ -30,6 +31,7 @@
     materialParamVector.cxx \
     materialPool.cxx \
     materialRegistry.cxx \
+    skyBoxMaterial.cxx \
     standardMaterial.cxx
 
   #define INSTALL_HEADERS \
