@@ -229,7 +229,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   const TexMatrixAttrib *tma;
   state->get_attrib_def(tma);
   int num_stages = ta->get_num_on_stages();
-  //set_vertex_shader_define("NUM_TEXTURES", num_stages);
+  if (num_stages > 0) {
+    set_vertex_shader_define("NUM_TEXTURES", num_stages);
+  }
   for (int i = 0; i < num_stages; i++) {
     TextureStage *stage = ta->get_on_stage(i);
     const std::string &stage_name = stage->get_name();
@@ -238,8 +240,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       // No material and we have a base texture through the default texture stage.
       set_pixel_shader_define("BASETEXTURE");
       //set_vertex_shader_define("BASETEXTURETRANSFORM");
-      //set_vertex_shader_define("BASETEXTURE_INDEX", i);
-      set_input(ShaderInput("baseTextureSampler", ta->get_on_texture(stage)));
+      set_vertex_shader_define("BASETEXTURE_INDEX", i);
+      Texture *tex = ta->get_on_texture(stage);
+      tex->convert_to_srgb_format();
+      set_input(ShaderInput("baseTextureSampler", tex));
       //set_input(ShaderInput("baseTextureTransform", tma->get_transform(stage)->get_mat()));
 
     } else if (stage_name == "reflection") {
