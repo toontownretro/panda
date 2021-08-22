@@ -838,6 +838,62 @@ get_aux_data(const string &key) const {
 }
 
 /**
+ * If this texture is not in an sRGB format, converts the format of the texture
+ * to an sRGB equivalent based on the number of channels.
+ */
+void Texture::
+convert_to_srgb_format() {
+  if (is_srgb(get_format())) {
+    // Already in sRGB format.
+    return;
+  }
+
+  switch (get_num_components()) {
+  case 1:
+    set_format(F_sluminance);
+    break;
+  case 2:
+    set_format(F_sluminance_alpha);
+    break;
+  case 3:
+    set_format(F_srgb);
+    break;
+  case 4:
+  default:
+    set_format(F_srgb_alpha);
+    break;
+  }
+}
+
+/**
+ * If this texture is in an sRGB format, converts the format of the texture
+ * to an RGB equivalent based on the number of channels.
+ */
+void Texture::
+convert_to_rgb_format() {
+  if (!is_srgb(get_format())) {
+    // Already in RGB format.
+    return;
+  }
+
+  switch (get_num_components()) {
+  case 1:
+    set_format(F_luminance);
+    break;
+  case 2:
+    set_format(F_luminance_alpha);
+    break;
+  case 3:
+    set_format(F_rgb);
+    break;
+  case 4:
+  default:
+    set_format(F_rgba);
+    break;
+  }
+}
+
+/**
  * Reads the texture from a Panda texture object.  This defines the complete
  * Texture specification, including the image data as well as all texture
  * properties.  This only works if the txo file contains a static Texture

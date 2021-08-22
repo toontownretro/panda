@@ -558,6 +558,9 @@ PUBLISHED:
   INLINE static AutoTextureScale get_textures_power_2();
   INLINE static bool has_textures_power_2();
 
+  void convert_to_srgb_format();
+  void convert_to_rgb_format();
+
 PUBLISHED:
 
   INLINE int get_pad_x_size() const;
