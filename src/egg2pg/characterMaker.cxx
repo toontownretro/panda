@@ -29,7 +29,6 @@
 #include "jointVertexTransform.h"
 #include "userVertexTransform.h"
 #include "eggAnimPreload.h"
-#include "animPreloadTable.h"
 
 using std::string;
 
@@ -197,28 +196,6 @@ make_bundle() {
  */
 void CharacterMaker::
 build_joint_hierarchy(EggNode *egg_node, int parent) {
-  if (egg_node->is_of_type(EggAnimPreload::get_class_type())) {
-    EggAnimPreload *egg_anim_preload = DCAST(EggAnimPreload, egg_node);
-
-    double fps = 24.0;
-    if (egg_anim_preload->has_fps()) {
-      fps = egg_anim_preload->get_fps();
-    }
-
-    int num_frames = 1;
-    if (egg_anim_preload->has_num_frames()) {
-      num_frames = egg_anim_preload->get_num_frames();
-    }
-
-    PT(AnimPreloadTable) anim_preload = _bundle->modify_anim_preload();
-    if (anim_preload == nullptr) {
-      anim_preload = new AnimPreloadTable;
-      _bundle->set_anim_preload(anim_preload);
-    }
-    anim_preload->add_anim(egg_node->get_name(), fps, num_frames);
-    return;
-  }
-
   if (egg_node->is_of_type(EggGroup::get_class_type())) {
     EggGroup *egg_group = DCAST(EggGroup, egg_node);
 

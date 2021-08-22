@@ -22,14 +22,15 @@
 #include "character.h"
 #include "virtualFileSystem.h"
 #include "ikChain.h"
-#include "animBundleNode.h"
-#include "animBundle.h"
+#include "animChannelTable.h"
+#include "animChannelBundle.h"
+#include "animChannelBlend1D.h"
+#include "animChannelBlend2D.h"
+#include "animChannelLayered.h"
 #include "materialPool.h"
 #include "pdxList.h"
-#include "animSequence.h"
 #include "weightList.h"
 #include "poseParameter.h"
-#include "animBlendNode2D.h"
 #include "mathutil_misc.h"
 #include "animActivity.h"
 #include "animEvent.h"
@@ -746,7 +747,6 @@ build_graph() {
     Character *part_bundle = DCAST(Character, char_node->get_character());
     _part_bundle = part_bundle;
 
-    pmap<std::string, AnimSequence *> seqs_by_name;
     pmap<std::string, PT(WeightList)> wls_by_name;
 
     // JOINT MERGES
@@ -775,18 +775,6 @@ build_graph() {
       desc.set_weights(wl->_weights);
       PT(WeightList) list = new WeightList(part_bundle, desc);
       wls_by_name[wl->_name] = list;
-    }
-
-    // ANIMATIONS
-    for (size_t i = 0; i < _data->_anims.size(); i++) {
-      PMDLAnim *anim = &_data->_anims[i];
-      AnimBundle *anim_bundle = load_anim(anim->_name, anim->_anim_filename);
-      if (anim_bundle == nullptr) {
-        continue;
-      }
-      if (anim->_fps != -1) {
-        anim_bundle->set_base_frame_rate(anim->_fps);
-      }
     }
 
     // IK CHAINS
@@ -826,135 +814,75 @@ build_graph() {
 
     // SEQUENCES
 
-    // Implicitly create the "zero" sequence as the first sequence.
-    // This sequence just maintains the resting pose of the model.
-    PT(AnimSequence) zero_seq = new AnimSequence("zero");
-    zero_seq->set_flags(AnimSequence::F_all_zeros);
-    zero_seq->set_num_frames(1);
-    zero_seq->set_frame_rate(30);
-    seqs_by_name["zero"] = zero_seq;
-    part_bundle->add_sequence(zero_seq);
-
     for (size_t i = 0; i < _data->_sequences.size(); i++) {
       PMDLSequence *pmdl_seq = &_data->_sequences[i];
-      PT(AnimSequence) seq = new AnimSequence(pmdl_seq->_name);
+
+      PT(AnimChannel) chan;
+
+      if (!pmdl_seq->_layers.empty()) {
+        chan = make_layered_channel(pmdl_seq);
+
+      } else if (!pmdl_seq->_blend._animations.empty()) {
+        chan = make_blend_channel(pmdl_seq->_blend, pmdl_seq->_fps);
+
+      } else if (!pmdl_seq->_animation_name.empty()) {
+        chan = find_or_load_anim(pmdl_seq->_animation_name);
+      }
+
+      if (chan == nullptr) {
+        continue;
+      }
+
+      chan->set_name(pmdl_seq->_name);
 
       unsigned int flags = 0;
       if (pmdl_seq->_loop) {
-        flags |= AnimSequence::F_looping;
+        flags |= AnimChannel::F_looping;
       }
       if (pmdl_seq->_delta) {
-        flags |= AnimSequence::F_delta | AnimSequence::F_post;
+        flags |= AnimChannel::F_delta;
       } else if (pmdl_seq->_pre_delta) {
-        flags |= AnimSequence::F_delta;
+        flags |= AnimChannel::F_pre_delta;
       }
       if (pmdl_seq->_zero_x) {
-        flags |= AnimSequence::F_zero_root_x;
+        flags |= AnimChannel::F_zero_root_x;
       }
       if (pmdl_seq->_zero_y) {
-        flags |= AnimSequence::F_zero_root_y;
+        flags |= AnimChannel::F_zero_root_y;
       }
       if (pmdl_seq->_zero_z) {
-        flags |= AnimSequence::F_zero_root_z;
+        flags |= AnimChannel::F_zero_root_z;
       }
       if (pmdl_seq->_snap) {
-        flags |= AnimSequence::F_snap;
+        flags |= AnimChannel::F_snap;
       }
       if (pmdl_seq->_real_time) {
-        flags |= AnimSequence::F_real_time;
+        flags |= AnimChannel::F_real_time;
       }
-      if (pmdl_seq->_animation_name.empty() && pmdl_seq->_blend._animations.empty()) {
-        flags |= AnimSequence::F_all_zeros;
-      }
-      seq->set_flags(flags);
+      chan->set_flags(flags);
 
-      seq->set_fade_out(pmdl_seq->_fade_out);
-      seq->set_fade_in(pmdl_seq->_fade_in);
+      chan->set_fade_out(pmdl_seq->_fade_out);
+      chan->set_fade_in(pmdl_seq->_fade_in);
 
       if (pmdl_seq->_fps != -1) {
-        seq->set_frame_rate(pmdl_seq->_fps);
+        chan->set_frame_rate(pmdl_seq->_fps);
       }
       if (pmdl_seq->_num_frames != -1) {
-        seq->set_num_frames(pmdl_seq->_num_frames);
+        chan->set_num_frames(pmdl_seq->_num_frames);
       }
 
-      seq->set_activity(activities->get_value_id(pmdl_seq->_activity),
-                        pmdl_seq->_activity_weight);
+      chan->add_activity(activities->get_value_id(pmdl_seq->_activity),
+                         pmdl_seq->_activity_weight);
 
-      if (!pmdl_seq->_animation_name.empty()) {
-        // Single-animation sequence.
-        AnimBundle *anim_bundle = find_or_load_anim(pmdl_seq->_animation_name);
-        if (anim_bundle != nullptr) {
-          seq->set_base(anim_bundle);
-          if (pmdl_seq->_fps != -1) {
-            anim_bundle->set_base_frame_rate(pmdl_seq->_fps);
-          }
-        }
-
-      } else if (!pmdl_seq->_blend._animations.empty()) {
-        // Blended multi-animation sequence.
-
-        PT(AnimBlendNode2D) blend_node = new AnimBlendNode2D("blend_" + pmdl_seq->_name);
-
-        int num_rows = pmdl_seq->_blend._animations.size() / pmdl_seq->_blend._blend_width;
-        int num_cols = pmdl_seq->_blend._blend_width;
-        for (size_t row = 0; row < num_rows; row++) {
-          for (size_t col = 0; col < num_cols; col++) {
-            size_t anim_index = (row * num_cols) + col;
-            AnimBundle *anim_bundle = find_or_load_anim(pmdl_seq->_blend._animations[anim_index]);
-            if (pmdl_seq->_fps != -1) {
-              anim_bundle->set_base_frame_rate(pmdl_seq->_fps);
-            }
-            if (num_rows > 1) {
-              LPoint2 pt((PN_stdfloat)col / (num_cols - 1),
-                         (PN_stdfloat)row / (num_rows - 1));
-              blend_node->add_input(anim_bundle, pt);
-            } else {
-              // Cheat until AnimBlendNode1D.
-              blend_node->add_input(anim_bundle, LPoint2((PN_stdfloat)col / (num_cols - 1), 0.0f));
-              blend_node->add_input(anim_bundle, LPoint2((PN_stdfloat)col / (num_cols - 1), 1.0f));
-            }
-          }
-        }
-
-        blend_node->set_input_x(part_bundle->find_pose_parameter(pmdl_seq->_blend._x_pose_param));
-        blend_node->set_input_y(part_bundle->find_pose_parameter(pmdl_seq->_blend._y_pose_param));
-
-        seq->set_base(blend_node);
-      }
-
-      // Sequence auto-layers.
-      for (size_t j = 0; j < pmdl_seq->_layers.size(); j++) {
-        PMDLSequenceLayer *pmdl_layer = &pmdl_seq->_layers[j];
-        auto it = seqs_by_name.find(pmdl_layer->_sequence_name);
-        if (it == seqs_by_name.end()) {
-          egg2pg_cat.error()
-            << "Layer sequence " << pmdl_layer->_sequence_name << " not found\n";
-          continue;
-        }
-        AnimSequence *layer_seq = (*it).second;
-        int pose_param = -1;
-        if (!pmdl_layer->_pose_param.empty()) {
-          pose_param = part_bundle->find_pose_parameter(pmdl_layer->_pose_param);
-          if (pose_param == -1) {
-            egg2pg_cat.error()
-              << "Sequence " << pmdl_seq->_name << " layer " << pmdl_layer->_sequence_name
-              << " pose parameter " << pmdl_layer->_pose_param << " not found\n";
-            continue;
-          }
-        }
-        seq->add_layer(layer_seq, pmdl_layer->_start_frame,
-                       pmdl_layer->_peak_frame, pmdl_layer->_tail_frame,
-                       pmdl_layer->_end_frame, pmdl_layer->_spline,
-                       pmdl_layer->_no_blend, pmdl_layer->_xfade, pose_param);
-      }
-
+#if 0
       // Sequence events.
       for (size_t j = 0; j < pmdl_seq->_events.size(); j++) {
         PMDLSequenceEvent *event = &pmdl_seq->_events[j];
         seq->add_event(event->_type, events->get_value_id(event->_event),
                        event->_frame, event->_options);
       }
+
+#endif
 
       // Per-joint weight list.
       if (!pmdl_seq->_weight_list_name.empty()) {
@@ -964,13 +892,13 @@ build_graph() {
             << "Weight list " << pmdl_seq->_weight_list_name << " not found\n";
           continue;
         }
-        seq->set_weight_list((*it).second);
+        chan->set_weight_list((*it).second);
       }
 
       // TODO: sequence ik locks and ik rules.
 
-      seqs_by_name[pmdl_seq->_name] = seq;
-      part_bundle->add_sequence(seq);
+      _chans_by_name[pmdl_seq->_name] = chan;
+      part_bundle->add_channel(chan);
     }
 
     // ATTACHMENTS
@@ -1159,7 +1087,106 @@ build_graph() {
 /**
  *
  */
-AnimBundle *PMDLLoader::
+PT(AnimChannel) PMDLLoader::
+make_blend_channel(const PMDLSequenceBlend &blend, int fps) {
+  int num_rows = blend._animations.size() / blend._blend_width;
+  int num_cols = blend._blend_width;
+
+  if (num_rows == 1) {
+    // 1D blend space.
+    PT(AnimChannelBlend1D) chan = new AnimChannelBlend1D("1dblend");
+
+    for (size_t col = 0; col < num_cols; col++) {
+      AnimChannelTable *anim_bundle = find_or_load_anim(blend._animations[col]);
+      if (fps != -1) {
+        anim_bundle->set_frame_rate(fps);
+      }
+      chan->add_channel(anim_bundle, (PN_stdfloat)col / (num_cols - 1));
+    }
+
+    chan->set_blend_param(_part_bundle->find_pose_parameter(blend._x_pose_param));
+
+    return chan;
+
+  } else {
+    // 2D blend space.
+    PT(AnimChannelBlend2D) chan = new AnimChannelBlend2D("2dblend");
+
+    for (size_t row = 0; row < num_rows; row++) {
+      for (size_t col = 0; col < num_cols; col++) {
+        size_t anim_index = (row * num_cols) + col;
+        AnimChannelTable *anim_bundle = find_or_load_anim(blend._animations[anim_index]);
+        if (fps != -1) {
+          anim_bundle->set_frame_rate(fps);
+        }
+        LPoint2 pt((PN_stdfloat)col / (num_cols - 1),
+                    (PN_stdfloat)row / (num_rows - 1));
+        chan->add_channel(anim_bundle, pt);
+      }
+    }
+
+    chan->set_blend_x(_part_bundle->find_pose_parameter(blend._x_pose_param));
+    chan->set_blend_y(_part_bundle->find_pose_parameter(blend._y_pose_param));
+
+    return chan;
+  }
+}
+
+/**
+ *
+ */
+PT(AnimChannel) PMDLLoader::
+make_layered_channel(const PMDLSequence *seq) {
+  PT(AnimChannelLayered) chan = new AnimChannelLayered("layered");
+
+  PT(AnimChannel) base_chan;
+  // First start with the base layer.
+  if (!seq->_blend._animations.empty()) {
+    base_chan = make_blend_channel(seq->_blend, seq->_fps);
+
+  } else if (!seq->_animation_name.empty()) {
+    base_chan = find_or_load_anim(seq->_animation_name);
+    if (seq->_fps != -1) {
+      base_chan->set_frame_rate(seq->_fps);
+    }
+  }
+
+  if (base_chan != nullptr) {
+    chan->add_channel(base_chan);
+  }
+
+  for (int i = 0; i < seq->_layers.size(); i++) {
+    const PMDLSequenceLayer *pmdl_layer = &seq->_layers[i];
+    auto it = _chans_by_name.find(pmdl_layer->_sequence_name);
+    if (it == _chans_by_name.end()) {
+      egg2pg_cat.error()
+        << "Layer sequence " << pmdl_layer->_sequence_name << " not found\n";
+      continue;
+    }
+    AnimChannel *layer_chan = (*it).second;
+    int pose_param = -1;
+    if (!pmdl_layer->_pose_param.empty()) {
+      pose_param = _part_bundle->find_pose_parameter(pmdl_layer->_pose_param);
+      if (pose_param == -1) {
+        egg2pg_cat.error()
+          << "Sequence " << seq->_name << " layer " << pmdl_layer->_sequence_name
+          << " pose parameter " << pmdl_layer->_pose_param << " not found\n";
+        continue;
+      }
+    }
+    chan->add_channel(layer_chan, pmdl_layer->_start_frame,
+                      pmdl_layer->_peak_frame, pmdl_layer->_tail_frame,
+                      pmdl_layer->_end_frame, pmdl_layer->_spline,
+                      pmdl_layer->_no_blend, pmdl_layer->_xfade, pose_param);
+  }
+
+  return chan;
+}
+
+/**
+ *
+ */
+AnimChannelTable *PMDLLoader::
 find_or_load_anim(const std::string &anim_name) {
   auto it = _anims_by_name.find(anim_name);
   if (it != _anims_by_name.end()) {
@@ -1172,7 +1199,7 @@ find_or_load_anim(const std::string &anim_name) {
 /**
  *
  */
-AnimBundle *PMDLLoader::
+AnimChannelTable *PMDLLoader::
 load_anim(const std::string &anim_name, const Filename &filename) {
   Loader *loader = Loader::get_global_ptr();
 
@@ -1191,18 +1218,22 @@ load_anim(const std::string &anim_name, const Filename &filename) {
     return nullptr;
   }
   NodePath anim_np(anim_model);
-  NodePath anim_bundle_np = anim_np.find("**/+AnimBundleNode");
+  NodePath anim_bundle_np = anim_np.find("**/+AnimChannelBundle");
   if (anim_bundle_np.is_empty()) {
     egg2pg_cat.error()
       << "Model " << fullpath << " is not an animation!\n";
     return nullptr;
   }
-  AnimBundleNode *anim_bundle_node = DCAST(AnimBundleNode, anim_bundle_np.node());
-  AnimBundle *anim_bundle = anim_bundle_node->get_bundle();
-  anim_bundle->set_base_frame_rate(30);
+  AnimChannelBundle *anim_bundle_node = DCAST(AnimChannelBundle, anim_bundle_np.node());
+  if (anim_bundle_node->get_num_channels() == 0) {
+    egg2pg_cat.error()
+      << "Animation model " << fullpath << " contains no channels\n";
+    return nullptr;
+  }
+  AnimChannelTable *anim_bundle = DCAST(AnimChannelTable, anim_bundle_node->get_channel(0));
+  anim_bundle->set_frame_rate(30);
   anim_bundle->set_name(anim_name);
-  int anim_index = _part_bundle->bind_anim(anim_bundle);
-  if (anim_index == -1) {
+  if (!_part_bundle->bind_anim(anim_bundle)) {
     egg2pg_cat.error()
       << "Failed to bind anim " << fullpath << " to character " << _part_bundle->get_name() << "\n";
     return nullptr;

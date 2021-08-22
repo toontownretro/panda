@@ -33,6 +33,7 @@ EXPCL_PANDA_ANIM extern ConfigVariableInt async_bind_priority;
 EXPCL_PANDA_ANIM extern ConfigVariableBool even_animation;
 EXPCL_PANDA_ANIM extern ConfigVariableList anim_events;
 EXPCL_PANDA_ANIM extern ConfigVariableList anim_activities;
+EXPCL_PANDA_ANIM extern ConfigVariableBool source_delta_anims;
 
 extern EXPCL_PANDA_ANIM void init_libanim();
 

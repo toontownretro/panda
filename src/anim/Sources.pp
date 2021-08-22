@@ -10,21 +10,15 @@
 
   #define SOURCES \
     animActivity.h \
-    animAddNode.h animAddNode.I \
-    animBlendNode2D.h animBlendNode2D.I \
-    animBundle.h animBundle.I \
-    animBundleNode.h animBundleNode.I \
+    animChannel.h animChannel.I \
+    animChannelBlend1D.h animChannelBlend1D.I \
+    animChannelBlend2D.h animChannelBlend2D.I \
+    animChannelBundle.h animChannelBundle.I \
+    animChannelLayered.h animChannelLayered.I \
+    animChannelTable.h animChannelTable.I \
+    animEvalContext.h animEvalContext.I \
     animEvent.h \
-    animGraphNode.h animGraphNode.I \
     animLayer.h animLayer.I \
-    animMixNode.h animMixNode.I \
-    animOverlayNode.h animOverlayNode.I \
-    animPreloadTable.h animPreloadTable.I \
-    animSequence.h animSequence.I \
-    animSequencePlayer.h animSequencePlayer.I \
-    animStateMachine.h animStateMachine.I \
-    auto_bind.h \
-    bindAnimRequest.h bindAnimRequest.I \
     character.h character.I \
     characterAttachment.h characterAttachment.I \
     characterJoint.h characterJoint.I \
@@ -38,28 +32,20 @@
     ikChain.h ikChain.I \
     ikSolver.h \
     jointVertexTransform.h jointVertexTransform.I \
-    partSubset.h partSubset.I \
     poseParameter.h poseParameter.I \
     sharedEnum.h sharedEnum.I \
     weightList.h weightList.I
 
   #define COMPOSITE_SOURCES \
     animActivity.cxx \
-    animAddNode.cxx \
-    animBlendNode2D.cxx \
-    animBundle.cxx \
-    animBundleNode.cxx \
+    animChannel.cxx \
+    animChannelBlend1D.cxx \
+    animChannelBlend2D.cxx \
+    animChannelBundle.cxx \
+    animChannelLayered.cxx \
+    animChannelTable.cxx \
     animEvent.cxx \
-    animGraphNode.cxx \
     animLayer.cxx \
-    animMixNode.cxx \
-    animOverlayNode.cxx \
-    animPreloadTable.cxx \
-    animSequence.cxx \
-    animSequencePlayer.cxx \
-    animStateMachine.cxx \
-    auto_bind.cxx \
-    bindAnimRequest.cxx \
     character.cxx \
     characterAttachment.cxx \
     characterJoint.cxx \
@@ -73,7 +59,6 @@
     ikChain.cxx \
     ikSolver.cxx \
     jointVertexTransform.cxx \
-    partSubset.cxx \
     poseParameter.cxx \
     sharedEnum.cxx \
     weightList.cxx

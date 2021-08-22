@@ -24,7 +24,7 @@
 
 class PandaNode;
 class Character;
-class AnimBundle;
+class AnimChannelTable;
 
 /**
  * A single material group.
@@ -370,10 +370,14 @@ public:
 
   DSearchPath _search_path;
 
-  AnimBundle *find_or_load_anim(const std::string &anim_name);
-  AnimBundle *load_anim(const std::string &name, const Filename &filename);
+  PT(AnimChannel) make_blend_channel(const PMDLSequenceBlend &blend, int fps);
+  PT(AnimChannel) make_layered_channel(const PMDLSequence *seq);
 
-  pmap<std::string, AnimBundle *> _anims_by_name;
+  AnimChannelTable *find_or_load_anim(const std::string &anim_name);
+  AnimChannelTable *load_anim(const std::string &name, const Filename &filename);
+
+  pmap<std::string, AnimChannelTable *> _anims_by_name;
+  pmap<std::string, AnimChannel *> _chans_by_name;
 };
 
 #include "pmdlLoader.I"

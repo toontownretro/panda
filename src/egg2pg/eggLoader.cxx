@@ -68,7 +68,7 @@
 #include "characterMaker.h"
 #include "character.h"
 #include "animBundleMaker.h"
-#include "animBundleNode.h"
+#include "animChannelBundle.h"
 #include "selectiveChildNode.h"
 #include "collisionNode.h"
 #include "collisionSphere.h"
@@ -2261,7 +2261,7 @@ make_node(EggTable *egg_table, PandaNode *parent) {
 
   // It's an actual bundle, so make an AnimBundle from it and its descendants.
   AnimBundleMaker bundle_maker(egg_table);
-  AnimBundleNode *node = bundle_maker.make_node();
+  PT(AnimChannelBundle) node = bundle_maker.make_node();
   parent->add_child(node);
   return node;
 }

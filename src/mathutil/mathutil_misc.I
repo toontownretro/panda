@@ -133,3 +133,12 @@ floor_pow_2(int in) {
 
 	return retval >> 1;
 }
+
+/**
+ * Simple spline curve.
+ */
+INLINE PN_stdfloat
+simple_spline(PN_stdfloat s) {
+  PN_stdfloat val_squared = s * s;
+  return (3 * val_squared - 2 * val_squared * s);
+}

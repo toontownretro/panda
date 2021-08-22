@@ -38,6 +38,13 @@ protected:
   AnimInterface(const AnimInterface &copy);
 
 PUBLISHED:
+  enum PlayMode {
+    PM_pose,
+    PM_play,
+    PM_loop,
+    PM_pingpong,
+  };
+
   virtual ~AnimInterface();
   INLINE void play();
   INLINE void play(double from, double to);
@@ -60,6 +67,13 @@ PUBLISHED:
   INLINE double get_full_fframe() const;
   INLINE bool is_playing() const;
 
+  static double get_f(double start_time, PN_stdfloat fps, double play_rate);
+
+  static double get_full_fframe(PlayMode mode, double start_time, int num_frames,
+                                PN_stdfloat fps, double play_rate);
+  static double get_full_fframe(PlayMode mode, double start_time, double from_frame,
+                                double play_frames, PN_stdfloat fps, double play_rate);
+
   virtual void output(std::ostream &out) const;
 
 PUBLISHED:
@@ -81,13 +95,6 @@ protected:
   virtual void animation_deactivated();
 
 protected:
-  enum PlayMode {
-    PM_pose,
-    PM_play,
-    PM_loop,
-    PM_pingpong,
-  };
-
   INLINE PlayMode get_play_mode() const;
   INLINE double get_start_time() const;
   INLINE double get_start_frame() const;

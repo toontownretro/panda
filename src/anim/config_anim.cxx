@@ -13,10 +13,6 @@
 
 #include "config_anim.h"
 
-#include "animBundle.h"
-#include "animBundleNode.h"
-#include "animPreloadTable.h"
-//#include "bindAnimRequest.h"
 
 #include "character.h"
 #include "characterNode.h"
@@ -26,16 +22,14 @@
 #include "eyeballNode.h"
 
 // Anim graph objects
-#include "animGraphNode.h"
-#include "animAddNode.h"
-#include "animBlendNode2D.h"
-#include "animMixNode.h"
-#include "animSequence.h"
-#include "animStateMachine.h"
+#include "animChannel.h"
+#include "animChannelTable.h"
+#include "animChannelBlend1D.h"
+#include "animChannelBlend2D.h"
+#include "animChannelLayered.h"
+#include "animChannelBundle.h"
 #include "poseParameter.h"
 #include "weightList.h"
-#include "animOverlayNode.h"
-#include "animSequencePlayer.h"
 
 #include "luse.h"
 
@@ -124,6 +118,17 @@ ConfigVariableList anim_activities
  PRC_DESC("A list of filenames that contain animation activity type "
           "definitions, so both Python and C++ code have access to them."));
 
+ConfigVariableBool source_delta_anims
+("source-delta-anims",
+ PRC_DESC("Set this true if your delta animations were converted out of the "
+          "Source Engine.  When true, the animation system will use same "
+          "quaternion multiply-add method as Source to ensure that delta "
+          "animations blend correctly.  It will also apply a 90-degree "
+          "counter-rotation on the roll axis to the root joint of all "
+          "delta animations, as it seems to be the case that delta "
+          "animations converted out of Source have a 90-degree rotation "
+          "on the roll axis of the root joint."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -139,18 +144,16 @@ init_libanim() {
 
   initialized = true;
 
-  AnimAddNode::init_type();
-  AnimBlendNode2D::init_type();
-  AnimBundle::init_type();
-  AnimBundleNode::init_type();
-  AnimGraphNode::init_type();
-  AnimMixNode::init_type();
-  AnimOverlayNode::init_type();
-  AnimPreloadTable::init_type();
-  AnimSequence::init_type();
-  AnimSequencePlayer::init_type();
-  AnimStateMachine::init_type();
-  //BindAnimRequest::init_type();
+  JointEntry::init_type();
+  JointFrame::init_type();
+  SliderEntry::init_type();
+
+  AnimChannel::init_type();
+  AnimChannelTable::init_type();
+  AnimChannelBundle::init_type();
+  AnimChannelBlend1D::init_type();
+  AnimChannelBlend2D::init_type();
+  AnimChannelLayered::init_type();
   PoseParameter::init_type();
   WeightList::init_type();
 
@@ -166,9 +169,11 @@ init_libanim() {
   // don't necessarily resolve very well across dynamic libraries.
   LMatrix4::init_type();
 
-  AnimBundle::register_with_read_factory();
-  AnimBundleNode::register_with_read_factory();
-  AnimPreloadTable::register_with_read_factory();
+  AnimChannelTable::register_with_read_factory();
+  AnimChannelBlend1D::register_with_read_factory();
+  AnimChannelBlend2D::register_with_read_factory();
+  AnimChannelLayered::register_with_read_factory();
+  AnimChannelBundle::register_with_read_factory();
 
   Character::register_with_read_factory();
   CharacterNode::register_with_read_factory();

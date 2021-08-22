@@ -31,7 +31,6 @@
 #include "colorAttrib.h"
 #include "perspectiveLens.h"
 #include "orthographicLens.h"
-#include "auto_bind.h"
 #include "ambientLight.h"
 #include "directionalLight.h"
 #include "lightAttrib.h"
@@ -52,7 +51,6 @@
 #include "bamFile.h"
 #include "staticTextFont.h"
 #include "mouseButton.h"
-#include "animStateMachine.h"
 
 // This is generated data for the standard texture we apply to the blue
 // triangle.

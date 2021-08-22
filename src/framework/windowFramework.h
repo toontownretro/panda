@@ -19,7 +19,6 @@
 #include "camera.h"
 #include "graphicsOutput.h"
 #include "graphicsWindow.h"
-//#include "animControlCollection.h"
 #include "trackball.h"
 #include "filename.h"
 #include "frameRateMeter.h"
@@ -93,9 +92,7 @@ public:
                    const pvector<Filename> &files);
   NodePath load_model(const NodePath &parent, Filename filename);
   NodePath load_default_model(const NodePath &parent);
-  void loop_animations(int hierarchy_match_flags =
-                       Character::HMF_ok_part_extra |
-                       Character::HMF_ok_anim_extra);
+  void loop_animations(int hierarchy_match_flags = 0);
   void stagger_animations();
   void next_anim_control();
   void set_anim_controls(bool enable);

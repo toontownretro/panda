@@ -63,6 +63,57 @@ get_num_frames() const {
 /**
  *
  */
+double AnimInterface::
+get_f(double start_time, PN_stdfloat fps, double play_rate) {
+  double now = ClockObject::get_global_clock()->get_frame_time();
+  double elapsed = now - start_time;
+  return (elapsed * (fps * play_rate));
+}
+
+/**
+ *
+ */
+double AnimInterface::
+get_full_fframe(PlayMode mode, double start_time, int num_frames,
+                PN_stdfloat fps, double play_rate) {
+  return get_full_fframe(mode, start_time, 0, num_frames, fps, play_rate);
+}
+
+/**
+ *
+ */
+double AnimInterface::
+get_full_fframe(PlayMode mode, double start_time, double from_frame,
+                double play_frames, PN_stdfloat fps, double play_rate) {
+  switch (mode) {
+  case PM_pose:
+    return from_frame;
+
+  case PM_play:
+    return min(max(get_f(start_time, fps, play_rate), 0.0), play_frames) + from_frame;
+
+  case PM_loop:
+    nassertr(play_frames >= 0.0, 0.0);
+    return cmod(get_f(start_time, fps, play_rate), play_frames) + from_frame;
+
+  case PM_pingpong:
+    {
+      nassertr(play_frames >= 0.0, 0.0);
+      double f = cmod(get_f(start_time, fps, play_rate), play_frames * 2.0);
+      if (f > play_frames) {
+        return (play_frames * 2.0 - f) + from_frame;
+      } else {
+        return f + from_frame;
+      }
+    }
+  }
+
+  return from_frame;
+}
+
+/**
+ *
+ */
 void AnimInterface::
 output(std::ostream &out) const {
   CDReader cdata(_cycler);
@@ -335,30 +386,8 @@ get_full_frame(int increment) const {
  */
 double AnimInterface::CData::
 get_full_fframe() const {
-  switch (_play_mode) {
-  case PM_pose:
-    return _start_frame;
-
-  case PM_play:
-    return min(max(get_f(), 0.0), _play_frames) + _start_frame;
-
-  case PM_loop:
-    nassertr(_play_frames >= 0.0, 0.0);
-    return cmod(get_f(), _play_frames) + _start_frame;
-
-  case PM_pingpong:
-    {
-      nassertr(_play_frames >= 0.0, 0.0);
-      double f = cmod(get_f(), _play_frames * 2.0);
-      if (f > _play_frames) {
-        return (_play_frames * 2.0 - f) + _start_frame;
-      } else {
-        return f + _start_frame;
-      }
-    }
-  }
-
-  return _start_frame;
+  return AnimInterface::get_full_fframe(
+    _play_mode, _start_time, _start_frame, _play_frames, _frame_rate, _play_rate);
 }
 
 /**
@@ -449,8 +478,6 @@ get_f() const {
     return _paused_f;
 
   } else {
-    double now = ClockObject::get_global_clock()->get_frame_time();
-    double elapsed = now - _start_time;
-    return (elapsed * _effective_frame_rate);
+    return AnimInterface::get_f(_start_time, _frame_rate, _play_rate);
   }
 }

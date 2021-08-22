@@ -6,57 +6,45 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file animBundle.cxx
- * @author drose
- * @date 1999-02-21
+ * @file animChannelTable.cxx
+ * @author brian
+ * @date 2021-08-04
  */
 
-#include "animBundle.h"
-
-#include "indent.h"
+#include "animChannelTable.h"
+#include "bamReader.h"
 #include "datagram.h"
 #include "datagramIterator.h"
-#include "bamReader.h"
-#include "bamWriter.h"
+#include "animLayer.h"
+#include "animEvalContext.h"
+#include "characterJoint.h"
 
-TypeHandle AnimBundle::_type_handle;
+IMPLEMENT_CLASS(JointEntry);
+IMPLEMENT_CLASS(JointFrame);
+IMPLEMENT_CLASS(SliderEntry);
 
-/**
- * Creates a new AnimBundle, just like this one, without copying any children.
- * The new copy is added to the indicated parent.  Intended to be called by
- * make_copy() only.
- */
-AnimBundle::
-AnimBundle(const AnimBundle &copy) :
-  AnimGraphNode(copy),
-  _fps(copy._fps),
-  _num_frames(copy._num_frames),
-  _joint_frames(copy._joint_frames),
-  _joint_entries(copy._joint_entries),
-  _slider_table(copy._slider_table),
-  _slider_entries(copy._slider_entries),
-  _joint_map(copy._joint_map),
-  _has_character_bound(copy._has_character_bound)
-{
-}
+template class PointerToBase<ReferenceCountedVector<JointEntry> >;
+template class PointerToArrayBase<JointEntry>;
+template class PointerToArray<JointEntry>;
+template class ConstPointerToArray<JointEntry>;
 
-/**
- * Returns a full copy of the bundle and its entire tree of nested AnimGroups.
- * However, the actual data stored in the leaves--that is, animation tables,
- * such as those stored in an AnimChannelMatrixXfmTable--will be shared.
- */
-PT(AnimBundle) AnimBundle::
-copy_bundle() const {
-  //PT(AnimGroup) group = copy_subtree(nullptr);
-  //return DCAST(AnimBundle, group.p());
-  return nullptr; // FIXME
-}
+template class PointerToBase<ReferenceCountedVector<JointFrame> >;
+template class PointerToArrayBase<JointFrame>;
+template class PointerToArray<JointFrame>;
+template class ConstPointerToArray<JointFrame>;
+
+template class PointerToBase<ReferenceCountedVector<SliderEntry> >;
+template class PointerToArrayBase<SliderEntry>;
+template class PointerToArray<SliderEntry>;
+template class ConstPointerToArray<SliderEntry>;
+
+IMPLEMENT_CLASS(AnimChannelTable);
 
 /**
  * Returns the index of the joint channel with the indicated name, or -1 if no
  * such joint channel exists.
  */
-int AnimBundle::
+int AnimChannelTable::
 find_joint_channel(const std::string &name) const {
   for (size_t i = 0; i < _joint_entries.size(); i++) {
     if (_joint_entries[i].name == name) {
@@ -71,7 +59,7 @@ find_joint_channel(const std::string &name) const {
  * Returns the index of the slider channel with the indicated name, or -1 if no
  * such slider channel exists.
  */
-int AnimBundle::
+int AnimChannelTable::
 find_slider_channel(const std::string &name) const {
   for (size_t i = 0; i < _slider_entries.size(); i++) {
     if (_slider_entries[i].name == name) {
@@ -83,38 +71,83 @@ find_slider_channel(const std::string &name) const {
 }
 
 /**
- * Writes a one-line description of the bundle.
+ * Creates and returns a copy of this AnimChannel.
  */
-void AnimBundle::
-output(std::ostream &out) const {
-  out << get_type() << " " << get_name() << ", " << get_num_frames()
-      << " frames at " << get_base_frame_rate() << " fps";
+PT(AnimChannel) AnimChannelTable::
+make_copy() const {
+  return new AnimChannelTable(*this);
+}
+
+/**
+ * Returns the duration of the channel.
+ */
+PN_stdfloat AnimChannelTable::
+get_length(Character *character) const {
+  return _num_frames / _fps;
 }
 
 /**
  *
  */
-void AnimBundle::
-evaluate(AnimGraphEvalContext &context) {
-  if (!has_mapped_character()) {
+void AnimChannelTable::
+calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (!has_mapped_character() || data._weight == 0.0f) {
     return;
   }
 
   // Make sure cycle is within 0-1 range.
-  PN_stdfloat cycle = std::max(0.0f, std::min(0.999f, context._cycle));
+  PN_stdfloat cycle = std::max(0.0f, std::min(1.0f, data._cycle));
+
   int num_frames = get_num_frames();
+  int start_frame = (int)floor(context._start_cycle * (num_frames - 1));
+  int play_frames = (int)floor(context._play_cycles * (num_frames - 1));
+
   // Calculate the floating-point frame.
-  PN_stdfloat fframe = cycle * num_frames;
+  PN_stdfloat fframe = cycle * (num_frames - 1);
   // Snap to integer frame.
   int frame = (int)floor(fframe);
+
+  // Determine next frame for inter-frame blending.
   int next_frame;
-  if (context._looping) {
-    next_frame = cmod(frame + 1, num_frames);
-  } else {
-    next_frame = std::max(0, std::min(num_frames - 1, frame + 1));
+  switch (context._play_mode) {
+  case AnimLayer::PM_pose:
+    next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+    break;
+  case AnimLayer::PM_play:
+    next_frame = std::min(std::max(frame + 1, 0), play_frames) + start_frame;
+    break;
+  case AnimLayer::PM_loop:
+    {
+      if (play_frames == 0) {
+        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+      } else {
+        next_frame = cmod(frame + 1, play_frames) + start_frame;
+      }
+    }
+    break;
+  case AnimLayer::PM_pingpong:
+    {
+      if (play_frames == 0) {
+        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+
+      } else {
+        next_frame = cmod(frame + 1, play_frames) + start_frame;
+        if (next_frame > play_frames) {
+          next_frame = (play_frames * 2.0f - next_frame) + start_frame;
+        } else {
+          next_frame += start_frame;
+        }
+      }
+    }
+    break;
+  default:
+    next_frame = frame;
+    break;
   }
 
   PN_stdfloat frac = fframe - frame;
+
+  AnimEvalData table_data(data);
 
   if (!context._frame_blend || frame == next_frame) {
     // Hold the current frame until the next one is ready.
@@ -122,17 +155,16 @@ evaluate(AnimGraphEvalContext &context) {
       if (!context._joint_mask.get_bit(i)) {
         continue;
       }
-      JointTransform &xform = context._joints[i];
-      CharacterJoint &joint = context._parts[i];
+      CharacterJoint &joint = context._joints[i];
       int anim_joint = get_anim_joint_for_character_joint(i);
       if (anim_joint == -1) {
         continue;
       }
       const JointFrame &jframe = get_joint_frame(anim_joint, frame);
 
-      xform._rotation = jframe.quat;
-      xform._position = jframe.pos;
-      xform._scale = jframe.scale;
+      table_data._rotation[i] = jframe.quat;
+      table_data._position[i] = jframe.pos;
+      table_data._scale[i] = jframe.scale;
     }
 
   } else {
@@ -144,8 +176,7 @@ evaluate(AnimGraphEvalContext &context) {
       if (!context._joint_mask.get_bit(i)) {
         continue;
       }
-      JointTransform &t = context._joints[i];
-      CharacterJoint &j = context._parts[i];
+      CharacterJoint &j = context._joints[i];
       int anim_joint = get_anim_joint_for_character_joint(i);
       if (anim_joint == -1) {
         continue;
@@ -155,42 +186,43 @@ evaluate(AnimGraphEvalContext &context) {
       const JointFrame &jf = get_joint_frame(je, frame);
       const JointFrame &jf_next = get_joint_frame(je, next_frame);
 
-      t._position = (jf.pos * e0) + (jf_next.pos * frac);
-      t._scale = (jf.scale * e0) + (jf_next.scale * frac);
-      LQuaternion::blend(jf.quat, jf_next.quat, frac, t._rotation);
+      table_data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
+      table_data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
+      LQuaternion::blend(jf.quat, jf_next.quat, frac, table_data._rotation[i]);
     }
   }
+
+  blend(context, data, table_data, data._weight);
 }
 
 /**
  *
  */
-void AnimBundle::
-evaluate_anims(pvector<AnimBundle *> &anims, vector_stdfloat &weights, PN_stdfloat this_weight) {
-  anims.push_back(this);
-  weights.push_back(this_weight);
+void AnimChannelTable::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
- * Returns a copy of this object, and attaches it to the indicated parent
- * (which may be NULL only if this is an AnimBundle).  Intended to be called
- * by copy_subtree() only.
+ *
  */
-//AnimGroup *AnimBundle::
-//make_copy(AnimGroup *parent) const {
-//  return new AnimBundle(parent, *this);
-//}
+TypedWritable *AnimChannelTable::
+make_from_bam(const FactoryParams &params) {
+  AnimChannelTable *table = new AnimChannelTable;
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  table->fillin(scan, manager);
+  return table;
+}
 
 /**
- * Function to write the important information in the particular object to a
- * Datagram
+ *
  */
-void AnimBundle::
+void AnimChannelTable::
 write_datagram(BamWriter *manager, Datagram &me) {
-  me.add_string(get_name());
-
-  me.add_stdfloat(_fps);
-  me.add_uint16(_num_frames);
+  AnimChannel::write_datagram(manager, me);
 
   me.add_uint16(_joint_entries.size());
   for (size_t i = 0; i < _joint_entries.size(); i++) {
@@ -238,16 +270,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
 }
 
 /**
- * Function that reads out of the datagram (or asks manager to read) all of
- * the data that is needed to re-create this object and stores it in the
- * appropiate place
+ *
  */
-void AnimBundle::
+void AnimChannelTable::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  set_name(scan.get_string());
-
-  _fps = scan.get_stdfloat();
-  _num_frames = scan.get_uint16();
+  AnimChannel::fillin(scan, manager);
 
   _joint_entries.resize(scan.get_uint16());
   for (size_t i = 0; i < _joint_entries.size(); i++) {
@@ -286,26 +313,4 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   }
 
   _has_character_bound = scan.get_bool();
-}
-
-/**
- * Factory method to generate a AnimBundle object
- */
-TypedWritable *AnimBundle::
-make_AnimBundle(const FactoryParams &params) {
-  AnimBundle *me = new AnimBundle;
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  me->fillin(scan, manager);
-  return me;
-}
-
-/**
- * Factory method to generate a AnimBundle object
- */
-void AnimBundle::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_AnimBundle);
 }

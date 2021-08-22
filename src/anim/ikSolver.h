@@ -52,25 +52,6 @@ PUBLISHED:
   float find_d(PN_stdfloat a, PN_stdfloat b, PN_stdfloat c);
   float find_e(PN_stdfloat a, PN_stdfloat d);
 
-  static void solve_ik(const LPoint3 &root_pos, const LPoint3 &joint_pos, const LPoint3 &end_pos,
-         const LPoint3 &target, const LPoint3 &effector, LPoint3 &out_joint_pos,
-         LPoint3 &out_end_pos, PN_stdfloat upper_length, PN_stdfloat lower_length,
-         bool allow_stretching, PN_stdfloat start_stretch_ratio,
-         PN_stdfloat max_stretch_scale);
-
-  static void solve_ik(JointTransform &root, JointTransform &joint, JointTransform &end,
-         const LPoint3 &target, const LPoint3 &effector, PN_stdfloat upper_length,
-         PN_stdfloat lower_length, bool allow_stretching,
-         PN_stdfloat start_stretch_ratio, PN_stdfloat max_stretch_scale);
-
-  static void solve_ik(const LPoint3 &root, const LPoint3 &joint, const LPoint3 &end, const LPoint3 &target,
-         const LPoint3 &effector, LPoint3 &out_joint_pos, LPoint3 &out_end_pos,
-         bool allow_stretching, PN_stdfloat start_stretch_ratio, PN_stdfloat max_stretch_scale);
-
-  static void solve_ik(JointTransform &root, JointTransform &joint, JointTransform &end,
-         const LPoint3 &target, const LPoint3 &effector, bool allow_stretching,
-         PN_stdfloat start_stretch_ratio, PN_stdfloat max_stretch_scale);
-
 private:
   LMatrix3 _forward;
   LMatrix3 _inverse;

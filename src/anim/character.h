@@ -26,19 +26,17 @@
 #include "cycleDataLockedReader.h"
 #include "cycleDataStageWriter.h"
 #include "filename.h"
-#include "partSubset.h"
-#include "animPreloadTable.h"
-#include "animGraphNode.h"
 #include "poseParameter.h"
-#include "animBundle.h"
-#include "animSequence.h"
 #include "characterAttachment.h"
 #include "ikChain.h"
+#include "animLayer.h"
+#include "animChannel.h"
 
 class FactoryParams;
-class AnimBundle;
 class Loader;
 class CharacterNode;
+class AnimChannelTable;
+class AnimEvalData;
 
 /**
  * An animated character.  Defines a hierarchy of joints that influence the
@@ -52,31 +50,13 @@ private:
   Character(const Character &copy);
 
 PUBLISHED:
-  // This enum defines bits which may be passed into check_hierarchy() and
-  // PartBundle::bind_anim() to allow an inexact match of channel hierarchies.
-  // This specifies conditions that we don't care about enforcing.
-  enum HierarchyMatchFlags {
-    HMF_ok_part_extra          = 0x01,
-    HMF_ok_anim_extra          = 0x02,
-    HMF_ok_wrong_root_name     = 0x04,
-  };
-
   Character(const std::string &name);
-
-  INLINE CPT(AnimPreloadTable) get_anim_preload() const;
-  INLINE PT(AnimPreloadTable) modify_anim_preload();
-  INLINE void set_anim_preload(AnimPreloadTable *table);
-  INLINE void clear_anim_preload();
-  void merge_anim_preloads(const Character *other);
 
   INLINE int add_pose_parameter(const std::string &name, PN_stdfloat min_val, PN_stdfloat max_val,
                                 PN_stdfloat looping = 0.0f);
   INLINE int get_num_pose_parameters() const;
   INLINE PoseParameter &get_pose_parameter(int n);
   INLINE int find_pose_parameter(const std::string &name) const;
-
-  INLINE void set_anim_graph(AnimGraphNode *graph);
-  INLINE AnimGraphNode *get_anim_graph() const;
 
   INLINE void set_frame_blend_flag(bool frame_blend_flag);
   INLINE bool get_frame_blend_flag() const;
@@ -94,7 +74,7 @@ PUBLISHED:
   MAKE_SEQ_PROPERTY(nodes, get_num_nodes, get_node);
 
   int make_joint(const std::string &name, int parent = -1,
-                             const LMatrix4 &default_value = LMatrix4::ident_mat());
+                 const LMatrix4 &default_value = LMatrix4::ident_mat());
   int make_slider(const std::string &name, PN_stdfloat default_value = 0.0f);
 
   INLINE void set_joint_forced_value(int n, const LMatrix4 &value);
@@ -127,19 +107,15 @@ PUBLISHED:
   INLINE const LMatrix4 &get_joint_default_value(int n) const;
   INLINE const LMatrix4 &get_joint_value(int n) const;
 
-  INLINE int add_sequence(AnimSequence *sequence);
-  INLINE int get_num_sequences() const;
-  INLINE AnimSequence *get_sequence(int n) const;
+  INLINE int add_channel(AnimChannel *channel);
+  INLINE int get_num_channels() const;
+  INLINE AnimChannel *get_channel(int n) const;
 
-  int get_sequence_for_activity(int activity, int curr_sequence, unsigned long seed = 0) const;
+  bool bind_anim(AnimChannelTable *anim);
+
+  int get_channel_for_activity(int activity, int curr_channel, unsigned long seed = 0) const;
 
   void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
-
-  int bind_anim(AnimBundle *anim);
-  int load_bind_anim(Loader *loader,
-                     const Filename &filename);
-  INLINE int get_num_anims() const;
-  INLINE AnimBundle *get_anim(int n) const;
 
   bool update();
   bool force_update();
@@ -171,8 +147,51 @@ PUBLISHED:
   INLINE int get_num_ik_chains() const;
   INLINE IKChain *get_ik_chain(int n);
 
+  void advance();
+
+  INLINE int get_num_anim_layers() const;
+  INLINE AnimLayer *get_anim_layer(int n);
+
+  INLINE void set_auto_advance_flag(bool flag);
+  INLINE bool get_auto_advance_flag() const;
+
+  INLINE void set_channel_transition_flag(bool flag);
+  INLINE bool get_channel_transition_flag() const;
+
   PT(Character) make_copy() const;
   PT(Character) copy_subgraph() const;
+
+  void play(int channel, int layer = 0, PN_stdfloat play_rate = 1.0f,
+            bool autokill = false, PN_stdfloat blend_in = 0.0f,
+            PN_stdfloat blend_out = 0.0f);
+  void play(int channel, double from, double to, int layer = 0,
+            PN_stdfloat play_rate = 1.0f,
+            bool autokill = false, PN_stdfloat blend_in = 0.0f,
+            PN_stdfloat blend_out = 0.0f);
+  void loop(int channel, bool restart, int layer = 0,
+            PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f);
+  void loop(int channel, bool restart, double from, double to, int layer = 0,
+            PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f);
+  void pingpong(int channel, bool restart, int layer = 0,
+                PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f);
+  void pingpong(int channel, bool restart, double from, double to, int layer = 0,
+                PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f);
+  void pose(int channel, double frame, int layer = 0, PN_stdfloat blend_in = 0.0f,
+            PN_stdfloat blend_out = 0.0f);
+  //void start(int channel, bool restart, int layer = 0,
+  //           PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f,
+  //           PN_stdfloat blend_out = 0.0f);
+  //void start(int channel, bool restart, double from, double to, int layer = 0,
+  //           PN_stdfloat play_rate = 1.0f, PN_stdfloat blend_in = 0.0f,
+  //           PN_stdfloat blend_out = 0.0f);
+  void stop(int layer = -1, bool kill = false);
+
+  void reset_layer_channel(int layer, int channel, int activity, bool restart,
+                           PN_stdfloat start_time, PN_stdfloat from, PN_stdfloat to,
+                           AnimLayer::PlayMode mode, PN_stdfloat play_rate,
+                           bool autokill, PN_stdfloat blend_in, PN_stdfloat blend_out);
+  void ensure_layer_count(int count);
+
 
 public:
   void add_node(CharacterNode *node);
@@ -186,22 +205,26 @@ private:
   void update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner);
 
   bool apply_pose(CData *cdata, const LMatrix4 &root_xform,
-                  const AnimGraphEvalContext &context, Thread *current_thread);
+                  const AnimEvalData &data, Thread *current_thread);
+
+  bool do_update(double now, CData *cdata, Thread *current_thread);
+  void do_advance(double now, CData *cdata, Thread *current_thread);
 
 private:
   typedef pvector<LMatrix4> Matrices;
   typedef pvector<JointVertexTransform *> VertexTransforms;
   typedef pvector<CharacterJoint> Joints;
   typedef pvector<PoseParameter> PoseParameters;
-  typedef pvector<PT(AnimBundle)> Animations;
-  typedef pvector<PT(AnimSequence)> Sequences;
   typedef pvector<CharacterAttachment> Attachments;
   typedef pvector<IKChain> IKChains;
+  typedef pvector<AnimLayer> AnimLayers;
+  typedef pvector<PT(AnimChannel)> AnimChannels;
+
+  AnimChannels _channels;
+
+  AnimLayers _anim_layers;
 
   IKChains _ik_chains;
-
-  Animations _animations;
-  Sequences _sequences;
 
   PoseParameters _pose_parameters;
 
@@ -226,8 +249,6 @@ private:
 
   double _update_delay;
 
-  COWPT(AnimPreloadTable) _anim_preload;
-
   // The active owner of this Character.  All expose joint nodes are parented
   // to this CharacterNode.
   CharacterNode *_active_owner;
@@ -249,8 +270,9 @@ private:
     }
 
     bool _frame_blend_flag;
+    bool _auto_advance_flag;
+    bool _channel_transition_flag;
     LMatrix4 _root_xform;
-    PT(AnimGraphNode) _anim_graph;
     PT(Character) _joint_merge_character;
     bool _anim_changed;
     double _last_update;

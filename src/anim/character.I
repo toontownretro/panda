@@ -12,41 +12,6 @@
  */
 
 /**
- * Returns the AnimPreloadTable associated with the Character.  This table,
- * if present, can be used for the benefit of load_bind_anim() to allow
- * asynchronous binding.
- */
-INLINE CPT(AnimPreloadTable) Character::
-get_anim_preload() const {
-  return _anim_preload.get_read_pointer();
-}
-
-/**
- * Returns a modifiable pointer to the AnimPreloadTable associated with the
- * Character, if any.
- */
-INLINE PT(AnimPreloadTable) Character::
-modify_anim_preload() {
-  return _anim_preload.get_write_pointer();
-}
-
-/**
- * Replaces the AnimPreloadTable associated with the Character.
- */
-INLINE void Character::
-set_anim_preload(AnimPreloadTable *anim_preload) {
-  _anim_preload = anim_preload;
-}
-
-/**
- * Removes any AnimPreloadTable associated with the Character.
- */
-INLINE void Character::
-clear_anim_preload() {
-  _anim_preload = nullptr;
-}
-
-/**
  * Adds a new pose parameter to the character.  This can be used by animation
  * blend nodes to control the blend result.  Returns the index of the new pose
  * parameter.
@@ -88,29 +53,6 @@ find_pose_parameter(const std::string &name) const {
   }
 
   return -1;
-}
-
-/**
- * Sets the animation graph that the character should evaluate to determine
- * a final pose for a frame of animation.
- */
-INLINE void Character::
-set_anim_graph(AnimGraphNode *graph) {
-  CDWriter cdata(_cycler);
-  if (cdata->_anim_graph != graph) {
-    cdata->_anim_graph = graph;
-    cdata->_anim_changed = true;
-  }
-}
-
-/**
- * Returns the animation graph that the character should evaluate to determine
- * a final pose for a frame of animation.
- */
-INLINE AnimGraphNode *Character::
-get_anim_graph() const {
-  CDReader cdata(_cycler);
-  return cdata->_anim_graph;
 }
 
 /**
@@ -438,55 +380,36 @@ get_joint_value(int n) const {
 }
 
 /**
- * Adds a new AnimSequence to the character and returns the index of the
- * sequence.
+ * Adds a new AnimChannel to the character and returns the index of the
+ * channel.
  */
 INLINE int Character::
-add_sequence(AnimSequence *sequence) {
-  Sequences::const_iterator it = std::find(_sequences.begin(), _sequences.end(), sequence);
-  if (it != _sequences.end()) {
+add_channel(AnimChannel *channel) {
+  auto it = std::find(_channels.begin(), _channels.end(), channel);
+  if (it != _channels.end()) {
     // Already added to the character.
-    return (int)(it - _sequences.begin());
+    return (int)(it - _channels.begin());
   }
 
-  _sequences.push_back(sequence);
-  return (int)_sequences.size() - 1;
+  _channels.push_back(channel);
+  return (int)_channels.size() - 1;
 }
 
 /**
- * Returns the number of sequences in the character.
+ * Returns the number of channels in the character.
  */
 INLINE int Character::
-get_num_sequences() const {
-  return (int)_sequences.size();
+get_num_channels() const {
+  return (int)_channels.size();
 }
 
 /**
- * Returns the sequence at the indicated index.
+ * Returns the channel at the indicated index.
  */
-INLINE AnimSequence *Character::
-get_sequence(int n) const {
-  nassertr(n >= 0 && n < (int)_sequences.size(), nullptr);
-  return _sequences[n];
-}
-
-/**
- * Returns the number of animations in the character.  This is the number of
- * raw frame-by-frame animations that were created and exported from the
- * modelling package.  A sequence may be composed of multiple animations.
- */
-INLINE int Character::
-get_num_anims() const {
-  return (int)_animations.size();
-}
-
-/**
- * Returns the AnimBundle at the indicated index.
- */
-INLINE AnimBundle *Character::
-get_anim(int n) const {
-  nassertr(n >= 0 && n < (int)_animations.size(), nullptr);
-  return _animations[n];
+INLINE AnimChannel *Character::
+get_channel(int n) const {
+  nassertr(n >= 0 && n < (int)_channels.size(), nullptr);
+  return _channels[n];
 }
 
 /**
@@ -509,6 +432,23 @@ get_ik_chain(int n) {
 }
 
 /**
+ * Returns the number of animation layers on the character.
+ */
+INLINE int Character::
+get_num_anim_layers() const {
+  return (int)_anim_layers.size();
+}
+
+/**
+ * Returns the nth animation layer on the character.
+ */
+INLINE AnimLayer *Character::
+get_anim_layer(int n) {
+  nassertr(n >= 0 && n < (int)_anim_layers.size(), nullptr);
+  return &_anim_layers[n];
+}
+
+/**
  * Specifies the minimum amount of time, in seconds, that should elapse
  * between any two consecutive updates.  This is normally used by
  * Character::set_lod_animation(), and should not be called directly.
@@ -516,4 +456,51 @@ get_ik_chain(int n) {
 INLINE void Character::
 set_update_delay(double delay) {
   _update_delay = delay;
+}
+
+/**
+ * Specifies whether the Character should automatically advance the timing of
+ * all playing animations when it is visited during the Cull traversal.  If
+ * this is set to false, the user is responsible for explicitly calling
+ * advance() on the Character to update animation timing prior to rendering, or
+ * manually supply timing values to each animation layer.  When doing
+ * server-side replicated animation, this flag is false and the client will
+ * manually set the timing values of each layer with interpolated values
+ * received from the server.
+ */
+INLINE void Character::
+set_auto_advance_flag(bool flag) {
+  CDWriter cdata(_cycler);
+  cdata->_auto_advance_flag = flag;
+}
+
+/**
+ * Returns whether the Character should automatically advance the timing of
+ * all playing animations when it is visited during the Cull traversal.  See
+ * set_auto_advance_flag().
+ */
+INLINE bool Character::
+get_auto_advance_flag() const {
+  CDReader cdata(_cycler);
+  return cdata->_auto_advance_flag;
+}
+
+/**
+ * Specifies whether the Character should smoothly transition between changes
+ * in animations within an animation layer.
+ */
+INLINE void Character::
+set_channel_transition_flag(bool flag) {
+  CDWriter cdata(_cycler);
+  cdata->_channel_transition_flag = flag;
+}
+
+/**
+ * Returns whether the Character should smoothly transition between changes in
+ * animations within an animation layer.
+ */
+INLINE bool Character::
+get_channel_transition_flag() const {
+  CDReader cdata(_cycler);
+  return cdata->_channel_transition_flag;
 }

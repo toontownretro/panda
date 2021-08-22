@@ -17,12 +17,12 @@
 #include "bamWriter.h"
 #include "clockObject.h"
 #include "loader.h"
-#include "animBundleNode.h"
-//#include "bindAnimRequest.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
 #include "characterJointEffect.h"
 #include "randomizer.h"
+#include "animChannelTable.h"
+#include "animEvalContext.h"
 
 TypeHandle Character::_type_handle;
 
@@ -40,7 +40,6 @@ Character::
 Character(const Character &copy) :
   Namable(copy)
 {
-  _anim_preload = copy._anim_preload;
   _update_delay = 0.0;
   _active_owner = nullptr;
 
@@ -48,6 +47,8 @@ Character(const Character &copy) :
   CDReader cdata_from(copy._cycler);
   cdata->_frame_blend_flag = cdata_from->_frame_blend_flag;
   cdata->_root_xform = cdata_from->_root_xform;
+
+  ensure_layer_count(1);
 }
 
 /**
@@ -59,30 +60,8 @@ Character(const std::string &name) :
   _update_delay(0.0),
   _active_owner(nullptr)
 {
+  ensure_layer_count(1);
 }
-
-/**
- * Copies the contents of the other Character's preload table into this one.
- */
-void Character::
-merge_anim_preloads(const Character *other) {
-  if (other->_anim_preload == nullptr ||
-      _anim_preload == other->_anim_preload) {
-    // No-op.
-    return;
-  }
-
-  if (_anim_preload == nullptr) {
-    // Trivial case.
-    _anim_preload = other->_anim_preload;
-    return;
-  }
-
-  // Copy-on-write.
-  PT(AnimPreloadTable) anim_preload = _anim_preload.get_write_pointer();
-  anim_preload->add_anims_from(other->_anim_preload.get_read_pointer());
-}
-
 
 /**
  * Creates a new CharacterJoint with the indicated name and parent
@@ -133,38 +112,17 @@ make_slider(const std::string &name, PN_stdfloat default_value) {
 }
 
 /**
- * Binds the animation to the bundle, if possible, and returns a new
- * AnimControl that can be used to start and stop the animation.  If the anim
- * hierarchy does not match the part hierarchy, returns NULL.
- *
- * If hierarchy_match_flags is 0, only an exact match is accepted; otherwise,
- * it may contain a union of PartGroup::HierarchyMatchFlags values indicating
- * conditions that will be tolerated (but warnings will still be issued).
- *
- * If subset is specified, it restricts the binding only to the named subtree
- * of joints.
- *
- * The AnimControl is not stored within the PartBundle; it is the user's
- * responsibility to maintain the pointer.  The animation will automatically
- * unbind itself when the AnimControl destructs (i.e.  its reference count
- * goes to zero).
+ * Binds the indicated AnimChannelTable to this Character.  Matches up joints
+ * in the character to joints in the animation with the same name.  The results
+ * are stored on the channel.  Returns true on success, or false if the
+ * animation couldn't be binded.  Follow this up with a call to add_channel()
+ * to make the animation playable on the character.
  */
-int Character::
-bind_anim(AnimBundle *anim) {
-  // Check to see if the animation has already been bound.
-  Animations::const_iterator it = std::find(_animations.begin(), _animations.end(), anim);
-  if (it != _animations.end()) {
-    // Already bound.  Return the index of the existing animation.
-    return (int)(it - _animations.begin());
-  }
-
-  int index = (int)_animations.size();
-  _animations.push_back(anim);
-
+bool Character::
+bind_anim(AnimChannelTable *anim) {
   if (anim->has_mapped_character()) {
-    // The animation has already been mapped to a Character.  We can assume
-    // that Character has the same joint hierarchy as us.
-    return index;
+    // If the table was already binded to another character, we're done.
+    return true;
   }
 
   // We need to map our joints and sliders to joints and sliders on the
@@ -193,84 +151,7 @@ bind_anim(AnimBundle *anim) {
     anim->map_character_slider_to_anim_slider(slider, anim_slider);
   }
 
-  return index;
-}
-
-/**
- * Binds an animation to the bundle.  The animation is loaded from the disk
- * via the indicated Loader object.  In other respects, this behaves similarly
- * to bind_anim(), with the addition of asynchronous support.
- *
- * If allow_aysnc is true, the load will be asynchronous if possible.  This
- * requires that the animation basename can be found in the PartBundle's
- * preload table (see get_anim_preload()).
- *
- * In an asynchronous load, the animation file will be loaded and bound in a
- * sub-thread.  This means that the animation will not necessarily be
- * available at the time this method returns.  You may still use the returned
- * AnimControl immediately, though, but no visible effect will occur until the
- * animation eventually becomes available.
- *
- * You can test AnimControl::is_pending() to see if the animation has been
- * loaded yet, or wait for it to finish with AnimControl::wait_pending() or
- * even PartBundle::wait_pending().  You can also set an event to be triggered
- * when the animation finishes loading with
- * AnimControl::set_pending_done_event().
- */
-int Character::
-load_bind_anim(Loader *loader, const Filename &filename) {
-  nassertr(loader != nullptr, -1);
-
-  LoaderOptions anim_options(LoaderOptions::LF_search |
-                             LoaderOptions::LF_report_errors |
-                             LoaderOptions::LF_convert_anim);
-  std::string basename = filename.get_basename_wo_extension();
-
-  //int anim_index = -1;
-  //CPT(AnimPreloadTable) anim_preload = _anim_preload.get_read_pointer();
-  //if (anim_preload != nullptr) {
-  //  anim_index = anim_preload->find_anim(basename);
-  //}
-
-  if (true) {//anim_index < 0 || !allow_async || !Thread::is_threading_supported()) {
-    // The animation is not present in the table, or allow_async is false.
-    // Therefore, perform an ordinary synchronous load-and-bind.
-
-    PT(PandaNode) model = loader->load_sync(filename, anim_options);
-    if (model == nullptr) {
-      // Couldn't load the file.
-      return -1;
-    }
-    AnimBundle *anim = AnimBundleNode::find_anim_bundle(model);
-    if (anim == nullptr) {
-      // No anim bundle.
-      return -1;
-    }
-    return bind_anim(anim);
-  }
-
-  // The animation is present in the table, so we can perform an asynchronous
-  // load-and-bind.
-  //PN_stdfloat frame_rate = anim_preload->get_base_frame_rate(anim_index);
-  //int num_frames = anim_preload->get_num_frames(anim_index);
-  //PT(AnimControl) control =
-  //  new AnimControl(basename, this, frame_rate, num_frames);
-
-  //if (!subset.is_include_empty()) {
-    // Figure out the actual subset of joints to be bound.
-  //  BitArray bound_joints;
-  //  find_bound_joints(0, false, bound_joints, subset);
-  //  control->set_bound_joints(bound_joints);
-  //}
-
-  //PT(BindAnimRequest) request =
-  //  new BindAnimRequest(std::string("bind:") + filename.get_basename(),
-  //                      filename, anim_options, loader, control,
-  //                      hierarchy_match_flags, subset);
-  //request->set_priority(async_bind_priority);
-  //loader->load_async(request);
-
-  return -1;
+  return true;
 }
 
 /**
@@ -285,43 +166,173 @@ update() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
 
-  if (cdata->_anim_graph == nullptr) {
+  double now = ClockObject::get_global_clock()->get_frame_time();
+  if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
+    return do_update(now, cdata, current_thread);
+
+  } else {
+    return false;
+  }
+}
+
+/**
+ * Internal method that advances the animation time for all layers.
+ */
+void Character::
+do_advance(double now, CData *cdata, Thread *current_thread) {
+  // We must have at least 1 layer at all times, even if no animations are
+  // playing.
+  nassertv(!_anim_layers.empty());
+
+  double dt = ClockObject::get_global_clock()->get_dt();
+
+  // Advance our layers.
+  for (int i = 0; i < (int)_anim_layers.size(); i++) {
+    AnimLayer *layer = &_anim_layers[i];
+
+    if (layer->is_active()) {
+      if (layer->is_killme()) {
+        if (anim_cat.is_debug()) {
+          anim_cat.debug()
+            << "Layer " << i << " is active and killme\n";
+        }
+        if (layer->_kill_delay > 0.0f) {
+          if (anim_cat.is_debug()) {
+            anim_cat.debug()
+              << "Layer " << i << " kill delay " << layer->_kill_delay << "\n";
+          }
+          layer->_kill_delay -= dt;
+          layer->_kill_delay = std::max(0.0f, std::min(1.0f, layer->_kill_delay));
+
+        } else if (layer->_kill_weight != 0.0f) {
+          // Give it at least one frame advance cycle to propagate 0.0 to client.
+          layer->_kill_weight -= layer->_kill_rate * dt;
+          layer->_kill_weight = std::max(0.0f, std::min(1.0f, layer->_kill_weight));
+          if (anim_cat.is_debug()) {
+            anim_cat.debug()
+              << "Layer " << i << " kill weight " << layer->_kill_weight << "\n";
+          }
+
+        } else {
+          // Shift the other layers down in order
+          //fast_remove_layer(i);
+          // Needs at least one thing cycle dead to trigger sequence change.
+          if (anim_cat.is_debug()) {
+            anim_cat.debug()
+              << "Layer " << i << " killme now dying\n";
+          }
+          layer->dying();
+          continue;
+        }
+      }
+
+      layer->update();
+
+      if (layer->_sequence_finished && layer->is_autokill()) {
+        layer->_kill_weight = 0.0f;
+        layer->killme();
+      }
+
+      layer->_weight = layer->_kill_weight * layer->_ramp_weight;
+
+    } else if (layer->is_dying()) {
+      layer->dead();
+
+    } else if (layer->_weight > 0.0f) {
+      // Now that the server blends, it is turning off layers all the time.
+      layer->init(this);
+      layer->dying();
+    }
+  }
+}
+
+/**
+ * Internal method that actually computes the animation for the character.
+ */
+bool Character::
+do_update(double now, CData *cdata, Thread *current_thread) {
+  if ((int)_joints.size() > max_character_joints) {
+    anim_cat.error()
+      << "Too many joints on character " << get_name() << "\n";
     return false;
   }
 
-  bool any_changed = false;
+  // We must have at least 1 layer at all times, even if no animations are
+  // playing.
+  nassertr(!_anim_layers.empty(), false);
 
-  double now = ClockObject::get_global_clock()->get_frame_time();
-  if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
-
-    BitArray joint_mask;
-    for (size_t i = 0; i < _joints.size(); i++) {
-      if (_joints[i]._merge_joint != -1 || _joints[i]._has_forced_value) {
-        // Don't need to animate this joint.
-        joint_mask.clear_bit(i);
-
-      } else {
-        joint_mask.set_bit(i);
-      }
-    }
-
-    AnimGraphEvalContext ctx(this, _joints.data(), (int)_joints.size(), cdata->_frame_blend_flag, joint_mask);
-    // Apply the bind poses of each joint as the starting point.
-    for (int i = 0; i < ctx._num_joints; i++) {
-      if (!joint_mask.get_bit(i)) {
-        continue;
-      }
-      ctx._joints[i]._position = _joints[i]._default_pos;
-      ctx._joints[i]._rotation = _joints[i]._default_quat;
-      ctx._joints[i]._scale = _joints[i]._default_scale;
-    }
-    cdata->_anim_graph->evaluate(ctx);
-
-    any_changed = apply_pose(cdata, cdata->_root_xform, ctx, current_thread);
-
-    cdata->_anim_changed = false;
-    cdata->_last_update = now;
+  // If we are auto advancing animation time, do that now.
+  if (cdata->_auto_advance_flag) {
+    do_advance(now, cdata, current_thread);
   }
+
+  // Initialize the context for the evaluation.
+  AnimEvalContext ctx;
+  ctx._character = this;
+  ctx._joints = _joints.data();
+  ctx._num_joints = (int)_joints.size();
+  ctx._frame_blend = cdata->_frame_blend_flag;
+  ctx._time = now;
+
+  for (size_t i = 0; i < _joints.size(); i++) {
+    if (_joints[i]._merge_joint != -1 || _joints[i]._has_forced_value) {
+      // Don't need to animate this joint.
+      ctx._joint_mask.clear_bit(i);
+
+    } else {
+      ctx._joint_mask.set_bit(i);
+    }
+  }
+
+  AnimEvalData data;
+  // Apply the bind poses of each joint as the starting point.
+  for (int i = 0; i < ctx._num_joints; i++) {
+    if (!ctx._joint_mask.get_bit(i)) {
+      continue;
+    }
+    data._position[i] = _joints[i]._default_pos;
+    data._rotation[i] = _joints[i]._default_quat;
+    data._scale[i] = _joints[i]._default_scale;
+  }
+
+  //
+  // Evaluate our layers.
+  //
+
+  // Sort the layers.
+  int *layer = (int *)alloca(sizeof(int) * _anim_layers.size());
+  for (int i = 0; i < (int)_anim_layers.size(); i++) {
+    layer[i] = -1;
+  }
+
+  for (int i = 0; i < (int)_anim_layers.size(); i++) {
+    AnimLayer *thelayer = &_anim_layers[i];
+    if ((thelayer->_weight > 0.0f) &&
+        (thelayer->is_active()) &&
+        (thelayer->_order >= 0) &&
+        (thelayer->_order < (int)_anim_layers.size())) {
+      layer[thelayer->_order] = i;
+    }
+  }
+
+  for (int i = 0; i < (int)_anim_layers.size(); i++) {
+    if (layer[i] < 0 || layer[i] >= (int)_anim_layers.size()) {
+      continue;
+    }
+
+    AnimLayer *thelayer = &_anim_layers[layer[i]];
+    if ((thelayer->_sequence >= 0) &&
+        (thelayer->_sequence < (int)_channels.size())) {
+
+      thelayer->calc_pose(ctx, data, cdata->_channel_transition_flag);
+    }
+  }
+
+  // Now apply the evaluated pose to the joints.
+  bool any_changed = apply_pose(cdata, cdata->_root_xform, data, current_thread);
+
+  cdata->_anim_changed = false;
+  cdata->_last_update = now;
 
   return any_changed;
 }
@@ -334,42 +345,9 @@ bool Character::
 force_update() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
-
-  if (cdata->_anim_graph == nullptr) {
-    return false;
-  }
-
   double now = ClockObject::get_global_clock()->get_frame_time();
 
-  BitArray joint_mask;
-  for (size_t i = 0; i < _joints.size(); i++) {
-    if (_joints[i]._merge_joint != -1 || _joints[i]._has_forced_value) {
-      // Don't need to animate this joint.
-      joint_mask.clear_bit(i);
-
-    } else {
-      joint_mask.set_bit(i);
-    }
-  }
-
-  AnimGraphEvalContext ctx(this, _joints.data(), (int)_joints.size(), cdata->_frame_blend_flag, joint_mask);
-  // Apply the bind poses of each joint as the starting point.
-  for (int i = 0; i < ctx._num_joints; i++) {
-    if (!joint_mask.get_bit(i)) {
-      continue;
-    }
-    ctx._joints[i]._position = _joints[i]._default_pos;
-    ctx._joints[i]._rotation = _joints[i]._default_quat;
-    ctx._joints[i]._scale = _joints[i]._default_scale;
-  }
-  cdata->_anim_graph->evaluate(ctx);
-
-  bool any_changed = apply_pose(cdata, cdata->_root_xform, ctx, current_thread);
-
-  cdata->_anim_changed = false;
-  cdata->_last_update = now;
-
-  return any_changed;
+  return do_update(now, cdata, current_thread);
 }
 
 /**
@@ -552,9 +530,9 @@ compute_attachment_transform(int index) {
     int parent = (*it).first;
     CharacterAttachment::ParentInfluence &inf = (*it).second;
     if (parent != -1) {
-      if (!_changed_joints.get_bit(parent)) {
-        continue;
-      }
+      //if (!_changed_joints.get_bit(parent)) {
+      //  continue;
+      //}
       inf._transform = _joint_net_transforms[parent] * inf._offset * inf._weight;
     }
     transform += inf._transform;
@@ -566,9 +544,6 @@ compute_attachment_transform(int index) {
     transform = LMatrix4::ident_mat();
   }
   attach._curr_transform = TransformState::make_mat(transform);
-  attach._curr_transform = TransformState::make_pos_hpr_scale_shear(
-    attach._curr_transform->get_pos(),
-    attach._curr_transform->get_hpr(), 1, 0);
   if (attach._node != nullptr) {
     attach._node->set_transform(attach._curr_transform);
   }
@@ -643,8 +618,7 @@ copy_subgraph() const {
     copy->_sliders.push_back(_sliders[i]);
   }
 
-  copy->_animations = _animations;
-  copy->_sequences = _sequences;
+  copy->_channels = _channels;
   copy->_pose_parameters = _pose_parameters;
   copy->_attachments = _attachments;
   copy->_ik_chains = _ik_chains;
@@ -656,7 +630,7 @@ copy_subgraph() const {
  * Applies the final pose computed by the animation graph to each joint.
  */
 bool Character::
-apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext &context, Thread *current_thread) {
+apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread) {
   PStatTimer timer(apply_pose_collector);
 
   size_t joint_count = _joints.size();
@@ -690,9 +664,9 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimGraphEvalContext 
       }
 
     } else {
-      const JointTransform &xform = context._joints[i];
-      _joint_values[i] = LMatrix4::scale_mat(xform._scale) * xform._rotation;
-      _joint_values[i].set_row(3, xform._position);
+      // Use the computed pose of the joint.
+      _joint_values[i] = LMatrix4::scale_mat(data._scale[i]) * data._rotation[i];
+      _joint_values[i].set_row(3, data._position[i]);
     }
   }
   ap_compose_collector.stop();
@@ -894,16 +868,6 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _pose_parameters[i].write_datagram(manager, me);
   }
 
-  me.add_uint16(_animations.size());
-  for (size_t i = 0; i < _animations.size(); i++) {
-    manager->write_pointer(me, _animations[i]);
-  }
-
-  me.add_uint16(_sequences.size());
-  for (size_t i = 0; i < _sequences.size(); i++) {
-    manager->write_pointer(me, _sequences[i]);
-  }
-
   me.add_uint8(_attachments.size());
   for (size_t i = 0; i < _attachments.size(); i++) {
     _attachments[i].write_datagram(manager, me);
@@ -914,7 +878,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _ik_chains[i].write_datagram(manager, me);
   }
 
-  manager->write_pointer(me, _anim_preload.get_read_pointer());
+  me.add_uint16(_channels.size());
+  for (size_t i = 0; i < _channels.size(); i++) {
+    manager->write_pointer(me, _channels[i]);
+  }
 
   manager->write_cdata(me, _cycler);
 }
@@ -927,19 +894,13 @@ int Character::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = 0;
 
-  for (size_t i = 0; i < _animations.size(); i++) {
-    _animations[i] = DCAST(AnimBundle, p_list[pi++]);
-  }
-
-  for (size_t i = 0; i < _sequences.size(); i++) {
-    _sequences[i] = DCAST(AnimSequence, p_list[pi++]);
-  }
-
   for (size_t i = 0; i < _attachments.size(); i++) {
     pi = _attachments[i].complete_pointers(pi, p_list, manager);
   }
 
-  _anim_preload = DCAST(AnimPreloadTable, p_list[pi++]);
+  for (size_t i = 0; i < _channels.size(); i++) {
+    _channels[i] = DCAST(AnimChannel, p_list[pi++]);
+  }
 
   return pi;
 }
@@ -992,12 +953,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _pose_parameters[i].fillin(scan, manager);
   }
 
-  _animations.resize(scan.get_uint16());
-  manager->read_pointers(scan, _animations.size());
-
-  _sequences.resize(scan.get_uint16());
-  manager->read_pointers(scan, _sequences.size());
-
   _attachments.resize(scan.get_uint8());
   for (size_t i = 0; i < _attachments.size(); i++) {
     _attachments[i].fillin(scan, manager);
@@ -1008,7 +963,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _ik_chains[i].fillin(scan, manager);
   }
 
-  manager->read_pointer(scan);
+  _channels.resize(scan.get_uint16());
+  manager->read_pointers(scan, _channels.size());
 
   manager->read_cdata(scan, _cycler);
 }
@@ -1019,10 +975,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 Character::CData::
 CData() :
   _frame_blend_flag(interpolate_frames),
+  _auto_advance_flag(true),
+  _channel_transition_flag(true),
   _anim_changed(false),
   _last_update(0.0),
   _root_xform(LMatrix4::ident_mat()),
-  _anim_graph(nullptr),
   _joint_merge_character(nullptr)
 {
 }
@@ -1033,10 +990,11 @@ CData() :
 Character::CData::
 CData(const Character::CData &copy) :
   _frame_blend_flag(copy._frame_blend_flag),
+  _auto_advance_flag(copy._auto_advance_flag),
+  _channel_transition_flag(copy._channel_transition_flag),
   _root_xform(copy._root_xform),
   _anim_changed(copy._anim_changed),
   _last_update(copy._last_update),
-  _anim_graph(copy._anim_graph),
   _joint_merge_character(copy._joint_merge_character)
 {
   // Note that this copy constructor is not used by the PartBundle copy
@@ -1075,44 +1033,48 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 }
 
 /**
- * Returns a suitable sequence to use for the indicated activity number.
- * If multiple sequences are part of the same activity, the sequence is chosen
+ * Returns a suitable channel to use for the indicated activity number.
+ * If multiple channels are part of the same activity, the channel is chosen
  * at random based on assigned weight.  An explicit seed may be given for the
- * random number generator, in case the selected sequence needs to be
+ * random number generator, in case the selected channel needs to be
  * consistent, for instance during client-side prediction.
  */
 int Character::
-get_sequence_for_activity(int activity, int curr_sequence, unsigned long seed) const {
-  if (get_num_sequences() == 0) {
+get_channel_for_activity(int activity, int curr_channel, unsigned long seed) const {
+  if (_channels.empty()) {
     return -1;
   }
 
   Randomizer random(seed);
 
   int weight_total = 0;
-  int seq_idx = -1;
-  for (int i = 0; i < get_num_sequences(); i++) {
-    AnimSequence *sequence = get_sequence(i);
-    int curr_activity = sequence->get_activity();
-    int weight = sequence->get_activity_weight();
-    if (curr_activity == activity) {
-      if (curr_sequence == i && weight < 0) {
-        // If this is the current sequence and the weight is < 0, stick with
-        // this sequence.
-        seq_idx = i;
-        break;
-      }
+  int chan_idx = -1;
+  bool got_chan = false;
+  for (int i = 0; i < (int)_channels.size() && !got_chan; i++) {
+    AnimChannel *channel = _channels[i];
+    for (int j = 0; j < channel->get_num_activities(); j++) {
+      int curr_activity = channel->get_activity(j);
+      int weight = channel->get_activity_weight(j);
+      if (curr_activity == activity) {
+        if (curr_channel == i && weight < 0) {
+          // If this is the current sequence and the weight is < 0, stick with
+          // this sequence.
+          chan_idx = i;
+          got_chan = true;
+          break;
+        } else {
+          weight_total += std::abs(weight);
 
-      weight_total += std::abs(weight);
-
-      int random_value = random.random_int(weight_total);
-      if (!weight_total || random_value < std::abs(weight)) {
-        seq_idx = i;
+          int random_value = random.random_int(weight_total);
+          if (!weight_total || random_value < std::abs(weight)) {
+            chan_idx = i;
+          }
+        }
       }
     }
   }
 
-  return seq_idx;
+  return chan_idx;
 }
 
 /**
@@ -1121,4 +1083,211 @@ get_sequence_for_activity(int activity, int curr_sequence, unsigned long seed) c
 void Character::
 set_joint_vertex_transform(JointVertexTransform *transform, int n) {
   _joint_vertex_transforms[n] = transform;
+}
+
+/**
+ * Plays the indicated animation channel on the indicated layer completely
+ * through once and stops.
+ */
+void Character::
+play(int channel, int layer, PN_stdfloat play_rate, bool autokill,
+     PN_stdfloat blend_in, PN_stdfloat blend_out) {
+  nassertv(channel >= 0 && channel < (int)_channels.size());
+  AnimChannel *chan = _channels[channel];
+  play(channel, 0.0, chan->get_num_frames() - 1, layer, play_rate,
+       autokill, blend_in, blend_out);
+}
+
+/**
+ * Plays the indicated animation channel on the indicated layer once,
+ * constrained to the indicated frame range, and stops.
+ */
+void Character::
+play(int channel, double from, double to, int layer, PN_stdfloat play_rate,
+     bool autokill, PN_stdfloat blend_in, PN_stdfloat blend_out) {
+  if (from >= to) {
+    pose(channel, from, layer, blend_in, blend_out);
+    return;
+  }
+
+  PN_stdfloat start_time = ClockObject::get_global_clock()->get_frame_time();
+  reset_layer_channel(layer, channel, -1, true,
+                      start_time,
+                      from, to, AnimLayer::PM_play, play_rate,
+                      autokill, blend_in, blend_out);
+}
+
+/**
+ * Loops the indicated animation channel on the indicated layer repeatedly.
+ */
+void Character::
+loop(int channel, bool restart, int layer, PN_stdfloat play_rate,
+     PN_stdfloat blend_in) {
+  nassertv(channel >= 0 && channel < (int)_channels.size());
+  AnimChannel *chan = _channels[channel];
+  loop(channel, restart, 0.0, chan->get_num_frames() - 1, layer,
+       play_rate, blend_in);
+}
+
+/**
+ *
+ */
+void Character::
+loop(int channel, bool restart, double from, double to, int layer,
+     PN_stdfloat play_rate, PN_stdfloat blend_in) {
+  if (from >= to) {
+    pose(channel, from, layer, blend_in, 0.0);
+    return;
+  }
+
+  PN_stdfloat start_time = ClockObject::get_global_clock()->get_frame_time();
+  //if (!restart) {
+
+  //}
+  reset_layer_channel(layer, channel, -1, true, start_time,
+                      from, to, AnimLayer::PM_loop, play_rate,
+                      false, blend_in, 0.0f);
+}
+
+/**
+ * Plays the indicated animation channel on the indicated layer back and forth
+ * repeatedly.
+ */
+void Character::
+pingpong(int channel, bool restart, int layer, PN_stdfloat play_rate,
+         PN_stdfloat blend_in) {
+  nassertv(channel >= 0 && channel < (int)_channels.size());
+  AnimChannel *chan = _channels[channel];
+  pingpong(channel, restart, 0.0, chan->get_num_frames() - 1, layer,
+           play_rate, blend_in);
+}
+
+/**
+ *
+ */
+void Character::
+pingpong(int channel, bool restart, double from, double to, int layer,
+         PN_stdfloat play_rate, PN_stdfloat blend_in) {
+  if (from >= to) {
+    pose(channel, from, layer, blend_in, 0.0);
+    return;
+  }
+
+  PN_stdfloat start_time = ClockObject::get_global_clock()->get_frame_time();
+  //if (!restart) {
+
+  //}
+  reset_layer_channel(layer, channel, -1, true, start_time,
+                      from, to, AnimLayer::PM_pingpong, play_rate,
+                      false, blend_in, 0.0f);
+}
+
+/**
+ * Holds a particular frame of the indicated animation channel on the indicated
+ * layer.
+ */
+void Character::
+pose(int channel, double frame, int layer, PN_stdfloat blend_in, PN_stdfloat blend_out) {
+  PN_stdfloat start_time = ClockObject::get_global_clock()->get_frame_time();
+  reset_layer_channel(layer, channel, -1, false, start_time, frame, frame,
+                      AnimLayer::PM_pose, 1.0f, false, blend_in, blend_out);
+}
+
+/**
+ * Stops whatever animation channel is playing on the indicated layer.  If -1
+ * is passed, all layers are stopped.  If kill is true, the layer(s) will be
+ * faded out instead of immediately stopped.
+ */
+void Character::
+stop(int layer, bool kill) {
+  if (layer < 0) {
+    for (int i = 0; i < (int)_anim_layers.size(); i++) {
+      if (kill) {
+        _anim_layers[i].killme();
+      } else {
+        _anim_layers[i].dying();
+      }
+    }
+  } else {
+    nassertv(layer < (int)_anim_layers.size());
+    if (kill) {
+      _anim_layers[layer].killme();
+    } else {
+      _anim_layers[layer].dying();
+    }
+  }
+}
+
+
+/**
+ * Resets the indicated animation layer to start playing the indicated
+ * channel.
+ */
+void Character::
+reset_layer_channel(int layer, int channel, int activity, bool restart, PN_stdfloat start_time,
+                    PN_stdfloat from, PN_stdfloat to, AnimLayer::PlayMode mode,
+                    PN_stdfloat play_rate, bool autokill, PN_stdfloat blend_in,
+                    PN_stdfloat blend_out) {
+  nassertv(channel >= 0 && channel < (int)_channels.size());
+  ensure_layer_count(layer + 1);
+
+  AnimChannel *chan = _channels[channel];
+
+  int num_frames = chan->get_num_frames();
+  PN_stdfloat from_cycle = from / std::max(1, (num_frames - 1));
+  PN_stdfloat play_frames = std::max(1.0, to - from + 1.0);
+  PN_stdfloat play_cycles = play_frames / std::max(1, (num_frames - 1));
+
+  AnimLayer *alayer = get_anim_layer(layer);
+  if (restart || channel != alayer->_sequence) {
+    // Bump the parity to note that the sequence changed.
+    alayer->_sequence_parity = (alayer->_sequence_parity + 1) % 256;
+  }
+  alayer->_sequence = channel;
+  alayer->_unclamped_cycle = from_cycle;
+  alayer->_cycle = from_cycle;
+  alayer->_prev_cycle = from_cycle;
+  alayer->_start_cycle = from_cycle;
+  alayer->_play_cycles = play_cycles;
+  alayer->_activity = activity;
+  alayer->_order = layer;
+  alayer->_priority = 0;
+  alayer->_play_rate = play_rate;
+  alayer->_weight = 1.0f;
+  alayer->_ramp_weight = 1.0f;
+  alayer->_kill_weight = 1.0f;
+  alayer->_blend_in = blend_in;
+  alayer->_blend_out = blend_out;
+  alayer->_sequence_finished = false;
+  alayer->_last_event_check = 0;
+  alayer->_play_mode = mode;
+  alayer->_flags = AnimLayer::F_active;
+  if (autokill) {
+    alayer->_flags |= AnimLayer::F_autokill;
+  }
+  alayer->mark_active();
+}
+
+/**
+ * Ensures that the character contains at least the indicated number of
+ * animation layers.  If not, they will be allocated.
+ */
+void Character::
+ensure_layer_count(int count) {
+  int diff = count - (int)_anim_layers.size();
+  for (int i = 0; i < diff; i++) {
+    _anim_layers.push_back(AnimLayer());
+    _anim_layers.back().init(this);
+  }
+}
+
+/**
+ *
+ */
+void Character::
+advance() {
+  CDWriter cdata(_cycler);
+  Thread *current_thread = Thread::get_current_thread();
+  double now = ClockObject::get_global_clock()->get_frame_time();
+  do_advance(now, cdata, current_thread);
 }

@@ -391,6 +391,8 @@ inline planetypes PlaneTypeForNormal(vec3_t normal)
         return plane_anyz;
 }
 
+INLINE PN_stdfloat simple_spline(PN_stdfloat s);
+
 #include "mathutil_misc.I"
 #include "mathutil_misc.T"
 

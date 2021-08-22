@@ -20,8 +20,8 @@
 #include "eggXfmAnimData.h"
 #include "eggXfmSAnim.h"
 #include "eggGroupNode.h"
-#include "animBundle.h"
-#include "animBundleNode.h"
+#include "animChannelTable.h"
+#include "animChannelBundle.h"
 #include "vector_stdfloat.h"
 
 using std::min;
@@ -66,17 +66,19 @@ AnimBundleMaker(EggTable *root) : _root(root) {
 /**
  *
  */
-AnimBundleNode *AnimBundleMaker::
+PT(AnimChannelBundle) AnimBundleMaker::
 make_node() {
-  return new AnimBundleNode(_root->get_name(), make_bundle());
+  PT(AnimChannelBundle) node = new AnimChannelBundle(_root->get_name());
+  node->add_channel(make_bundle());
+  return node;
 }
 
 /**
  *
  */
-AnimBundle *AnimBundleMaker::
+PT(AnimChannelTable) AnimBundleMaker::
 make_bundle() {
-  AnimBundle *bundle = new AnimBundle(_root->get_name(), _fps, _num_frames);
+  PT(AnimChannelTable) bundle = new AnimChannelTable(_root->get_name(), _fps, _num_frames);
 
   EggTable::const_iterator ci;
   for (ci = _root->begin(); ci != _root->end(); ++ci) {
@@ -179,7 +181,7 @@ inspect_tree(EggNode *egg_node) {
  * Walks the egg tree again, creating the AnimChannels as appropriate.
  */
 void AnimBundleMaker::
-build_hierarchy(EggTable *egg_table, AnimBundle *bundle) {
+build_hierarchy(EggTable *egg_table, AnimChannelTable *bundle) {
   // First, scan the children of egg_table for anim data tables.  If any of
   // them is named "xform", it's a special case--this one stands for the
   // egg_table node itself.  Don't ask me why.
@@ -222,7 +224,7 @@ build_hierarchy(EggTable *egg_table, AnimBundle *bundle) {
  */
 void AnimBundleMaker::
 create_s_channel(EggSAnimData *egg_anim, const std::string &name,
-                 AnimBundle *bundle) {
+                 AnimChannelTable *bundle) {
   SliderEntry slider;
   slider.name = name;
   slider.first_frame = (int)_slider_table.size();
@@ -243,7 +245,7 @@ create_s_channel(EggSAnimData *egg_anim, const std::string &name,
  */
 void AnimBundleMaker::
 create_xfm_channel(EggNode *egg_node, const std::string &name,
-                   AnimBundle *bundle) {
+                   AnimChannelTable *bundle) {
   if (egg_node->is_of_type(EggXfmAnimData::get_class_type())) {
     EggXfmAnimData *egg_anim = DCAST(EggXfmAnimData, egg_node);
     EggXfmSAnim new_anim(*egg_anim);
@@ -269,7 +271,7 @@ create_xfm_channel(EggNode *egg_node, const std::string &name,
  */
 void AnimBundleMaker::
 create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
-                   AnimBundle *bundle) {
+                   AnimChannelTable *bundle) {
   // Ensure that the anim table is optimal and that it is standard order.
   egg_anim->optimize_to_standard_order();
 

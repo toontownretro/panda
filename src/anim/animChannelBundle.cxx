@@ -6,26 +6,21 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file animBundleNode.cxx
- * @author drose
- * @date 2002-03-06
+ * @file animChannelBundle.cxx
+ * @author brian
+ * @date 2021-08-05
  */
 
-#include "animBundleNode.h"
-#include "datagram.h"
-#include "datagramIterator.h"
-#include "bamReader.h"
-#include "bamWriter.h"
+#include "animChannelBundle.h"
 
-TypeHandle AnimBundleNode::_type_handle;
-
+IMPLEMENT_CLASS(AnimChannelBundle);
 
 /**
  *
  */
-PandaNode *AnimBundleNode::
+PandaNode *AnimChannelBundle::
 make_copy() const {
-  return new AnimBundleNode(*this);
+  return new AnimChannelBundle(*this);
 }
 
 /**
@@ -34,57 +29,15 @@ make_copy() const {
  * cannot be safely flattened, because the Camera pointer itself is
  * meaningful).
  */
-bool AnimBundleNode::
+bool AnimChannelBundle::
 safe_to_flatten() const {
   return false;
 }
 
 /**
- * Recursively walks the scene graph beginning at the indicated node (which
- * need not be an AnimBundleNode), and returns the first AnimBundle found.
- * Returns NULL if no AnimBundle can be found.
+ * Tells the BamReader how to create objects of type AnimChannelBundle.
  */
-AnimBundle *AnimBundleNode::
-find_anim_bundle(PandaNode *root) {
-  nassertr(root != nullptr, nullptr);
-
-  if (root->is_of_type(AnimBundleNode::get_class_type())) {
-    AnimBundleNode *anode = DCAST(AnimBundleNode, root);
-    AnimBundle *anim = anode->get_bundle();
-    if (anim != nullptr) {
-      return anim;
-    }
-  }
-
-  Children cr = root->get_children();
-  int num_children = cr.get_num_children();
-  for (int i = 0; i < num_children; i++) {
-    AnimBundle *anim = find_anim_bundle(cr.get_child(i));
-    if (anim != nullptr) {
-      return anim;
-    }
-  }
-
-  return nullptr;
-}
-
-/**
- *
- */
-void AnimBundleNode::
-output(std::ostream &out) const {
-  PandaNode::output(out);
-  if (_bundle != nullptr) {
-    out << " (";
-    _bundle->output(out);
-    out << ")";
-  }
-}
-
-/**
- * Tells the BamReader how to create objects of type AnimBundleNode.
- */
-void AnimBundleNode::
+void AnimChannelBundle::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
 }
@@ -93,20 +46,25 @@ register_with_read_factory() {
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
-void AnimBundleNode::
+void AnimChannelBundle::
 write_datagram(BamWriter *manager, Datagram &dg) {
   PandaNode::write_datagram(manager, dg);
-  manager->write_pointer(dg, _bundle);
+  dg.add_uint32(_channels.size());
+  for (size_t i = 0; i < _channels.size(); i++) {
+    manager->write_pointer(dg, _channels[i]);
+  }
 }
 
 /**
  * Receives an array of pointers, one for each time manager->read_pointer()
  * was called in fillin(). Returns the number of pointers processed.
  */
-int AnimBundleNode::
+int AnimChannelBundle::
 complete_pointers(TypedWritable **p_list, BamReader* manager) {
   int pi = PandaNode::complete_pointers(p_list, manager);
-  _bundle = DCAST(AnimBundle, p_list[pi++]);
+  for (size_t i = 0; i < _channels.size(); i++) {
+    _channels[i] = DCAST(AnimChannel, p_list[pi++]);
+  }
   return pi;
 }
 
@@ -115,9 +73,9 @@ complete_pointers(TypedWritable **p_list, BamReader* manager) {
  * this type is encountered in the Bam file.  It should create the object and
  * extract its information from the file.
  */
-TypedWritable *AnimBundleNode::
+TypedWritable *AnimChannelBundle::
 make_from_bam(const FactoryParams &params) {
-  AnimBundleNode *node = new AnimBundleNode;
+  AnimChannelBundle *node = new AnimChannelBundle("");
   DatagramIterator scan;
   BamReader *manager;
 
@@ -131,8 +89,11 @@ make_from_bam(const FactoryParams &params) {
  * This internal function is called by make_from_bam to read in all of the
  * relevant data from the BamFile for the new PandaNode.
  */
-void AnimBundleNode::
+void AnimChannelBundle::
 fillin(DatagramIterator &scan, BamReader* manager) {
   PandaNode::fillin(scan, manager);
-  manager->read_pointer(scan);
+  _channels.resize(scan.get_uint32());
+  for (size_t i = 0; i < _channels.size(); i++) {
+    manager->read_pointer(scan);
+  }
 }
