@@ -843,24 +843,21 @@ get_aux_data(const string &key) const {
  */
 void Texture::
 convert_to_srgb_format() {
-  if (is_srgb(get_format())) {
-    // Already in sRGB format.
-    return;
-  }
-
-  switch (get_num_components()) {
-  case 1:
+  switch (get_format()) {
+  case F_luminance:
     set_format(F_sluminance);
     break;
-  case 2:
+  case F_luminance_alpha:
     set_format(F_sluminance_alpha);
     break;
-  case 3:
+  case F_rgb:
     set_format(F_srgb);
     break;
-  case 4:
-  default:
+  case F_rgba:
     set_format(F_srgb_alpha);
+    break;
+
+  default:
     break;
   }
 }
@@ -871,24 +868,20 @@ convert_to_srgb_format() {
  */
 void Texture::
 convert_to_rgb_format() {
-  if (!is_srgb(get_format())) {
-    // Already in RGB format.
-    return;
-  }
-
-  switch (get_num_components()) {
-  case 1:
+  switch (get_format()) {
+  case F_sluminance:
     set_format(F_luminance);
     break;
-  case 2:
+  case F_sluminance_alpha:
     set_format(F_luminance_alpha);
     break;
-  case 3:
+  case F_srgb:
     set_format(F_rgb);
     break;
-  case 4:
-  default:
+  case F_srgb_alpha:
     set_format(F_rgba);
+    break;
+  default:
     break;
   }
 }

@@ -166,8 +166,8 @@ get_blend_targets(Character *character, const Channel *&from, const Channel *&to
  * joint.
  */
 void AnimChannelBlend1D::
-calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
-  if (_channels.empty() || _blend_param < 0 || data._weight == 0.0f) {
+do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (_channels.empty() || _blend_param < 0) {
     return;
   }
 
@@ -175,25 +175,33 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat frac = get_blend_targets(context._character, from, to);
 
   if (to == nullptr) {
-    AnimEvalData from_data(data);
-    from->_channel->calc_pose(context, from_data);
-    blend(context, data, from_data, data._weight);
+    from->_channel->calc_pose(context, data);
 
   } else if (from == nullptr) {
-    AnimEvalData to_data(data);
-    to->_channel->calc_pose(context, to_data);
-    blend(context, data, to_data, data._weight);
+    to->_channel->calc_pose(context, data);
 
   } else {
-    AnimEvalData blend_data(data);
+    // Evaluate both at full weight and blend between them.
 
-    blend_data._weight = 1.0f - frac;
-    from->_channel->calc_pose(context, blend_data);
+    AnimEvalData from_data(data);
+    from_data._weight = 1.0f;
+    from->_channel->calc_pose(context, from_data);
 
-    blend_data._weight = frac;
-    to->_channel->calc_pose(context, blend_data);
+    AnimEvalData to_data(data);
+    to_data._weight = 1.0f;
+    to->_channel->calc_pose(context, to_data);
 
-    blend(context, data, blend_data, data._weight);
+    PN_stdfloat e0 = 1.0f - frac;
+
+    for (int i = 0; i < context._num_joints; i++) {
+      if (!context._joint_mask.get_bit(i)) {
+        continue;
+      }
+
+      data._position[i] = (from_data._position[i] * e0) + (to_data._position[i] * frac);
+      data._scale[i] = (from_data._scale[i] * e0) + (to_data._scale[i] * frac);
+      LQuaternion::blend(from_data._rotation[i], to_data._rotation[i], frac, data._rotation[i]);
+    }
   }
 }
 

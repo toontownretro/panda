@@ -16,6 +16,7 @@
 #include "mathutil_misc.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "clockObject.h"
 
 IMPLEMENT_CLASS(AnimChannel);
 
@@ -161,7 +162,9 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
   if (weight == 0.0f) {
     return;
 
-  } else if (_weights == nullptr && weight == 1.0f) {
+  } else if (_weights == nullptr && weight == 1.0f && !has_flags(F_delta | F_pre_delta)) {
+    // If there's no per-joint weight list, the blend has full weight on B, and
+    // we're not an additive channel, just copy B to A.
     a.copy_joints(b);
     return;
   }
@@ -232,6 +235,46 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       a._scale[i] = (a._scale[i] * s1) + (b._scale[i] * s2);
     }
   }
+}
+
+/**
+ *
+ */
+void AnimChannel::
+calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (data._weight == 0.0f) {
+    return;
+  }
+
+  AnimEvalData this_data(data);
+
+  if (has_flags(F_real_time)) {
+    // Compute cycle from current rendering time instead of relative to
+    // the start time of the sequence.
+    PN_stdfloat cps = get_cycle_rate(context._character);
+    this_data._cycle = ClockObject::get_global_clock()->get_frame_time() * cps;
+    this_data._cycle -= (int)this_data._cycle;
+  }
+
+  // Implementation-specific pose calculation.
+  do_calc_pose(context, this_data);
+
+  // Zero out requested root translational axes.  This is done when a
+  // locomotion animation has movement part of the root joint of the
+  // animation, but the character needs to remain stationary so it can be
+  // moved around with game code.
+  if (has_flags(F_zero_root_x)) {
+    this_data._position[0][0] = 0.0f;
+  }
+  if (has_flags(F_zero_root_y)) {
+    this_data._position[0][1] = 0.0f;
+  }
+  if (has_flags(F_zero_root_z)) {
+    this_data._position[0][2] = 0.0f;
+  }
+
+  // Now blend the channel onto the output using the requested weight.
+  blend(context, data, this_data, data._weight);
 }
 
 /**

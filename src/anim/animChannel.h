@@ -95,10 +95,12 @@ PUBLISHED:
   INLINE void set_fade_out(PN_stdfloat time);
   INLINE PN_stdfloat get_fade_out() const;
 
+  void calc_pose(const AnimEvalContext &context, AnimEvalData &data);
+
   /**
    * Computes the pose of each joint for this channel in the given context.
    */
-  virtual void calc_pose(const AnimEvalContext &context, AnimEvalData &data)=0;
+  virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data)=0;
 
   void blend(const AnimEvalContext &context, AnimEvalData &a,
              const AnimEvalData &b, PN_stdfloat weight) const;

@@ -36,7 +36,7 @@ PUBLISHED:
 
   virtual PN_stdfloat get_length(Character *character) const override;
 
-  virtual void calc_pose(const AnimEvalContext &context, AnimEvalData &data) override;
+  virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) override;
 
 public:
   static void register_with_read_factory();

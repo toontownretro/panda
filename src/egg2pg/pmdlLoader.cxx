@@ -818,9 +818,11 @@ build_graph() {
       PMDLSequence *pmdl_seq = &_data->_sequences[i];
 
       PT(AnimChannel) chan;
+      bool layered = false;
 
       if (!pmdl_seq->_layers.empty()) {
         chan = make_layered_channel(pmdl_seq);
+        layered = true;
 
       } else if (!pmdl_seq->_blend._animations.empty()) {
         chan = make_blend_channel(pmdl_seq->_blend, pmdl_seq->_fps);
@@ -839,25 +841,29 @@ build_graph() {
       if (pmdl_seq->_loop) {
         flags |= AnimChannel::F_looping;
       }
-      if (pmdl_seq->_delta) {
-        flags |= AnimChannel::F_delta;
-      } else if (pmdl_seq->_pre_delta) {
-        flags |= AnimChannel::F_pre_delta;
-      }
-      if (pmdl_seq->_zero_x) {
-        flags |= AnimChannel::F_zero_root_x;
-      }
-      if (pmdl_seq->_zero_y) {
-        flags |= AnimChannel::F_zero_root_y;
-      }
-      if (pmdl_seq->_zero_z) {
-        flags |= AnimChannel::F_zero_root_z;
+      if (!layered) {
+        // For a layered channel these flags should only apply to the base
+        // layer, not the overall layered channel.
+        if (pmdl_seq->_real_time) {
+          flags |= AnimChannel::F_real_time;
+        }
+        if (pmdl_seq->_zero_x) {
+          flags |= AnimChannel::F_zero_root_x;
+        }
+        if (pmdl_seq->_zero_y) {
+          flags |= AnimChannel::F_zero_root_y;
+        }
+        if (pmdl_seq->_zero_z) {
+          flags |= AnimChannel::F_zero_root_z;
+        }
+        if (pmdl_seq->_delta) {
+          flags |= AnimChannel::F_delta;
+        } else if (pmdl_seq->_pre_delta) {
+          flags |= AnimChannel::F_pre_delta;
+        }
       }
       if (pmdl_seq->_snap) {
         flags |= AnimChannel::F_snap;
-      }
-      if (pmdl_seq->_real_time) {
-        flags |= AnimChannel::F_real_time;
       }
       chan->set_flags(flags);
 
@@ -1153,6 +1159,28 @@ make_layered_channel(const PMDLSequence *seq) {
 
   if (base_chan != nullptr) {
     chan->add_channel(base_chan);
+
+    // If these flags appear on the sequence they should be applied to the
+    // channel of the base layer, not the entire layered channel.
+    unsigned int flags = 0;
+    if (seq->_real_time) {
+      flags |= AnimChannel::F_real_time;
+    }
+    if (seq->_zero_x) {
+      flags |= AnimChannel::F_zero_root_x;
+    }
+    if (seq->_zero_y) {
+      flags |= AnimChannel::F_zero_root_y;
+    }
+    if (seq->_zero_z) {
+      flags |= AnimChannel::F_zero_root_z;
+    }
+    if (seq->_delta) {
+      flags |= AnimChannel::F_delta;
+    } else if (seq->_pre_delta) {
+      flags |= AnimChannel::F_pre_delta;
+    }
+    base_chan->set_flags(flags);
   }
 
   for (int i = 0; i < seq->_layers.size(); i++) {

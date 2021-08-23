@@ -286,11 +286,7 @@ get_length(Character *character) const {
  *
  */
 void AnimChannelBlend2D::
-calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
-  if (data._weight == 0.0f) {
-    return;
-  }
-
+do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   compute_weights_if_necessary(context._character);
 
   if (_active_tri == nullptr) {
@@ -327,48 +323,44 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   }
 
   if (c0._weight == 1.0f) {
-    blend(context, data, c0_data, data._weight);
+    data.steal_joints(c0_data);
 
   } else if (c1._weight == 1.0f) {
-    blend(context, data, c1_data, data._weight);
+    data.steal_joints(c1_data);
 
   } else if (c2._weight == 1.0f) {
-    blend(context, data, c2_data, data._weight);
+    data.steal_joints(c2_data);
 
   } else {
-    AnimEvalData blended_data;
-
     for (int i = 0; i < context._num_joints; i++) {
       if (!context._joint_mask.get_bit(i)) {
         continue;
       }
-      blended_data._position[i].set(0, 0, 0);
-      blended_data._scale[i].set(0, 0, 0);
+      data._position[i].set(0, 0, 0);
+      data._scale[i].set(0, 0, 0);
 
       if (w0 != 0.0f) {
-        blended_data._position[i] += c0_data._position[i] * w0;
-        blended_data._scale[i] += c0_data._scale[i] * w0;
+        data._position[i] += c0_data._position[i] * w0;
+        data._scale[i] += c0_data._scale[i] * w0;
       }
       if (w1 != 0.0f) {
-        blended_data._position[i] += c1_data._position[i] * w1;
-        blended_data._scale[i] += c1_data._scale[i] * w1;
+        data._position[i] += c1_data._position[i] * w1;
+        data._scale[i] += c1_data._scale[i] * w1;
       }
       if (w2 != 0.0f) {
-        blended_data._position[i] += c2_data._position[i] * w2;
-        blended_data._scale[i] += c2_data._scale[i] * w2;
+        data._position[i] += c2_data._position[i] * w2;
+        data._scale[i] += c2_data._scale[i] * w2;
       }
 
       if (w1 < 0.001f) {
         // On diagonal.
-        LQuaternion::blend(c0_data._rotation[i], c2_data._rotation[i], w2 / (w0 + w2), blended_data._rotation[i]);
+        LQuaternion::blend(c0_data._rotation[i], c2_data._rotation[i], w2 / (w0 + w2), data._rotation[i]);
       } else {
         LQuaternion q;
         LQuaternion::blend(c0_data._rotation[i], c1_data._rotation[i], w1 / (w0 + w1), q);
-        LQuaternion::blend(q, c2_data._rotation[i], w2, blended_data._rotation[i]);
+        LQuaternion::blend(q, c2_data._rotation[i], w2, data._rotation[i]);
       }
     }
-
-    blend(context, data, blended_data, data._weight);
   }
 }
 

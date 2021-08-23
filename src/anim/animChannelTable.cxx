@@ -90,8 +90,8 @@ get_length(Character *character) const {
  *
  */
 void AnimChannelTable::
-calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
-  if (!has_mapped_character() || data._weight == 0.0f) {
+do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (!has_mapped_character()) {
     return;
   }
 
@@ -147,8 +147,6 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   PN_stdfloat frac = fframe - frame;
 
-  AnimEvalData table_data(data);
-
   if (!context._frame_blend || frame == next_frame) {
     // Hold the current frame until the next one is ready.
     for (int i = 0; i < context._num_joints; i++) {
@@ -162,9 +160,9 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       }
       const JointFrame &jframe = get_joint_frame(anim_joint, frame);
 
-      table_data._rotation[i] = jframe.quat;
-      table_data._position[i] = jframe.pos;
-      table_data._scale[i] = jframe.scale;
+      data._rotation[i] = jframe.quat;
+      data._position[i] = jframe.pos;
+      data._scale[i] = jframe.scale;
     }
 
   } else {
@@ -186,13 +184,11 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       const JointFrame &jf = get_joint_frame(je, frame);
       const JointFrame &jf_next = get_joint_frame(je, next_frame);
 
-      table_data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
-      table_data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
-      LQuaternion::blend(jf.quat, jf_next.quat, frac, table_data._rotation[i]);
+      data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
+      data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
+      LQuaternion::blend(jf.quat, jf_next.quat, frac, data._rotation[i]);
     }
   }
-
-  blend(context, data, table_data, data._weight);
 }
 
 /**

@@ -90,19 +90,22 @@ make_copy() const {
  */
 PN_stdfloat AnimChannelLayered::
 get_length(Character *character) const {
-  return _num_frames / _fps;
+  if (_channels.empty()) {
+    return 0.0f;
+  }
+
+  // Return the length of the base layer.
+  return _channels[0]._channel->get_length(character);
 }
 
 /**
  * Calculates a pose for the channel for each joint.
  */
 void AnimChannelLayered::
-calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
-  if (_channels.empty() || data._weight == 0.0f) {
+do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (_channels.empty()) {
     return;
   }
-
-  AnimEvalData layer_data(data);
 
   PN_stdfloat cycle = data._cycle;
   PN_stdfloat weight = 1.0f;
@@ -173,12 +176,10 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       continue;
     }
 
-    layer_data._cycle = layer_cycle;
-    layer_data._weight = layer_weight;
-    layer._channel->calc_pose(context, layer_data);
+    data._cycle = layer_cycle;
+    data._weight = layer_weight;
+    layer._channel->calc_pose(context, data);
   }
-
-  blend(context, data, layer_data, data._weight);
 }
 
 /**

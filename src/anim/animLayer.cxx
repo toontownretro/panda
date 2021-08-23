@@ -46,7 +46,7 @@ init(Character *character) {
   _sequence_parity = 0;
   _prev_sequence_parity = 0;
   _priority = 0;
-  _order = max_anim_layers;
+  _order = 0;
   _kill_rate = 100.0f;
   _kill_delay = 0.0f;
   _play_rate = 1.0f;
