@@ -33,7 +33,7 @@ init(Character *character) {
   _character = character;
   _play_mode = PM_none;
   _start_cycle = 0.0f;
-  _play_cycles = 0.0f;
+  _play_cycles = 1.0f;
   _last_advance_time = 0.0f;
   _last_event_channel = -1;
   _last_event_cycle = 0.0f;
