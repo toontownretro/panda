@@ -324,7 +324,7 @@ do_update(double now, CData *cdata, Thread *current_thread) {
     if ((thelayer->_sequence >= 0) &&
         (thelayer->_sequence < (int)_channels.size())) {
 
-      thelayer->calc_pose(ctx, data, cdata->_channel_transition_flag);
+      thelayer->calc_pose(ctx, data, cdata->_channel_transition_flag && (layer[i] == 0));
     }
   }
 
