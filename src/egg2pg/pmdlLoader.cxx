@@ -880,15 +880,12 @@ build_graph() {
       chan->add_activity(activities->get_value_id(pmdl_seq->_activity),
                          pmdl_seq->_activity_weight);
 
-#if 0
       // Sequence events.
       for (size_t j = 0; j < pmdl_seq->_events.size(); j++) {
         PMDLSequenceEvent *event = &pmdl_seq->_events[j];
-        seq->add_event(event->_type, events->get_value_id(event->_event),
-                       event->_frame, event->_options);
+        chan->add_event(event->_type, events->get_value_id(event->_event),
+                        event->_frame, event->_options);
       }
-
-#endif
 
       // Per-joint weight list.
       if (!pmdl_seq->_weight_list_name.empty()) {

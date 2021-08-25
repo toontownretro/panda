@@ -37,6 +37,7 @@ class Loader;
 class CharacterNode;
 class AnimChannelTable;
 class AnimEvalData;
+class AnimEventQueue;
 
 /**
  * An animated character.  Defines a hierarchy of joints that influence the
@@ -160,6 +161,8 @@ PUBLISHED:
 
   PT(Character) make_copy() const;
   PT(Character) copy_subgraph() const;
+
+  void get_events(AnimEventQueue &queue, int type);
 
   void play(int channel, int layer = 0, PN_stdfloat play_rate = 1.0f,
             bool autokill = false, PN_stdfloat blend_in = 0.0f,

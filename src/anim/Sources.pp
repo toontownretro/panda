@@ -18,6 +18,7 @@
     animChannelTable.h animChannelTable.I \
     animEvalContext.h animEvalContext.I \
     animEvent.h \
+    animEventQueue.h animEventQueue.I \
     animLayer.h animLayer.I \
     character.h character.I \
     characterAttachment.h characterAttachment.I \

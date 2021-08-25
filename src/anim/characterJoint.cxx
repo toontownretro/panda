@@ -24,6 +24,7 @@ CharacterJoint() :
   _has_forced_value(false),
   _forced_value(LMatrix4::ident_mat()),
   _default_scale(1),
+  _default_shear(0),
   _default_quat(LQuaternion::ident_quat()),
   _merge(false),
   _merge_joint(-1) {
@@ -41,6 +42,7 @@ CharacterJoint(const CharacterJoint &other) :
   _default_value(other._default_value),
   _default_pos(other._default_pos),
   _default_scale(other._default_scale),
+  _default_shear(other._default_shear),
   _default_quat(other._default_quat),
   _forced_value(other._forced_value),
   _has_forced_value(other._has_forced_value),
@@ -61,6 +63,7 @@ CharacterJoint(CharacterJoint &&other) :
   _default_value(std::move(other._default_value)),
   _default_pos(std::move(other._default_pos)),
   _default_scale(std::move(other._default_scale)),
+  _default_shear(std::move(other._default_shear)),
   _default_quat(std::move(other._default_quat)),
   _forced_value(std::move(other._forced_value)),
   _has_forced_value(std::move(other._has_forced_value)),
@@ -80,6 +83,7 @@ operator=(const CharacterJoint &other) {
   _default_value = other._default_value;
   _default_pos = other._default_pos;
   _default_scale = other._default_scale;
+  _default_shear = other._default_shear;
   _default_quat = other._default_quat;
   _forced_value = other._forced_value;
   _has_forced_value = other._has_forced_value;
@@ -96,6 +100,7 @@ CharacterJoint(const std::string &name) :
 {
   _default_value = LMatrix4::ident_mat();
   _default_scale = LVecBase3(1);
+  _default_shear = LVecBase3(0);
   _default_quat = LQuaternion::ident_quat();
   _forced_value = LMatrix4::ident_mat();
   _has_forced_value = false;
@@ -121,6 +126,7 @@ write_datagram(Datagram &dg) {
   _default_value.write_datagram(dg);
   _default_pos.write_datagram(dg);
   _default_scale.write_datagram(dg);
+  _default_shear.write_datagram(dg);
   _default_quat.write_datagram(dg);
 
   dg.add_bool(_merge);
@@ -145,6 +151,7 @@ read_datagram(DatagramIterator &dgi) {
   _default_value.read_datagram(dgi);
   _default_pos.read_datagram(dgi);
   _default_scale.read_datagram(dgi);
+  _default_shear.read_datagram(dgi);
   _default_quat.read_datagram(dgi);
 
   _merge = dgi.get_bool();

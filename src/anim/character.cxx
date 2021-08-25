@@ -76,8 +76,9 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   joint._index = index;
   joint._default_value = default_value;
   // Break out the components as well.
-  LVecBase3 hpr, shear;
-  decompose_matrix(default_value, joint._default_scale, shear, hpr, joint._default_pos);
+  LVecBase3 hpr;
+  decompose_matrix(default_value, joint._default_scale,
+                   joint._default_shear, hpr, joint._default_pos);
   joint._default_quat.set_hpr(hpr);
 
   if (parent != -1) {
@@ -89,7 +90,7 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   _joint_net_transforms.push_back(LMatrix4::ident_mat());
   _joint_skinning_matrices.push_back(LMatrix4::ident_mat());
   _joint_vertex_transforms.push_back(nullptr);
-  _changed_joints.set_bit(index);
+  //_changed_joints.set_bit(index);
 
   recompute_joint_net_transform(index);
   _joint_initial_net_transform_inverse.push_back(invert(_joint_net_transforms[index]));
@@ -268,6 +269,7 @@ do_update(double now, CData *cdata, Thread *current_thread) {
 
   // Initialize the context for the evaluation.
   AnimEvalContext ctx;
+  ClearBitString(ctx._joint_mask, max_character_joints);
   ctx._character = this;
   ctx._joints = _joints.data();
   ctx._num_joints = (int)_joints.size();
@@ -275,24 +277,22 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   ctx._time = now;
 
   for (size_t i = 0; i < _joints.size(); i++) {
-    if (_joints[i]._merge_joint != -1 || _joints[i]._has_forced_value) {
-      // Don't need to animate this joint.
-      ctx._joint_mask.clear_bit(i);
-
-    } else {
-      ctx._joint_mask.set_bit(i);
+    if (_joints[i]._merge_joint == -1 && !_joints[i]._has_forced_value) {
+      // We need to calculate this joint in the evaluation.
+      SetBit(ctx._joint_mask, i);
     }
   }
 
   AnimEvalData data;
   // Apply the bind poses of each joint as the starting point.
   for (int i = 0; i < ctx._num_joints; i++) {
-    if (!ctx._joint_mask.get_bit(i)) {
+    if (!CheckBit(ctx._joint_mask, i)) {
       continue;
     }
     data._position[i] = _joints[i]._default_pos;
     data._rotation[i] = _joints[i]._default_quat;
     data._scale[i] = _joints[i]._default_scale;
+    data._shear[i] = _joints[i]._default_shear;
   }
 
   //
@@ -401,9 +401,9 @@ add_attachment_parent(int n, int parent, const LPoint3 &local_pos,
   inf._transform = LMatrix4::ident_mat();
   if (parent == -1) {
     inf._transform = inf._offset * inf._weight;
-  } else {
-    _changed_joints.set_bit(parent);
-  }
+  } //else {
+    //_changed_joints.set_bit(parent);
+  //}
   attach._parents[parent] = inf;
 
   compute_attachment_transform(n);
@@ -650,9 +650,9 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
 
       // Take the net transform and re-interpret it.
       const LMatrix4 &parent_net = merge_char->_joint_net_transforms[joint._merge_joint];
-      if (parent_net != _joint_net_transforms[i]) {
-        _changed_joints.set_bit(i);
-      }
+      //if (parent_net != _joint_net_transforms[i]) {
+      //  _changed_joints.set_bit(i);
+      //}
       _joint_net_transforms[i] = parent_net;
       if (joint._parent != -1) {
         LMatrix4 parent_inverse = _joint_net_transforms[joint._parent];
@@ -665,7 +665,7 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
 
     } else {
       // Use the computed pose of the joint.
-      _joint_values[i] = LMatrix4::scale_mat(data._scale[i]) * data._rotation[i];
+      _joint_values[i] = LMatrix4::scale_shear_mat(data._scale[i], data._shear[i]) * data._rotation[i];
       _joint_values[i].set_row(3, data._position[i]);
     }
   }
@@ -688,21 +688,21 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         _joint_net_transforms[i] = _joint_values[i] * root_xform;
       }
 
-      if (_joint_net_transforms[i] != old_net) {
-        _changed_joints.set_bit(i);
-      }
+      //if (_joint_net_transforms[i] != old_net) {
+      //  _changed_joints.set_bit(i);
+      //}
     }
-    if (_changed_joints.get_bit(i)) {
+    //if (_changed_joints.get_bit(i)) {
       _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
-    }
+    //}
   }
   ap_net_collector.stop();
 
   ap_mark_jvt_collector.start();
   for (size_t i = 0; i < joint_count; i++) {
-    if (!_changed_joints.get_bit(i)) {
-      continue;
-    }
+    //if (!_changed_joints.get_bit(i)) {
+    //  continue;
+    //}
     JointVertexTransform *trans = _joint_vertex_transforms[i];
     if (trans != nullptr) {
       trans->mark_modified(current_thread);
@@ -722,7 +722,7 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     _sliders[i].update(current_thread);
   }
 
-  _changed_joints.clear();
+  //_changed_joints.clear();
 
   return true;
 }
@@ -1086,6 +1086,16 @@ set_joint_vertex_transform(JointVertexTransform *transform, int n) {
 }
 
 /**
+ * Collects AnimChannel events from all playing layers.
+ */
+void Character::
+get_events(AnimEventQueue &queue, int type) {
+  for (size_t i = 0; i < _anim_layers.size(); i++) {
+    _anim_layers[i].get_events(queue, type);
+  }
+}
+
+/**
  * Plays the indicated animation channel on the indicated layer completely
  * through once and stops.
  */
@@ -1236,7 +1246,7 @@ reset_layer_channel(int layer, int channel, int activity, bool restart, PN_stdfl
   int num_frames = chan->get_num_frames();
   PN_stdfloat from_cycle = from / std::max(1, (num_frames - 1));
   PN_stdfloat play_frames = std::max(1.0, to - from + 1.0);
-  PN_stdfloat play_cycles = play_frames / std::max(1, (num_frames - 1));
+  PN_stdfloat play_cycles = play_frames / num_frames;
 
   AnimLayer *alayer = get_anim_layer(layer);
   if (restart || channel != alayer->_sequence) {

@@ -151,9 +151,9 @@ set_joint_forced_value(int n, const LMatrix4 &value) {
     _joint_net_transforms[n] = value * get_root_xform();
   }
 
-  if (!_changed_joints.get_bit(n) && _joint_net_transforms[n] != old_net) {
-    _changed_joints.set_bit(n);
-  }
+  //if (!_changed_joints.get_bit(n) && _joint_net_transforms[n] != old_net) {
+  //  _changed_joints.set_bit(n);
+  //}
 }
 
 /**
@@ -165,7 +165,7 @@ clear_joint_forced_value(int n) {
   nassertv(n >= 0 && n < (int)_joints.size());
 
   _joints[n]._has_forced_value = false;
-  _changed_joints.set_bit(n);
+  //_changed_joints.set_bit(n);
 }
 
 /**
@@ -285,8 +285,10 @@ set_joint_default_value(int n, const LMatrix4 &value) {
   _joint_values[n] = value;
   _joints[n]._default_value = value;
   // Break out the components as well.
-  LVecBase3 hpr, shear;
-  decompose_matrix(value, _joints[n]._default_scale, shear, hpr, _joints[n]._default_pos);
+  LVecBase3 hpr;
+  decompose_matrix(value, _joints[n]._default_scale,
+                   _joints[n]._default_shear, hpr,
+                   _joints[n]._default_pos);
   _joints[n]._default_quat.set_hpr(hpr);
 }
 

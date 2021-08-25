@@ -35,6 +35,8 @@ EXPCL_PANDA_ANIM extern ConfigVariableList anim_events;
 EXPCL_PANDA_ANIM extern ConfigVariableList anim_activities;
 EXPCL_PANDA_ANIM extern ConfigVariableBool source_delta_anims;
 
+static constexpr int max_character_joints = 256;
+
 extern EXPCL_PANDA_ANIM void init_libanim();
 
 #endif // CONFIG_ANIM_H

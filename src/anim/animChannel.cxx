@@ -149,13 +149,25 @@ AnimChannel() :
 }
 
 /**
+ * Adds a new event that should occur at the indicated point in this
+ * AnimChannel's timeline.
+ */
+void AnimChannel::
+add_event(int type, int event, PN_stdfloat frame, const std::string &options) {
+  Event ev(type, event, frame / std::max(1.0f, _num_frames - 1.0f), options);
+  _events.push_back(std::move(ev));
+}
+
+/**
  * Blends between "a" and "b" using the indicated weight, and stores the
  * result in "a".  A weight of 0 returns "a", 1 returns "b".  The joint
- * weights of the channel are taken into account as well.
+ * weights of the channel are taken into account as well.  "b" may be
+ * invalidated after calling this method, so don't try to access its joints
+ * after calling this method.
  */
 void AnimChannel::
 blend(const AnimEvalContext &context, AnimEvalData &a,
-      const AnimEvalData &b, PN_stdfloat weight) const {
+      AnimEvalData &b, PN_stdfloat weight) const {
 
   weight = std::clamp(weight, 0.0f, 1.0f);
 
@@ -165,7 +177,7 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
   } else if (_weights == nullptr && weight == 1.0f && !has_flags(F_delta | F_pre_delta)) {
     // If there's no per-joint weight list, the blend has full weight on B, and
     // we're not an additive channel, just copy B to A.
-    a.copy_joints(b);
+    a.steal_joints(b, context._num_joints);
     return;
   }
 
@@ -176,7 +188,7 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
   // Build per-joint weight list.
   PN_stdfloat *weights = (PN_stdfloat *)alloca(num_joints * sizeof(PN_stdfloat));
   for (i = 0; i < num_joints; i++) {
-    if (!context._joint_mask.get_bit(i)) {
+    if (!CheckBit(context._joint_mask, i)) {
       // Don't care about this joint.
       weights[i] = 0.0f;
 
@@ -213,7 +225,7 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
         }
         quaternion_ma_seq(a._rotation[i], s2, b_rot, a._rotation[i]);
         a._position[i] = a._position[i] + (b._position[i] * s2);
-        // Not doing scale.
+        // Not doing scale or shear.
       }
     }
 
@@ -233,6 +245,7 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       a._rotation[i] = q3;
       a._position[i] = (a._position[i] * s1) + (b._position[i] * s2);
       a._scale[i] = (a._scale[i] * s1) + (b._scale[i] * s2);
+      a._shear[i] = (a._shear[i] * s1) + (b._shear[i] * s2);
     }
   }
 }
@@ -246,7 +259,7 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     return;
   }
 
-  AnimEvalData this_data(data);
+  AnimEvalData this_data(data, context._num_joints);
 
   if (has_flags(F_real_time)) {
     // Compute cycle from current rendering time instead of relative to
@@ -295,17 +308,31 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 void AnimChannel::
 write_datagram(BamWriter *manager, Datagram &me) {
   TypedWritableReferenceCount::write_datagram(manager, me);
+
   me.add_string(get_name());
+
   me.add_uint16(_num_frames);
   me.add_stdfloat(_fps);
+
   me.add_uint32(_flags);
+
   me.add_uint8(_activities.size());
   for (size_t i = 0; i < _activities.size(); i++) {
     me.add_uint32(_activities[i].activity);
     me.add_stdfloat(_activities[i].weight);
   }
+
   me.add_stdfloat(_fade_in);
   me.add_stdfloat(_fade_out);
+
+  me.add_uint8(_events.size());
+  for (size_t i = 0; i < _events.size(); i++) {
+    me.add_uint8(_events[i]._type);
+    me.add_stdfloat(_events[i]._cycle);
+    me.add_int16(_events[i]._event);
+    me.add_string(_events[i]._options);
+  }
+
   manager->write_pointer(me, _weights);
 }
 
@@ -315,16 +342,30 @@ write_datagram(BamWriter *manager, Datagram &me) {
 void AnimChannel::
 fillin(DatagramIterator &scan, BamReader *manager) {
   TypedWritableReferenceCount::fillin(scan, manager);
+
   set_name(scan.get_string());
+
   _num_frames = (int)scan.get_uint16();
   _fps = scan.get_stdfloat();
+
   _flags = scan.get_uint32();
+
   _activities.resize(scan.get_uint8());
   for (size_t i = 0; i < _activities.size(); i++) {
     _activities[i].activity = scan.get_uint32();
     _activities[i].weight = scan.get_stdfloat();
   }
+
   _fade_in = scan.get_stdfloat();
   _fade_out = scan.get_stdfloat();
+
+  _events.resize(scan.get_uint8());
+  for (size_t i = 0; i < _events.size(); i++) {
+    _events[i]._type = scan.get_uint8();
+    _events[i]._cycle = scan.get_stdfloat();
+    _events[i]._event = scan.get_int16();
+    _events[i]._options = scan.get_string();
+  }
+
   manager->read_pointer(scan); // _weights
 }

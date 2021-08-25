@@ -15,14 +15,20 @@
 #define ANIMEVALCONTEXT_H
 
 #include "pandabase.h"
-#include "bitArray.h"
 #include "luse.h"
-#include "animInterface.h"
+#include "config_anim.h"
 
 class Character;
 class CharacterJoint;
 
 // NOTE: Avoid heap allocations during the AnimChannel evaluation.
+
+#ifndef CheckBit
+#define CheckBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] & ( 1 << ( (bitNumber) & 7 ) ) )
+#define SetBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] |= ( 1 << ( (bitNumber) & 7 ) ) )
+#define ClearBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] &= ~( 1 << ( (bitNumber) & 7 ) ) )
+#define ClearBitString(bitstring, bitCount) (memset(bitstring, 0, bitCount/8))
+#endif
 
 /**
  * Defines the context of an AnimChannel hierarchy evaluation.  This data
@@ -36,7 +42,7 @@ public:
   // The bit mask of joints we actually care about animating.  Joints that are
   // joint merged or have a forced value don't need to be evaluated, so their
   // bits would not be set.
-  BitArray _joint_mask;
+  unsigned char _joint_mask[max_character_joints/8];
 
   // The number of joints in the character.
   int _num_joints;
@@ -59,8 +65,6 @@ public:
   PN_stdfloat _play_rate;
 };
 
-static constexpr int max_character_joints = 256;
-
 /**
  * Contains the data for evaluating an AnimChannel at a particular level of
  * the hierarchy.
@@ -68,16 +72,19 @@ static constexpr int max_character_joints = 256;
 class AnimEvalData final {
 public:
   INLINE AnimEvalData();
-  INLINE AnimEvalData(const AnimEvalData &copy);
-  INLINE AnimEvalData(AnimEvalData &&other);
+  AnimEvalData(const AnimEvalData &copy) = delete;
+  AnimEvalData(AnimEvalData &&other) = delete;
+  INLINE AnimEvalData(const AnimEvalData &copy, int num_joints);
+  INLINE AnimEvalData(AnimEvalData &&other, int num_joints);
 
-  INLINE void copy_joints(const AnimEvalData &other);
-  INLINE void steal_joints(AnimEvalData &other);
+  INLINE void copy_joints(const AnimEvalData &other, int num_joints);
+  INLINE void steal_joints(AnimEvalData &other, int num_joints);
 
   // Poses of all joints.
   LPoint3 _position[max_character_joints];
   LQuaternion _rotation[max_character_joints];
   LVecBase3 _scale[max_character_joints];
+  LVecBase3 _shear[max_character_joints];
 
   PN_stdfloat _weight;
 

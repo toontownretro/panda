@@ -18,6 +18,7 @@ INLINE AnimEvalData::
 AnimEvalData() :
   _position{ LPoint3(0) },
   _scale{ LVecBase3(1) },
+  _shear{ LVecBase3(0) },
   _rotation{ LQuaternion::ident_quat() },
   _weight(1.0f),
   _cycle(0.0f)
@@ -28,10 +29,11 @@ AnimEvalData() :
  *
  */
 INLINE AnimEvalData::
-AnimEvalData(const AnimEvalData &copy) {
-  std::copy(copy._position, copy._position + max_character_joints, _position);
-  std::copy(copy._scale, copy._scale + max_character_joints, _scale);
-  std::copy(copy._rotation, copy._rotation + max_character_joints, _rotation);
+AnimEvalData(const AnimEvalData &copy, int num_joints) {
+  std::copy(copy._position, copy._position + num_joints, _position);
+  std::copy(copy._scale, copy._scale + num_joints, _scale);
+  std::copy(copy._rotation, copy._rotation + num_joints, _rotation);
+  std::copy(copy._shear, copy._shear + num_joints, _shear);
   _weight = copy._weight;
   _cycle = copy._cycle;
 }
@@ -40,10 +42,11 @@ AnimEvalData(const AnimEvalData &copy) {
  *
  */
 INLINE AnimEvalData::
-AnimEvalData(AnimEvalData &&other) {
-  std::move(other._position, other._position + max_character_joints, _position);
-  std::move(other._scale, other._scale + max_character_joints, _scale);
-  std::move(other._rotation, other._rotation + max_character_joints, _rotation);
+AnimEvalData(AnimEvalData &&other, int num_joints) {
+  std::move(other._position, other._position + num_joints, _position);
+  std::move(other._scale, other._scale + num_joints, _scale);
+  std::move(other._rotation, other._rotation + num_joints, _rotation);
+  std::move(other._shear, other._shear + num_joints, _shear);
   _weight = std::move(other._weight);
   _cycle = std::move(other._cycle);
 }
@@ -52,10 +55,11 @@ AnimEvalData(AnimEvalData &&other) {
  * Copies the joint poses from the indicated AnimEvalData into this one.
  */
 INLINE void AnimEvalData::
-copy_joints(const AnimEvalData &copy) {
-  std::copy(copy._position, copy._position + max_character_joints, _position);
-  std::copy(copy._scale, copy._scale + max_character_joints, _scale);
-  std::copy(copy._rotation, copy._rotation + max_character_joints, _rotation);
+copy_joints(const AnimEvalData &copy, int num_joints) {
+  std::copy(copy._position, copy._position + num_joints, _position);
+  std::copy(copy._scale, copy._scale + num_joints, _scale);
+  std::copy(copy._rotation, copy._rotation + num_joints, _rotation);
+  std::copy(copy._shear, copy._shear + num_joints, _shear);
 }
 
 /**
@@ -63,8 +67,9 @@ copy_joints(const AnimEvalData &copy) {
  * try to access the joint poses on the other AnimEvalData after calling this.
  */
 INLINE void AnimEvalData::
-steal_joints(AnimEvalData &other) {
-  std::move(other._position, other._position + max_character_joints, _position);
-  std::move(other._scale, other._scale + max_character_joints, _scale);
-  std::move(other._rotation, other._rotation + max_character_joints, _rotation);
+steal_joints(AnimEvalData &other, int num_joints) {
+  std::move(other._position, other._position + num_joints, _position);
+  std::move(other._scale, other._scale + num_joints, _scale);
+  std::move(other._rotation, other._rotation + num_joints, _rotation);
+  std::move(other._shear, other._shear + num_joints, _shear);
 }

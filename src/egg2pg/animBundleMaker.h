@@ -17,7 +17,7 @@
 #include "pandabase.h"
 #include "typedef.h"
 #include "animChannelTable.h"
-#include "pta_stdfloat.h"
+#include "vector_stdfloat.h"
 
 class EggNode;
 class EggGroupNode;
@@ -61,7 +61,7 @@ private:
   int _num_sliders;
 
   JointFrames _joint_table;
-  PTA_stdfloat _slider_table;
+  vector_stdfloat _slider_table;
 
   EggTable *_root;
 

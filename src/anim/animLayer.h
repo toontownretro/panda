@@ -18,6 +18,8 @@
 #include "numeric_types.h"
 #include "animEvalContext.h"
 
+class AnimEventQueue;
+
 static const int max_anim_layers = 15;
 
 /**
@@ -65,6 +67,8 @@ PUBLISHED:
 
   void update();
   void calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition);
+
+  void get_events(AnimEventQueue &queue, unsigned int type);
 
   INLINE PN_stdfloat get_fade_out(PN_stdfloat frame_time) const;
 
@@ -122,6 +126,12 @@ PUBLISHED:
   PN_stdfloat _last_advance_time;
 
   Character *_character;
+
+  // The index of the channel playing on the layer the last time we checked
+  // for events.
+  int _last_event_channel;
+  // The cycle of the layer the last time we checked for events.
+  PN_stdfloat _last_event_cycle;
 };
 
 #include "animLayer.I"

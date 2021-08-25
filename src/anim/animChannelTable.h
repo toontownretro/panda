@@ -18,7 +18,7 @@
 #include "animChannel.h"
 #include "luse.h"
 #include "pointerToArray.h"
-#include "pta_stdfloat.h"
+#include "vector_stdfloat.h"
 #include "vector_int.h"
 
 class FactoryParams;
@@ -44,26 +44,29 @@ PUBLISHED:
   }
 };
 
-class EXPCL_PANDA_ANIM ALIGN_16BYTE JointFrame : public TypedObject {
+class EXPCL_PANDA_ANIM JointFrame : public TypedObject {
   DECLARE_CLASS(JointFrame, TypedObject);
 PUBLISHED:
   LQuaternion quat;
   LVecBase3 pos;
   LVecBase3 scale;
+  LVecBase3 shear;
 
   JointFrame() = default;
 
   JointFrame(const JointFrame &copy) :
     quat(copy.quat),
     pos(copy.pos),
-    scale(copy.scale)
+    scale(copy.scale),
+    shear(copy.shear)
   {
   }
 
   JointFrame(JointFrame &&other) :
     quat(std::move(other.quat)),
     pos(std::move(other.pos)),
-    scale(std::move(other.scale))
+    scale(std::move(other.scale)),
+    shear(std::move(other.shear))
   {
   }
 
@@ -71,20 +74,24 @@ PUBLISHED:
     quat = std::move(other.quat);
     pos = std::move(other.pos);
     scale = std::move(other.scale);
+    shear = std::move(other.shear);
   }
 
   void operator = (const JointFrame &other) {
     quat = other.quat;
     pos = other.pos;
     scale = other.scale;
+    shear = other.shear;
   }
 
   bool operator == (const JointFrame &other) const {
     return quat == other.quat &&
            pos == other.pos &&
-           scale == other.scale;
+           scale == other.scale &&
+           shear == other.shear;
   }
 };
+typedef pvector<JointFrame> JointFrames;
 
 /**
  * There is one instance of this class for each slider in an animation.  It
@@ -104,34 +111,6 @@ PUBLISHED:
   }
 };
 
-BEGIN_PUBLISH
-
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToBase<ReferenceCountedVector<JointEntry> >)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArrayBase<JointEntry>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArray<JointEntry>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerToArray<JointEntry>)
-
-typedef PointerToArray<JointEntry> JointEntries;
-typedef ConstPointerToArray<JointEntry> CJointEntries;
-
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToBase<ReferenceCountedVector<JointFrame> >)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArrayBase<JointFrame>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArray<JointFrame>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerToArray<JointFrame>)
-
-typedef PointerToArray<JointFrame> JointFrames;
-typedef ConstPointerToArray<JointFrame> CJointFrames;
-
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToBase<ReferenceCountedVector<SliderEntry> >)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArrayBase<SliderEntry>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, PointerToArray<SliderEntry>)
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerToArray<SliderEntry>)
-
-typedef PointerToArray<SliderEntry> SliderEntries;
-typedef ConstPointerToArray<SliderEntry> CSliderEntries;
-
-END_PUBLISH
-
 /**
  * This is an AnimChannel that gets its pose by sampling a static joint
  * animation table.  This corresponds directly to an animation that was
@@ -143,14 +122,14 @@ class EXPCL_PANDA_ANIM AnimChannelTable final : public AnimChannel {
 PUBLISHED:
   INLINE explicit AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames);
 
-  INLINE void set_joint_table(JointFrames table);
-  INLINE JointFrames get_joint_table() const;
+  INLINE void set_joint_table(JointFrames &&table);
+  INLINE const JointFrames &get_joint_table() const;
 
   INLINE const JointFrame &get_joint_frame(int joint, int frame) const;
   INLINE const JointFrame &get_joint_frame(const JointEntry &joint, int frame) const;
 
-  INLINE void set_slider_table(PTA_stdfloat table);
-  INLINE PTA_stdfloat get_slider_table() const;
+  INLINE void set_slider_table(vector_stdfloat &&table);
+  INLINE const vector_stdfloat &get_slider_table() const;
 
   INLINE void get_scalar(int slider, int frame, PN_stdfloat &scalar) const;
   INLINE void get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const;
@@ -191,19 +170,23 @@ protected:
   void fillin(DatagramIterator &scan, BamReader *manager);
 
 private:
-  JointEntries _joint_entries;
+  JointEntry _joint_entries[max_character_joints];
+  size_t _num_joint_entries;
   JointFrames _joint_frames;
 
-  SliderEntries _slider_entries;
-  PTA_stdfloat _slider_table;
+  SliderEntry _slider_entries[max_character_joints];
+  size_t _num_slider_entries;
+  vector_stdfloat _slider_table;
 
   // Maps joints on the corresponding character to joints on the animation.
   // This is needed because Egg files do not guarantee matching joint orders
   // between characters and their animations.  I don't expect an animation to
   // be used for multiple characters with different joint hierarchies, so a
   // single mapping should be fine.
-  vector_int _joint_map;
-  vector_int _slider_map;
+  int _joint_map[max_character_joints];
+  size_t _joint_map_size;
+  int _slider_map[max_character_joints];
+  size_t _slider_map_size;
 
   bool _has_character_bound;
 };

@@ -97,6 +97,23 @@ clear_flags(unsigned int flags) {
 }
 
 /**
+ * Returns the number of events in the channel.
+ */
+INLINE int AnimChannel::
+get_num_events() const {
+  return (int)_events.size();
+}
+
+/**
+ * Returns the nth event of the channel.
+ */
+INLINE const AnimChannel::Event &AnimChannel::
+get_event(int n) const {
+  assert(n >= 0 && n < (int)_events.size());
+  return _events[n];
+}
+
+/**
  * Associates the channel with the indicated activity with the given weight.
  */
 INLINE void AnimChannel::

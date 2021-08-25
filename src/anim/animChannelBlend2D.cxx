@@ -301,9 +301,9 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat w1 = c1._weight;
   PN_stdfloat w2 = c2._weight;
 
-  AnimEvalData c0_data(data);
-  AnimEvalData c1_data(data);
-  AnimEvalData c2_data(data);
+  AnimEvalData c0_data(data, context._num_joints);
+  AnimEvalData c1_data(data, context._num_joints);
+  AnimEvalData c2_data(data, context._num_joints);
 
   // Calculate the channels at full weight and blend between them.
 
@@ -323,33 +323,37 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   }
 
   if (c0._weight == 1.0f) {
-    data.steal_joints(c0_data);
+    data.steal_joints(c0_data, context._num_joints);
 
   } else if (c1._weight == 1.0f) {
-    data.steal_joints(c1_data);
+    data.steal_joints(c1_data, context._num_joints);
 
   } else if (c2._weight == 1.0f) {
-    data.steal_joints(c2_data);
+    data.steal_joints(c2_data, context._num_joints);
 
   } else {
     for (int i = 0; i < context._num_joints; i++) {
-      if (!context._joint_mask.get_bit(i)) {
+      if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
       data._position[i].set(0, 0, 0);
       data._scale[i].set(0, 0, 0);
+      data._shear[i].set(0, 0, 0);
 
       if (w0 != 0.0f) {
         data._position[i] += c0_data._position[i] * w0;
         data._scale[i] += c0_data._scale[i] * w0;
+        data._shear[i] += c0_data._shear[i] * w0;
       }
       if (w1 != 0.0f) {
         data._position[i] += c1_data._position[i] * w1;
         data._scale[i] += c1_data._scale[i] * w1;
+        data._shear[i] += c1_data._shear[i] * w1;
       }
       if (w2 != 0.0f) {
         data._position[i] += c2_data._position[i] * w2;
         data._scale[i] += c2_data._scale[i] * w2;
+        data._shear[i] += c2_data._shear[i] * w2;
       }
 
       if (w1 < 0.001f) {

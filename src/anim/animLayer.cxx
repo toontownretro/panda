@@ -15,6 +15,7 @@
 #include "clockObject.h"
 #include "animChannel.h"
 #include "character.h"
+#include "animEventQueue.h"
 
 /**
  *
@@ -34,6 +35,9 @@ init(Character *character) {
   _start_cycle = 0.0f;
   _play_cycles = 0.0f;
   _last_advance_time = 0.0f;
+  _last_event_channel = -1;
+  _last_event_cycle = 0.0f;
+  _last_event_check = 0.0f;
   _flags = 0;
   _weight = 0;
   _kill_weight = 0.0f;
@@ -42,7 +46,7 @@ init(Character *character) {
   _prev_cycle = 0;
   _sequence_finished = false;
   _activity = -1;
-  _sequence = 0;
+  _sequence = -1;
   _sequence_parity = 0;
   _prev_sequence_parity = 0;
   _priority = 0;
@@ -128,11 +132,11 @@ accumulate_cycle() {
       _last_advance_time = now;
     }
 
-    double elapsed = now - _last_advance_time;
-
-    if (elapsed <= 0.001f) {
+    if (now == _last_advance_time) {
       return;
     }
+
+    double elapsed = now - _last_advance_time;
 
     // Note animation time for next frame.
     _last_advance_time = now;
@@ -184,6 +188,11 @@ void AnimLayer::
 update() {
   if (_sequence < 0) {
     _sequence_finished = true;
+    return;
+  }
+
+  double now = ClockObject::get_global_clock()->get_frame_time();
+  if (now == _last_advance_time) {
     return;
   }
 
@@ -338,4 +347,172 @@ calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition) {
   } else {
     _prev_sequence_parity = _sequence_parity;
   }
+}
+
+/**
+ * Enqueues events that should occur on the channel currently playing on this
+ * layer.
+ */
+void AnimLayer::
+get_events(AnimEventQueue &queue, unsigned int type) {
+  // FIXME: Not sure what to do about posed animations.  It makes sense that
+  // posed animations can't generate events because they hold a frame, but
+  // ActorInterval makes use of pose to play the animation over time.  Maybe
+  // figure out a way to do ActorInterval without pose?
+
+  if (anim_cat.is_debug()) {
+    anim_cat.debug()
+      << "animlayer get events chan " << _sequence << " weight " << _weight << " order " << _order << " flags " << _flags << "\n";
+  }
+
+  if (_sequence == -1 || _weight == 0.0f || _order == -1 ||
+      ((_flags & F_active) == 0)) {
+    return;
+  }
+
+  AnimChannel *channel = _character->get_channel(_sequence);
+  if (channel->get_num_events() == 0) {
+    return;
+  }
+
+  bool reset_events = _sequence != _last_event_channel;
+  _last_event_channel = _sequence;
+
+  PN_stdfloat start = _last_event_cycle;
+  PN_stdfloat end = _cycle;
+
+  if (reset_events) {
+    if (anim_cat.is_debug()) {
+      anim_cat.debug()
+        << "Reset events sequence changed\n";
+    }
+    end = _start_cycle;
+    start = _start_cycle - 0.01f;
+    _last_event_cycle = start;
+    _last_event_channel = _sequence;
+  }
+
+  if (anim_cat.is_debug()) {
+    anim_cat.debug()
+      << "Get events channel " << _sequence << " current cycle " << _cycle << " start " << start << " end " << end << "\n";
+  }
+
+  if (end == start) {
+    if (anim_cat.is_debug()) {
+      anim_cat.debug()
+        << "Stalled\n";
+    }
+    return;
+  }
+
+  PN_stdfloat cycle_rate = channel->get_cycle_rate(_character) * _play_rate;
+  if (cycle_rate == 0.0f) {
+    if (anim_cat.is_debug()) {
+      anim_cat.debug()
+        << "0 cycle rate\n";
+    }
+    return;
+  }
+
+  // See if we wrapped around a looping animation since the last event check.
+  bool looped = false;
+  if (_play_mode == PM_loop) {
+    if (cycle_rate > 0.0f) {
+      if (end <= start) {
+        if ((start - end) > ((_start_cycle + _play_cycles) * 0.5f)) {
+          looped = true;
+        } else {
+          //if (anim_cat.is_debug()) {
+          //  anim_cat.debug()
+          //    << "Looping diff too small\n";
+          //}
+          return;
+        }
+      }
+    } else {
+      if (start <= end) {
+        if ((end - start) > ((_start_cycle + _play_cycles) * 0.5f)) {
+          looped = true;
+        } else {
+          return;
+        }
+      }
+    }
+  }
+
+  if (_play_mode == PM_pingpong) {
+    // If we're pingponging the channel, figure out which direction the
+    // channel is playing and adjust the cycle rate accordingly.
+    if (cycle_rate > 0.0f) {
+      if (end < start) {
+        // Playing forward, but pingponging backward.
+        cycle_rate = -cycle_rate;
+      }
+    } else {
+      if (end > start) {
+        // Playing backward, but pingponging forward.
+        cycle_rate = -cycle_rate;
+      }
+    }
+  }
+
+  if (looped) {
+    // The animation looped around since last time.  Process the events before
+    // the loop happened.
+    for (int i = 0; i < channel->get_num_events(); i++) {
+      const AnimChannel::Event &event = channel->get_event(i);
+
+      if ((event.get_type() & type) == 0) {
+        continue;
+      }
+
+      if (cycle_rate > 0.0f) {
+        if (event.get_cycle() <= start) {
+          continue;
+        }
+      } else {
+        if (event.get_cycle() >= start) {
+          continue;
+        }
+      }
+
+      if (anim_cat.is_debug()) {
+        anim_cat.debug()
+          << "Push looping event " << i << " channel " << _sequence << " cycle " << event.get_cycle() << " start " << start << " end " << end << "\n";
+      }
+
+      queue.push_event(_sequence, i);
+    }
+
+    // Now reset the start cycle to gather events on the other side of the
+    // loop.
+    start = _start_cycle - 0.01f;
+  }
+
+  for (int i = 0; i < channel->get_num_events(); i++) {
+    const AnimChannel::Event &event = channel->get_event(i);
+
+    if ((event.get_type() & type) == 0) {
+      continue;
+    }
+
+    if (cycle_rate > 0.0f) {
+      if (event.get_cycle() < start || event.get_cycle() >= end) {
+        continue;
+      }
+    } else {
+      if (event.get_cycle() >= start || event.get_cycle() < end) {
+        continue;
+      }
+    }
+
+    if (anim_cat.is_debug()) {
+      anim_cat.debug()
+        << "Push event " << i << " channel " << _sequence << " cycle " << event.get_cycle() << " start " << start << " end " << end << "\n";
+    }
+
+    queue.push_event(_sequence, i);
+  }
+
+  _last_event_cycle = end;
 }

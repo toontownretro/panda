@@ -290,6 +290,7 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
   vector_stdfloat x, y, z;
   vector_stdfloat sx, sy, sz;
   vector_stdfloat h, p, r;
+  vector_stdfloat a, b, c;
 
   for (ci = egg_anim->begin(); ci != egg_anim->end(); ++ci) {
     if ((*ci)->is_of_type(EggSAnimData::get_class_type())) {
@@ -325,6 +326,15 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
           break;
         case 'r':
           r.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'a':
+          a.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'b':
+          b.push_back((PN_stdfloat)child->get_value(i));
+          break;
+        case 'c':
+          c.push_back((PN_stdfloat)child->get_value(i));
           break;
         default:
           break;
@@ -365,9 +375,20 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
     sz.push_back(1.0f);
   }
 
+  if (a.empty()) {
+    a.push_back(0.0f);
+  }
+  if (b.empty()) {
+    b.push_back(0.0f);
+  }
+  if (c.empty()) {
+    c.push_back(0.0f);
+  }
+
   joint.num_frames = std::max(x.size(), std::max(y.size(), z.size()));
   joint.num_frames = std::max((size_t)joint.num_frames, std::max(h.size(), std::max(p.size(), r.size())));
   joint.num_frames = std::max((size_t)joint.num_frames, std::max(sx.size(), std::max(sy.size(), sz.size())));
+  joint.num_frames = std::max((size_t)joint.num_frames, std::max(a.size(), std::max(b.size(), c.size())));
 
   for (int i = 0; i < joint.num_frames; i++) {
     LVecBase3 pos(
@@ -388,6 +409,12 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
       r[i % r.size()]
     );
 
+    LVecBase3 shear(
+      a[i % a.size()],
+      b[i % b.size()],
+      c[i % c.size()]
+    );
+
     LQuaternion quat;
     quat.set_hpr(hpr);
 
@@ -395,6 +422,7 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
     frame.pos = std::move(pos);
     frame.quat = std::move(quat);
     frame.scale = std::move(scale);
+    frame.shear = std::move(shear);
 
     _joint_table.push_back(std::move(frame));
   }

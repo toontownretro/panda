@@ -56,6 +56,7 @@ public:
   LMatrix4 _default_value;
   LVecBase3 _default_pos;
   LVecBase3 _default_scale;
+  LVecBase3 _default_shear;
   LQuaternion _default_quat;
 
   // Should the joint be used to merge with the corresponding joint on a child

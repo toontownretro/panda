@@ -183,23 +183,24 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   } else {
     // Evaluate both at full weight and blend between them.
 
-    AnimEvalData from_data(data);
+    AnimEvalData from_data(data, context._num_joints);
     from_data._weight = 1.0f;
     from->_channel->calc_pose(context, from_data);
 
-    AnimEvalData to_data(data);
+    AnimEvalData to_data(data, context._num_joints);
     to_data._weight = 1.0f;
     to->_channel->calc_pose(context, to_data);
 
     PN_stdfloat e0 = 1.0f - frac;
 
     for (int i = 0; i < context._num_joints; i++) {
-      if (!context._joint_mask.get_bit(i)) {
+      if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
 
       data._position[i] = (from_data._position[i] * e0) + (to_data._position[i] * frac);
       data._scale[i] = (from_data._scale[i] * e0) + (to_data._scale[i] * frac);
+      data._shear[i] = (from_data._shear[i] * e0) + (to_data._shear[i] * frac);
       LQuaternion::blend(from_data._rotation[i], to_data._rotation[i], frac, data._rotation[i]);
     }
   }

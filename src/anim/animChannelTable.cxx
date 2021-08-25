@@ -22,22 +22,6 @@
 IMPLEMENT_CLASS(JointEntry);
 IMPLEMENT_CLASS(JointFrame);
 IMPLEMENT_CLASS(SliderEntry);
-
-template class PointerToBase<ReferenceCountedVector<JointEntry> >;
-template class PointerToArrayBase<JointEntry>;
-template class PointerToArray<JointEntry>;
-template class ConstPointerToArray<JointEntry>;
-
-template class PointerToBase<ReferenceCountedVector<JointFrame> >;
-template class PointerToArrayBase<JointFrame>;
-template class PointerToArray<JointFrame>;
-template class ConstPointerToArray<JointFrame>;
-
-template class PointerToBase<ReferenceCountedVector<SliderEntry> >;
-template class PointerToArrayBase<SliderEntry>;
-template class PointerToArray<SliderEntry>;
-template class ConstPointerToArray<SliderEntry>;
-
 IMPLEMENT_CLASS(AnimChannelTable);
 
 /**
@@ -46,7 +30,7 @@ IMPLEMENT_CLASS(AnimChannelTable);
  */
 int AnimChannelTable::
 find_joint_channel(const std::string &name) const {
-  for (size_t i = 0; i < _joint_entries.size(); i++) {
+  for (size_t i = 0; i < _num_joint_entries; i++) {
     if (_joint_entries[i].name == name) {
       return (int)i;
     }
@@ -61,7 +45,7 @@ find_joint_channel(const std::string &name) const {
  */
 int AnimChannelTable::
 find_slider_channel(const std::string &name) const {
-  for (size_t i = 0; i < _slider_entries.size(); i++) {
+  for (size_t i = 0; i < _num_slider_entries; i++) {
     if (_slider_entries[i].name == name) {
       return (int)i;
     }
@@ -147,10 +131,10 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   PN_stdfloat frac = fframe - frame;
 
-  if (!context._frame_blend || frame == next_frame) {
+  if (!context._frame_blend || frame == next_frame || frac == 0.0f) {
     // Hold the current frame until the next one is ready.
     for (int i = 0; i < context._num_joints; i++) {
-      if (!context._joint_mask.get_bit(i)) {
+      if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
       CharacterJoint &joint = context._joints[i];
@@ -163,6 +147,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       data._rotation[i] = jframe.quat;
       data._position[i] = jframe.pos;
       data._scale[i] = jframe.scale;
+      data._shear[i] = jframe.shear;
     }
 
   } else {
@@ -171,7 +156,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     PN_stdfloat e0 = 1.0f - frac;
 
     for (int i = 0; i < context._num_joints; i++) {
-      if (!context._joint_mask.get_bit(i)) {
+      if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
       CharacterJoint &j = context._joints[i];
@@ -184,9 +169,33 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       const JointFrame &jf = get_joint_frame(je, frame);
       const JointFrame &jf_next = get_joint_frame(je, next_frame);
 
-      data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
-      data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
-      LQuaternion::blend(jf.quat, jf_next.quat, frac, data._rotation[i]);
+      if (jf.pos == jf_next.pos) {
+        data._position[i] = jf.pos;
+
+      } else {
+        data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
+      }
+
+      if (jf.scale == jf_next.scale) {
+        data._scale[i] = jf.scale;
+
+      } else {
+        data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
+      }
+
+      if (jf.shear == jf_next.shear) {
+        data._shear[i] = jf.shear;
+
+      } else {
+        data._shear[i] = (jf.shear * e0) + (jf_next.shear * frac);
+      }
+
+      if (jf.quat == jf_next.quat) {
+        data._rotation[i] = jf.quat;
+
+      } else {
+        LQuaternion::blend(jf.quat, jf_next.quat, frac, data._rotation[i]);
+      }
     }
   }
 }
@@ -220,8 +229,8 @@ void AnimChannelTable::
 write_datagram(BamWriter *manager, Datagram &me) {
   AnimChannel::write_datagram(manager, me);
 
-  me.add_uint16(_joint_entries.size());
-  for (size_t i = 0; i < _joint_entries.size(); i++) {
+  me.add_uint8(_num_joint_entries);
+  for (size_t i = 0; i < _num_joint_entries; i++) {
     const JointEntry &entry = _joint_entries[i];
 
     me.add_string(entry.name);
@@ -235,10 +244,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _joint_frames[i].pos.write_datagram(me);
     _joint_frames[i].quat.write_datagram(me);
     _joint_frames[i].scale.write_datagram(me);
+    _joint_frames[i].shear.write_datagram(me);
   }
 
-  me.add_uint16(_slider_entries.size());
-  for (size_t i = 0; i < _slider_entries.size(); i++) {
+  me.add_uint8(_num_slider_entries);
+  for (size_t i = 0; i < _num_slider_entries; i++) {
     const SliderEntry &entry = _slider_entries[i];
 
     me.add_string(entry.name);
@@ -252,13 +262,13 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_stdfloat(_slider_table[i]);
   }
 
-  me.add_uint16(_joint_map.size());
-  for (size_t i = 0; i < _joint_map.size(); i++) {
+  me.add_uint8(_joint_map_size);
+  for (size_t i = 0; i < _joint_map_size; i++) {
     me.add_int16(_joint_map[i]);
   }
 
-  me.add_uint16(_slider_map.size());
-  for (size_t i = 0; i < _slider_map.size(); i++) {
+  me.add_uint8(_slider_map_size);
+  for (size_t i = 0; i < _slider_map_size; i++) {
     me.add_int16(_slider_map[i]);
   }
 
@@ -272,8 +282,8 @@ void AnimChannelTable::
 fillin(DatagramIterator &scan, BamReader *manager) {
   AnimChannel::fillin(scan, manager);
 
-  _joint_entries.resize(scan.get_uint16());
-  for (size_t i = 0; i < _joint_entries.size(); i++) {
+  _num_joint_entries = scan.get_uint8();
+  for (size_t i = 0; i < _num_joint_entries; i++) {
     _joint_entries[i].name = scan.get_string();
     _joint_entries[i].first_frame = scan.get_int16();
     _joint_entries[i].num_frames = scan.get_int16();
@@ -284,10 +294,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _joint_frames[i].pos.read_datagram(scan);
     _joint_frames[i].quat.read_datagram(scan);
     _joint_frames[i].scale.read_datagram(scan);
+    _joint_frames[i].shear.read_datagram(scan);
   }
 
-  _slider_entries.resize(scan.get_uint16());
-  for (size_t i = 0; i < _slider_entries.size(); i++) {
+  _num_slider_entries = scan.get_uint8();
+  for (size_t i = 0; i < _num_slider_entries; i++) {
     _slider_entries[i].name = scan.get_string();
     _slider_entries[i].first_frame = scan.get_int16();
     _slider_entries[i].num_frames = scan.get_int16();
@@ -298,13 +309,13 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _slider_table[i] = scan.get_stdfloat();
   }
 
-  _joint_map.resize(scan.get_uint16());
-  for (size_t i = 0; i < _joint_map.size(); i++) {
+  _joint_map_size = scan.get_uint8();
+  for (size_t i = 0; i < _joint_map_size; i++) {
     _joint_map[i] = scan.get_int16();
   }
 
-  _slider_map.resize(scan.get_uint16());
-  for (size_t i = 0; i < _slider_map.size(); i++) {
+  _slider_map_size = scan.get_uint8();
+  for (size_t i = 0; i < _slider_map_size; i++) {
     _slider_map[i] = scan.get_int16();
   }
 

@@ -56,6 +56,40 @@ PUBLISHED:
     F_real_time = 1 << 7,
   };
 
+  /**
+   * An event that occurs somewhere in the timeline of an AnimChannel.  Note
+   * that events are only processed on the top-level channel.
+   */
+  class EXPCL_PANDA_ANIM Event {
+  PUBLISHED:
+    INLINE Event(int type, int event, PN_stdfloat cycle,
+                 const std::string &options) :
+      _type(type),
+      _cycle(cycle),
+      _event(event),
+      _options(options)
+    {}
+
+    INLINE Event() :
+      _type(0),
+      _cycle(0),
+      _event(0)
+    {}
+
+    INLINE PN_stdfloat get_cycle() const { return _cycle; }
+    INLINE int get_type() const { return _type; }
+    INLINE int get_event() const { return _event; }
+    INLINE const std::string &get_options() const { return _options; }
+
+  private:
+    int _type;
+    PN_stdfloat _cycle;
+    int _event;
+    std::string _options;
+
+    friend class AnimChannel;
+  };
+
   AnimChannel(const std::string &name);
 
   /**
@@ -81,6 +115,11 @@ PUBLISHED:
   INLINE unsigned int get_flags() const;
   INLINE void clear_flags(unsigned int flags);
 
+  void add_event(int type, int event, PN_stdfloat frame,
+                 const std::string &options = "");
+  INLINE int get_num_events() const;
+  INLINE const Event &get_event(int n) const;
+
   INLINE void add_activity(int activity, PN_stdfloat weight = 1.0f);
   INLINE int get_num_activities() const;
   INLINE int get_activity(int n) const;
@@ -103,7 +142,7 @@ PUBLISHED:
   virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data)=0;
 
   void blend(const AnimEvalContext &context, AnimEvalData &a,
-             const AnimEvalData &b, PN_stdfloat weight) const;
+             AnimEvalData &b, PN_stdfloat weight) const;
 
 public:
   virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
@@ -133,6 +172,9 @@ protected:
 
   // Controls per-joint weighting of the evaluated pose for the channel.
   PT(WeightList) _weights;
+
+  typedef pvector<Event> Events;
+  Events _events;
 };
 
 #include "animChannel.I"
