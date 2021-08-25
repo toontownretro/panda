@@ -20,8 +20,8 @@ get_next_event() {
     return nullptr;
   }
 
-  PT(SteamNetworkEvent) event = _events.back();
-  _events.pop_back();
+  PT(SteamNetworkEvent) event = _events.front();
+  _events.pop_front();
   return event;
 }
 
