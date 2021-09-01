@@ -16,6 +16,8 @@
 
 #include "pandabase.h"
 
+#define BT_NO_SIMD_OPERATOR_OVERLOADS 1
+
 #include <btBulletDynamicsCommon.h>
 
 #ifndef CPPPARSER
