@@ -111,15 +111,15 @@ egg_to_transform(EggNode *egg_node) {
  * the character's top node.
  */
 PandaNode *CharacterMaker::
-part_to_node(const string &name) const {
+part_to_node(int joint, const string &name) const {
   PandaNode *node = _character_node;
 
-  //if (part->is_character_joint()) {
-    //CharacterJoint *joint = DCAST(CharacterJoint, part);
-    //if (joint->_geom_node != nullptr) {
-    //  node = joint->_geom_node;
-    //}
-  //}
+  if (joint != -1) {
+    auto it = _joint_dcs.find(joint);
+    if (it != _joint_dcs.end()) {
+      return (*it).second;
+    }
+  }
 
   // We should always return a GeomNode, so that all polysets created at the
   // same level will get added into the same GeomNode.  Look for a child of
@@ -281,11 +281,21 @@ make_geometry(EggNode *egg_node) {
     if (!egg_bin->empty() &&
         (egg_bin->get_bin_number() == EggBinner::BN_polyset ||
          egg_bin->get_bin_number() == EggBinner::BN_patches)) {
-      EggGroupNode *bin_home = _egg_root;
-      // This is a dynamic polyset that lives under the character's root
-      // node.
+      EggGroupNode *bin_home = determine_bin_home(egg_bin);
 
-      PandaNode *parent = part_to_node(/*egg_to_part(bin_home),*/ egg_bin->get_name());
+      bool is_dynamic;
+      if (bin_home == nullptr) {
+        // This is a dynamic polyset that lives under the character's root
+        // node.
+        bin_home = _egg_root;
+        is_dynamic = true;
+      } else {
+        // This is a totally static polyset that is parented under some
+        // animated joint node.
+        is_dynamic = false;
+      }
+
+      PandaNode *parent = part_to_node(egg_to_joint(bin_home), egg_bin->get_name());
       LMatrix4d transform =
         egg_bin->get_vertex_frame() *
         bin_home->get_node_frame_inv();
@@ -303,6 +313,144 @@ make_geometry(EggNode *egg_node) {
       make_geometry(*ci);
     }
   }
+}
+
+/**
+ * Examines the joint assignment of the vertices of all of the primitives
+ * within this bin to determine which parent node the bin's polyset should be
+ * created under.
+ */
+EggGroupNode *CharacterMaker::
+determine_bin_home(EggBin *egg_bin) {
+  // A primitive's vertices may be referenced by any joint in the character.
+  // Or, the primitive itself may be explicitly placed under a joint.
+
+  // If any of the vertices, in any primitive, are referenced by multiple
+  // joints, or if any two vertices are referenced by different joints, then
+  // the entire bin must be considered dynamic.  (We'll indicate a dynamic bin
+  // by returning NULL.)
+
+  if (!egg_rigid_geometry) {
+    // If we don't have egg-rigid-geometry enabled, then all geometry is
+    // considered dynamic.
+    return nullptr;
+  }
+
+  // We need to keep track of the one joint we've encountered so far, to see
+  // if all the vertices are referenced by the same joint.
+  EggGroupNode *home = nullptr;
+
+  EggGroupNode::const_iterator ci;
+  for (ci = egg_bin->begin(); ci != egg_bin->end(); ++ci) {
+    CPT(EggPrimitive) egg_primitive = DCAST(EggPrimitive, (*ci));
+
+    EggPrimitive::const_iterator vi;
+    for (vi = egg_primitive->begin();
+         vi != egg_primitive->end();
+         ++vi) {
+      EggVertex *vertex = (*vi);
+      if (vertex->gref_size() > 1) {
+        // This vertex is referenced by multiple joints; the primitive is
+        // dynamic.
+        return nullptr;
+      }
+
+      if (!vertex->_dxyzs.empty() ||
+          !vertex->_dnormals.empty() ||
+          !vertex->_drgbas.empty()) {
+        // This vertex has some morph slider definitions; therefore, the
+        // primitive is dynamic.
+        return nullptr;
+      }
+      EggVertex::const_uv_iterator uvi;
+      for (uvi = vertex->uv_begin(); uvi != vertex->uv_end(); ++uvi) {
+        if (!(*uvi)->_duvs.empty()) {
+          // Ditto: the vertex has some UV morphs; therefore the primitive is
+          // dynamic.
+          return nullptr;
+        }
+      }
+
+      EggGroupNode *vertex_home;
+
+      if (vertex->gref_size() == 0) {
+        // This vertex is not referenced at all, which means it belongs right
+        // where it is.
+        vertex_home = egg_primitive->get_parent();
+      } else {
+        nassertr(vertex->gref_size() == 1, nullptr);
+        // This vertex is referenced exactly once.
+        vertex_home = *vertex->gref_begin();
+      }
+
+      if (home != nullptr && home != vertex_home) {
+        // Oops, two vertices are referenced by different joints!  The
+        // primitive is dynamic.
+        return nullptr;
+      }
+
+      home = vertex_home;
+    }
+  }
+
+  // This shouldn't be possible, unless there are no vertices--but we
+  // eliminate invalid primitives before we begin, so all primitives should
+  // have vertices, and all bins should have primitives.
+  nassertr(home != nullptr, nullptr);
+
+  // So, all the vertices are assigned to the same group.  This means all the
+  // primitives in the bin belong entirely to one joint.
+
+  // If the group is not, in fact, a joint then we return the first joint
+  // above the group.
+  EggGroup *egg_group = nullptr;
+  if (home->is_of_type(EggGroup::get_class_type())) {
+    egg_group = DCAST(EggGroup, home);
+  }
+  while (egg_group != nullptr &&
+         egg_group->get_group_type() != EggGroup::GT_joint &&
+         egg_group->get_dart_type() == EggGroup::DT_none) {
+    nassertr(egg_group->get_parent() != nullptr, nullptr);
+    home = egg_group->get_parent();
+    egg_group = nullptr;
+    if (home->is_of_type(EggGroup::get_class_type())) {
+      egg_group = DCAST(EggGroup, home);
+    }
+  }
+
+  if (egg_group != nullptr &&
+      egg_group->get_group_type() == EggGroup::GT_joint &&
+      !egg_group->has_dcs_type()) {
+    // If we have rigid geometry that is assigned to a joint without a <DCS>
+    // flag, which means the joint didn't get created as its own node, go
+    // ahead and make an implicit node for the joint.
+
+    if (egg_group->get_dcs_type() == EggGroup::DC_none) {
+/*
+ * Unless the user specifically forbade exposing the joint by putting an
+ * explicit "<DCS> { none }" entry in the joint.  In this case, we return NULL
+ * to treat the geometry as dynamic (and animate it by animating its
+ * vertices), but display lists and vertex buffers will perform better if more
+ * geometry is rigid.  There's a tradeoff, though, since the cull traverser
+ * will have to do more work with additional transforms in the scene graph,
+ * and this may also break up the geometry into more individual pieces, which
+ * is the biggest limiting factor on modern PC graphics cards.
+ */
+      return nullptr;
+    }
+
+    int joint = egg_to_joint(egg_group);
+    if (joint == -1) {
+      return home;
+    }
+    egg_group->set_dcs_type(EggGroup::DC_default);
+
+    PT(ModelNode) geom_node = new ModelNode(egg_group->get_name());
+    geom_node->set_preserve_transform(ModelNode::PT_local);
+    _joint_dcs[joint] = geom_node;
+  }
+
+  return home;
 }
 
 /**

@@ -50,7 +50,7 @@ public:
 
   VertexTransform *egg_to_transform(EggNode *egg_node);
 
-  PandaNode *part_to_node(const std::string &name) const;
+  PandaNode *part_to_node(int joint, const std::string &name) const;
 
   int create_slider(const std::string &name);
   VertexSlider *egg_to_vertex_slider(const std::string &name);
@@ -61,6 +61,8 @@ private:
   void parent_joint_nodes();
 
   void make_geometry(EggNode *egg_node);
+
+  EggGroupNode *determine_bin_home(EggBin *egg_bin);
 
   VertexTransform *get_identity_transform();
 
