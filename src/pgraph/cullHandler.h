@@ -30,11 +30,11 @@ public:
   CullHandler();
   virtual ~CullHandler();
 
-  virtual void record_object(CullableObject *object,
+  virtual void record_object(CullableObject &object,
                              const CullTraverser *traverser);
   virtual void end_traverse();
 
-  INLINE static void draw(CullableObject *object,
+  INLINE static void draw(CullableObject &object,
                           GraphicsStateGuardianBase *gsg,
                           bool force, Thread *current_thread);
 };

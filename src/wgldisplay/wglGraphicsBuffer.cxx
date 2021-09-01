@@ -326,7 +326,7 @@ open_buffer() {
   wglGraphicsPipe::wgl_make_current(twindow_dc, context,
                                     &_make_current_pcollector);
   wglgsg->reset_if_new();
-  wglgsg->report_my_gl_errors();
+  report_my_gl_errors(wglgsg);
   if (!wglgsg->get_fb_properties().verify_hardware_software
       (_fb_properties,wglgsg->get_gl_renderer())) {
     _gsg = nullptr;

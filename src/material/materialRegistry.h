@@ -42,7 +42,7 @@ PUBLISHED:
   static MaterialRegistry *get_global_ptr();
 
 private:
-  typedef pmap<TypeHandle, CreateMaterialFunc> RegisteredMaterials;
+  typedef pflat_hash_map<TypeHandle, CreateMaterialFunc> RegisteredMaterials;
   RegisteredMaterials _registered_materials;
 
   static MaterialRegistry *_global_ptr;

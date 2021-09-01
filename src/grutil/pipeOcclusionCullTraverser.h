@@ -59,7 +59,7 @@ protected:
   virtual bool is_in_view(CullTraverserData &data);
   virtual void traverse_below(CullTraverserData &data);
 
-  virtual void record_object(CullableObject *object,
+  virtual void record_object(CullableObject &object,
                              const CullTraverser *traverser);
 
 private:
@@ -110,10 +110,10 @@ private:
 
   class PendingObject {
   public:
-    INLINE PendingObject(CullableObject *object);
+    INLINE PendingObject(CullableObject &object);
     INLINE ~PendingObject();
 
-    CullableObject *_object;
+    CullableObject _object;
     PT(OcclusionQueryContext) _query;
   };
   typedef pvector<PendingObject> PendingObjects;

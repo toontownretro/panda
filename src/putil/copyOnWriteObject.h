@@ -27,7 +27,7 @@
 
 // Nowadays, this is the same thing as asking if HAVE_THREADS is defined.
 // Maybe we'll just replace COW_THREADED with HAVE_THREADS in the future.
-#ifdef HAVE_THREADS
+#if/*def HAVE_THREADS*/0
   #define COW_THREADED 1
 #else
   #undef COW_THREADED

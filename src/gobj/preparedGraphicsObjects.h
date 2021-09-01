@@ -218,21 +218,21 @@ private:
   static std::string init_name();
 
 private:
-  typedef phash_set<TextureContext *, pointer_hash> Textures;
-  typedef phash_map< PT(Texture), PT(EnqueuedObject) > EnqueuedTextures;
-  typedef phash_set<GeomContext *, pointer_hash> Geoms;
-  typedef phash_set< PT(Geom) > EnqueuedGeoms;
-  typedef phash_set<ShaderContext *, pointer_hash> Shaders;
-  typedef phash_map< PT(Shader), PT(EnqueuedObject) > EnqueuedShaders;
-  typedef phash_set<BufferContext *, pointer_hash> Buffers;
-  typedef phash_set< PT(GeomVertexArrayData) > EnqueuedVertexBuffers;
-  typedef phash_set< PT(GeomPrimitive) > EnqueuedIndexBuffers;
-  typedef phash_set< PT(ShaderBuffer) > EnqueuedShaderBuffers;
+  typedef pflat_hash_set<TextureContext *, pointer_hash> Textures;
+  typedef pflat_hash_map< PT(Texture), PT(EnqueuedObject) > EnqueuedTextures;
+  typedef pflat_hash_set<GeomContext *, pointer_hash> Geoms;
+  typedef pflat_hash_set< PT(Geom) > EnqueuedGeoms;
+  typedef pflat_hash_set<ShaderContext *, pointer_hash> Shaders;
+  typedef pflat_hash_map< PT(Shader), PT(EnqueuedObject) > EnqueuedShaders;
+  typedef pflat_hash_set<BufferContext *, pointer_hash> Buffers;
+  typedef pflat_hash_set< PT(GeomVertexArrayData) > EnqueuedVertexBuffers;
+  typedef pflat_hash_set< PT(GeomPrimitive) > EnqueuedIndexBuffers;
+  typedef pflat_hash_set< PT(ShaderBuffer) > EnqueuedShaderBuffers;
 
   // Sampler states are stored a little bit differently, as they are mapped by
   // value and can't store the list of prepared samplers.
   typedef pmap<SamplerState, SamplerContext *> PreparedSamplers;
-  typedef pset<SamplerContext *, pointer_hash> ReleasedSamplers;
+  typedef pflat_hash_set<SamplerContext *, pointer_hash> ReleasedSamplers;
   typedef pset<SamplerState> EnqueuedSamplers;
 
   class BufferCacheKey {

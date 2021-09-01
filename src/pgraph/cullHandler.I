@@ -17,7 +17,7 @@
  * drawing the object.
  */
 INLINE void CullHandler::
-draw(CullableObject *object, GraphicsStateGuardianBase *gsg,
+draw(CullableObject &object, GraphicsStateGuardianBase *gsg,
      bool force, Thread *current_thread) {
-  object->draw(gsg, force, current_thread);
+  object.draw(gsg, force, current_thread);
 }

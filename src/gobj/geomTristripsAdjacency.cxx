@@ -28,6 +28,7 @@ GeomTristripsAdjacency::
 GeomTristripsAdjacency(GeomTristripsAdjacency::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_triangle_strips_adj;
 }
 
 /**
@@ -102,15 +103,6 @@ get_min_num_vertices_per_primitive() const {
 int GeomTristripsAdjacency::
 get_num_unused_vertices_per_primitive() const {
   return 1;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomTristripsAdjacency::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_tristrips_adj(reader, force);
 }
 
 /**

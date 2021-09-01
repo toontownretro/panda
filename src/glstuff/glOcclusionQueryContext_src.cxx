@@ -98,7 +98,7 @@ get_num_fragments() const {
       << " fragments.\n";
   }
 
-  glgsg->report_my_gl_errors();
+  report_my_gl_errors(glgsg);
   return result;
 }
 

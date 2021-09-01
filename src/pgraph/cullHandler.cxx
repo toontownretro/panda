@@ -35,15 +35,11 @@ CullHandler::
 /**
  * This callback function is intended to be overridden by a derived class.
  * This is called as each Geom is discovered by the CullTraverser.
- *
- * The CullHandler becomes the owner of the CullableObject pointer and is
- * expected to delete it later.
  */
 void CullHandler::
-record_object(CullableObject *object, const CullTraverser *traverser) {
-  nout << *object->_geom << " " << *object->_internal_transform << " "
-       << *object->_state << "\n";
-  delete object;
+record_object(CullableObject &object, const CullTraverser *traverser) {
+  nout << *object._geom << " " << *object._internal_transform << " "
+       << *object._state << "\n";
 }
 
 /**

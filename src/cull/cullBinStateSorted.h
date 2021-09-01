@@ -43,7 +43,7 @@ public:
                            GraphicsStateGuardianBase *gsg,
                            const PStatCollector &draw_region_pcollector);
 
-  virtual void add_object(CullableObject *object, Thread *current_thread);
+  virtual void add_object(CullableObject &object, Thread *current_thread);
   virtual void finish_cull(SceneSetup *scene_setup, Thread *current_thread);
   virtual void draw(bool force, Thread *current_thread);
 
@@ -53,15 +53,21 @@ protected:
 private:
   class ObjectData {
   public:
-    INLINE ObjectData(CullableObject *object);
+    INLINE ObjectData(CullableObject &&object);
+    INLINE ObjectData(ObjectData &&other);
+    INLINE ObjectData(const ObjectData &copy);
+    INLINE void operator = (ObjectData &&other);
+    INLINE void operator = (const ObjectData &copy);
     INLINE bool operator < (const ObjectData &other) const;
 
-    CullableObject *_object;
+    CullableObject _object;
     const GeomVertexFormat *_format;
   };
 
   typedef pvector<ObjectData> Objects;
   Objects _objects;
+  // Sorted object indices.
+  vector_int _object_indices;
 
 public:
   static TypeHandle get_class_type() {

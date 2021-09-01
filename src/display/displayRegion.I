@@ -476,7 +476,7 @@ get_region_pixels_i(int i, int &xo, int &yo, int &w, int &h) const {
  * pipeline stages.
  */
 INLINE void DisplayRegion::
-set_cull_result(PT(CullResult) cull_result, PT(SceneSetup) scene_setup,
+set_cull_result(CullResult &&cull_result, PT(SceneSetup) scene_setup,
                 Thread *current_thread) {
   CDCullWriter cdata(_cycler_cull, true, current_thread);
   cdata->_cull_result = std::move(cull_result);
@@ -488,7 +488,7 @@ set_cull_result(PT(CullResult) cull_result, PT(SceneSetup) scene_setup,
  * presumably by the last successful cull operation.  This method is for the
  * benefit of the GraphicsEngine; normally you shouldn't call this directly.
  */
-INLINE CullResult *DisplayRegion::
+INLINE const CullResult &DisplayRegion::
 get_cull_result(Thread *current_thread) const {
   CDCullReader cdata(_cycler_cull, current_thread);
   return cdata->_cull_result;

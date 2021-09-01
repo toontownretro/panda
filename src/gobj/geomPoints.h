@@ -36,11 +36,6 @@ public:
   virtual int get_min_num_vertices_per_primitive() const;
 
 public:
-  virtual bool draw(GraphicsStateGuardianBase *gsg,
-                    const GeomPrimitivePipelineReader *reader,
-                    bool force) const;
-
-public:
   static void register_with_read_factory();
 
 protected:

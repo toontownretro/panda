@@ -109,7 +109,7 @@ private:
   GLint _frame_number_loc;
   GLint _frame_number;
 #ifndef OPENGLES
-  pmap<GLint, GLuint64> _glsl_uniform_handles;
+  pflat_hash_map<GLint, GLuint64, integer_hash<GLint>> _glsl_uniform_handles;
 #endif
 
 #ifndef OPENGLES

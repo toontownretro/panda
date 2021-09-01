@@ -33,6 +33,23 @@ get_bin(int bin_index) {
 }
 
 /**
+ * Clears all the bins from the CullResult.
+ */
+INLINE void CullResult::
+clear() {
+  _bins.clear();
+}
+
+/**
+ * Returns true if the CullResult is empty.  That is, if there are no bins
+ * in the CullResult.
+ */
+INLINE bool CullResult::
+is_empty() const {
+  return _bins.empty();
+}
+
+/**
  * If the user configured flash-bin-binname, then update the object's state to
  * flash all the geometry in the bin.
  */

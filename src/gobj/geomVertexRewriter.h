@@ -46,7 +46,7 @@ PUBLISHED:
 
   INLINE GeomVertexData *get_vertex_data() const;
   INLINE GeomVertexArrayData *get_array_data() const;
-  INLINE GeomVertexArrayDataHandle *get_array_handle() const;
+  INLINE GeomVertexArrayDataHandle *get_array_handle();
   INLINE size_t get_stride() const;
   INLINE Thread *get_current_thread() const;
 

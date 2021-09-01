@@ -189,7 +189,7 @@ clear(Thread *current_thread) {
     glgsg->_glClearBufferiv(GL_STENCIL, 0, &stencil);
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif
 
@@ -299,7 +299,7 @@ begin_frame(FrameMode mode, Thread *current_thread) {
 #endif
 
   _gsg->set_current_properties(&get_fb_properties());
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -345,10 +345,10 @@ check_fbo() {
     GLCAT.error(false) << " for " << get_name() << "\n";
 
     glgsg->bind_fbo(0);
-    report_my_gl_errors();
+    report_my_gl_errors(this);
     return false;
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -547,7 +547,7 @@ rebuild_bitplanes() {
   for (int layer = 0; layer < (int)num_fbos; ++layer) {
     // Bind the FBO
     if (_fbo[layer] == 0) {
-      report_my_gl_errors();
+      report_my_gl_errors(this);
       return;
     }
     glgsg->bind_fbo(_fbo[layer]);
@@ -680,7 +680,7 @@ rebuild_bitplanes() {
   _rb_context->update_data_size_bytes(_rb_data_size_bytes);
 
   _initial_clear = false;
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef OPENGLES
   if (_have_any_color) {
@@ -693,7 +693,7 @@ rebuild_bitplanes() {
 #endif
 
   _needs_rebuild = false;
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   if (!check_fbo()) {
     if (GLCAT.is_debug()) {
@@ -834,7 +834,7 @@ bind_slot(int layer, bool rb_resize, Texture **attach, RenderTexturePlane slot, 
       _rb[slot] = 0;
     }
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
 
   } else {
     // No texture to bind.  Instead, create a renderbuffer.  Choose a suitable
@@ -1023,7 +1023,7 @@ bind_slot(int layer, bool rb_resize, Texture **attach, RenderTexturePlane slot, 
       glgsg->_glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT,
                                         GL_RENDERBUFFER_EXT, rb);
 
-      report_my_gl_errors();
+      report_my_gl_errors(this);
 
     } else if (slot == RTP_depth) {
       if (GLCAT.is_debug()) {
@@ -1063,7 +1063,7 @@ bind_slot(int layer, bool rb_resize, Texture **attach, RenderTexturePlane slot, 
       glgsg->_glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
                                         GL_RENDERBUFFER_EXT, rb);
 
-      report_my_gl_errors();
+      report_my_gl_errors(this);
 
     } else {
       if (GLCAT.is_debug()) {
@@ -1086,7 +1086,7 @@ bind_slot(int layer, bool rb_resize, Texture **attach, RenderTexturePlane slot, 
       glgsg->_glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, attachpoint,
                                         GL_RENDERBUFFER_EXT, _rb[slot]);
 
-      report_my_gl_errors();
+      report_my_gl_errors(this);
     }
   }
 }
@@ -1229,7 +1229,7 @@ bind_slot_multisample(bool rb_resize, Texture **attach, RenderTexturePlane slot,
     glgsg->_glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER_EXT, attachpoint,
                                       GL_RENDERBUFFER_EXT, _rbm[slot]);
   }
-  glgsg->report_my_gl_errors();
+  report_my_gl_errors(glgsg);
 }
 
 /**
@@ -1320,7 +1320,7 @@ generate_mipmaps() {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -1363,7 +1363,7 @@ end_frame(FrameMode mode, Thread *current_thread) {
     trigger_flip();
     clear_cube_map_selection();
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   glgsg->pop_group_marker();
 }
@@ -1410,7 +1410,7 @@ select_target_tex_page(int page) {
     _bound_tex_page = page;
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -1419,7 +1419,7 @@ select_target_tex_page(int page) {
  */
 bool CLP(GraphicsBuffer)::
 open_buffer() {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   // Double check that we have a valid gsg
   nassertr(_gsg != nullptr, false);
@@ -1607,7 +1607,7 @@ open_buffer() {
 
   _is_valid = true;
   _needs_rebuild = true;
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   return true;
 }
@@ -1644,7 +1644,7 @@ close_buffer() {
   CLP(GraphicsStateGuardian) *glgsg;
   DCAST_INTO_V(glgsg, _gsg);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   // Delete the renderbuffers.
   for (int i=0; i<RTP_COUNT; i++) {
     if (_rb[i] != 0) {
@@ -1662,7 +1662,7 @@ close_buffer() {
 
   _rb_size_x = 0;
   _rb_size_y = 0;
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   // Delete the FBO itself.
   if (!_fbo.empty()) {
@@ -1670,7 +1670,7 @@ close_buffer() {
     _fbo.clear();
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   // Release the Gsg
   _gsg.clear();
@@ -1732,7 +1732,7 @@ share_depth_buffer(GraphicsOutput *graphics_output) {
     }
     _needs_rebuild = true;
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return state;
 }
 
@@ -1854,7 +1854,7 @@ resolve_multisamples() {
   }
 #endif
 
-  glgsg->report_my_gl_errors();
+  report_my_gl_errors(glgsg);
   GLuint fbo = _fbo[0];
   if (_bound_tex_page != -1) {
     fbo = _fbo[_bound_tex_page];
@@ -1933,7 +1933,7 @@ resolve_multisamples() {
     next += 1;
   }
 #endif
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef OPENGLES
   if (_have_any_color) {
@@ -1944,5 +1944,5 @@ resolve_multisamples() {
     glReadBuffer(GL_NONE);
   }
 #endif
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }

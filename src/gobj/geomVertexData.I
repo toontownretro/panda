@@ -161,12 +161,12 @@ get_array(size_t i) const {
 /**
  * Equivalent to get_array(i).get_handle().
  */
-INLINE CPT(GeomVertexArrayDataHandle) GeomVertexData::
+INLINE const GeomVertexArrayDataHandle GeomVertexData::
 get_array_handle(size_t i) const {
   Thread *current_thread = Thread::get_current_thread();
   CDReader cdata(_cycler, current_thread);
-  nassertr(i < cdata->_arrays.size(), nullptr);
-  return new GeomVertexArrayDataHandle(cdata->_arrays[i].get_read_pointer(), current_thread);
+  nassertr(i < cdata->_arrays.size(), GeomVertexArrayDataHandle());
+  return GeomVertexArrayDataHandle(cdata->_arrays[i].get_read_pointer(), current_thread);
 }
 
 /**
@@ -187,11 +187,11 @@ modify_array(size_t i) {
 /**
  * Equivalent to modify_array(i).modify_handle().
  */
-INLINE PT(GeomVertexArrayDataHandle) GeomVertexData::
+INLINE GeomVertexArrayDataHandle GeomVertexData::
 modify_array_handle(size_t i) {
   Thread *current_thread = Thread::get_current_thread();
   GeomVertexDataPipelineWriter writer(this, true, current_thread);
-  return new GeomVertexArrayDataHandle(writer.modify_array(i), current_thread);
+  return GeomVertexArrayDataHandle(writer.modify_array(i), current_thread);
 }
 
 /**
@@ -764,7 +764,8 @@ get_modified() const {
 INLINE GeomVertexDataPipelineReader::
 GeomVertexDataPipelineReader(Thread *current_thread) :
   GeomVertexDataPipelineBase(current_thread),
-  _got_array_readers(false)
+  _got_array_readers(false),
+  _num_array_readers(0)
 {
 }
 
@@ -776,7 +777,8 @@ GeomVertexDataPipelineReader(const GeomVertexData *object,
                              Thread *current_thread) :
   GeomVertexDataPipelineBase((GeomVertexData *)object, current_thread,
                              (GeomVertexData::CData *)object->_cycler.read_unlocked(current_thread)),
-  _got_array_readers(false)
+  _got_array_readers(false),
+  _num_array_readers(0)
 {
 }
 
@@ -790,7 +792,8 @@ set_object(const GeomVertexData *object) {
     unref_delete((CycleData *)_cdata);
   }
 #endif  // DO_PIPELINING
-  _array_readers.clear();
+  _num_array_readers = 0;
+  //_array_readers.clear();
 
   _object = (GeomVertexData *)object;
   _cdata = (GeomVertexData::CData *)_object->_cycler.read_unlocked(_current_thread);
@@ -825,8 +828,8 @@ check_array_readers() const {
 INLINE const GeomVertexArrayDataHandle *GeomVertexDataPipelineReader::
 get_array_reader(int i) const {
   nassertr(_got_array_readers, nullptr);
-  nassertr(i >= 0 && i < (int)_array_readers.size(), nullptr);
-  return _array_readers[i];
+  nassertr(i >= 0 && i < _num_array_readers, nullptr);
+  return &_array_readers[i];
 }
 
 /**
@@ -917,10 +920,10 @@ check_array_writers() const {
  *
  */
 INLINE GeomVertexArrayDataHandle *GeomVertexDataPipelineWriter::
-get_array_writer(size_t i) const {
+get_array_writer(size_t i) {
   nassertr(_got_array_writers, nullptr);
   nassertr(i < _array_writers.size(), nullptr);
-  return _array_writers[i];
+  return &_array_writers[i];
 }
 
 INLINE std::ostream &

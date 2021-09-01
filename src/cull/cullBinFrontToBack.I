@@ -25,7 +25,7 @@ CullBinFrontToBack(const std::string &name, GraphicsStateGuardianBase *gsg,
  *
  */
 INLINE CullBinFrontToBack::ObjectData::
-ObjectData(CullableObject *object, PN_stdfloat dist) :
+ObjectData(CullableObject &object, PN_stdfloat dist) :
   _object(object),
   _dist(dist)
 {

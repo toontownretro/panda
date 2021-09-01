@@ -1242,14 +1242,14 @@ apply_collect_changes() {
 void GeomTransformer::NewCollectedData::
 append_vdata(const GeomVertexData *vdata, int vertex_offset) {
   for (size_t i = 0; i < vdata->get_num_arrays(); ++i) {
-    PT(GeomVertexArrayDataHandle) new_handle = _new_data->modify_array_handle(i);
-    CPT(GeomVertexArrayDataHandle) old_handle = vdata->get_array_handle(i);
+    GeomVertexArrayDataHandle new_handle = _new_data->modify_array_handle(i);
+    const GeomVertexArrayDataHandle old_handle = vdata->get_array_handle(i);
     size_t stride = (size_t)_new_format->get_array(i)->get_stride();
     size_t start_byte = (size_t)vertex_offset * stride;
-    size_t copy_bytes = old_handle->get_data_size_bytes();
-    nassertv(start_byte + copy_bytes <= new_handle->get_data_size_bytes());
+    size_t copy_bytes = old_handle.get_data_size_bytes();
+    nassertv(start_byte + copy_bytes <= new_handle.get_data_size_bytes());
 
-    new_handle->copy_subdata_from(start_byte, copy_bytes, old_handle, 0, copy_bytes);
+    new_handle.copy_subdata_from(start_byte, copy_bytes, &old_handle, 0, copy_bytes);
   }
 
   // Also, copy the animation data (if any).  This means combining transform
@@ -1271,17 +1271,6 @@ append_vdata(const GeomVertexData *vdata, int vertex_offset) {
       old_table = TransformTable::register_table(temp_table);
     }
 
-    // First, build a mapping of the transforms we already have in the current
-    // table.  We must do this because the TransformTable doesn't
-    // automatically unquify index numbers for us (it doesn't store an index).
-    typedef pmap<const VertexTransform *, int> AddedTransforms;
-    AddedTransforms added_transforms;
-
-    int num_old_transforms = old_table->get_num_transforms();
-    for (int i = 0; i < num_old_transforms; i++) {
-      added_transforms[old_table->get_transform(i)] = i;
-    }
-
     // Now create a new table.  We have to create a new table instead of
     // modifying the existing one, since a registered TransformTable cannot be
     // modified.
@@ -1290,6 +1279,15 @@ append_vdata(const GeomVertexData *vdata, int vertex_offset) {
       new_table = new TransformTable(*_new_data->get_transform_table());
     } else {
       new_table = new TransformTable;
+    }
+
+    // First, build a mapping of the transforms we already have in the current
+    // table.  We must do this because the TransformTable doesn't
+    // automatically unquify index numbers for us (it doesn't store an index).
+    typedef pmap<const VertexTransform *, int> AddedTransforms;
+    AddedTransforms added_transforms;
+    for (int i = 0; i < new_table->get_num_transforms(); i++) {
+      added_transforms[new_table->get_transform(i)] = i;
     }
 
     // Now walk through the old table and copy over its transforms.  We will
@@ -1312,6 +1310,7 @@ append_vdata(const GeomVertexData *vdata, int vertex_offset) {
         added_transforms[transform] = tj;
       }
     }
+
     _new_data->set_transform_table(TransformTable::register_table(new_table));
 
     // And now modify the vertices to update the indices to their new values

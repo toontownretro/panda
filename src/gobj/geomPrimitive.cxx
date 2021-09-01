@@ -73,7 +73,8 @@ GeomPrimitive(GeomPrimitive::UsageHint usage_hint) {
 GeomPrimitive::
 GeomPrimitive(const GeomPrimitive &copy) :
   CopyOnWriteObject(copy),
-  _cycler(copy._cycler)
+  _cycler(copy._cycler),
+  _geom_primitive_type(copy._geom_primitive_type)
 {
 }
 

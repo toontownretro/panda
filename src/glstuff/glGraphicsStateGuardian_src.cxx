@@ -3319,7 +3319,7 @@ reset() {
   }
 #endif  // !OPENGLES_1
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   if (core_profile) {
     // TODO: better detection mechanism?
@@ -3544,7 +3544,7 @@ reset() {
   _current_sbuffer_base.clear();
 #endif
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifdef SUPPORT_FIXED_FUNCTION
   if (has_fixed_function_pipeline()) {
@@ -3577,7 +3577,7 @@ reset() {
 
   _error_count = 0;
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef OPENGLES_1
   if (GLCAT.is_debug()) {
@@ -3739,7 +3739,7 @@ finish() {
  */
 void CLP(GraphicsStateGuardian)::
 clear(DrawableRegion *clearable) {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   if (!clearable->is_any_clear_active()) {
     return;
@@ -3899,7 +3899,7 @@ clear(DrawableRegion *clearable) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -4011,7 +4011,7 @@ prepare_display_region(DisplayRegionPipelineReader *dr) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -4132,7 +4132,7 @@ prepare_lens() {
 
     glMatrixMode(GL_PROJECTION);
     call_glLoadMatrix(_projection_mat->get_mat());
-    report_my_gl_errors();
+    report_my_gl_errors(this);
 
     do_point_size();
   }
@@ -4156,7 +4156,7 @@ begin_frame(Thread *current_thread) {
   }
   _renderbuffer_residency.begin_frame(current_thread);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifdef DO_PSTATS
   _vertices_display_list_pcollector.clear_level();
@@ -4208,7 +4208,7 @@ begin_frame(Thread *current_thread) {
   }
 #endif
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -4238,7 +4238,7 @@ end_scene() {
   GraphicsStateGuardian::end_scene();
 
   _dlights.clear();
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -4247,7 +4247,7 @@ end_scene() {
  */
 void CLP(GraphicsStateGuardian)::
 end_frame(Thread *current_thread) {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef OPENGLES
   if (_current_properties->get_srgb_color()) {
@@ -4255,7 +4255,7 @@ end_frame(Thread *current_thread) {
   }
 #endif
 
-#ifdef DO_PSTATS
+#ifdef DO_PSTATS && defined(SUPPORT_FIXED_FUNCTION)
   // Check for textures, etc., that are no longer resident.  These calls might
   // be measurably expensive, and they don't have any benefit unless we are
   // actually viewing PStats, so don't do them unless we're connected.  That
@@ -4355,7 +4355,7 @@ end_frame(Thread *current_thread) {
 
 #ifndef NDEBUG
   if (_check_errors || (_supports_debug && gl_debug)) {
-    report_my_gl_errors();
+    report_my_gl_errors(this);
   } else {
     // If _check_errors is false, we still want to check for errors once every
     // second, so that we know if anything went wrong at all.
@@ -4615,7 +4615,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
 #endif  // OPENGLES_1
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -4874,7 +4874,7 @@ disable_standard_vertex_arrays() {
   _last_max_stage_index = 0;
 
   glDisableClientState(GL_VERTEX_ARRAY);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -5012,7 +5012,7 @@ draw_triangles(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5073,7 +5073,7 @@ draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 #endif  // OPENGLES
@@ -5086,7 +5086,7 @@ draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
@@ -5200,7 +5200,7 @@ draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5213,7 +5213,7 @@ draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
@@ -5321,7 +5321,7 @@ draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 #endif  // OPENGLES
@@ -5401,7 +5401,7 @@ draw_trifans(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5477,7 +5477,7 @@ draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
 
 #endif // OPENGLES
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5541,7 +5541,7 @@ draw_lines(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5600,7 +5600,7 @@ draw_lines_adj(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 #endif  // OPENGLES
@@ -5613,7 +5613,7 @@ draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
@@ -5723,7 +5723,7 @@ draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5736,7 +5736,7 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
@@ -5833,7 +5833,7 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 #endif  // OPENGLES
@@ -5896,7 +5896,7 @@ draw_points(const GeomPrimitivePipelineReader *reader, bool force) {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -5937,7 +5937,7 @@ end_draw_primitives() {
 
   GraphicsStateGuardian::end_draw_primitives();
   maybe_gl_finish();
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 #ifndef OPENGLES_1
@@ -5983,7 +5983,7 @@ issue_memory_barrier(GLbitfield barriers) {
 
   GLCAT.spam(false) << "\n";
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // OPENGLES_1
 
@@ -6001,7 +6001,7 @@ TextureContext *CLP(GraphicsStateGuardian)::
 prepare_texture(Texture *tex, int view) {
   PStatGPUTimer timer(this, _prepare_texture_pcollector);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   // Make sure we'll support this texture when it's rendered.  Don't bother to
   // prepare it if we won't.
   Texture::TextureType texture_type = tex->get_texture_type();
@@ -6052,7 +6052,7 @@ prepare_texture(Texture *tex, int view) {
 
   CLP(TextureContext) *gtc = new CLP(TextureContext)(this, _prepared_objects, tex, view);
   gtc->_target = get_texture_target(texture_type);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   return gtc;
 }
@@ -6116,7 +6116,7 @@ update_texture(TextureContext *tc, bool force) {
 
   gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -6199,7 +6199,7 @@ bool CLP(GraphicsStateGuardian)::
 extract_texture_data(Texture *tex) {
   bool success = true;
   // Make sure the error stack is cleared out before we begin.
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   int num_views = tex->get_num_views();
   for (int view = 0; view < num_views; ++view) {
@@ -6302,7 +6302,7 @@ prepare_sampler(const SamplerState &sampler) {
 
   gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return gsc;
 }
 #endif  // !OPENGLES_1
@@ -6347,10 +6347,12 @@ prepare_geom(Geom *geom) {
 void CLP(GraphicsStateGuardian)::
 release_geom(GeomContext *gc) {
   CLP(GeomContext) *ggc = DCAST(CLP(GeomContext), gc);
+#ifdef SUPPORT_FIXED_FUNCTION
   if (has_fixed_function_pipeline()) {
     ggc->release_display_lists();
   }
-  report_my_gl_errors();
+#endif
+  report_my_gl_errors(this);
 
   delete ggc;
 }
@@ -6427,8 +6429,9 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
         << *data->get_array_format() << "\n";
     }
 
-    report_my_gl_errors();
-    update_vertex_buffer(gvbc, data->get_handle(), false);
+    report_my_gl_errors(this);
+    const GeomVertexArrayDataHandle handle = data->get_handle();
+    update_vertex_buffer(gvbc, &handle, false);
     return gvbc;
   }
 
@@ -6488,7 +6491,7 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
   gvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   maybe_gl_finish();
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -6521,7 +6524,7 @@ release_vertex_buffer(VertexBufferContext *vbc) {
   }
 
   _glDeleteBuffers(1, &gvbc->_index);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   gvbc->_index = 0;
 
@@ -6571,7 +6574,7 @@ release_vertex_buffers(const pvector<BufferContext *> &contexts) {
   }
 
   _glDeleteBuffers(num_indices, indices);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -6660,7 +6663,7 @@ prepare_index_buffer(GeomPrimitive *data) {
         << ")\n";
     }
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
     GeomPrimitivePipelineReader reader(data, Thread::get_current_thread());
     apply_index_buffer(gibc, &reader, false);
     return gibc;
@@ -6723,7 +6726,7 @@ apply_index_buffer(IndexBufferContext *ibc,
   gibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   maybe_gl_finish();
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -6756,7 +6759,7 @@ release_index_buffer(IndexBufferContext *ibc) {
   }
 
   _glDeleteBuffers(1, &gibc->_index);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   gibc->_index = 0;
 
@@ -6806,7 +6809,7 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
   }
 
   _glDeleteBuffers(num_indices, indices);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -6899,7 +6902,7 @@ prepare_shader_buffer(ShaderBuffer *data) {
 
     gbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
     return gbc;
   }
 
@@ -6935,7 +6938,7 @@ apply_shader_buffer(GLuint base, ShaderBuffer *buffer) {
     _current_sbuffer_base[base] = index;
     _current_sbuffer_index = index;
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
   }
 }
 
@@ -6968,7 +6971,7 @@ release_shader_buffer(BufferContext *bc) {
   }
 
   _glDeleteBuffers(1, &gbc->_index);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   gbc->_index = 0;
 
@@ -7018,7 +7021,7 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
   }
 
   _glDeleteBuffers(num_indices, indices);
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif
 
@@ -7050,7 +7053,7 @@ begin_occlusion_query() {
   _glBeginQuery(GL_SAMPLES_PASSED, query->_index);
   _current_occlusion_query = query;
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // !OPENGLES
 
@@ -7090,7 +7093,7 @@ end_occlusion_query() {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   return result;
 }
@@ -7378,7 +7381,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
   gtc->mark_loaded();
   gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   // Force reload of texture state, since we've just monkeyed with it.
   _state_mask.clear_bit(TextureAttrib::get_class_slot());
@@ -7603,7 +7606,7 @@ framebuffer_copy_to_ram(Texture *tex, int view, int z,
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -7628,7 +7631,7 @@ apply_fog(Fog *fog) {
   }
 
   call_glFogfv(GL_FOG_COLOR, fog->get_color());
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -7658,7 +7661,7 @@ do_issue_transform() {
 #endif
   _transform_stale = false;
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 #ifdef SUPPORT_FIXED_FUNCTION
@@ -7758,7 +7761,7 @@ do_issue_shader() {
   }
 #endif
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // !OPENGLES_1
 
@@ -7808,7 +7811,7 @@ do_issue_render_mode() {
 #endif
     _point_size = thickness;
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
 #ifdef SUPPORT_FIXED_FUNCTION
   if (has_fixed_function_pipeline()) {
@@ -7879,7 +7882,7 @@ do_issue_antialias() {
 #endif
 #endif  // !OPENGLES_2
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 #ifdef SUPPORT_FIXED_FUNCTION // OpenGL ES 2.0 doesn't support rescaling normals.
@@ -7923,7 +7926,7 @@ do_issue_rescale_normal() {
     GLCAT.error()
       << "Unknown rescale_normal mode " << (int)mode << endl;
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -7945,7 +7948,7 @@ do_issue_depth_test() {
     enable_depth_test(true);
     glDepthFunc(PANDA_TO_GL_COMPAREFUNC(mode));
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 #ifdef SUPPORT_FIXED_FUNCTION
@@ -7997,7 +8000,7 @@ do_issue_depth_write() {
 #endif
     glDepthMask(GL_TRUE);
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -8027,7 +8030,7 @@ do_issue_cull_face() {
       << "invalid cull face mode " << (int)mode << endl;
     break;
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 #ifdef SUPPORT_FIXED_FUNCTION
@@ -8047,7 +8050,7 @@ do_issue_fog() {
   } else {
     enable_fog(false);
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -8091,7 +8094,7 @@ do_issue_depth_offset() {
   }
 #endif  // OPENGLES
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -8355,7 +8358,7 @@ bind_light(PointLight *light_obj, const NodePath &light, int light_id) {
   glLightf(id, GL_LINEAR_ATTENUATION, 0.0);
   glLightf(id, GL_QUADRATIC_ATTENUATION, light_obj->get_falloff());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -8408,7 +8411,7 @@ bind_light(DirectionalLight *light_obj, const NodePath &light, int light_id) {
   glLightf(id, GL_LINEAR_ATTENUATION, 0.0f);
   glLightf(id, GL_QUADRATIC_ATTENUATION, 0.0f);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -8454,7 +8457,7 @@ bind_light(Spotlight *light_obj, const NodePath &light, int light_id) {
   glLightf(id, GL_LINEAR_ATTENUATION, 0.0);
   glLightf(id, GL_QUADRATIC_ATTENUATION, light_obj->get_falloff());
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -9097,7 +9100,7 @@ set_draw_buffer(int rbtype) {
   // Also ensure that any global color channels are masked out.
   set_color_write_mask(_color_write_mask);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -9187,7 +9190,7 @@ set_read_buffer(int rbtype) {
 #endif  // OPENGLES
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 #endif  // OPENGLES_1
 }
 
@@ -11437,7 +11440,7 @@ bind_clip_plane(const NodePath &plane, int plane_id) {
   glClipPlane(id, double_plane.get_data());
 #endif  // OPENGLES
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -11472,7 +11475,7 @@ end_bind_clip_planes() {
 void CLP(GraphicsStateGuardian)::
 set_state_and_transform(const RenderState *target,
                         const TransformState *transform) {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 #ifndef NDEBUG
   if (gsg_cat.is_spam()) {
     gsg_cat.spam() << "Setting GSG state to " << (void *)target << ":\n";
@@ -11480,7 +11483,7 @@ set_state_and_transform(const RenderState *target,
   }
 #endif
 
-  _state_pcollector.add_level(1);
+  //_state_pcollector.add_level(1);
   PStatGPUTimer timer1(this, _draw_set_state_pcollector);
 
   bool transform_changed = transform != _internal_transform;
@@ -11491,7 +11494,7 @@ set_state_and_transform(const RenderState *target,
     do_issue_transform();
   }
 
-  if (target == _state_rs && (_state_mask | _inv_state_mask).is_all_on()) {
+  if (target == _target_rs || target == _state_rs) {
 #ifndef OPENGLES_1
     if (transform_changed) {
       // The state has not changed, but the transform has. Set the new
@@ -11505,6 +11508,8 @@ set_state_and_transform(const RenderState *target,
     return;
   }
   _target_rs = target;
+
+  _state_pcollector.add_level(1);
 
 #ifndef OPENGLES_1
   determine_target_shader();
@@ -11534,27 +11539,6 @@ set_state_and_transform(const RenderState *target,
     // PStatGPUTimer timer(this, _draw_set_state_antialias_pcollector);
     do_issue_antialias();
     _state_mask.set_bit(antialias_slot);
-  }
-
-  int clip_plane_slot = ClipPlaneAttrib::get_class_slot();
-  if (_target_rs->get_attrib(clip_plane_slot) != _state_rs->get_attrib(clip_plane_slot) ||
-      !_state_mask.get_bit(clip_plane_slot)) {
-    // PStatGPUTimer timer(this, _draw_set_state_clip_plane_pcollector);
-    do_issue_clip_plane();
-    _state_mask.set_bit(clip_plane_slot);
-  }
-
-  int color_slot = ColorAttrib::get_class_slot();
-  int color_scale_slot = ColorScaleAttrib::get_class_slot();
-  if (_target_rs->get_attrib(color_slot) != _state_rs->get_attrib(color_slot) ||
-      _target_rs->get_attrib(color_scale_slot) != _state_rs->get_attrib(color_scale_slot) ||
-      !_state_mask.get_bit(color_slot) ||
-      !_state_mask.get_bit(color_scale_slot)) {
-    // PStatGPUTimer timer(this, _draw_set_state_color_pcollector);
-    do_issue_color();
-    do_issue_color_scale();
-    _state_mask.set_bit(color_slot);
-    _state_mask.set_bit(color_scale_slot);
   }
 
   int cull_face_slot = CullFaceAttrib::get_class_slot();
@@ -11692,8 +11676,29 @@ set_state_and_transform(const RenderState *target,
     _state_mask.set_bit(scissor_slot);
   }
 
+  int color_slot = ColorAttrib::get_class_slot();
+    int color_scale_slot = ColorScaleAttrib::get_class_slot();
+    if (_target_rs->get_attrib(color_slot) != _state_rs->get_attrib(color_slot) ||
+        _target_rs->get_attrib(color_scale_slot) != _state_rs->get_attrib(color_scale_slot) ||
+        !_state_mask.get_bit(color_slot) ||
+        !_state_mask.get_bit(color_scale_slot)) {
+      // PStatGPUTimer timer(this, _draw_set_state_color_pcollector);
+      do_issue_color();
+      do_issue_color_scale();
+      _state_mask.set_bit(color_slot);
+      _state_mask.set_bit(color_scale_slot);
+    }
+
 #ifdef SUPPORT_FIXED_FUNCTION
   if (has_fixed_function_pipeline()) {
+    int clip_plane_slot = ClipPlaneAttrib::get_class_slot();
+    if (_target_rs->get_attrib(clip_plane_slot) != _state_rs->get_attrib(clip_plane_slot) ||
+        !_state_mask.get_bit(clip_plane_slot)) {
+      // PStatGPUTimer timer(this, _draw_set_state_clip_plane_pcollector);
+      do_issue_clip_plane();
+      _state_mask.set_bit(clip_plane_slot);
+    }
+
     int alpha_test_slot = AlphaTestAttrib::get_class_slot();
     if (_target_rs->get_attrib(alpha_test_slot) != _state_rs->get_attrib(alpha_test_slot) ||
         !_state_mask.get_bit(alpha_test_slot)
@@ -11752,7 +11757,7 @@ set_state_and_transform(const RenderState *target,
 
   _state_rs = _target_rs;
   maybe_gl_finish();
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 
 /**
@@ -12035,7 +12040,7 @@ update_standard_texture_bindings() {
   // Save the count of texture stages for next time.
   _num_active_texture_stages = num_stages;
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -12184,7 +12189,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
     // TODO: glBindSampler(0) ?
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // NDEBUG
 
@@ -12281,7 +12286,7 @@ disable_standard_texture_bindings() {
 
   _num_active_texture_stages = 0;
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -12315,7 +12320,7 @@ do_issue_tex_matrix() {
       // call_glLoadMatrix(LMatrix4::ident_mat());
     }
   }
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -12589,7 +12594,7 @@ do_issue_tex_gen() {
 #endif  // OPENGLES
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif  // SUPPORT_FIXED_FUNCTION
 
@@ -12725,7 +12730,7 @@ specify_texture(CLP(TextureContext) *gtc, const SamplerState &sampler) {
   }
 #endif
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   if (uses_mipmaps && !gtc->_uses_mipmaps) {
     // Suddenly we require mipmaps.  This means the texture may need
@@ -12761,7 +12766,7 @@ apply_texture(CLP(TextureContext) *gtc) {
       << "glBindTexture(0x" << hex << target << dec << ", " << gtc->_index << "): " << *gtc->get_texture() << "\n";
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -12821,7 +12826,7 @@ apply_sampler(GLuint unit, const SamplerState &sampler, CLP(TextureContext) *gtc
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -12955,7 +12960,7 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
 
   if (max_dimension_x == 0 || max_dimension_y == 0 || max_dimension_z == 0) {
     // Guess this GL doesn't support cube mapping3d textures2d texture arrays.
-    report_my_gl_errors();
+    report_my_gl_errors(this);
     return false;
   }
 
@@ -13249,7 +13254,7 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
     // A cube map must load six different 2-d images (which are stored as the
     // six pages of the system ram image).
     if (!_supports_cube_map) {
-      report_my_gl_errors();
+      report_my_gl_errors(this);
       return false;
     }
     nassertr(target == GL_TEXTURE_CUBE_MAP, false);
@@ -13346,11 +13351,11 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
     engine->texture_uploaded(tex);
     gtc->mark_loaded();
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
     return true;
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return false;
 }
 
@@ -13374,7 +13379,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
                      bool one_page_only, int z,
                      Texture::CompressionMode image_compression) {
   // Make sure the error stack is cleared out before we begin.
-  clear_my_gl_errors();
+  clear_my_gl_errors(this);
 
   if (texture_target == GL_NONE) {
     // Unsupported target (e.g.  3-d texturing on GL 1.1).
@@ -13539,7 +13544,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
                                        external_format, view_size, image_ptr);
           }
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13569,7 +13574,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
                                        external_format, view_size, image_ptr);
           }
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13580,7 +13585,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
         if (_supports_buffer_texture) {
           _glBufferSubData(GL_TEXTURE_BUFFER, 0, view_size, image_ptr);
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13736,7 +13741,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
                                     0, view_size, image_ptr);
           }
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13756,7 +13761,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
                                     0, view_size, image_ptr);
           }
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13768,7 +13773,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
           _glBufferData(GL_TEXTURE_BUFFER, view_size, image_ptr,
                         get_usage(tex->get_usage_hint()));
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -13798,7 +13803,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   return true;
 }
@@ -13833,7 +13838,7 @@ generate_mipmaps(CLP(TextureContext) *gtc) {
  */
 bool CLP(GraphicsStateGuardian)::
 upload_simple_texture(CLP(TextureContext) *gtc) {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   PStatGPUTimer timer(this, _load_texture_pcollector);
   Texture *tex = gtc->get_texture();
@@ -13891,7 +13896,7 @@ upload_simple_texture(CLP(TextureContext) *gtc) {
 
   gtc->mark_simple_loaded();
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
   return true;
 }
 
@@ -13927,7 +13932,7 @@ get_texture_memory_size(CLP(TextureContext) *gtc) {
     return tex->get_expected_ram_image_size();
   }
 
-  clear_my_gl_errors();
+  clear_my_gl_errors(this);
 
   GLint internal_format;
   glGetTexLevelParameteriv(page_target, 0, GL_TEXTURE_INTERNAL_FORMAT, &internal_format);
@@ -13980,7 +13985,7 @@ get_texture_memory_size(CLP(TextureContext) *gtc) {
     glGetTexLevelParameteriv(page_target, 0, GL_TEXTURE_DEPTH, &depth);
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   size_t num_bits = (red_size + green_size + blue_size + alpha_size + luminance_size + intensity_size + depth_size);
   size_t num_bytes = (num_bits + 7) / 8;
@@ -14021,7 +14026,7 @@ check_nonresident_texture(BufferContextChain &chain) {
   GLboolean *results = (GLboolean *)alloca(num_textures * sizeof(GLboolean));
   bool all_resident = (glAreTexturesResident(num_textures, texture_list, results) != 0);
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   if (!all_resident) {
     // Some are now nonresident.
@@ -14040,7 +14045,7 @@ check_nonresident_texture(BufferContextChain &chain) {
  */
 bool CLP(GraphicsStateGuardian)::
 do_extract_texture_data(CLP(TextureContext) *gtc) {
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 
   GLenum target = gtc->_target;
   if (target == GL_NONE) {
@@ -14117,7 +14122,7 @@ do_extract_texture_data(CLP(TextureContext) *gtc) {
     depth = 6;
   }
 #endif
-  clear_my_gl_errors();
+  clear_my_gl_errors(this);
   if (width <= 0 || height <= 0 || depth <= 0) {
     GLCAT.error()
       << "No texture data for " << tex->get_name() << "\n";
@@ -14852,7 +14857,7 @@ do_point_size() {
     }
   }
 
-  report_my_gl_errors();
+  report_my_gl_errors(this);
 }
 #endif
 

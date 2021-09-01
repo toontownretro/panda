@@ -59,9 +59,9 @@ public:
   INLINE ShaderBase *get_shader(CPT_InternalName name) const;
 
 private:
-  typedef phash_map<CPT(InternalName), ShaderBase *> ShaderRegistry;
+  typedef pflat_hash_map<CPT(InternalName), ShaderBase *> ShaderRegistry;
   // This maps material types to the shader that can render it.
-  typedef pmap<TypeHandle, ShaderBase *> MaterialShaders;
+  typedef pflat_hash_map<TypeHandle, ShaderBase *> MaterialShaders;
   ShaderRegistry _shaders;
   MaterialShaders _material_shaders;
 

@@ -981,11 +981,9 @@ get_num_bytes() const {
   CDReader cdata(_cycler);
 
   int num_bytes = sizeof(Geom);
-  Primitives::const_iterator pi;
-  for (pi = cdata->_primitives.begin();
-       pi != cdata->_primitives.end();
-       ++pi) {
-    num_bytes += (*pi).get_read_pointer()->get_num_bytes();
+  size_t count = cdata->_primitives.size();
+  for (size_t i = 0; i < count; i++) {
+    num_bytes += cdata->_primitives[i].get_read_pointer()->get_num_bytes();
   }
 
   return num_bytes;
@@ -1641,15 +1639,13 @@ combine_primitives(GeomPrimitive *a_prim, CPT(GeomPrimitive) b_prim,
     a_prim->append_unused_vertices(a_vertices, b_vertex);
   }
 
-  PT(GeomVertexArrayDataHandle) a_handle =
-    new GeomVertexArrayDataHandle(std::move(a_vertices), current_thread);
-  CPT(GeomVertexArrayDataHandle) b_handle =
-    new GeomVertexArrayDataHandle(std::move(b_vertices), current_thread);
+  GeomVertexArrayDataHandle a_handle(std::move(a_vertices), current_thread);
+  const GeomVertexArrayDataHandle b_handle(std::move(b_vertices), current_thread);
 
-  size_t orig_a_vertices = a_handle->get_num_rows();
+  size_t orig_a_vertices = a_handle.get_num_rows();
 
-  a_handle->copy_subdata_from(a_handle->get_data_size_bytes(), 0,
-                              b_handle, 0, b_handle->get_data_size_bytes());
+  a_handle.copy_subdata_from(a_handle.get_data_size_bytes(), 0,
+                             &b_handle, 0, b_handle.get_data_size_bytes());
   a_prim->clear_minmax();
   if (a_prim->is_composite()) {
     // Also copy the ends array.
@@ -1877,11 +1873,9 @@ draw(GraphicsStateGuardianBase *gsg,
     all_ok = gsg->begin_draw_primitives(this, data_reader, num_instances, force);
   }
   if (all_ok) {
-    Geom::Primitives::const_iterator pi;
-    for (pi = _cdata->_primitives.begin();
-         pi != _cdata->_primitives.end();
-         ++pi) {
-      GeomPrimitivePipelineReader reader((*pi).get_read_pointer(_current_thread), _current_thread);
+    size_t count = _cdata->_primitives.size();
+    for (size_t i = 0; i < count; i++) {
+      GeomPrimitivePipelineReader reader(_cdata->_primitives[i].get_read_pointer(_current_thread), _current_thread);
       if (reader.get_num_vertices() != 0) {
         reader.check_minmax();
         nassertr(reader.check_valid(data_reader), false);

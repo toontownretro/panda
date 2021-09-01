@@ -27,11 +27,6 @@ TypeHandle CullBinStateSorted::_type_handle;
  */
 CullBinStateSorted::
 ~CullBinStateSorted() {
-  Objects::iterator oi;
-  for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
-    delete object;
-  }
 }
 
 /**
@@ -47,8 +42,9 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinStateSorted::
-add_object(CullableObject *object, Thread *current_thread) {
-  _objects.push_back(ObjectData(object));
+add_object(CullableObject &object, Thread *current_thread) {
+  _objects.emplace_back(ObjectData(std::move(object)));
+  _object_indices.push_back(_objects.size() - 1);
 }
 
 /**
@@ -59,7 +55,11 @@ add_object(CullableObject *object, Thread *current_thread) {
 void CullBinStateSorted::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-  sort(_objects.begin(), _objects.end());
+  //std::sort(_objects.begin(), _objects.end());
+  std::sort(_object_indices.begin(), _object_indices.end(),
+    [this](const int &a, const int &b) {
+      return _objects[a] < _objects[b];
+    });
 }
 
 
@@ -70,9 +70,12 @@ void CullBinStateSorted::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
 
-  for (const ObjectData &data : _objects) {
-    data._object->draw(_gsg, force, current_thread);
+  for (int index : _object_indices) {
+    _objects[index]._object.draw(_gsg, force, current_thread);
   }
+  //for (ObjectData &data : _objects) {
+  //  data._object.draw(_gsg, force, current_thread);
+  //}
 }
 
 /**
@@ -81,9 +84,9 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinStateSorted::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  Objects::const_iterator oi;
+  Objects::iterator oi;
   for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
+    CullableObject &object = (*oi)._object;
     builder.add_object(object);
   }
 }

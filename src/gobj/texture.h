@@ -1067,8 +1067,8 @@ protected:
   // conversely keeps a list (a set) of all the Textures that have been
   // prepared there.  When either destructs, it removes itself from the
   // other's list.
-  typedef pmap<int, TextureContext *> Contexts;
-  typedef pmap<PreparedGraphicsObjects *, Contexts> PreparedViews;
+  typedef pflat_hash_map<int, TextureContext *, int_hash> Contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, Contexts, pointer_hash> PreparedViews;
   PreparedViews _prepared_views;
 
   // It is common, when using normal maps, specular maps, gloss maps, and
@@ -1076,7 +1076,7 @@ protected:
   // maps are derived by concatenating a suffix to the name of the diffuse
   // map.  The following table enables lookup of the special maps given the
   // diffuse map and the suffix.
-  typedef pmap<CPT(InternalName), PT(Texture)> RelatedTextures;
+  typedef pflat_hash_map<CPT(InternalName), PT(Texture)> RelatedTextures;
   RelatedTextures _related_textures;
 
   // The TexturePool finds this useful.
@@ -1084,7 +1084,7 @@ protected:
 
 private:
   // The auxiliary data is not recorded to a bam file.
-  typedef pmap<std::string, PT(TypedReferenceCount) > AuxData;
+  typedef pflat_hash_map<std::string, PT(TypedReferenceCount), string_hash > AuxData;
   AuxData _aux_data;
 
   static AutoTextureScale _textures_power_2;

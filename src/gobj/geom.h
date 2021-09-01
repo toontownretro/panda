@@ -354,7 +354,7 @@ private:
 
   // This works just like the Texture contexts: each Geom keeps a record of
   // all the PGO objects that hold the Geom, and vice-versa.
-  typedef pmap<PreparedGraphicsObjects *, GeomContext *> Contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, GeomContext *, pointer_hash> Contexts;
   Contexts _contexts;
 
   static UpdateSeq _next_modified;
@@ -395,6 +395,7 @@ private:
   friend class GeomContext;
   friend class GeomPipelineReader;
   friend class PreparedGraphicsObjects;
+  friend class GraphicsStateGuardian;
 };
 
 /**
@@ -452,6 +453,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class GraphicsStateGuardian;
 };
 
 INLINE std::ostream &operator << (std::ostream &out, const Geom &obj);

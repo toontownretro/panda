@@ -107,10 +107,10 @@ PUBLISHED:
 
   INLINE size_t get_num_arrays() const;
   INLINE CPT(GeomVertexArrayData) get_array(size_t i) const;
-  INLINE CPT(GeomVertexArrayDataHandle) get_array_handle(size_t i) const;
+  INLINE const GeomVertexArrayDataHandle get_array_handle(size_t i) const;
   MAKE_SEQ(get_arrays, get_num_arrays, get_array);
   INLINE PT(GeomVertexArrayData) modify_array(size_t i);
-  INLINE PT(GeomVertexArrayDataHandle) modify_array_handle(size_t i);
+  INLINE GeomVertexArrayDataHandle modify_array_handle(size_t i);
   INLINE void set_array(size_t i, const GeomVertexArrayData *array);
   INLINE void remove_array(size_t i);
   INLINE void insert_array(size_t i, const GeomVertexArrayData *array);
@@ -435,6 +435,8 @@ protected:
   GeomVertexData::CData *_cdata;
 };
 
+static constexpr int max_array_handles = 10;
+
 /**
  * Encapsulates the data from a GeomVertexData, pre-fetched for one stage of
  * the pipeline.
@@ -446,7 +448,7 @@ public:
   INLINE GeomVertexDataPipelineReader(Thread *current_thread);
   INLINE GeomVertexDataPipelineReader(const GeomVertexData *object, Thread *current_thread);
 
-  ALLOC_DELETED_CHAIN(GeomVertexDataPipelineReader);
+  //ALLOC_DELETED_CHAIN(GeomVertexDataPipelineReader);
 
   INLINE void set_object(const GeomVertexData *object);
   INLINE const GeomVertexData *get_object() const;
@@ -486,8 +488,8 @@ private:
   void make_array_readers();
 
   bool _got_array_readers;
-  typedef pvector<CPT(GeomVertexArrayDataHandle) > ArrayReaders;
-  ArrayReaders _array_readers;
+  size_t _num_array_readers;
+  GeomVertexArrayDataHandle _array_readers[max_array_handles];
 
 public:
   static TypeHandle get_class_type() {
@@ -513,12 +515,12 @@ public:
                                       Thread *current_thread);
 
   INLINE ~GeomVertexDataPipelineWriter();
-  ALLOC_DELETED_CHAIN(GeomVertexDataPipelineWriter);
+  //ALLOC_DELETED_CHAIN(GeomVertexDataPipelineWriter);
 
   INLINE GeomVertexData *get_object() const;
 
   INLINE void check_array_writers() const;
-  INLINE GeomVertexArrayDataHandle *get_array_writer(size_t i) const;
+  INLINE GeomVertexArrayDataHandle *get_array_writer(size_t i);
 
   PT(GeomVertexArrayData) modify_array(size_t i);
   void set_array(size_t i, const GeomVertexArrayData *array);
@@ -538,7 +540,7 @@ private:
   void delete_array_writers();
 
   bool _got_array_writers;
-  typedef pvector<PT(GeomVertexArrayDataHandle) > ArrayWriters;
+  typedef pvector<GeomVertexArrayDataHandle> ArrayWriters;
   ArrayWriters _array_writers;
 
 public:

@@ -20,20 +20,60 @@ CullBinStateSorted(const std::string &name, GraphicsStateGuardianBase *gsg,
   CullBin(name, BT_state_sorted, gsg, draw_region_pcollector),
   _objects(get_class_type())
 {
+  _objects.reserve(8192);
+  _object_indices.reserve(8192);
 }
 
 /**
  *
  */
 INLINE CullBinStateSorted::ObjectData::
-ObjectData(CullableObject *object) :
-  _object(object)
+ObjectData(CullableObject &&object) :
+  _object(std::move(object))
 {
-  if (object->_munged_data == nullptr) {
+  if (_object._munged_data == nullptr) {
     _format = nullptr;
   } else {
-    _format = object->_munged_data->get_format();
+    _format = _object._munged_data->get_format();
   }
+}
+
+/**
+ *
+ */
+INLINE CullBinStateSorted::ObjectData::
+ObjectData(ObjectData &&other) :
+  _object(std::move(other._object)),
+  _format(std::move(other._format))
+{
+}
+
+/**
+ *
+ */
+INLINE CullBinStateSorted::ObjectData::
+ObjectData(const ObjectData &copy) :
+  _object(copy._object),
+  _format(copy._format)
+{
+}
+
+/**
+ *
+ */
+INLINE void CullBinStateSorted::ObjectData::
+operator = (const ObjectData &copy) {
+  _object = copy._object;
+  _format = copy._format;
+}
+
+/**
+ *
+ */
+INLINE void CullBinStateSorted::ObjectData::
+operator = (ObjectData &&other) {
+  _object = std::move(other._object);
+  _format = std::move(other._format);
 }
 
 /**
@@ -43,8 +83,13 @@ INLINE bool CullBinStateSorted::ObjectData::
 operator < (const ObjectData &other) const {
   // Group by state changes, in approximate order from heaviest change to
   // lightest change.
-  const RenderState *sa = _object->_state;
-  const RenderState *sb = other._object->_state;
+  const RenderState *sa = _object._state;
+  const RenderState *sb = other._object._state;
+
+  if (sa == sb) {
+    return 0;
+  }
+
   int compare = sa->compare_sort(*sb);
   if (compare != 0) {
     return compare < 0;
@@ -56,13 +101,13 @@ operator < (const ObjectData &other) const {
   }
 
   // Prevent unnecessary vertex buffer rebinds.
-  if (_object->_munged_data != other._object->_munged_data) {
-    return _object->_munged_data < other._object->_munged_data;
-  }
+  //if (_object._munged_data != other._object._munged_data) {
+  //  return _object._munged_data < other._object._munged_data;
+  //}
 
   // Uniform updates are actually pretty fast.
-  if (_object->_internal_transform != other._object->_internal_transform) {
-    return _object->_internal_transform < other._object->_internal_transform;
+  if (_object._internal_transform != other._object._internal_transform) {
+    return _object._internal_transform < other._object._internal_transform;
   }
 
   return 0;

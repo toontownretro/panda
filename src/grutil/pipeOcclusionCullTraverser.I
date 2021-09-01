@@ -42,7 +42,7 @@ get_occlusion_mask() const {
  *
  */
 INLINE PipeOcclusionCullTraverser::PendingObject::
-PendingObject(CullableObject *object) :
+PendingObject(CullableObject &object) :
   _object(object)
 {
 }

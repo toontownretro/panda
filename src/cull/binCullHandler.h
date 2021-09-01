@@ -28,11 +28,11 @@ class EXPCL_PANDA_CULL BinCullHandler : public CullHandler {
 public:
   INLINE BinCullHandler(CullResult *cull_result);
 
-  virtual void record_object(CullableObject *object,
+  virtual void record_object(CullableObject &object,
                              const CullTraverser *traverser);
 
 private:
-  PT(CullResult) _cull_result;
+  CullResult *_cull_result;
 };
 
 #include "binCullHandler.I"

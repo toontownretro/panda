@@ -1,7 +1,7 @@
 #define BUILD_DIRECTORY $[HAVE_EMBREE]
 
 #define USE_PACKAGES embree
-#define LOCAL_LIBS ssemath pgraph putil gobj
+#define LOCAL_LIBS pgraph putil gobj
 
 #begin lib_target
   #define TARGET raytrace

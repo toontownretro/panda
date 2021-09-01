@@ -42,16 +42,6 @@ PStatCollector CullableObject::_sw_sprites_pcollector("SW Sprites");
 
 TypeHandle CullableObject::_type_handle;
 
-void CullableObject::
-ensure_generated_shader(GraphicsStateGuardianBase *gsg) {
-  gsg->ensure_generated_shader(_state);
-}
-
-CullableObject *CullableObject::
-make_copy() {
-  return new CullableObject(*this);
-}
-
 /**
  * Uses the indicated GeomMunger to transform the geom and/or its vertices.
  *
@@ -62,12 +52,15 @@ make_copy() {
 bool CullableObject::
 munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
            const CullTraverser *traverser, bool force) {
-  nassertr(munger != nullptr, false);
+  //nassertr(munger != nullptr, false);
 
   Thread *current_thread = traverser->get_current_thread();
   PStatTimer timer(_munge_pcollector, current_thread);
+
   if (_geom != nullptr) {
     GraphicsStateGuardianBase *gsg = traverser->get_gsg();
+
+#if 0
     int gsg_bits = gsg->get_supported_geom_rendering();
     if (!hardware_point_sprites) {
       // If support for hardware point sprites or perspective-scaled points is
@@ -140,14 +133,23 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
     }
 
+#endif
+
     // Now invoke the munger to ensure the resulting geometry is in a GSG-
     // friendly form.
-    {
-      PStatTimer timer(_munge_geom_pcollector, current_thread);
-      if (!munger->munge_geom(_geom, _munged_data, force, current_thread)) {
-        return false;
-      }
-    }
+    //{
+    //  PStatTimer timer(_munge_geom_pcollector, current_thread);
+    //  if (!munger->munge_geom(_geom, _munged_data, force, current_thread)) {
+    //    return false;
+    //  }
+    //}
+
+    //{
+      //PStatTimer timer(_munge_geom_pcollector, current_thread);
+      //GeomPipelineReader geom_reader(_geom, current_thread);
+      //_munged_data = geom_reader.get_vertex_data();
+      //_munged_data = _geom->get_vertex_data();
+    //}
 
     // If there is any animation left in the vertex data after it has been
     // munged--that is, we couldn't arrange to handle the animation in
@@ -182,8 +184,8 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     const ShaderAttrib *sattr;
     _state->get_attrib_def(sattr);
     if (sattr->auto_shader()) {
-      GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
-      if (data_reader.get_format()->get_animation().get_animation_type() == Geom::AT_hardware) {
+      //GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
+      if (_munged_data->get_format()->get_animation().get_animation_type() == Geom::AT_hardware) {
         static CPT(RenderState) state = RenderState::make(
           DCAST(ShaderAttrib, ShaderAttrib::make())->set_flag(ShaderAttrib::F_hardware_skinning, true));
         // Compose it backwards so the flag still gets picked up if the higher
@@ -191,16 +193,16 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
         _state = state->compose(_state);
       }
 
-      ensure_generated_shader(gsg);
+      gsg->ensure_generated_shader(_state);
       if (_state->_generated_shader != nullptr) {
         sattr = DCAST(ShaderAttrib, _state->_generated_shader);
       }
     } else {
       // We may need to munge the state for the fixed-function pipeline.
-      StateMunger *state_munger = (StateMunger *)munger;
-      if (state_munger->should_munge_state()) {
-        _state = state_munger->munge_state(_state);
-      }
+      //StateMunger *state_munger = (StateMunger *)munger;
+      //if (state_munger->should_munge_state()) {
+      //  _state = state_munger->munge_state(_state);
+      //}
     }
 
     if (sattr != nullptr) {

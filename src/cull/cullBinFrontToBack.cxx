@@ -28,11 +28,6 @@ TypeHandle CullBinFrontToBack::_type_handle;
  */
 CullBinFrontToBack::
 ~CullBinFrontToBack() {
-  Objects::iterator oi;
-  for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
-    delete object;
-  }
 }
 
 /**
@@ -48,11 +43,10 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinFrontToBack::
-add_object(CullableObject *object, Thread *current_thread) {
+add_object(CullableObject &object, Thread *current_thread) {
   // Determine the center of the bounding volume.
-  CPT(BoundingVolume) volume = object->_geom->get_bounds();
+  CPT(BoundingVolume) volume = object._geom->get_bounds();
   if (volume->is_empty()) {
-    delete object;
     return;
   }
 
@@ -60,11 +54,11 @@ add_object(CullableObject *object, Thread *current_thread) {
   nassertv(gbv != nullptr);
 
   LPoint3 center = gbv->get_approx_center();
-  nassertv(object->_internal_transform != nullptr);
-  center = center * object->_internal_transform->get_mat();
+  nassertv(object._internal_transform != nullptr);
+  center = center * object._internal_transform->get_mat();
 
   PN_stdfloat distance = _gsg->compute_distance_to(center);
-  _objects.push_back(ObjectData(object, distance));
+  _objects.emplace_back(ObjectData(object, distance));
 }
 
 /**
@@ -85,8 +79,8 @@ void CullBinFrontToBack::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
 
-  for (const ObjectData &data : _objects) {
-    data._object->draw(_gsg, force, current_thread);
+  for (ObjectData &data : _objects) {
+    data._object.draw(_gsg, force, current_thread);
   }
 }
 
@@ -96,9 +90,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFrontToBack::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  Objects::const_iterator oi;
-  for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
-    builder.add_object(object);
+  for (ObjectData &data : _objects) {
+    builder.add_object(data._object);
   }
 }

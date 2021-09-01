@@ -21,6 +21,7 @@
 #include "transformState.h"
 #include "renderState.h"
 #include "pointerTo.h"
+#include "cullableObject.h"
 
 /**
  * A specific kind of CullBin that sorts geometry in the order specified by
@@ -41,7 +42,7 @@ public:
                            GraphicsStateGuardianBase *gsg,
                            const PStatCollector &draw_region_pcollector);
 
-  virtual void add_object(CullableObject *object, Thread *current_thread);
+  virtual void add_object(CullableObject &object, Thread *current_thread);
   virtual void finish_cull(SceneSetup *scene_setup, Thread *current_thread);
   virtual void draw(bool force, Thread *current_thread);
 
@@ -51,10 +52,10 @@ protected:
 private:
   class ObjectData {
   public:
-    INLINE ObjectData(CullableObject *object, int draw_order);
+    INLINE ObjectData(CullableObject &object, int draw_order);
     INLINE bool operator < (const ObjectData &other) const;
 
-    CullableObject *_object;
+    CullableObject _object;
     int _draw_order;
   };
 

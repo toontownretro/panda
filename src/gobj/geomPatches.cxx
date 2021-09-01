@@ -31,6 +31,7 @@ GeomPatches(int num_vertices_per_patch, GeomPatches::UsageHint usage_hint) :
   GeomPrimitive(usage_hint),
   _num_vertices_per_patch(num_vertices_per_patch)
 {
+  _geom_primitive_type = GPT_patches;
 }
 
 /**
@@ -84,15 +85,6 @@ get_primitive_type() const {
 int GeomPatches::
 get_num_vertices_per_primitive() const {
   return _num_vertices_per_patch;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomPatches::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_patches(reader, force);
 }
 
 /**

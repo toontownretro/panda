@@ -28,11 +28,6 @@ TypeHandle CullBinFixed::_type_handle;
  */
 CullBinFixed::
 ~CullBinFixed() {
-  Objects::iterator oi;
-  for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
-    delete object;
-  }
 }
 
 /**
@@ -48,8 +43,8 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinFixed::
-add_object(CullableObject *object, Thread *current_thread) {
-  int draw_order = object->_state->get_draw_order();
+add_object(CullableObject &object, Thread *current_thread) {
+  int draw_order = object._state->get_draw_order();
   _objects.push_back(ObjectData(object, draw_order));
 }
 
@@ -71,8 +66,8 @@ void CullBinFixed::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
 
-  for (const ObjectData &data : _objects) {
-    data._object->draw(_gsg, force, current_thread);
+  for (ObjectData &data : _objects) {
+    data._object.draw(_gsg, force, current_thread);
   }
 }
 
@@ -82,9 +77,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFixed::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  Objects::const_iterator oi;
-  for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject *object = (*oi)._object;
-    builder.add_object(object);
+  for (ObjectData &data : _objects) {
+    builder.add_object(data._object);
   }
 }

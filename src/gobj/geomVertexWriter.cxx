@@ -76,12 +76,12 @@ reserve_num_rows(int num_rows) {
     GeomVertexDataPipelineWriter writer(_vertex_data, true, _current_thread);
     writer.check_array_writers();
     result = writer.reserve_num_rows(num_rows);
-    _handle = writer.get_array_writer(_array);
+    _handle = *writer.get_array_writer(_array);
 
   } else {
     // Otherwise, we can get away with modifying only the one array we're
     // using.
-    result = _handle->reserve_num_rows(num_rows);
+    result = _handle.reserve_num_rows(num_rows);
   }
 
   return result;
@@ -137,8 +137,8 @@ set_vertex_column(int array, const GeomVertexColumn *column,
 #endif
 
   _array = array;
-  _handle = data_writer->get_array_writer(_array);
-  _stride = _handle->get_array_format()->get_stride();
+  _handle = *data_writer->get_array_writer(_array);
+  _stride = _handle.get_array_format()->get_stride();
 
   _packer = column->_packer;
   set_pointer(_start_row);
@@ -159,7 +159,7 @@ set_array_column(const GeomVertexColumn *column) {
   nassertr(_array_data != nullptr, false);
 
   _handle = _array_data->modify_handle();
-  _stride = _handle->get_array_format()->get_stride();
+  _stride = _handle.get_array_format()->get_stride();
 
   _packer = column->_packer;
   set_pointer(_start_row);

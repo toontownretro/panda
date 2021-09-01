@@ -76,7 +76,7 @@ cleanup() {
   cdata->_camera = NodePath();
 
   CDCullWriter cdata_cull(_cycler_cull, true);
-  cdata_cull->_cull_result = nullptr;
+  cdata_cull->_cull_result.clear();
 }
 
 /**
@@ -531,11 +531,11 @@ get_screenshot() {
  */
 PT(PandaNode) DisplayRegion::
 make_cull_result_graph() {
-  CullResult *cull_result = get_cull_result(Thread::get_current_thread());
-  if (cull_result == nullptr) {
+  const CullResult &cull_result = get_cull_result(Thread::get_current_thread());
+  if (cull_result.is_empty()) {
     return nullptr;
   }
-  return cull_result->make_result_graph();
+  return ((CullResult &)cull_result).make_result_graph();
 }
 
 /**

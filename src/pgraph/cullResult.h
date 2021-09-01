@@ -41,18 +41,27 @@ class TransformState;
  * This is also used to keep the results of last frame's cull traversal around
  * to make next frame's traversal of the same scene a little easier.
  */
-class EXPCL_PANDA_PGRAPH CullResult : public ReferenceCount {
+class EXPCL_PANDA_PGRAPH CullResult {
 public:
   CullResult(GraphicsStateGuardianBase *gsg,
              const PStatCollector &draw_region_pcollector);
   INLINE ~CullResult();
 
+  CullResult();
+  CullResult(const CullResult &copy);
+  CullResult(CullResult &&other);
+  void operator = (const CullResult &copy);
+  void operator = (CullResult &&other);
+
 PUBLISHED:
-  PT(CullResult) make_next() const;
+  CullResult make_next() const;
 
   INLINE CullBin *get_bin(int bin_index);
 
-  void add_object(CullableObject *object, const CullTraverser *traverser);
+  INLINE void clear();
+  INLINE bool is_empty() const;
+
+  void add_object(CullableObject &object, const CullTraverser *traverser);
   void finish_cull(SceneSetup *scene_setup, Thread *current_thread);
   void draw(Thread *current_thread);
 

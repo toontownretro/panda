@@ -105,8 +105,14 @@ INLINE std::ostream &operator << (std::ostream &out, GLenum v) {
 
 #define ISPOW2(X) (((X) & ((X)-1))==0)
 
-#define report_my_gl_errors() \
-  report_my_errors(__LINE__, __FILE__)
+#define report_my_gl_errors(gsg) //\
+  //gsg->report_my_errors(__LINE__, __FILE__) //\
+//if (gl_check_errors) { \
+//  report_my_errors(__LINE__, __FILE__); \
+//}
 
-#define clear_my_gl_errors() \
-  clear_my_errors(__LINE__, __FILE__)
+#define clear_my_gl_errors(gsg) //\
+  //gsg->clear_my_errors(__LINE__, __FILE__) //\
+//if (gl_check_errors) { \
+//  clear_my_errors(__LINE__, __FILE__) \
+//}

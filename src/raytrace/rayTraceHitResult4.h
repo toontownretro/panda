@@ -10,6 +10,8 @@
  * @author lachbr
  */
 
+#if 0
+
 #ifndef RAYTRACEHITRESULT4_H
 #define RAYTRACEHITRESULT4_H
 
@@ -28,3 +30,5 @@ public:
 };
 
 #endif // RAYTRACEHITRESULT4_h
+
+#endif

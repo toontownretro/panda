@@ -230,15 +230,8 @@ end_traverse() {
         _true_cull_handler->record_object(pobj._object, this);
       } else {
         _occlusion_failed_pcollector.add_level(1);
-        delete pobj._object;
       }
     }
-
-    // The CullableObject has by now either been recorded (which will
-    // eventually delete it) or deleted directly.
-#ifndef NDEBUG
-    pobj._object = nullptr;
-#endif  // NDEBUG
   }
   _pending_objects.clear();
   CullTraverser::end_traverse();
@@ -363,7 +356,7 @@ traverse_below(CullTraverserData &data) {
  * the end of the scene.
  */
 void PipeOcclusionCullTraverser::
-record_object(CullableObject *object, const CullTraverser *traverser) {
+record_object(CullableObject &object, const CullTraverser *traverser) {
   nassertv(traverser == this);
   PendingObject pobj(object);
 
@@ -379,13 +372,13 @@ record_object(CullableObject *object, const CullTraverser *traverser) {
     // ancestor.  Don't perform another one.
     pobj._query = _current_query;
 
-  } else if (object->_geom->get_nested_vertices(current_thread) < min_occlusion_vertices) {
+  } else if (object._geom->get_nested_vertices(current_thread) < min_occlusion_vertices) {
     // This object is too small to bother testing for occlusions.
 
   } else {
     // Issue an occlusion test for this object.
-    CPT(BoundingVolume) vol = object->_geom->get_bounds(current_thread);
-    CPT(TransformState) net_transform = _inv_cs_world_transform->compose(object->_internal_transform);
+    CPT(BoundingVolume) vol = object._geom->get_bounds(current_thread);
+    CPT(TransformState) net_transform = _inv_cs_world_transform->compose(object._internal_transform);
     CPT(TransformState) internal_transform;
     CPT(Geom) geom;
     if (get_volume_viz(vol, geom, net_transform, internal_transform)) {
@@ -608,8 +601,7 @@ perform_occlusion_test(const Geom *geom, const TransformState *net_transform,
 
   gsg->begin_occlusion_query();
 
-  CullableObject *viz =
-    new CullableObject(geom, _solid_test_state, internal_transform);
+  CullableObject viz(geom, _solid_test_state, internal_transform);
 
   static ConfigVariableBool test_occlude("test-occlude", false);
   if (test_occlude) {
@@ -654,13 +646,11 @@ show_results(int num_fragments, const Geom *geom,
      TransparencyAttrib::make(TransparencyAttrib::M_alpha),
      ColorAttrib::make_flat(color));
 
-  CullableObject *internal_viz =
-    new CullableObject(geom, state, internal_transform);
+  CullableObject internal_viz(geom, state, internal_transform);
   _internal_cull_handler->record_object(internal_viz, _internal_trav);
 
   // Also render the viz in the main scene.
   internal_transform = get_scene()->get_cs_world_transform()->compose(net_transform);
-  CullableObject *main_viz =
-    new CullableObject(geom, state, internal_transform);
+  CullableObject main_viz(geom, state, internal_transform);
   _true_cull_handler->record_object(main_viz, this);
 }

@@ -34,11 +34,6 @@ public:
 
   virtual int get_num_vertices_per_primitive() const;
 
-public:
-  virtual bool draw(GraphicsStateGuardianBase *gsg,
-                    const GeomPrimitivePipelineReader *reader,
-                    bool force) const;
-
 private:
   int _num_vertices_per_patch;
 

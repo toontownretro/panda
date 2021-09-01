@@ -35,11 +35,6 @@ public:
 
   virtual int get_num_vertices_per_primitive() const;
 
-public:
-  virtual bool draw(GraphicsStateGuardianBase *gsg,
-                    const GeomPrimitivePipelineReader *reader,
-                    bool force) const;
-
 protected:
   virtual CPT(GeomPrimitive) doubleside_impl() const;
   virtual CPT(GeomPrimitive) reverse_impl() const;

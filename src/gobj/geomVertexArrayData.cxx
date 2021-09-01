@@ -52,7 +52,7 @@ TypeHandle GeomVertexArrayData::_type_handle;
 TypeHandle GeomVertexArrayData::CData::_type_handle;
 TypeHandle GeomVertexArrayDataHandle::_type_handle;
 
-ALLOC_DELETED_CHAIN_DEF(GeomVertexArrayDataHandle);
+//ALLOC_DELETED_CHAIN_DEF(GeomVertexArrayDataHandle);
 
 /**
  * Constructs an invalid object.  This is only used when reading from the bam
@@ -61,8 +61,7 @@ ALLOC_DELETED_CHAIN_DEF(GeomVertexArrayDataHandle);
 GeomVertexArrayData::
 GeomVertexArrayData() :
   SimpleLruPage(0),
-  _array_format(nullptr),
-  _contexts(nullptr) {
+  _array_format(nullptr) {
 
   // Can't put it in the LRU until it has been read in and made valid.
 }
@@ -83,8 +82,7 @@ GeomVertexArrayData(const GeomVertexArrayFormat *array_format,
                     GeomVertexArrayData::UsageHint usage_hint) :
   SimpleLruPage(0),
   _array_format(array_format),
-  _cycler(CData(usage_hint)),
-  _contexts(nullptr)
+  _cycler(CData(usage_hint))
 {
   set_lru_size(0);
   nassertv(_array_format->is_registered());
@@ -98,8 +96,7 @@ GeomVertexArrayData(const GeomVertexArrayData &copy) :
   CopyOnWriteObject(copy),
   SimpleLruPage(copy),
   _array_format(copy._array_format),
-  _cycler(copy._cycler),
-  _contexts(nullptr)
+  _cycler(copy._cycler)
 {
   copy.mark_used_lru();
 
@@ -147,21 +144,21 @@ int GeomVertexArrayData::
 compare_to(const GeomVertexArrayData &other) const {
   Thread *current_thread = Thread::get_current_thread();
 
-  CPT(GeomVertexArrayDataHandle) handle = get_handle(current_thread);
-  CPT(GeomVertexArrayDataHandle) other_handle = other.get_handle(current_thread);
+  const GeomVertexArrayDataHandle handle = get_handle(current_thread);
+  const GeomVertexArrayDataHandle other_handle = other.get_handle(current_thread);
 
-  if (handle->get_usage_hint() != other_handle->get_usage_hint()) {
-    return (int)handle->get_usage_hint() - (int)other_handle->get_usage_hint();
+  if (handle.get_usage_hint() != other_handle.get_usage_hint()) {
+    return (int)handle.get_usage_hint() - (int)other_handle.get_usage_hint();
   }
-  if (handle->get_array_format() != other_handle->get_array_format()) {
-    return handle->get_array_format() < other_handle->get_array_format() ? -1 : 1;
+  if (handle.get_array_format() != other_handle.get_array_format()) {
+    return handle.get_array_format() < other_handle.get_array_format() ? -1 : 1;
   }
-  if (handle->get_data_size_bytes() != other_handle->get_data_size_bytes()) {
-    return (int)handle->get_data_size_bytes() - (int)other_handle->get_data_size_bytes();
+  if (handle.get_data_size_bytes() != other_handle.get_data_size_bytes()) {
+    return (int)handle.get_data_size_bytes() - (int)other_handle.get_data_size_bytes();
   }
-  return memcmp(handle->get_read_pointer(true),
-                other_handle->get_read_pointer(true),
-                handle->get_data_size_bytes());
+  return memcmp(handle.get_read_pointer(true),
+                other_handle.get_read_pointer(true),
+                handle.get_data_size_bytes());
 }
 
 /**
@@ -214,12 +211,9 @@ prepare(PreparedGraphicsObjects *prepared_objects) {
  */
 bool GeomVertexArrayData::
 is_prepared(PreparedGraphicsObjects *prepared_objects) const {
-  if (_contexts == nullptr) {
-    return false;
-  }
   Contexts::const_iterator ci;
-  ci = _contexts->find(prepared_objects);
-  if (ci != _contexts->end()) {
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
     return true;
   }
   return prepared_objects->is_vertex_buffer_queued(this);
@@ -239,18 +233,15 @@ is_prepared(PreparedGraphicsObjects *prepared_objects) const {
 VertexBufferContext *GeomVertexArrayData::
 prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  if (_contexts == nullptr) {
-    _contexts = new Contexts;
-  }
   Contexts::const_iterator ci;
-  ci = _contexts->find(prepared_objects);
-  if (ci != _contexts->end()) {
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
     return (*ci).second;
   }
 
   VertexBufferContext *vbc = prepared_objects->prepare_vertex_buffer_now(this, gsg);
   if (vbc != nullptr) {
-    (*_contexts)[prepared_objects] = vbc;
+    _contexts[prepared_objects] = vbc;
   }
   return vbc;
 }
@@ -261,14 +252,12 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
  */
 bool GeomVertexArrayData::
 release(PreparedGraphicsObjects *prepared_objects) {
-  if (_contexts != nullptr) {
-    Contexts::iterator ci;
-    ci = _contexts->find(prepared_objects);
-    if (ci != _contexts->end()) {
-      VertexBufferContext *vbc = (*ci).second;
-      prepared_objects->release_vertex_buffer(vbc);
-      return true;
-    }
+  Contexts::iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    VertexBufferContext *vbc = (*ci).second;
+    prepared_objects->release_vertex_buffer(vbc);
+    return true;
   }
 
   // Maybe it wasn't prepared yet, but it's about to be.
@@ -283,25 +272,23 @@ int GeomVertexArrayData::
 release_all() {
   int num_freed = 0;
 
-  if (_contexts != nullptr) {
-    // We have to traverse a copy of the _contexts list, because the
-    // PreparedGraphicsObjects object will call clear_prepared() in response
-    // to each release_vertex_buffer(), and we don't want to be modifying the
-    // _contexts list while we're traversing it.
-    Contexts temp = *_contexts;
-    num_freed = (int)_contexts->size();
+  // We have to traverse a copy of the _contexts list, because the
+  // PreparedGraphicsObjects object will call clear_prepared() in response
+  // to each release_vertex_buffer(), and we don't want to be modifying the
+  // _contexts list while we're traversing it.
+  Contexts temp = _contexts;
+  num_freed = (int)_contexts.size();
 
-    Contexts::const_iterator ci;
-    for (ci = temp.begin(); ci != temp.end(); ++ci) {
-      PreparedGraphicsObjects *prepared_objects = (*ci).first;
-      VertexBufferContext *vbc = (*ci).second;
-      prepared_objects->release_vertex_buffer(vbc);
-    }
-
-    // Now that we've called release_vertex_buffer() on every known context,
-    // the _contexts list should have completely emptied itself.
-    nassertr(_contexts == nullptr, num_freed);
+  Contexts::const_iterator ci;
+  for (ci = temp.begin(); ci != temp.end(); ++ci) {
+    PreparedGraphicsObjects *prepared_objects = (*ci).first;
+    VertexBufferContext *vbc = (*ci).second;
+    prepared_objects->release_vertex_buffer(vbc);
   }
+
+  // Now that we've called release_vertex_buffer() on every known context,
+  // the _contexts list should have completely emptied itself.
+  nassertr(_contexts.empty(), num_freed);
 
   return num_freed;
 }
@@ -342,16 +329,11 @@ evict_lru() {
  */
 void GeomVertexArrayData::
 clear_prepared(PreparedGraphicsObjects *prepared_objects) {
-  nassertv(_contexts != nullptr);
 
   Contexts::iterator ci;
-  ci = _contexts->find(prepared_objects);
-  if (ci != _contexts->end()) {
-    _contexts->erase(ci);
-    if (_contexts->empty()) {
-      delete _contexts;
-      _contexts = nullptr;
-    }
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    _contexts.erase(ci);
   } else {
     // If this assertion fails, clear_prepared() was given a prepared_objects
     // which the data array didn't know about.
@@ -589,6 +571,122 @@ fillin(DatagramIterator &scan, BamReader *manager, void *extra_data) {
   array_data->set_lru_size(_buffer.get_size());
 
   _modified = Geom::get_next_modified();
+}
+
+/**
+ *
+ */
+GeomVertexArrayDataHandle::
+GeomVertexArrayDataHandle() :
+  _object(nullptr),
+  _current_thread(nullptr),
+  _cdata(nullptr),
+  _writable(true)
+{
+}
+
+/**
+ *
+ */
+GeomVertexArrayDataHandle::
+GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &copy) :
+  _object(copy._object),
+  _current_thread(copy._current_thread),
+  _cdata(copy._cdata),
+  _writable(copy._writable)
+{
+#ifdef _DEBUG
+  if (_object != nullptr) {
+    nassertv(_object->test_ref_count_nonzero());
+  }
+#endif // _DEBUG
+
+  if (_cdata != nullptr) {
+#ifdef DO_PIPELINING
+      _cdata->ref();
+#endif  // DO_PIPELINING
+    // We must grab the lock *after* we have incremented the reference count,
+    // above.
+    _cdata->_rw_lock.acquire();
+  }
+}
+
+/**
+ *
+ */
+GeomVertexArrayDataHandle::
+GeomVertexArrayDataHandle(GeomVertexArrayDataHandle &&other) :
+  _object(std::move(other._object)),
+  _current_thread(std::move(other._current_thread)),
+  _cdata(std::move(other._cdata)),
+  _writable(std::move(other._writable))
+{
+#ifdef _DEBUG
+  if (_object != nullptr) {
+    nassertv(_object->test_ref_count_nonzero());
+  }
+#endif // _DEBUG
+
+  if (_cdata != nullptr) {
+#ifdef DO_PIPELINING
+      _cdata->ref();
+#endif  // DO_PIPELINING
+    // We must grab the lock *after* we have incremented the reference count,
+    // above.
+    _cdata->_rw_lock.acquire();
+  }
+}
+
+/**
+ *
+ */
+void GeomVertexArrayDataHandle::
+operator = (const GeomVertexArrayDataHandle &copy) {
+  _object = copy._object;
+  _current_thread = copy._current_thread;
+  _cdata = copy._cdata;
+  _writable = copy._writable;
+
+#ifdef _DEBUG
+  if (_object != nullptr) {
+    nassertv(_object->test_ref_count_nonzero());
+  }
+#endif // _DEBUG
+
+  if (_cdata != nullptr) {
+#ifdef DO_PIPELINING
+      _cdata->ref();
+#endif  // DO_PIPELINING
+    // We must grab the lock *after* we have incremented the reference count,
+    // above.
+    _cdata->_rw_lock.acquire();
+  }
+}
+
+/**
+ *
+ */
+void GeomVertexArrayDataHandle::
+operator = (GeomVertexArrayDataHandle &&other) {
+  _object = std::move(other._object);
+  _current_thread = std::move(other._current_thread);
+  _cdata = std::move(other._cdata);
+  _writable = std::move(other._writable);
+
+#ifdef _DEBUG
+  if (_object != nullptr) {
+    nassertv(_object->test_ref_count_nonzero());
+  }
+#endif // _DEBUG
+
+  if (_cdata != nullptr) {
+#ifdef DO_PIPELINING
+      _cdata->ref();
+#endif  // DO_PIPELINING
+    // We must grab the lock *after* we have incremented the reference count,
+    // above.
+    _cdata->_rw_lock.acquire();
+  }
 }
 
 /**

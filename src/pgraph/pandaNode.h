@@ -542,7 +542,7 @@ private:
   // represents the set of instances of this node that we have requested a
   // NodePath for.  We don't keep reference counts; when each
   // NodePathComponent destructs, it removes itself from this set.
-  typedef phash_set<NodePathComponent *, pointer_hash> Paths;
+  typedef pflat_hash_set<NodePathComponent *, pointer_hash> Paths;
 
   // We don't cycle the set of Paths, since these are across all threads.  A
   // NodePathComponent, once created, is always associated with the same node.

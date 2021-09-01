@@ -23,6 +23,10 @@
 #include "pnotify.h"
 #include "config_pipeline.h"
 
+#ifndef CPPPARSER
+#include <thread>
+#endif
+
 #ifdef ANDROID
 typedef struct _JNIEnv JNIEnv;
 #endif
@@ -75,6 +79,7 @@ PUBLISHED:
   INLINE static bool is_threading_supported();
   INLINE static bool is_true_threads();
   INLINE static bool is_simple_threads();
+  INLINE static int get_num_supported_threads();
   BLOCKING INLINE static void sleep(double seconds);
 
   BLOCKING INLINE static void force_yield();
@@ -111,6 +116,7 @@ PUBLISHED:
   MAKE_PROPERTY(threading_supported, is_threading_supported);
   MAKE_PROPERTY(true_threads, is_true_threads);
   MAKE_PROPERTY(simple_threads, is_simple_threads);
+  MAKE_PROPERTY(num_supported_threads, get_num_supported_threads);
 
   MAKE_PROPERTY(started, is_started);
   MAKE_PROPERTY(joinable, is_joinable);

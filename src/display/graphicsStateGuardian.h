@@ -370,6 +370,10 @@ public:
   virtual CPT(RenderState) begin_decal_base_second();
   virtual void finish_decal();
 
+  virtual bool draw_object(CullableObject *object, bool force);
+  bool draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
+                 bool force, Thread *current_thread);
+
   virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,
                                      const GeomVertexDataPipelineReader *data_reader,
                                      size_t num_instances, bool force);

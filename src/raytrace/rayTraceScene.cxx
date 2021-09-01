@@ -156,6 +156,7 @@ RayTraceHitResult RayTraceScene::trace_ray( const LPoint3 &start, const LVector3
         return result;
 }
 
+#if 0
 void RayTraceScene::trace_four_rays(const FourVectors &start, const FourVectors &direction,
         const fltx4 &distance, const u32x4 &mask, RayTraceHitResult4 *res)
 {
@@ -186,3 +187,4 @@ void RayTraceScene::trace_four_rays(const FourVectors &start, const FourVectors 
         res->hit_fraction = MulSIMD( LoadAlignedSIMD( rhit4.ray.tfar ), factor );
         //res->hit = CmpLtSIMD( res->hit_fraction, Four_Ones );
 }
+#endif

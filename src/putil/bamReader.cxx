@@ -332,8 +332,7 @@ resolve() {
     any_completed_this_pass = false;
 
     ObjectPointers::iterator oi;
-    oi = _object_pointers.begin();
-    while (oi != _object_pointers.end()) {
+    for (oi = _object_pointers.begin(); oi != _object_pointers.end();) {
       int object_id = (*oi).first;
       PointerReference &pref = (*oi).second;
 
@@ -353,9 +352,6 @@ resolve() {
         // Now remove this object from the list of things that need
         // completion.  We have to be a bit careful when deleting things from
         // the STL container while we are traversing it.
-        ObjectPointers::iterator old = oi;
-        ++oi;
-        _object_pointers.erase(old);
         any_completed_this_pass = true;
 
         // Does the pointer need to change?
@@ -405,6 +401,8 @@ resolve() {
           created_obj._change_this = nullptr;
           created_obj._change_this_ref = nullptr;
         }
+
+        oi = _object_pointers.erase(oi);
 
       } else {
         // Couldn't complete this object yet; it'll wait for next time.
@@ -474,7 +472,7 @@ change_pointer(const TypedWritable *orig_pointer, const TypedWritable *new_point
       << (void *)new_pointer << ") (" << new_pointer->get_type() << ")\n";
   }
 
-  const vector_int &old_refs = (*ci).second;
+  vector_int old_refs = (*ci).second;
   vector_int &new_refs = _created_objs_by_pointer[new_pointer];
 
   for (vector_int::const_iterator oi = old_refs.begin();
@@ -482,22 +480,26 @@ change_pointer(const TypedWritable *orig_pointer, const TypedWritable *new_point
        ++oi) {
     int object_id = (*oi);
 
-    CreatedObjs::iterator ci = _created_objs.find(object_id);
-    nassertr(ci != _created_objs.end(), false);
-    nassertr((*ci).second._ptr == orig_pointer, false);
+    CreatedObjs::iterator pi = _created_objs.find(object_id);
+    nassertr(pi != _created_objs.end(), false);
+    nassertr((*pi).second._ptr == orig_pointer, false);
 
     TypedWritable *ptr = (TypedWritable *)new_pointer;
-    (*ci).second.set_ptr(ptr, ptr->as_reference_count());
+    (*pi).second.set_ptr(ptr, ptr->as_reference_count());
     new_refs.push_back(object_id);
   }
 
-  _created_objs_by_pointer.erase(ci);
+  _created_objs_by_pointer.erase(orig_pointer);
 
   // Also change the pointer on the finalize_list.
   Finalize::iterator fi = _finalize_list.find((TypedWritable *)orig_pointer);
   if (fi != _finalize_list.end()) {
-    _finalize_list.insert((TypedWritable *)new_pointer);
+    if (bam_cat.is_spam()) {
+      bam_cat.spam()
+        << "removing " << orig_pointer << " from finalize_list\n";
+    }
     _finalize_list.erase(fi);
+    _finalize_list.insert((TypedWritable *)new_pointer);
   }
 
   return true;
@@ -1301,8 +1303,7 @@ resolve_object_pointers(TypedWritable *object,
 
   // First do the PipelineCycler objects.
   CyclerPointers::iterator ci;
-  ci = pref._cycler_pointers.begin();
-  while (ci != pref._cycler_pointers.end()) {
+  for (ci = pref._cycler_pointers.begin(); ci != pref._cycler_pointers.end();) {
     PipelineCyclerBase *cycler = (*ci).first;
     const vector_int &pointer_ids = (*ci).second;
 
@@ -1310,9 +1311,7 @@ resolve_object_pointers(TypedWritable *object,
       // Now remove this cycler from the list of things that need completion.
       // We have to be a bit careful when deleting things from the STL
       // container while we are traversing it.
-      CyclerPointers::iterator old = ci;
-      ++ci;
-      pref._cycler_pointers.erase(old);
+      ci = pref._cycler_pointers.erase(ci);
 
     } else {
       // Couldn't complete this cycler yet; it'll wait for next time.

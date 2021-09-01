@@ -199,7 +199,7 @@ private:
     int _column_index;
   };
 
-  typedef pmap<const InternalName *, DataTypeRecord> DataTypesByName;
+  typedef pflat_hash_map<const InternalName *, DataTypeRecord, pointer_hash> DataTypesByName;
   DataTypesByName _columns_by_name;
 
   int _vertex_array_index;

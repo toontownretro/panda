@@ -1,3 +1,5 @@
+#define BUILD_DIRECTORY
+
 #define LOCAL_LIBS mathutil
 
 #begin lib_target

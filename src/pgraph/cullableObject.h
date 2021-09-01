@@ -46,9 +46,9 @@ public:
                         CPT(TransformState) internal_transform);
 
   INLINE CullableObject(const CullableObject &copy);
+  INLINE CullableObject(CullableObject &&other);
   INLINE void operator = (const CullableObject &copy);
-  
-  virtual CullableObject *make_copy();
+  INLINE void operator = (CullableObject &&other);
 
   bool munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
                   const CullTraverser *traverser, bool force);
@@ -60,15 +60,13 @@ public:
 
   INLINE void set_draw_callback(CallbackObject *draw_callback);
 
-  INLINE void draw_inline(GraphicsStateGuardianBase *gsg,
-                          bool force, Thread *current_thread);
+  //INLINE void draw_inline(GraphicsStateGuardianBase *gsg,
+  //                        bool force, Thread *current_thread);
   INLINE void draw_callback(GraphicsStateGuardianBase *gsg,
                             bool force, Thread *current_thread);
 
-  virtual void ensure_generated_shader(GraphicsStateGuardianBase *gsg);
-
 public:
-  ALLOC_DELETED_CHAIN(CullableObject);
+  //ALLOC_DELETED_CHAIN(CullableObject);
 
   void output(std::ostream &out) const;
 
@@ -77,6 +75,7 @@ public:
   CPT(GeomVertexData) _munged_data;
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;
+
   PT(CallbackObject) _draw_callback;
   CPT(InstanceList) _instances;
   int _num_instances = 1;

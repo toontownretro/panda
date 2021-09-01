@@ -126,7 +126,7 @@ get_array_data() const {
  * GeomVertexRewriter.
  */
 INLINE GeomVertexArrayDataHandle *GeomVertexRewriter::
-get_array_handle() const {
+get_array_handle() {
   return GeomVertexWriter::get_array_handle();
 }
 

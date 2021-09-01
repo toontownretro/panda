@@ -332,9 +332,8 @@ render_thread(CullTraverser *trav, CullTraverserData &data,
     state = state->add_attrib(ColorAttrib::make_vertex());
   }
 
-  CullableObject *object =
-    new CullableObject(geom, state,
-                       data.get_internal_transform(trav));
+  CullableObject object(geom, state,
+                        data.get_internal_transform(trav));
   trav->get_cull_handler()->record_object(object, trav);
 }
 
@@ -378,9 +377,8 @@ render_tape(CullTraverser *trav, CullTraverserData &data,
     state = state->add_attrib(ColorAttrib::make_vertex());
   }
 
-  CullableObject *object =
-    new CullableObject(geom, state,
-                       data.get_internal_transform(trav));
+  CullableObject object(geom, state,
+                        data.get_internal_transform(trav));
   trav->get_cull_handler()->record_object(object, trav);
 }
 
@@ -431,9 +429,8 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
     state = state->add_attrib(ColorAttrib::make_vertex());
   }
 
-  CullableObject *object =
-    new CullableObject(geom, state,
-                       data.get_internal_transform(trav));
+  CullableObject object(geom, state,
+                        data.get_internal_transform(trav));
   trav->get_cull_handler()->record_object(object, trav);
 }
 
@@ -492,9 +489,8 @@ render_tube(CullTraverser *trav, CullTraverserData &data,
     state = state->add_attrib(ColorAttrib::make_vertex());
   }
 
-  CullableObject *object =
-    new CullableObject(geom, state,
-                       data.get_internal_transform(trav));
+  CullableObject object(geom, state,
+                        data.get_internal_transform(trav));
   trav->get_cull_handler()->record_object(object, trav);
 }
 

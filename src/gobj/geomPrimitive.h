@@ -31,10 +31,10 @@
 #include "cycleDataStageWriter.h"
 #include "pipelineCycler.h"
 #include "deletedChain.h"
+#include "graphicsStateGuardianBase.h"
 
 class PreparedGraphicsObjects;
 class IndexBufferContext;
-class GraphicsStateGuardianBase;
 class FactoryParams;
 class GeomPrimitivePipelineReader;
 
@@ -64,6 +64,8 @@ PUBLISHED:
   void operator = (const GeomPrimitive &copy);
   virtual ~GeomPrimitive();
   ALLOC_DELETED_CHAIN(GeomPrimitive);
+
+  INLINE GeomPrimitiveType get_geom_primitive_type() const;
 
   virtual PT(GeomPrimitive) make_copy() const=0;
 
@@ -164,9 +166,9 @@ PUBLISHED:
  */
 
   INLINE CPT(GeomVertexArrayData) get_vertices() const;
-  INLINE CPT(GeomVertexArrayDataHandle) get_vertices_handle(Thread *current_thread) const;
+  INLINE const GeomVertexArrayDataHandle get_vertices_handle(Thread *current_thread) const;
   PT(GeomVertexArrayData) modify_vertices(int num_vertices = -1);
-  INLINE PT(GeomVertexArrayDataHandle) modify_vertices_handle(Thread *current_thread);
+  INLINE GeomVertexArrayDataHandle modify_vertices_handle(Thread *current_thread);
   void set_vertices(const GeomVertexArrayData *vertices, int num_vertices = -1);
   void set_nonindexed_vertices(int first_vertex, int num_vertices);
 
@@ -216,9 +218,9 @@ private:
   static int get_strip_cut_index(NumericType index_type);
 
 public:
-  virtual bool draw(GraphicsStateGuardianBase *gsg,
-                    const GeomPrimitivePipelineReader *reader,
-                    bool force) const=0;
+  INLINE bool draw(GraphicsStateGuardianBase *gsg,
+                   const GeomPrimitivePipelineReader *reader,
+                   bool force) const;
 
   void calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
                          PN_stdfloat &sq_center_dist, bool &found_any,
@@ -250,12 +252,15 @@ private:
   void do_set_index_type(CData *cdata, NumericType index_type);
   PT(GeomVertexArrayData) do_modify_vertices(CData *cdata);
 
+protected:
+  GeomPrimitiveType _geom_primitive_type;
+
 private:
   // A GeomPrimitive keeps a list (actually, a map) of all the
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
   // conversely keeps a list (a set) of all the Geoms that have been prepared
   // there.  When either destructs, it removes itself from the other's list.
-  typedef pmap<PreparedGraphicsObjects *, IndexBufferContext *> Contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, IndexBufferContext *, pointer_hash> Contexts;
   Contexts _contexts;
 
   // This is the data that must be cycled between pipeline stages.
@@ -407,6 +412,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class GraphicsStateGuardian;
 };
 
 INLINE std::ostream &operator << (std::ostream &out, const GeomPrimitive &obj);

@@ -429,7 +429,7 @@ make_average(const EggVertex *first, const EggVertex *second) {
   }
 
   // Now merge the vertex memberships.
-  GroupRef::iterator gi;
+  GroupRef::const_iterator gi;
   for (gi = first->_gref.begin(); gi != first->_gref.end(); ++gi) {
     EggGroup *group = *gi;
     if (second->_gref.count(group)) {

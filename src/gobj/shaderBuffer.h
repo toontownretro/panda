@@ -67,7 +67,7 @@ private:
   UsageHint _usage_hint;
   vector_uchar _initial_data;
 
-  typedef pmap<PreparedGraphicsObjects *, BufferContext *> Contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, BufferContext *, pointer_hash> Contexts;
   Contexts *_contexts = nullptr;
 
 public:

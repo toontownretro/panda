@@ -366,11 +366,11 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
 
   CDReader cdata(_cycler, current_thread);
   GeomList::const_iterator gi;
-  CPT(GeomList) geoms = cdata->get_geoms();
+  const GeomList *geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     CPT(RenderState) geom_state = node_state->compose(entry._state);
-    CPT(Geom) geom = entry._geom.get_read_pointer();
+    const Geom *geom = entry._geom.get_read_pointer();
 
     // Munge the geom as required by the GSG.
     PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
@@ -470,9 +470,9 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
 
   CDReader cdata(_cycler, current_thread);
   GeomList::const_iterator gi;
-  CPT(GeomList) geoms = cdata->get_geoms();
+  const GeomList *geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
-    CPT(Geom) geom = (*gi)._geom.get_read_pointer();
+    const Geom *geom = (*gi)._geom.get_read_pointer();
     geom->calc_tight_bounds(min_point, max_point, found_any,
                             geom->get_animated_vertex_data(true, current_thread),
                             !next_transform->is_identity(), mat,
@@ -520,13 +520,12 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     // If there's only one Geom, we don't need to bother culling each individual
     // Geom bounding volume against the view frustum, since we've already
     // checked the one on the GeomNode itself.
-    CPT(Geom) geom = geoms.get_geom(0);
+    const Geom *geom = geoms.get_geom(0);
     if (!geom->is_empty()) {
       CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
-        CullableObject *object =
-          new CullableObject(std::move(geom), std::move(state), std::move(internal_transform));
-        object->_instances = data._instances;
+        CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
+        object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
     }
@@ -534,7 +533,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   else {
     // More than one Geom.
     for (int i = 0; i < num_geoms; i++) {
-      CPT(Geom) geom = geoms.get_geom(i);
+      const Geom *geom = geoms.get_geom(i);
       if (geom->is_empty()) {
         continue;
       }
@@ -548,9 +547,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       if (data._instances != nullptr) {
         // Draw each individual instance.  We don't bother culling each
         // individual Geom for each instance; that is probably way too slow.
-        CullableObject *object =
-          new CullableObject(std::move(geom), std::move(state), internal_transform);
-        object->_instances = data._instances;
+        CullableObject object(std::move(geom), std::move(state), internal_transform);
+        object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
         continue;
       }
@@ -587,8 +585,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         }
       }
 
-      CullableObject *object =
-        new CullableObject(std::move(geom), std::move(state), internal_transform);
+      CullableObject object(std::move(geom), std::move(state), internal_transform);
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
@@ -978,14 +975,14 @@ compute_internal_bounds(CPT(BoundingVolume) &internal_bounds,
   bool all_box = true;
 
   GeomList::const_iterator gi;
-  CPT(GeomList) geoms = cdata->get_geoms();
+  const GeomList *geoms = cdata->get_geoms();
   child_volumes.reserve(geoms->size());
   child_volumes_ref.reserve(geoms->size());
 
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
-    CPT(Geom) geom = entry._geom.get_read_pointer();
-    CPT(BoundingVolume) volume = geom->get_bounds();
+    const Geom *geom = entry._geom.get_read_pointer();
+    const BoundingVolume *volume = geom->get_bounds();
 
     if (!volume->is_empty()) {
       child_volumes.push_back(volume);

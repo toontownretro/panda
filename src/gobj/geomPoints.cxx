@@ -26,6 +26,7 @@ GeomPoints::
 GeomPoints(GeomPoints::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_points;
 }
 
 /**
@@ -100,15 +101,6 @@ get_num_vertices_per_primitive() const {
 int GeomPoints::
 get_min_num_vertices_per_primitive() const {
   return 1;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomPoints::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_points(reader, force);
 }
 
 /**

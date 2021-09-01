@@ -25,7 +25,7 @@ CullBinFixed(const std::string &name, GraphicsStateGuardianBase *gsg,
  *
  */
 INLINE CullBinFixed::ObjectData::
-ObjectData(CullableObject *object, int draw_order) :
+ObjectData(CullableObject &object, int draw_order) :
   _object(object),
   _draw_order(draw_order)
 {

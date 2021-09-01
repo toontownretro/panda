@@ -27,6 +27,7 @@ GeomTrifans::
 GeomTrifans(GeomTrifans::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_triangle_fans;
 }
 
 /**
@@ -77,15 +78,6 @@ get_geom_rendering() const {
   } else {
     return GR_triangle_fan;
   }
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomTrifans::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_trifans(reader, force);
 }
 
 /**

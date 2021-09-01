@@ -64,6 +64,7 @@ PUBLISHED:
         }
 
 public:
+#if 0
 #ifndef CPPPARSER
         INLINE void trace_four_lines( const FourVectors &start, const FourVectors &end,
                 const u32x4 &mask, RayTraceHitResult4 *res )
@@ -76,6 +77,7 @@ public:
         }
         void trace_four_rays( const FourVectors &origin, const FourVectors &direction,
                 const fltx4 &distance, const u32x4 &mask, RayTraceHitResult4 *res );
+#endif
 #endif
 
 private:

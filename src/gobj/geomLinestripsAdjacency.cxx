@@ -29,6 +29,7 @@ GeomLinestripsAdjacency::
 GeomLinestripsAdjacency(GeomEnums::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_line_strips_adj;
 }
 
 /**
@@ -103,15 +104,6 @@ get_min_num_vertices_per_primitive() const {
 int GeomLinestripsAdjacency::
 get_num_unused_vertices_per_primitive() const {
   return 1;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomLinestripsAdjacency::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_linestrips_adj(reader, force);
 }
 
 /**

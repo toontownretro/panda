@@ -68,7 +68,7 @@ get_num_rows() const {
  */
 INLINE bool GeomVertexArrayData::
 set_num_rows(int n) {
-  return modify_handle()->set_num_rows(n);
+  return modify_handle().set_num_rows(n);
 }
 
 /**
@@ -82,7 +82,7 @@ set_num_rows(int n) {
  */
 INLINE bool GeomVertexArrayData::
 unclean_set_num_rows(int n) {
-  return modify_handle()->unclean_set_num_rows(n);
+  return modify_handle().unclean_set_num_rows(n);
 }
 
 /**
@@ -94,7 +94,7 @@ unclean_set_num_rows(int n) {
  */
 INLINE bool GeomVertexArrayData::
 reserve_num_rows(int n) {
-  return modify_handle()->reserve_num_rows(n);
+  return modify_handle().reserve_num_rows(n);
 }
 
 /**
@@ -103,7 +103,7 @@ reserve_num_rows(int n) {
  */
 INLINE void GeomVertexArrayData::
 clear_rows() {
-  return modify_handle()->clear_rows();
+  return modify_handle().clear_rows();
 }
 
 /**
@@ -159,9 +159,9 @@ request_resident(Thread *current_thread) const {
  * threads attempting to read or write the data, until the returned object
  * destructs.
  */
-INLINE CPT(GeomVertexArrayDataHandle) GeomVertexArrayData::
+INLINE const GeomVertexArrayDataHandle GeomVertexArrayData::
 get_handle(Thread *current_thread) const {
-  return new GeomVertexArrayDataHandle(this, current_thread);
+  return GeomVertexArrayDataHandle(this, current_thread);
 }
 
 /**
@@ -170,9 +170,9 @@ get_handle(Thread *current_thread) const {
  * any other threads attempting to read or write the data, until the returned
  * object destructs.
  */
-INLINE PT(GeomVertexArrayDataHandle) GeomVertexArrayData::
+INLINE GeomVertexArrayDataHandle GeomVertexArrayData::
 modify_handle(Thread *current_thread) {
-  return new GeomVertexArrayDataHandle(PT(GeomVertexArrayData)(this), current_thread);
+  return GeomVertexArrayDataHandle(PT(GeomVertexArrayData)(this), current_thread);
 }
 
 /**
@@ -292,9 +292,6 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::update_type(this, get_class_type());
-#endif
 }
 
 /**
@@ -317,9 +314,6 @@ GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::update_type(this, get_class_type());
-#endif
 }
 
 /**
@@ -343,9 +337,6 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::update_type(this, get_class_type());
-#endif
 }
 
 /**
@@ -368,9 +359,6 @@ GeomVertexArrayDataHandle(GeomVertexArrayData *object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::update_type(this, get_class_type());
-#endif
 }
 
 /**
@@ -379,20 +367,24 @@ GeomVertexArrayDataHandle(GeomVertexArrayData *object,
 INLINE GeomVertexArrayDataHandle::
 ~GeomVertexArrayDataHandle() {
 #ifdef _DEBUG
-  nassertv(_object->test_ref_count_nonzero());
+  if (_object != nullptr) {
+    nassertv(_object->test_ref_count_nonzero());
+  }
 #endif // _DEBUG
 
-  if (_writable) {
+  if (_writable && _object != nullptr) {
     _object->_cycler.release_write(_cdata);
   }
 
-  // We must release the lock *before* we decrement the reference count,
-  // below.
-  _cdata->_rw_lock.release();
+  if (_cdata != nullptr) {
+    // We must release the lock *before* we decrement the reference count,
+    // below.
+    _cdata->_rw_lock.release();
 
 #ifdef DO_PIPELINING
-  unref_delete((CycleData *)_cdata);
+    unref_delete((CycleData *)_cdata);
 #endif  // DO_PIPELINING
+  }
 
 #ifdef _DEBUG
   _object = nullptr;

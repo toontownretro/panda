@@ -97,8 +97,8 @@ PUBLISHED:
 
   INLINE bool request_resident(Thread *current_thread = Thread::get_current_thread()) const;
 
-  INLINE CPT(GeomVertexArrayDataHandle) get_handle(Thread *current_thread = Thread::get_current_thread()) const;
-  INLINE PT(GeomVertexArrayDataHandle) modify_handle(Thread *current_thread = Thread::get_current_thread());
+  INLINE const GeomVertexArrayDataHandle get_handle(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE GeomVertexArrayDataHandle modify_handle(Thread *current_thread = Thread::get_current_thread());
 
   void prepare(PreparedGraphicsObjects *prepared_objects);
   bool is_prepared(PreparedGraphicsObjects *prepared_objects) const;
@@ -137,8 +137,8 @@ private:
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
   // conversely keeps a list (a set) of all the Geoms that have been prepared
   // there.  When either destructs, it removes itself from the other's list.
-  typedef pmap<PreparedGraphicsObjects *, VertexBufferContext *> Contexts;
-  Contexts *_contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, VertexBufferContext *, pointer_hash> Contexts;
+  Contexts _contexts;
 
   // This data is only needed when reading from a bam file.
   class BamAuxData : public BamReader::AuxData {
@@ -247,7 +247,7 @@ private:
  * This class serves in lieu of a pair of GeomVertexArrayDataPipelineReader
  * and GeomVertexArrayDataPipelineWriter classes
  */
-class EXPCL_PANDA_GOBJ GeomVertexArrayDataHandle : public ReferenceCount, public GeomEnums {
+class EXPCL_PANDA_GOBJ GeomVertexArrayDataHandle : public GeomEnums {
 private:
   INLINE GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
                                    Thread *current_thread);
@@ -262,11 +262,12 @@ PUBLISHED:
   INLINE ~GeomVertexArrayDataHandle();
 
 public:
-  GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &) = delete;
+  GeomVertexArrayDataHandle();
+  GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &);
+  GeomVertexArrayDataHandle(GeomVertexArrayDataHandle &&);
 
-  ALLOC_DELETED_CHAIN_DECL(GeomVertexArrayDataHandle);
-
-  GeomVertexArrayDataHandle &operator = (const GeomVertexArrayDataHandle &) = delete;
+  void operator = (const GeomVertexArrayDataHandle &);
+  void operator = (GeomVertexArrayDataHandle &&);
 
   INLINE Thread *get_current_thread() const;
 
@@ -325,7 +326,7 @@ PUBLISHED:
 
 private:
   PT(GeomVertexArrayData) _object;
-  Thread *const _current_thread;
+  Thread * _current_thread;
   GeomVertexArrayData::CData *_cdata;
   bool _writable;
 
@@ -334,7 +335,6 @@ public:
     return _type_handle;
   }
   static void init_type() {
-    ReferenceCount::init_type();
     register_type(_type_handle, "GeomVertexArrayDataHandle",
                   ReferenceCount::get_class_type());
   }

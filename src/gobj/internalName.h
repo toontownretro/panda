@@ -106,7 +106,7 @@ public:
 #ifdef HAVE_PYTHON
   // It's OK for us to define it here since these are just pointers of which
   // the reference is maintained indefinitely.
-  typedef phash_map<PyObject *, InternalName *, pointer_hash> PyInternTable;
+  typedef pflat_hash_map<PyObject *, InternalName *, pointer_hash> PyInternTable;
   static PyInternTable _py_intern_table;
 #endif
 
@@ -114,11 +114,11 @@ private:
   PT(InternalName) _parent;
   std::string _basename;
 
-  typedef phash_map<std::string, InternalName *, string_hash> NameTable;
+  typedef pflat_hash_map<std::string, InternalName *, string_hash> NameTable;
   NameTable _name_table;
   LightMutex _name_table_lock;
 
-  typedef phash_map<const char *, PT(InternalName), pointer_hash> LiteralTable;
+  typedef pflat_hash_map<const char *, PT(InternalName), pointer_hash> LiteralTable;
   static LiteralTable _literal_table;
   static LightMutex _literal_table_lock;
 

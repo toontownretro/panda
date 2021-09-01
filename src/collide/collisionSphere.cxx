@@ -582,9 +582,9 @@ fill_viz_geom() {
   PT(GeomLinestrips) ring = new GeomLinestrips(Geom::UH_static);
   ring->set_index_type(GeomEnums::NT_uint16);
   {
-    PT(GeomVertexArrayDataHandle) handle = ring->modify_vertices_handle(current_thread);
-    handle->unclean_set_num_rows(num_stacks * 2 + 1);
-    uint16_t *ptr = (uint16_t *)handle->get_write_pointer();
+    GeomVertexArrayDataHandle handle = ring->modify_vertices_handle(current_thread);
+    handle.unclean_set_num_rows(num_stacks * 2 + 1);
+    uint16_t *ptr = (uint16_t *)handle.get_write_pointer();
     *ptr++ = 0;
     for (int i = 0; i < num_stacks; ++i) {
       *ptr++ = i * 2 + 1;

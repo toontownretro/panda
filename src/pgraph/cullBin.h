@@ -51,7 +51,7 @@ public:
 
   virtual PT(CullBin) make_next() const;
 
-  virtual void add_object(CullableObject *object, Thread *current_thread)=0;
+  virtual void add_object(CullableObject &object, Thread *current_thread)=0;
   virtual void finish_cull(SceneSetup *scene_setup, Thread *current_thread);
 
   virtual void draw(bool force, Thread *current_thread)=0;
@@ -77,10 +77,10 @@ protected:
   class EXPCL_PANDA_PGRAPH ResultGraphBuilder {
   public:
     ResultGraphBuilder(PandaNode *root_node);
-    void add_object(CullableObject *object);
+    void add_object(CullableObject &object);
 
   private:
-    void record_one_object(GeomNode *node, CullableObject *object);
+    void record_one_object(GeomNode *node, CullableObject &object);
 
   private:
     int _object_index;

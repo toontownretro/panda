@@ -226,7 +226,7 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
     reflect_program();
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 
   // Restore the active shader.
   if (_glgsg->_current_shader_context == nullptr) {
@@ -2019,7 +2019,7 @@ release_resources() {
 
   _modules.clear();
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -2057,7 +2057,7 @@ bind() {
                  << _shader->get_filename() << "\n";
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -2070,7 +2070,7 @@ unbind() {
   }
 
   _glgsg->_glUseProgram(0);
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -2532,7 +2532,7 @@ issue_parameters(int altered) {
     }
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -2558,9 +2558,13 @@ update_transform_table(const TransformTable *table) {
 #endif
       }
     }
-    for (; i < num_matrices; ++i) {
-      matrices[i] = LMatrix4f::ident_mat();
-    }
+    // I think leaving this out should be okay.  It is a mistake for a vertex
+    // to index transforms outside of its transform table.  You'll get a nice
+    // visual clue if a vertex does by reading from junk memory.
+    //
+    //for (; i < num_matrices; ++i) {
+    //  matrices[i] = LMatrix4f::ident_mat();
+    //}
     _glgsg->_glUniformMatrix4fv(_transform_table_index, _transform_table_size,
                                 (_shader->get_language() == Shader::SL_Cg),
                                 (float *)matrices);
@@ -2586,11 +2590,15 @@ update_transform_table(const TransformTable *table) {
         vectors[i * 3 + 2] = matrix.get_col(2);
       }
     }
-    for (; i < num_matrices; ++i) {
-      vectors[i * 3 + 0].set(1, 0, 0, 0);
-      vectors[i * 3 + 1].set(0, 1, 0, 0);
-      vectors[i * 3 + 2].set(0, 0, 1, 0);
-    }
+    // I think leaving this out should be okay.  It is a mistake for a vertex
+    // to index transforms outside of its transform table.  You'll get a nice
+    // visual clue if a vertex does by reading from junk memory.
+    //
+    //for (; i < num_matrices; ++i) {
+    //  vectors[i * 3 + 0].set(1, 0, 0, 0);
+    //  vectors[i * 3 + 1].set(0, 1, 0, 0);
+    //  vectors[i * 3 + 2].set(0, 0, 1, 0);
+    //}
     _glgsg->_glUniformMatrix3x4fv(_transform_table_index, _transform_table_size,
                                   GL_FALSE, (float *)vectors);
   }
@@ -2632,7 +2640,7 @@ disable_shader_vertex_arrays() {
     }
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -2824,7 +2832,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
     update_slider_table(table);
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 
   return true;
 }
@@ -2920,7 +2928,7 @@ disable_shader_texture_bindings() {
     }
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -3149,8 +3157,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
 
         // Check if we have already specified this texture handle.  If so, no
         // need to call glUniformHandle again.
-        pmap<GLint, GLuint64>::const_iterator it;
-        it = _glsl_uniform_handles.find(p);
+        auto it = _glsl_uniform_handles.find(p);
         if (it != _glsl_uniform_handles.end() && it->second == handle) {
           // Already specified.
           continue;
@@ -3208,7 +3215,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
   }
 #endif
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
 }
 
 /**
@@ -3415,7 +3422,7 @@ attach_shader(const ShaderModule *module) {
   if (!handle) {
     GLCAT.error()
       << "Could not create a GLSL " << stage << " shader.\n";
-    _glgsg->report_my_gl_errors();
+    report_my_gl_errors(_glgsg);
     return false;
   }
 
@@ -3811,7 +3818,7 @@ compile_and_link() {
 #endif  // NDEBUG
   }
 
-  _glgsg->report_my_gl_errors();
+  report_my_gl_errors(_glgsg);
   return valid;
 }
 

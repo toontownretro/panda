@@ -36,7 +36,8 @@ compute_mass_properties() {
   physx::PxMassProperties props = physx::PxRigidBodyExt::computeMassPropertiesFromShapes(shapes, num_shapes);
   get_rigid_body()->setCMassLocalPose(physx::PxTransform(props.centerOfMass));
   get_rigid_body()->setMass(props.mass);
-  get_rigid_body()->setMassSpaceInertiaTensor(physx::PxMassProperties::getMassSpaceInertia(props.inertiaTensor, physx::PxQuat()));
+  physx::PxQuat mass_frame;
+  get_rigid_body()->setMassSpaceInertiaTensor(physx::PxMassProperties::getMassSpaceInertia(props.inertiaTensor, mass_frame));
 }
 
 /**

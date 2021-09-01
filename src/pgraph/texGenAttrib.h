@@ -83,14 +83,14 @@ private:
     NodePath _light;
     LTexCoord3 _constant_value;
   };
-  typedef pmap<PT(TextureStage), ModeDef> Stages;
+  typedef pflat_hash_map<PT(TextureStage), ModeDef> Stages;
   Stages _stages;
 
   // This is a set of TextureStage pointers for which texture coordinates will
   // not be needed from the Geom.  It's redundant; it's almost the same set
   // that is listed in _stages, above.  It's just here as an optimization
   // during rendering.
-  typedef pset<TextureStage *> NoTexCoordStages;
+  typedef pflat_hash_set<TextureStage *, pointer_hash> NoTexCoordStages;
   NoTexCoordStages _no_texcoords;
 
   // This element is only used during reading from a bam file.  It has no

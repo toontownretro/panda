@@ -169,7 +169,7 @@ get_array_data() const {
  */
 INLINE const GeomVertexArrayDataHandle *GeomVertexReader::
 get_array_handle() const {
-  return _handle;
+  return &_handle;
 }
 
 /**
@@ -683,15 +683,15 @@ get_packer() const {
  */
 INLINE bool GeomVertexReader::
 set_pointer(int row) {
-  _pointer_begin = _handle->get_read_pointer(_force);
-  if (_pointer_begin == nullptr && _handle->get_data_size_bytes() != 0) {
+  _pointer_begin = _handle.get_read_pointer(_force);
+  if (_pointer_begin == nullptr && _handle.get_data_size_bytes() != 0) {
     // Vertex data is not resident.
     set_column(0, nullptr);
     return false;
   }
 
   // Vertex data is resident, or just empty.
-  _pointer_end = _pointer_begin + _handle->get_data_size_bytes();
+  _pointer_end = _pointer_begin + _handle.get_data_size_bytes();
   quick_set_pointer(row);
   return true;
 }

@@ -189,8 +189,8 @@ protected:
   int _num_defines;
 
 private:
-  typedef phash_map<ShaderObjectSetup, PT(Shader)> ObjectSetupCache;
-  typedef phash_map<ShaderSetup, CPT(RenderAttrib)> SetupCache;
+  typedef pflat_hash_map<ShaderObjectSetup, PT(Shader)> ObjectSetupCache;
+  typedef pflat_hash_map<ShaderSetup, CPT(RenderAttrib)> SetupCache;
   ObjectSetupCache _obj_cache;
   SetupCache _cache;
 

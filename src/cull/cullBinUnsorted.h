@@ -35,14 +35,14 @@ public:
                            GraphicsStateGuardianBase *gsg,
                            const PStatCollector &draw_region_pcollector);
 
-  virtual void add_object(CullableObject *object, Thread *current_thread);
+  virtual void add_object(CullableObject &object, Thread *current_thread);
   virtual void draw(bool force, Thread *current_thread);
 
 protected:
   virtual void fill_result_graph(ResultGraphBuilder &builder);
 
 private:
-  typedef pvector<CullableObject *> Objects;
+  typedef pvector<CullableObject> Objects;
   Objects _objects;
 
 public:

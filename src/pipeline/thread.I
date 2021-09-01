@@ -185,6 +185,19 @@ is_simple_threads() {
 }
 
 /**
+ * Returns the number of concurrent threads supported by the hardware.  You
+ * should not attempt to spawn more threads than the number returned by this
+ * method.  Returns 0 if threading is not supported.
+ */
+INLINE int Thread::
+get_num_supported_threads() {
+  if (!support_threads) {
+    return 0;
+  }
+  return (int)std::thread::hardware_concurrency();
+}
+
+/**
  * Suspends the current thread for at least the indicated amount of time.  It
  * might be suspended for longer.
  */

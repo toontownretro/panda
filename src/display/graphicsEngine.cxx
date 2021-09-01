@@ -1546,7 +1546,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
         PT(DisplayRegion) dr = win->get_active_display_region(i);
         if (dr != nullptr) {
           PT(SceneSetup) scene_setup;
-          PT(CullResult) cull_result;
+          CullResult cull_result;
           CullKey key;
           {
             PStatTimer timer(_cull_setup_pcollector, current_thread);
@@ -1587,14 +1587,14 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
             // We have not used this camera already in this thread.  Perform
             // the cull operation.
             cull_result = dr->get_cull_result(current_thread);
-            if (cull_result != nullptr) {
-              cull_result = cull_result->make_next();
+            if (!cull_result.is_empty()) {
+              cull_result = cull_result.make_next();
             } else {
               // This DisplayRegion has no cull results; draw it.
-              cull_result = new CullResult(gsg, dr->get_draw_region_pcollector());
+              cull_result = CullResult(gsg, dr->get_draw_region_pcollector());
             }
             (*aci).second = dr;
-            cull_to_bins(win, gsg, dr, scene_setup, cull_result, current_thread);
+            cull_to_bins(win, gsg, dr, scene_setup, &cull_result, current_thread);
 
           } else {
             // We have already culled a scene using this camera in this
@@ -1622,7 +1622,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
     GraphicsOutput *win = dr->get_window();
     PStatTimer timer(win->get_cull_window_pcollector(), current_thread);
 
-    PT(CullResult) cull_result;
+    CullResult cull_result;
 
     // Are the cull bounds in view of another camera?
     GeometricBoundingVolume *frustum = scene_setup->get_view_frustum();
@@ -1630,13 +1630,13 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
         non_shadow_bounds[scene_setup->get_scene_root()].contains(frustum)) {
       GraphicsStateGuardian *gsg = win->get_gsg();
       cull_result = dr->get_cull_result(current_thread);
-      if (cull_result != nullptr) {
-        cull_result = cull_result->make_next();
+      if (!cull_result.is_empty()) {
+        cull_result = cull_result.make_next();
       } else {
         // This DisplayRegion has no cull results; draw it.
-        cull_result = new CullResult(gsg, dr->get_draw_region_pcollector());
+        cull_result = CullResult(gsg, dr->get_draw_region_pcollector());
       }
-      cull_to_bins(win, gsg, dr, scene_setup, cull_result, current_thread);
+      cull_to_bins(win, gsg, dr, scene_setup, &cull_result, current_thread);
     }
     else if (display_cat.is_spam()) {
       display_cat.spam()
@@ -2090,11 +2090,11 @@ do_draw(GraphicsOutput *win, GraphicsStateGuardian *gsg, DisplayRegion *dr, Thre
 
   gsg->push_group_marker(dr->get_debug_name());
 
-  PT(CullResult) cull_result;
+  const CullResult *cull_result = nullptr;
   PT(SceneSetup) scene_setup;
   {
     DisplayRegion::CDCullReader cdata(dr->_cycler_cull, current_thread);
-    cull_result = cdata->_cull_result;
+    cull_result = &cdata->_cull_result;
     scene_setup = cdata->_scene_setup;
   }
 
@@ -2122,7 +2122,7 @@ do_draw(GraphicsOutput *win, GraphicsStateGuardian *gsg, DisplayRegion *dr, Thre
     gsg->clear_before_callback();
     gsg->set_state_and_transform(state, TransformState::make_identity());
 
-    DisplayRegionDrawCallbackData cbdata(cull_result, scene_setup);
+    DisplayRegionDrawCallbackData cbdata((CullResult *)cull_result, scene_setup);
     cbobj->do_callback(&cbdata);
 
     if (cbdata.get_lost_state()) {
@@ -2130,7 +2130,7 @@ do_draw(GraphicsOutput *win, GraphicsStateGuardian *gsg, DisplayRegion *dr, Thre
       gsg->clear_state_and_transform();
     }
 
-  } else if (cull_result == nullptr || scene_setup == nullptr) {
+  } else if (cull_result == nullptr || cull_result->is_empty() || scene_setup == nullptr) {
     // Nothing to see here.
 
   } else if (dr->is_stereo()) {
@@ -2147,7 +2147,7 @@ do_draw(GraphicsOutput *win, GraphicsStateGuardian *gsg, DisplayRegion *dr, Thre
 
   } else {
     if (gsg->begin_scene()) {
-      cull_result->draw(current_thread);
+      ((CullResult *)cull_result)->draw(current_thread);
       gsg->end_scene();
     }
   }

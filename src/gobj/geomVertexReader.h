@@ -147,7 +147,7 @@ private:
   GeomVertexColumn::Packer *_packer;
   int _stride;
 
-  CPT(GeomVertexArrayDataHandle) _handle;
+  GeomVertexArrayDataHandle _handle;
   const unsigned char *_pointer_begin;
   const unsigned char *_pointer_end;
   const unsigned char *_pointer;

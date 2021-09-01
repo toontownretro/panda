@@ -681,7 +681,7 @@ enqueue_object(const TypedWritable *object) {
 
     StateMap::iterator si;
     bool inserted;
-    tie(si, inserted) =
+    std::tie(si, inserted) =
       _state_map.insert(StateMap::value_type(object, StoreState(_next_object_id)));
     nassertr(inserted, false);
 

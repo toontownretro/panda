@@ -49,8 +49,8 @@ private:
   std::string _after_defines;
   SourceFormat _format;
 
-  typedef phash_map<Filename, CPT(ShaderSource), string_hash> SourceCache;
-  typedef phash_map<std::string, CPT(ShaderSource), string_hash> RawSourceCache;
+  typedef pflat_hash_map<Filename, CPT(ShaderSource), string_hash> SourceCache;
+  typedef pflat_hash_map<std::string, CPT(ShaderSource), string_hash> RawSourceCache;
   static SourceCache _cache;
   static RawSourceCache _raw_cache;
 };

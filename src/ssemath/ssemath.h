@@ -1806,7 +1806,9 @@ INLINE float SubFloat(const fltx4 &a, int idx)
         // NOTE: if the output goes into a register, this causes a Load-Hit-Store stall (don't mix fpu/vpu math!)
 #ifndef __GNUC__
         return a.m128_f32[idx];
+#pragma message("not gnuc")
 #else
+#pragma message("yes gnuc")
         return (reinterpret_cast<float const *>(&a))[idx];
 #endif
 }

@@ -86,6 +86,8 @@ wp_callback(void *) {
 CPT(GeomVertexFormat) CLP(GeomMunger)::
 munge_format_impl(const GeomVertexFormat *orig,
                   const GeomVertexAnimationSpec &animation) {
+  return orig;
+
   PT(GeomVertexFormat) new_format = new GeomVertexFormat(*orig);
   new_format->set_animation(animation);
 
@@ -166,6 +168,7 @@ munge_format_impl(const GeomVertexFormat *orig,
        color_type->get_start(), color_type->get_column_alignment());
   }
 
+#if 0
   if (animation.get_animation_type() == AT_hardware) {
     // If we want hardware animation, we need to reserve space for the blend
     // weights.
@@ -200,6 +203,7 @@ munge_format_impl(const GeomVertexFormat *orig,
       new_format->add_array(new_array_format);
     }
   }
+#endif
 
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format(new_format);
 
@@ -291,6 +295,8 @@ munge_format_impl(const GeomVertexFormat *orig,
  */
 CPT(GeomVertexFormat) CLP(GeomMunger)::
 premunge_format_impl(const GeomVertexFormat *orig) {
+  return orig;
+
   PT(GeomVertexFormat) new_format = new GeomVertexFormat(*orig);
 
   CLP(GraphicsStateGuardian) *glgsg;

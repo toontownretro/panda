@@ -148,7 +148,7 @@ private:
 
   // We don't keep a reference to the InternalName, since this is also already
   // stored on the ShaderInput object.
-  typedef pmap<const InternalName *, ShaderInput> Inputs;
+  typedef pflat_hash_map<const InternalName *, ShaderInput, pointer_hash> Inputs;
   Inputs _inputs;
 
   friend class Extension<NodePath>;

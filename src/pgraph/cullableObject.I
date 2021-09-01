@@ -16,9 +16,6 @@
  */
 INLINE CullableObject::
 CullableObject() {
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::record_pointer(this, get_class_type());
-#endif
 }
 
 /**
@@ -32,9 +29,11 @@ CullableObject(CPT(Geom) geom, CPT(RenderState) state,
   _state(std::move(state)),
   _internal_transform(std::move(internal_transform))
 {
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::record_pointer(this, get_class_type());
-#endif
+  if (_geom != nullptr) {
+    _munged_data = _geom->get_vertex_data();
+  } else {
+    _munged_data = nullptr;
+  }
 }
 
 /**
@@ -47,9 +46,18 @@ CullableObject(const CullableObject &copy) :
   _state(copy._state),
   _internal_transform(copy._internal_transform)
 {
-#ifdef DO_MEMORY_USAGE
-  MemoryUsage::record_pointer(this, get_class_type());
-#endif
+}
+
+/**
+ * Moves the CullableObject.
+ */
+INLINE CullableObject::
+CullableObject(CullableObject &&other) :
+  _geom(std::move(other._geom)),
+  _munged_data(std::move(other._munged_data)),
+  _state(std::move(other._state)),
+  _internal_transform(std::move(other._internal_transform))
+{
 }
 
 /**
@@ -65,11 +73,26 @@ operator = (const CullableObject &copy) {
 }
 
 /**
+ * Copies the CullableObject.
+ */
+INLINE void CullableObject::
+operator = (CullableObject &&other) {
+  _geom = std::move(other._geom);
+  _munged_data = std::move(other._munged_data);
+  _state = std::move(other._state);
+  _internal_transform = std::move(other._internal_transform);
+  _draw_callback = std::move(other._draw_callback);
+}
+
+/**
  * Draws the cullable object on the GSG immediately, in the GSG's current
  * state.  This should only be called from the draw thread.
  */
 INLINE void CullableObject::
 draw(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
+  gsg->draw_object(this, force);
+
+/*
   if (UNLIKELY(_draw_callback != nullptr)) {
     // It has a callback associated.
     gsg->clear_before_callback();
@@ -101,6 +124,7 @@ draw(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
       geom_reader.draw(gsg, &data_reader, _num_instances, force);
     }
   }
+  */
 }
 
 /**
@@ -143,10 +167,12 @@ flush_level() {
  * state.  This should only be called from the draw thread.  Assumes the GSG
  * has already been set to the appropriate state.
  */
-INLINE void CullableObject::
-draw_inline(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
+//INLINE void CullableObject::
+//draw_inline(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
+  /*
   _geom->draw(gsg, _munged_data, _num_instances, force, current_thread);
-}
+  */
+//}
 
 /**
  * Invokes the draw callback, assuming one is set.  Crashes if not.

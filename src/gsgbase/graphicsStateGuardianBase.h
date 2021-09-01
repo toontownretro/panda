@@ -61,6 +61,7 @@ class ShaderContext;
 class ShaderBuffer;
 class RenderState;
 class TransformState;
+class CullableObject;
 
 class ColorScaleAttrib;
 class TexMatrixAttrib;
@@ -199,6 +200,8 @@ public:
   // by the appropriate Geom and NodeTransition types.  They're public only
   // because it would be too inconvenient to declare each of those types to be
   // friends of this class.
+
+  virtual bool draw_object(CullableObject *object, bool force)=0;
 
   virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,
                                      const GeomVertexDataPipelineReader *data_reader,

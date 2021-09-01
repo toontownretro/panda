@@ -176,9 +176,9 @@ public:
 
   virtual bool supports_pixel_zoom() const;
 
-  INLINE void set_cull_result(PT(CullResult) cull_result, PT(SceneSetup) scene_setup,
+  INLINE void set_cull_result(CullResult &&cull_result, PT(SceneSetup) scene_setup,
                               Thread *current_thread);
-  INLINE CullResult *get_cull_result(Thread *current_thread) const;
+  INLINE const CullResult &get_cull_result(Thread *current_thread) const;
   INLINE SceneSetup *get_scene_setup(Thread *current_thread) const;
 
   INLINE PStatCollector &get_cull_region_pcollector();
@@ -270,7 +270,7 @@ private:
       return DisplayRegion::get_class_type();
     }
 
-    PT(CullResult) _cull_result;
+    CullResult _cull_result;
     PT(SceneSetup) _scene_setup;
   };
   PipelineCycler<CDataCull> _cycler_cull;

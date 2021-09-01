@@ -30,6 +30,7 @@ GeomTriangles::
 GeomTriangles(GeomTriangles::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_triangles;
 }
 
 /**
@@ -151,15 +152,6 @@ make_adjacency() const {
 int GeomTriangles::
 get_num_vertices_per_primitive() const {
   return 3;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomTriangles::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_triangles(reader, force);
 }
 
 /**

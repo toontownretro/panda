@@ -559,7 +559,7 @@ protected:
   friend class ShaderContext;
   friend class PreparedGraphicsObjects;
 
-  typedef pmap <PreparedGraphicsObjects *, ShaderContext *> Contexts;
+  typedef pflat_hash_map<PreparedGraphicsObjects *, ShaderContext *, pointer_hash> Contexts;
   Contexts _contexts;
 
   PStatCollector _prepare_shader_pcollector;

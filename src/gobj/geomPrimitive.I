@@ -12,6 +12,16 @@
  */
 
 /**
+ * Returns the type of rendering primitive this GeomPrimtive represents.  This
+ * corresponds exactly to the method that will be called on the GSG to draw
+ * this primitive.
+ */
+INLINE GeomPrimitive::GeomPrimitiveType GeomPrimitive::
+get_geom_primitive_type() const {
+  return _geom_primitive_type;
+}
+
+/**
  * Returns the ShadeModel hint for this primitive.  This is intended as a hint
  * to the renderer to tell it how the per-vertex colors and normals are
  * applied.
@@ -257,19 +267,19 @@ get_vertices() const {
 /**
  * Equivalent to get_vertices().get_handle().
  */
-INLINE CPT(GeomVertexArrayDataHandle) GeomPrimitive::
+INLINE const GeomVertexArrayDataHandle GeomPrimitive::
 get_vertices_handle(Thread *current_thread) const {
   CDReader cdata(_cycler, current_thread);
-  return new GeomVertexArrayDataHandle(cdata->_vertices.get_read_pointer(current_thread), current_thread);
+  return GeomVertexArrayDataHandle(cdata->_vertices.get_read_pointer(current_thread), current_thread);
 }
 
 /**
  * Equivalent to modify_vertices().get_handle().
  */
-INLINE PT(GeomVertexArrayDataHandle) GeomPrimitive::
+INLINE GeomVertexArrayDataHandle GeomPrimitive::
 modify_vertices_handle(Thread *current_thread) {
   CDWriter cdata(_cycler, true, current_thread);
-  return new GeomVertexArrayDataHandle(do_modify_vertices(cdata), current_thread);
+  return GeomVertexArrayDataHandle(do_modify_vertices(cdata), current_thread);
 }
 
 /**
@@ -396,6 +406,51 @@ get_index_format() const {
 INLINE PT(GeomVertexArrayData) GeomPrimitive::
 make_index_data() const {
   return new GeomVertexArrayData(get_index_format(), get_usage_hint());
+}
+
+/**
+ * Draws the primitive.  Calls the correct method on the indicated GSG based
+ * on the primitive type.
+ */
+INLINE bool GeomPrimitive::
+draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader, bool force) const {
+  switch (_geom_primitive_type) {
+  case GPT_triangles:
+    return gsg->draw_triangles(reader, force);
+
+  case GPT_triangle_strips:
+    return gsg->draw_tristrips(reader, force);
+
+  case GPT_triangle_fans:
+    return gsg->draw_trifans(reader, force);
+
+  case GPT_lines:
+    return gsg->draw_lines(reader, force);
+
+  case GPT_line_strips:
+    return gsg->draw_linestrips(reader, force);
+
+  case GPT_points:
+    return gsg->draw_points(reader, force);
+
+  case GPT_triangles_adj:
+    return gsg->draw_triangles_adj(reader, force);
+
+  case GPT_triangle_strips_adj:
+    return gsg->draw_tristrips_adj(reader, force);
+
+  case GPT_lines_adj:
+    return gsg->draw_lines_adj(reader, force);
+
+  case GPT_line_strips_adj:
+    return gsg->draw_linestrips_adj(reader, force);
+
+  case GPT_patches:
+    return gsg->draw_patches(reader, force);
+
+  default:
+    return false;
+  }
 }
 
 /**

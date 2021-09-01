@@ -34,15 +34,15 @@ UpdateSeq TransformState::_last_cycle_detect;
 size_t TransformState::_garbage_index = 0;
 bool TransformState::_uniquify_matrix = true;
 
-PStatCollector TransformState::_cache_update_pcollector("*:State Cache:Update");
-PStatCollector TransformState::_garbage_collect_pcollector("*:State Cache:Garbage Collect");
-PStatCollector TransformState::_transform_compose_pcollector("*:State Cache:Compose Transform");
-PStatCollector TransformState::_transform_invert_pcollector("*:State Cache:Invert Transform");
-PStatCollector TransformState::_transform_calc_pcollector("*:State Cache:Calc Components");
-PStatCollector TransformState::_transform_break_cycles_pcollector("*:State Cache:Break Cycles");
-PStatCollector TransformState::_transform_new_pcollector("*:State Cache:New");
-PStatCollector TransformState::_transform_validate_pcollector("*:State Cache:Validate");
-PStatCollector TransformState::_transform_hash_pcollector("*:State Cache:Calc Hash");
+PStatCollector TransformState::_cache_update_pcollector("*:TState Cache:Update");
+PStatCollector TransformState::_garbage_collect_pcollector("*:TState Cache:Garbage Collect");
+PStatCollector TransformState::_transform_compose_pcollector("*:TState Cache:Compose Transform");
+PStatCollector TransformState::_transform_invert_pcollector("*:TState Cache:Invert Transform");
+PStatCollector TransformState::_transform_calc_pcollector("*:TState Cache:Calc Components");
+PStatCollector TransformState::_transform_break_cycles_pcollector("*:TState Cache:Break Cycles");
+PStatCollector TransformState::_transform_new_pcollector("*:TState Cache:New");
+PStatCollector TransformState::_transform_validate_pcollector("*:TState Cache:Validate");
+PStatCollector TransformState::_transform_hash_pcollector("*:TState Cache:Calc Hash");
 PStatCollector TransformState::_node_counter("TransformStates:On nodes");
 PStatCollector TransformState::_cache_counter("TransformStates:Cached");
 

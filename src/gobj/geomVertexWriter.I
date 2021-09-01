@@ -164,8 +164,8 @@ get_array_data() const {
  * with modifying the data in the handle out from under the GeomVertexWriter.
  */
 INLINE GeomVertexArrayDataHandle *GeomVertexWriter::
-get_array_handle() const {
-  return _handle;
+get_array_handle() {
+  return &_handle;
 }
 
 /**
@@ -1321,8 +1321,8 @@ get_packer() const {
  */
 INLINE void GeomVertexWriter::
 set_pointer(int row) {
-  _pointer_begin = _handle->get_write_pointer();
-  _pointer_end = _pointer_begin + _handle->get_data_size_bytes();
+  _pointer_begin = _handle.get_write_pointer();
+  _pointer_end = _pointer_begin + _handle.get_data_size_bytes();
   quick_set_pointer(row);
 }
 
@@ -1380,16 +1380,16 @@ inc_add_pointer() {
     if (_vertex_data != nullptr) {
       // If we have a whole GeomVertexData, we must set the length of all its
       // arrays at once.
-      _handle = nullptr;
+      //_handle = nullptr;
       GeomVertexDataPipelineWriter writer(_vertex_data, true, _current_thread);
       writer.check_array_writers();
       writer.set_num_rows(std::max(write_row + 1, writer.get_num_rows()));
-      _handle = writer.get_array_writer(_array);
+      _handle = *writer.get_array_writer(_array);
 
     } else {
       // Otherwise, we can get away with modifying only the one array we're
       // using.
-      _handle->set_num_rows(std::max(write_row + 1, _handle->get_num_rows()));
+      _handle.set_num_rows(std::max(write_row + 1, _handle.get_num_rows()));
     }
 
     set_pointer(write_row);

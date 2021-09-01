@@ -37,11 +37,6 @@ public:
   virtual int get_min_num_vertices_per_primitive() const;
   virtual int get_num_unused_vertices_per_primitive() const;
 
-public:
-  virtual bool draw(GraphicsStateGuardianBase *gsg,
-                    const GeomPrimitivePipelineReader *reader,
-                    bool force) const;
-
 protected:
   virtual CPT(GeomPrimitive) decompose_impl() const;
   virtual CPT(GeomVertexArrayData) rotate_impl() const;

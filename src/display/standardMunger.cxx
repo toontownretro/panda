@@ -107,6 +107,7 @@ munge_data_impl(const GeomVertexData *data) {
   }
 
   GeomVertexAnimationSpec animation = new_data->get_format()->get_animation();
+#if 0
   if ((_shader_skinning && animation.get_animation_type() != AT_none) ||
       (_auto_shader && hardware_animated_vertices &&
        animation.get_animation_type() == AT_panda)) {
@@ -144,6 +145,7 @@ munge_data_impl(const GeomVertexData *data) {
       }
     }
   }
+#endif
 
   CPT(GeomVertexFormat) orig_format = new_data->get_format();
   CPT(GeomVertexFormat) new_format = munge_format(orig_format, animation);

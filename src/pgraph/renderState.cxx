@@ -57,14 +57,15 @@ const RenderState *RenderState::_empty_state = nullptr;
 UpdateSeq RenderState::_last_cycle_detect;
 size_t RenderState::_garbage_index = 0;
 
-PStatCollector RenderState::_cache_update_pcollector("*:State Cache:Update");
-PStatCollector RenderState::_garbage_collect_pcollector("*:State Cache:Garbage Collect");
-PStatCollector RenderState::_state_compose_pcollector("*:State Cache:Compose State");
-PStatCollector RenderState::_state_invert_pcollector("*:State Cache:Invert State");
+PStatCollector RenderState::_cache_update_pcollector("*:RState Cache:Update");
+PStatCollector RenderState::_garbage_collect_pcollector("*:RState Cache:Garbage Collect");
+PStatCollector RenderState::_state_compose_pcollector("*:RState Cache:Compose State");
+PStatCollector RenderState::_state_invert_pcollector("*:RState Cache:Invert State");
 PStatCollector RenderState::_node_counter("RenderStates:On nodes");
 PStatCollector RenderState::_cache_counter("RenderStates:Cached");
-PStatCollector RenderState::_state_break_cycles_pcollector("*:State Cache:Break Cycles");
-PStatCollector RenderState::_state_validate_pcollector("*:State Cache:Validate");
+PStatCollector RenderState::_state_break_cycles_pcollector("*:RState Cache:Break Cycles");
+PStatCollector RenderState::_state_validate_pcollector("*:RState Cache:Validate");
+static PStatCollector _state_new_pcollector("*:RState Cache:New");
 
 CacheStats RenderState::_cache_stats;
 
@@ -183,7 +184,7 @@ compare_sort(const RenderState &other) const {
   int num_sorted_slots = reg->get_num_sorted_slots();
   for (int n = 0; n < num_sorted_slots; ++n) {
     int slot = reg->get_sorted_slot(n);
-    nassertr((_attributes[slot]._attrib != nullptr) == _filled_slots.get_bit(slot), 0);
+    //nassertr((_attributes[slot]._attrib != nullptr) == _filled_slots.get_bit(slot), 0);
 
     const RenderAttrib *a = _attributes[slot]._attrib;
     const RenderAttrib *b = other._attributes[slot]._attrib;
@@ -1287,6 +1288,8 @@ return_unique(RenderState *state) {
     nassertr(validate_states(), state);
   }
 #endif
+
+  PStatTimer timer(_state_new_pcollector);
 
   LightReMutexHolder holder(*_states_lock);
 

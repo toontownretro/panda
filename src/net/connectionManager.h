@@ -124,9 +124,9 @@ protected:
 
   std::string format_mac_address(const unsigned char *data, size_t data_size);
 
-  typedef phash_set< PT(Connection) > Connections;
-  typedef phash_set<ConnectionReader *, pointer_hash> Readers;
-  typedef phash_set<ConnectionWriter *, pointer_hash> Writers;
+  typedef pflat_hash_set< PT(Connection) > Connections;
+  typedef pflat_hash_set<ConnectionReader *, pointer_hash> Readers;
+  typedef pflat_hash_set<ConnectionWriter *, pointer_hash> Writers;
   Connections _connections;
   Readers _readers;
   Writers _writers;

@@ -31,6 +31,7 @@ GeomTristrips::
 GeomTristrips(GeomTristrips::UsageHint usage_hint) :
   GeomPrimitive(usage_hint)
 {
+  _geom_primitive_type = GPT_triangle_strips;
 }
 
 /**
@@ -240,15 +241,6 @@ get_min_num_vertices_per_primitive() const {
 int GeomTristrips::
 get_num_unused_vertices_per_primitive() const {
   return 2;
-}
-
-/**
- * Calls the appropriate method on the GSG to draw the primitive.
- */
-bool GeomTristrips::
-draw(GraphicsStateGuardianBase *gsg, const GeomPrimitivePipelineReader *reader,
-     bool force) const {
-  return gsg->draw_tristrips(reader, force);
 }
 
 /**
@@ -485,8 +477,8 @@ append_unused_vertices(GeomVertexArrayData *vertices, int vertex) {
   size_t offset = vertices->get_num_rows();
   vertices->set_num_rows(offset + 2);
 
-  PT(GeomVertexArrayDataHandle) handle = vertices->modify_handle();
-  unsigned char *ptr = handle->get_write_pointer();
+  GeomVertexArrayDataHandle handle = vertices->modify_handle();
+  unsigned char *ptr = handle.get_write_pointer();
   switch (vertices->get_array_format()->get_stride()) {
   case 1:
     ((uint8_t *)ptr)[offset] = ((uint8_t *)ptr)[offset - 1];

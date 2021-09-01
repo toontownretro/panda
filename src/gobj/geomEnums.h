@@ -172,6 +172,22 @@ PUBLISHED:
     PT_patches
   };
 
+  // The exact type of a GeomPrimitive subclass.  This is the type of primitive
+  // that will actually be rendered by the graphics pipe.
+  enum GeomPrimitiveType {
+    GPT_triangles,
+    GPT_triangle_strips,
+    GPT_triangle_fans,
+    GPT_lines,
+    GPT_line_strips,
+    GPT_lines_adj,
+    GPT_line_strips_adj,
+    GPT_patches,
+    GPT_points,
+    GPT_triangles_adj,
+    GPT_triangle_strips_adj,
+  };
+
   // The numeric type determines what physical representation is used to
   // encode a numeric value within the vertex data.
   enum NumericType {
