@@ -198,10 +198,14 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
         continue;
       }
 
-      data._position[i] = (from_data._position[i] * e0) + (to_data._position[i] * frac);
-      data._scale[i] = (from_data._scale[i] * e0) + (to_data._scale[i] * frac);
-      data._shear[i] = (from_data._shear[i] * e0) + (to_data._shear[i] * frac);
-      LQuaternion::blend(from_data._rotation[i], to_data._rotation[i], frac, data._rotation[i]);
+      AnimEvalData::Joint &pose = data._pose[i];
+      AnimEvalData::Joint &from_pose = from_data._pose[i];
+      AnimEvalData::Joint &to_pose = to_data._pose[i];
+
+      pose._position = (from_pose._position * e0) + (to_pose._position * frac);
+      pose._scale = (from_pose._scale * e0) + (to_pose._scale * frac);
+      pose._shear = (from_pose._shear * e0) + (to_pose._shear * frac);
+      LQuaternion::blend(from_pose._rotation, to_pose._rotation, frac, pose._rotation);
     }
   }
 }

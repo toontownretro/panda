@@ -144,10 +144,6 @@ init_libanim() {
 
   initialized = true;
 
-  JointEntry::init_type();
-  JointFrame::init_type();
-  SliderEntry::init_type();
-
   AnimChannel::init_type();
   AnimChannelTable::init_type();
   AnimChannelBundle::init_type();

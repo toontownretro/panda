@@ -60,9 +60,7 @@ JointVertexTransform::
  */
 void JointVertexTransform::
 get_matrix(LMatrix4 &matrix) const {
-  nassertv(!_char.was_deleted());
-
-  matrix = _char->get_joint_skinning_matrix(_joint);
+  matrix = _matrix;
 }
 
 /**
@@ -73,9 +71,7 @@ get_matrix(LMatrix4 &matrix) const {
  */
 void JointVertexTransform::
 mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
-  nassertv(!_char.was_deleted());
-
-  result.multiply(_char->get_joint_skinning_matrix(_joint), previous);
+  result.multiply(_matrix, previous);
 }
 
 /**
@@ -85,9 +81,7 @@ mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
  */
 void JointVertexTransform::
 accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
-  nassertv(!_char.was_deleted());
-
-  accum.accumulate(_char->get_joint_skinning_matrix(_joint), weight);
+  accum.accumulate(_matrix, weight);
 }
 
 /**

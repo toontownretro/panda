@@ -322,6 +322,12 @@ calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition) {
       AnimChannel *blend_channel = _character->get_channel(blend->_sequence);
       nassertv(blend_channel != nullptr);
 
+      //if (blend_channel->has_flags(AnimChannel::F_delta | AnimChannel::F_pre_delta)) {
+        // Don't blend out delta channels until I figure out how to do it.
+        // Need to normalize the blend weights or something.
+      //  continue;
+      //}
+
       // Calculate what the cycle would be if the channel kept playing.
       PN_stdfloat cycle;
       if (blend->_play_mode == PM_pose ||

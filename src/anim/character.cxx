@@ -289,10 +289,11 @@ do_update(double now, CData *cdata, Thread *current_thread) {
     if (!CheckBit(ctx._joint_mask, i)) {
       continue;
     }
-    data._position[i] = _joints[i]._default_pos;
-    data._rotation[i] = _joints[i]._default_quat;
-    data._scale[i] = _joints[i]._default_scale;
-    data._shear[i] = _joints[i]._default_shear;
+    AnimEvalData::Joint &pose = data._pose[i];
+    pose._position = _joints[i]._default_pos;
+    pose._scale = _joints[i]._default_scale;
+    pose._shear = _joints[i]._default_shear;
+    pose._rotation = _joints[i]._default_quat;
   }
 
   //
@@ -525,7 +526,6 @@ compute_attachment_transform(int index) {
 
   CharacterAttachment &attach = _attachments[index];
   LMatrix4 transform = LMatrix4::zeros_mat();
-  float weight_total = 0.0f;
   for (auto it = attach._parents.begin(); it != attach._parents.end(); ++it) {
     int parent = (*it).first;
     CharacterAttachment::ParentInfluence &inf = (*it).second;
@@ -536,12 +536,6 @@ compute_attachment_transform(int index) {
       inf._transform = _joint_net_transforms[parent] * inf._offset * inf._weight;
     }
     transform += inf._transform;
-    weight_total += inf._weight;
-  }
-  if (weight_total != 0.0f) {
-    transform /= weight_total;
-  } else {
-    transform = LMatrix4::ident_mat();
   }
   attach._curr_transform = TransformState::make_mat(transform);
   if (attach._node != nullptr) {
@@ -664,9 +658,10 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       }
 
     } else {
+      const AnimEvalData::Joint &pose = data._pose[i];
       // Use the computed pose of the joint.
-      _joint_values[i] = LMatrix4::scale_shear_mat(data._scale[i], data._shear[i]) * data._rotation[i];
-      _joint_values[i].set_row(3, data._position[i]);
+      _joint_values[i] = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
+      _joint_values[i].set_row(3, pose._position);
     }
   }
   ap_compose_collector.stop();
@@ -705,6 +700,7 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     //}
     JointVertexTransform *trans = _joint_vertex_transforms[i];
     if (trans != nullptr) {
+      trans->_matrix = _joint_skinning_matrices[i];
       trans->mark_modified(current_thread);
     }
   }

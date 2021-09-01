@@ -177,7 +177,7 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
   } else if (_weights == nullptr && weight == 1.0f && !has_flags(F_delta | F_pre_delta)) {
     // If there's no per-joint weight list, the blend has full weight on B, and
     // we're not an additive channel, just copy B to A.
-    a.steal_joints(b, context._num_joints);
+    a.steal_pose(b, context._num_joints);
     return;
   }
 
@@ -217,14 +217,16 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       } else {
         // Overlay delta.
         LQuaternion b_rot;
+        AnimEvalData::Joint &a_pose = a._pose[i];
+        const AnimEvalData::Joint &b_pose = b._pose[i];
         if (i == 0 && source_delta_anims) {
           // Apply the stupid rotation fix for the root joint of delta animations.
-          b_rot = b._rotation[i] * root_delta_fixup;
+          b_rot = b_pose._rotation * root_delta_fixup;
         } else {
-          b_rot = b._rotation[i];
+          b_rot = b_pose._rotation;
         }
-        quaternion_ma_seq(a._rotation[i], s2, b_rot, a._rotation[i]);
-        a._position[i] = a._position[i] + (b._position[i] * s2);
+        a_pose._position += (b_pose._position * s2);
+        quaternion_ma_seq(a_pose._rotation, s2, b_rot, a_pose._rotation);
         // Not doing scale or shear.
       }
     }
@@ -240,12 +242,16 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
 
       s1 = 1.0f - s2;
 
-      LQuaternion::slerp(b._rotation[i], a._rotation[i], s1, q3);
+      AnimEvalData::Joint &a_pose = a._pose[i];
+      const AnimEvalData::Joint &b_pose = b._pose[i];
 
-      a._rotation[i] = q3;
-      a._position[i] = (a._position[i] * s1) + (b._position[i] * s2);
-      a._scale[i] = (a._scale[i] * s1) + (b._scale[i] * s2);
-      a._shear[i] = (a._shear[i] * s1) + (b._shear[i] * s2);
+      a_pose._position = (a_pose._position * s1) + (b_pose._position * s2);
+      a_pose._scale = (a_pose._scale * s1) + (b_pose._scale * s2);
+      a_pose._shear = (a_pose._shear * s1) + (b_pose._shear * s2);
+
+      LQuaternion::slerp(b_pose._rotation, a_pose._rotation, s1, q3);
+      a_pose._rotation = q3;
+
     }
   }
 }
@@ -277,13 +283,13 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   // animation, but the character needs to remain stationary so it can be
   // moved around with game code.
   if (has_flags(F_zero_root_x)) {
-    this_data._position[0][0] = 0.0f;
+    this_data._pose[0]._position[0] = 0.0f;
   }
   if (has_flags(F_zero_root_y)) {
-    this_data._position[0][1] = 0.0f;
+    this_data._pose[0]._position[1] = 0.0f;
   }
   if (has_flags(F_zero_root_z)) {
-    this_data._position[0][2] = 0.0f;
+    this_data._pose[0]._position[2] = 0.0f;
   }
 
   // Now blend the channel onto the output using the requested weight.

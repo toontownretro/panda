@@ -77,14 +77,23 @@ public:
   INLINE AnimEvalData(const AnimEvalData &copy, int num_joints);
   INLINE AnimEvalData(AnimEvalData &&other, int num_joints);
 
-  INLINE void copy_joints(const AnimEvalData &other, int num_joints);
-  INLINE void steal_joints(AnimEvalData &other, int num_joints);
+  INLINE void copy_pose(const AnimEvalData &other, int num_joints);
+  INLINE void steal_pose(AnimEvalData &other, int num_joints);
+
+  class Joint {
+  public:
+    INLINE Joint() :
+      _rotation(LQuaternion::ident_quat()),
+      _scale(1)
+    { }
+    LPoint3 _position;
+    LVecBase3 _scale;
+    LVecBase3 _shear;
+    LQuaternion _rotation;
+  };
 
   // Poses of all joints.
-  LPoint3 _position[max_character_joints];
-  LQuaternion _rotation[max_character_joints];
-  LVecBase3 _scale[max_character_joints];
-  LVecBase3 _shear[max_character_joints];
+  Joint _pose[max_character_joints];
 
   PN_stdfloat _weight;
 

@@ -30,8 +30,7 @@ class FactoryParams;
  * for each component, because egg files optimize out components that remain
  * constant.
  */
-class EXPCL_PANDA_ANIM JointEntry : public TypedObject {
-  DECLARE_CLASS(JointEntry, TypedObject);
+class EXPCL_PANDA_ANIM JointEntry final {
 PUBLISHED:
   std::string name;
 
@@ -44,13 +43,12 @@ PUBLISHED:
   }
 };
 
-class EXPCL_PANDA_ANIM JointFrame : public TypedObject {
-  DECLARE_CLASS(JointFrame, TypedObject);
+class EXPCL_PANDA_ANIM JointFrame final {
 PUBLISHED:
-  LQuaternion quat;
   LVecBase3 pos;
   LVecBase3 scale;
   LVecBase3 shear;
+  LQuaternion quat;
 
   JointFrame() = default;
 
@@ -97,8 +95,7 @@ typedef pvector<JointFrame> JointFrames;
  * There is one instance of this class for each slider in an animation.  It
  * specifies the index for a slider into the animation table.
  */
-class EXPCL_PANDA_ANIM SliderEntry : public TypedObject {
-  DECLARE_CLASS(SliderEntry, TypedObject);
+class EXPCL_PANDA_ANIM SliderEntry final {
 PUBLISHED:
   std::string name;
 

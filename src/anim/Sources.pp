@@ -1,7 +1,7 @@
 // New animation system
 
 #define LOCAL_LIBS \
-  pgraph ssemath
+  pgraph
 
 #begin lib_target
   #define TARGET anim

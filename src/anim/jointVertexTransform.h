@@ -54,6 +54,7 @@ PUBLISHED:
   MAKE_PROPERTY(character, get_character);
 
 private:
+  LMatrix4 _matrix;
   WPT(Character) _char;
   int _joint;
 

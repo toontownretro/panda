@@ -323,46 +323,44 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   }
 
   if (c0._weight == 1.0f) {
-    data.steal_joints(c0_data, context._num_joints);
+    data.steal_pose(c0_data, context._num_joints);
 
   } else if (c1._weight == 1.0f) {
-    data.steal_joints(c1_data, context._num_joints);
+    data.steal_pose(c1_data, context._num_joints);
 
   } else if (c2._weight == 1.0f) {
-    data.steal_joints(c2_data, context._num_joints);
+    data.steal_pose(c2_data, context._num_joints);
 
   } else {
     for (int i = 0; i < context._num_joints; i++) {
       if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
-      data._position[i].set(0, 0, 0);
-      data._scale[i].set(0, 0, 0);
-      data._shear[i].set(0, 0, 0);
 
-      if (w0 != 0.0f) {
-        data._position[i] += c0_data._position[i] * w0;
-        data._scale[i] += c0_data._scale[i] * w0;
-        data._shear[i] += c0_data._shear[i] * w0;
-      }
-      if (w1 != 0.0f) {
-        data._position[i] += c1_data._position[i] * w1;
-        data._scale[i] += c1_data._scale[i] * w1;
-        data._shear[i] += c1_data._shear[i] * w1;
-      }
-      if (w2 != 0.0f) {
-        data._position[i] += c2_data._position[i] * w2;
-        data._scale[i] += c2_data._scale[i] * w2;
-        data._shear[i] += c2_data._shear[i] * w2;
-      }
+      AnimEvalData::Joint &pose = data._pose[i];
+      AnimEvalData::Joint &pose_0 = c0_data._pose[i];
+      AnimEvalData::Joint &pose_1 = c1_data._pose[i];
+      AnimEvalData::Joint &pose_2 = c2_data._pose[i];
+
+      pose._position = pose_0._position * w0;
+      pose._position += pose_1._position * w1;
+      pose._position += pose_2._position * w2;
+
+      pose._scale = pose_0._scale * w0;
+      pose._scale += pose_1._scale * w1;
+      pose._scale += pose_2._scale * w2;
+
+      pose._shear = pose_0._shear * w0;
+      pose._shear += pose_1._shear * w1;
+      pose._shear += pose_2._shear * w2;
 
       if (w1 < 0.001f) {
         // On diagonal.
-        LQuaternion::blend(c0_data._rotation[i], c2_data._rotation[i], w2 / (w0 + w2), data._rotation[i]);
+        LQuaternion::blend(pose_0._rotation, pose_2._rotation, w2 / (w0 + w2), pose._rotation);
       } else {
         LQuaternion q;
-        LQuaternion::blend(c0_data._rotation[i], c1_data._rotation[i], w1 / (w0 + w1), q);
-        LQuaternion::blend(q, c2_data._rotation[i], w2, data._rotation[i]);
+        LQuaternion::blend(pose_0._rotation, pose_1._rotation, w1 / (w0 + w1), q);
+        LQuaternion::blend(q, pose_2._rotation, w2, pose._rotation);
       }
     }
   }

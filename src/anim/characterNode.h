@@ -60,10 +60,10 @@ protected:
 private:
   void do_update();
 
-  typedef pmap<const PandaNode *, PandaNode *> NodeMap;
-  typedef pmap<const GeomVertexData *, GeomVertexData *> GeomVertexMap;
-  typedef pmap<const VertexTransform *, PT(JointVertexTransform) > GeomJointMap;
-  typedef pmap<const VertexSlider *, PT(CharacterVertexSlider) > GeomSliderMap;
+  typedef phash_map<const PandaNode *, PandaNode *, pointer_hash> NodeMap;
+  typedef phash_map<const GeomVertexData *, GeomVertexData *, pointer_hash> GeomVertexMap;
+  typedef phash_map<const VertexTransform *, PT(JointVertexTransform), pointer_hash> GeomJointMap;
+  typedef phash_map<const VertexSlider *, PT(CharacterVertexSlider), pointer_hash> GeomSliderMap;
 
   void r_copy_char(PandaNode *dest, const PandaNode *source,
                    const CharacterNode *from, NodeMap &node_map,

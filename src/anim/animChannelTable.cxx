@@ -19,9 +19,6 @@
 #include "animEvalContext.h"
 #include "characterJoint.h"
 
-IMPLEMENT_CLASS(JointEntry);
-IMPLEMENT_CLASS(JointFrame);
-IMPLEMENT_CLASS(SliderEntry);
 IMPLEMENT_CLASS(AnimChannelTable);
 
 /**
@@ -137,17 +134,19 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
-      CharacterJoint &joint = context._joints[i];
+
       int anim_joint = get_anim_joint_for_character_joint(i);
       if (anim_joint == -1) {
         continue;
       }
+
       const JointFrame &jframe = get_joint_frame(anim_joint, frame);
 
-      data._rotation[i] = jframe.quat;
-      data._position[i] = jframe.pos;
-      data._scale[i] = jframe.scale;
-      data._shear[i] = jframe.shear;
+      AnimEvalData::Joint &pose = data._pose[i];
+      pose._position = jframe.pos;
+      pose._scale = jframe.scale;
+      pose._shear = jframe.shear;
+      pose._rotation = jframe.quat;
     }
 
   } else {
@@ -169,32 +168,34 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       const JointFrame &jf = get_joint_frame(je, frame);
       const JointFrame &jf_next = get_joint_frame(je, next_frame);
 
+      AnimEvalData::Joint &pose = data._pose[i];
+
       if (jf.pos == jf_next.pos) {
-        data._position[i] = jf.pos;
+        pose._position = jf.pos;
 
       } else {
-        data._position[i] = (jf.pos * e0) + (jf_next.pos * frac);
+        pose._position = (jf.pos * e0) + (jf_next.pos * frac);
       }
 
       if (jf.scale == jf_next.scale) {
-        data._scale[i] = jf.scale;
+        pose._scale = jf.scale;
 
       } else {
-        data._scale[i] = (jf.scale * e0) + (jf_next.scale * frac);
+        pose._scale = (jf.scale * e0) + (jf_next.scale * frac);
       }
 
       if (jf.shear == jf_next.shear) {
-        data._shear[i] = jf.shear;
+        pose._shear = jf.shear;
 
       } else {
-        data._shear[i] = (jf.shear * e0) + (jf_next.shear * frac);
+        pose._shear = (jf.shear * e0) + (jf_next.shear * frac);
       }
 
       if (jf.quat == jf_next.quat) {
-        data._rotation[i] = jf.quat;
+        pose._rotation = jf.quat;
 
       } else {
-        LQuaternion::blend(jf.quat, jf_next.quat, frac, data._rotation[i]);
+        LQuaternion::blend(jf.quat, jf_next.quat, frac, pose._rotation);
       }
     }
   }
