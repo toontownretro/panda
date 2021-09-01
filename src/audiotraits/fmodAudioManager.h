@@ -207,7 +207,7 @@ private:
   // managers.  We run a once-per-frame update method that iterates over all
   // the DSPs, and for each one, checks if the dirty flag is set.  If it is,
   // we configure the DSP on all audio managers that it has been applied to.
-  typedef pmap<DSP *, ManagerList> DSPManagers;
+  typedef phash_map<DSP *, ManagerList, pointer_hash> DSPManagers;
   static DSPManagers _dsp_managers;
 
   static int _last_update_frame;
@@ -227,14 +227,14 @@ private:
   bool _is_valid;
   bool _active;
 
-  typedef phash_set<PT(FMODAudioSound)> SoundsPlaying;
+  typedef pflat_hash_set<PT(FMODAudioSound)> SoundsPlaying;
   SoundsPlaying _sounds_playing;
 
-  typedef phash_set<FMODAudioSound *, pointer_hash> AllSounds;
+  typedef pflat_hash_set<FMODAudioSound *, pointer_hash> AllSounds;
   AllSounds _all_sounds;
 
   // Mapping of Panda DSP instance to FMOD DSP instance.
-  typedef pmap<PT(DSP), FMOD::DSP *> FMODDSPs;
+  typedef phash_map<PT(DSP), FMOD::DSP *> FMODDSPs;
   FMODDSPs _dsps;
 
   FMOD_OUTPUTTYPE _saved_outputtype;

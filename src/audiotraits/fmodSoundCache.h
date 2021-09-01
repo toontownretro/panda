@@ -69,7 +69,7 @@ private:
 private:
   static FMODSoundCache *_ptr;
 
-  typedef phash_map<Filename, PT(FMODSoundHandle)> Sounds;
+  typedef pflat_hash_map<Filename, PT(FMODSoundHandle)> Sounds;
   Sounds _sounds;
 };
 
