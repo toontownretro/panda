@@ -13,12 +13,6 @@
 
 #ifndef CPPPARSER
 
-template<class Element>
-pvector<Element> PointerToArray<Element>::_empty_array;
-
-template<class Element>
-pvector<Element> ConstPointerToArray<Element>::_empty_array;
-
 /**
  *
  */
@@ -107,8 +101,8 @@ PointerToArray(pvector<Element> &&from, TypeHandle type_handle) :
 template<class Element>
 INLINE typename PointerToArray<Element>::iterator PointerToArray<Element>::
 begin() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.begin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((PointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->begin();
 }
@@ -119,8 +113,8 @@ begin() const {
 template<class Element>
 INLINE typename PointerToArray<Element>::iterator PointerToArray<Element>::
 end() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.begin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((PointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->end();
 }
@@ -131,8 +125,8 @@ end() const {
 template<class Element>
 INLINE typename PointerToArray<Element>::reverse_iterator PointerToArray<Element>::
 rbegin() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.rbegin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((PointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->rbegin();
 }
@@ -143,8 +137,8 @@ rbegin() const {
 template<class Element>
 INLINE typename PointerToArray<Element>::reverse_iterator PointerToArray<Element>::
 rend() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.rbegin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((PointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->rend();
 }
@@ -730,8 +724,8 @@ ConstPointerToArray(pvector<Element> &&from, TypeHandle type_handle) :
 template<class Element>
 INLINE typename ConstPointerToArray<Element>::iterator ConstPointerToArray<Element>::
 begin() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.begin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((ConstPointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->begin();
 }
@@ -742,8 +736,8 @@ begin() const {
 template<class Element>
 INLINE typename ConstPointerToArray<Element>::iterator ConstPointerToArray<Element>::
 end() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.begin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((ConstPointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->end();
 }
@@ -754,8 +748,8 @@ end() const {
 template<class Element>
 INLINE typename ConstPointerToArray<Element>::reverse_iterator ConstPointerToArray<Element>::
 rbegin() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.rbegin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((ConstPointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->rbegin();
 }
@@ -766,8 +760,8 @@ rbegin() const {
 template<class Element>
 INLINE typename ConstPointerToArray<Element>::reverse_iterator ConstPointerToArray<Element>::
 rend() const {
-  if ((this->_void_ptr) == nullptr) {
-    return _empty_array.rbegin();
+  nassertd((this->_void_ptr) != nullptr) {
+    ((ConstPointerToArray<Element> *)this)->reassign(new ReferenceCountedVector<Element>(_type_handle));
   }
   return ((To *)(this->_void_ptr))->rend();
 }

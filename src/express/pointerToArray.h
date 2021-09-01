@@ -236,12 +236,6 @@ public:
 private:
   TypeHandle _type_handle;
 
-  // This static empty array is kept around just so we can return something
-  // meaningful when begin() or end() is called and we have a NULL pointer.
-  // It might not be shared properly between different .so's, since it's a
-  // static member of a template class, but we don't really care.
-  static pvector<Element> _empty_array;
-
   friend class ConstPointerToArray<Element>;
 };
 
@@ -370,12 +364,6 @@ public:
 
 private:
   TypeHandle _type_handle;
-
-  // This static empty array is kept around just so we can return something
-  // meangful when begin() or end() is called and we have a NULL pointer.  It
-  // might not be shared properly between different .so's, since it's a static
-  // member of a template class, but we don't really care.
-  static pvector<Element> _empty_array;
 
   friend class PointerToArray<Element>;
 };
