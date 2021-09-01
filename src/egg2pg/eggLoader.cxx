@@ -483,15 +483,6 @@ make_polyset(EggBin *egg_bin, PandaNode *parent, const LMatrix4d *transform,
                          is_dynamic, character_maker, has_overall_color);
       nassertv(vertex_data != nullptr);
 
-      std::cout << *vertex_data << "\n";
-      if (vertex_data->get_transform_table()) {
-        std::cout << "xform table: ";
-        std::cout << "count " << vertex_data->get_transform_table()->get_num_transforms() << "\n";
-        vertex_data->get_transform_table()->write(std::cout);
-        std::cout << "\n";
-        std::cout << vertex_data->get_transform_table() << "\n";
-      }
-
       // And create a Geom to hold the primitives.
       PT(Geom) geom = new Geom(vertex_data);
 
