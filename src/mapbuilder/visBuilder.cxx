@@ -18,8 +18,8 @@
 #include "clockObject.h"
 #include "randomizer.h"
 #include "threadManager.h"
-#include "ssemath.h"
-#include "rayTraceHitResult4.h"
+//#include "ssemath.h"
+//#include "rayTraceHitResult4.h"
 #include "keyValues.h"
 #include "kdTree.h"
 

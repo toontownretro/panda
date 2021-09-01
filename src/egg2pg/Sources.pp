@@ -5,7 +5,11 @@
 #begin lib_target
   #define TARGET egg2pg
   #define LOCAL_LIBS \
-    parametrics collide egg pgraph anim pphysics
+    parametrics collide egg pgraph anim
+
+  #if $[HAVE_PHYSX]
+    #define LOCAL_LIBS $[LOCAL_LIBS] pphysics
+  #endif
 
   #define BUILDING_DLL BUILDING_PANDA_EGG2PG
 

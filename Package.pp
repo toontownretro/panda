@@ -38,7 +38,7 @@
 #if $[PANDA_INSTALL]
   #define PANDA_INSTALL $[unixfilename $[PANDA_INSTALL]]
 #elif $[CTPROJS]
-  #set PANDA $[unixfilename $[PANDA]]
+  #define PANDA $[unixfilename $[PANDA]]
   #define PANDA_INSTALL $[PANDA]/built
   #if $[eq $[PANDA],]
     #error You seem to be attached to some trees, but not PANDA!

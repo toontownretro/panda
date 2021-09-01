@@ -39,9 +39,12 @@
 #include "geomNode.h"
 #include "materialAttrib.h"
 #include "material.h"
-#include "physConvexMeshData.h"
 #include "geomVertexReader.h"
 #include "internalName.h"
+
+#ifdef HAVE_PHYSX
+#include "physConvexMeshData.h"
+#endif
 
 /**
  *
@@ -1028,6 +1031,7 @@ build_graph() {
     }
   }
 
+#ifdef HAVE_PHYSX
   if (!_data->_phy._mesh_name.empty()) {
     NodePath phy_mesh_np = root_np.find("**/" + _data->_phy._mesh_name);
     nassertv(!phy_mesh_np.is_empty());
@@ -1078,6 +1082,7 @@ build_graph() {
     cinfo->set_mesh_data(mesh_data->get_mesh_data());
     mdl_root->set_collision_info(cinfo);
   }
+#endif
 
   mdl_root->set_custom_data(_data->_custom_data);
   mdl_root->set_final(true);

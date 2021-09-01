@@ -1,4 +1,4 @@
-#define BUILD_DIRECTORY $[HAVE_EMBREE]
+#define BUILD_DIRECTORY $[HAVE_MAPBUILDER]
 
 #define LOCAL_LIBS map pgraph pphysics grutil raytrace
 
