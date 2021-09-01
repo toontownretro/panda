@@ -151,7 +151,7 @@ build() {
     }
 
     // Try to combine all the polygon Geoms into as few Geoms as possible.
-    geom_node->unify(max_collect_indices, false);
+    geom_node->unify(UINT16_MAX, false);
 
     // The node we parent the mesh group to will decide which mesh group(s) to
     // render based on the current view cluster.

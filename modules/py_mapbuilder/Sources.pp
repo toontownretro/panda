@@ -1,4 +1,4 @@
-#define DIR_TYPE model
+#define DIR_TYPE module
 
 #define BUILD_DIRECTORY $[HAVE_MAPBUILDER]
 
