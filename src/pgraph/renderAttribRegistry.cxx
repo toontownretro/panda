@@ -22,13 +22,9 @@ RenderAttribRegistry *RenderAttribRegistry::_global_ptr;
  *
  */
 RenderAttribRegistry::
-RenderAttribRegistry() {
-  _registry.reserve(_max_slots);
-  _sorted_slots.reserve(_max_slots);
-
-  // Reserve slot 0 for TypeHandle::none(), and for types that exceed
-  // max_slots.
-  _registry.push_back(RegistryNode(TypeHandle::none(), 0, nullptr));
+RenderAttribRegistry() :
+  _sorted_slots{ 0 },
+  _num_slots(1) {
 }
 
 /**
@@ -73,7 +69,7 @@ register_slot(TypeHandle type_handle, int sort, RenderAttrib *default_attrib) {
     return _slots_by_type[type_index];
   }
 
-  int slot = (int)_registry.size();
+  int slot = _num_slots;
   if (slot >= _max_slots) {
     pgraph_cat->error()
       << "Too many registered RenderAttribs; not registering "
@@ -81,6 +77,7 @@ register_slot(TypeHandle type_handle, int sort, RenderAttrib *default_attrib) {
     nassert_raise("out of RenderAttrib slots");
     return 0;
   }
+  _num_slots++;
 
   // Register the default attribute.  We don't use return_unique and register
   // it even if the state cache is disabled, because we can't read the
@@ -102,10 +99,13 @@ register_slot(TypeHandle type_handle, int sort, RenderAttrib *default_attrib) {
 
   _slots_by_type[type_index] = slot;
 
-  _registry.push_back(RegistryNode(type_handle, sort, default_attrib));
+  _registry[slot] = RegistryNode(type_handle, sort, default_attrib);
 
-  _sorted_slots.push_back(slot);
-  std::sort(_sorted_slots.begin(), _sorted_slots.end(), SortSlots(this));
+  for (int i = 1; i < _num_slots; i++) {
+    _sorted_slots[i - 1] = i;
+  }
+
+  std::sort(_sorted_slots, _sorted_slots + (_num_slots - 1), SortSlots(this));
 
   return slot;
 }
@@ -115,15 +115,14 @@ register_slot(TypeHandle type_handle, int sort, RenderAttrib *default_attrib) {
  */
 void RenderAttribRegistry::
 set_slot_sort(int slot, int sort) {
-  nassertv(slot >= 0 && slot < (int)_registry.size());
+  nassertv(slot >= 0 && slot < _num_slots);
   _registry[slot]._sort = sort;
 
   // Re-sort the slot list.
-  _sorted_slots.clear();
-  for (int i = 1; i < (int)_registry.size(); ++i) {
-    _sorted_slots.push_back(i);
+  for (int i = 1; i < _num_slots; i++) {
+    _sorted_slots[i - 1] = i;
   }
-  std::sort(_sorted_slots.begin(), _sorted_slots.end(), SortSlots(this));
+  std::sort(_sorted_slots, _sorted_slots + (_num_slots - 1), SortSlots(this));
 }
 
 /**

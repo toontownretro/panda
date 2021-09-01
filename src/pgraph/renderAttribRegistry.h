@@ -85,16 +85,17 @@ private:
   public:
     INLINE RegistryNode(TypeHandle type, int sort,
                         const RenderAttrib *default_attrib);
+    INLINE RegistryNode();
 
     TypeHandle _type;
     int _sort;
     const RenderAttrib *_default_attrib;
   };
-  typedef pvector<RegistryNode> Registry;
-  Registry _registry;
 
+  int _num_slots;
+  RegistryNode _registry[_max_slots];
+  int _sorted_slots[_max_slots - 1];
   vector_int _slots_by_type;
-  vector_int _sorted_slots;
 
   static RenderAttribRegistry *_global_ptr;
 };
