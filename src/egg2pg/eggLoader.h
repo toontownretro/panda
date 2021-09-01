@@ -38,6 +38,7 @@
 #include "geomPrimitive.h"
 #include "bamCacheRecord.h"
 #include "renderState.h"
+#include "transformTable.h"
 
 class EggNode;
 class EggBin;
@@ -150,9 +151,9 @@ private:
                           bool &any_hidden);
   PT(GeomVertexData) make_vertex_data
   (const EggRenderState *render_state, EggVertexPool *vertex_pool,
-   EggNode *primitive_home, const LMatrix4d &transform, TransformBlendTable *blend_table,
+   EggNode *primitive_home, const LMatrix4d &transform, TransformTable *xform_table,
    bool is_dynamic, CharacterMaker *character_maker, bool ignore_color);
-  PT(TransformBlendTable) make_blend_table
+  PT(TransformTable) make_transform_table
   (EggVertexPool *vertex_bool, EggNode *primitive_home,
    CharacterMaker *character_maker);
   void record_morph
@@ -262,6 +263,9 @@ private:
 
   typedef pmap<LMatrix4, CPT(TransformState) > TransformStates;
   TransformStates _transform_states;
+
+  typedef pmap<PT(EggNode), int> VertexTransformIndices;
+  VertexTransformIndices _vertex_transform_indices;
 
   DeferredNodes _deferred_nodes;
 

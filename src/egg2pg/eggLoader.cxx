@@ -442,18 +442,18 @@ make_polyset(EggBin *egg_bin, PandaNode *parent, const LMatrix4d *transform,
       has_overall_color = false;
     }
 
-    PT(TransformBlendTable) blend_table;
+    PT(TransformTable) xform_table;
     if (is_dynamic) {
-      // Dynamic vertex pools will require a TransformBlendTable to indicate
+      // Dynamic vertex pools will require a TransformTable to indicate
       // how the vertices are to be animated.
-      blend_table = make_blend_table(vertex_pool, egg_bin, character_maker);
+      xform_table = make_transform_table(vertex_pool, egg_bin, character_maker);
 
       // Now that we've created the blend table, we can re-order the vertices
       // in the pool to efficiently group vertices together that will share
       // the same transform matrix.  (We have to re-order them before we
       // create primitives, below, because this will change the vertex index
       // numbers.)
-      vertex_pool->sort_by_external_index();
+      //vertex_pool->sort_by_external_index();
     }
 
     // Create a handful of GeomPrimitives corresponding to the various types
@@ -479,9 +479,18 @@ make_polyset(EggBin *egg_bin, PandaNode *parent, const LMatrix4d *transform,
 
       // Now convert this vertex pool to a GeomVertexData.
       PT(GeomVertexData) vertex_data =
-        make_vertex_data(render_state, vertex_pool, egg_bin, mat, blend_table,
+        make_vertex_data(render_state, vertex_pool, egg_bin, mat, xform_table,
                          is_dynamic, character_maker, has_overall_color);
       nassertv(vertex_data != nullptr);
+
+      std::cout << *vertex_data << "\n";
+      if (vertex_data->get_transform_table()) {
+        std::cout << "xform table: ";
+        std::cout << "count " << vertex_data->get_transform_table()->get_num_transforms() << "\n";
+        vertex_data->get_transform_table()->write(std::cout);
+        std::cout << "\n";
+        std::cout << vertex_data->get_transform_table() << "\n";
+      }
 
       // And create a Geom to hold the primitives.
       PT(Geom) geom = new Geom(vertex_data);
@@ -500,8 +509,8 @@ make_polyset(EggBin *egg_bin, PandaNode *parent, const LMatrix4d *transform,
         geom->add_primitive(primitive);
       }
 
-        // vertex_data->write(cerr); geom->write(cerr);
-        // render_state->_state->write(cerr, 0);
+      // vertex_data->write(std::cerr); geom->write(std::cerr);
+      // render_state->_state->write(std::cerr, 0);
 
       // Create a new GeomNode if we haven't already.
       if (geom_node == nullptr) {
@@ -2331,7 +2340,7 @@ check_for_polysets(EggGroup *egg_group, bool &all_polysets, bool &any_hidden) {
 PT(GeomVertexData) EggLoader::
 make_vertex_data(const EggRenderState *render_state,
                  EggVertexPool *vertex_pool, EggNode *primitive_home,
-                 const LMatrix4d &transform, TransformBlendTable *blend_table,
+                 const LMatrix4d &transform, TransformTable *xform_table,
                  bool is_dynamic, CharacterMaker *character_maker,
                  bool ignore_color) {
   VertexPoolTransform vpt;
@@ -2417,16 +2426,25 @@ make_vertex_data(const EggRenderState *render_state,
     // indexes into the blend table per vertex, and also one for each
     // different type of morph delta.
 
-    // Tell the format that we're setting it up for Panda-based animation.
+    // Tell the format that we're setting it up for GPU-based animation.
     GeomVertexAnimationSpec animation;
-    animation.set_panda();
+    animation.set_hardware(4, true);
     temp_format->set_animation(animation);
 
     PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
     anim_array_format->add_column
-      (InternalName::get_transform_blend(), 1,
-       Geom::NT_uint16, Geom::C_index, 0, 2);
+      (InternalName::get_transform_weight(), animation.get_num_transforms(),
+       GeomEnums::NT_stdfloat, GeomEnums::C_other);
+    anim_array_format->add_column
+      (InternalName::get_transform_index(), animation.get_num_transforms(),
+       GeomEnums::NT_uint8, GeomEnums::C_index);
     temp_format->add_array(anim_array_format);
+
+    //PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
+    //anim_array_format->add_column
+    //  (InternalName::get_transform_blend(), 1,
+    //   Geom::NT_uint16, Geom::C_index, 0, 2);
+    //temp_format->add_array(anim_array_format);
 
     pmap<string, BitArray> slider_names;
     EggVertexPool::const_iterator vi;
@@ -2501,7 +2519,9 @@ make_vertex_data(const EggRenderState *render_state,
     new GeomVertexData(name, format, Geom::UH_static);
   vertex_data->reserve_num_rows(vertex_pool->size());
 
-  vertex_data->set_transform_blend_table(blend_table);
+  if (xform_table != nullptr) {
+    vertex_data->set_transform_table(TransformTable::register_table(xform_table));
+  }
   if (slider_table != nullptr) {
     vertex_data->set_slider_table(SliderTable::register_table(slider_table));
   }
@@ -2626,9 +2646,68 @@ make_vertex_data(const EggRenderState *render_state,
     }
 
     if (is_dynamic) {
-      int table_index = vertex->get_external_index();
-      gvw.set_column(InternalName::get_transform_blend());
-      gvw.set_data1i(table_index);
+      // Gather the indices into the TransformTable of the VertexTransforms
+      // that this vertex is assigned to, along with their membership
+      // weights.
+
+      LVecBase4f weights(0);
+      LVecBase4i indices(0);
+
+      // For normalizing the weights.
+      double weight_total = 0.0f;
+
+      if (vertex->gref_size() == 0) {
+        auto it = _vertex_transform_indices.find(primitive_home);
+        if (it != _vertex_transform_indices.end()) {
+          indices[0] = (*it).second;
+        }
+
+        weights[0] = 1.0f;
+        weight_total = 1.0f;
+
+      } else {
+        double quantize = egg_vertex_membership_quantize;
+        EggVertex::GroupRef::const_iterator gri;
+        int vtx_weight_index = 0;
+        for (gri = vertex->gref_begin(); gri != vertex->gref_end(); ++gri) {
+          EggGroup *egg_group = (*gri);
+
+          if (vtx_weight_index < 4) {
+            // Find the index into the TransformTable of this EggGroup's VertexTransform.
+            auto it = _vertex_transform_indices.find(egg_group);
+            if (it != _vertex_transform_indices.end()) {
+              indices[vtx_weight_index] = (*it).second;
+            }
+          }
+
+
+          double membership = egg_group->get_vertex_membership(vertex);
+          if (quantize != 0.0) {
+            membership = cfloor(membership / quantize + 0.5) * quantize;
+          }
+
+          weight_total += membership;
+
+          if (vtx_weight_index < 4) {
+            weights[vtx_weight_index] = membership;
+
+            vtx_weight_index++;
+          }
+        }
+      }
+
+      if (weight_total != 0.0) {
+        weights /= weight_total;
+      }
+
+      // Write the indices of the VertexTransforms that the vertex is assigned
+      // to.
+      gvw.set_column(InternalName::get_transform_index());
+      gvw.add_data4i(indices);
+
+      // And finally the weights of each VertexTransform.
+      gvw.set_column(InternalName::get_transform_weight());
+      gvw.add_data4(weights);
     }
   }
 
@@ -2643,25 +2722,30 @@ make_vertex_data(const EggRenderState *render_state,
 /**
  *
  */
-PT(TransformBlendTable) EggLoader::
-make_blend_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
+PT(TransformTable) EggLoader::
+make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
                  CharacterMaker *character_maker) {
-  PT(TransformBlendTable) blend_table;
-  blend_table = new TransformBlendTable;
-  blend_table->set_rows(SparseArray::lower_on(vertex_pool->size()));
+  PT(TransformTable) table = new TransformTable;
+
+  pmap<PT(VertexTransform), size_t> transform_indices;
 
   EggVertexPool::const_iterator vi;
   for (vi = vertex_pool->begin(); vi != vertex_pool->end(); ++vi) {
     EggVertex *vertex = (*vi);
 
     // Figure out the transforms affecting this particular vertex.
-    TransformBlend blend;
     if (vertex->gref_size() == 0) {
       // If the vertex has no explicit membership, it belongs right where it
       // is.
       PT(VertexTransform) vt = character_maker->egg_to_transform(primitive_home);
       nassertr(vt != nullptr, nullptr);
-      blend.add_transform(vt, 1.0f);
+
+      auto it = transform_indices.find(vt);
+      if (it == transform_indices.end()) {
+        size_t index = table->add_transform(vt);
+        transform_indices[vt] = index;
+        _vertex_transform_indices[primitive_home] = index;
+      }
     } else {
       // If the vertex does have an explicit membership, ignore its parentage
       // and assign it where it wants to be.
@@ -2669,29 +2753,31 @@ make_blend_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
       EggVertex::GroupRef::const_iterator gri;
       for (gri = vertex->gref_begin(); gri != vertex->gref_end(); ++gri) {
         EggGroup *egg_joint = (*gri);
-        double membership = egg_joint->get_vertex_membership(vertex);
-        if (quantize != 0.0) {
-          membership = cfloor(membership / quantize + 0.5) * quantize;
-        }
 
         PT(VertexTransform) vt = character_maker->egg_to_transform(egg_joint);
         nassertr(vt != nullptr, nullptr);
-        blend.add_transform(vt, membership);
+
+        auto it = transform_indices.find(vt);
+        if (it == transform_indices.end()) {
+          size_t index = table->add_transform(vt);
+          transform_indices[vt] = index;
+          _vertex_transform_indices[egg_joint] = index;
+        }
       }
     }
-    if (egg_vertex_max_num_joints >= 0) {
-      blend.limit_transforms(egg_vertex_max_num_joints);
-    }
-    blend.normalize_weights();
+    //if (egg_vertex_max_num_joints >= 0) {
+    //  blend.limit_transforms(egg_vertex_max_num_joints);
+    //}
+    //blend.normalize_weights();
 
-    int table_index = blend_table->add_blend(blend);
+    //int table_index = blend_table->add_blend(blend);
 
     // We take advantage of the "external index" field of the EggVertex to
     // temporarily store the transform blend index.
-    vertex->set_external_index(table_index);
+    //vertex->set_external_index(table_index);
   }
 
-  return blend_table;
+  return table;
 }
 
 /**
