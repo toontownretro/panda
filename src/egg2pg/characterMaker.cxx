@@ -300,7 +300,7 @@ make_geometry(EggNode *egg_node) {
         egg_bin->get_vertex_frame() *
         bin_home->get_node_frame_inv();
 
-      _loader.make_polyset(egg_bin, parent, &transform, true,
+      _loader.make_polyset(egg_bin, parent, &transform, is_dynamic,
                            this);
     }
   }
