@@ -11494,7 +11494,7 @@ set_state_and_transform(const RenderState *target,
     do_issue_transform();
   }
 
-  if (target == _target_rs || target == _state_rs) {
+  if (target == _state_rs) {
 #ifndef OPENGLES_1
     if (transform_changed) {
       // The state has not changed, but the transform has. Set the new
@@ -11616,7 +11616,7 @@ set_state_and_transform(const RenderState *target,
   if (_target_rs->get_attrib(texture_slot) != _state_rs->get_attrib(texture_slot) ||
       !_state_mask.get_bit(texture_slot)) {
     PStatGPUTimer timer(this, _draw_set_state_texture_pcollector);
-    determine_target_texture();
+    //determine_target_texture();
     do_issue_texture();
 
     // Since the TexGen and TexMatrix states depend partly on the particular
@@ -11627,37 +11627,6 @@ set_state_and_transform(const RenderState *target,
 
     _state_texture = _target_texture;
     _state_mask.set_bit(texture_slot);
-  }
-
-  // If one of the previously-loaded TexGen modes modified the texture matrix,
-  // then if either state changed, we have to change both of them now.
-  if (_tex_gen_modifies_mat) {
-    int tex_gen_slot = TexGenAttrib::get_class_slot();
-    int tex_matrix_slot = TexMatrixAttrib::get_class_slot();
-    if (_target_rs->get_attrib(tex_gen_slot) != _state_rs->get_attrib(tex_gen_slot) ||
-        _target_rs->get_attrib(tex_matrix_slot) != _state_rs->get_attrib(tex_matrix_slot) ||
-        !_state_mask.get_bit(tex_gen_slot) ||
-        !_state_mask.get_bit(tex_matrix_slot)) {
-      _state_mask.clear_bit(tex_gen_slot);
-      _state_mask.clear_bit(tex_matrix_slot);
-    }
-  }
-
-  int tex_matrix_slot = TexMatrixAttrib::get_class_slot();
-  if (_target_rs->get_attrib(tex_matrix_slot) != _state_rs->get_attrib(tex_matrix_slot) ||
-      !_state_mask.get_bit(tex_matrix_slot)) {
-    // PStatGPUTimer timer(this, _draw_set_state_tex_matrix_pcollector);
-#ifdef SUPPORT_FIXED_FUNCTION
-    if (has_fixed_function_pipeline()) {
-      do_issue_tex_matrix();
-    }
-#endif
-    _state_mask.set_bit(tex_matrix_slot);
-#ifndef OPENGLES_1
-    if (_current_shader_context) {
-      _current_shader_context->issue_parameters(Shader::SSD_tex_matrix);
-    }
-#endif
   }
 
   int stencil_slot = StencilAttrib::get_class_slot();
@@ -11677,20 +11646,51 @@ set_state_and_transform(const RenderState *target,
   }
 
   int color_slot = ColorAttrib::get_class_slot();
-    int color_scale_slot = ColorScaleAttrib::get_class_slot();
-    if (_target_rs->get_attrib(color_slot) != _state_rs->get_attrib(color_slot) ||
-        _target_rs->get_attrib(color_scale_slot) != _state_rs->get_attrib(color_scale_slot) ||
-        !_state_mask.get_bit(color_slot) ||
-        !_state_mask.get_bit(color_scale_slot)) {
-      // PStatGPUTimer timer(this, _draw_set_state_color_pcollector);
-      do_issue_color();
-      do_issue_color_scale();
-      _state_mask.set_bit(color_slot);
-      _state_mask.set_bit(color_scale_slot);
-    }
+  int color_scale_slot = ColorScaleAttrib::get_class_slot();
+  if (_target_rs->get_attrib(color_slot) != _state_rs->get_attrib(color_slot) ||
+      _target_rs->get_attrib(color_scale_slot) != _state_rs->get_attrib(color_scale_slot) ||
+      !_state_mask.get_bit(color_slot) ||
+      !_state_mask.get_bit(color_scale_slot)) {
+    // PStatGPUTimer timer(this, _draw_set_state_color_pcollector);
+    do_issue_color();
+    do_issue_color_scale();
+    _state_mask.set_bit(color_slot);
+    _state_mask.set_bit(color_scale_slot);
+  }
 
 #ifdef SUPPORT_FIXED_FUNCTION
   if (has_fixed_function_pipeline()) {
+    // If one of the previously-loaded TexGen modes modified the texture matrix,
+    // then if either state changed, we have to change both of them now.
+    if (_tex_gen_modifies_mat) {
+      int tex_gen_slot = TexGenAttrib::get_class_slot();
+      int tex_matrix_slot = TexMatrixAttrib::get_class_slot();
+      if (_target_rs->get_attrib(tex_gen_slot) != _state_rs->get_attrib(tex_gen_slot) ||
+          _target_rs->get_attrib(tex_matrix_slot) != _state_rs->get_attrib(tex_matrix_slot) ||
+          !_state_mask.get_bit(tex_gen_slot) ||
+          !_state_mask.get_bit(tex_matrix_slot)) {
+        _state_mask.clear_bit(tex_gen_slot);
+        _state_mask.clear_bit(tex_matrix_slot);
+      }
+    }
+
+    int tex_matrix_slot = TexMatrixAttrib::get_class_slot();
+    if (_target_rs->get_attrib(tex_matrix_slot) != _state_rs->get_attrib(tex_matrix_slot) ||
+        !_state_mask.get_bit(tex_matrix_slot)) {
+      // PStatGPUTimer timer(this, _draw_set_state_tex_matrix_pcollector);
+  #ifdef SUPPORT_FIXED_FUNCTION
+      if (has_fixed_function_pipeline()) {
+        do_issue_tex_matrix();
+      }
+  #endif
+      _state_mask.set_bit(tex_matrix_slot);
+  //#ifndef OPENGLES_1
+      //if (_current_shader_context) {
+      //  _current_shader_context->issue_parameters(Shader::SSD_tex_matrix);
+      //}
+  //#endif
+    }
+
     int clip_plane_slot = ClipPlaneAttrib::get_class_slot();
     if (_target_rs->get_attrib(clip_plane_slot) != _state_rs->get_attrib(clip_plane_slot) ||
         !_state_mask.get_bit(clip_plane_slot)) {
