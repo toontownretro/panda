@@ -50,9 +50,8 @@ JointVertexTransform(Character *character, int joint) :
 JointVertexTransform::
 ~JointVertexTransform() {
   // Tell the joint to stop informing us about its motion.
-  if (!_char.was_deleted() && _char != nullptr) {
-    _char->set_joint_vertex_transform(nullptr, _joint);
-  }
+  nassertv(_char != nullptr);
+  _char->set_joint_vertex_transform(nullptr, _joint);
 }
 
 /**
@@ -89,7 +88,7 @@ accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
  */
 void JointVertexTransform::
 output(std::ostream &out) const {
-  nassertv(!_char.was_deleted());
+  nassertv(_char != nullptr);
 
   out << _char->get_joint_name(_joint);
 }

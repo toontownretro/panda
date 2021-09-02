@@ -16,11 +16,7 @@
  */
 INLINE const Character *JointVertexTransform::
 get_character() const {
-  if (_char.was_deleted()) {
-    return nullptr;
-  } else {
-    return _char.p();
-  }
+  return _char;
 }
 
 /**

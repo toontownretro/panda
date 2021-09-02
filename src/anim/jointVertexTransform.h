@@ -55,7 +55,7 @@ PUBLISHED:
 
 private:
   LMatrix4 _matrix;
-  WPT(Character) _char;
+  PT(Character) _char;
   int _joint;
 
 public:
