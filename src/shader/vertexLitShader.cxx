@@ -242,7 +242,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       //set_vertex_shader_define("BASETEXTURETRANSFORM");
       set_vertex_shader_define("BASETEXTURE_INDEX", i);
       Texture *tex = ta->get_on_texture(stage);
-      tex->convert_to_srgb_format();
+      //tex->convert_to_srgb_format();
       set_input(ShaderInput("baseTextureSampler", tex));
       //set_input(ShaderInput("baseTextureTransform", tma->get_transform(stage)->get_mat()));
 
