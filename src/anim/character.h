@@ -101,12 +101,12 @@ PUBLISHED:
   INLINE int get_joint_parent(int n) const;
   INLINE int get_joint_num_children(int n) const;
   INLINE int get_joint_child(int joint, int child) const;
-  INLINE const LMatrix4 &get_joint_skinning_matrix(int n) const;
-  INLINE const LMatrix4 &get_joint_net_transform(int n) const;
-  INLINE const LMatrix4 &get_joint_transform(int n) const;
-  INLINE const LMatrix4 &get_joint_initial_net_transform_inverse(int n) const;
-  INLINE const LMatrix4 &get_joint_default_value(int n) const;
-  INLINE const LMatrix4 &get_joint_value(int n) const;
+  INLINE LMatrix4 get_joint_skinning_matrix(int n) const;
+  INLINE LMatrix4 get_joint_net_transform(int n) const;
+  INLINE LMatrix4 get_joint_transform(int n) const;
+  INLINE LMatrix4 get_joint_initial_net_transform_inverse(int n) const;
+  INLINE LMatrix4 get_joint_default_value(int n) const;
+  INLINE LMatrix4 get_joint_value(int n) const;
 
   INLINE int add_channel(AnimChannel *channel);
   INLINE int get_num_channels() const;
@@ -136,6 +136,8 @@ PUBLISHED:
   int get_num_attachments() const;
   int find_attachment(const std::string &name) const;
   void compute_attachment_transform(int index);
+  void remove_attachment(int attachment);
+  void remove_all_attachments();
 
   int add_ik_chain(const std::string &name,
                    int top_joint, int middle_joint, int end_joint,
@@ -217,6 +219,7 @@ private:
   typedef pvector<LMatrix4> Matrices;
   typedef pvector<JointVertexTransform *> VertexTransforms;
   typedef pvector<CharacterJoint> Joints;
+  typedef pvector<CharacterJointPoseData> JointPoses;
   typedef pvector<PoseParameter> PoseParameters;
   typedef pvector<CharacterAttachment> Attachments;
   typedef pvector<IKChain> IKChains;
@@ -234,18 +237,8 @@ private:
   Attachments _attachments;
 
   // These are filled in as the joint animates.
-  Matrices _joint_values;
-  Matrices _joint_net_transforms;
-  // This is the product of the above; the matrix that gets applied to a
-  // vertex (whose coordinates are in the coordinate space of the character
-  // in its neutral pose) to transform it from its neutral position to its
-  // animated position.
-  Matrices _joint_skinning_matrices;
-  Matrices _joint_initial_net_transform_inverse;
-  BitArray _changed_joints;
-  //Matrices _joint_default_values;
-  VertexTransforms _joint_vertex_transforms;
   Joints _joints;
+  JointPoses _joint_poses;
 
   typedef pvector<CharacterSlider> Sliders;
   Sliders _sliders;

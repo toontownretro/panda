@@ -138,22 +138,17 @@ get_node(int n) const {
  */
 INLINE void Character::
 set_joint_forced_value(int n, const LMatrix4 &value) {
-  nassertv(n >= 0 && n < (int)_joints.size());
+  nassertv(n >= 0 && n < (int)_joint_poses.size());
 
-  _joints[n]._forced_value = value;
-  _joints[n]._has_forced_value = true;
-  const CharacterJoint &joint = _joints[n];
-  LMatrix4 old_net = _joint_net_transforms[n];
-  if (joint._parent != -1) {
-    _joint_net_transforms[n] = value * _joint_net_transforms[joint._parent];
-
+  CharacterJointPoseData &pose = _joint_poses[n];
+  pose._has_forced_value = true;
+  pose._forced_value = value;
+  LMatrix4 old_net = pose._net_transform;
+  if (pose._parent != -1) {
+    pose._net_transform = value * _joint_poses[pose._parent]._net_transform;
   } else {
-    _joint_net_transforms[n] = value * get_root_xform();
+    pose._net_transform = value * get_root_xform();
   }
-
-  //if (!_changed_joints.get_bit(n) && _joint_net_transforms[n] != old_net) {
-  //  _changed_joints.set_bit(n);
-  //}
 }
 
 /**
@@ -162,10 +157,8 @@ set_joint_forced_value(int n, const LMatrix4 &value) {
  */
 INLINE void Character::
 clear_joint_forced_value(int n) {
-  nassertv(n >= 0 && n < (int)_joints.size());
-
-  _joints[n]._has_forced_value = false;
-  //_changed_joints.set_bit(n);
+  nassertv(n >= 0 && n < (int)_joint_poses.size());
+  _joint_poses[n]._has_forced_value = false;
 }
 
 /**
@@ -282,7 +275,7 @@ get_joint_merge_character() const {
  */
 INLINE void Character::
 set_joint_default_value(int n, const LMatrix4 &value) {
-  _joint_values[n] = value;
+  _joint_poses[n]._value = value;
   _joints[n]._default_value = value;
   // Break out the components as well.
   LVecBase3 hpr;
@@ -297,6 +290,7 @@ set_joint_default_value(int n, const LMatrix4 &value) {
  */
 INLINE void Character::
 set_joint_merge(int n, bool enable) {
+  nassertv(n >= 0 && n < (int)_joints.size());
   _joints[n]._merge = enable;
 }
 
@@ -305,6 +299,7 @@ set_joint_merge(int n, bool enable) {
  */
 INLINE bool Character::
 get_joint_merge(int n) const {
+  nassertr(n >= 0 && n < (int)_joints.size(), false);
   return _joints[n]._merge;
 }
 
@@ -313,7 +308,8 @@ get_joint_merge(int n) const {
  */
 INLINE int Character::
 get_joint_parent(int n) const {
-  return _joints[n]._parent;
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), -1);
+  return _joint_poses[n]._parent;
 }
 
 /**
@@ -321,6 +317,7 @@ get_joint_parent(int n) const {
  */
 INLINE int Character::
 get_joint_num_children(int n) const {
+  nassertr(n >= 0 && n < (int)_joints.size(), 0);
   return _joints[n]._children.size();
 }
 
@@ -329,56 +326,69 @@ get_joint_num_children(int n) const {
  */
 INLINE int Character::
 get_joint_child(int joint, int child) const {
-  return _joints[joint]._children[child];
+  nassertr(joint >= 0 && joint < (int)_joints.size(), -1);
+  const CharacterJoint &cjoint = _joints[joint];
+  nassertr(child >= 0 && child < (int)cjoint._children.size(), -1);
+  return cjoint._children[child];
 }
 
 /**
  * Returns the current skinning matrix of the specified joint.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_skinning_matrix(int n) const {
-  return _joint_skinning_matrices[n];
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
+  const CharacterJointPoseData &pose = _joint_poses[n];
+  nassertr(pose._vertex_transform != nullptr, LMatrix4::ident_mat());
+  LMatrix4 mat;
+  pose._vertex_transform->get_matrix(mat);
+  return mat;
 }
 
 /**
  * Returns the net transform of the indicated joint.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_net_transform(int n) const {
-  return _joint_net_transforms[n];
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
+  return _joint_poses[n]._net_transform;
 }
 
 /**
  * Returns the local transform of the indicated joint.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_transform(int n) const {
-  return _joint_values[n];
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
+  return _joint_poses[n]._value;
 }
 
 /**
  * Returns the matrix needed to transform coordinates from character space to
  * the local space of this joint, from the resting pose.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_initial_net_transform_inverse(int n) const {
-  return _joint_initial_net_transform_inverse[n];
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
+  return _joint_poses[n]._initial_net_transform_inverse;
 }
 
 /**
  * Returns resting pose of the specified joint.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_default_value(int n) const {
+  nassertr(n >= 0 && n < (int)_joints.size(), LMatrix4::ident_mat());
   return _joints[n]._default_value;
 }
 
 /**
  * Returns the current local-space pose of the specified joint.
  */
-INLINE const LMatrix4 &Character::
+INLINE LMatrix4 Character::
 get_joint_value(int n) const {
-  return _joint_values[n];
+  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
+  return _joint_poses[n]._value;
 }
 
 /**

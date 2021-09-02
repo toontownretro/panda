@@ -72,7 +72,6 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   int index = (int)_joints.size();
 
   CharacterJoint joint(name);
-  joint._parent = parent;
   joint._index = index;
   joint._default_value = default_value;
   // Break out the components as well.
@@ -82,18 +81,24 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
   joint._default_quat.set_hpr(hpr);
 
   if (parent != -1) {
+    nassertr(parent < (int)_joints.size(), -1);
     _joints[parent]._children.push_back(joint._index);
   }
 
+  CharacterJointPoseData pose;
+  pose._parent = parent;
+  pose._value = default_value;
+  pose._net_transform = LMatrix4::ident_mat();
+  pose._has_forced_value = false;
+  pose._merge_joint = -1;
+  pose._vertex_transform = nullptr;
+
   _joints.push_back(joint);
-  _joint_values.push_back(default_value);
-  _joint_net_transforms.push_back(LMatrix4::ident_mat());
-  _joint_skinning_matrices.push_back(LMatrix4::ident_mat());
-  _joint_vertex_transforms.push_back(nullptr);
-  //_changed_joints.set_bit(index);
+  _joint_poses.push_back(pose);
 
   recompute_joint_net_transform(index);
-  _joint_initial_net_transform_inverse.push_back(invert(_joint_net_transforms[index]));
+
+  _joint_poses[index]._initial_net_transform_inverse = invert(_joint_poses[index]._net_transform);
 
   return index;
 }
@@ -276,8 +281,8 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   ctx._frame_blend = cdata->_frame_blend_flag;
   ctx._time = now;
 
-  for (size_t i = 0; i < _joints.size(); i++) {
-    if (_joints[i]._merge_joint == -1 && !_joints[i]._has_forced_value) {
+  for (size_t i = 0; i < _joint_poses.size(); i++) {
+    if (_joint_poses[i]._merge_joint == -1 && !_joint_poses[i]._has_forced_value) {
       // We need to calculate this joint in the evaluation.
       SetBit(ctx._joint_mask, i);
     }
@@ -366,13 +371,15 @@ recompute_joint_net_transforms() {
  */
 void Character::
 recompute_joint_net_transform(int i) {
-  CharacterJoint &joint = _joints[i];
+  nassertv(i >= 0 && i < (int)_joint_poses.size());
+
+  CharacterJointPoseData &joint = _joint_poses[i];
 
   if (joint._parent != -1) {
-    _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
+    joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
 
   } else {
-    _joint_net_transforms[i] = _joint_values[i] * get_root_xform();
+    joint._net_transform = joint._value * get_root_xform();
   }
 }
 
@@ -533,7 +540,7 @@ compute_attachment_transform(int index) {
       //if (!_changed_joints.get_bit(parent)) {
       //  continue;
       //}
-      inf._transform = _joint_net_transforms[parent] * inf._offset * inf._weight;
+      inf._transform = _joint_poses[parent]._net_transform * inf._offset * inf._weight;
     }
     transform += inf._transform;
   }
@@ -541,6 +548,23 @@ compute_attachment_transform(int index) {
   if (attach._node != nullptr) {
     attach._node->set_transform(attach._curr_transform);
   }
+}
+
+/**
+ * Removes the attachment from the character at the indicated index.
+ */
+void Character::
+remove_attachment(int attachment) {
+  nassertv(attachment >= 0 && attachment < (int)_attachments.size());
+  _attachments.erase(_attachments.begin() + attachment);
+}
+
+/**
+ * Removes all attachments from the character.
+ */
+void Character::
+remove_all_attachments() {
+  _attachments.clear();
 }
 
 /**
@@ -597,20 +621,15 @@ PT(Character) Character::
 copy_subgraph() const {
   PT(Character) copy = make_copy();
 
-  for (size_t i = 0; i < _joints.size(); i++) {
-    copy->_joints.push_back(_joints[i]);
-    copy->_joint_values.push_back(_joint_values[i]);
-    copy->_joint_net_transforms.push_back(_joint_net_transforms[i]);
-    copy->_joint_skinning_matrices.push_back(_joint_skinning_matrices[i]);
-    copy->_joint_initial_net_transform_inverse.push_back(_joint_initial_net_transform_inverse[i]);
-    copy->_joint_vertex_transforms.push_back(nullptr);
+  copy->_joints = _joints;
+  copy->_joint_poses = _joint_poses;
 
-    // We don't copy the sets of transform nodes.
+  // Don't inherit the vertex transforms.
+  for (size_t i = 0; i < _joint_poses.size(); i++) {
+    copy->_joint_poses[i]._vertex_transform = nullptr;
   }
 
-  for (size_t i = 0; i < _sliders.size(); i++) {
-    copy->_sliders.push_back(_sliders[i]);
-  }
+  copy->_sliders = _sliders;
 
   copy->_channels = _channels;
   copy->_pose_parameters = _pose_parameters;
@@ -632,79 +651,52 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   Character *merge_char = cdata->_joint_merge_character;
 
   ap_compose_collector.start();
+
   for (size_t i = 0; i < joint_count; i++) {
-    CharacterJoint &joint = _joints[i];
+    CharacterJointPoseData &joint = _joint_poses[i];
 
     // Check for a forced joint override value.
     if (joint._has_forced_value) {
-      _joint_values[i] = joint._forced_value;
+      joint._value = joint._forced_value;
 
     } else if (joint._merge_joint != -1) {
       // Use the transform of the parent merge joint.
 
       // Take the net transform and re-interpret it.
-      const LMatrix4 &parent_net = merge_char->_joint_net_transforms[joint._merge_joint];
-      //if (parent_net != _joint_net_transforms[i]) {
-      //  _changed_joints.set_bit(i);
-      //}
-      _joint_net_transforms[i] = parent_net;
+      // TODO: perhaps do this in world coordinates so we can merge from
+      // anywhere in the scene graph.
+      const LMatrix4 &parent_net = merge_char->_joint_poses[joint._merge_joint]._net_transform;
+      joint._net_transform = parent_net;
       if (joint._parent != -1) {
-        LMatrix4 parent_inverse = _joint_net_transforms[joint._parent];
-        parent_inverse.invert_in_place();
-        _joint_values[i] = _joint_net_transforms[i] * parent_inverse;
+        LMatrix4 parent_inverse = invert(_joint_poses[joint._parent]._net_transform);
+        joint._value = joint._net_transform * parent_inverse;
 
       } else {
-        _joint_values[i] = _joint_net_transforms[i];
+        joint._value = joint._net_transform;
       }
 
     } else {
+      // Use the transform calculated during the channel evaluation.
       const AnimEvalData::Joint &pose = data._pose[i];
-      // Use the computed pose of the joint.
-      _joint_values[i] = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
-      _joint_values[i].set_row(3, pose._position);
+      joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
+      joint._value.set_row(3, pose._position);
+
+      // Now compute the net transform.
+      LMatrix4 old_net = joint._net_transform;
+      if (joint._parent != -1) {
+        joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
+      } else {
+        joint._net_transform = joint._value * root_xform;
+      }
+
+      // Compute the skinning matrix and apply it to our vertex transform.
+      if (joint._vertex_transform != nullptr) {
+        joint._vertex_transform->_matrix = joint._initial_net_transform_inverse * joint._net_transform;
+        joint._vertex_transform->mark_modified(current_thread);
+      }
     }
   }
   ap_compose_collector.stop();
-
-  ap_net_collector.start();
-  for (size_t i = 0; i < joint_count; i++) {
-    CharacterJoint &joint = _joints[i];
-
-    // If it's a merged joint, we already computed the net transform above.  If
-    // it has a forced value, we computed the net transform when the forced
-    // value was set.
-    if (joint._merge_joint == -1 && !joint._has_forced_value) {
-      LMatrix4 old_net = _joint_net_transforms[i];
-
-      if (joint._parent != -1) {
-        _joint_net_transforms[i] = _joint_values[i] * _joint_net_transforms[joint._parent];
-
-      } else {
-        _joint_net_transforms[i] = _joint_values[i] * root_xform;
-      }
-
-      //if (_joint_net_transforms[i] != old_net) {
-      //  _changed_joints.set_bit(i);
-      //}
-    }
-    //if (_changed_joints.get_bit(i)) {
-      _joint_skinning_matrices[i] = _joint_initial_net_transform_inverse[i] * _joint_net_transforms[i];
-    //}
-  }
-  ap_net_collector.stop();
-
-  ap_mark_jvt_collector.start();
-  for (size_t i = 0; i < joint_count; i++) {
-    //if (!_changed_joints.get_bit(i)) {
-    //  continue;
-    //}
-    JointVertexTransform *trans = _joint_vertex_transforms[i];
-    if (trans != nullptr) {
-      trans->_matrix = _joint_skinning_matrices[i];
-      trans->mark_modified(current_thread);
-    }
-  }
-  ap_mark_jvt_collector.stop();
 
   ap_update_net_transform_nodes.start();
   // Compute attachment transforms from the updated character pose.
@@ -717,8 +709,6 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   for (size_t i = 0; i < _sliders.size(); i++) {
     _sliders[i].update(current_thread);
   }
-
-  //_changed_joints.clear();
 
   return true;
 }
@@ -759,16 +749,16 @@ remove_node(CharacterNode *node) {
 void Character::
 build_joint_merge_map(Character *merge_char) {
   if (merge_char == nullptr) {
-    for (size_t i = 0; i < _joints.size(); i++) {
-      _joints[i]._merge_joint = -1;
+    for (size_t i = 0; i < _joint_poses.size(); i++) {
+      _joint_poses[i]._merge_joint = -1;
     }
 
   } else {
-    for (size_t i = 0; i < _joints.size(); i++) {
-      CharacterJoint &joint = _joints[i];
+    for (size_t i = 0; i < _joint_poses.size(); i++) {
+      CharacterJointPoseData &joint = _joint_poses[i];
 
       // See if the parent character has a joint with this name.
-      int parent_joint_idx = merge_char->find_joint(joint.get_name());
+      int parent_joint_idx = merge_char->find_joint(_joints[i].get_name());
       if (parent_joint_idx == -1) {
         joint._merge_joint = -1;
         continue;
@@ -848,10 +838,12 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_int16((int)_joints.size());
   for (int i = 0; i < (int)_joints.size(); i++) {
     _joints[i].write_datagram(me);
-    _joint_values[i].write_datagram(me);
-    _joint_net_transforms[i].write_datagram(me);
-    _joint_skinning_matrices[i].write_datagram(me);
-    _joint_initial_net_transform_inverse[i].write_datagram(me);
+
+    const CharacterJointPoseData &pose = _joint_poses[i];
+    me.add_int16(pose._parent);
+    pose._value.write_datagram(me);
+    pose._net_transform.write_datagram(me);
+    pose._initial_net_transform_inverse.write_datagram(me);
   }
 
   me.add_int16((int)_sliders.size());
@@ -924,19 +916,18 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
 
   _joints.resize(scan.get_int16());
-  _joint_values.resize(_joints.size());
-  _joint_net_transforms.resize(_joints.size());
-  _joint_skinning_matrices.resize(_joints.size());
-  _joint_initial_net_transform_inverse.resize(_joints.size());
-  _joint_vertex_transforms.resize(_joints.size());
+  _joint_poses.resize(_joints.size());
   for (size_t i = 0; i < _joints.size(); i++) {
     _joints[i].read_datagram(scan);
-    _joint_values[i].read_datagram(scan);
-    _joint_net_transforms[i].read_datagram(scan);
-    _joint_skinning_matrices[i].read_datagram(scan);
-    _joint_initial_net_transform_inverse[i].read_datagram(scan);
 
-    _joint_vertex_transforms[i] = nullptr;
+    CharacterJointPoseData &pose = _joint_poses[i];
+    pose._parent = scan.get_int16();
+    pose._value.read_datagram(scan);
+    pose._net_transform.read_datagram(scan);
+    pose._initial_net_transform_inverse.read_datagram(scan);
+    pose._has_forced_value = false;
+    pose._merge_joint = -1;
+    pose._vertex_transform = nullptr;
   }
 
   _sliders.resize(scan.get_int16());
@@ -1078,7 +1069,8 @@ get_channel_for_activity(int activity, int curr_channel, unsigned long seed) con
  */
 void Character::
 set_joint_vertex_transform(JointVertexTransform *transform, int n) {
-  _joint_vertex_transforms[n] = transform;
+  nassertv(n >= 0 && n < (int)_joint_poses.size());
+  _joint_poses[n]._vertex_transform = transform;
 }
 
 /**

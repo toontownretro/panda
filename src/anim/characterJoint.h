@@ -26,6 +26,28 @@
 class Datagram;
 class DatagramIterator;
 
+
+/**
+ * Pose information for a character joint.  Stored separately from
+ * CharacterJoint to be more cache-friendly during apply_pose().
+ */
+class CharacterJointPoseData {
+public:
+  bool _has_forced_value;
+
+  // Index of joint on the character that this joint should be merged with.
+  int _merge_joint;
+
+  LMatrix4 _value;
+  LMatrix4 _net_transform;
+  int _parent;
+
+  JointVertexTransform *_vertex_transform;
+  LMatrix4 _initial_net_transform_inverse;
+
+  LMatrix4 _forced_value;
+};
+
 /**
  * A single joint of a Character.  Receives a matrix each frame that transforms
  * the vertices assigned to the joint.
@@ -47,11 +69,7 @@ private:
   //AnimChannelBase *make_default_channel() const;
 
 public:
-  int _parent;
   vector_int _children;
-
-  LMatrix4 _forced_value;
-  bool _has_forced_value;
 
   LMatrix4 _default_value;
   LVecBase3 _default_pos;
@@ -62,9 +80,6 @@ public:
   // Should the joint be used to merge with the corresponding joint on a child
   // character?
   bool _merge;
-
-  // Index of joint on the character that this joint should be merged with.
-  int _merge_joint;
 
   friend class Character;
 };

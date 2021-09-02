@@ -21,13 +21,10 @@
 CharacterJoint::
 CharacterJoint() :
   CharacterPart(),
-  _has_forced_value(false),
-  _forced_value(LMatrix4::ident_mat()),
   _default_scale(1),
   _default_shear(0),
   _default_quat(LQuaternion::ident_quat()),
-  _merge(false),
-  _merge_joint(-1) {
+  _merge(false) {
 }
 
 /**
@@ -36,7 +33,6 @@ CharacterJoint() :
 CharacterJoint::
 CharacterJoint(const CharacterJoint &other) :
   CharacterPart(other),
-  _parent(other._parent),
   _children(other._children),
   //_vertex_transforms(other._vertex_transforms),
   _default_value(other._default_value),
@@ -44,10 +40,7 @@ CharacterJoint(const CharacterJoint &other) :
   _default_scale(other._default_scale),
   _default_shear(other._default_shear),
   _default_quat(other._default_quat),
-  _forced_value(other._forced_value),
-  _has_forced_value(other._has_forced_value),
-  _merge(other._merge),
-  _merge_joint(other._merge_joint)
+  _merge(other._merge)
 {
 }
 
@@ -57,7 +50,6 @@ CharacterJoint(const CharacterJoint &other) :
 CharacterJoint::
 CharacterJoint(CharacterJoint &&other) :
   CharacterPart(std::move(other)),
-  _parent(std::move(other._parent)),
   _children(std::move(other._children)),
   //_vertex_transforms(std::move(other._vertex_transforms)),
   _default_value(std::move(other._default_value)),
@@ -65,10 +57,7 @@ CharacterJoint(CharacterJoint &&other) :
   _default_scale(std::move(other._default_scale)),
   _default_shear(std::move(other._default_shear)),
   _default_quat(std::move(other._default_quat)),
-  _forced_value(std::move(other._forced_value)),
-  _has_forced_value(std::move(other._has_forced_value)),
-  _merge(std::move(other._merge)),
-  _merge_joint(std::move(other._merge_joint))
+  _merge(std::move(other._merge))
 {
 }
 
@@ -78,17 +67,13 @@ CharacterJoint(CharacterJoint &&other) :
 void CharacterJoint::
 operator=(const CharacterJoint &other) {
   CharacterPart::operator=(other);
-  _parent = other._parent;
   _children = other._children;
   _default_value = other._default_value;
   _default_pos = other._default_pos;
   _default_scale = other._default_scale;
   _default_shear = other._default_shear;
   _default_quat = other._default_quat;
-  _forced_value = other._forced_value;
-  _has_forced_value = other._has_forced_value;
   _merge = other._merge;
-  _merge_joint = other._merge_joint;
 }
 
 /**
@@ -102,10 +87,7 @@ CharacterJoint(const std::string &name) :
   _default_scale = LVecBase3(1);
   _default_shear = LVecBase3(0);
   _default_quat = LQuaternion::ident_quat();
-  _forced_value = LMatrix4::ident_mat();
-  _has_forced_value = false;
   _merge = false;
-  _merge_joint = -1;
 }
 
 /**
@@ -114,8 +96,6 @@ CharacterJoint(const std::string &name) :
 void CharacterJoint::
 write_datagram(Datagram &dg) {
   CharacterPart::write_datagram(dg);
-
-  dg.add_int16(_parent);
 
   dg.add_int16(_children.size());
   for (size_t i = 0; i < _children.size(); i++) {
@@ -139,8 +119,6 @@ write_datagram(Datagram &dg) {
 void CharacterJoint::
 read_datagram(DatagramIterator &dgi) {
   CharacterPart::read_datagram(dgi);
-
-  _parent = dgi.get_int16();
 
   _children.resize(dgi.get_int16());
   for (size_t i = 0; i < _children.size(); i++) {
