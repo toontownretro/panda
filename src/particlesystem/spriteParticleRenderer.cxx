@@ -29,6 +29,10 @@
 #include "indent.h"
 #include "config_particlesystem.h"
 #include "pStatTimer.h"
+#include "spriteParticleMaterial.h"
+#include "materialAttrib.h"
+#include "materialParamFloat.h"
+#include "shaderAttrib.h"
 
 using std::max;
 using std::min;
@@ -49,8 +53,6 @@ SpriteParticleRenderer(Texture *tex) :
   _initial_y_scale(1.0f),
   _final_y_scale(1.0f),
   _theta(0.0f),
-  _base_y_scale(1.0f),
-  _aspect_ratio(1.0f),
   _animate_frames_rate(0.0f),
   _animate_frames_index(0),
   _animate_x_ratio(false),
@@ -81,8 +83,6 @@ SpriteParticleRenderer(const SpriteParticleRenderer& copy) :
   _initial_y_scale(copy._initial_y_scale),
   _final_y_scale(copy._final_y_scale),
   _theta(copy._theta),
-  _base_y_scale(copy._base_y_scale),
-  _aspect_ratio(copy._aspect_ratio),
   _animate_frames_rate(copy._animate_frames_rate),
   _animate_frames_index(copy._animate_frames_index),
   _animate_x_ratio(copy._animate_x_ratio),
@@ -412,31 +412,9 @@ init_geoms() {
   // Setup format
   PT(GeomVertexArrayFormat) array_format = new GeomVertexArrayFormat
     (InternalName::get_vertex(), 3, Geom::NT_stdfloat, Geom::C_point,
-     InternalName::get_color(), 1, Geom::NT_packed_dabc, Geom::C_color);
-
-  if (_animate_theta || _theta != 0.0f) {
-    array_format->add_column
-      (InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
-  }
-
-  _base_y_scale = _initial_y_scale;
-  _aspect_ratio = _width / _height;
-
-  PN_stdfloat final_x_scale = _animate_x_ratio ? _final_x_scale : _initial_x_scale;
-  PN_stdfloat final_y_scale = _animate_y_ratio ? _final_y_scale : _initial_y_scale;
-
-  if (_animate_y_ratio) {
-    _base_y_scale = max(_initial_y_scale, _final_y_scale);
-    array_format->add_column
-      (InternalName::get_size(), 1, Geom::NT_stdfloat, Geom::C_other);
-  }
-
-  if (_aspect_ratio * _initial_x_scale != _initial_y_scale ||
-      _aspect_ratio * final_x_scale != final_y_scale) {
-    array_format->add_column
-      (InternalName::get_aspect_ratio(), 1, Geom::NT_stdfloat,
-       Geom::C_other);
-  }
+     InternalName::get_color(), 4, Geom::NT_uint8, Geom::C_color);
+  array_format->add_column(InternalName::get_size(), 2, Geom::NT_stdfloat, Geom::C_other);
+  array_format->add_column(InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
 
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format
     (new GeomVertexFormat(array_format));
@@ -481,10 +459,10 @@ init_geoms() {
       // value
       _sprite_writer[i].push_back(SpriteWriter());
 
-      state = state->add_attrib(RenderModeAttrib::make(RenderModeAttrib::M_unchanged, _base_y_scale * _height, true));
+      // Render the sprites using the specific point sprite particle shader.
+      state = state->add_attrib(ShaderAttrib::make("SpriteParticles"));
       if (anim->get_frame(j) != nullptr) {
         state = state->add_attrib(TextureAttrib::make(anim->get_frame(j)));
-        state = state->add_attrib(TexGenAttrib::make(TextureStage::get_default(), TexGenAttrib::M_point_sprite));
 
         // Build a transform to convert the texture coordinates to the ll, ur
         // space.
@@ -574,7 +552,6 @@ render(pvector< PT(PhysicsObject) >& po_vector, int ttl_particles) {
       _sprite_writer[i][j].color = GeomVertexWriter(_vdata[i][j], InternalName::get_color());
       _sprite_writer[i][j].rotate = GeomVertexWriter(_vdata[i][j], InternalName::get_rotate());
       _sprite_writer[i][j].size = GeomVertexWriter(_vdata[i][j], InternalName::get_size());
-      _sprite_writer[i][j].aspect_ratio = GeomVertexWriter(_vdata[i][j], InternalName::get_aspect_ratio());
     }
   }
 
@@ -679,10 +656,7 @@ render(pvector< PT(PhysicsObject) >& po_vector, int ttl_particles) {
     }
 
     if (_sprite_writer[anim_index][frame].size.has_column()) {
-      _sprite_writer[anim_index][frame].size.add_data1f(current_y_scale * _height);
-    }
-    if (_sprite_writer[anim_index][frame].aspect_ratio.has_column()) {
-      _sprite_writer[anim_index][frame].aspect_ratio.add_data1f(_aspect_ratio * current_x_scale / current_y_scale);
+      _sprite_writer[anim_index][frame].size.add_data2f(LVecBase2f(current_x_scale * _width, current_y_scale * _height));
     }
     if (_animate_theta) {
       _sprite_writer[anim_index][frame].rotate.add_data1f(cur_particle->get_theta());

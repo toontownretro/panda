@@ -45,8 +45,7 @@ public:
     vertex(copy.vertex),
     color(copy.color),
     rotate(copy.rotate),
-    size(copy.size),
-    aspect_ratio(copy.aspect_ratio) {
+    size(copy.size) {
   };
 
   void clear() {
@@ -54,14 +53,12 @@ public:
     color.clear();
     rotate.clear();
     size.clear();
-    aspect_ratio.clear();
   }
 
   GeomVertexWriter vertex;
   GeomVertexWriter color;
   GeomVertexWriter rotate;
   GeomVertexWriter size;
-  GeomVertexWriter aspect_ratio;
 };
 
 /**
@@ -237,8 +234,6 @@ private:
   PN_stdfloat _initial_y_scale;
   PN_stdfloat _final_y_scale;
   PN_stdfloat _theta;
-  PN_stdfloat _base_y_scale;
-  PN_stdfloat _aspect_ratio;
   PN_stdfloat _animate_frames_rate;
   int _animate_frames_index;
 
