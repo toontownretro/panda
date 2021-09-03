@@ -169,7 +169,7 @@ private:
 
     // This implements read-write locking.  Anyone who gets the data for
     // reading or writing will hold this mutex during the lock.
-    ReMutex _rw_lock;
+    //ReMutex _rw_lock;
     UsageHint _usage_hint;
 
   public:

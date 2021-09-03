@@ -607,7 +607,7 @@ GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &copy) :
 #endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    _cdata->_rw_lock.acquire();
+    //_cdata->_rw_lock.acquire();
   }
 }
 
@@ -633,7 +633,7 @@ GeomVertexArrayDataHandle(GeomVertexArrayDataHandle &&other) :
 #endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    _cdata->_rw_lock.acquire();
+    //_cdata->_rw_lock.acquire();
   }
 }
 
@@ -659,7 +659,7 @@ operator = (const GeomVertexArrayDataHandle &copy) {
 #endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    _cdata->_rw_lock.acquire();
+    //_cdata->_rw_lock.acquire();
   }
 }
 
@@ -685,7 +685,7 @@ operator = (GeomVertexArrayDataHandle &&other) {
 #endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    _cdata->_rw_lock.acquire();
+    //_cdata->_rw_lock.acquire();
   }
 }
 

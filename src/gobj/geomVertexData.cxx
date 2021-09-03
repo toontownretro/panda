@@ -2373,13 +2373,9 @@ make_array_readers() {
   _num_array_readers = arrays.size();
   nassertv(_num_array_readers <= max_array_handles);
 
-  const GeomVertexArrayData **array_datas = (const GeomVertexArrayData **)alloca(sizeof(GeomVertexArrayData *) * _num_array_readers);
   for (size_t i = 0; i < _num_array_readers; i++) {
-    array_datas[i] = arrays[i].get_read_pointer(_current_thread);
-  }
-
-  for (size_t i = 0; i < _num_array_readers; i++) {
-    _array_readers[i] = GeomVertexArrayDataHandle(array_datas[i], _current_thread);
+    const GeomVertexArrayData *array_data = arrays[i].get_read_pointer(_current_thread);
+    _array_readers[i] = GeomVertexArrayDataHandle(array_data, _current_thread);
   }
 }
 

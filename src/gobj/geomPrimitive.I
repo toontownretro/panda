@@ -528,7 +528,7 @@ GeomPrimitivePipelineReader(CPT(GeomPrimitive) object,
 #endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    _vertices_cdata->_rw_lock.acquire();
+    //_vertices_cdata->_rw_lock.acquire();
   }
 }
 
@@ -549,7 +549,7 @@ INLINE GeomPrimitivePipelineReader::
   if (_vertices_cdata != nullptr) {
     // We must release the lock *before* we decrement the reference count,
     // below.
-    _vertices_cdata->_rw_lock.release();
+    //_vertices_cdata->_rw_lock.release();
 
 #ifdef DO_PIPELINING
     unref_delete((CycleData *)_vertices_cdata);

@@ -139,12 +139,12 @@ request_resident(Thread *current_thread) const {
   cdata->ref();
 #endif
 
-  cdata->_rw_lock.acquire();
+  //cdata->_rw_lock.acquire();
 
   ((GeomVertexArrayData *)this)->mark_used();
   bool is_resident = (cdata->_buffer.get_read_pointer(false) != nullptr);
 
-  cdata->_rw_lock.release();
+  //cdata->_rw_lock.release();
 
 #ifdef DO_PIPELINING
   unref_delete((CycleData *)cdata);
@@ -232,8 +232,8 @@ mark_used() {
  */
 INLINE GeomVertexArrayData::CData::
 CData(UsageHint usage_hint) :
-  _usage_hint(usage_hint),
-  _rw_lock("GeomVertexArrayData::CData::_rw_lock")
+  _usage_hint(usage_hint)//,
+  //_rw_lock("GeomVertexArrayData::CData::_rw_lock")
 {
 }
 
@@ -244,8 +244,8 @@ INLINE GeomVertexArrayData::CData::
 CData(GeomVertexArrayData::CData &&from) noexcept :
   _usage_hint(std::move(from._usage_hint)),
   _buffer(std::move(from._buffer)),
-  _modified(std::move(from._modified)),
-  _rw_lock("GeomVertexArrayData::CData::_rw_lock")
+  _modified(std::move(from._modified))//,
+  //_rw_lock("GeomVertexArrayData::CData::_rw_lock")
 {
 }
 
@@ -256,8 +256,8 @@ INLINE GeomVertexArrayData::CData::
 CData(const GeomVertexArrayData::CData &copy) :
   _usage_hint(copy._usage_hint),
   _buffer(copy._buffer),
-  _modified(copy._modified),
-  _rw_lock("GeomVertexArrayData::CData::_rw_lock")
+  _modified(copy._modified)//,
+  //_rw_lock("GeomVertexArrayData::CData::_rw_lock")
 {
 }
 
@@ -289,7 +289,7 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  //_cdata->_rw_lock.acquire();
 
   _current_thread = current_thread;
   _writable = false;
@@ -314,7 +314,7 @@ GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  //_cdata->_rw_lock.acquire();
 }
 
 /**
@@ -335,7 +335,7 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  //_cdata->_rw_lock.acquire();
 
   _current_thread = current_thread;
   _writable = true;
@@ -360,7 +360,7 @@ GeomVertexArrayDataHandle(GeomVertexArrayData *object,
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  //_cdata->_rw_lock.acquire();
 }
 
 /**
@@ -381,7 +381,7 @@ INLINE GeomVertexArrayDataHandle::
   if (_cdata != nullptr) {
     // We must release the lock *before* we decrement the reference count,
     // below.
-    _cdata->_rw_lock.release();
+    //_cdata->_rw_lock.release();
 
 #ifdef DO_PIPELINING
     unref_delete((CycleData *)_cdata);
