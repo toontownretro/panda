@@ -733,7 +733,7 @@ verify_child_no_cycles(PandaNode *child_node) {
  */
 INLINE void PandaNode::
 do_set_dirty_prev_transform() {
-  nassertv(_dirty_prev_transforms._lock.debug_is_locked());
+  //nassertv(_dirty_prev_transforms._lock.debug_is_locked());
   if (!_dirty_prev_transform) {
     LinkedListNode::insert_before(&_dirty_prev_transforms);
     _dirty_prev_transform = true;
@@ -747,7 +747,7 @@ do_set_dirty_prev_transform() {
  */
 INLINE void PandaNode::
 do_clear_dirty_prev_transform() {
-  nassertv(_dirty_prev_transforms._lock.debug_is_locked());
+  //nassertv(_dirty_prev_transforms._lock.debug_is_locked());
   if (_dirty_prev_transform) {
     LinkedListNode::remove_from_list();
     _dirty_prev_transform = false;

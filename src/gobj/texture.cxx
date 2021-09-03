@@ -1920,7 +1920,7 @@ TextureContext *Texture::
 prepare_now(int view,
             PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  MutexHolder holder(_lock);
+  //MutexHolder holder(_lock);
   CDReader cdata(_cycler);
 
   // Don't exceed the actual number of views.

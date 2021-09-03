@@ -2100,7 +2100,10 @@ set_state_and_transform(const RenderState *target_rs,
     altered |= Shader::SSD_projection;
   }
 
-  CPT(RenderState) state_rs = _state_rs.lock();
+  const RenderState *state_rs = nullptr;
+  if (!_state_rs.was_deleted()) {
+    state_rs = _state_rs.p();
+  }
   if (state_rs == nullptr) {
     // Reset all of the state.
     altered |= Shader::SSD_general;

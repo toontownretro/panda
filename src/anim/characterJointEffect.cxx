@@ -123,8 +123,8 @@ void CharacterJointEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
-  if (auto character = _character.lock()) {
-    character->update();
+  if (!_character.was_deleted()) {
+    _character->update();
   }
   node_transform = data.node()->get_transform();
 }
@@ -151,8 +151,8 @@ void CharacterJointEffect::
 adjust_transform(CPT(TransformState) &net_transform,
                  CPT(TransformState) &node_transform,
                  const PandaNode *node) const {
-  if (auto character = _character.lock()) {
-    character->update();
+  if (!_character.was_deleted()) {
+    _character->update();
   }
   node_transform = node->get_transform();
 }

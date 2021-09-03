@@ -49,7 +49,7 @@ CharacterNode(const CharacterNode &copy) :
 {
   set_cull_callback();
 
-  LightMutexHolder holder(copy._lock);
+  //LightMutexHolder holder(copy._lock);
   // Copy the underlying character.
   _char = copy._char->copy_subgraph();
   _char->add_node(this);
@@ -68,7 +68,7 @@ CharacterNode(const std::string &name) :
 {
   set_cull_callback();
 
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   _char->add_node(this);
 }
 
@@ -77,7 +77,7 @@ CharacterNode(const std::string &name) :
  */
 CharacterNode::
 ~CharacterNode() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   if (_char != nullptr) {
     _char->remove_node(this);
   }
@@ -484,7 +484,7 @@ redirect_slider(const VertexSlider *vs, CharacterNode::GeomSliderMap &gsmap) {
  */
 void CharacterNode::
 update() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   double now = ClockObject::get_global_clock()->get_frame_time();
   if (now != _last_auto_update) {
     _last_auto_update = now;
@@ -505,7 +505,7 @@ update() {
  */
 void CharacterNode::
 force_update() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   // Statistics
   PStatTimer timer(_joints_pcollector);

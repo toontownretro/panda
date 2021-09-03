@@ -65,7 +65,7 @@ INLINE VertexDataBuffer::
  */
 INLINE const unsigned char *VertexDataBuffer::
 get_read_pointer(bool force) const {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   const unsigned char *ptr;
   if (_resident_data != nullptr || _size == 0) {
@@ -90,7 +90,7 @@ get_read_pointer(bool force) const {
  */
 INLINE unsigned char *VertexDataBuffer::
 get_write_pointer() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   if (_resident_data == nullptr && _reserved_size != 0) {
     do_page_in();
@@ -129,7 +129,7 @@ get_reserved_size() const {
  */
 INLINE void VertexDataBuffer::
 set_size(size_t size) {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   nassertv(size <= _reserved_size);
 
   if (size != _size) {
@@ -151,7 +151,7 @@ set_size(size_t size) {
  */
 INLINE void VertexDataBuffer::
 clean_realloc(size_t reserved_size) {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   do_clean_realloc(reserved_size);
 }
 
@@ -164,7 +164,7 @@ clean_realloc(size_t reserved_size) {
  */
 INLINE void VertexDataBuffer::
 unclean_realloc(size_t reserved_size) {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   do_unclean_realloc(reserved_size);
 }
 
@@ -173,7 +173,7 @@ unclean_realloc(size_t reserved_size) {
  */
 INLINE void VertexDataBuffer::
 clear() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   _size = 0;
   do_unclean_realloc(0);
 }
@@ -186,6 +186,6 @@ clear() {
  */
 INLINE void VertexDataBuffer::
 page_out(VertexDataBook &book) {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   do_page_out(book);
 }

@@ -84,7 +84,7 @@ TransformState::
   delete _inv_mat;
   _inv_mat = nullptr;
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // unref() should have cleared these.
   nassertv(_saved_entry == -1);
@@ -600,7 +600,7 @@ compose(const TransformState *other) const {
     return do_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // Is this composition already cached?
   int index = _composition_cache.find(other);
@@ -707,7 +707,7 @@ invert_compose(const TransformState *other) const {
     return do_invert_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   int index = _invert_composition_cache.find(other);
   if (index != -1) {
@@ -796,7 +796,7 @@ unref() const {
   // holding it if we happen to drop the reference count to 0. Having to grab
   // the lock at every call to unref() is a big limiting factor on
   // parallelization.
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   if (auto_break_cycles && uniquify_transforms) {
     if (get_cache_ref_count() > 0 &&
@@ -828,7 +828,7 @@ unref() const {
  */
 bool TransformState::
 validate_composition_cache() const {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   size_t size = _composition_cache.get_num_entries();
   for (size_t i = 0; i < size; ++i) {
@@ -986,7 +986,7 @@ write_composition_cache(ostream &out, int indent_level) const {
  */
 int TransformState::
 get_num_states() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
   return _states.get_num_entries();
 }
 
@@ -1005,7 +1005,7 @@ get_num_states() {
  */
 int TransformState::
 get_num_unused_states() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // First, we need to count the number of times each TransformState object is
   // recorded in the cache.  We could just trust get_cache_ref_count(), but
@@ -1087,7 +1087,7 @@ get_num_unused_states() {
  */
 int TransformState::
 clear_cache() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   PStatTimer timer(_cache_update_pcollector);
   int orig_size = _states.get_num_entries();
@@ -1158,7 +1158,7 @@ garbage_collect() {
     return 0;
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   PStatTimer timer(_garbage_collect_pcollector);
   size_t orig_size = _states.get_num_entries();
@@ -1247,7 +1247,7 @@ garbage_collect() {
  */
 void TransformState::
 list_cycles(ostream &out) {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   typedef pset<const TransformState *> VisitedStates;
   VisitedStates visited;
@@ -1321,7 +1321,7 @@ list_cycles(ostream &out) {
  */
 void TransformState::
 list_states(ostream &out) {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   size_t size = _states.get_num_entries();
   out << size << " states:\n";
@@ -1341,7 +1341,7 @@ bool TransformState::
 validate_states() {
   PStatTimer timer(_transform_validate_pcollector);
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
   if (_states.is_empty()) {
     return true;
   }
@@ -1457,7 +1457,7 @@ return_unique(TransformState *state) {
 
   PStatTimer timer(_transform_new_pcollector);
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   if (state->_saved_entry != -1) {
     // This state is already in the cache.  nassertr(_states.find(state) ==
@@ -1866,7 +1866,7 @@ r_detect_reverse_cycles(const TransformState *start_state,
  */
 void TransformState::
 release_new() {
-  nassertv(_states_lock->debug_is_locked());
+  //nassertv(_states_lock->debug_is_locked());
 
   if (_saved_entry != -1) {
     _saved_entry = -1;
@@ -1883,7 +1883,7 @@ release_new() {
  */
 void TransformState::
 remove_cache_pointers() {
-  nassertv(_states_lock->debug_is_locked());
+  //nassertv(_states_lock->debug_is_locked());
 
   // Fortunately, since we added CompositionCache records in pairs, we know
   // exactly the set of TransformState objects that have us in their cache:
@@ -2047,7 +2047,7 @@ do_calc_hash() {
  */
 void TransformState::
 calc_singular() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   if ((_flags & F_singular_known) != 0) {
     // Someone else computed it first.
     return;
@@ -2158,7 +2158,7 @@ do_calc_hpr() {
  */
 void TransformState::
 calc_quat() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   if ((_flags & F_quat_known) != 0) {
     // Someone else computed it first.
     return;
@@ -2187,7 +2187,7 @@ calc_norm_quat() {
   PStatTimer timer(_transform_calc_pcollector);
 
   LQuaternion quat = get_quat();
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   _norm_quat = quat;
   _norm_quat.normalize();
   _flags |= F_norm_quat_known;

@@ -16,7 +16,7 @@
  */
 INLINE size_t SimpleLru::
 get_total_size() const {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   return _total_size;
 }
 
@@ -26,7 +26,7 @@ get_total_size() const {
  */
 INLINE size_t SimpleLru::
 get_max_size() const {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   return _max_size;
 }
 
@@ -38,7 +38,7 @@ get_max_size() const {
  */
 INLINE void SimpleLru::
 set_max_size(size_t max_size) {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   _max_size = max_size;
   if (_total_size > _max_size) {
     do_evict_to(_max_size, false);
@@ -50,7 +50,7 @@ set_max_size(size_t max_size) {
  */
 INLINE void SimpleLru::
 consider_evict() {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   if (_total_size > _max_size) {
     do_evict_to(_max_size, false);
   }
@@ -62,7 +62,7 @@ consider_evict() {
  */
 INLINE void SimpleLru::
 evict_to(size_t target_size) {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   if (_total_size > target_size) {
     do_evict_to(target_size, true);
   }
@@ -85,7 +85,7 @@ begin_epoch() {
  */
 INLINE bool SimpleLru::
 validate() {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   return do_validate();
 }
 
@@ -123,7 +123,7 @@ operator = (const SimpleLruPage &copy) {
  */
 INLINE SimpleLru *SimpleLruPage::
 get_lru() const {
-  LightMutexHolder holder(SimpleLru::_global_lock);
+  //LightMutexHolder holder(SimpleLru::_global_lock);
   return _lru;
 }
 
@@ -132,7 +132,7 @@ get_lru() const {
  */
 INLINE void SimpleLruPage::
 dequeue_lru() {
-  LightMutexHolder holder(SimpleLru::_global_lock);
+  //LightMutexHolder holder(SimpleLru::_global_lock);
 
   if (_lru != nullptr) {
     remove_from_list();
@@ -178,7 +178,7 @@ get_lru_size() const {
  */
 INLINE void SimpleLruPage::
 set_lru_size(size_t lru_size) {
-  LightMutexHolder holder(SimpleLru::_global_lock);
+  //LightMutexHolder holder(SimpleLru::_global_lock);
   if (_lru != nullptr) {
     _lru->_total_size -= _lru_size;
     _lru->_total_size += lru_size;

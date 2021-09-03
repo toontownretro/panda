@@ -62,7 +62,7 @@ SimpleLru::
  */
 void SimpleLruPage::
 enqueue_lru(SimpleLru *lru) {
-  LightMutexHolder holder(SimpleLru::_global_lock);
+  //LightMutexHolder holder(SimpleLru::_global_lock);
 
   if (_lru == lru) {
     if (_lru != nullptr) {
@@ -95,7 +95,7 @@ enqueue_lru(SimpleLru *lru) {
  */
 size_t SimpleLru::
 count_active_size() const {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   size_t total = 0;
 
   LinkedListNode *node = _prev;
@@ -112,7 +112,7 @@ count_active_size() const {
  */
 void SimpleLru::
 output(ostream &out) const {
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   out << "SimpleLru " << get_name()
       << ", " << _total_size << " of " << _max_size;
 }
@@ -128,7 +128,7 @@ write(ostream &out, int indent_level) const {
   // freshest in the LRU.  Things at the end of the list will be the next to
   // be evicted.
 
-  LightMutexHolder holder(_global_lock);
+  //LightMutexHolder holder(_global_lock);
   LinkedListNode *node = _prev;
   while (node != _active_marker && node != this) {
     SimpleLruPage *page = (SimpleLruPage *)node;
@@ -171,9 +171,9 @@ do_evict_to(size_t target_size, bool hard_evict) {
     SimpleLruPage *next = (SimpleLruPage *)node->_next;
 
     // We must release the lock while we call evict_lru().
-    _global_lock.unlock();
+    //_global_lock.unlock();
     node->evict_lru();
-    _global_lock.lock();
+    //_global_lock.lock();
 
     if (node == end || node == _prev) {
       // If we reach the original tail of the list, stop.

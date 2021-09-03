@@ -100,7 +100,7 @@ PandaNode::
 
   if (_dirty_prev_transform) {
     // Need to have this held before we grab any other locks.
-    LightMutexHolder holder(_dirty_prev_transforms._lock);
+    //LightMutexHolder holder(_dirty_prev_transforms._lock);
     do_clear_dirty_prev_transform();
   }
 
@@ -145,7 +145,7 @@ PandaNode(const PandaNode &copy) :
 #endif
 
   // Need to have this held before we grab any other locks.
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
 
   // Copy the other node's state.
   {
@@ -1092,7 +1092,7 @@ set_transform(const TransformState *transform, Thread *current_thread) {
   nassertv(!transform->is_invalid());
 
   // Need to have this held before we grab any other locks.
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
 
   // Apply this operation to the current stage as well as to all upstream
   // stages.
@@ -1130,7 +1130,7 @@ set_prev_transform(const TransformState *transform, Thread *current_thread) {
   nassertv(!transform->is_invalid());
 
   // Need to have this held before we grab any other locks.
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
 
   // Apply this operation to the current stage as well as to all upstream
   // stages.
@@ -1157,7 +1157,7 @@ set_prev_transform(const TransformState *transform, Thread *current_thread) {
 void PandaNode::
 reset_prev_transform(Thread *current_thread) {
   // Need to have this held before we grab any other locks.
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
   do_clear_dirty_prev_transform();
 
   // Apply this operation to the current stage as well as to all upstream
@@ -1182,7 +1182,7 @@ reset_all_prev_transform(Thread *current_thread) {
   nassertv(current_thread->get_pipeline_stage() == 0);
 
   PStatTimer timer(_reset_prev_pcollector, current_thread);
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
 
   LinkedListNode *list_node = _dirty_prev_transforms._next;
   while (list_node != &_dirty_prev_transforms) {
@@ -1376,7 +1376,7 @@ copy_all_properties(PandaNode *other) {
   }
 
   // Need to have this held before we grab any other locks.
-  LightMutexHolder holder(_dirty_prev_transforms._lock);
+  //LightMutexHolder holder(_dirty_prev_transforms._lock);
 
   bool any_transform_changed = false;
   bool any_state_changed = false;

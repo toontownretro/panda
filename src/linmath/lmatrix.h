@@ -31,6 +31,8 @@
 #include "lvecBase3.h"
 #include "lvecBase2.h"
 
+#include "memoryBase.h"
+
 #include "fltnames.h"
 // lmatrix3_src.h includes lmatrix4_src.h.
 #include "lmatrix3_src.h"

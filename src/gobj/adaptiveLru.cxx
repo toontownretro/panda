@@ -223,7 +223,7 @@ count_active_size() const {
  */
 void AdaptiveLru::
 begin_epoch() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   do_partial_lru_update(_max_updates_per_frame);
   if (_total_size > _max_size) {
     do_evict_to(_max_size, false);
@@ -237,7 +237,7 @@ begin_epoch() {
  */
 void AdaptiveLru::
 output(ostream &out) const {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   out << "AdaptiveLru " << get_name()
       << ", " << _total_size << " of " << _max_size;
 }
@@ -253,7 +253,7 @@ write(ostream &out, int indent_level) const {
   // freshest in the LRU.  Things at the end of the list will be the next to
   // be evicted.
 
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   int index;
   for (index = 0; index < LPP_TotalPriorities; ++index) {
@@ -285,7 +285,7 @@ write(ostream &out, int indent_level) const {
 void AdaptiveLru::
 do_add_page(AdaptiveLruPage *page) {
   nassertv(page != nullptr && page->_lru == this);
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   _total_size += page->_lru_size;
   ((AdaptiveLruPageDynamicList *)page)->insert_before(&_page_array[page->_priority]);
@@ -298,7 +298,7 @@ do_add_page(AdaptiveLruPage *page) {
 void AdaptiveLru::
 do_remove_page(AdaptiveLruPage *page) {
   nassertv(page != nullptr && page->_lru == this);
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   _total_size -= page->_lru_size;
   ((AdaptiveLruPageDynamicList *)page)->remove_from_list();
@@ -311,7 +311,7 @@ do_remove_page(AdaptiveLruPage *page) {
 void AdaptiveLru::
 do_access_page(AdaptiveLruPage *page) {
   nassertv(page != nullptr && page->_lru == this);
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
 
   if (page->_current_frame_identifier == _current_frame_identifier) {
     // This is the second or more time this page is accessed this frame.
@@ -363,9 +363,9 @@ do_evict_to(size_t target_size, bool hard_evict) {
 
         } else {
           // We must release the lock while we call evict_lru().
-          _lock.unlock();
+          //_lock.unlock();
           page->evict_lru();
-          _lock.lock();
+          //_lock.lock();
 
           if (_total_size <= target_size) {
             // We've evicted enough to satisfy our target.

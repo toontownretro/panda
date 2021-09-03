@@ -131,7 +131,7 @@ RenderState::
   nassertv(!is_destructing());
   set_destructing();
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // unref() should have cleared these.
   nassertv(_saved_entry == -1);
@@ -372,7 +372,7 @@ compose(const RenderState *other) const {
     return do_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // Is this composition already cached?
   int index = _composition_cache.find(other);
@@ -461,7 +461,7 @@ invert_compose(const RenderState *other) const {
     return do_invert_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // Is this composition already cached?
   int index = _invert_composition_cache.find(other);
@@ -637,7 +637,7 @@ unref() const {
   // holding it if we happen to drop the reference count to 0. Having to grab
   // the lock at every call to unref() is a big limiting factor on
   // parallelization.
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   if (auto_break_cycles && uniquify_states) {
     if (get_cache_ref_count() > 0 &&
@@ -730,7 +730,7 @@ get_max_priority() {
  */
 int RenderState::
 get_num_states() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
   return _states.get_num_entries();
 }
 
@@ -749,7 +749,7 @@ get_num_states() {
  */
 int RenderState::
 get_num_unused_states() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   // First, we need to count the number of times each RenderState object is
   // recorded in the cache.
@@ -829,7 +829,7 @@ get_num_unused_states() {
  */
 int RenderState::
 clear_cache() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   PStatTimer timer(_cache_update_pcollector);
   int orig_size = _states.get_num_entries();
@@ -904,7 +904,7 @@ garbage_collect() {
     return num_attribs;
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   PStatTimer timer(_garbage_collect_pcollector);
   size_t orig_size = _states.get_num_entries();
@@ -985,7 +985,7 @@ garbage_collect() {
  */
 void RenderState::
 clear_munger_cache() {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   size_t size = _states.get_num_entries();
   for (size_t si = 0; si < size; ++si) {
@@ -1011,7 +1011,7 @@ clear_munger_cache() {
  */
 void RenderState::
 list_cycles(ostream &out) {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   typedef pset<const RenderState *> VisitedStates;
   VisitedStates visited;
@@ -1085,7 +1085,7 @@ list_cycles(ostream &out) {
  */
 void RenderState::
 list_states(ostream &out) {
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   size_t size = _states.get_num_entries();
   out << size << " states:\n";
@@ -1105,7 +1105,7 @@ bool RenderState::
 validate_states() {
   PStatTimer timer(_state_validate_pcollector);
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
   if (_states.is_empty()) {
     return true;
   }
@@ -1292,7 +1292,7 @@ return_unique(RenderState *state) {
 
   PStatTimer timer(_state_new_pcollector);
 
-  LightReMutexHolder holder(*_states_lock);
+  //LightReMutexHolder holder(*_states_lock);
 
   if (state->_saved_entry != -1) {
     // This state is already in the cache.  nassertr(_states.find(state) ==
@@ -1604,7 +1604,7 @@ r_detect_reverse_cycles(const RenderState *start_state,
  */
 void RenderState::
 release_new() {
-  nassertv(_states_lock->debug_is_locked());
+  //nassertv(_states_lock->debug_is_locked());
 
   if (_saved_entry != -1) {
     _saved_entry = -1;
@@ -1621,7 +1621,7 @@ release_new() {
  */
 void RenderState::
 remove_cache_pointers() {
-  nassertv(_states_lock->debug_is_locked());
+  //nassertv(_states_lock->debug_is_locked());
 
   // Fortunately, since we added CompositionCache records in pairs, we know
   // exactly the set of RenderState objects that have us in their cache: it's
@@ -1728,7 +1728,7 @@ remove_cache_pointers() {
  */
 void RenderState::
 determine_bin_index() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   if ((_flags & F_checked_bin_index) != 0) {
     // Someone else checked it first.
     return;
@@ -1779,7 +1779,7 @@ determine_bin_index() {
  */
 void RenderState::
 determine_cull_callback() {
-  LightMutexHolder holder(_lock);
+  //LightMutexHolder holder(_lock);
   if ((_flags & F_checked_cull_callback) != 0) {
     // Someone else checked it first.
     return;
