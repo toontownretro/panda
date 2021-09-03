@@ -16,6 +16,7 @@
  */
 INLINE CullableObject::
 CullableObject() {
+  memset(&_sort_data, 0, sizeof(_sort_data));
 }
 
 /**
@@ -25,15 +26,16 @@ CullableObject() {
 INLINE CullableObject::
 CullableObject(CPT(Geom) geom, CPT(RenderState) state,
                CPT(TransformState) internal_transform) :
-  _geom(std::move(geom)),
   _state(std::move(state)),
-  _internal_transform(std::move(internal_transform))
+  _internal_transform(std::move(internal_transform)),
+  _geom(std::move(geom))
 {
   if (_geom != nullptr) {
     _munged_data = _geom->get_vertex_data();
   } else {
     _munged_data = nullptr;
   }
+  memset(&_sort_data, 0, sizeof(_sort_data));
 }
 
 /**
@@ -41,11 +43,12 @@ CullableObject(CPT(Geom) geom, CPT(RenderState) state,
  */
 INLINE CullableObject::
 CullableObject(const CullableObject &copy) :
-  _geom(copy._geom),
-  _munged_data(copy._munged_data),
   _state(copy._state),
-  _internal_transform(copy._internal_transform)
+  _internal_transform(copy._internal_transform),
+  _geom(copy._geom),
+  _munged_data(copy._munged_data)
 {
+  memcpy(&_sort_data, &copy._sort_data, sizeof(_sort_data));
 }
 
 /**
@@ -53,11 +56,12 @@ CullableObject(const CullableObject &copy) :
  */
 INLINE CullableObject::
 CullableObject(CullableObject &&other) :
-  _geom(std::move(other._geom)),
-  _munged_data(std::move(other._munged_data)),
   _state(std::move(other._state)),
-  _internal_transform(std::move(other._internal_transform))
+  _internal_transform(std::move(other._internal_transform)),
+  _geom(std::move(other._geom)),
+  _munged_data(std::move(other._munged_data))
 {
+  memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
 }
 
 /**
@@ -65,11 +69,12 @@ CullableObject(CullableObject &&other) :
  */
 INLINE void CullableObject::
 operator = (const CullableObject &copy) {
-  _geom = copy._geom;
-  _munged_data = copy._munged_data;
+  _draw_callback = copy._draw_callback;
   _state = copy._state;
   _internal_transform = copy._internal_transform;
-  _draw_callback = copy._draw_callback;
+  _geom = copy._geom;
+  _munged_data = copy._munged_data;
+  memcpy(&_sort_data, &copy._sort_data, sizeof(_sort_data));
 }
 
 /**
@@ -77,11 +82,12 @@ operator = (const CullableObject &copy) {
  */
 INLINE void CullableObject::
 operator = (CullableObject &&other) {
-  _geom = std::move(other._geom);
-  _munged_data = std::move(other._munged_data);
+  _draw_callback = std::move(other._draw_callback);
   _state = std::move(other._state);
   _internal_transform = std::move(other._internal_transform);
-  _draw_callback = std::move(other._draw_callback);
+  _geom = std::move(other._geom);
+  _munged_data = std::move(other._munged_data);
+  memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
 }
 
 /**
@@ -159,7 +165,7 @@ set_draw_callback(CallbackObject *draw_callback) {
  */
 INLINE void CullableObject::
 flush_level() {
-  _sw_sprites_pcollector.flush_level();
+  //_sw_sprites_pcollector.flush_level();
 }
 
 /**
@@ -187,39 +193,4 @@ draw_callback(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread
     // Tell the GSG to forget its state.
     gsg->clear_state_and_transform();
   }
-}
-
-/**
- *
- */
-INLINE CullableObject::SortPoints::
-SortPoints(const CullableObject::PointData *array) :
-  _array(array)
-{
-}
-
-/**
- * Orders the points from back-to-front for correct transparency sorting in
- * munge_points_to_quads
- */
-INLINE bool CullableObject::SortPoints::
-operator () (unsigned short a, unsigned short b) const {
-  return _array[a]._dist > _array[b]._dist;
-}
-
-/**
- *
- */
-INLINE bool CullableObject::SourceFormat::
-operator < (const CullableObject::SourceFormat &other) const {
-  if (_format != other._format) {
-    return _format < other._format;
-  }
-  if (_sprite_texcoord != other._sprite_texcoord) {
-    return (int)_sprite_texcoord < (int)other._sprite_texcoord;
-  }
-  if (_retransform_sprites != other._retransform_sprites) {
-    return (int)_retransform_sprites < (int)other._retransform_sprites;
-  }
-  return false;
 }

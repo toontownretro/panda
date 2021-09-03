@@ -2652,14 +2652,51 @@ finish_decal() {
 }
 
 /**
- * Draws the indicated CullableObject.
+ * Draws the given set of CullableObjects one-by-one.
+ */
+bool GraphicsStateGuardian::
+draw_objects(const pvector<CullableObject> &objects, bool force) {
+  size_t count = objects.size();
+
+  bool all_ok = true;
+  for (size_t i = 0; i < objects.size(); i++) {
+    const CullableObject &object = objects[i];
+
+    if (/*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
+      nassertr(object._geom != nullptr, false);
+      set_state_and_transform(object._state, object._internal_transform);
+      if (!draw_geom(object._geom, object._munged_data, 1/*object._num_instances*/,
+                     force, Thread::get_current_thread())) {
+        all_ok = false;
+      }
+
+    } else if (object._draw_callback != nullptr) {
+      // It has a callback associated.
+      clear_before_callback();
+      set_state_and_transform(object._state, object._internal_transform);
+      GeomDrawCallbackData cbdata(((CullableObject *)&object), this, force);
+      object._draw_callback->do_callback(&cbdata);
+      if (cbdata.get_lost_state()) {
+        // Forget our state.
+        clear_state_and_transform();
+      }
+      // Now the callback has taken care of drawing.
+
+    } else {
+      // TODO: instances.
+    }
+  }
+}
+
+/**
+ * Draws the given CullableObject.
  */
 bool GraphicsStateGuardian::
 draw_object(CullableObject *object, bool force) {
-  if (object->_instances == nullptr && object->_draw_callback == nullptr) {
+  if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
-    return draw_geom(object->_geom, object->_munged_data, object->_num_instances,
+    return draw_geom(object->_geom, object->_munged_data, 1/*object->_num_instances*/,
                      force, Thread::get_current_thread());
 
   } else if (object->_draw_callback != nullptr) {

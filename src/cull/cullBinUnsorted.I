@@ -19,4 +19,5 @@ CullBinUnsorted(const std::string &name, GraphicsStateGuardianBase *gsg,
                 const PStatCollector &draw_region_pcollector) :
   CullBin(name, BT_unsorted, gsg, draw_region_pcollector)
 {
+  _objects.reserve(2048);
 }

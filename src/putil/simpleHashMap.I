@@ -786,6 +786,8 @@ resize_table(size_t new_size) {
 template<class Key, class Value, class Compare>
 void SimpleHashMap<Key, Value, Compare>::
 init_type() {
+  _type_handle = TypeHandle::none();
+#if 0
 #if defined(HAVE_RTTI) && !defined(__EDG__)
   // If we have RTTI, we can determine the name of the base type.
   std::string key_name = typeid(Key).name();
@@ -796,5 +798,6 @@ init_type() {
 #else
   _type_handle =
     register_dynamic_type("SimpleHashMap<unknown, unknown>");
+#endif
 #endif
 }

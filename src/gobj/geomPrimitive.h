@@ -252,9 +252,6 @@ private:
   void do_set_index_type(CData *cdata, NumericType index_type);
   PT(GeomVertexArrayData) do_modify_vertices(CData *cdata);
 
-protected:
-  GeomPrimitiveType _geom_primitive_type;
-
 private:
   // A GeomPrimitive keeps a list (actually, a map) of all the
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
@@ -278,20 +275,27 @@ private:
       return GeomPrimitive::get_class_type();
     }
 
-    ShadeModel _shade_model;
-    int _first_vertex;
-    int _num_vertices;
-    NumericType _index_type;
-    UsageHint _usage_hint;
     COWPT(GeomVertexArrayData) _vertices;
+
+    int _num_vertices;
+    bool _got_minmax;
+
     PTA_int _ends;
+
     COWPT(GeomVertexArrayData) _mins;
     COWPT(GeomVertexArrayData) _maxs;
+
     UpdateSeq _modified;
 
-    bool _got_minmax;
+    int _first_vertex;
+
     unsigned int _min_vertex;
     unsigned int _max_vertex;
+
+    ShadeModel _shade_model;
+
+    NumericType _index_type;
+    UsageHint _usage_hint;
 
   public:
     static TypeHandle get_class_type() {
@@ -312,6 +316,9 @@ private:
   typedef CycleDataWriter<CData> CDWriter;
   typedef CycleDataStageReader<CData> CDStageReader;
   typedef CycleDataStageWriter<CData> CDStageWriter;
+
+protected:
+  GeomPrimitiveType _geom_primitive_type;
 
 private:
   static PStatCollector _decompose_pcollector;
@@ -395,12 +402,12 @@ public:
   INLINE bool draw(GraphicsStateGuardianBase *gsg, bool force) const;
 
 private:
-  CPT(GeomPrimitive) _object;
-  Thread *_current_thread;
   const GeomPrimitive::CData *_cdata;
-
+  CPT(GeomPrimitive) _object;
   CPT(GeomVertexArrayData) _vertices;
   const GeomVertexArrayData::CData *_vertices_cdata;
+
+  Thread *_current_thread;
 
 public:
   static TypeHandle get_class_type() {

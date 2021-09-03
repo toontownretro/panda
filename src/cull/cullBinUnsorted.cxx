@@ -40,7 +40,7 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  */
 void CullBinUnsorted::
 add_object(CullableObject &object, Thread *current_thread) {
-  _objects.push_back(object);
+  _objects.emplace_back(std::move(object));
 }
 
 /**
@@ -49,10 +49,7 @@ add_object(CullableObject &object, Thread *current_thread) {
 void CullBinUnsorted::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-
-  for (CullableObject &object : _objects) {
-    object.draw(_gsg, force, current_thread);
-  }
+  _gsg->draw_objects(_objects, force);
 }
 
 /**

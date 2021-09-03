@@ -71,57 +71,35 @@ public:
   void output(std::ostream &out) const;
 
 public:
-  CPT(Geom) _geom;
-  CPT(GeomVertexData) _munged_data;
+  //CPT(InstanceList) _instances;
+  PT(CallbackObject) _draw_callback;
+
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;
 
-  PT(CallbackObject) _draw_callback;
-  CPT(InstanceList) _instances;
-  int _num_instances = 1;
+  CPT(Geom) _geom;
+  const GeomVertexData *_munged_data;
+
+  //int _num_instances = 1;
+
+  // This union contains the data used by various CullBins to sort their list
+  // of CullableObjects.  Each bin type will only use one of the three
+  // parameters to sort the objects, so a union is used to reduce the memory
+  // requirements.
+  union {
+    const GeomVertexFormat *_format;
+    PN_stdfloat _dist;
+    int _draw_order;
+  } _sort_data;
 
 private:
-  void munge_instances(Thread *current_thread);
-  bool munge_points_to_quads(const CullTraverser *traverser, bool force);
-
+  //void munge_instances(Thread *current_thread);
   static CPT(RenderState) get_flash_cpu_state();
   static CPT(RenderState) get_flash_hardware_state();
 
 private:
-  // This class is used internally by munge_points_to_quads().
-  class PointData {
-  public:
-    PN_stdfloat _dist;
-  };
-  class SortPoints {
-  public:
-    INLINE SortPoints(const PointData *array);
-    INLINE bool operator ()(unsigned short a, unsigned short b) const;
-
-    const PointData *_array;
-  };
-
-  // This is a cache of converted vertex formats.
-  class SourceFormat {
-  public:
-    SourceFormat(const GeomVertexFormat *format, bool sprite_texcoord);
-    INLINE bool operator < (const SourceFormat &other) const;
-
-    CPT(GeomVertexFormat) _format;
-    bool _sprite_texcoord;
-    bool _retransform_sprites;
-  };
-  typedef pmap<SourceFormat, CPT(GeomVertexFormat) > FormatMap;
-  static FormatMap _format_map;
-  static LightMutex _format_lock;
-
   static PStatCollector _munge_pcollector;
   static PStatCollector _munge_geom_pcollector;
-  static PStatCollector _munge_sprites_pcollector;
-  static PStatCollector _munge_sprites_verts_pcollector;
-  static PStatCollector _munge_sprites_prims_pcollector;
-  static PStatCollector _munge_instances_pcollector;
-  static PStatCollector _sw_sprites_pcollector;
 
 public:
   static TypeHandle get_class_type() {

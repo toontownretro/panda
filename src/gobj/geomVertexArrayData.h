@@ -130,9 +130,6 @@ private:
   void reverse_data_endianness(unsigned char *dest,
                                const unsigned char *source, size_t size);
 
-
-  CPT(GeomVertexArrayFormat) _array_format;
-
   // A GeomVertexArrayData keeps a list (actually, a map) of all the
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
   // conversely keeps a list (a set) of all the Geoms that have been prepared
@@ -166,13 +163,14 @@ private:
       return GeomVertexArrayData::get_class_type();
     }
 
-    UsageHint _usage_hint;
     VertexDataBuffer _buffer;
+
     UpdateSeq _modified;
 
     // This implements read-write locking.  Anyone who gets the data for
     // reading or writing will hold this mutex during the lock.
     ReMutex _rw_lock;
+    UsageHint _usage_hint;
 
   public:
     static TypeHandle get_class_type() {
@@ -193,6 +191,8 @@ private:
   typedef CycleDataWriter<CData> CDWriter;
   typedef CycleDataStageReader<CData> CDStageReader;
   typedef CycleDataStageWriter<CData> CDStageWriter;
+
+  CPT(GeomVertexArrayFormat) _array_format;
 
   static SimpleLru _independent_lru;
   static SimpleLru _small_lru;
@@ -325,9 +325,9 @@ PUBLISHED:
   INLINE void mark_used() const;
 
 private:
+  GeomVertexArrayData::CData *_cdata;
   PT(GeomVertexArrayData) _object;
   Thread * _current_thread;
-  GeomVertexArrayData::CData *_cdata;
   bool _writable;
 
 public:

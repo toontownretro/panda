@@ -50,16 +50,7 @@ protected:
   virtual void fill_result_graph(ResultGraphBuilder &builder);
 
 private:
-  class ObjectData {
-  public:
-    INLINE ObjectData(CullableObject &object, int draw_order);
-    INLINE bool operator < (const ObjectData &other) const;
-
-    CullableObject _object;
-    int _draw_order;
-  };
-
-  typedef pvector<ObjectData> Objects;
+  typedef pvector<CullableObject> Objects;
   Objects _objects;
 
 public:

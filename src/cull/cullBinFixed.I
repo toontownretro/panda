@@ -19,22 +19,5 @@ CullBinFixed(const std::string &name, GraphicsStateGuardianBase *gsg,
              const PStatCollector &draw_region_pcollector) :
   CullBin(name, BT_fixed, gsg, draw_region_pcollector)
 {
-}
-
-/**
- *
- */
-INLINE CullBinFixed::ObjectData::
-ObjectData(CullableObject &object, int draw_order) :
-  _object(object),
-  _draw_order(draw_order)
-{
-}
-
-/**
- * Specifies the correct sort ordering for these objects.
- */
-INLINE bool CullBinFixed::ObjectData::
-operator < (const ObjectData &other) const {
-  return _draw_order < other._draw_order;
+  _objects.reserve(2048);
 }

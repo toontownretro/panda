@@ -44,9 +44,13 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  */
 void CullBinFixed::
 add_object(CullableObject &object, Thread *current_thread) {
-  int draw_order = object._state->get_draw_order();
-  _objects.push_back(ObjectData(object, draw_order));
+  object._sort_data._draw_order = object._state->get_draw_order();
+  _objects.emplace_back(std::move(object));
 }
+
+auto compare_objects_fixed = [](const CullableObject &a, const CullableObject &b) -> bool {
+  return a._sort_data._draw_order < b._sort_data._draw_order;
+};
 
 /**
  * Called after all the geoms have been added, this indicates that the cull
@@ -56,7 +60,7 @@ add_object(CullableObject &object, Thread *current_thread) {
 void CullBinFixed::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-  std::stable_sort(_objects.begin(), _objects.end());
+  std::sort(_objects.begin(), _objects.end(), compare_objects_fixed);
 }
 
 /**
@@ -65,10 +69,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinFixed::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-
-  for (ObjectData &data : _objects) {
-    data._object.draw(_gsg, force, current_thread);
-  }
+  _gsg->draw_objects(_objects, force);
 }
 
 /**
@@ -77,7 +78,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFixed::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (ObjectData &data : _objects) {
-    builder.add_object(data._object);
+  for (CullableObject &object : _objects) {
+    builder.add_object(object);
   }
 }

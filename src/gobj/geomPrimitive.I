@@ -508,12 +508,12 @@ CData(const GeomPrimitive::CData &copy) :
 INLINE GeomPrimitivePipelineReader::
 GeomPrimitivePipelineReader(CPT(GeomPrimitive) object,
                             Thread *current_thread) :
-  _object(std::move(object)),
-  _current_thread(current_thread),
 #ifndef CPPPARSER
-  _cdata(_object->_cycler.read_unlocked(current_thread)),
+  _cdata(object->_cycler.read_unlocked(current_thread)),
 #endif
-  _vertices_cdata(nullptr)
+  _object(std::move(object)),
+  _vertices_cdata(nullptr),
+  _current_thread(current_thread)
 {
   nassertv(_object->test_ref_count_nonzero());
 #ifdef DO_PIPELINING

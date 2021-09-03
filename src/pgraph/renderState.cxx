@@ -106,8 +106,9 @@ RenderState(const RenderState &copy) :
   _lock("RenderState")
 {
   // Copy over the attributes.
-  int num_slots = RenderAttribRegistry::quick_get_global_ptr()->get_num_slots();
-  std::copy(copy._attributes, copy._attributes + num_slots, _attributes);
+  for (int i = 0; i < RenderAttribRegistry::_max_slots; ++i) {
+    _attributes[i] = copy._attributes[i];
+  }
 
   _saved_entry = -1;
   _last_mi = -1;

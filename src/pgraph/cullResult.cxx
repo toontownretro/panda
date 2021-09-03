@@ -163,6 +163,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
   Thread *current_thread = traverser->get_current_thread();
   CullBinManager *bin_manager = CullBinManager::get_global_ptr();
 
+#if 0
   // This is probably a good time to check for an auto rescale setting.
   const RescaleNormalAttrib *rescale;
   object._state->get_attrib_def(rescale);
@@ -179,6 +180,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
 
     object._state = object._state->compose(get_rescale_normal_state(mode));
   }
+#endif
 
   // Check for a special wireframe setting.
   const RenderModeAttrib *rmode;

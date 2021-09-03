@@ -370,7 +370,8 @@ public:
   virtual CPT(RenderState) begin_decal_base_second();
   virtual void finish_decal();
 
-  virtual bool draw_object(CullableObject *object, bool force);
+  virtual bool draw_objects(const pvector<CullableObject> &objects, bool force) override;
+  virtual bool draw_object(CullableObject *object, bool force) override;
   bool draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
                  bool force, Thread *current_thread);
 

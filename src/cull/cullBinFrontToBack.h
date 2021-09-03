@@ -49,16 +49,7 @@ protected:
   virtual void fill_result_graph(ResultGraphBuilder &builder);
 
 private:
-  class ObjectData {
-  public:
-    INLINE ObjectData(CullableObject &object, PN_stdfloat dist);
-    INLINE bool operator < (const ObjectData &other) const;
-
-    CullableObject _object;
-    PN_stdfloat _dist;
-  };
-
-  typedef pvector<ObjectData> Objects;
+  typedef pvector<CullableObject> Objects;
   Objects _objects;
 
 public:

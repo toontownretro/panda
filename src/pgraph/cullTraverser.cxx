@@ -255,10 +255,10 @@ show_bounds(CullTraverserData &data, bool tight) {
       _geoms_pcollector.add_level(1);
       CullableObject outer_viz(std::move(bounds_viz), get_bounds_outer_viz_state(),
                                internal_transform);
-      outer_viz._instances = data._instances;
+      //outer_viz._instances = data._instances;
       _cull_handler->record_object(outer_viz, this);
     }
-  } else if (data._instances == nullptr) {
+  } else if (/*data._instances == nullptr*/true) {
     draw_bounding_volume(node->get_bounds(), internal_transform);
 
     if (node->is_geom_node()) {
@@ -272,6 +272,7 @@ show_bounds(CullTraverserData &data, bool tight) {
       }
     }
   } else {
+    #if 0
     // Draw bounds for every instance.
     for (const InstanceList::Instance &instance : *data._instances) {
       CPT(TransformState) transform = internal_transform->compose(instance.get_transform());
@@ -287,6 +288,7 @@ show_bounds(CullTraverserData &data, bool tight) {
         }
       }
     }
+    #endif
   }
 }
 

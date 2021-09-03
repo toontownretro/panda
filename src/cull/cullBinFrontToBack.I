@@ -19,22 +19,5 @@ CullBinFrontToBack(const std::string &name, GraphicsStateGuardianBase *gsg,
                    const PStatCollector &draw_region_pcollector) :
   CullBin(name, BT_front_to_back, gsg, draw_region_pcollector)
 {
-}
-
-/**
- *
- */
-INLINE CullBinFrontToBack::ObjectData::
-ObjectData(CullableObject &object, PN_stdfloat dist) :
-  _object(object),
-  _dist(dist)
-{
-}
-
-/**
- * Specifies the correct sort ordering for these objects.
- */
-INLINE bool CullBinFrontToBack::ObjectData::
-operator < (const ObjectData &other) const {
-  return _dist < other._dist;
+  _objects.reserve(2048);
 }

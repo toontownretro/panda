@@ -303,15 +303,15 @@ private:
       return GeomVertexData::get_class_type();
     }
 
-    UsageHint _usage_hint;
-    CPT(GeomVertexFormat) _format;
     Arrays _arrays;
+    CPT(GeomVertexFormat) _format;
     CPT(TransformTable) _transform_table;
     COWPT(TransformBlendTable) _transform_blend_table;
     CPT(SliderTable) _slider_table;
     PT(GeomVertexData) _animated_vertices;
     UpdateSeq _animated_vertices_modified;
     UpdateSeq _modified;
+    UsageHint _usage_hint;
 
   public:
     static TypeHandle get_class_type() {
@@ -430,9 +430,9 @@ public:
   INLINE UpdateSeq get_modified() const;
 
 protected:
+  GeomVertexData::CData *_cdata;
   GeomVertexData *_object;
   Thread *_current_thread;
-  GeomVertexData::CData *_cdata;
 };
 
 static constexpr int max_array_handles = 10;

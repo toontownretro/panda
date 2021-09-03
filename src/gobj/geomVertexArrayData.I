@@ -276,11 +276,9 @@ operator = (const GeomVertexArrayData::CData &copy) {
  */
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
-                          Thread *current_thread) :
-  _current_thread(current_thread),
-  _cdata((GeomVertexArrayData::CData *)object->_cycler.read_unlocked(current_thread)),
-  _writable(false)
+                          Thread *current_thread)
 {
+  _cdata = (GeomVertexArrayData::CData *)object->_cycler.read_unlocked(current_thread);
   _object.swap(object);
 
 #ifdef _DEBUG
@@ -292,6 +290,9 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
+
+  _current_thread = current_thread;
+  _writable = false;
 }
 
 /**
@@ -300,9 +301,9 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
                           Thread *current_thread) :
+  _cdata((GeomVertexArrayData::CData *)object->_cycler.read_unlocked(current_thread)),
   _object((GeomVertexArrayData *)object),
   _current_thread(current_thread),
-  _cdata((GeomVertexArrayData::CData *)object->_cycler.read_unlocked(current_thread)),
   _writable(false)
 {
 #ifdef _DEBUG
@@ -321,11 +322,9 @@ GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
  */
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
-                          Thread *current_thread) :
-  _current_thread(current_thread),
-  _cdata(object->_cycler.write_upstream(true, current_thread)),
-  _writable(true)
+                          Thread *current_thread)
 {
+  _cdata = object->_cycler.write_upstream(true, current_thread);
   _object.swap(object);
 
 #ifdef _DEBUG
@@ -337,6 +336,9 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
   // We must grab the lock *after* we have incremented the reference count,
   // above.
   _cdata->_rw_lock.acquire();
+
+  _current_thread = current_thread;
+  _writable = true;
 }
 
 /**
@@ -345,9 +347,9 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(GeomVertexArrayData *object,
                           Thread *current_thread) :
+  _cdata(object->_cycler.write_upstream(true, current_thread)),
   _object(object),
   _current_thread(current_thread),
-  _cdata(object->_cycler.write_upstream(true, current_thread)),
   _writable(true)
 {
 #ifdef _DEBUG

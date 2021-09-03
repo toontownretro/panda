@@ -43,9 +43,46 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  */
 void CullBinStateSorted::
 add_object(CullableObject &object, Thread *current_thread) {
-  _objects.emplace_back(ObjectData(std::move(object)));
-  _object_indices.push_back(_objects.size() - 1);
+  if (object._munged_data != nullptr) {
+    object._sort_data._format = object._munged_data->get_format();
+  } else {
+    object._sort_data._format = nullptr;
+  }
+  _objects.emplace_back(std::move(object));
 }
+
+auto compare_objects_state = [](const CullableObject &a, const CullableObject &b) -> bool {
+  // Group by state changes, in approximate order from heaviest change to
+  // lightest change.
+  const RenderState *sa = a._state;
+  const RenderState *sb = b._state;
+
+  if (sa == sb) {
+    return false;
+  }
+
+  int compare = sa->compare_sort(*sb);
+  if (compare != 0) {
+    return compare < 0;
+  }
+
+  // Uniform updates are actually pretty fast.
+  if (a._internal_transform != b._internal_transform) {
+    return a._internal_transform < b._internal_transform;
+  }
+
+  // Prevent unnecessary vertex buffer rebinds.
+  if (a._munged_data != b._munged_data) {
+    return a._munged_data < b._munged_data;
+  }
+
+  // Vertex format changes are also fairly slow.
+  if (a._sort_data._format != b._sort_data._format) {
+    return a._sort_data._format < b._sort_data._format;
+  }
+
+  return false;
+};
 
 /**
  * Called after all the geoms have been added, this indicates that the cull
@@ -55,11 +92,7 @@ add_object(CullableObject &object, Thread *current_thread) {
 void CullBinStateSorted::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-  //std::sort(_objects.begin(), _objects.end());
-  std::sort(_object_indices.begin(), _object_indices.end(),
-    [this](const int &a, const int &b) {
-      return _objects[a] < _objects[b];
-    });
+  std::sort(_objects.begin(), _objects.end(), compare_objects_state);
 }
 
 
@@ -69,13 +102,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinStateSorted::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-
-  for (int index : _object_indices) {
-    _objects[index]._object.draw(_gsg, force, current_thread);
-  }
-  //for (ObjectData &data : _objects) {
-  //  data._object.draw(_gsg, force, current_thread);
-  //}
+  _gsg->draw_objects(_objects, force);
 }
 
 /**
@@ -86,7 +113,6 @@ void CullBinStateSorted::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
   Objects::iterator oi;
   for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    CullableObject &object = (*oi)._object;
-    builder.add_object(object);
+    builder.add_object(*oi);
   }
 }

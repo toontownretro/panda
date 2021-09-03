@@ -51,23 +51,8 @@ protected:
   virtual void fill_result_graph(ResultGraphBuilder &builder);
 
 private:
-  class ObjectData {
-  public:
-    INLINE ObjectData(CullableObject &&object);
-    INLINE ObjectData(ObjectData &&other);
-    INLINE ObjectData(const ObjectData &copy);
-    INLINE void operator = (ObjectData &&other);
-    INLINE void operator = (const ObjectData &copy);
-    INLINE bool operator < (const ObjectData &other) const;
-
-    CullableObject _object;
-    const GeomVertexFormat *_format;
-  };
-
-  typedef pvector<ObjectData> Objects;
+  typedef pvector<CullableObject> Objects;
   Objects _objects;
-  // Sorted object indices.
-  vector_int _object_indices;
 
 public:
   static TypeHandle get_class_type() {

@@ -299,7 +299,7 @@ public:
   private:
     static EXPCL_PANDA_GOBJ TypeHandle _type_handle;
   };
-  typedef pmap<const CacheKey *, PT(CacheEntry), IndirectLess<CacheKey> > Cache;
+  typedef pflat_map<const CacheKey *, PT(CacheEntry), IndirectLess<CacheKey> > Cache;
 
 private:
   // This is the data that must be cycled between pipeline stages.
@@ -317,11 +317,11 @@ private:
       return Geom::get_class_type();
     }
 
-    COWPT(GeomVertexData) _data;
     Primitives _primitives;
     PrimitiveType _primitive_type;
-    ShadeModel _shade_model;
-    int _geom_rendering;
+
+    COWPT(GeomVertexData) _data;
+
     UpdateSeq _modified;
 
     CPT(BoundingVolume) _internal_bounds;
@@ -329,6 +329,10 @@ private:
     bool _internal_bounds_stale;
     BoundingVolume::BoundsType _bounds_type;
     CPT(BoundingVolume) _user_bounds;
+
+    int _geom_rendering;
+
+    ShadeModel _shade_model;
 
   public:
     static TypeHandle get_class_type() {
@@ -342,6 +346,11 @@ private:
     static TypeHandle _type_handle;
   };
 
+  // This works just like the Texture contexts: each Geom keeps a record of
+  // all the PGO objects that hold the Geom, and vice-versa.
+  typedef pflat_hash_map<PreparedGraphicsObjects *, GeomContext *, pointer_hash> Contexts;
+  Contexts _contexts;
+
   PipelineCycler<CData> _cycler;
   typedef CycleDataLockedReader<CData> CDLockedReader;
   typedef CycleDataReader<CData> CDReader;
@@ -351,11 +360,6 @@ private:
 
   Cache _cache;
   LightMutex _cache_lock;
-
-  // This works just like the Texture contexts: each Geom keeps a record of
-  // all the PGO objects that hold the Geom, and vice-versa.
-  typedef pflat_hash_map<PreparedGraphicsObjects *, GeomContext *, pointer_hash> Contexts;
-  Contexts _contexts;
 
   static UpdateSeq _next_modified;
   static PStatCollector _draw_primitive_setup_pcollector;
@@ -439,9 +443,9 @@ public:
             size_t num_instances, bool force) const;
 
 private:
+  const Geom::CData *_cdata;
   const Geom *_object;
   Thread *_current_thread;
-  const Geom::CData *_cdata;
 
 public:
   static TypeHandle get_class_type() {
