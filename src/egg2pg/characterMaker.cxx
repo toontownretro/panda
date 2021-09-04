@@ -117,7 +117,7 @@ part_to_node(int joint, const string &name) const {
   if (joint != -1) {
     auto it = _joint_dcs.find(joint);
     if (it != _joint_dcs.end()) {
-      return (*it).second;
+      node = (*it).second;
     }
   }
 
