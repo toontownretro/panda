@@ -42,11 +42,15 @@ audio-library-name openal_audio
 
 # OpenGL renderer configurations.
 gl-coordiate-system default
-gl-version 3 2
+gl-version 4 0
 gl-compile-and-execute 1
 gl-force-depth-stencil 0
 gl-force-fbo-color 0
-
+gl-force-no-error 1
+gl-force-no-flush 1
+gl-force-no-scissor 1
+gl-check-errors 0
+gl-enable-memory-barriers 0
 
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files
@@ -147,5 +151,25 @@ egg-object-type-glow            <Scalar> blend { add }
 # This isn't used in the egg loader, it controls a setting only within
 # maya2egg itself.  So if it appears in an egg file, it means nothing.
 egg-object-type-keep-all-uvsets
+
+egg-vertex-membership-quantize 0.0
+
+cache-generated-shaders 0
+use-vertex-lit-for-no-material 1
+
+framebuffer-stencil 0
+support-stencil 0
+
+# This requires a task that clears the cache every so often.
+# ShowBase does this automatically.
+garbage-collect-states 0
+auto-break-cycles 0
+
+rescale-normals 0
+support-rescale-normal 0
+
+hardware-animated-vertices 1
+
+textures-power-2 none
 
 #end 20_panda.prc
