@@ -42,7 +42,6 @@
 #end lib_target
 
 #begin test_bin_target
-  #define BUILD_TESTS 1
   #define TARGET test_material
   #define LOCAL_LIBS material
   #define SOURCES test_material.cxx

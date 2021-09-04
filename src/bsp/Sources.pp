@@ -42,6 +42,5 @@
 #begin test_bin_target
   #define LOCAL_LIBS bsp
   #define TARGET extract-bsp-mat-names
-  #define BUILD_TESTS 1
   #define SOURCES extract_bsp_mat_names.cxx
 #end test_bin_target
