@@ -655,11 +655,26 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   for (size_t i = 0; i < joint_count; i++) {
     CharacterJointPoseData &joint = _joint_poses[i];
 
-    // Check for a forced joint override value.
-    if (joint._has_forced_value) {
+    if (!joint._has_forced_value && joint._merge_joint == -1) {
+      // Use the transform calculated during the channel evaluation.
+      const AnimEvalData::Joint &pose = data._pose[i];
+      joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
+      joint._value.set_row(3, pose._position);
+
+      // Now compute the net transform.
+      LMatrix4 old_net = joint._net_transform;
+      if (joint._parent != -1) {
+        joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
+      } else {
+        joint._net_transform = joint._value * root_xform;
+      }
+
+
+    } else if (joint._has_forced_value) {
+      // Use a forced joint override value.
       joint._value = joint._forced_value;
 
-    } else if (joint._merge_joint != -1) {
+    } else {
       // Use the transform of the parent merge joint.
 
       // Take the net transform and re-interpret it.
@@ -674,26 +689,12 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       } else {
         joint._value = joint._net_transform;
       }
+    }
 
-    } else {
-      // Use the transform calculated during the channel evaluation.
-      const AnimEvalData::Joint &pose = data._pose[i];
-      joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
-      joint._value.set_row(3, pose._position);
-
-      // Now compute the net transform.
-      LMatrix4 old_net = joint._net_transform;
-      if (joint._parent != -1) {
-        joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
-      } else {
-        joint._net_transform = joint._value * root_xform;
-      }
-
-      // Compute the skinning matrix and apply it to our vertex transform.
-      if (joint._vertex_transform != nullptr) {
-        joint._vertex_transform->_matrix = joint._initial_net_transform_inverse * joint._net_transform;
-        joint._vertex_transform->mark_modified(current_thread);
-      }
+    // Compute the skinning matrix to transform the vertices.
+    if (joint._vertex_transform != nullptr) {
+      joint._vertex_transform->_matrix = joint._initial_net_transform_inverse * joint._net_transform;
+      joint._vertex_transform->mark_modified(current_thread);
     }
   }
   ap_compose_collector.stop();
