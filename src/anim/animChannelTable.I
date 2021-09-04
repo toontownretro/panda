@@ -19,11 +19,8 @@ AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames) :
   AnimChannel(name) {
   _fps = fps;
   _num_frames = num_frames;
-  _has_character_bound = false;
   _num_joint_entries = 0;
   _num_slider_entries = 0;
-  _joint_map_size = 0;
-  _slider_map_size = 0;
   //_is_loaded = true;
 }
 
@@ -97,15 +94,10 @@ AnimChannelTable(const AnimChannelTable &copy) :
   _joint_frames(copy._joint_frames),
   _slider_table(copy._slider_table),
   _num_joint_entries(copy._num_joint_entries),
-  _num_slider_entries(copy._num_slider_entries),
-  _joint_map_size(copy._joint_map_size),
-  _slider_map_size(copy._slider_map_size),
-  _has_character_bound(copy._has_character_bound)
+  _num_slider_entries(copy._num_slider_entries)
 {
   std::copy(copy._joint_entries, copy._joint_entries + copy._num_joint_entries, _joint_entries);
   std::copy(copy._slider_entries, copy._slider_entries + copy._num_slider_entries, _slider_entries);
-  std::copy(copy._joint_map, copy._joint_map + copy._joint_map_size, _joint_map);
-  std::copy(copy._slider_map, copy._slider_map + copy._slider_map_size, _slider_map);
 }
 
 /**
@@ -227,69 +219,4 @@ get_num_joint_entries() const {
 INLINE int AnimChannelTable::
 get_num_slider_entries() const {
   return _num_slider_entries;
-}
-
-/**
- * Initializes the mapping of character joint indices to animation joint
- * indices with the indicated number of character joints.
- */
-INLINE void AnimChannelTable::
-init_joint_mapping(int num_character_joints, int num_character_sliders) {
-  _joint_map_size = num_character_joints;
-  _slider_map_size = num_character_sliders;
-  memset(_joint_map, -1, sizeof(int) * _joint_map_size);
-  memset(_slider_map, -1, sizeof(int) * _slider_map_size);
-  _has_character_bound = true;
-}
-
-/**
- * Maps the indicated character joint to a corresponding animation joint.
- */
-INLINE void AnimChannelTable::
-map_character_joint_to_anim_joint(int character_joint, int anim_joint) {
-  nassertv(character_joint >= 0 && character_joint < _joint_map_size &&
-           anim_joint >= 0 && anim_joint < max_character_joints);
-  _joint_map[character_joint] = anim_joint;
-}
-
-/**
- *
- */
-INLINE void AnimChannelTable::
-map_character_slider_to_anim_slider(int character_slider, int anim_slider) {
-  nassertv(character_slider >= 0 && character_slider < _slider_map_size &&
-           anim_slider >= 0 && anim_slider < max_character_joints);
-  _slider_map[character_slider] = anim_slider;
-}
-
-/**
- * Returns the animation joint index associated with the indicated character
- * joint index.
- */
-INLINE int AnimChannelTable::
-get_anim_joint_for_character_joint(int character_joint) const {
-  if (character_joint < 0 || character_joint >= _joint_map_size) {
-    return -1;
-  }
-  return _joint_map[character_joint];
-}
-
-/**
- *
- */
-INLINE int AnimChannelTable::
-get_anim_slider_for_character_slider(int character_slider) const {
-  if (character_slider < 0 || character_slider >= _slider_map_size) {
-    return -1;
-  }
-  return _slider_map[character_slider];
-}
-
-/**
- * Returns true if the AnimChannelTable has a valid mapping to a Character, or false
- * otherwise.
- */
-INLINE bool AnimChannelTable::
-has_mapped_character() const {
-  return _has_character_bound;
 }

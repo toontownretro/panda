@@ -226,7 +226,20 @@ private:
   typedef pvector<AnimLayer> AnimLayers;
   typedef pvector<PT(AnimChannel)> AnimChannels;
 
+  class ChannelBinding {
+  public:
+    vector_int _joint_map;
+    vector_int _slider_map;
+  };
+  typedef pflat_hash_map<AnimChannel *, ChannelBinding, pointer_hash> ChannelBindings;
+
   AnimChannels _channels;
+  // This maps AnimChannelTable pointers to a mapping of character joint
+  // indices to animation joint indices.  This is needed because animations can
+  // be shared by different characters with different joint hierarchies.
+  // When computing the animation for this character, AnimChannelTables will
+  // look up their pointer in this map to get the joint mapping.
+  ChannelBindings _channel_bindings;
 
   AnimLayers _anim_layers;
 
@@ -280,6 +293,9 @@ private:
   typedef CycleDataWriter<CData> CDWriter;
   typedef CycleDataStageWriter<CData> CDStageWriter;
 
+  // This is only used during Bam reading.
+  pvector<ChannelBinding> _read_bindings;
+
 public:
   static void register_with_read_factory();
   virtual void finalize(BamReader *manager);
@@ -312,6 +328,7 @@ private:
   static TypeHandle _type_handle;
 
   friend class CharacterNode;
+  friend class AnimChannelTable;
 };
 
 #include "character.I"

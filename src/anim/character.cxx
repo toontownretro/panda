@@ -120,20 +120,27 @@ make_slider(const std::string &name, PN_stdfloat default_value) {
 /**
  * Binds the indicated AnimChannelTable to this Character.  Matches up joints
  * in the character to joints in the animation with the same name.  The results
- * are stored on the channel.  Returns true on success, or false if the
- * animation couldn't be binded.  Follow this up with a call to add_channel()
- * to make the animation playable on the character.
+ * are stored on the character for access by the AnimChannelTable when
+ * computing the animation.
  */
 bool Character::
 bind_anim(AnimChannelTable *anim) {
-  if (anim->has_mapped_character()) {
-    // If the table was already binded to another character, we're done.
+  ChannelBindings::const_iterator it = _channel_bindings.find(anim);
+  if (it != _channel_bindings.end()) {
+    // Animation is already bound.
     return true;
   }
 
   // We need to map our joints and sliders to joints and sliders on the
   // animation.
-  anim->init_joint_mapping(get_num_joints(), get_num_sliders());
+  ChannelBindings::iterator iit = _channel_bindings.insert(
+    ChannelBindings::value_type(anim, ChannelBinding())).first;
+  vector_int &joint_map = (*iit).second._joint_map;
+  vector_int &slider_map = (*iit).second._slider_map;
+
+  joint_map.resize(get_num_joints());
+  slider_map.resize(get_num_sliders());
+
   for (int joint = 0; joint < get_num_joints(); joint++) {
     const std::string &joint_name = get_joint_name(joint);
     int anim_joint = anim->find_joint_channel(joint_name);
@@ -143,7 +150,7 @@ bind_anim(AnimChannelTable *anim) {
       anim_cat.warning()
         << "Character joint " << joint_name << " does not appear in animation " << anim->get_name() << "\n";
     }
-    anim->map_character_joint_to_anim_joint(joint, anim_joint);
+    joint_map[joint] = anim_joint;
   }
   for (int slider = 0; slider < get_num_sliders(); slider++) {
     const std::string &slider_name = get_slider_name(slider);
@@ -154,7 +161,7 @@ bind_anim(AnimChannelTable *anim) {
       anim_cat.warning()
         << "Character slider " << slider_name << " does not appear in animation " << anim->get_name() << "\n";
     }
-    anim->map_character_slider_to_anim_slider(slider, anim_slider);
+    slider_map[slider] = anim_slider;
   }
 
   return true;
@@ -632,6 +639,7 @@ copy_subgraph() const {
   copy->_sliders = _sliders;
 
   copy->_channels = _channels;
+  copy->_channel_bindings = _channel_bindings;
   copy->_pose_parameters = _pose_parameters;
   copy->_attachments = _attachments;
   copy->_ik_chains = _ik_chains;
@@ -872,6 +880,17 @@ write_datagram(BamWriter *manager, Datagram &me) {
     manager->write_pointer(me, _channels[i]);
   }
 
+  me.add_uint16(_channel_bindings.size());
+  for (auto it = _channel_bindings.begin(); it != _channel_bindings.end(); ++it) {
+    manager->write_pointer(me, (*it).first);
+    for (size_t i = 0; i < _joints.size(); i++) {
+      me.add_int16((*it).second._joint_map[i]);
+    }
+    for (size_t i = 0; i < _sliders.size(); i++) {
+      me.add_int16((*it).second._slider_map[i]);
+    }
+  }
+
   manager->write_cdata(me, _cycler);
 }
 
@@ -890,6 +909,12 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   for (size_t i = 0; i < _channels.size(); i++) {
     _channels[i] = DCAST(AnimChannel, p_list[pi++]);
   }
+
+  for (size_t i = 0; i < _read_bindings.size(); i++) {
+    AnimChannel *chan = DCAST(AnimChannel, p_list[pi++]);
+    _channel_bindings[chan] = _read_bindings[i];
+  }
+  _read_bindings.clear();
 
   return pi;
 }
@@ -953,6 +978,19 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
   _channels.resize(scan.get_uint16());
   manager->read_pointers(scan, _channels.size());
+
+  _read_bindings.resize(scan.get_uint16());
+  for (size_t i = 0; i < _read_bindings.size(); i++) {
+    manager->read_pointer(scan);
+    _read_bindings[i]._joint_map.resize(_joints.size());
+    _read_bindings[i]._slider_map.resize(_sliders.size());
+    for (size_t j = 0; j < _joints.size(); j++) {
+      _read_bindings[i]._joint_map[j] = scan.get_int16();
+    }
+    for (size_t j = 0; j < _sliders.size(); j++) {
+      _read_bindings[i]._slider_map[j] = scan.get_int16();
+    }
+  }
 
   manager->read_cdata(scan, _cycler);
 }

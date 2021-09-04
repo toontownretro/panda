@@ -18,6 +18,7 @@
 #include "animLayer.h"
 #include "animEvalContext.h"
 #include "characterJoint.h"
+#include "character.h"
 
 IMPLEMENT_CLASS(AnimChannelTable);
 
@@ -72,9 +73,18 @@ get_length(Character *character) const {
  */
 void AnimChannelTable::
 do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
-  if (!has_mapped_character()) {
+  auto it = context._character->_channel_bindings.find(this);
+  if (it == context._character->_channel_bindings.end()) {
+    // There's no mapping of character joints to anim joints on the character
+    // for this channel.
     return;
   }
+
+  const vector_int &joint_map = (*it).second._joint_map;
+
+  // Every joint should have an entry in the mapping, even if it's
+  // to no anim joint.
+  //nassertv(context._num_joints == (int)joint_map.size());
 
   // Make sure cycle is within 0-1 range.
   PN_stdfloat cycle = std::max(0.0f, std::min(1.0f, data._cycle));
@@ -135,8 +145,9 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
         continue;
       }
 
-      int anim_joint = get_anim_joint_for_character_joint(i);
-      if (anim_joint == -1) {
+      int anim_joint = joint_map[i];
+      if (anim_joint < 0) {
+        // Invalid anim joint.
         continue;
       }
 
@@ -159,8 +170,10 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
         continue;
       }
       CharacterJoint &j = context._joints[i];
-      int anim_joint = get_anim_joint_for_character_joint(i);
-      if (anim_joint == -1) {
+
+      int anim_joint = joint_map[i];
+      if (anim_joint < 0) {
+        // Invalid anim joint.
         continue;
       }
 
@@ -262,18 +275,6 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _slider_table.size(); i++) {
     me.add_stdfloat(_slider_table[i]);
   }
-
-  me.add_uint8(_joint_map_size);
-  for (size_t i = 0; i < _joint_map_size; i++) {
-    me.add_int16(_joint_map[i]);
-  }
-
-  me.add_uint8(_slider_map_size);
-  for (size_t i = 0; i < _slider_map_size; i++) {
-    me.add_int16(_slider_map[i]);
-  }
-
-  me.add_bool(_has_character_bound);
 }
 
 /**
@@ -309,16 +310,4 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < _slider_table.size(); i++) {
     _slider_table[i] = scan.get_stdfloat();
   }
-
-  _joint_map_size = scan.get_uint8();
-  for (size_t i = 0; i < _joint_map_size; i++) {
-    _joint_map[i] = scan.get_int16();
-  }
-
-  _slider_map_size = scan.get_uint8();
-  for (size_t i = 0; i < _slider_map_size; i++) {
-    _slider_map[i] = scan.get_int16();
-  }
-
-  _has_character_bound = scan.get_bool();
 }

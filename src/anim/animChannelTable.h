@@ -143,13 +143,6 @@ PUBLISHED:
   INLINE int get_num_joint_entries() const;
   INLINE int get_num_slider_entries() const;
 
-  INLINE void init_joint_mapping(int num_character_joints, int num_character_sliders);
-  INLINE void map_character_joint_to_anim_joint(int character_joint, int anim_joint);
-  INLINE void map_character_slider_to_anim_slider(int character_slider, int anim_slider);
-  INLINE int get_anim_joint_for_character_joint(int character_joint) const;
-  INLINE int get_anim_slider_for_character_slider(int character_slider) const;
-  INLINE bool has_mapped_character() const;
-
   virtual PT(AnimChannel) make_copy() const override;
   virtual PN_stdfloat get_length(Character *character) const override;
   virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data) override;
@@ -174,18 +167,6 @@ private:
   SliderEntry _slider_entries[max_character_joints];
   size_t _num_slider_entries;
   vector_stdfloat _slider_table;
-
-  // Maps joints on the corresponding character to joints on the animation.
-  // This is needed because Egg files do not guarantee matching joint orders
-  // between characters and their animations.  I don't expect an animation to
-  // be used for multiple characters with different joint hierarchies, so a
-  // single mapping should be fine.
-  int _joint_map[max_character_joints];
-  size_t _joint_map_size;
-  int _slider_map[max_character_joints];
-  size_t _slider_map_size;
-
-  bool _has_character_bound;
 };
 
 #include "animChannelTable.I"
