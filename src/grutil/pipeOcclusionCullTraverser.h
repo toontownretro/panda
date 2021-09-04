@@ -11,6 +11,8 @@
  * @date 2007-05-29
  */
 
+#if 0
+
 #ifndef PIPEOCCLUSIONCULLTRAVERSER_H
 #define PIPEOCCLUSIONCULLTRAVERSER_H
 
@@ -148,5 +150,7 @@ private:
 };
 
 #include "pipeOcclusionCullTraverser.I"
+
+#endif
 
 #endif

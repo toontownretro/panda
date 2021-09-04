@@ -11,6 +11,8 @@
  * @date 2007-05-29
  */
 
+#if 0
+
 /**
  *
  */
@@ -55,3 +57,5 @@ INLINE PipeOcclusionCullTraverser::PendingObject::
   // Tempting as it is, we shouldn't delete the CullableObject in the
   // destructor, since it has already been deleted.  delete _object;
 }
+
+#endif

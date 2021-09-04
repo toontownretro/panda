@@ -17,8 +17,7 @@
 #include "config_gobj.h"
 #include "config_display.h"
 #include "pipeline.h"
-#include "drawCullHandler.h"
-#include "binCullHandler.h"
+#include "cullHandler.h"
 #include "cullResult.h"
 #include "cullTraverser.h"
 #include "clockObject.h"
@@ -1491,7 +1490,7 @@ cull_and_draw_together(GraphicsOutput *win, DisplayRegion *dr,
       << gsg->get_type() << " cannot render scene with specified lens.\n";
 
   } else {
-    DrawCullHandler cull_handler(gsg);
+    CullHandler cull_handler(CullHandler::HT_draw, nullptr, gsg);
     if (gsg->begin_scene()) {
       CallbackObject *cbobj = dr->get_cull_callback();
       if (cbobj != nullptr) {
@@ -1658,7 +1657,7 @@ cull_to_bins(GraphicsOutput *win, GraphicsStateGuardian *gsg,
              DisplayRegion *dr, SceneSetup *scene_setup,
              CullResult *cull_result, Thread *current_thread) {
 
-  BinCullHandler cull_handler(cull_result);
+  CullHandler cull_handler(CullHandler::HT_bin, cull_result, gsg);
   CallbackObject *cbobj = dr->get_cull_callback();
   if (cbobj != nullptr) {
     // Issue the cull callback on this DisplayRegion.

@@ -22,7 +22,7 @@
 #include "texturePool.h"
 #include "nodeVertexTransform.h"
 #include "rigidBodyCombiner.h"
-#include "pipeOcclusionCullTraverser.h"
+//#include "pipeOcclusionCullTraverser.h"
 #include "shaderTerrainMesh.h"
 
 #include "dconfig.h"
@@ -126,7 +126,7 @@ init_libgrutil() {
   GeoMipTerrain::init_type();
   NodeVertexTransform::init_type();
   RigidBodyCombiner::init_type();
-  PipeOcclusionCullTraverser::init_type();
+  //PipeOcclusionCullTraverser::init_type();
   SceneGraphAnalyzerMeter::init_type();
   ShaderTerrainMesh::init_type();
 

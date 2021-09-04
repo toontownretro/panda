@@ -8,34 +8,28 @@
   #define BUILDING_DLL BUILDING_PANDA_CULL
 
   #define SOURCES \
-    binCullHandler.h binCullHandler.I \
     config_cull.h \
     cullBinBackToFront.h cullBinBackToFront.I \
     cullBinFixed.h cullBinFixed.I \
     cullBinFrontToBack.h cullBinFrontToBack.I \
     cullBinStateSorted.h cullBinStateSorted.I \
-    cullBinUnsorted.h cullBinUnsorted.I \
-    drawCullHandler.h drawCullHandler.I
+    cullBinUnsorted.h cullBinUnsorted.I
 
   #define COMPOSITE_SOURCES \
-    binCullHandler.cxx \
     config_cull.cxx \
     cullBinBackToFront.cxx \
     cullBinFixed.cxx \
     cullBinFrontToBack.cxx \
     cullBinStateSorted.cxx \
-    cullBinUnsorted.cxx \
-    drawCullHandler.cxx
+    cullBinUnsorted.cxx
 
   #define INSTALL_HEADERS \
-    binCullHandler.h binCullHandler.I \
     config_cull.h \
     cullBinBackToFront.h cullBinBackToFront.I \
     cullBinFixed.h cullBinFixed.I \
     cullBinFrontToBack.h cullBinFrontToBack.I \
     cullBinStateSorted.h cullBinStateSorted.I \
-    cullBinUnsorted.h cullBinUnsorted.I \
-    drawCullHandler.h drawCullHandler.I
+    cullBinUnsorted.h cullBinUnsorted.I
 
   #define IGATESCAN all
 

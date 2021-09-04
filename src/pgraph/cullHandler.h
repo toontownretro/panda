@@ -17,26 +17,36 @@
 #include "pandabase.h"
 #include "cullableObject.h"
 #include "graphicsStateGuardianBase.h"
-
-class CullTraverser;
+#include "cullResult.h"
+#include "cullTraverser.h"
 
 /**
- * This defines the abstract interface for an object that receives Geoms
- * identified by the CullTraverser.  By itself, it's not a particularly useful
- * class; to use it, derive from it and redefine record_object().
+ * This is an object that receives Geoms from the CullTraverser and takes
+ * appropriate action based on the configured handle type.
  */
 class EXPCL_PANDA_PGRAPH CullHandler {
 public:
-  CullHandler();
-  virtual ~CullHandler();
+  enum HandleType {
+    HT_bin, // Collect all of the objects into bins, sort the objects within
+            // each bin, and draw the objects within each bin.
+    HT_draw, // Draw objects has soon as they are encountered during the
+             // Cull traversal.
+  };
 
-  virtual void record_object(CullableObject &object,
-                             const CullTraverser *traverser);
-  virtual void end_traverse();
+  INLINE CullHandler(HandleType type, CullResult *result, GraphicsStateGuardianBase *gsg);
+
+  INLINE void record_object(CullableObject &object,
+                            const CullTraverser *traverser);
+  INLINE void end_traverse();
 
   INLINE static void draw(CullableObject &object,
                           GraphicsStateGuardianBase *gsg,
                           bool force, Thread *current_thread);
+
+private:
+  HandleType _type;
+  CullResult *_result;
+  GraphicsStateGuardianBase *_gsg;
 };
 
 #include "cullHandler.I"

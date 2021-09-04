@@ -11,6 +11,8 @@
  * @date 2007-05-29
  */
 
+#if 0
+
 #include "pipeOcclusionCullTraverser.h"
 #include "graphicsEngine.h"
 #include "graphicsPipe.h"
@@ -654,3 +656,5 @@ show_results(int num_fragments, const Geom *geom,
   CullableObject main_viz(geom, state, internal_transform);
   _true_cull_handler->record_object(main_viz, this);
 }
+
+#endif
