@@ -34,6 +34,7 @@ CharacterJoint::
 CharacterJoint(const CharacterJoint &other) :
   CharacterPart(other),
   _children(other._children),
+  _controller(other._controller),
   //_vertex_transforms(other._vertex_transforms),
   _default_value(other._default_value),
   _default_pos(other._default_pos),
@@ -51,6 +52,7 @@ CharacterJoint::
 CharacterJoint(CharacterJoint &&other) :
   CharacterPart(std::move(other)),
   _children(std::move(other._children)),
+  _controller(std::move(other._controller)),
   //_vertex_transforms(std::move(other._vertex_transforms)),
   _default_value(std::move(other._default_value)),
   _default_pos(std::move(other._default_pos)),
@@ -68,6 +70,7 @@ void CharacterJoint::
 operator=(const CharacterJoint &other) {
   CharacterPart::operator=(other);
   _children = other._children;
+  _controller = other._controller;
   _default_value = other._default_value;
   _default_pos = other._default_pos;
   _default_scale = other._default_scale;

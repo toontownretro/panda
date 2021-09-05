@@ -108,6 +108,10 @@ PUBLISHED:
   INLINE LMatrix4 get_joint_default_value(int n) const;
   INLINE LMatrix4 get_joint_value(int n) const;
 
+  INLINE void set_joint_controller_node(int n, PandaNode *node);
+  INLINE void clear_joint_controller_node(int n);
+  INLINE PandaNode *get_joint_controller_node(int n) const;
+
   INLINE int add_channel(AnimChannel *channel);
   INLINE int get_num_channels() const;
   INLINE AnimChannel *get_channel(int n) const;

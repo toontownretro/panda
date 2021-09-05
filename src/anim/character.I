@@ -392,6 +392,45 @@ get_joint_value(int n) const {
 }
 
 /**
+ * Sets the node that should be used to control the pose of the indicated
+ * joint.  Note that this completely overrides any other animation that
+ * might influence the joint.
+ */
+INLINE void Character::
+set_joint_controller_node(int n, PandaNode *node) {
+  nassertv(n >= 0 && n < (int)_joints.size());
+  _joints[n]._controller = node;
+  if (node != nullptr) {
+    // Force the joint to the node's current transform.
+    set_joint_forced_value(n, node->get_transform()->get_mat());
+
+  } else {
+    clear_joint_forced_value(n);
+  }
+
+}
+
+/**
+ * Clears whatever node was being used to override the pose of the indicated
+ * joint.  If there was a node, the joint will no longer be influenced by
+ * the node and will resume animating normally.
+ */
+INLINE void Character::
+clear_joint_controller_node(int n) {
+  set_joint_controller_node(n, nullptr);
+}
+
+/**
+ * Returns the node that is being used to override the pose of the indicated
+ * joint.
+ */
+INLINE PandaNode *Character::
+get_joint_controller_node(int n) const {
+  nassertr(n >= 0 && n < (int)_joints.size(), nullptr);
+  return _joints[n]._controller;
+}
+
+/**
  * Adds a new AnimChannel to the character and returns the index of the
  * channel.
  */

@@ -295,6 +295,15 @@ do_update(double now, CData *cdata, Thread *current_thread) {
     }
   }
 
+  // Read in the local transform of any controller nodes into the joint's
+  // forced value.
+  for (size_t i = 0; i < _joints.size(); i++) {
+    PandaNode *controller = _joints[i]._controller;
+    if (controller != nullptr) {
+      _joint_poses[i]._forced_value = controller->get_transform()->get_mat();
+    }
+  }
+
   AnimEvalData data;
   // Apply the bind poses of each joint as the starting point.
   for (int i = 0; i < ctx._num_joints; i++) {
@@ -663,11 +672,18 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   for (size_t i = 0; i < joint_count; i++) {
     CharacterJointPoseData &joint = _joint_poses[i];
 
-    if (!joint._has_forced_value && joint._merge_joint == -1) {
-      // Use the transform calculated during the channel evaluation.
-      const AnimEvalData::Joint &pose = data._pose[i];
-      joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
-      joint._value.set_row(3, pose._position);
+    if (joint._merge_joint == -1) {
+
+      if (!joint._has_forced_value) {
+        // Use the transform calculated during the channel evaluation.
+        const AnimEvalData::Joint &pose = data._pose[i];
+        joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
+        joint._value.set_row(3, pose._position);
+
+      } else {
+        // Take the local transform from the forced value.
+        joint._value = joint._forced_value;
+      }
 
       // Now compute the net transform.
       LMatrix4 old_net = joint._net_transform;
@@ -676,11 +692,6 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       } else {
         joint._net_transform = joint._value * root_xform;
       }
-
-
-    } else if (joint._has_forced_value) {
-      // Use a forced joint override value.
-      joint._value = joint._forced_value;
 
     } else {
       // Use the transform of the parent merge joint.
