@@ -15,12 +15,15 @@
 #define GEOMBUILDER_H
 
 #include "pandabase.h"
+#include "geomIndexData.h"
+#include "geomVertexFormat.h"
 
 /**
  * A utility class for manipulating a Geom index buffer.
  */
 class EXPCL_PANDA_GOBJ GeomBuilder {
-
+private:
+  PT(GeomIndexData) _index_buffer;
 };
 
 #include "geomBuilder.I"

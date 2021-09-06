@@ -32,22 +32,11 @@ class GraphicsOutputBase;
 class VertexBufferContext;
 class IndexBufferContext;
 class BufferContext;
-class GeomContext;
 class GeomNode;
 class Geom;
-class GeomPipelineReader;
 class GeomVertexData;
-class GeomVertexDataPipelineReader;
 class GeomVertexArrayData;
-class GeomPrimitive;
-class GeomPrimitivePipelineReader;
-class GeomTriangles;
-class GeomTristrips;
-class GeomTrifans;
-class GeomLines;
-class GeomLinestrips;
-class GeomPoints;
-class GeomMunger;
+class GeomIndexData;
 
 class SceneSetup;
 class PreparedGraphicsObjects;
@@ -153,9 +142,6 @@ public:
   virtual SamplerContext *prepare_sampler(const SamplerState &sampler)=0;
   virtual void release_sampler(SamplerContext *sc)=0;
 
-  virtual GeomContext *prepare_geom(Geom *geom)=0;
-  virtual void release_geom(GeomContext *gc)=0;
-
   virtual ShaderContext *prepare_shader(Shader *shader)=0;
   virtual void release_shader(ShaderContext *sc)=0;
 
@@ -163,7 +149,7 @@ public:
   virtual void release_vertex_buffer(VertexBufferContext *vbc)=0;
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts)=0;
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data)=0;
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexData *data)=0;
   virtual void release_index_buffer(IndexBufferContext *ibc)=0;
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts)=0;
 
@@ -172,9 +158,6 @@ public:
   virtual void release_shader_buffers(const pvector<BufferContext *> &contexts)=0;
 
   virtual void dispatch_compute(int size_x, int size_y, int size_z)=0;
-
-  virtual PT(GeomMunger) get_geom_munger(const RenderState *state,
-                                         Thread *current_thread)=0;
 
   virtual void set_state_and_transform(const RenderState *state,
                                        const TransformState *transform)=0;
@@ -204,20 +187,20 @@ public:
   virtual bool draw_objects(const pvector<CullableObject> &objects, bool force)=0;
   virtual bool draw_object(CullableObject *object, bool force)=0;
 
-  virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,
-                                     const GeomVertexDataPipelineReader *data_reader,
+  virtual bool begin_draw_primitives(const Geom *geom,
+                                     const GeomVertexData *data,
                                      size_t num_instances, bool force)=0;
-  virtual bool draw_triangles(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_trifans(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_patches(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_lines(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_lines_adj(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force)=0;
-  virtual bool draw_points(const GeomPrimitivePipelineReader *reader, bool force)=0;
+  virtual bool draw_triangles(const Geom *geom, bool force)=0;
+  virtual bool draw_triangles_adj(const Geom *geom, bool force)=0;
+  virtual bool draw_tristrips(const Geom *geom, bool force)=0;
+  virtual bool draw_tristrips_adj(const Geom *geom, bool force)=0;
+  virtual bool draw_trifans(const Geom *geom, bool force)=0;
+  virtual bool draw_patches(const Geom *geom, bool force)=0;
+  virtual bool draw_lines(const Geom *geom, bool force)=0;
+  virtual bool draw_lines_adj(const Geom *geom, bool force)=0;
+  virtual bool draw_linestrips(const Geom *geom, bool force)=0;
+  virtual bool draw_linestrips_adj(const Geom *geom, bool force)=0;
+  virtual bool draw_points(const Geom *geom, bool force)=0;
   virtual void end_draw_primitives()=0;
 
   virtual bool framebuffer_copy_to_texture

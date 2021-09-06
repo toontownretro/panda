@@ -17,7 +17,7 @@
 #include "pandabase.h"
 
 #include "bufferContext.h"
-#include "geomPrimitive.h"
+#include "geomIndexData.h"
 #include "preparedGraphicsObjects.h"
 #include "adaptiveLru.h"
 
@@ -32,18 +32,18 @@
  */
 class EXPCL_PANDA_GOBJ IndexBufferContext : public BufferContext, public AdaptiveLruPage {
 public:
-  INLINE IndexBufferContext(PreparedGraphicsObjects *pgo, GeomPrimitive *data);
+  INLINE IndexBufferContext(PreparedGraphicsObjects *pgo, GeomIndexData *data);
 
 PUBLISHED:
-  INLINE GeomPrimitive *get_data() const;
+  INLINE GeomIndexData *get_data() const;
 
-  INLINE bool changed_size(const GeomPrimitivePipelineReader *reader) const;
-  INLINE bool changed_usage_hint(const GeomPrimitivePipelineReader *reader) const;
-  INLINE bool was_modified(const GeomPrimitivePipelineReader *reader) const;
+  INLINE bool changed_size(const GeomIndexData *reader) const;
+  INLINE bool changed_usage_hint(const GeomIndexData *reader) const;
+  INLINE bool was_modified(const GeomIndexData *reader) const;
 
 public:
   INLINE void update_data_size_bytes(size_t new_data_size_bytes);
-  INLINE void mark_loaded(const GeomPrimitivePipelineReader *reader);
+  INLINE void mark_loaded(const GeomIndexData *reader);
   INLINE void mark_unloaded();
 
   virtual void output(std::ostream &out) const;

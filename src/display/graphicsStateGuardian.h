@@ -36,7 +36,6 @@
 #include "light.h"
 #include "planeNode.h"
 #include "config_display.h"
-#include "geomMunger.h"
 #include "geomVertexData.h"
 #include "pnotify.h"
 #include "pvector.h"
@@ -49,6 +48,7 @@
 #include "shaderAttrib.h"
 #include "texGenAttrib.h"
 #include "textureAttrib.h"
+#include "geomIndexData.h"
 
 class DrawableRegion;
 class GraphicsEngine;
@@ -296,9 +296,6 @@ public:
   virtual SamplerContext *prepare_sampler(const SamplerState &sampler);
   virtual void release_sampler(SamplerContext *sc);
 
-  virtual GeomContext *prepare_geom(Geom *geom);
-  virtual void release_geom(GeomContext *gc);
-
   virtual ShaderContext *prepare_shader(Shader *shader);
   virtual void release_shader(ShaderContext *sc);
 
@@ -306,7 +303,7 @@ public:
   virtual void release_vertex_buffer(VertexBufferContext *vbc);
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts);
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data);
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexData *data);
   virtual void release_index_buffer(IndexBufferContext *ibc);
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts);
 
@@ -320,11 +317,6 @@ public:
   virtual PT(TimerQueryContext) issue_timer_query(int pstats_index);
 
   virtual void dispatch_compute(int size_x, int size_y, int size_z);
-
-  virtual PT(GeomMunger) get_geom_munger(const RenderState *state,
-                                         Thread *current_thread);
-  virtual PT(GeomMunger) make_geom_munger(const RenderState *state,
-                                          Thread *current_thread);
 
   virtual void set_state_and_transform(const RenderState *state,
                                        const TransformState *transform);
@@ -375,30 +367,30 @@ public:
   bool draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
                  bool force, Thread *current_thread);
 
-  virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,
-                                     const GeomVertexDataPipelineReader *data_reader,
+  virtual bool begin_draw_primitives(const Geom *geom,
+                                     const GeomVertexData *data,
                                      size_t num_instances, bool force);
-  virtual bool draw_triangles(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_triangles(const Geom *geom,
                               bool force);
-  virtual bool draw_triangles_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_triangles_adj(const Geom *geom,
                                   bool force);
-  virtual bool draw_tristrips(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_tristrips(const Geom *geom,
                               bool force);
-  virtual bool draw_tristrips_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_tristrips_adj(const Geom *geom,
                                   bool force);
-  virtual bool draw_trifans(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_trifans(const Geom *geom,
                             bool force);
-  virtual bool draw_patches(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_patches(const Geom *geom,
                             bool force);
-  virtual bool draw_lines(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_lines(const Geom *geom,
                           bool force);
-  virtual bool draw_lines_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_lines_adj(const Geom *geom,
                               bool force);
-  virtual bool draw_linestrips(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_linestrips(const Geom *geom,
                                bool force);
-  virtual bool draw_linestrips_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_linestrips_adj(const Geom *geom,
                                    bool force);
-  virtual bool draw_points(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_points(const Geom *geom,
                            bool force);
   virtual void end_draw_primitives();
 
@@ -517,7 +509,7 @@ protected:
 
   // This is set by begin_draw_primitives(), and are only valid between
   // begin_draw_primitives() and end_draw_primitives().
-  const GeomVertexDataPipelineReader *_data_reader;
+  const GeomVertexData *_data;
 
   unsigned int _color_write_mask;
 

@@ -15,7 +15,7 @@
 #define GEOM_H
 
 #include "pandabase.h"
-#include "geomVertexArrayData.h"
+#include "geomIndexData.h"
 #include "geomVertexData.h"
 #include "pointerTo.h"
 #include "geomEnums.h"
@@ -39,11 +39,14 @@ PUBLISHED:
   INLINE void set_vertex_data(const GeomVertexData *data);
   INLINE const GeomVertexData *get_vertex_data() const;
 
-  INLINE void set_index_data(const GeomVertexArrayData *data);
-  INLINE const GeomVertexArrayData *get_index_data() const;
+  INLINE void set_index_data(const GeomIndexData *data);
+  INLINE const GeomIndexData *get_index_data() const;
+  INLINE bool is_indexed() const;
 
   INLINE void set_primitive_type(GeomPrimitiveType type);
   INLINE GeomPrimitiveType get_primitive_type() const;
+
+  INLINE PrimitiveType get_primitive_family() const;
 
   INLINE void set_index_range(unsigned int first_index, unsigned int num_indices);
   INLINE unsigned int get_first_index() const;
@@ -51,7 +54,7 @@ PUBLISHED:
 
 private:
   CPT(GeomVertexData) _vertex_data;
-  CPT(GeomVertexArrayData) _index_data;
+  CPT(GeomIndexData) _index_data;
   GeomPrimitiveType _primitive_type;
   unsigned int _first_index;
   unsigned int _num_indices;

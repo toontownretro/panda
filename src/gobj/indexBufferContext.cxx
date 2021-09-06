@@ -20,9 +20,9 @@ TypeHandle IndexBufferContext::_type_handle;
  */
 void IndexBufferContext::
 output(std::ostream &out) const {
-  GeomPrimitive *prim = get_data();
-  if (prim != nullptr) {
-    out << *prim;
+  GeomIndexData *indices = get_data();
+  if (indices != nullptr) {
+    out << *indices;
   } else {
     out << "NULL";
   }

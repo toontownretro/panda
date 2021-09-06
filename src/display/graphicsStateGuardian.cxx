@@ -29,9 +29,6 @@
 #include "clockObject.h"
 #include "pStatTimer.h"
 #include "pStatGPUTimer.h"
-#include "geomTristrips.h"
-#include "geomTrifans.h"
-#include "geomLinestrips.h"
 #include "colorWriteAttrib.h"
 #include "shader.h"
 #include "pnotify.h"
@@ -39,8 +36,6 @@
 #include "displayRegion.h"
 #include "graphicsOutput.h"
 #include "texturePool.h"
-#include "geomMunger.h"
-#include "stateMunger.h"
 #include "ambientLight.h"
 #include "directionalLight.h"
 #include "pointLight.h"
@@ -59,6 +54,7 @@
 #include "shaderManagerBase.h"
 #include "config_pstatclient.h"
 #include "cullableObject.h"
+#include "geom.h"
 
 #include <limits.h>
 
@@ -157,7 +153,7 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
 
   set_coordinate_system(get_default_coordinate_system());
 
-  _data_reader = nullptr;
+  _data = nullptr;
   _current_display_region = nullptr;
   _current_stereo_channel = Lens::SC_mono;
   _current_tex_view_offset = 0;
@@ -290,7 +286,6 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
 GraphicsStateGuardian::
 ~GraphicsStateGuardian() {
   remove_gsg(this);
-  GeomMunger::unregister_mungers_for_gsg(this);
 
   // Remove the munged states for this GSG.  This requires going through all
   // states, although destructing a GSG should be rare enough for this not to
@@ -778,62 +773,6 @@ issue_timer_query(int pstats_index) {
 void GraphicsStateGuardian::
 dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z) {
   nassert_raise("Compute shaders not supported by GSG");
-}
-
-/**
- * Looks up or creates a GeomMunger object to munge vertices appropriate to
- * this GSG for the indicated state.
- */
-PT(GeomMunger) GraphicsStateGuardian::
-get_geom_munger(const RenderState *state, Thread *current_thread) {
-  RenderState::Mungers &mungers = state->_mungers;
-
-  if (!mungers.is_empty()) {
-    // Before we even look up the map, see if the _last_mi value points to
-    // this GSG.  This is likely because we tend to visit the same state
-    // multiple times during a frame.  Also, this might well be the only GSG
-    // in the world anyway.
-    int mi = state->_last_mi;
-    if (mi >= 0 && (size_t)mi < mungers.get_num_entries() && mungers.get_key(mi) == _id) {
-      PT(GeomMunger) munger = mungers.get_data(mi);
-      if (munger->is_registered()) {
-        return munger;
-      }
-    }
-
-    // Nope, we have to look it up in the map.
-    mi = mungers.find(_id);
-    if (mi >= 0) {
-      PT(GeomMunger) munger = mungers.get_data(mi);
-      if (munger->is_registered()) {
-        state->_last_mi = mi;
-        return munger;
-      } else {
-        // This GeomMunger is no longer registered.  Remove it from the map.
-        mungers.remove_element(mi);
-      }
-    }
-  }
-
-  // Nothing in the map; create a new entry.
-  PT(GeomMunger) munger = make_geom_munger(state, current_thread);
-  nassertr(munger != nullptr && munger->is_registered(), munger);
-  nassertr(munger->is_of_type(StateMunger::get_class_type()), munger);
-
-  state->_last_mi = mungers.store(_id, munger);
-  return munger;
-}
-
-/**
- * Creates a new GeomMunger object to munge vertices appropriate to this GSG
- * for the indicated state.
- */
-PT(GeomMunger) GraphicsStateGuardian::
-make_geom_munger(const RenderState *state, Thread *current_thread) {
-  // The default implementation returns no munger at all, but presumably,
-  // every kind of GSG needs some special munging action, so real GSG's will
-  // override this to return something more useful.
-  return nullptr;
 }
 
 /**
@@ -2724,104 +2663,91 @@ draw_object(CullableObject *object, bool force) {
 bool GraphicsStateGuardian::
 draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
           bool force, Thread *current_thread) {
-  GeomPipelineReader geom_reader(geom, current_thread);
-  GeomVertexDataPipelineReader data_reader(vdata, current_thread);
-  data_reader.check_array_readers();
+
+  if (geom->get_num_indices() == 0) {
+    // Nothing to render for this geom.
+    return false;
+  }
 
   bool all_ok;
   //{
     //PStatTimer timer(Geom::_draw_primitive_setup_pcollector);
-    all_ok = begin_draw_primitives(&geom_reader, &data_reader, num_instances, force);
+    all_ok = begin_draw_primitives(geom, vdata, num_instances, force);
   //}
 
   if (!all_ok) {
     return false;
   }
 
-  // Draw all the primitives of the Geom.
-  const Geom::CData *cdata = geom_reader._cdata;
-  const pvector<COWPT(GeomPrimitive)> &primitives = cdata->_primitives;
-  size_t count = primitives.size();
-  const GeomPrimitive *prim;
-  for (size_t i = 0; i < count; i++) {
-    prim = primitives[i].get_read_pointer(current_thread);
-
-    GeomPrimitivePipelineReader prim_reader(prim, current_thread);
-    if (prim_reader.get_num_vertices() != 0) {
-      prim_reader.check_minmax();
-
-      //nassertr(prim_reader.check_valid(&data_reader), false);
-
-      switch (prim->get_geom_primitive_type()) {
-      case GeomPrimitive::GPT_triangles:
-        if (!draw_triangles(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_triangle_strips:
-        if (!draw_tristrips(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_triangle_fans:
-        if (!draw_trifans(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_lines:
-        if (!draw_lines(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_line_strips:
-        if (!draw_linestrips(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_points:
-        if (!draw_points(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_triangles_adj:
-        if (!draw_triangles_adj(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_triangle_strips_adj:
-        if (!draw_tristrips_adj(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_lines_adj:
-        if (!draw_lines_adj(&prim_reader, force)) {
-          all_ok = false;
-        }
-        break;
-
-      case GeomPrimitive::GPT_line_strips_adj:
-        if (!draw_linestrips_adj(&prim_reader, force)) {
-          all_ok = false;
-        }
-
-      case GeomPrimitive::GPT_patches:
-        if (!draw_patches(&prim_reader, force)) {
-          all_ok = false;
-        }
-
-      default:
-        all_ok = false;
-        break;
-      }
+  // Draw the entire Geom in one go.
+  switch (geom->get_primitive_type()) {
+  case Geom::GPT_triangles:
+    if (!draw_triangles(geom, force)) {
+      all_ok = false;
     }
+    break;
+
+  case Geom::GPT_triangle_strips:
+    if (!draw_tristrips(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_triangle_fans:
+    if (!draw_trifans(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_lines:
+    if (!draw_lines(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_line_strips:
+    if (!draw_linestrips(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_points:
+    if (!draw_points(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_triangles_adj:
+    if (!draw_triangles_adj(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_triangle_strips_adj:
+    if (!draw_tristrips_adj(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_lines_adj:
+    if (!draw_lines_adj(geom, force)) {
+      all_ok = false;
+    }
+    break;
+
+  case Geom::GPT_line_strips_adj:
+    if (!draw_linestrips_adj(geom, force)) {
+      all_ok = false;
+    }
+
+  case Geom::GPT_patches:
+    if (!draw_patches(geom, force)) {
+      all_ok = false;
+    }
+
+  default:
+    all_ok = false;
+    break;
   }
 
   end_draw_primitives();
@@ -2835,10 +2761,10 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
  * vertices are ok, false to abort this group of primitives.
  */
 bool GraphicsStateGuardian::
-begin_draw_primitives(const GeomPipelineReader *geom_reader,
-                      const GeomVertexDataPipelineReader *data_reader,
+begin_draw_primitives(const Geom *geom,
+                      const GeomVertexData *data,
                       size_t num_instances, bool force) {
-  _data_reader = data_reader;
+  _data = data;
 
   if (num_instances == 0) {
     return false;
@@ -2846,14 +2772,15 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
 
   // Always draw if we have a shader, since the shader might use a different
   // mechanism for fetching vertex data.
-  return _data_reader->has_vertex() || (_target_shader && _target_shader->has_shader());
+  return (_data->get_format()->get_vertex_column() != nullptr) ||
+         (_target_shader && _target_shader->has_shader());
 }
 
 /**
  * Draws a series of disconnected triangles.
  */
 bool GraphicsStateGuardian::
-draw_triangles(const GeomPrimitivePipelineReader *, bool) {
+draw_triangles(const Geom *, bool) {
   return false;
 }
 
@@ -2862,7 +2789,7 @@ draw_triangles(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of disconnected triangles with adjacency information.
  */
 bool GraphicsStateGuardian::
-draw_triangles_adj(const GeomPrimitivePipelineReader *, bool) {
+draw_triangles_adj(const Geom *, bool) {
   return false;
 }
 
@@ -2870,7 +2797,7 @@ draw_triangles_adj(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of triangle strips.
  */
 bool GraphicsStateGuardian::
-draw_tristrips(const GeomPrimitivePipelineReader *, bool) {
+draw_tristrips(const Geom *, bool) {
   return false;
 }
 
@@ -2878,7 +2805,7 @@ draw_tristrips(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of triangle strips with adjacency information.
  */
 bool GraphicsStateGuardian::
-draw_tristrips_adj(const GeomPrimitivePipelineReader *, bool) {
+draw_tristrips_adj(const Geom *, bool) {
   return false;
 }
 
@@ -2886,7 +2813,7 @@ draw_tristrips_adj(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of triangle fans.
  */
 bool GraphicsStateGuardian::
-draw_trifans(const GeomPrimitivePipelineReader *, bool) {
+draw_trifans(const Geom *, bool) {
   return false;
 }
 
@@ -2895,7 +2822,7 @@ draw_trifans(const GeomPrimitivePipelineReader *, bool) {
  * shader.
  */
 bool GraphicsStateGuardian::
-draw_patches(const GeomPrimitivePipelineReader *, bool) {
+draw_patches(const Geom *, bool) {
   return false;
 }
 
@@ -2903,7 +2830,7 @@ draw_patches(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of disconnected line segments.
  */
 bool GraphicsStateGuardian::
-draw_lines(const GeomPrimitivePipelineReader *, bool) {
+draw_lines(const Geom *, bool) {
   return false;
 }
 
@@ -2911,7 +2838,7 @@ draw_lines(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of disconnected line segments with adjacency information.
  */
 bool GraphicsStateGuardian::
-draw_lines_adj(const GeomPrimitivePipelineReader *, bool) {
+draw_lines_adj(const Geom *, bool) {
   return false;
 }
 
@@ -2919,7 +2846,7 @@ draw_lines_adj(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of line strips.
  */
 bool GraphicsStateGuardian::
-draw_linestrips(const GeomPrimitivePipelineReader *, bool) {
+draw_linestrips(const Geom *, bool) {
   return false;
 }
 
@@ -2927,7 +2854,7 @@ draw_linestrips(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of line strips with adjacency information.
  */
 bool GraphicsStateGuardian::
-draw_linestrips_adj(const GeomPrimitivePipelineReader *, bool) {
+draw_linestrips_adj(const Geom *, bool) {
   return false;
 }
 
@@ -2935,7 +2862,7 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *, bool) {
  * Draws a series of disconnected points.
  */
 bool GraphicsStateGuardian::
-draw_points(const GeomPrimitivePipelineReader *, bool) {
+draw_points(const Geom *, bool) {
   return false;
 }
 
@@ -2945,7 +2872,7 @@ draw_points(const GeomPrimitivePipelineReader *, bool) {
  */
 void GraphicsStateGuardian::
 end_draw_primitives() {
-  _data_reader = nullptr;
+  _data = nullptr;
 }
 
 /**

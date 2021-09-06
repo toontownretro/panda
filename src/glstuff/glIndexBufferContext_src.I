@@ -17,7 +17,7 @@
 INLINE CLP(IndexBufferContext)::
 CLP(IndexBufferContext)(CLP(GraphicsStateGuardian) *glgsg,
                         PreparedGraphicsObjects *pgo,
-                        GeomPrimitive *data) :
+                        GeomIndexData *data) :
   IndexBufferContext(pgo, data),
   _glgsg(glgsg)
 {

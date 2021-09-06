@@ -18,7 +18,6 @@
 #include "texture.h"
 #include "geom.h"
 #include "geomVertexArrayData.h"
-#include "geomPrimitive.h"
 #include "samplerContext.h"
 #include "shader.h"
 #include "reMutexHolder.h"
@@ -76,12 +75,6 @@ PreparedGraphicsObjects::
     delete sc;
   }
   _released_samplers.clear();
-
-  release_all_geoms();
-  for (GeomContext *gc : _released_geoms) {
-    delete gc;
-  }
-  _released_geoms.clear();
 
   release_all_shaders();
   for (ShaderContext *sc : _released_shaders) {
@@ -508,157 +501,6 @@ prepare_sampler_now(const SamplerState &sampler, GraphicsStateGuardianBase *gsg)
 }
 
 /**
- * Indicates that a geom would like to be put on the list to be prepared when
- * the GSG is next ready to do this (presumably at the next frame).
- */
-void PreparedGraphicsObjects::
-enqueue_geom(Geom *geom) {
-  ReMutexHolder holder(_lock);
-
-  _enqueued_geoms.insert(geom);
-}
-
-/**
- * Returns true if the geom has been queued on this GSG, false otherwise.
- */
-bool PreparedGraphicsObjects::
-is_geom_queued(const Geom *geom) const {
-  ReMutexHolder holder(_lock);
-
-  EnqueuedGeoms::const_iterator qi = _enqueued_geoms.find((Geom *)geom);
-  return (qi != _enqueued_geoms.end());
-}
-
-/**
- * Removes a geom from the queued list of geoms to be prepared.  Normally it
- * is not necessary to call this, unless you change your mind about preparing
- * it at the last minute, since the geom will automatically be dequeued and
- * prepared at the next frame.
- *
- * The return value is true if the geom is successfully dequeued, false if it
- * had not been queued.
- */
-bool PreparedGraphicsObjects::
-dequeue_geom(Geom *geom) {
-  ReMutexHolder holder(_lock);
-
-  EnqueuedGeoms::iterator qi = _enqueued_geoms.find(geom);
-  if (qi != _enqueued_geoms.end()) {
-    _enqueued_geoms.erase(qi);
-    return true;
-  }
-  return false;
-}
-
-/**
- * Returns true if the vertex buffer has been prepared on this GSG, false
- * otherwise.
- */
-bool PreparedGraphicsObjects::
-is_geom_prepared(const Geom *geom) const {
-  return geom->is_prepared((PreparedGraphicsObjects *)this);
-}
-
-/**
- * Indicates that a geom context, created by a previous call to
- * prepare_geom(), is no longer needed.  The driver resources will not be
- * freed until some GSG calls update(), indicating it is at a stage where it
- * is ready to release geoms--this prevents conflicts from threading or
- * multiple GSG's sharing geoms (we have no way of knowing which graphics
- * context is currently active, or what state it's in, at the time
- * release_geom is called).
- */
-void PreparedGraphicsObjects::
-release_geom(GeomContext *gc) {
-  ReMutexHolder holder(_lock);
-
-  gc->_geom->clear_prepared(this);
-
-  // We have to set the Geom pointer to NULL at this point, since the Geom
-  // itself might destruct at any time after it has been released.
-  gc->_geom = nullptr;
-
-  bool removed = (_prepared_geoms.erase(gc) != 0);
-  nassertv(removed);
-
-  _released_geoms.insert(gc);
-}
-
-/**
- * Releases all geoms at once.  This will force them to be reloaded into geom
- * memory for all GSG's that share this object.  Returns the number of geoms
- * released.
- */
-int PreparedGraphicsObjects::
-release_all_geoms() {
-  ReMutexHolder holder(_lock);
-
-  int num_geoms = (int)_prepared_geoms.size() + (int)_enqueued_geoms.size();
-
-  for (GeomContext *gc : _prepared_geoms) {
-    gc->_geom->clear_prepared(this);
-    gc->_geom = nullptr;
-
-    _released_geoms.insert(gc);
-  }
-
-  _prepared_geoms.clear();
-  _enqueued_geoms.clear();
-
-  return num_geoms;
-}
-
-/**
- * Returns the number of geoms that have been enqueued to be prepared on this
- * GSG.
- */
-int PreparedGraphicsObjects::
-get_num_queued_geoms() const {
-  return _enqueued_geoms.size();
-}
-
-/**
- * Returns the number of geoms that have already been prepared on this GSG.
- */
-int PreparedGraphicsObjects::
-get_num_prepared_geoms() const {
-  return _prepared_geoms.size();
-}
-
-/**
- * Immediately creates a new GeomContext for the indicated geom and returns
- * it.  This assumes that the GraphicsStateGuardian is the currently active
- * rendering context and that it is ready to accept new geoms.  If this is not
- * necessarily the case, you should use enqueue_geom() instead.
- *
- * Normally, this function is not called directly.  Call Geom::prepare_now()
- * instead.
- *
- * The GeomContext contains all of the pertinent information needed by the GSG
- * to keep track of this one particular geom, and will exist as long as the
- * geom is ready to be rendered.
- *
- * When either the Geom or the PreparedGraphicsObjects object destructs, the
- * GeomContext will be deleted.
- */
-GeomContext *PreparedGraphicsObjects::
-prepare_geom_now(Geom *geom, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
-
-  // Ask the GSG to create a brand new GeomContext.  There might be several
-  // GSG's sharing the same set of geoms; if so, it doesn't matter which of
-  // them creates the context (since they're all shared anyway).
-  GeomContext *gc = gsg->prepare_geom(geom);
-
-  if (gc != nullptr) {
-    bool prepared = _prepared_geoms.insert(gc).second;
-    nassertr(prepared, gc);
-  }
-
-  return gc;
-}
-
-/**
  * Indicates that a shader would like to be put on the list to be prepared
  * when the GSG is next ready to do this (presumably at the next frame).
  */
@@ -1039,7 +881,7 @@ prepare_vertex_buffer_now(GeomVertexArrayData *data, GraphicsStateGuardianBase *
  * when the GSG is next ready to do this (presumably at the next frame).
  */
 void PreparedGraphicsObjects::
-enqueue_index_buffer(GeomPrimitive *data) {
+enqueue_index_buffer(GeomIndexData *data) {
   ReMutexHolder holder(_lock);
 
   _enqueued_index_buffers.insert(data);
@@ -1050,10 +892,10 @@ enqueue_index_buffer(GeomPrimitive *data) {
  * otherwise.
  */
 bool PreparedGraphicsObjects::
-is_index_buffer_queued(const GeomPrimitive *data) const {
+is_index_buffer_queued(const GeomIndexData *data) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedIndexBuffers::const_iterator qi = _enqueued_index_buffers.find((GeomPrimitive *)data);
+  EnqueuedIndexBuffers::const_iterator qi = _enqueued_index_buffers.find((GeomIndexData *)data);
   return (qi != _enqueued_index_buffers.end());
 }
 
@@ -1067,7 +909,7 @@ is_index_buffer_queued(const GeomPrimitive *data) const {
  * it had not been queued.
  */
 bool PreparedGraphicsObjects::
-dequeue_index_buffer(GeomPrimitive *data) {
+dequeue_index_buffer(GeomIndexData *data) {
   ReMutexHolder holder(_lock);
 
   EnqueuedIndexBuffers::iterator qi = _enqueued_index_buffers.find(data);
@@ -1083,7 +925,7 @@ dequeue_index_buffer(GeomPrimitive *data) {
  * otherwise.
  */
 bool PreparedGraphicsObjects::
-is_index_buffer_prepared(const GeomPrimitive *data) const {
+is_index_buffer_prepared(const GeomIndexData *data) const {
   return data->is_prepared((PreparedGraphicsObjects *)this);
 }
 
@@ -1199,7 +1041,7 @@ get_num_prepared_index_buffers() const {
  * IndexBufferContext will be deleted.
  */
 IndexBufferContext *PreparedGraphicsObjects::
-prepare_index_buffer_now(GeomPrimitive *data, GraphicsStateGuardianBase *gsg) {
+prepare_index_buffer_now(GeomIndexData *data, GraphicsStateGuardianBase *gsg) {
   ReMutexHolder holder(_lock);
 
   // First, see if there might be a cached context of the appropriate size.
@@ -1429,17 +1271,14 @@ cancel() {
   if (_object->is_of_type(Texture::get_class_type())) {
     return pgo->dequeue_texture((Texture *)_object.p());
 
-  } else if (_object->is_of_type(Geom::get_class_type())) {
-    return pgo->dequeue_geom((Geom *)_object.p());
-
   } else if (_object->is_of_type(Shader::get_class_type())) {
     return pgo->dequeue_shader((Shader *)_object.p());
 
   } else if (_object->is_of_type(GeomVertexArrayData::get_class_type())) {
     return pgo->dequeue_vertex_buffer((GeomVertexArrayData *)_object.p());
 
-  } else if (_object->is_of_type(GeomPrimitive::get_class_type())) {
-    return pgo->dequeue_index_buffer((GeomPrimitive *)_object.p());
+  } else if (_object->is_of_type(GeomIndexData::get_class_type())) {
+    return pgo->dequeue_index_buffer((GeomIndexData *)_object.p());
 
   } else if (_object->is_of_type(ShaderBuffer::get_class_type())) {
     return pgo->dequeue_shader_buffer((ShaderBuffer *)_object.p());
@@ -1536,14 +1375,6 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
 
   _enqueued_samplers.clear();
 
-  EnqueuedGeoms::iterator qgi;
-  for (qgi = _enqueued_geoms.begin();
-       qgi != _enqueued_geoms.end();
-       ++qgi) {
-    Geom *geom = (*qgi);
-    geom->prepare_now(this, gsg);
-  }
-
   _enqueued_geoms.clear();
 
   EnqueuedShaders::iterator qsi;
@@ -1573,12 +1404,10 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   for (qibi = _enqueued_index_buffers.begin();
        qibi != _enqueued_index_buffers.end();
        ++qibi) {
-    GeomPrimitive *data = (*qibi);
+    GeomVertexArrayData *data = (*qibi);
     // We need this check because the actual index data may not actually have
     // propagated to the draw thread yet.
-    if (data->is_indexed()) {
-      data->prepare_now(this, gsg);
-    }
+    data->prepare_now(this, gsg);
   }
 
   _enqueued_index_buffers.clear();

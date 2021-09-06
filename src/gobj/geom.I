@@ -94,16 +94,25 @@ get_vertex_data() const {
  * Sets the index buffer of the Geom.
  */
 INLINE void Geom::
-set_index_data(const GeomVertexArrayData *data) {
+set_index_data(const GeomIndexData *data) {
   _index_data = data;
 }
 
 /**
  * Returns the index buffer of the Geom.
  */
-INLINE const GeomVertexArrayData *Geom::
+INLINE const GeomIndexData *Geom::
 get_index_data() const {
   return _index_data;
+}
+
+/**
+ * Returns true if this is an indexed Geom.  That is, if the Geom contains an
+ * index buffer.
+ */
+INLINE bool Geom::
+is_indexed() const {
+  return _index_data != nullptr;
 }
 
 /**
@@ -124,6 +133,39 @@ set_primitive_type(GeomPrimitiveType type) {
 INLINE Geom::GeomPrimitiveType Geom::
 get_primitive_type() const {
   return _primitive_type;
+}
+
+/**
+ * Returns the primitive family that the primitive type of the Geom belongs to.
+ * For instance, triangles, tristrips, and trifans are all in the polygons
+ * primitive family.  This is used to determine the correct antialiasing mode
+ * to use when rendering the Geom.
+ */
+INLINE Geom::PrimitiveType Geom::
+get_primitive_family() const {
+  switch (_primitive_type) {
+  case GPT_triangles:
+  case GPT_triangles_adj:
+  case GPT_triangle_strips:
+  case GPT_triangle_strips_adj:
+  case GPT_triangle_fans:
+    return PT_polygons;
+
+  case GPT_lines:
+  case GPT_lines_adj:
+  case GPT_line_strips:
+  case GPT_line_strips_adj:
+    return PT_lines;
+
+  case GPT_points:
+    return PT_points;
+
+  case GPT_patches:
+    return PT_patches;
+
+  default:
+    return PT_none;
+  }
 }
 
 /**

@@ -4414,12 +4414,12 @@ end_frame(Thread *current_thread) {
  * vertices are ok, false to abort this group of primitives.
  */
 bool CLP(GraphicsStateGuardian)::
-begin_draw_primitives(const GeomPipelineReader *geom_reader,
-                      const GeomVertexDataPipelineReader *data_reader,
+begin_draw_primitives(const Geom *geom_reader,
+                      const GeomVertexData *data_reader,
                       size_t num_instances, bool force) {
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "begin_draw_primitives: " << *(data_reader->get_object()) << "\n";
+    GLCAT.spam() << "begin_draw_primitives: " << *data_reader << "\n";
   }
 #endif  // NDEBUG
 
@@ -4436,7 +4436,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
   if (!GraphicsStateGuardian::begin_draw_primitives(geom_reader, data_reader, num_instances, force)) {
     return false;
   }
-  nassertr(_data_reader != nullptr, false);
+  nassertr(_data != nullptr, false);
 
 #ifndef OPENGLES_1
   _instance_count = _supports_geometry_instancing ? num_instances : 1;
@@ -4445,7 +4445,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
   _geom_display_list = 0;
 
   if (_auto_antialias_mode) {
-    switch (geom_reader->get_primitive_type()) {
+    switch (geom_reader->get_primitive_family()) {
     case GeomPrimitive::PT_polygons:
     case GeomPrimitive::PT_patches:
       setup_antialias_polygon();
@@ -4954,13 +4954,13 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
  * Draws a series of disconnected triangles.
  */
 bool CLP(GraphicsStateGuardian)::
-draw_triangles(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_triangles(const Geom *reader, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_triangles: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_triangles: " << *reader << "\n";
   }
 #endif  // NDEBUG
 
@@ -4971,20 +4971,21 @@ draw_triangles(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_tri_pcollector.add_level(num_vertices);
+    int num_indices = reader->get_num_indices();
+    _vertices_tri_pcollector.add_level(num_indices);
     _primitive_batches_tri_pcollector.add_level(1);
 
     if (reader->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = reader->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
 
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_TRIANGLES, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
+        _glDrawElementsInstanced(GL_TRIANGLES, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
                                  client_pointer, _instance_count);
       } else
 #endif
@@ -4992,22 +4993,22 @@ draw_triangles(const GeomPrimitivePipelineReader *reader, bool force) {
         _glDrawRangeElements(GL_TRIANGLES,
                              reader->get_min_vertex(),
                              reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
                              client_pointer);
       }
     } else {
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_TRIANGLES,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               reader->get_first_index(),
+                               num_indices, _instance_count);
       } else
 #endif
       {
         glDrawArrays(GL_TRIANGLES,
-                        reader->get_first_vertex(),
-                        num_vertices);
+                     reader->get_first_index(),
+                     num_indices);
       }
     }
   }
@@ -6325,39 +6326,6 @@ release_sampler(SamplerContext *sc) {
 #endif  // !OPENGLES_1
 
 /**
- * Creates a new retained-mode representation of the given geom, and returns a
- * newly-allocated GeomContext pointer to reference it.  It is the
- * responsibility of the calling function to later call release_geom() with
- * this same pointer (which will also delete the pointer).
- *
- * This function should not be called directly to prepare a geom.  Instead,
- * call Geom::prepare().
- */
-GeomContext *CLP(GraphicsStateGuardian)::
-prepare_geom(Geom *geom) {
-  PStatGPUTimer timer(this, _prepare_geom_pcollector);
-  return new CLP(GeomContext)(geom);
-}
-
-/**
- * Frees the GL resources previously allocated for the geom.  This function
- * should never be called directly; instead, call Geom::release() (or simply
- * let the Geom destruct).
- */
-void CLP(GraphicsStateGuardian)::
-release_geom(GeomContext *gc) {
-  CLP(GeomContext) *ggc = DCAST(CLP(GeomContext), gc);
-#ifdef SUPPORT_FIXED_FUNCTION
-  if (has_fixed_function_pipeline()) {
-    ggc->release_display_lists();
-  }
-#endif
-  report_my_gl_errors(this);
-
-  delete ggc;
-}
-
-/**
  *
  */
 ShaderContext *CLP(GraphicsStateGuardian)::
@@ -6648,7 +6616,7 @@ setup_array_data(const unsigned char *&client_pointer,
  * call Geom::prepare().
  */
 IndexBufferContext *CLP(GraphicsStateGuardian)::
-prepare_index_buffer(GeomPrimitive *data) {
+prepare_index_buffer(GeomIndexData *data) {
   if (_supports_buffers) {
     PStatGPUTimer timer(this, _prepare_index_buffer_pcollector);
 
@@ -6664,8 +6632,7 @@ prepare_index_buffer(GeomPrimitive *data) {
     }
 
     report_my_gl_errors(this);
-    GeomPrimitivePipelineReader reader(data, Thread::get_current_thread());
-    apply_index_buffer(gibc, &reader, false);
+    apply_index_buffer(gibc, data, false);
     return gibc;
   }
 
@@ -6677,7 +6644,7 @@ prepare_index_buffer(GeomPrimitive *data) {
  */
 bool CLP(GraphicsStateGuardian)::
 apply_index_buffer(IndexBufferContext *ibc,
-                   const GeomPrimitivePipelineReader *reader,
+                   const GeomIndexData *reader,
                    bool force) {
   nassertr(_supports_buffers, false);
   if (reader->get_modified() == UpdateSeq::initial()) {
@@ -6827,7 +6794,7 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
  */
 bool CLP(GraphicsStateGuardian)::
 setup_primitive(const unsigned char *&client_pointer,
-                const GeomPrimitivePipelineReader *reader,
+                const GeomIndexData *reader,
                 bool force) {
   if (!_supports_buffers) {
     // No support for buffer objects; always render from client.

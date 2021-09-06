@@ -174,7 +174,7 @@ PUBLISHED:
 
   // The exact type of a GeomPrimitive subclass.  This is the type of primitive
   // that will actually be rendered by the graphics pipe.
-  enum GeomPrimitiveType {
+  enum GeomPrimitiveType : uint8_t {
     GPT_triangles,
     GPT_triangle_strips,
     GPT_triangle_fans,

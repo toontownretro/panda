@@ -70,6 +70,7 @@ typedef void (APIENTRYP PFNGLGETQUERYIVPROC) (GLenum target, GLenum pname, GLint
 typedef void (APIENTRYP PFNGLGETQUERYOBJECTUIVPROC) (GLuint id, GLenum pname, GLuint *params);
 typedef void (APIENTRYP PFNGLPOINTPARAMETERFVPROC) (GLenum pname, const GLfloat *params);
 typedef void (APIENTRYP PFNGLDRAWRANGEELEMENTSPROC) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
+typedef void (APIENTRYP PFNGLDRAWELEMENTSPROC) (GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 // There is some trivial disagreement between different gl.h headers about
 // this one, so we use our own typename.
 typedef void (APIENTRYP PFNGLTEXIMAGE3DPROC_P) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
@@ -311,38 +312,38 @@ public:
   virtual void end_scene();
   virtual void end_frame(Thread *current_thread);
 
-  virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,
-                                     const GeomVertexDataPipelineReader *data_reader,
+  virtual bool begin_draw_primitives(const Geom *geom,
+                                     const GeomVertexData *vdata,
                                      size_t num_instances, bool force);
-  virtual bool draw_triangles(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_triangles(const Geom *reader,
                               bool force);
 #ifndef OPENGLES
-  virtual bool draw_triangles_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_triangles_adj(const Geom *geom,
                                   bool force);
 #endif
-  virtual bool draw_tristrips(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_tristrips(const Geom *reader,
                               bool force);
 #ifndef OPENGLES
-  virtual bool draw_tristrips_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_tristrips_adj(const Geom *reader,
                                   bool force);
 #endif
-  virtual bool draw_trifans(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_trifans(const Geom *reader,
                             bool force);
-  virtual bool draw_patches(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_patches(const Geom *reader,
                             bool force);
-  virtual bool draw_lines(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_lines(const Geom *reader,
                           bool force);
 #ifndef OPENGLES
-  virtual bool draw_lines_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_lines_adj(const Geom *reader,
                               bool force);
 #endif
-  virtual bool draw_linestrips(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_linestrips(const Geom *reader,
                                bool force);
 #ifndef OPENGLES
-  virtual bool draw_linestrips_adj(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_linestrips_adj(const Geom *reader,
                                    bool force);
 #endif
-  virtual bool draw_points(const GeomPrimitivePipelineReader *reader,
+  virtual bool draw_points(const Geom *reader,
                            bool force);
   virtual void end_draw_primitives();
 
@@ -361,9 +362,6 @@ public:
   virtual void release_sampler(SamplerContext *sc);
 #endif
 
-  virtual GeomContext *prepare_geom(Geom *geom);
-  virtual void release_geom(GeomContext *gc);
-
   virtual ShaderContext *prepare_shader(Shader *shader);
   virtual void release_shader(ShaderContext *sc);
 
@@ -380,14 +378,14 @@ public:
                         const GeomVertexArrayDataHandle *data,
                         bool force);
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data);
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexData *data);
   bool apply_index_buffer(IndexBufferContext *ibc,
-                          const GeomPrimitivePipelineReader *reader,
+                          const GeomIndexData *reader,
                           bool force);
   virtual void release_index_buffer(IndexBufferContext *ibc);
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts);
   bool setup_primitive(const unsigned char *&client_pointer,
-                       const GeomPrimitivePipelineReader *reader,
+                       const GeomIndexData *reader,
                        bool force);
 
 #ifndef OPENGLES
