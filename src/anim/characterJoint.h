@@ -71,6 +71,10 @@ private:
 public:
   vector_int _children;
 
+  // If non-NULL, the local transform of this node is used as a forced value
+  // for the joint.
+  PT(PandaNode) _controller;
+
   LMatrix4 _default_value;
   LVecBase3 _default_pos;
   LVecBase3 _default_scale;

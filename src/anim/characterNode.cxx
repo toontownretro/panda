@@ -316,7 +316,7 @@ copy_node_pointers(const CharacterNode::NodeMap &node_map,
                    Character *dest, const Character *source) {
   nassertv(dest != source);
 
-  // First handle any nodes below the character link back up the the character.
+  // First handle any nodes below the character that link back up the the character.
   for (auto it = node_map.begin(); it != node_map.end(); ++it) {
     const PandaNode *source_node = (*it).first;
     PandaNode *dest_node = (*it).second;
@@ -330,6 +330,7 @@ copy_node_pointers(const CharacterNode::NodeMap &node_map,
     }
   }
 
+  // Handle attachment nodes.
   for (size_t i = 0; i < source->get_num_attachments(); i++) {
     PandaNode *source_node = source->get_attachment_node(i);
     if (source_node == nullptr) {
@@ -342,6 +343,20 @@ copy_node_pointers(const CharacterNode::NodeMap &node_map,
       // Here's an internal joint that the source Character was animating
       // directly.  We'll animate our corresponding joint the same way.
       dest->set_attachment_node(i, dest_node);
+    }
+  }
+
+  // Handle joint controller nodes.
+  for (size_t i = 0; i < dest->get_num_joints(); i++) {
+    CharacterJoint &dest_joint = dest->_joints[i];
+    const CharacterJoint &src_joint = source->_joints[i];
+
+    if (src_joint._controller != nullptr) {
+      // Find the destination equivalent for the source controller node.
+      auto it = node_map.find(src_joint._controller);
+      if (it != node_map.end()) {
+        dest_joint._controller = (*it).second;
+      }
     }
   }
 }
