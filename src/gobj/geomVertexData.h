@@ -21,7 +21,6 @@
 #include "geomVertexColumn.h"
 #include "geomVertexArrayData.h"
 #include "geomEnums.h"
-#include "geomCacheEntry.h"
 #include "transformTable.h"
 #include "transformBlendTable.h"
 #include "sliderTable.h"
@@ -170,9 +169,6 @@ PUBLISHED:
   void write(std::ostream &out, int indent_level = 0) const;
   void describe_vertex(std::ostream &out, int row) const;
 
-  void clear_cache();
-  void clear_cache_stage();
-
 public:
   static INLINE uint32_t pack_abcd(unsigned int a, unsigned int b,
                                     unsigned int c, unsigned int d);
@@ -211,81 +207,6 @@ private:
   std::string _name;
 
   typedef pvector< COWPT(GeomVertexArrayData) > Arrays;
-
-  // The pipelined data with each CacheEntry.
-  class EXPCL_PANDA_GOBJ CDataCache : public CycleData {
-  public:
-    INLINE CDataCache();
-    INLINE CDataCache(const CDataCache &copy);
-    ALLOC_DELETED_CHAIN(CDataCache);
-    virtual CycleData *make_copy() const;
-    virtual TypeHandle get_parent_type() const {
-      return GeomVertexData::get_class_type();
-    }
-
-    CPT(GeomVertexData) _result;
-
-  public:
-    static TypeHandle get_class_type() {
-      return _type_handle;
-    }
-    static void init_type() {
-      register_type(_type_handle, "GeomVertexData::CDataCache");
-    }
-
-  private:
-    static TypeHandle _type_handle;
-  };
-  typedef CycleDataReader<CDataCache> CDCacheReader;
-  typedef CycleDataWriter<CDataCache> CDCacheWriter;
-
-public:
-  // The CacheKey class separates out just the part of CacheEntry that is used
-  // to key the cache entry within the map.  We have this as a separate class
-  // so we can easily look up a new entry in the map, without having to
-  // execute the relatively expensive CacheEntry constructor.
-  class EXPCL_PANDA_GOBJ CacheKey {
-  public:
-    INLINE CacheKey(const GeomVertexFormat *modifier);
-    INLINE CacheKey(const CacheKey &copy);
-    INLINE CacheKey(CacheKey &&from) noexcept;
-
-    INLINE bool operator < (const CacheKey &other) const;
-
-    CPT(GeomVertexFormat) _modifier;
-  };
-  // It is not clear why MSVC7 needs this class to be public.
-  class EXPCL_PANDA_GOBJ CacheEntry : public GeomCacheEntry {
-  public:
-    INLINE CacheEntry(GeomVertexData *source,
-                      const GeomVertexFormat *modifier);
-    INLINE CacheEntry(GeomVertexData *source, const CacheKey &key);
-    INLINE CacheEntry(GeomVertexData *source, CacheKey &&key) noexcept;
-
-    ALLOC_DELETED_CHAIN(CacheEntry);
-
-    virtual void evict_callback();
-    virtual void output(std::ostream &out) const;
-
-    GeomVertexData *_source;  // A back pointer to the containing data.
-    CacheKey _key;
-
-    PipelineCycler<CDataCache> _cycler;
-
-  public:
-    static TypeHandle get_class_type() {
-      return _type_handle;
-    }
-    static void init_type() {
-      GeomCacheEntry::init_type();
-      register_type(_type_handle, "GeomVertexData::CacheEntry",
-                    GeomCacheEntry::get_class_type());
-    }
-
-  private:
-    static TypeHandle _type_handle;
-  };
-  typedef pmap<const CacheKey *, PT(CacheEntry), IndirectLess<CacheKey> > Cache;
 
 private:
   // This is the data that must be cycled between pipeline stages.
@@ -332,9 +253,6 @@ private:
   typedef CycleDataStageReader<CData> CDStageReader;
   typedef CycleDataStageWriter<CData> CDStageWriter;
 
-  Cache _cache;
-  LightMutex _cache_lock;
-
 private:
   void update_animated_vertices(CData *cdata, Thread *current_thread);
   void do_transform_point_column(const GeomVertexFormat *format, GeomVertexRewriter &data,
@@ -380,8 +298,6 @@ public:
     CopyOnWriteObject::init_type();
     register_type(_type_handle, "GeomVertexData",
                   CopyOnWriteObject::get_class_type());
-    CDataCache::init_type();
-    CacheEntry::init_type();
     CData::init_type();
   }
   virtual TypeHandle get_type() const {
@@ -392,7 +308,6 @@ public:
 private:
   static TypeHandle _type_handle;
 
-  friend class CacheEntry;
   friend class GeomVertexDataPipelineBase;
   friend class GeomVertexDataPipelineReader;
   friend class GeomVertexDataPipelineWriter;

@@ -321,14 +321,6 @@ public:
   virtual bool draw_triangles_adj(const Geom *geom,
                                   bool force);
 #endif
-  virtual bool draw_tristrips(const Geom *reader,
-                              bool force);
-#ifndef OPENGLES
-  virtual bool draw_tristrips_adj(const Geom *reader,
-                                  bool force);
-#endif
-  virtual bool draw_trifans(const Geom *reader,
-                            bool force);
   virtual bool draw_patches(const Geom *reader,
                             bool force);
   virtual bool draw_lines(const Geom *reader,
@@ -336,12 +328,6 @@ public:
 #ifndef OPENGLES
   virtual bool draw_lines_adj(const Geom *reader,
                               bool force);
-#endif
-  virtual bool draw_linestrips(const Geom *reader,
-                               bool force);
-#ifndef OPENGLES
-  virtual bool draw_linestrips_adj(const Geom *reader,
-                                   bool force);
 #endif
   virtual bool draw_points(const Geom *reader,
                            bool force);

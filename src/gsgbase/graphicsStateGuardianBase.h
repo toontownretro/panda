@@ -192,14 +192,9 @@ public:
                                      size_t num_instances, bool force)=0;
   virtual bool draw_triangles(const Geom *geom, bool force)=0;
   virtual bool draw_triangles_adj(const Geom *geom, bool force)=0;
-  virtual bool draw_tristrips(const Geom *geom, bool force)=0;
-  virtual bool draw_tristrips_adj(const Geom *geom, bool force)=0;
-  virtual bool draw_trifans(const Geom *geom, bool force)=0;
   virtual bool draw_patches(const Geom *geom, bool force)=0;
   virtual bool draw_lines(const Geom *geom, bool force)=0;
   virtual bool draw_lines_adj(const Geom *geom, bool force)=0;
-  virtual bool draw_linestrips(const Geom *geom, bool force)=0;
-  virtual bool draw_linestrips_adj(const Geom *geom, bool force)=0;
   virtual bool draw_points(const Geom *geom, bool force)=0;
   virtual void end_draw_primitives()=0;
 

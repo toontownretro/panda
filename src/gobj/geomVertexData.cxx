@@ -25,8 +25,6 @@
 using std::ostream;
 
 TypeHandle GeomVertexData::_type_handle;
-TypeHandle GeomVertexData::CDataCache::_type_handle;
-TypeHandle GeomVertexData::CacheEntry::_type_handle;
 TypeHandle GeomVertexData::CData::_type_handle;
 TypeHandle GeomVertexDataPipelineReader::_type_handle;
 TypeHandle GeomVertexDataPipelineWriter::_type_handle;
@@ -145,8 +143,6 @@ void GeomVertexData::
 operator = (const GeomVertexData &copy) {
   CopyOnWriteObject::operator = (copy);
 
-  clear_cache();
-
   _name = copy._name;
   _cycler = copy._cycler;
   _char_pcollector = copy._char_pcollector;
@@ -168,7 +164,6 @@ operator = (const GeomVertexData &copy) {
  */
 GeomVertexData::
 ~GeomVertexData() {
-  clear_cache();
 }
 
 /**
@@ -239,7 +234,6 @@ set_usage_hint(GeomVertexData::UsageHint usage_hint) {
     PT(GeomVertexArrayData) array_obj = (*ai).get_write_pointer();
     array_obj->set_usage_hint(usage_hint);
   }
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices_modified = UpdateSeq();
 }
@@ -285,7 +279,6 @@ set_format(const GeomVertexFormat *format) {
   // to the new format.
   copy_from(orig_data, false, current_thread);
 
-  clear_cache_stage();
   cdataw->_modified = Geom::get_next_modified();
   cdataw->_animated_vertices.clear();
 }
@@ -328,7 +321,6 @@ unclean_set_format(const GeomVertexFormat *format) {
     array_obj->_array_format = format->get_array(ai);
   }
 
-  clear_cache_stage();
   cdataw->_modified = Geom::get_next_modified();
   cdataw->_animated_vertices.clear();
 }
@@ -353,7 +345,6 @@ clear_rows() {
     PT(GeomVertexArrayData) array_obj = (*ai).get_write_pointer();
     array_obj->clear_rows();
   }
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices.clear();
 }
@@ -373,7 +364,6 @@ set_transform_table(const TransformTable *table) {
 
   CDWriter cdata(_cycler, true, current_thread);
   cdata->_transform_table = (TransformTable *)table;
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices_modified = UpdateSeq();
 }
@@ -390,7 +380,6 @@ PT(TransformBlendTable) GeomVertexData::
 modify_transform_blend_table() {
   CDWriter cdata(_cycler, true);
 
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices_modified = UpdateSeq();
 
@@ -409,7 +398,6 @@ void GeomVertexData::
 set_transform_blend_table(const TransformBlendTable *table) {
   CDWriter cdata(_cycler, true);
   cdata->_transform_blend_table = (TransformBlendTable *)table;
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices_modified = UpdateSeq();
 }
@@ -431,7 +419,6 @@ set_slider_table(const SliderTable *table) {
 
   CDWriter cdata(_cycler, true);
   cdata->_slider_table = (SliderTable *)table;
-  clear_cache_stage();
   cdata->_modified = Geom::get_next_modified();
   cdata->_animated_vertices_modified = UpdateSeq();
 }
@@ -709,36 +696,6 @@ convert_to(const GeomVertexFormat *new_format) const {
     return this;
   }
 
-  // Look up the new format in our cache--maybe we've recently applied it.
-  PT(CacheEntry) entry;
-
-  CacheKey key(new_format);
-
-  _cache_lock.acquire();
-  Cache::const_iterator ci = _cache.find(&key);
-  if (ci == _cache.end()) {
-    _cache_lock.release();
-
-  } else {
-    entry = (*ci).second;
-    _cache_lock.release();
-    nassertr(entry->_source == this, nullptr);
-
-    // Here's an element in the cache for this computation.  Record a cache
-    // hit, so this element will stay in the cache a while longer.
-    entry->refresh(current_thread);
-
-    CDCacheReader cdata(entry->_cycler);
-    if (cdata->_result != nullptr) {
-      return cdata->_result;
-    }
-
-    // The cache entry is stale, but we'll recompute it below.  Note that
-    // there's a small race condition here; another thread might recompute the
-    // cache at the same time.  No big deal, since it'll compute the same
-    // result.
-  }
-
   // Okay, convert the data to the new format.
   if (gobj_cat.is_debug()) {
     gobj_cat.debug()
@@ -754,30 +711,6 @@ convert_to(const GeomVertexFormat *new_format) const {
   new_data->set_slider_table(get_slider_table());
 
   new_data->copy_from(this, false);
-
-  // Record the new result in the cache.
-  if (entry == nullptr) {
-    // Create a new entry for the result.
-    // We don't need the key anymore, move the pointers into the CacheEntry.
-    entry = new CacheEntry((GeomVertexData *)this, std::move(key));
-
-    {
-      LightMutexHolder holder(_cache_lock);
-      bool inserted = ((GeomVertexData *)this)->_cache.insert(Cache::value_type(&entry->_key, entry)).second;
-      if (!inserted) {
-        // Some other thread must have beat us to the punch.  Never mind.
-        return new_data;
-      }
-    }
-
-    // And tell the cache manager about the new entry.  (It might immediately
-    // request a delete from the cache of the thing we just added.)
-    entry->record(current_thread);
-  }
-
-  // Finally, store the cached result on the entry.
-  CDCacheWriter cdata(entry->_cycler, true, current_thread);
-  cdata->_result = new_data;
 
   return new_data;
 }
@@ -1364,44 +1297,6 @@ describe_vertex(ostream &out, int row) const {
       Datagram dg(data + start, stride);
       dg.dump_hex(out, 4);
     }
-  }
-}
-
-/**
- * Removes all of the previously-cached results of convert_to().
- *
- * This blows away the entire cache, upstream and downstream the pipeline.
- * Use clear_cache_stage() instead if you only want to blow away the cache at
- * the current stage and upstream.
- */
-void GeomVertexData::
-clear_cache() {
-  LightMutexHolder holder(_cache_lock);
-  for (Cache::iterator ci = _cache.begin();
-       ci != _cache.end();
-       ++ci) {
-    CacheEntry *entry = (*ci).second;
-    entry->erase();
-  }
-  _cache.clear();
-}
-
-/**
- * Removes all of the previously-cached results of convert_to(), at the
- * current pipeline stage and upstream.  Does not affect the downstream cache.
- *
- * Don't call this in a downstream thread unless you don't mind it blowing
- * away other changes you might have recently made in an upstream thread.
- */
-void GeomVertexData::
-clear_cache_stage() {
-  LightMutexHolder holder(_cache_lock);
-  for (Cache::iterator ci = _cache.begin();
-       ci != _cache.end();
-       ++ci) {
-    CacheEntry *entry = (*ci).second;
-    CDCacheWriter cdata(entry->_cycler);
-    cdata->_result = nullptr;
   }
 }
 
@@ -2109,36 +2004,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 /**
  *
  */
-CycleData *GeomVertexData::CDataCache::
-make_copy() const {
-  return new CDataCache(*this);
-}
-
-/**
- * Called when the entry is evicted from the cache, this should clean up the
- * owning object appropriately.
- */
-void GeomVertexData::CacheEntry::
-evict_callback() {
-  LightMutexHolder holder(_source->_cache_lock);
-  Cache::iterator ci = _source->_cache.find(&_key);
-  nassertv(ci != _source->_cache.end());
-  nassertv((*ci).second == this);
-  _source->_cache.erase(ci);
-}
-
-/**
- *
- */
-void GeomVertexData::CacheEntry::
-output(ostream &out) const {
-  out << "vertex data " << (void *)_source << " to "
-      << *_key._modifier;
-}
-
-/**
- *
- */
 CycleData *GeomVertexData::CData::
 make_copy() const {
   return new CData(*this);
@@ -2485,7 +2350,6 @@ set_num_rows(int n) {
   }
 
   if (any_changed) {
-    _object->clear_cache_stage();
     _cdata->_modified = Geom::get_next_modified();
     _cdata->_animated_vertices.clear();
   }
@@ -2512,7 +2376,6 @@ unclean_set_num_rows(int n) {
   }
 
   if (any_changed) {
-    _object->clear_cache_stage();
     _cdata->_modified = Geom::get_next_modified();
     _cdata->_animated_vertices.clear();
   }
@@ -2553,7 +2416,6 @@ modify_array(size_t i) {
     new_data = _cdata->_arrays[i].get_write_pointer();
   }
 
-  _object->clear_cache_stage();
   _cdata->_modified = Geom::get_next_modified();
   _cdata->_animated_vertices_modified = UpdateSeq();
 
@@ -2567,7 +2429,6 @@ void GeomVertexDataPipelineWriter::
 set_array(size_t i, const GeomVertexArrayData *array) {
   nassertv(i < _cdata->_arrays.size());
   _cdata->_arrays[i] = (GeomVertexArrayData *)array;
-  _object->clear_cache_stage();
   _cdata->_modified = Geom::get_next_modified();
   _cdata->_animated_vertices_modified = UpdateSeq();
 
@@ -2588,7 +2449,6 @@ remove_array(size_t i) {
   _cdata->_format = GeomVertexFormat::register_format(new_format);
   _cdata->_arrays.erase(_cdata->_arrays.begin() + i);
 
-  _object->clear_cache_stage();
   _cdata->_modified = Geom::get_next_modified();
   _cdata->_animated_vertices.clear();
 
@@ -2613,7 +2473,6 @@ insert_array(size_t i, const GeomVertexArrayData *array) {
   _cdata->_format = GeomVertexFormat::register_format(new_format);
   _cdata->_arrays.insert(_cdata->_arrays.begin() + i, (GeomVertexArrayData *)array);
 
-  _object->clear_cache_stage();
   _cdata->_modified = Geom::get_next_modified();
   _cdata->_animated_vertices.clear();
 
@@ -2674,7 +2533,6 @@ make_array_writers() {
     _array_writers.emplace_back(GeomVertexArrayDataHandle((*ai).get_write_pointer(), _current_thread));
   }
 
-  _object->clear_cache_stage();
   _cdata->_modified = Geom::get_next_modified();
   _cdata->_animated_vertices_modified = UpdateSeq();
 

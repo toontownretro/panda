@@ -208,8 +208,6 @@ private:
 private:
   typedef pflat_hash_set<TextureContext *, pointer_hash> Textures;
   typedef pflat_hash_map< PT(Texture), PT(EnqueuedObject) > EnqueuedTextures;
-  typedef pflat_hash_set<GeomContext *, pointer_hash> Geoms;
-  typedef pflat_hash_set< PT(Geom) > EnqueuedGeoms;
   typedef pflat_hash_set<ShaderContext *, pointer_hash> Shaders;
   typedef pflat_hash_map< PT(Shader), PT(EnqueuedObject) > EnqueuedShaders;
   typedef pflat_hash_set<BufferContext *, pointer_hash> Buffers;
@@ -256,8 +254,6 @@ private:
   PreparedSamplers _prepared_samplers;
   ReleasedSamplers _released_samplers;
   EnqueuedSamplers _enqueued_samplers;
-  Geoms _prepared_geoms, _released_geoms;
-  EnqueuedGeoms _enqueued_geoms;
   Shaders _prepared_shaders, _released_shaders;
   EnqueuedShaders _enqueued_shaders;
   Buffers _prepared_vertex_buffers;

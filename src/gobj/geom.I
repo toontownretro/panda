@@ -15,19 +15,6 @@
  *
  */
 INLINE Geom::
-Geom(GeomPrimitiveType type, const GeomVertexData *data) :
-  _vertex_data(data),
-  _index_data(nullptr),
-  _primitive_type(type),
-  _first_index(0),
-  _num_indices(0)
-{
-}
-
-/**
- *
- */
-INLINE Geom::
 Geom(const Geom &copy) :
   _vertex_data(copy._vertex_data),
   _index_data(copy._index_data),
@@ -75,11 +62,26 @@ operator = (Geom &&other) {
 }
 
 /**
+ * Simultaneously sets both the vertex buffer and index buffer of the Geom.
+ *
+ * This causes the index range of the Geom to be recomputed automatically.
+ */
+INLINE void Geom::
+set_buffers(const GeomVertexData *vertex_data, const GeomIndexData *index_data) {
+  _vertex_data = vertex_data;
+  _index_data = index_data;
+  compute_index_range();
+}
+
+/**
  * Sets the table of vertices that should be used to draw this Geom.
+ *
+ * This causes the index range of the Geom to be recomputed automatically.
  */
 INLINE void Geom::
 set_vertex_data(const GeomVertexData *data) {
   _vertex_data = data;
+  compute_index_range();
 }
 
 /**
@@ -92,10 +94,13 @@ get_vertex_data() const {
 
 /**
  * Sets the index buffer of the Geom.
+ *
+ * This causes the index range of the Geom to be recomputed automatically.
  */
 INLINE void Geom::
 set_index_data(const GeomIndexData *data) {
   _index_data = data;
+  compute_index_range();
 }
 
 /**
@@ -146,15 +151,10 @@ get_primitive_family() const {
   switch (_primitive_type) {
   case GPT_triangles:
   case GPT_triangles_adj:
-  case GPT_triangle_strips:
-  case GPT_triangle_strips_adj:
-  case GPT_triangle_fans:
     return PT_polygons;
 
   case GPT_lines:
   case GPT_lines_adj:
-  case GPT_line_strips:
-  case GPT_line_strips_adj:
     return PT_lines;
 
   case GPT_points:
@@ -165,6 +165,27 @@ get_primitive_family() const {
 
   default:
     return PT_none;
+  }
+}
+
+/**
+ * Returns the number of vertices that make up a single primitive of the Geom.
+ */
+INLINE int Geom::
+get_num_vertices_per_primitive() const {
+  switch (_primitive_type) {
+  case GPT_triangles_adj:
+    return 6;
+  case GPT_lines_adj:
+    return 4;
+  case GPT_triangles:
+    return 3;
+  case GPT_lines:
+    return 2;
+  case GPT_points:
+    return 1;
+  case GPT_patches:
+    return _num_vertices_per_patch;
   }
 }
 

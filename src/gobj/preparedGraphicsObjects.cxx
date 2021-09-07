@@ -21,7 +21,6 @@
 #include "samplerContext.h"
 #include "shader.h"
 #include "reMutexHolder.h"
-#include "geomContext.h"
 #include "shaderContext.h"
 #include "config_gobj.h"
 #include "throw_event.h"
@@ -1311,13 +1310,6 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
     _released_samplers.clear();
   }
 
-  if (!_released_geoms.empty()) {
-    for (GeomContext *gc : _released_geoms) {
-      gsg->release_geom(gc);
-    }
-    _released_geoms.clear();
-  }
-
   if (!_released_shaders.empty()) {
     for (ShaderContext *sc : _released_shaders) {
       gsg->release_shader(sc);
@@ -1374,8 +1366,6 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   }
 
   _enqueued_samplers.clear();
-
-  _enqueued_geoms.clear();
 
   EnqueuedShaders::iterator qsi;
   for (qsi = _enqueued_shaders.begin();

@@ -19,25 +19,10 @@
     cg_preamble.cxx \
     config_gobj.h \
     geom.h geom.I \
-    geomContext.I geomContext.h \
     geomEnums.h \
-    geomMunger.h geomMunger.I \
-    geomPrimitive.h geomPrimitive.I \
-    geomPatches.h \
-    geomTriangles.h \
-    geomTrianglesAdjacency.h \
-    geomTristrips.h \
-    geomTristripsAdjacency.h \
-    geomTrifans.h \
-    geomLines.h \
-    geomLinesAdjacency.h \
-    geomLinestrips.h \
-    geomLinestripsAdjacency.h \
-    geomPoints.h \
+    geomIndexData.h geomIndexData.I \
     geomVertexArrayData.h geomVertexArrayData.I \
     geomVertexArrayFormat.h geomVertexArrayFormat.I \
-    geomCacheEntry.h geomCacheEntry.I \
-    geomCacheManager.h geomCacheManager.I \
     geomVertexAnimationSpec.h geomVertexAnimationSpec.I \
     geomVertexData.h geomVertexData.I \
     geomVertexColumn.h geomVertexColumn.I \
@@ -107,26 +92,11 @@
     bufferContextChain.cxx \
     bufferResidencyTracker.cxx \
     config_gobj.cxx \
-    geomContext.cxx \
     geom.cxx \
     geomEnums.cxx \
-    geomMunger.cxx \
-    geomPrimitive.cxx \
-    geomPatches.cxx \
-    geomTriangles.cxx \
-    geomTrianglesAdjacency.cxx \
-    geomTristrips.cxx \
-    geomTristripsAdjacency.cxx \
-    geomTrifans.cxx \
-    geomLines.cxx \
-    geomLinesAdjacency.cxx \
-    geomLinestrips.cxx \
-    geomLinestripsAdjacency.cxx \
-    geomPoints.cxx \
+    geomIndexData.cxx \
     geomVertexArrayData.cxx \
     geomVertexArrayFormat.cxx \
-    geomCacheEntry.cxx \
-    geomCacheManager.cxx \
     geomVertexAnimationSpec.cxx \
     geomVertexData.cxx \
     geomVertexColumn.cxx \
@@ -197,25 +167,10 @@
     geom.I geom.h \
     textureContext.I textureContext.h \
     geom.h geom.I \
-    geomContext.I geomContext.h \
     geomEnums.h \
-    geomMunger.h geomMunger.I \
-    geomPrimitive.h geomPrimitive.I \
-    geomPatches.h \
-    geomTriangles.h \
-    geomTrianglesAdjacency.h \
-    geomTristrips.h \
-    geomTristripsAdjacency.h \
-    geomTrifans.h \
-    geomLines.h \
-    geomLinesAdjacency.h \
-    geomLinestrips.h \
-    geomLinestripsAdjacency.h \
-    geomPoints.h \
+    geomIndexData.h geomIndexData.I \
     geomVertexArrayData.h geomVertexArrayData.I \
     geomVertexArrayFormat.h geomVertexArrayFormat.I \
-    geomCacheEntry.h geomCacheEntry.I \
-    geomCacheManager.h geomCacheManager.I \
     geomVertexAnimationSpec.h geomVertexAnimationSpec.I \
     geomVertexData.h geomVertexData.I \
     geomVertexColumn.h geomVertexColumn.I \

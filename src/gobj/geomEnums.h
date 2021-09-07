@@ -176,16 +176,11 @@ PUBLISHED:
   // that will actually be rendered by the graphics pipe.
   enum GeomPrimitiveType : uint8_t {
     GPT_triangles,
-    GPT_triangle_strips,
-    GPT_triangle_fans,
-    GPT_lines,
-    GPT_line_strips,
-    GPT_lines_adj,
-    GPT_line_strips_adj,
-    GPT_patches,
-    GPT_points,
     GPT_triangles_adj,
-    GPT_triangle_strips_adj,
+    GPT_lines,
+    GPT_lines_adj,
+    GPT_points,
+    GPT_patches,
   };
 
   // The numeric type determines what physical representation is used to

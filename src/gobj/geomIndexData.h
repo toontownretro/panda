@@ -20,10 +20,15 @@
 /**
  * This is a subclass of GeomVertexArrayData whose only purpose is to indicate
  * that the object represents an index buffer instead of a vertex buffer.
+ *
+ * It also stores a few things about the index buffer format locally, such as
+ * the index numeric type and stride, so we don't have to ask our pointer to
+ * the GeomVertexArrayFormat for the info when we render.
  */
 class EXPCL_PANDA_GOBJ GeomIndexData : public GeomVertexArrayData {
 PUBLISHED:
   INLINE GeomEnums::NumericType get_index_type() const;
+  INLINE int get_index_stride() const;
 
 private:
   GeomEnums::NumericType _index_type;

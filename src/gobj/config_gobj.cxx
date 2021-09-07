@@ -16,24 +16,11 @@
 #include "config_putil.h"
 #include "config_gobj.h"
 #include "geom.h"
-#include "geomCacheEntry.h"
-#include "geomMunger.h"
-#include "geomPrimitive.h"
-#include "geomTriangles.h"
-#include "geomTrianglesAdjacency.h"
-#include "geomTristrips.h"
-#include "geomTristripsAdjacency.h"
-#include "geomTrifans.h"
-#include "geomPatches.h"
-#include "geomLines.h"
-#include "geomLinesAdjacency.h"
-#include "geomLinestrips.h"
-#include "geomLinestripsAdjacency.h"
-#include "geomPoints.h"
 #include "geomVertexArrayData.h"
 #include "geomVertexArrayFormat.h"
 #include "geomVertexData.h"
 #include "geomVertexFormat.h"
+#include "geomIndexData.h"
 #include "lens.h"
 #include "occlusionQueryContext.h"
 #include "orthographicLens.h"
@@ -63,7 +50,6 @@
 #include "vertexTransform.h"
 #include "vertexSlider.h"
 #include "videoTexture.h"
-#include "geomContext.h"
 #include "vertexBufferContext.h"
 #include "indexBufferContext.h"
 #include "internalName.h"
@@ -545,24 +531,6 @@ ConfigVariableInt glsl_include_recursion_limit
 ConfigureFn(config_gobj) {
   AnimateVerticesRequest::init_type();
   BufferContext::init_type();
-  Geom::init_type();
-  GeomCacheEntry::init_type();
-  GeomPipelineReader::init_type();
-  GeomContext::init_type();
-  GeomLines::init_type();
-  GeomLinesAdjacency::init_type();
-  GeomLinestrips::init_type();
-  GeomLinestripsAdjacency::init_type();
-  GeomMunger::init_type();
-  GeomPoints::init_type();
-  GeomPrimitive::init_type();
-  GeomPrimitivePipelineReader::init_type();
-  GeomTriangles::init_type();
-  GeomTrianglesAdjacency::init_type();
-  GeomTrifans::init_type();
-  GeomTristrips::init_type();
-  GeomTristripsAdjacency::init_type();
-  GeomPatches::init_type();
   GeomVertexArrayData::init_type();
   GeomVertexArrayDataHandle::init_type();
   GeomVertexArrayFormat::init_type();
@@ -570,6 +538,7 @@ ConfigureFn(config_gobj) {
   GeomVertexDataPipelineReader::init_type();
   GeomVertexDataPipelineWriter::init_type();
   GeomVertexFormat::init_type();
+  GeomIndexData::init_type();
   IndexBufferContext::init_type();
   InternalName::init_type();
   Lens::init_type();
@@ -616,22 +585,11 @@ ConfigureFn(config_gobj) {
 
   // Registration of writeable object's creation functions with BamReader's
   // factory
-  Geom::register_with_read_factory();
-  GeomLines::register_with_read_factory();
-  GeomLinesAdjacency::register_with_read_factory();
-  GeomLinestrips::register_with_read_factory();
-  GeomLinestripsAdjacency::register_with_read_factory();
-  GeomPoints::register_with_read_factory();
-  GeomTriangles::register_with_read_factory();
-  GeomTrianglesAdjacency::register_with_read_factory();
-  GeomTrifans::register_with_read_factory();
-  GeomTristrips::register_with_read_factory();
-  GeomTristripsAdjacency::register_with_read_factory();
-  GeomPatches::register_with_read_factory();
   GeomVertexArrayData::register_with_read_factory();
   GeomVertexArrayFormat::register_with_read_factory();
   GeomVertexData::register_with_read_factory();
   GeomVertexFormat::register_with_read_factory();
+  GeomIndexData::register_with_read_factory();
   InternalName::register_with_read_factory();
   MatrixLens::register_with_read_factory();
   OrthographicLens::register_with_read_factory();

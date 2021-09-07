@@ -16,7 +16,6 @@
 #include "compose_matrix.h"
 #include "look_at.h"
 #include "geom.h"
-#include "geomLinestrips.h"
 #include "geomVertexWriter.h"
 #include "boundingHexahedron.h"
 #include "indent.h"
@@ -564,8 +563,9 @@ is_orthographic() const {
  * representation of the frustum used for this kind of lens, if it makes sense
  * to do so.  If a visible representation cannot be created, returns NULL.
  */
-PT(Geom) Lens::
+Geom Lens::
 make_geometry() {
+#if 0
   CDWriter cdata(_cycler, true);
 
   // The default behavior for make_geometry() will be to draw a hexahedron
@@ -631,6 +631,8 @@ make_geometry() {
   geom->add_primitive(line);
 
   return geom;
+#endif
+  return Geom(Geom::GPT_lines, nullptr);
 }
 
 /**

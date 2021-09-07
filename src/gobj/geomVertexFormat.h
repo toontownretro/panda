@@ -30,7 +30,6 @@
 
 class FactoryParams;
 class GeomVertexData;
-class GeomMunger;
 
 /**
  * This class defines the physical layout of the vertex data stored within a
@@ -288,7 +287,6 @@ private:
   static TypeHandle _type_handle;
 
   friend class GeomVertexFormat::Registry;
-  friend class GeomMunger;
 };
 
 INLINE std::ostream &operator << (std::ostream &out, const GeomVertexFormat &obj);

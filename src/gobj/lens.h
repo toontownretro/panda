@@ -173,7 +173,7 @@ PUBLISHED:
   virtual bool is_linear() const;
   virtual bool is_perspective() const;
   virtual bool is_orthographic() const;
-  virtual PT(Geom) make_geometry();
+  virtual Geom make_geometry();
 
   virtual PT(BoundingVolume) make_bounds() const;
 

@@ -18,13 +18,8 @@
 #include "displayRegion.h"
 #include "renderBuffer.h"
 #include "geom.h"
+#include "geomIndexData.h"
 #include "geomVertexData.h"
-#include "geomTriangles.h"
-#include "geomTristrips.h"
-#include "geomTrifans.h"
-#include "geomLines.h"
-#include "geomLinestrips.h"
-#include "geomPoints.h"
 #include "geomVertexReader.h"
 #include "graphicsWindow.h"
 #include "lens.h"
@@ -4982,20 +4977,23 @@ draw_triangles(const Geom *reader, bool force) {
         return false;
       }
 
+      int index_stride = index_data->get_index_stride();
+      int first_index = reader->get_first_index();
+
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
         _glDrawElementsInstanced(GL_TRIANGLES, num_indices,
                                  get_numeric_type(index_data->get_index_type()),
-                                 client_pointer, _instance_count);
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else
 #endif
       {
         _glDrawRangeElements(GL_TRIANGLES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
+                             /*reader->get_min_vertex()*/0,
+                             /*reader->get_max_vertex()*/0,
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
-                             client_pointer);
+                             client_pointer + first_index * index_stride);
       }
     } else {
 #ifndef OPENGLES_1
@@ -5022,13 +5020,13 @@ draw_triangles(const Geom *reader, bool force) {
  */
 #ifndef OPENGLES
 bool CLP(GraphicsStateGuardian)::
-draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_triangles_adj(const Geom *geom, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_triangles_adj: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_triangles_adj: " << *geom << "\n";
   }
 #endif  // NDEBUG
 
@@ -5039,37 +5037,41 @@ draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_tri_pcollector.add_level(num_vertices);
+    int num_indices = geom->get_num_indices();
+    _vertices_tri_pcollector.add_level(num_indices);
     _primitive_batches_tri_pcollector.add_level(1);
 
-    if (reader->is_indexed()) {
+    if (geom->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = geom->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
 
+      int index_stride = index_data->get_index_stride();
+      int first_index = geom->get_first_index();
+
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_TRIANGLES_ADJACENCY, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
+        _glDrawElementsInstanced(GL_TRIANGLES_ADJACENCY, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else {
         _glDrawRangeElements(GL_TRIANGLES_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+                             /*reader->get_min_vertex()*/0,
+                             /*reader->get_max_vertex()*/0,
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
+                             client_pointer + first_index * index_stride);
       }
     } else {
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_TRIANGLES_ADJACENCY,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               geom->get_first_index(),
+                               num_indices, _instance_count);
       } else {
         glDrawArrays(GL_TRIANGLES_ADJACENCY,
-                     reader->get_first_vertex(),
-                     num_vertices);
+                     geom->get_first_index(),
+                     num_indices);
       }
     }
   }
@@ -5078,346 +5080,19 @@ draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force) {
   return true;
 }
 #endif  // OPENGLES
-
-/**
- * Draws a series of triangle strips.
- */
-bool CLP(GraphicsStateGuardian)::
-draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force) {
-  // PStatGPUTimer timer(this, _draw_primitive_pcollector,
-  // reader->get_current_thread());
-
-  report_my_gl_errors(this);
-
-#ifndef NDEBUG
-  if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_tristrips: " << *(reader->get_object()) << "\n";
-  }
-#endif  // NDEBUG
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  if (_use_sender) {
-    draw_immediate_composite_primitives(reader, GL_TRIANGLE_STRIP);
-
-  } else
-#endif  // SUPPORT_IMMEDIATE_MODE
-  {
-    if (connect_triangle_strips && _render_mode != RenderModeAttrib::M_wireframe) {
-      // One long triangle strip, connected by the degenerate vertices that
-      // have already been set up within the primitive.
-      int num_vertices = reader->get_num_vertices();
-      _vertices_tristrip_pcollector.add_level(num_vertices);
-      _primitive_batches_tristrip_pcollector.add_level(1);
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-#ifndef OPENGLES_1
-        if (_instance_count != 1) {
-          _glDrawElementsInstanced(GL_TRIANGLE_STRIP, num_vertices,
-                                   get_numeric_type(reader->get_index_type()),
-                                   client_pointer, _instance_count);
-        } else
-#endif
-        {
-          _glDrawRangeElements(GL_TRIANGLE_STRIP,
-                               reader->get_min_vertex(),
-                               reader->get_max_vertex(),
-                               num_vertices,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer);
-        }
-      } else {
-#ifndef OPENGLES_1
-        if (_instance_count != 1) {
-          _glDrawArraysInstanced(GL_TRIANGLE_STRIP,
-                                 reader->get_first_vertex(),
-                                 num_vertices, _instance_count);
-        } else
-#endif
-        {
-          glDrawArrays(GL_TRIANGLE_STRIP,
-                          reader->get_first_vertex(),
-                          num_vertices);
-        }
-      }
-
-    } else {
-      // Send the individual triangle strips, stepping over the degenerate
-      // vertices.
-      CPTA_int ends = reader->get_ends();
-
-      _primitive_batches_tristrip_pcollector.add_level(ends.size());
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-        int index_stride = reader->get_index_stride();
-        GeomVertexReader mins(reader->get_mins(), 0);
-        GeomVertexReader maxs(reader->get_maxs(), 0);
-        nassertr(reader->get_mins()->get_num_rows() == (int)ends.size() &&
-                 reader->get_maxs()->get_num_rows() == (int)ends.size(), false);
-
-        unsigned int start = 0;
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_tristrip_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-          if (_instance_count != 1) {
-            _glDrawElementsInstanced(GL_TRIANGLE_STRIP, ends[i] - start,
-                                     get_numeric_type(reader->get_index_type()),
-                                     client_pointer + start * index_stride,
-                                     _instance_count);
-          } else
-#endif
-          {
-            _glDrawRangeElements(GL_TRIANGLE_STRIP,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
-          }
-          start = ends[i] + 2;
-        }
-      } else {
-        unsigned int start = 0;
-        int first_vertex = reader->get_first_vertex();
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_tristrip_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-          if (_instance_count != 1) {
-            _glDrawArraysInstanced(GL_TRIANGLE_STRIP, first_vertex + start,
-                                   ends[i] - start, _instance_count);
-          } else
-#endif
-          {
-            glDrawArrays(GL_TRIANGLE_STRIP, first_vertex + start,
-                            ends[i] - start);
-          }
-          start = ends[i] + 2;
-        }
-      }
-    }
-  }
-
-  report_my_gl_errors(this);
-  return true;
-}
-
-/**
- * Draws a series of triangle strips with adjacency information.
- */
-#ifndef OPENGLES
-bool CLP(GraphicsStateGuardian)::
-draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
-  // PStatGPUTimer timer(this, _draw_primitive_pcollector,
-  // reader->get_current_thread());
-
-  report_my_gl_errors(this);
-
-#ifndef NDEBUG
-  if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_tristrips_adj: " << *(reader->get_object()) << "\n";
-  }
-#endif  // NDEBUG
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  if (_use_sender) {
-    draw_immediate_composite_primitives(reader, GL_TRIANGLE_STRIP_ADJACENCY);
-
-  } else
-#endif  // SUPPORT_IMMEDIATE_MODE
-  {
-    if (reader->is_indexed() &&
-        (_supported_geom_rendering & GeomEnums::GR_strip_cut_index) != 0) {
-      // One long line strip, connected by strip cut indices.
-      if (_explicit_primitive_restart) {
-        glEnable(GL_PRIMITIVE_RESTART);
-        _glPrimitiveRestartIndex(reader->get_strip_cut_index());
-      }
-      int num_vertices = reader->get_num_vertices();
-      _vertices_tristrip_pcollector.add_level(num_vertices);
-      _primitive_batches_tristrip_pcollector.add_level(1);
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-        if (_instance_count != 1) {
-          _glDrawElementsInstanced(GL_TRIANGLE_STRIP_ADJACENCY, num_vertices,
-                                   get_numeric_type(reader->get_index_type()),
-                                   client_pointer, _instance_count);
-        } else {
-          _glDrawRangeElements(GL_TRIANGLE_STRIP_ADJACENCY,
-                               reader->get_min_vertex(),
-                               reader->get_max_vertex(),
-                               num_vertices,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer);
-        }
-      } else {
-        if (_instance_count != 1) {
-          _glDrawArraysInstanced(GL_TRIANGLE_STRIP_ADJACENCY,
-                                 reader->get_first_vertex(),
-                                 num_vertices, _instance_count);
-        } else {
-          glDrawArrays(GL_TRIANGLE_STRIP_ADJACENCY,
-                          reader->get_first_vertex(),
-                          num_vertices);
-        }
-      }
-      if (_explicit_primitive_restart) {
-        glDisable(GL_PRIMITIVE_RESTART);
-      }
-    } else {
-      // Send the individual triangle strips, stepping over the degenerate
-      // vertices.
-      CPTA_int ends = reader->get_ends();
-
-      _primitive_batches_tristrip_pcollector.add_level(ends.size());
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-        int index_stride = reader->get_index_stride();
-        GeomVertexReader mins(reader->get_mins(), 0);
-        GeomVertexReader maxs(reader->get_maxs(), 0);
-        nassertr(reader->get_mins()->get_num_rows() == (int)ends.size() &&
-                 reader->get_maxs()->get_num_rows() == (int)ends.size(), false);
-
-        unsigned int start = 0;
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_tristrip_pcollector.add_level(ends[i] - start);
-          if (_instance_count != 1) {
-            _glDrawElementsInstanced(GL_TRIANGLE_STRIP_ADJACENCY, ends[i] - start,
-                                     get_numeric_type(reader->get_index_type()),
-                                     client_pointer + start * index_stride,
-                                     _instance_count);
-          } else {
-            _glDrawRangeElements(GL_TRIANGLE_STRIP_ADJACENCY,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
-          }
-          start = ends[i] + 1;
-        }
-      } else {
-        unsigned int start = 0;
-        int first_vertex = reader->get_first_vertex();
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_tristrip_pcollector.add_level(ends[i] - start);
-          if (_instance_count != 1) {
-            _glDrawArraysInstanced(GL_TRIANGLE_STRIP_ADJACENCY, first_vertex + start,
-                                   ends[i] - start, _instance_count);
-          } else {
-            glDrawArrays(GL_TRIANGLE_STRIP_ADJACENCY, first_vertex + start,
-                         ends[i] - start);
-          }
-          start = ends[i] + 1;
-        }
-      }
-    }
-  }
-
-  report_my_gl_errors(this);
-  return true;
-}
-#endif  // OPENGLES
-
-/**
- * Draws a series of triangle fans.
- */
-bool CLP(GraphicsStateGuardian)::
-draw_trifans(const GeomPrimitivePipelineReader *reader, bool force) {
-  // PStatGPUTimer timer(this, _draw_primitive_pcollector,
-  // reader->get_current_thread());
-
-#ifndef NDEBUG
-  if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_trifans: " << *(reader->get_object()) << "\n";
-  }
-#endif  // NDEBUG
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  if (_use_sender) {
-    draw_immediate_composite_primitives(reader, GL_TRIANGLE_FAN);
-  } else
-#endif  // SUPPORT_IMMEDIATE_MODE
-  {
-    // Send the individual triangle fans.  There's no connecting fans with
-    // degenerate vertices, so no worries about that.
-    CPTA_int ends = reader->get_ends();
-
-    _primitive_batches_trifan_pcollector.add_level(ends.size());
-    if (reader->is_indexed()) {
-      const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
-        return false;
-      }
-      int index_stride = reader->get_index_stride();
-      GeomVertexReader mins(reader->get_mins(), 0);
-      GeomVertexReader maxs(reader->get_maxs(), 0);
-      nassertr(reader->get_mins()->get_num_rows() == (int)ends.size() &&
-               reader->get_maxs()->get_num_rows() == (int)ends.size(), false);
-
-      unsigned int start = 0;
-      for (size_t i = 0; i < ends.size(); i++) {
-        _vertices_trifan_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-        if (_instance_count != 1) {
-          _glDrawElementsInstanced(GL_TRIANGLE_FAN, ends[i] - start,
-                                   get_numeric_type(reader->get_index_type()),
-                                   client_pointer + start * index_stride,
-                                   _instance_count);
-        } else
-#endif
-        {
-          _glDrawRangeElements(GL_TRIANGLE_FAN,
-                               mins.get_data1i(), maxs.get_data1i(), ends[i] - start,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer + start * index_stride);
-        }
-        start = ends[i];
-      }
-    } else {
-      unsigned int start = 0;
-      int first_vertex = reader->get_first_vertex();
-      for (size_t i = 0; i < ends.size(); i++) {
-        _vertices_trifan_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-        if (_instance_count != 1) {
-          _glDrawArraysInstanced(GL_TRIANGLE_FAN, first_vertex + start,
-                                 ends[i] - start, _instance_count);
-        } else
-#endif
-        {
-          glDrawArrays(GL_TRIANGLE_FAN, first_vertex + start,
-                          ends[i] - start);
-        }
-        start = ends[i];
-      }
-    }
-  }
-
-  report_my_gl_errors(this);
-  return true;
-}
 
 /**
  * Draws a series of "patches", which can only be processed by a tessellation
  * shader.
  */
 bool CLP(GraphicsStateGuardian)::
-draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_patches(const Geom *geom, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_patches: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_patches: " << *geom << "\n";
   }
 #endif  // NDEBUG
 
@@ -5426,7 +5101,7 @@ draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
   }
 
 #ifndef OPENGLES
-  _glPatchParameteri(GL_PATCH_VERTICES, reader->get_object()->get_num_vertices_per_primitive());
+  _glPatchParameteri(GL_PATCH_VERTICES, geom->get_num_vertices_per_primitive());
 
 #ifdef SUPPORT_IMMEDIATE_MODE
   if (_use_sender) {
@@ -5435,43 +5110,47 @@ draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_patch_pcollector.add_level(num_vertices);
+    int num_indices = reader->get_num_vertices();
+    _vertices_patch_pcollector.add_level(num_indices);
     _primitive_batches_patch_pcollector.add_level(1);
 
-    if (reader->is_indexed()) {
+    if (geom->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = geom->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
 
+      int index_stride = index_data->get_index_stride();
+      int first_index = geom->get_first_index();
+
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_PATCHES, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
+        _glDrawElementsInstanced(GL_PATCHES, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else
 #endif
       {
         _glDrawRangeElements(GL_PATCHES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+                             0,
+                             0,
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
+                             client_pointer + first_index * index_stride);
       }
     } else {
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_PATCHES,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               geom->get_first_index(),
+                               num_indices, _instance_count);
       } else
 #endif
       {
         glDrawArrays(GL_PATCHES,
-                        reader->get_first_vertex(),
-                        num_vertices);
+                     geom->get_first_index(),
+                     num_indices);
       }
     }
   }
@@ -5486,13 +5165,13 @@ draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
  * Draws a series of disconnected line segments.
  */
 bool CLP(GraphicsStateGuardian)::
-draw_lines(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_lines(const Geom *geom, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_lines: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_lines: " << *geom << "\n";
   }
 #endif  // NDEBUG
 
@@ -5502,42 +5181,47 @@ draw_lines(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_other_pcollector.add_level(num_vertices);
+    int num_indices = geom->get_num_indices();
+    _vertices_other_pcollector.add_level(num_indices);
     _primitive_batches_other_pcollector.add_level(1);
 
-    if (reader->is_indexed()) {
+    if (geom->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = geom->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
+
+      int index_stride = index_data->get_index_stride();
+      int first_index = geom->get_first_index();
+
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_LINES, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
+        _glDrawElementsInstanced(GL_LINES, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else
 #endif
       {
         _glDrawRangeElements(GL_LINES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+                             0,
+                             0,
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
+                             client_pointer + first_index * index_stride);
       }
     } else {
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_LINES,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               geom->get_first_index(),
+                               num_indices, _instance_count);
       } else
 #endif
       {
         glDrawArrays(GL_LINES,
-                        reader->get_first_vertex(),
-                        num_vertices);
+                        geom->get_first_index(),
+                        num_indices);
       }
     }
   }
@@ -5551,13 +5235,13 @@ draw_lines(const GeomPrimitivePipelineReader *reader, bool force) {
  */
 #ifndef OPENGLES
 bool CLP(GraphicsStateGuardian)::
-draw_lines_adj(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_lines_adj(const Geom *geom, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_lines_adj: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_lines_adj: " << *geom << "\n";
   }
 #endif  // NDEBUG
 
@@ -5567,269 +5251,41 @@ draw_lines_adj(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_other_pcollector.add_level(num_vertices);
+    int num_indices = geom->get_num_indices();
+    _vertices_other_pcollector.add_level(num_indices);
     _primitive_batches_other_pcollector.add_level(1);
 
-    if (reader->is_indexed()) {
+    if (geom->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = geom->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
+
+      int index_stride = index_data->get_index_stride();
+      int first_index = geom->get_first_index();
+
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_LINES_ADJACENCY, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
+        _glDrawElementsInstanced(GL_LINES_ADJACENCY, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else {
         _glDrawRangeElements(GL_LINES_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+                             0,
+                             0,
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
+                             client_pointer + first_index * index_stride);
       }
     } else {
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_LINES_ADJACENCY,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               geom->get_first_index(),
+                               num_indices, _instance_count);
       } else {
         glDrawArrays(GL_LINES_ADJACENCY,
-                     reader->get_first_vertex(),
-                     num_vertices);
-      }
-    }
-  }
-
-  report_my_gl_errors(this);
-  return true;
-}
-#endif  // OPENGLES
-
-/**
- * Draws a series of line strips.
- */
-bool CLP(GraphicsStateGuardian)::
-draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force) {
-  // PStatGPUTimer timer(this, _draw_primitive_pcollector,
-  // reader->get_current_thread());
-
-  report_my_gl_errors(this);
-
-#ifndef NDEBUG
-  if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_linestrips: " << *(reader->get_object()) << "\n";
-  }
-#endif  // NDEBUG
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  if (_use_sender) {
-    draw_immediate_composite_primitives(reader, GL_LINE_STRIP);
-
-  } else
-#endif  // SUPPORT_IMMEDIATE_MODE
-  {
-    if (reader->is_indexed() &&
-        (_supported_geom_rendering & GeomEnums::GR_strip_cut_index) != 0) {
-      // One long triangle strip, connected by strip cut indices.
-#ifndef OPENGLES
-      if (_explicit_primitive_restart) {
-        glEnable(GL_PRIMITIVE_RESTART);
-        _glPrimitiveRestartIndex(reader->get_strip_cut_index());
-      }
-#endif  // !OPENGLES
-
-      int num_vertices = reader->get_num_vertices();
-      _vertices_other_pcollector.add_level(num_vertices);
-      _primitive_batches_other_pcollector.add_level(1);
-
-      const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
-        return false;
-      }
-#ifndef OPENGLES_1
-      if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_LINE_STRIP, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
-      } else
-#endif  // !OPENGLES
-      {
-        _glDrawRangeElements(GL_LINE_STRIP,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
-      }
-
-#ifndef OPENGLES
-      if (_explicit_primitive_restart) {
-        glDisable(GL_PRIMITIVE_RESTART);
-      }
-#endif  // !OPENGLES
-    } else {
-      // Send the individual line strips, stepping over the strip-cut indices.
-      CPTA_int ends = reader->get_ends();
-
-      _primitive_batches_other_pcollector.add_level(ends.size());
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-        int index_stride = reader->get_index_stride();
-        GeomVertexReader mins(reader->get_mins(), 0);
-        GeomVertexReader maxs(reader->get_maxs(), 0);
-        nassertr(reader->get_mins()->get_num_rows() == (int)ends.size() &&
-                 reader->get_maxs()->get_num_rows() == (int)ends.size(), false);
-
-        unsigned int start = 0;
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_other_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-          if (_instance_count != 1) {
-            _glDrawElementsInstanced(GL_LINE_STRIP, ends[i] - start,
-                                     get_numeric_type(reader->get_index_type()),
-                                     client_pointer + start * index_stride,
-                                     _instance_count);
-          } else
-#endif
-          {
-            _glDrawRangeElements(GL_LINE_STRIP,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
-          }
-          start = ends[i] + 1;
-        }
-      } else {
-        unsigned int start = 0;
-        int first_vertex = reader->get_first_vertex();
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_other_pcollector.add_level(ends[i] - start);
-#ifndef OPENGLES_1
-          if (_instance_count != 1) {
-            _glDrawArraysInstanced(GL_LINE_STRIP, first_vertex + start,
-                                   ends[i] - start, _instance_count);
-          } else
-#endif
-          {
-            glDrawArrays(GL_LINE_STRIP, first_vertex + start, ends[i] - start);
-          }
-          start = ends[i] + 1;
-        }
-      }
-    }
-  }
-
-  report_my_gl_errors(this);
-  return true;
-}
-
-/**
- * Draws a series of line strips with adjacency information.
- */
-#ifndef OPENGLES
-bool CLP(GraphicsStateGuardian)::
-draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
-  // PStatGPUTimer timer(this, _draw_primitive_pcollector,
-  // reader->get_current_thread());
-
-  report_my_gl_errors(this);
-
-#ifndef NDEBUG
-  if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_linestrips_adj: " << *(reader->get_object()) << "\n";
-  }
-#endif  // NDEBUG
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  if (_use_sender) {
-    draw_immediate_composite_primitives(reader, GL_LINE_STRIP_ADJACENCY);
-
-  } else
-#endif  // SUPPORT_IMMEDIATE_MODE
-  {
-    if (reader->is_indexed() &&
-        (_supported_geom_rendering & GeomEnums::GR_strip_cut_index) != 0) {
-      // One long line strip, connected by strip cut indices.
-      if (_explicit_primitive_restart) {
-        glEnable(GL_PRIMITIVE_RESTART);
-        _glPrimitiveRestartIndex(reader->get_strip_cut_index());
-      }
-
-      int num_vertices = reader->get_num_vertices();
-      _vertices_other_pcollector.add_level(num_vertices);
-      _primitive_batches_other_pcollector.add_level(1);
-
-      const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
-        return false;
-      }
-      if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_LINE_STRIP_ADJACENCY, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
-      } else {
-        _glDrawRangeElements(GL_LINE_STRIP_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
-      }
-
-      if (_explicit_primitive_restart) {
-        glDisable(GL_PRIMITIVE_RESTART);
-      }
-    } else {
-      // Send the individual line strips, stepping over the strip-cut indices.
-      CPTA_int ends = reader->get_ends();
-
-      _primitive_batches_other_pcollector.add_level(ends.size());
-      if (reader->is_indexed()) {
-        const unsigned char *client_pointer;
-        if (!setup_primitive(client_pointer, reader, force)) {
-          return false;
-        }
-        int index_stride = reader->get_index_stride();
-        GeomVertexReader mins(reader->get_mins(), 0);
-        GeomVertexReader maxs(reader->get_maxs(), 0);
-        nassertr(reader->get_mins()->get_num_rows() == (int)ends.size() &&
-                 reader->get_maxs()->get_num_rows() == (int)ends.size(), false);
-
-        unsigned int start = 0;
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_other_pcollector.add_level(ends[i] - start);
-          if (_instance_count != 1) {
-            _glDrawElementsInstanced(GL_LINE_STRIP_ADJACENCY, ends[i] - start,
-                                     get_numeric_type(reader->get_index_type()),
-                                     client_pointer + start * index_stride,
-                                     _instance_count);
-          } else {
-            _glDrawRangeElements(GL_LINE_STRIP_ADJACENCY,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
-          }
-          start = ends[i] + 1;
-        }
-      } else {
-        unsigned int start = 0;
-        int first_vertex = reader->get_first_vertex();
-        for (size_t i = 0; i < ends.size(); i++) {
-          _vertices_other_pcollector.add_level(ends[i] - start);
-          if (_instance_count != 1) {
-            _glDrawArraysInstanced(GL_LINE_STRIP_ADJACENCY, first_vertex + start,
-                                   ends[i] - start, _instance_count);
-          } else {
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, first_vertex + start, ends[i] - start);
-          }
-          start = ends[i] + 1;
-        }
+                     geom->get_first_index(),
+                     num_indices);
       }
     }
   }
@@ -5843,13 +5299,13 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
  * Draws a series of disconnected points.
  */
 bool CLP(GraphicsStateGuardian)::
-draw_points(const GeomPrimitivePipelineReader *reader, bool force) {
+draw_points(const Geom *geom, bool force) {
   // PStatGPUTimer timer(this, _draw_primitive_pcollector,
   // reader->get_current_thread());
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
-    GLCAT.spam() << "draw_points: " << *(reader->get_object()) << "\n";
+    GLCAT.spam() << "draw_points: " << *geom << "\n";
   }
 #endif  // NDEBUG
 
@@ -5859,40 +5315,45 @@ draw_points(const GeomPrimitivePipelineReader *reader, bool force) {
   } else
 #endif  // SUPPORT_IMMEDIATE_MODE
   {
-    int num_vertices = reader->get_num_vertices();
-    _vertices_other_pcollector.add_level(num_vertices);
+    int num_indices = geom->get_num_indices();
+    _vertices_other_pcollector.add_level(num_indices);
     _primitive_batches_other_pcollector.add_level(1);
 
-    if (reader->is_indexed()) {
+    if (geom->is_indexed()) {
       const unsigned char *client_pointer;
-      if (!setup_primitive(client_pointer, reader, force)) {
+      const GeomIndexData *index_data = geom->get_index_data();
+      if (!setup_primitive(client_pointer, index_data, force)) {
         return false;
       }
+
+      int index_stride = index_data->get_index_stride();
+      int first_index = geom->get_first_index();
+
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
-        _glDrawElementsInstanced(GL_POINTS, num_vertices,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer, _instance_count);
+        _glDrawElementsInstanced(GL_POINTS, num_indices,
+                                 get_numeric_type(index_data->get_index_type()),
+                                 client_pointer + first_index * index_stride, _instance_count);
       } else
 #endif
       {
         _glDrawRangeElements(GL_POINTS,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+                             0,
+                             0,
+                             num_indices,
+                             get_numeric_type(index_data->get_index_type()),
+                             client_pointer + first_index * index_stride);
       }
     } else {
 #ifndef OPENGLES_1
       if (_instance_count != 1) {
         _glDrawArraysInstanced(GL_POINTS,
-                               reader->get_first_vertex(),
-                               num_vertices, _instance_count);
+                               geom->get_first_index(),
+                               num_indices, _instance_count);
       } else
 #endif
       {
-        glDrawArrays(GL_POINTS, reader->get_first_vertex(), num_vertices);
+        glDrawArrays(GL_POINTS, geom->get_first_index(), num_indices);
       }
     }
   }
@@ -6626,8 +6087,8 @@ prepare_index_buffer(GeomIndexData *data) {
     if (GLCAT.is_debug() && gl_debug_buffers) {
       GLCAT.debug()
         << "creating index buffer " << (int)gibc->_index << ": "
-        << data->get_num_vertices() << " indices ("
-        << data->get_vertices()->get_array_format()->get_column(0)->get_numeric_type()
+        << data->get_num_rows() << " indices ("
+        << data->get_index_type()
         << ")\n";
     }
 
@@ -6677,7 +6138,7 @@ apply_index_buffer(IndexBufferContext *ibc,
         return false;
       }
 
-      PStatGPUTimer timer(this, _load_index_buffer_pcollector, reader->get_current_thread());
+      PStatGPUTimer timer(this, _load_index_buffer_pcollector, Thread::get_current_thread());
       if (gibc->changed_size(reader) || gibc->changed_usage_hint(reader)) {
         _glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_bytes, client_pointer,
                       get_usage(reader->get_usage_hint()));

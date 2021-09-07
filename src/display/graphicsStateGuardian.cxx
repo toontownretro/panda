@@ -610,28 +610,6 @@ release_sampler(SamplerContext *) {
 }
 
 /**
- * Prepares the indicated Geom for retained-mode rendering, by creating
- * whatever structures are necessary in the GSG (for instance, vertex
- * buffers). Returns the newly-allocated GeomContext that can be used to
- * render the geom.
- */
-GeomContext *GraphicsStateGuardian::
-prepare_geom(Geom *) {
-  return nullptr;
-}
-
-/**
- * Frees the resources previously allocated via a call to prepare_geom(),
- * including deleting the GeomContext itself, if it is non-NULL.
- *
- * This function should not be called directly to prepare a Geom.  Instead,
- * call Geom::prepare().
- */
-void GraphicsStateGuardian::
-release_geom(GeomContext *) {
-}
-
-/**
  * Compile a vertex/fragment shader body.
  */
 ShaderContext *GraphicsStateGuardian::
@@ -677,7 +655,7 @@ release_vertex_buffers(const pvector<BufferContext *> &contexts) {
  * Prepares the indicated buffer for retained-mode rendering.
  */
 IndexBufferContext *GraphicsStateGuardian::
-prepare_index_buffer(GeomPrimitive *) {
+prepare_index_buffer(GeomIndexData *) {
   return nullptr;
 }
 
@@ -2687,26 +2665,8 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
     }
     break;
 
-  case Geom::GPT_triangle_strips:
-    if (!draw_tristrips(geom, force)) {
-      all_ok = false;
-    }
-    break;
-
-  case Geom::GPT_triangle_fans:
-    if (!draw_trifans(geom, force)) {
-      all_ok = false;
-    }
-    break;
-
   case Geom::GPT_lines:
     if (!draw_lines(geom, force)) {
-      all_ok = false;
-    }
-    break;
-
-  case Geom::GPT_line_strips:
-    if (!draw_linestrips(geom, force)) {
       all_ok = false;
     }
     break;
@@ -2723,27 +2683,17 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
     }
     break;
 
-  case Geom::GPT_triangle_strips_adj:
-    if (!draw_tristrips_adj(geom, force)) {
-      all_ok = false;
-    }
-    break;
-
   case Geom::GPT_lines_adj:
     if (!draw_lines_adj(geom, force)) {
       all_ok = false;
     }
     break;
 
-  case Geom::GPT_line_strips_adj:
-    if (!draw_linestrips_adj(geom, force)) {
-      all_ok = false;
-    }
-
   case Geom::GPT_patches:
     if (!draw_patches(geom, force)) {
       all_ok = false;
     }
+    break;
 
   default:
     all_ok = false;
@@ -2794,30 +2744,6 @@ draw_triangles_adj(const Geom *, bool) {
 }
 
 /**
- * Draws a series of triangle strips.
- */
-bool GraphicsStateGuardian::
-draw_tristrips(const Geom *, bool) {
-  return false;
-}
-
-/**
- * Draws a series of triangle strips with adjacency information.
- */
-bool GraphicsStateGuardian::
-draw_tristrips_adj(const Geom *, bool) {
-  return false;
-}
-
-/**
- * Draws a series of triangle fans.
- */
-bool GraphicsStateGuardian::
-draw_trifans(const Geom *, bool) {
-  return false;
-}
-
-/**
  * Draws a series of "patches", which can only be processed by a tessellation
  * shader.
  */
@@ -2839,22 +2765,6 @@ draw_lines(const Geom *, bool) {
  */
 bool GraphicsStateGuardian::
 draw_lines_adj(const Geom *, bool) {
-  return false;
-}
-
-/**
- * Draws a series of line strips.
- */
-bool GraphicsStateGuardian::
-draw_linestrips(const Geom *, bool) {
-  return false;
-}
-
-/**
- * Draws a series of line strips with adjacency information.
- */
-bool GraphicsStateGuardian::
-draw_linestrips_adj(const Geom *, bool) {
   return false;
 }
 

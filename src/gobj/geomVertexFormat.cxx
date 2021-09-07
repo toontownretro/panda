@@ -13,7 +13,6 @@
 
 #include "geomVertexFormat.h"
 #include "geomVertexData.h"
-#include "geomMunger.h"
 #include "lightReMutexHolder.h"
 #include "indent.h"
 #include "bamReader.h"
