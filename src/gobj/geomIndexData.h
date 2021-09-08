@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "geomVertexArrayData.h"
+#include "pointerTo.h"
 
 /**
  * This is a subclass of GeomVertexArrayData whose only purpose is to indicate
@@ -26,9 +27,19 @@
  * the GeomVertexArrayFormat for the info when we render.
  */
 class EXPCL_PANDA_GOBJ GeomIndexData : public GeomVertexArrayData {
+protected:
+  virtual PT(CopyOnWriteObject) make_cow_copy() override;
+
 PUBLISHED:
+  INLINE GeomIndexData(NumericType index_type, UsageHint usage);
+  INLINE GeomIndexData(const GeomIndexData &copy);
+  INLINE void operator = (const GeomIndexData &copy);
+  virtual ~GeomIndexData() override;
+
   INLINE GeomEnums::NumericType get_index_type() const;
   INLINE int get_index_stride() const;
+
+  INLINE static CPT(GeomVertexArrayFormat) make_index_format(NumericType index_type);
 
 private:
   GeomEnums::NumericType _index_type;
@@ -50,6 +61,7 @@ public:
 private:
   static TypeHandle _type_handle;
 };
+
 #include "geomIndexData.I"
 
 #endif // GEOMINDEXDATA_H

@@ -14,3 +14,18 @@
 #include "geomIndexData.h"
 
 TypeHandle GeomIndexData::_type_handle;
+
+/**
+ *
+ */
+PT(CopyOnWriteObject) GeomIndexData::
+make_cow_copy() {
+  return new GeomIndexData(*this);
+}
+
+/**
+ *
+ */
+GeomIndexData::
+~GeomIndexData() {
+}
