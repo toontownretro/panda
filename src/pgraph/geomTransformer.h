@@ -90,7 +90,7 @@ public:
 private:
   int _max_collect_vertices;
 
-  typedef pvector<PT(Geom) > GeomList;
+  typedef pvector<Geom *> GeomList;
 
   // Keeps track of the Geoms that are associated with a particular
   // GeomVertexData.  Also tracks whether the vertex data might have unused

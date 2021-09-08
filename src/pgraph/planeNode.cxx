@@ -19,7 +19,7 @@
 #include "datagramIterator.h"
 #include "geomVertexWriter.h"
 #include "geomVertexData.h"
-#include "geomLines.h"
+#include "geomIndexData.h"
 #include "geom.h"
 #include "cullableObject.h"
 #include "cullHandler.h"
@@ -112,8 +112,8 @@ xform(const LMatrix4 &mat) {
   PandaNode::xform(mat);
   CDWriter cdata(_cycler);
   cdata->_plane = cdata->_plane * mat;
-  cdata->_front_viz = nullptr;
-  cdata->_back_viz = nullptr;
+  cdata->_front_viz.clear();
+  cdata->_back_viz.clear();
 }
 
 /**
@@ -176,7 +176,7 @@ compute_internal_bounds(CPT(BoundingVolume) &internal_bounds,
 /**
  * Returns a Geom that represents the visualization of the PlaneNode.
  */
-PT(Geom) PlaneNode::
+Geom PlaneNode::
 get_viz(CullTraverser *trav, CullTraverserData &data) {
   CDLockedReader cdata(_cycler);
 
@@ -185,7 +185,7 @@ get_viz(CullTraverser *trav, CullTraverserData &data) {
   LPlane eye_plane = cdata->_plane * data.get_modelview_transform(trav)->get_mat();
   bool front = (eye_plane.dist_to_plane(lens->get_nodal_point()) >= 0.0f);
 
-  if (cdata->_front_viz != nullptr) {
+  if (!cdata->_front_viz.is_empty()) {
     return front ? cdata->_front_viz : cdata->_back_viz;
   }
 
@@ -201,7 +201,7 @@ get_viz(CullTraverser *trav, CullTraverserData &data) {
     (get_name(), GeomVertexFormat::get_v3cp(), Geom::UH_static);
 
   GeomVertexWriter vertex(vdata, InternalName::get_vertex());
-  PT(GeomLines) lines = new GeomLines(Geom::UH_static);
+  PT(GeomIndexData) lines = new GeomIndexData(Geom::UH_static);
 
   LVector3 a, b;
 
@@ -246,11 +246,15 @@ get_viz(CullTraverser *trav, CullTraverserData &data) {
     lines->close_primitive();
   }
 
-  cdataw->_front_viz = new Geom(vdata->set_color(LColor(1.0f, 1.0f, 0.0f, 1.0f)));
-  cdataw->_front_viz->add_primitive(lines);
+  cdataw->_front_viz = Geom(
+    Geom::GPT_lines,
+    vdata->set_color(LColor(1.0f, 1.0f, 0.0f, 1.0f)),
+    lines);
 
-  cdataw->_back_viz = new Geom(vdata->set_color(LColor(0.4, 0.4, 0.0f, 1.0f)));
-  cdataw->_back_viz->add_primitive(lines);
+  cdataw->_back_viz = Geom(
+    Geom::GPT_lines,
+    vdata->set_color(LColor(0.4, 0.4, 0.0f, 1.0f)),
+    lines);
 
   return front ? cdataw->_front_viz : cdataw->_back_viz;
 }

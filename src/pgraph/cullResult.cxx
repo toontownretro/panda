@@ -157,7 +157,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
   static const LColor flash_multisample_color(0.78f, 0.05f, 0.81f, 1.0f);
   static const LColor flash_dual_color(0.92, 0.01f, 0.01f, 1.0f);
 
-  nassertv(object._draw_callback != nullptr || object._geom != nullptr);
+  nassertv(object._draw_callback != nullptr || !object._geom.is_empty());
 
   bool force = !traverser->get_effective_incomplete_render();
   Thread *current_thread = traverser->get_current_thread();
@@ -190,8 +190,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
       wireframe_part._state = get_wireframe_overlay_state(rmode);
 
       if (wireframe_part.munge_geom
-          (_gsg, /*_gsg->get_geom_munger(wireframe_part->_state, current_thread)*/nullptr,
-           traverser, force)) {
+          (_gsg, traverser, force)) {
         int wireframe_bin_index = bin_manager->find_bin("fixed");
         CullBin *bin = get_bin(wireframe_bin_index);
         nassertv(bin != nullptr);
@@ -259,8 +258,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
               CPT(RenderState) transparent_state = get_dual_transparent_state();
               transparent_part._state = object._state->compose(transparent_state);
               if (transparent_part.munge_geom
-                  (_gsg, /*_gsg->get_geom_munger(transparent_part->_state, current_thread)*/nullptr,
-                   traverser, force)) {
+                  (_gsg, traverser, force)) {
                 int transparent_bin_index = transparent_part._state->get_bin_index();
                 CullBin *bin = get_bin(transparent_bin_index);
                 nassertv(bin != nullptr);
@@ -290,7 +288,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
 
   // Munge vertices as needed for the GSG's requirements, and the object's
   // current state.
-  if (object.munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
+  if (object.munge_geom(_gsg, traverser, force)) {
     // The object may or may not now be fully resident, but this may not
     // matter, since the GSG may have the necessary buffers already loaded.
     // We'll let the GSG ultimately decide whether to render it.

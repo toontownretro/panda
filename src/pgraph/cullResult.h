@@ -19,7 +19,6 @@
 #include "cullBinManager.h"
 #include "renderState.h"
 #include "cullableObject.h"
-#include "geomMunger.h"
 #include "referenceCount.h"
 #include "pointerTo.h"
 #include "pvector.h"

@@ -183,7 +183,7 @@ get_geoms(Thread *current_thread) const {
  *
  */
 INLINE GeomNode::GeomEntry::
-GeomEntry(Geom &geom, const RenderState *state) :
+GeomEntry(const Geom &geom, const RenderState *state) :
   _geom(geom),
   _state(state)
 {

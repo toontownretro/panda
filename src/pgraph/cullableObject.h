@@ -33,7 +33,6 @@
 #include "instanceList.h"
 
 class CullTraverser;
-class GeomMunger;
 
 /**
  * The smallest atom of cull.  This is normally just a Geom and its associated
@@ -42,7 +41,7 @@ class GeomMunger;
 class EXPCL_PANDA_PGRAPH CullableObject {
 public:
   INLINE CullableObject();
-  INLINE CullableObject(CPT(Geom) geom, CPT(RenderState) state,
+  INLINE CullableObject(const Geom &geom, CPT(RenderState) state,
                         CPT(TransformState) internal_transform);
 
   INLINE CullableObject(const CullableObject &copy);
@@ -50,7 +49,7 @@ public:
   INLINE void operator = (const CullableObject &copy);
   INLINE void operator = (CullableObject &&other);
 
-  bool munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
+  bool munge_geom(GraphicsStateGuardianBase *gsg,
                   const CullTraverser *traverser, bool force);
   INLINE void draw(GraphicsStateGuardianBase *gsg,
                    bool force, Thread *current_thread);
@@ -77,10 +76,10 @@ public:
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;
 
-  CPT(Geom) _geom;
+  Geom _geom;
   const GeomVertexData *_munged_data;
 
-  //int _num_instances = 1;
+  int _num_instances = 1;
 
   // This union contains the data used by various CullBins to sort their list
   // of CullableObjects.  Each bin type will only use one of the three

@@ -108,7 +108,7 @@ add_object(CullableObject &object) {
  */
 void CullBin::ResultGraphBuilder::
 record_one_object(GeomNode *node, CullableObject &object) {
-  PT(Geom) new_geom = object._geom->make_copy();
-  new_geom->set_vertex_data(object._munged_data);
+  Geom new_geom = object._geom;
+  new_geom.set_vertex_data(object._munged_data);
   node->add_geom(new_geom);
 }

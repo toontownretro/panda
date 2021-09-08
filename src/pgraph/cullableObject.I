@@ -16,6 +16,7 @@
  */
 INLINE CullableObject::
 CullableObject() {
+  _num_instances = 1;
   memset(&_sort_data, 0, sizeof(_sort_data));
 }
 
@@ -24,14 +25,15 @@ CullableObject() {
  * render state and transform.
  */
 INLINE CullableObject::
-CullableObject(CPT(Geom) geom, CPT(RenderState) state,
+CullableObject(const Geom &geom, CPT(RenderState) state,
                CPT(TransformState) internal_transform) :
   _state(std::move(state)),
   _internal_transform(std::move(internal_transform)),
-  _geom(std::move(geom))
+  _geom(geom),
+  _num_instances(1)
 {
-  if (_geom != nullptr) {
-    _munged_data = _geom->get_vertex_data();
+  if (!_geom.is_empty()) {
+    _munged_data = _geom.get_vertex_data();
   } else {
     _munged_data = nullptr;
   }
@@ -46,7 +48,8 @@ CullableObject(const CullableObject &copy) :
   _state(copy._state),
   _internal_transform(copy._internal_transform),
   _geom(copy._geom),
-  _munged_data(copy._munged_data)
+  _munged_data(copy._munged_data),
+  _num_instances(copy._num_instances)
 {
   memcpy(&_sort_data, &copy._sort_data, sizeof(_sort_data));
 }
@@ -59,7 +62,8 @@ CullableObject(CullableObject &&other) :
   _state(std::move(other._state)),
   _internal_transform(std::move(other._internal_transform)),
   _geom(std::move(other._geom)),
-  _munged_data(std::move(other._munged_data))
+  _munged_data(std::move(other._munged_data)),
+  _num_instances(std::move(other._num_instances))
 {
   memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
 }
@@ -74,6 +78,7 @@ operator = (const CullableObject &copy) {
   _internal_transform = copy._internal_transform;
   _geom = copy._geom;
   _munged_data = copy._munged_data;
+  _num_instances = copy._num_instances;
   memcpy(&_sort_data, &copy._sort_data, sizeof(_sort_data));
 }
 
@@ -87,6 +92,7 @@ operator = (CullableObject &&other) {
   _internal_transform = std::move(other._internal_transform);
   _geom = std::move(other._geom);
   _munged_data = std::move(other._munged_data);
+  _num_instances = std::move(other._num_instances);
   memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
 }
 
@@ -141,8 +147,10 @@ draw(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
 INLINE bool CullableObject::
 request_resident() const {
   bool resident = true;
-  if (!_geom->request_resident()) {
-    resident = false;
+  if (_geom.is_indexed()) {
+    if (!_geom.get_index_data()->request_resident()) {
+      resident = false;
+    }
   }
   if (!_munged_data->request_resident()) {
     resident = false;

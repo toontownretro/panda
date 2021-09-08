@@ -24,7 +24,6 @@
 #include "pStatTimer.h"
 #include "geomVertexWriter.h"
 #include "geomVertexReader.h"
-#include "geomTriangles.h"
 #include "light.h"
 #include "lightMutexHolder.h"
 
@@ -41,14 +40,14 @@ TypeHandle CullableObject::_type_handle;
  * have to block while the vertex data is paged in.
  */
 bool CullableObject::
-munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
+munge_geom(GraphicsStateGuardianBase *gsg,
            const CullTraverser *traverser, bool force) {
   //nassertr(munger != nullptr, false);
 
   Thread *current_thread = traverser->get_current_thread();
   PStatTimer timer(_munge_pcollector, current_thread);
 
-  if (_geom != nullptr) {
+  if (!_geom.is_empty()) {
     GraphicsStateGuardianBase *gsg = traverser->get_gsg();
 
     // If there is any animation left in the vertex data after it has been
@@ -99,24 +98,13 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
     }
 
-#if 0
     if (sattr != nullptr) {
-      if (_instances != nullptr &&
-          sattr->get_flag(ShaderAttrib::F_hardware_instancing)) {
-        // We are under an InstancedNode, and the shader implements hardware.
-        // Munge the instance list into the vertex data.
-        munge_instances(current_thread);
-        _num_instances = _instances->size();
-        _instances = nullptr;
-      } else {
-        // No, use the instance count from the ShaderAttrib.
-        int count = sattr->get_instance_count();
-        _num_instances = (count > 0) ? (size_t)count : 1;
-      }
+      // No, use the instance count from the ShaderAttrib.
+      int count = sattr->get_instance_count();
+      _num_instances = (count > 0) ? (size_t)count : 1;
     } else {
       _num_instances = 1;
     }
-#endif
   }
 
   return true;
@@ -127,8 +115,8 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
  */
 void CullableObject::
 output(std::ostream &out) const {
-  if (_geom != nullptr) {
-    out << *_geom;
+  if (_geom.is_empty()) {
+    out << _geom;
   } else {
     out << "(null)";
   }

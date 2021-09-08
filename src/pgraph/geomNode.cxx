@@ -124,7 +124,7 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
     size_t num_geoms = geoms->size();
     for (size_t i = 0; i < num_geoms; ++i) {
       GeomEntry *entry = &(*geoms)[i];
-      Geom new_geom = entry->_geom;
+      Geom *new_geom = &entry->_geom;
 
       AccumulatedAttribs geom_attribs = attribs;
       entry->_state = geom_attribs.collect(entry->_state, attrib_types);
@@ -264,8 +264,8 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
               if (has_normals) {
                 // If the geometry has normals, we have to duplicate it to
                 // reverse the normals on the duplicate copy.
-                PT(Geom) dup_geom = new_geom->reverse();
-                transformer.reverse_normals(dup_geom);
+                Geom dup_geom = new_geom->reverse();
+                transformer.reverse_normals(&dup_geom);
 
                 geoms->push_back(GeomEntry(dup_geom, entry->_state));
 
@@ -295,9 +295,9 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
         }
       }
 
-      if (any_changed) {
-        entry->_geom = new_geom;
-      }
+      //if (any_changed) {
+      //  entry->_geom = new_geom;
+      //}
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
@@ -369,11 +369,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     CPT(RenderState) geom_state = node_state->compose(entry._state);
-    const Geom *geom = entry._geom.get_read_pointer();
-
-    // Munge the geom as required by the GSG.
-    PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
-    geom = transformer.premunge_geom(geom, munger);
+    const Geom *geom = &entry._geom;
 
     // Prepare each of the vertex arrays in the munged Geom.
     CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(false, current_thread);
@@ -384,16 +380,9 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       prepared_objects->enqueue_vertex_buffer((GeomVertexArrayData *)array.p());
     }
 
-    // And also each of the index arrays.
-    int num_primitives = geom->get_num_primitives();
-    for (int i = 0; i < num_primitives; ++i) {
-      CPT(GeomPrimitive) prim = geom->get_primitive(i);
-      prepared_objects->enqueue_index_buffer((GeomPrimitive *)prim.p());
-    }
-
-    if (munger->is_of_type(StateMunger::get_class_type())) {
-      StateMunger *state_munger = (StateMunger *)munger.p();
-      geom_state = state_munger->munge_state(geom_state);
+    // And also the index array.
+    if (geom->is_indexed()) {
+      prepared_objects->enqueue_index_buffer((GeomIndexData *)geom->get_index_data());
     }
 
     // And now prepare each of the textures.
@@ -471,7 +460,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
   GeomList::const_iterator gi;
   const GeomList *geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
-    const Geom *geom = (*gi)._geom.get_read_pointer();
+    const Geom *geom = &(*gi)._geom;
     geom->calc_tight_bounds(min_point, max_point, found_any,
                             geom->get_animated_vertex_data(true, current_thread),
                             !next_transform->is_identity(), mat,
@@ -523,7 +512,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     if (!geom->is_empty()) {
       CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
-        CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
+        CullableObject object(*geom, std::move(state), std::move(internal_transform));
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
@@ -546,19 +535,20 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       if (data._instances != nullptr) {
         // Draw each individual instance.  We don't bother culling each
         // individual Geom for each instance; that is probably way too slow.
-        CullableObject object(std::move(geom), std::move(state), internal_transform);
+        CullableObject object(*geom, std::move(state), internal_transform);
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
         continue;
       }
 
       // Cull the individual Geom against the view frustum.
-      if (data._view_frustum != nullptr &&
-          !geom->is_in_view(data._view_frustum, current_thread)) {
-        // Cull this Geom.
-        continue;
-      }
+      //if (data._view_frustum != nullptr &&
+      //    !geom->is_in_view(data._view_frustum, current_thread)) {
+      //  // Cull this Geom.
+      //  continue;
+      //}
 
+#if 0
       bool has_cull_planes = !data._cull_planes->is_empty();
       bool has_cull_lights = !data._cull_lights->is_empty();
 
@@ -583,8 +573,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
           data._cull_lights->do_cull(result, state, geom_gbv);
         }
       }
+#endif
 
-      CullableObject object(std::move(geom), std::move(state), internal_transform);
+      CullableObject object(*geom, std::move(state), internal_transform);
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
@@ -609,9 +600,9 @@ get_legal_collide_mask() const {
  * scene graph).
  */
 void GeomNode::
-add_geom(Geom *geom, const RenderState *state) {
-  nassertv(geom != nullptr);
-  nassertv(geom->check_valid());
+add_geom(const Geom &geom, const RenderState *state) {
+  nassertv(!geom.is_empty());
+  //nassertv(geom->check_valid());
   nassertv(state != nullptr);
 
   Thread *current_thread = Thread::get_current_thread();
@@ -641,7 +632,7 @@ add_geoms_from(const GeomNode *other) {
     PT(GeomList) this_geoms = cdata->modify_geoms();
     for (gi = other_geoms->begin(); gi != other_geoms->end(); ++gi) {
       const GeomEntry &entry = (*gi);
-      nassertv(entry._geom.get_read_pointer()->check_valid());
+      //nassertv(entry._geom.get_read_pointer()->check_valid());
       this_geoms->push_back(entry);
     }
   }
@@ -660,9 +651,9 @@ add_geoms_from(const GeomNode *other) {
  * independently in pipeline stage 0. Use with caution.
  */
 void GeomNode::
-set_geom(int n, Geom *geom) {
-  nassertv(geom != nullptr);
-  nassertv(geom->check_valid());
+set_geom(int n, const Geom &geom) {
+  nassertv(!geom.is_empty());
+  //nassertv(geom->check_valid());
 
   CDWriter cdata(_cycler, true);
   PT(GeomList) geoms = cdata->modify_geoms();
@@ -682,9 +673,9 @@ check_valid() const {
   int num_geoms = get_num_geoms();
   for (int i = 0; i < num_geoms; i++) {
     const Geom *geom = get_geom(i);
-    if (!geom->check_valid()) {
-      return false;
-    }
+    //if (!geom->check_valid()) {
+    //  return false;
+    //}
   }
 
   return true;
@@ -702,6 +693,7 @@ check_valid() const {
  */
 void GeomNode::
 decompose() {
+#if 0
   Thread *current_thread = Thread::get_current_thread();
   OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
@@ -710,12 +702,13 @@ decompose() {
     PT(GeomList) geoms = cdata->modify_geoms();
     for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
       GeomEntry &entry = (*gi);
-      nassertv(entry._geom.test_ref_count_integrity());
+      //nassertv(entry._geom.test_ref_count_integrity());
       PT(Geom) geom = entry._geom.get_write_pointer();
       geom->decompose_in_place();
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
+#endif
 }
 
 /**
@@ -839,7 +832,7 @@ write_geoms(std::ostream &out, int indent_level) const {
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     indent(out, indent_level + 2)
-      << *entry._geom.get_read_pointer() << " " << *entry._state << "\n";
+      << entry._geom << " " << *entry._state << "\n";
   }
 }
 
@@ -854,10 +847,9 @@ write_verbose(std::ostream &out, int indent_level) const {
   CPT(GeomList) geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
-    CPT(Geom) geom = entry._geom.get_read_pointer();
     indent(out, indent_level + 2)
-      << *geom << " " << *entry._state << "\n";
-    geom->write(out, indent_level + 4);
+      << entry._geom << " " << *entry._state << "\n";
+    entry._geom.write(out, indent_level + 4);
   }
 }
 
@@ -915,22 +907,6 @@ void GeomNode::
 do_premunge(GraphicsStateGuardianBase *gsg,
             const RenderState *node_state,
             GeomTransformer &transformer) {
-  Thread *current_thread = Thread::get_current_thread();
-
-  OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
-    CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
-
-    GeomList::iterator gi;
-    PT(GeomList) geoms = cdata->modify_geoms();
-    for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
-      GeomEntry &entry = (*gi);
-      CPT(RenderState) geom_state = node_state->compose(entry._state);
-      CPT(Geom) geom = entry._geom.get_read_pointer();
-      PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
-      entry._geom = transformer.premunge_geom(geom, munger);
-    }
-  }
-  CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
 }
 
 /**
@@ -939,6 +915,7 @@ do_premunge(GraphicsStateGuardianBase *gsg,
  */
 void GeomNode::
 r_mark_geom_bounds_stale(Thread *current_thread) {
+#if 0
   OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
 
@@ -950,6 +927,7 @@ r_mark_geom_bounds_stale(Thread *current_thread) {
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
+#endif
   mark_internal_bounds_stale();
 
   PandaNode::r_mark_geom_bounds_stale(current_thread);
@@ -1105,7 +1083,7 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
   GeomList::const_iterator gi;
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
-    manager->write_pointer(dg, entry._geom.get_read_pointer());
+    entry._geom.write_datagram(manager, dg);
     manager->write_pointer(dg, entry._state);
   }
 }
@@ -1123,7 +1101,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   PT(GeomList) geoms = _geoms.get_write_pointer();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomEntry &entry = (*gi);
-    entry._geom = DCAST(Geom, p_list[pi++]);
+    pi = entry._geom.complete_pointers(p_list, manager, pi);
     entry._state = DCAST(RenderState, p_list[pi++]);
   }
 
@@ -1141,9 +1119,10 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   PT(GeomList) geoms = new GeomList;
   geoms->reserve(num_geoms);
   for (int i = 0; i < num_geoms; i++) {
+    Geom geom;
+    geom.fillin(scan, manager);
     manager->read_pointer(scan);
-    manager->read_pointer(scan);
-    geoms->push_back(GeomEntry(nullptr, nullptr));
+    geoms->push_back(GeomEntry(geom, nullptr));
   }
   _geoms = geoms;
 }

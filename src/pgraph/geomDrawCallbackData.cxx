@@ -39,7 +39,7 @@ output(std::ostream &out) const {
 void GeomDrawCallbackData::
 upcall() {
   // Go ahead and draw the object, if we have one.
-  if (_obj->_geom != nullptr) {
+  if (!_obj->_geom.is_empty()) {
     if (_lost_state) {
       // Tell the GSG to forget its state.
       _gsg->clear_state_and_transform();

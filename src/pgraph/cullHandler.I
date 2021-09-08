@@ -39,7 +39,7 @@ record_object(CullableObject &object, const CullTraverser *traverser) {
     bool force = !_gsg->get_effective_incomplete_render();
     Thread *current_thread = traverser->get_current_thread();
 
-    if (object.munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
+    if (object.munge_geom(_gsg, traverser, force)) {
       // Now we can immediately draw the object.
       _gsg->draw_object(&object, force);
     }

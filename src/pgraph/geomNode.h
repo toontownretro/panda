@@ -75,9 +75,9 @@ PUBLISHED:
   MAKE_SEQ(get_geom_states, get_num_geoms, get_geom_state);
   INLINE void set_geom_state(int n, const RenderState *state);
 
-  void add_geom(Geom &geom, const RenderState *state = RenderState::make_empty());
+  void add_geom(const Geom &geom, const RenderState *state = RenderState::make_empty());
   void add_geoms_from(const GeomNode *other);
-  void set_geom(int n, Geom &geom);
+  void set_geom(int n, const Geom &geom);
   INLINE void remove_geom(int n);
   INLINE void remove_all_geoms();
   bool check_valid() const;
@@ -114,7 +114,7 @@ public:
   // class to access it.
   class GeomEntry {
   public:
-    INLINE GeomEntry(Geom &geom, const RenderState *state);
+    INLINE GeomEntry(const Geom &geom, const RenderState *state);
     Geom _geom;
     CPT(RenderState) _state;
   };

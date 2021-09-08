@@ -73,7 +73,7 @@ protected:
                                        int &internal_vertices,
                                        int pipeline_stage,
                                        Thread *current_thread) const;
-  PT(Geom) get_viz(CullTraverser *trav, CullTraverserData &data);
+  Geom get_viz(CullTraverser *trav, CullTraverserData &data);
 
 private:
   // The priority is not cycled, because there's no real reason to do so, and
@@ -95,7 +95,7 @@ private:
     }
 
     LPlane _plane;
-    PT(Geom) _front_viz, _back_viz;
+    Geom _front_viz, _back_viz;
     PN_stdfloat _viz_scale;
   };
 
