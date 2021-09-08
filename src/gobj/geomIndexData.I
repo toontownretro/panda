@@ -112,7 +112,7 @@ add_vertices(int v1, int v2, int v3, int v4) {
  */
 INLINE int GeomIndexData::
 get_num_vertices() const {
-  get_num_rows();
+  return get_num_rows();
 }
 
 /**
