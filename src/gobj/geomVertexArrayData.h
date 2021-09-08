@@ -343,7 +343,7 @@ private:
   static TypeHandle _type_handle;
 
   friend class Geom;
-  friend class GeomPrimitive;
+  friend class GeomIndexData;
   friend class GeomVertexData;
   friend class GeomVertexDataPipelineReader;
   friend class GeomVertexDataPipelineWriter;

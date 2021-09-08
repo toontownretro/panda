@@ -15,9 +15,12 @@
  *
  */
 INLINE GeomIndexData::
-GeomIndexData(NumericType index_type, UsageHint usage) :
+GeomIndexData(UsageHint usage, NumericType index_type) :
   GeomVertexArrayData(make_index_format(index_type), usage),
-  _index_type(index_type)
+  _index_type(index_type),
+  _min_vertex(0),
+  _max_vertex(0),
+  _got_minmax(false)
 {
 }
 
@@ -27,7 +30,10 @@ GeomIndexData(NumericType index_type, UsageHint usage) :
 INLINE GeomIndexData::
 GeomIndexData(const GeomIndexData &copy) :
   GeomVertexArrayData(copy),
-  _index_type(copy._index_type)
+  _index_type(copy._index_type),
+  _min_vertex(copy._min_vertex),
+  _max_vertex(copy._max_vertex),
+  _got_minmax(copy._got_minmax)
 {
 }
 
@@ -38,6 +44,9 @@ INLINE void GeomIndexData::
 operator = (const GeomIndexData &copy) {
   GeomVertexArrayData::operator = (copy);
   _index_type = copy._index_type;
+  _min_vertex = copy._min_vertex;
+  _max_vertex = copy._max_vertex;
+  _got_minmax = copy._got_minmax;
 }
 
 /**
@@ -66,6 +75,62 @@ get_index_stride() const {
     assert(false);
     return 0;
   }
+}
+
+/**
+ * Appends several vertex indices to the index buffer.
+ */
+INLINE void GeomIndexData::
+add_vertices(int v1, int v2) {
+  add_vertex(v1);
+  add_vertex(v2);
+}
+
+/**
+ * Appends several vertex indices to the index buffer.
+ */
+INLINE void GeomIndexData::
+add_vertices(int v1, int v2, int v3) {
+  add_vertex(v1);
+  add_vertex(v2);
+  add_vertex(v3);
+}
+
+/**
+ * Appends several vertex indices to the index buffer.
+ */
+INLINE void GeomIndexData::
+add_vertices(int v1, int v2, int v3, int v4) {
+  add_vertex(v1);
+  add_vertex(v2);
+  add_vertex(v3);
+  add_vertex(v4);
+}
+
+/**
+ * Returns the total number of vertex indices in the index buffer.
+ */
+INLINE int GeomIndexData::
+get_num_vertices() const {
+  get_num_rows();
+}
+
+/**
+ * Returns the minimum vertex index referenced by the index buffer.
+ */
+INLINE int GeomIndexData::
+get_min_vertex() const {
+  nassertr(_got_minmax, 0);
+  return _min_vertex;
+}
+
+/**
+ * Returns the maximum vertex index referenced by the index buffer.
+ */
+INLINE int GeomIndexData::
+get_max_vertex() const {
+  nassertr(_got_minmax, 0);
+  return _max_vertex;
 }
 
 /**
