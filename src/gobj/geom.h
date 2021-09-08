@@ -103,7 +103,7 @@ PUBLISHED:
   CPT(GeomVertexData) get_animated_vertex_data(bool force, Thread *current_thread) const;
 
 public:
-  void write_datagram(BamWriter *manager, Datagram &me);
+  void write_datagram(BamWriter *manager, Datagram &me) const;
   void fillin(DatagramIterator &scan, BamReader *manager);
 
   int complete_pointers(TypedWritable **p_list, BamReader *manager, int pi);

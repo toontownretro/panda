@@ -294,7 +294,7 @@ get_animated_vertex_data(bool force, Thread *current_thread) const {
  *
  */
 void Geom::
-write_datagram(BamWriter *manager, Datagram &me) {
+write_datagram(BamWriter *manager, Datagram &me) const {
   manager->write_pointer(me, (GeomVertexData *)_vertex_data.get_read_pointer());
   manager->write_pointer(me, (GeomIndexData *)_index_data.get_read_pointer());
   me.add_uint8(_primitive_type);
