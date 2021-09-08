@@ -754,7 +754,9 @@ add_node(CharacterNode *node) {
 void Character::
 remove_node(CharacterNode *node) {
   Nodes::iterator ni = find(_nodes.begin(), _nodes.end(), node);
-  nassertv(ni != _nodes.end());
+  if (ni == _nodes.end()) {
+    return;
+  }
   _nodes.erase(ni);
 
   if (get_num_nodes() > 0) {
