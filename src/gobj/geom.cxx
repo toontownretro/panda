@@ -14,6 +14,8 @@
 #include "geom.h"
 #include "geomVertexWriter.h"
 #include "geomVertexRewriter.h"
+#include "bamWriter.h"
+#include "bamReader.h"
 
 UpdateSeq Geom::_next_modified;
 
@@ -246,4 +248,80 @@ get_referenced_vertices(BitArray &bits) const {
     // Non-indexed case.
     bits.set_range(_first_index, _num_indices);
   }
+}
+
+/**
+ * Clears the Geom.  This removes the vertex buffer and index buffer
+ * references.
+ */
+void Geom::
+clear() {
+  _vertex_data = nullptr;
+  _index_data = nullptr;
+  _first_index = 0;
+  _num_indices = 0;
+}
+
+/**
+ * Returns a GeomVertexData that represents the results of computing the
+ * vertex animation on the CPU for this Geom's vertex data.
+ *
+ * If there is no CPU-defined vertex animation on this object, this just
+ * returns the original object.
+ *
+ * If there is vertex animation, but the VertexTransform values have not
+ * changed since last time, this may return the same pointer it returned
+ * previously.  Even if the VertexTransform values have changed, it may still
+ * return the same pointer, but with its contents modified (this is preferred,
+ * since it allows the graphics backend to update vertex buffers optimally).
+ *
+ * If force is false, this method may return immediately with stale data, if
+ * the vertex data is not completely resident.  If force is true, this method
+ * will never return stale data, but may block until the data is available.
+ */
+CPT(GeomVertexData) Geom::
+get_animated_vertex_data(bool force, Thread *current_thread) const {
+  const GeomVertexData *vdata = get_vertex_data();
+
+  if (vdata == nullptr) {
+    return nullptr;
+  }
+
+  return vdata->animate_vertices(force, current_thread);
+}
+
+/**
+ *
+ */
+void Geom::
+write_datagram(BamWriter *manager, Datagram &me) {
+  manager->write_pointer(me, (GeomVertexData *)_vertex_data.get_read_pointer());
+  manager->write_pointer(me, (GeomIndexData *)_index_data.get_read_pointer());
+  me.add_uint8(_primitive_type);
+  me.add_uint32(_first_index);
+  me.add_uint32(_num_indices);
+  me.add_int32(_num_vertices_per_patch);
+}
+
+/**
+ *
+ */
+void Geom::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  manager->read_pointer(scan); // vertex data
+  manager->read_pointer(scan); // index data
+  _primitive_type = (GeomPrimitiveType)scan.get_uint8();
+  _first_index = scan.get_uint32();
+  _num_indices = scan.get_uint32();
+  _num_vertices_per_patch = scan.get_int32();
+}
+
+/**
+ *
+ */
+int Geom::
+complete_pointers(TypedWritable **p_list, BamReader *manager, int pi) {
+  _vertex_data = DCAST(GeomVertexData, p_list[pi++]);
+  _index_data = DCAST(GeomIndexData, p_list[pi++]);
+  return pi;
 }

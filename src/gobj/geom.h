@@ -98,6 +98,16 @@ PUBLISHED:
 
   void get_referenced_vertices(BitArray &bits) const;
 
+  void clear();
+
+  CPT(GeomVertexData) get_animated_vertex_data(bool force, Thread *current_thread) const;
+
+public:
+  void write_datagram(BamWriter *manager, Datagram &me);
+  void fillin(DatagramIterator &scan, BamReader *manager);
+
+  int complete_pointers(TypedWritable **p_list, BamReader *manager, int pi);
+
 public:
   static UpdateSeq get_next_modified();
 
