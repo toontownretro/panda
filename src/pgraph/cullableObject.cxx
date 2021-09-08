@@ -21,7 +21,6 @@
 #include "cullTraverser.h"
 #include "sceneSetup.h"
 #include "lens.h"
-#include "stateMunger.h"
 #include "pStatTimer.h"
 #include "geomVertexWriter.h"
 #include "geomVertexReader.h"

@@ -24,7 +24,6 @@
 #include "pStatCollector.h"
 #include "renderModeAttrib.h"
 #include "texMatrixAttrib.h"
-#include "geomMunger.h"
 #include "weakPointerTo.h"
 #include "lightReMutex.h"
 #include "lightMutex.h"
@@ -139,7 +138,6 @@ PUBLISHED:
   static int get_num_states();
   static int get_num_unused_states();
   static int clear_cache();
-  static void clear_munger_cache();
   static int garbage_collect();
   static void list_cycles(std::ostream &out);
   static void list_states(std::ostream &out);
@@ -269,20 +267,6 @@ private:
   CompositionCache _composition_cache;
   CompositionCache _invert_composition_cache;
 
-  // This is here to provide a quick cache of GSG + RenderState -> GeomMunger
-  // for the cull phase.  It is here because it is faster to look up the GSG
-  // in the RenderState pointer than vice-versa, since there are likely to be
-  // far fewer GSG's than RenderStates.  The code to manage this map lives in
-  // GraphicsStateGuardian::get_geom_munger().
-  typedef SimpleHashMap<size_t, PT(GeomMunger), size_t_hash> Mungers;
-  mutable Mungers _mungers;
-  mutable int _last_mi;
-
-  // Similarly, this is a cache of munged states.  This map is managed by
-  // StateMunger::munge_state().
-  typedef SimpleHashMap<size_t, WCPT(RenderState), size_t_hash> MungedStates;
-  mutable MungedStates _munged_states;
-
   // This is used to mark nodes as we visit them to detect cycles.
   UpdateSeq _cycle_detect;
   static UpdateSeq _last_cycle_detect;
@@ -375,7 +359,6 @@ private:
   friend class GraphicsStateGuardian;
   friend class RenderAttribRegistry;
   friend class Extension<RenderState>;
-  friend class StateMunger;
 };
 
 // We can safely redefine this as a no-op.

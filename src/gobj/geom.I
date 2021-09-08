@@ -67,7 +67,7 @@ operator = (Geom &&other) {
  * This causes the index range of the Geom to be recomputed automatically.
  */
 INLINE void Geom::
-set_buffers(const GeomVertexData *vertex_data, const GeomIndexData *index_data) {
+set_buffers(GeomVertexData *vertex_data, GeomIndexData *index_data) {
   _vertex_data = vertex_data;
   _index_data = index_data;
   compute_index_range();
@@ -80,7 +80,7 @@ set_buffers(const GeomVertexData *vertex_data, const GeomIndexData *index_data) 
  */
 INLINE void Geom::
 set_vertex_data(const GeomVertexData *data) {
-  _vertex_data = data;
+  _vertex_data = (GeomVertexData *)data;
   compute_index_range();
 }
 
@@ -89,7 +89,15 @@ set_vertex_data(const GeomVertexData *data) {
  */
 INLINE const GeomVertexData *Geom::
 get_vertex_data() const {
-  return _vertex_data;
+  return _vertex_data.get_read_pointer();
+}
+
+/**
+ * Returns a writable pointer to the Geom's vertex data.
+ */
+INLINE PT(GeomVertexData) Geom::
+modify_vertex_data() {
+  return _vertex_data.get_write_pointer();
 }
 
 /**
@@ -99,7 +107,7 @@ get_vertex_data() const {
  */
 INLINE void Geom::
 set_index_data(const GeomIndexData *data) {
-  _index_data = data;
+  _index_data = (GeomIndexData *)data;
   compute_index_range();
 }
 
@@ -108,7 +116,15 @@ set_index_data(const GeomIndexData *data) {
  */
 INLINE const GeomIndexData *Geom::
 get_index_data() const {
-  return _index_data;
+  return _index_data.get_read_pointer();
+}
+
+/**
+ * Returns a writable pointer to the Geom's index data.
+ */
+INLINE PT(GeomIndexData) Geom::
+modify_index_data() {
+  return _index_data.get_write_pointer();
 }
 
 /**
@@ -217,4 +233,107 @@ get_first_index() const {
 INLINE unsigned int Geom::
 get_num_indices() const {
   return _num_indices;
+}
+
+/**
+ * Returns true if the Geom is empty.  This is, if the Geom has no vertex
+ * buffer.
+ */
+INLINE bool Geom::
+is_empty() const {
+  return _vertex_data.is_null();
+}
+
+/**
+ * Returns true if the primitive is a composite primitive such as a tristrip
+ * or trifan, or false if it is a fundamental primitive such as a collection
+ * of triangles.
+ *
+ * Note: This always returns false as composite primitives are no longer
+ * supported.
+ */
+INLINE bool Geom::
+is_composite() const {
+  return false;
+}
+
+/**
+ * Returns the first vertex number referenced by the primitive.  This is
+ * particularly important in the case of a nonindexed primitive, in which case
+ * get_first_vertex() and get_num_vertices() completely define the extent of
+ * the vertex range.
+ */
+INLINE int Geom::
+get_first_vertex() const {
+  return get_first_index();
+}
+
+/**
+ * Returns the number of indices used by all the primitives in this object.
+ */
+INLINE int Geom::
+get_num_vertices() const {
+  return get_num_indices();
+}
+
+/**
+ * Returns the minimum vertex index number used by this Geom.
+ */
+INLINE int Geom::
+get_min_vertex() const {
+  if (is_indexed()) {
+    const GeomIndexData *index_data = get_index_data();
+    index_data->check_minmax();
+    return index_data->get_min_vertex();
+
+  } else {
+    return _first_index;
+  }
+}
+
+/**
+ * Returns the maximum vertex index number referenced by the Geom.
+ */
+INLINE int Geom::
+get_max_vertex() const {
+  if (is_indexed()) {
+    const GeomIndexData *index_data = get_index_data();
+    index_data->check_minmax();
+    return index_data->get_max_vertex();
+
+  } else {
+    return _first_index + _num_indices - 1;
+  }
+}
+
+/**
+ * Returns the number of individual primitives stored within this object.  All
+ * primitives are the same type.
+ */
+INLINE int Geom::
+get_num_primitives() const {
+  int num_vertices_per_primitive = get_num_vertices_per_primitive();
+
+  // Should not be a composite primitive, not supported anymore.
+  nassertr(num_vertices_per_primitive > 0, 0);
+
+  // This is a simple primitive type like a triangle: each primitive uses
+  // the same number of vertices.
+  return (get_num_vertices() / num_vertices_per_primitive);
+}
+
+/**
+ *
+ */
+INLINE int Geom::
+get_num_faces() const {
+  return get_num_primitives();
+}
+
+/**
+ *
+ */
+INLINE int Geom::
+get_primitive_num_faces(int n) const {
+  return 1;
 }

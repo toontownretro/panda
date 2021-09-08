@@ -24,7 +24,6 @@
 #include "pStatTimer.h"
 #include "vector_int.h"
 #include "userVertexTransform.h"
-#include "geomMunger.h"
 #include "texture.h"
 #include "texturePeeker.h"
 #include "textureAttrib.h"
@@ -93,8 +92,7 @@ register_vertices(GeomNode *node, bool might_have_unused) {
     PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
     for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
       GeomNode::GeomEntry &entry = (*gi);
-      PT(Geom) geom = entry._geom.get_write_pointer();
-      register_vertices(geom, might_have_unused);
+      register_vertices(&entry._geom, might_have_unused);
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(node->_cycler);
@@ -149,9 +147,7 @@ transform_vertices(GeomNode *node, const LMatrix4 &mat) {
     PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
     for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
       GeomNode::GeomEntry &entry = (*gi);
-      PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-      if (transform_vertices(new_geom, mat)) {
-        entry._geom = std::move(new_geom);
+      if (transform_vertices(&entry._geom, mat)) {
         any_changed = true;
       }
     }
@@ -243,9 +239,7 @@ transform_texcoords(GeomNode *node, const InternalName *from_name,
   PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomNode::GeomEntry &entry = (*gi);
-    PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-    if (transform_texcoords(new_geom, from_name, to_name, mat)) {
-      entry._geom = new_geom;
+    if (transform_texcoords(&entry._geom, from_name, to_name, mat)) {
       any_changed = true;
     }
   }
@@ -301,9 +295,7 @@ set_color(GeomNode *node, const LColor &color) {
   PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomNode::GeomEntry &entry = (*gi);
-    PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-    if (set_color(new_geom, color)) {
-      entry._geom = new_geom;
+    if (set_color(&entry._geom, color)) {
       any_changed = true;
     }
   }
@@ -362,9 +354,7 @@ transform_colors(GeomNode *node, const LVecBase4 &scale) {
   PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomNode::GeomEntry &entry = (*gi);
-    PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-    if (transform_colors(new_geom, scale)) {
-      entry._geom = new_geom;
+    if (transform_colors(&entry._geom, scale)) {
       any_changed = true;
     }
   }
@@ -600,12 +590,10 @@ apply_texture_colors(GeomNode *node, const RenderState *state) {
           keep_vertex_color = false;
         }
 
-        PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-        if (apply_texture_colors(new_geom, ts, tex, tma, base_color, keep_vertex_color)) {
-          entry._geom = new_geom;
+        if (apply_texture_colors(&entry._geom, ts, tex, tma, base_color, keep_vertex_color)) {
           any_changed = true;
 
-          if (new_geom->get_vertex_data()->has_column(InternalName::get_color())) {
+          if (entry._geom.get_vertex_data()->has_column(InternalName::get_color())) {
             // Ensure we have a ColorAttrib::make_vertex() attrib.
             CPT(RenderState) color_state = entry._state->set_attrib(ColorAttrib::make_vertex());
             if (entry._state != color_state) {
@@ -720,9 +708,7 @@ remove_column(GeomNode *node, const InternalName *column) {
   PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomNode::GeomEntry &entry = (*gi);
-    PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-    if (remove_column(new_geom, column)) {
-      entry._geom = new_geom;
+    if (remove_column(&entry._geom, column)) {
       any_changed = true;
     }
   }
@@ -789,20 +775,14 @@ make_compatible_state(GeomNode *node) {
       const ColorAttrib *ca = DCAST(ColorAttrib, ra);
       if (ca->get_color_type() == ColorAttrib::T_vertex) {
         // All we need to do is ensure that the geom has a color column.
-        if (!entry._geom.get_read_pointer()->get_vertex_data()->has_column(InternalName::get_color())) {
-          PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-          if (set_color(new_geom, LColor(1,1,1,1))) {
-            entry._geom = new_geom;
-          }
+        if (!entry._geom.get_vertex_data()->has_column(InternalName::get_color())) {
+          set_color(&entry._geom, LColor(1));
         }
       } else {
         // A flat color (or "off", which is white).  Set the vertices to the
         // indicated flat color.
         LColor c = ca->get_color();
-        PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-        if (set_color(new_geom, c)) {
-          entry._geom = new_geom;
-        }
+        set_color(&entry._geom, c);
       }
       entry._state = canon_state->add_attrib(ColorAttrib::make_vertex());
       any_changed = true;
@@ -857,19 +837,18 @@ bool GeomTransformer::
 doubleside(GeomNode *node) {
   int num_geoms = node->get_num_geoms();
   for (int i = 0; i < num_geoms; ++i) {
-    CPT(Geom) orig_geom = node->get_geom(i);
+    const Geom *orig_geom = node->get_geom(i);
     bool has_normals = (orig_geom->get_vertex_data()->has_column(InternalName::get_normal()));
     if (has_normals) {
       // If the geometry has normals, we have to duplicate it to reverse the
       // normals on the duplicate copy.
-      PT(Geom) new_geom = orig_geom->reverse();
-      reverse_normals(new_geom);
+      Geom new_geom = orig_geom->reverse();
+      reverse_normals(&new_geom);
       node->add_geom(new_geom, node->get_geom_state(i));
 
     } else {
       // If there are no normals, we can just doubleside it in place.  This is
       // preferable because we can share vertices.
-      orig_geom.clear();
       node->modify_geom(i)->doubleside_in_place();
     }
   }
@@ -1053,20 +1032,18 @@ collect_vertex_data(GeomNode *node, int collect_bits, bool format_only) {
   PT(GeomNode::GeomList) geoms = cdata->modify_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomNode::GeomEntry &entry = (*gi);
-    PT(Geom) new_geom = entry._geom.get_read_pointer()->make_copy();
-    entry._geom = new_geom;
 
     if ((collect_bits & SceneGraphReducer::CVD_avoid_dynamic) != 0 &&
-        new_geom->get_vertex_data()->get_usage_hint() < Geom::UH_static) {
+        entry._geom.get_vertex_data()->get_usage_hint() < Geom::UH_static) {
       // This one has some dynamic properties.  Collect it independently of
       // the outside world.
       if (dynamic == nullptr) {
         dynamic = new GeomTransformer(*this);
       }
-      num_adjusted += dynamic->collect_vertex_data(new_geom, collect_bits, format_only);
+      num_adjusted += dynamic->collect_vertex_data(&entry._geom, collect_bits, format_only);
 
     } else {
-      num_adjusted += collect_vertex_data(new_geom, collect_bits, format_only);
+      num_adjusted += collect_vertex_data(&entry._geom, collect_bits, format_only);
     }
   }
 
@@ -1109,30 +1086,6 @@ finish_collect(bool format_only) {
   _already_collected_map.clear();
 
   return num_adjusted;
-}
-
-/**
- * Uses the indicated munger to premunge the given Geom to optimize it for
- * eventual rendering.  See SceneGraphReducer::premunge().
- */
-PT(Geom) GeomTransformer::
-premunge_geom(const Geom *geom, GeomMunger *munger) {
-  // This method had been originally provided to cache the result for a
-  // particular geommunger and vdatamunger combination, similar to the way
-  // other GeomTransformer methods work.  On reflection, this additional
-  // caching is not necessary, since the GeomVertexFormat does its own
-  // caching, and there's no danger of that cache filling up during the span
-  // of one frame.
-
-  CPT(GeomVertexData) vdata = geom->get_vertex_data();
-  vdata = munger->premunge_data(vdata);
-  CPT(Geom) pgeom = geom;
-  munger->premunge_geom(pgeom, vdata);
-
-  PT(Geom) geom_copy = pgeom->make_copy();
-  geom_copy->set_vertex_data(vdata);
-
-  return geom_copy;
 }
 
 /**
@@ -1435,11 +1388,7 @@ remove_unused_vertices(const GeomVertexData *vdata) {
     }
 
     any_referenced = true;
-    int num_primitives = geom->get_num_primitives();
-    for (int i = 0; i < num_primitives; ++i) {
-      GeomPrimitivePipelineReader reader(geom->get_primitive(i), current_thread);
-      reader.get_referenced_vertices(referenced_vertices);
-    }
+    geom->get_referenced_vertices(referenced_vertices);
   }
 
   if (!any_referenced) {
@@ -1529,20 +1478,18 @@ remove_unused_vertices(const GeomVertexData *vdata) {
       continue;
     }
 
-    int num_primitives = geom->get_num_primitives();
-    for (int i = 0; i < num_primitives; ++i) {
-      PT(GeomPrimitive) prim = geom->modify_primitive(i);
-      prim->make_indexed();
-      PT(GeomVertexArrayData) vertices = prim->modify_vertices();
-      GeomVertexRewriter rewriter(vertices, 0, current_thread);
+    // Make sure it's indexed.
+    geom->make_indexed();
 
-      while (!rewriter.is_at_end()) {
-        index = rewriter.get_data1i();
-        nassertv(index >= 0 && index < num_vertices);
-        new_index = remap_array[index];
-        nassertv(new_index >= 0 && new_index < new_num_vertices);
-        rewriter.set_data1i(new_index);
-      }
+    PT(GeomIndexData) vertices = geom->modify_index_data();
+    GeomVertexRewriter rewriter(vertices, 0, current_thread);
+
+    while (!rewriter.is_at_end()) {
+      index = rewriter.get_data1i();
+      nassertv(index >= 0 && index < num_vertices);
+      new_index = remap_array[index];
+      nassertv(new_index >= 0 && new_index < new_num_vertices);
+      rewriter.set_data1i(new_index);
     }
 
     geom->set_vertex_data(new_vdata);

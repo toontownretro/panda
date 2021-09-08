@@ -104,7 +104,6 @@
     shaderInput.I shaderInput.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
-    stateMunger.I stateMunger.h \
     stencilAttrib.I stencilAttrib.h \
     texMatrixAttrib.I texMatrixAttrib.h \
     texProjectorEffect.I texProjectorEffect.h \
@@ -205,7 +204,6 @@
     shaderInput.cxx \
     shaderPool.cxx \
     showBoundsEffect.cxx \
-    stateMunger.cxx \
     stencilAttrib.cxx \
     texMatrixAttrib.cxx \
     texProjectorEffect.cxx \
@@ -306,7 +304,6 @@
     shaderInput.I shaderInput.h \
     shaderPool.I shaderPool.h \
     showBoundsEffect.I showBoundsEffect.h \
-    stateMunger.I stateMunger.h \
     stencilAttrib.I stencilAttrib.h \
     texMatrixAttrib.I texMatrixAttrib.h \
     texProjectorEffect.I texProjectorEffect.h \

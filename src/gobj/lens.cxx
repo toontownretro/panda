@@ -565,7 +565,6 @@ is_orthographic() const {
  */
 Geom Lens::
 make_geometry() {
-#if 0
   CDWriter cdata(_cycler, true);
 
   // The default behavior for make_geometry() will be to draw a hexahedron
@@ -580,11 +579,11 @@ make_geometry() {
   if (num_segments == 0) {
     // Can't do a frustum.
     cdata->_geom_data.clear();
-    return nullptr;
+    return Geom();
   }
 
   // Now string together the line segments.
-  PT(GeomLinestrips) line = new GeomLinestrips(Geom::UH_static);
+  PT(GeomIndexData) line = new GeomIndexData(GeomEnums::UH_static);
 
   // Draw a frame around the near plane.
   int i, si;
@@ -594,7 +593,7 @@ make_geometry() {
     }
   }
   line->add_vertex(0);
-  line->close_primitive();
+  //line->close_primitive();
 
   // Draw a frame around the far plane.
   for (i = 0; i < 4; ++i) {
@@ -603,16 +602,16 @@ make_geometry() {
     }
   }
   line->add_vertex(1);
-  line->close_primitive();
+  //line->close_primitive();
 
   // Draw connecting lines at the corners.
   line->add_vertex(0 * 2 + 0);
   line->add_vertex(0 * 2 + 1);
-  line->close_primitive();
+  //line->close_primitive();
 
   line->add_vertex(1 * 2 + 0);
   line->add_vertex(1 * 2 + 1);
-  line->close_primitive();
+  //line->close_primitive();
 
   line->add_vertex(2 * 2 + 0);
   line->add_vertex(2 * 2 + 1);
@@ -627,12 +626,7 @@ make_geometry() {
   line->add_vertex(num_segments * (4 * 2) + 1);
   line->close_primitive();
 
-  PT(Geom) geom = new Geom(cdata->_geom_data);
-  geom->add_primitive(line);
-
-  return geom;
-#endif
-  return Geom(Geom::GPT_lines, nullptr);
+  return Geom(Geom::GPT_lines, cdata->_geom_data, line);
 }
 
 /**

@@ -67,17 +67,17 @@ PUBLISHED:
   INLINE bool get_preserved() const;
 
   INLINE int get_num_geoms() const;
-  INLINE CPT(Geom) get_geom(int n) const;
+  INLINE const Geom *get_geom(int n) const;
   MAKE_SEQ(get_geoms, get_num_geoms, get_geom);
-  INLINE PT(Geom) modify_geom(int n);
+  INLINE Geom *modify_geom(int n);
   MAKE_SEQ(modify_geoms, get_num_geoms, modify_geom);
   INLINE const RenderState *get_geom_state(int n) const;
   MAKE_SEQ(get_geom_states, get_num_geoms, get_geom_state);
   INLINE void set_geom_state(int n, const RenderState *state);
 
-  void add_geom(Geom *geom, const RenderState *state = RenderState::make_empty());
+  void add_geom(Geom &geom, const RenderState *state = RenderState::make_empty());
   void add_geoms_from(const GeomNode *other);
-  void set_geom(int n, Geom *geom);
+  void set_geom(int n, Geom &geom);
   INLINE void remove_geom(int n);
   INLINE void remove_all_geoms();
   bool check_valid() const;
@@ -114,8 +114,8 @@ public:
   // class to access it.
   class GeomEntry {
   public:
-    INLINE GeomEntry(Geom *geom, const RenderState *state);
-    COWPT(Geom) _geom;
+    INLINE GeomEntry(Geom &geom, const RenderState *state);
+    Geom _geom;
     CPT(RenderState) _state;
   };
 
@@ -171,7 +171,7 @@ public:
     INLINE void operator = (Geoms &&from) noexcept;
 
     INLINE int get_num_geoms() const;
-    INLINE CPT(Geom) get_geom(int n) const;
+    INLINE const Geom *get_geom(int n) const;
     INLINE const RenderState *get_geom_state(int n) const;
 
   private:

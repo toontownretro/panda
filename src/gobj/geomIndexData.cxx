@@ -15,6 +15,7 @@
 #include "geomVertexWriter.h"
 #include "geomVertexReader.h"
 #include "thread.h"
+#include "geomVertexRewriter.h"
 
 TypeHandle GeomIndexData::_type_handle;
 
@@ -149,6 +150,21 @@ reserve_num_vertices(int count) {
 }
 
 /**
+ * Offsets all indices in the index buffer by the indicated amount.
+ */
+void GeomIndexData::
+offset_vertices(int offset) {
+  GeomVertexRewriter vertices(this, 0);
+
+  while (!vertices.is_at_end()) {
+    int vertex = vertices.get_data1i();
+    vertices.set_data1i(vertex + offset);
+  }
+
+  _got_minmax = false;
+}
+
+/**
  * Returns the ith vertex index in the index buffer.
  */
 int GeomIndexData::
@@ -236,6 +252,100 @@ consider_elevate_index_type(int vertex) {
     break;
 
   default:
+    break;
+  }
+}
+
+/**
+ * Returns a copy of this index data with the indices reversed.
+ */
+PT(GeomIndexData) GeomIndexData::
+reverse() const {
+  PT(GeomIndexData) copy = new GeomIndexData(*this);
+  copy->reverse_in_place();
+  return copy;
+}
+
+/**
+ * Reverses the ordering of the indices within the index buffer,
+ * as an in-place operation.
+ */
+void GeomIndexData::
+reverse_in_place() {
+  // Make a copy of ourselves so we can read the non-reversed indices
+  // as we reverse in-place.
+  GeomIndexData orig(*this);
+  orig.local_object();
+
+  GeomVertexWriter index(this, 0);
+  index.set_row_unsafe(0);
+
+  for (int i = orig.get_num_vertices() - 1; i >= 0; --i) {
+    index.set_data1i(orig.get_vertex(i));
+  }
+}
+
+/**
+ * Returns a copy of this index data with the reversed set of indices
+ * appended to the end of the existing indices.  This in practice double-sides
+ * the geometry.
+ */
+PT(GeomIndexData) GeomIndexData::
+doubleside() const {
+  PT(GeomIndexData) copy = new GeomIndexData(*this);
+  copy->doubleside_in_place();
+  return copy;
+}
+
+/**
+ *
+ */
+void GeomIndexData::
+doubleside_in_place() {
+  GeomVertexWriter writer(this, 0);
+  GeomVertexReader reader(this, 0);
+
+  int num_rows = get_num_rows();
+
+  writer.set_row(num_rows);
+  reader.set_row(0);
+
+  for (int i = get_num_vertices() - 1; i >= 0; --i) {
+    reader.set_row(i);
+    writer.add_data1i(reader.get_data1i());
+  }
+}
+
+/**
+ * Turns on all bits corresponding to vertex indices that are referenced
+ * by the index buffer.
+ */
+void GeomIndexData::
+get_referenced_vertices(BitArray &bits) const {
+  GeomVertexArrayDataHandle handle(this, Thread::get_current_thread());
+  const unsigned char *ptr = handle.get_read_pointer(true);
+  int num_vertices = handle.get_num_rows();
+  switch (_index_type) {
+  case NT_uint8:
+  for (int vi = 0; vi < num_vertices; ++vi) {
+      int index = ((const uint8_t *)ptr)[vi];
+      bits.set_bit(index);
+    }
+    break;
+  case GeomEnums::NT_uint16:
+    for (int vi = 0; vi < num_vertices; ++vi) {
+      int index = ((const uint16_t *)ptr)[vi];
+      bits.set_bit(index);
+    }
+    break;
+  case GeomEnums::NT_uint32:
+    for (int vi = 0; vi < num_vertices; ++vi) {
+      int index = ((const uint32_t *)ptr)[vi];
+      bits.set_bit(index);
+    }
+    break;
+  default:
+    nassert_raise("unsupported index type");
     break;
   }
 }

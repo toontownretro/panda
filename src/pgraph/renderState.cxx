@@ -980,23 +980,6 @@ garbage_collect() {
 }
 
 /**
- * Completely empties the cache of state + gsg -> munger, for all states and
- * all gsg's.  Normally there is no need to empty this cache.
- */
-void RenderState::
-clear_munger_cache() {
-  //LightReMutexHolder holder(*_states_lock);
-
-  size_t size = _states.get_num_entries();
-  for (size_t si = 0; si < size; ++si) {
-    RenderState *state = (RenderState *)(_states.get_key(si));
-    state->_mungers.clear();
-    state->_munged_states.clear();
-    state->_last_mi = -1;
-  }
-}
-
-/**
  * Detects all of the reference-count cycles in the cache and reports them to
  * standard output.
  *

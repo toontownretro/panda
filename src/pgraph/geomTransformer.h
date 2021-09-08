@@ -24,7 +24,6 @@
 class GeomNode;
 class RenderState;
 class InternalName;
-class GeomMunger;
 class Texture;
 
 /**
@@ -87,8 +86,6 @@ public:
   int collect_vertex_data(Geom *geom, int collect_bits, bool format_only);
   int collect_vertex_data(GeomNode *node, int collect_bits, bool format_only);
   int finish_collect(bool format_only);
-
-  PT(Geom) premunge_geom(const Geom *geom, GeomMunger *munger);
 
 private:
   int _max_collect_vertices;

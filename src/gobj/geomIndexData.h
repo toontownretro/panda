@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "geomVertexArrayData.h"
 #include "pointerTo.h"
+#include "bitArray.h"
 
 /**
  * This is a subclass of GeomVertexArrayData whose only purpose is to indicate
@@ -51,13 +52,25 @@ PUBLISHED:
   void add_next_vertices(int num_vertices);
   void reserve_num_vertices(int num_vertices);
 
+  void offset_vertices(int offset);
+
   INLINE int get_num_vertices() const;
   int get_vertex(int n) const;
   INLINE int get_min_vertex() const;
   INLINE int get_max_vertex() const;
 
+  PT(GeomIndexData) reverse() const;
+  void reverse_in_place();
+
+  PT(GeomIndexData) doubleside() const;
+  void doubleside_in_place();
+
+  INLINE bool close_primitive() { return true; }
+
   void check_minmax() const;
   void recompute_minmax();
+
+  void get_referenced_vertices(BitArray &bits) const;
 
   INLINE static CPT(GeomVertexArrayFormat) make_index_format(NumericType index_type);
 

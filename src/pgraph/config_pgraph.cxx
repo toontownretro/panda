@@ -84,7 +84,6 @@
 #include "shader.h"
 #include "showBoundsEffect.h"
 #include "stencilAttrib.h"
-#include "stateMunger.h"
 #include "texMatrixAttrib.h"
 #include "texProjectorEffect.h"
 #include "textureAttrib.h"
@@ -496,7 +495,6 @@ init_libpgraph() {
   ShadeModelAttrib::init_type();
   ShaderAttrib::init_type();
   ShowBoundsEffect::init_type();
-  StateMunger::init_type();
   StencilAttrib::init_type();
   TexMatrixAttrib::init_type();
   TexProjectorEffect::init_type();
