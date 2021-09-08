@@ -80,6 +80,7 @@ CharacterNode::
   //LightMutexHolder holder(_lock);
   if (_char != nullptr) {
     _char->remove_node(this);
+    _char = nullptr;
   }
 }
 
