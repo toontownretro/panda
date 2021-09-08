@@ -2657,6 +2657,12 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
     return false;
   }
 
+  // See if we need to recompute the min/max vertex indices of the
+  // Geom's index buffer.
+  if (geom->is_indexed()) {
+    geom->get_index_data()->check_minmax();
+  }
+
   // Draw the entire Geom in one go.
   switch (geom->get_primitive_type()) {
   case Geom::GPT_triangles:

@@ -4989,8 +4989,8 @@ draw_triangles(const Geom *reader, bool force) {
 #endif
       {
         _glDrawRangeElements(GL_TRIANGLES,
-                             /*reader->get_min_vertex()*/0,
-                             /*reader->get_max_vertex()*/0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
@@ -5057,8 +5057,8 @@ draw_triangles_adj(const Geom *geom, bool force) {
                                  client_pointer + first_index * index_stride, _instance_count);
       } else {
         _glDrawRangeElements(GL_TRIANGLES_ADJACENCY,
-                             /*reader->get_min_vertex()*/0,
-                             /*reader->get_max_vertex()*/0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
@@ -5133,8 +5133,8 @@ draw_patches(const Geom *geom, bool force) {
 #endif
       {
         _glDrawRangeElements(GL_PATCHES,
-                             0,
-                             0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
@@ -5204,8 +5204,8 @@ draw_lines(const Geom *geom, bool force) {
 #endif
       {
         _glDrawRangeElements(GL_LINES,
-                             0,
-                             0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
@@ -5271,8 +5271,8 @@ draw_lines_adj(const Geom *geom, bool force) {
                                  client_pointer + first_index * index_stride, _instance_count);
       } else {
         _glDrawRangeElements(GL_LINES_ADJACENCY,
-                             0,
-                             0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
@@ -5338,8 +5338,8 @@ draw_points(const Geom *geom, bool force) {
 #endif
       {
         _glDrawRangeElements(GL_POINTS,
-                             0,
-                             0,
+                             index_data->get_min_vertex(),
+                             index_data->get_max_vertex(),
                              num_indices,
                              get_numeric_type(index_data->get_index_type()),
                              client_pointer + first_index * index_stride);
