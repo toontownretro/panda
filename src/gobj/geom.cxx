@@ -16,8 +16,12 @@
 #include "geomVertexRewriter.h"
 #include "bamWriter.h"
 #include "bamReader.h"
+#include "boundingBox.h"
+#include "boundingSphere.h"
+#include "config_mathutil.h"
 
 UpdateSeq Geom::_next_modified;
+TypeHandle Geom::_type_handle;
 
 /**
  *
@@ -26,7 +30,11 @@ Geom::
 Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data, const GeomIndexData *index_data) :
   _vertex_data((GeomVertexData *)vertex_data),
   _index_data((GeomIndexData *)index_data),
-  _primitive_type(type)
+  _primitive_type(type),
+  _internal_bounds_stale(true),
+  _num_vertices_per_patch(0),
+  _nested_vertices(0),
+  _bounds_type(BoundingVolume::BT_default)
 {
   compute_index_range();
 }
@@ -41,8 +49,18 @@ Geom() :
   _index_data(nullptr),
   _first_index(0),
   _num_indices(0),
-  _num_vertices_per_patch(0)
+  _num_vertices_per_patch(0),
+  _nested_vertices(0),
+  _internal_bounds_stale(true),
+  _bounds_type(BoundingVolume::BT_default)
 {
+}
+
+/**
+ *
+ */
+Geom::
+~Geom() {
 }
 
 /**
@@ -66,6 +84,16 @@ compute_index_range() {
     // Use the number of rows in the index buffer.
     _num_indices = _index_data.get_read_pointer()->get_num_rows();
   }
+
+  mark_internal_bounds_stale();
+}
+
+/**
+ *
+ */
+Geom *Geom::
+make_copy() const {
+  return new Geom(*this);
 }
 
 /**
@@ -122,10 +150,10 @@ get_num_used_vertices() const {
  * This only means something to triangle Geoms.  Other primitive types
  * just return a copy of the same exact Geom.
  */
-Geom Geom::
+PT(Geom) Geom::
 reverse() const {
-  Geom copy(*this);
-  copy.reverse_in_place();
+  PT(Geom) copy = make_copy();
+  copy->reverse_in_place();
   return copy;
 }
 
@@ -151,10 +179,10 @@ reverse_in_place() {
  * This only means something to triangle Geoms.  Other primitive types
  * just return a copy of the same exact Geom.
  */
-Geom Geom::
+PT(Geom) Geom::
 doubleside() const {
-  Geom copy(*this);
-  copy.doubleside_in_place();
+  PT(Geom) copy = make_copy();
+  copy->doubleside_in_place();
   return copy;
 }
 
@@ -294,7 +322,9 @@ get_animated_vertex_data(bool force, Thread *current_thread) const {
  *
  */
 void Geom::
-write_datagram(BamWriter *manager, Datagram &me) const {
+write_datagram(BamWriter *manager, Datagram &me) {
+  CopyOnWriteObject::write_datagram(manager, me);
+
   manager->write_pointer(me, (GeomVertexData *)_vertex_data.get_read_pointer());
   manager->write_pointer(me, (GeomIndexData *)_index_data.get_read_pointer());
   me.add_uint8(_primitive_type);
@@ -308,6 +338,8 @@ write_datagram(BamWriter *manager, Datagram &me) const {
  */
 void Geom::
 fillin(DatagramIterator &scan, BamReader *manager) {
+  CopyOnWriteObject::fillin(scan, manager);
+
   manager->read_pointer(scan); // vertex data
   manager->read_pointer(scan); // index data
   _primitive_type = (GeomPrimitiveType)scan.get_uint8();
@@ -320,8 +352,390 @@ fillin(DatagramIterator &scan, BamReader *manager) {
  *
  */
 int Geom::
-complete_pointers(TypedWritable **p_list, BamReader *manager, int pi) {
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = CopyOnWriteObject::complete_pointers(p_list, manager);
+
   _vertex_data = DCAST(GeomVertexData, p_list[pi++]);
   _index_data = DCAST(GeomIndexData, p_list[pi++]);
+
   return pi;
+}
+
+/**
+ *
+ */
+void Geom::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+TypedWritable *Geom::
+make_from_bam(const FactoryParams &params) {
+  Geom *geom = new Geom;
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  geom->fillin(scan, manager);
+  return geom;
+}
+
+/**
+ * Returns the bounding volume for the Geom.
+ */
+CPT(BoundingVolume) Geom::
+get_bounds() const {
+  if (_user_bounds != nullptr) {
+    // Use the explicitly set bounds on the Geom.
+    return _user_bounds;
+  }
+
+  if (_internal_bounds_stale) {
+    ((Geom *)this)->compute_internal_bounds();
+  }
+
+  return _internal_bounds;
+}
+
+/**
+ * Recomputes the dynamic bounding volume for this Geom.  This includes all of
+ * the vertices.
+ */
+void Geom::
+compute_internal_bounds() {
+  int num_vertices = 0;
+
+  // Get the vertex data, after animation.
+  CPT(GeomVertexData) vertex_data = get_animated_vertex_data(true, Thread::get_current_thread());
+
+  // Now actually compute the bounding volume.  We do this by using
+  // calc_tight_bounds to determine our box first.
+  LPoint3 pmin, pmax;
+  PN_stdfloat sq_center_dist = 0.0f;
+  bool found_any = false;
+  do_calc_tight_bounds(pmin, pmax, sq_center_dist, found_any,
+                       vertex_data, false, LMatrix4::ident_mat(),
+                       InternalName::get_vertex());
+
+  BoundingVolume::BoundsType btype = _bounds_type;
+  if (btype == BoundingVolume::BT_default) {
+    btype = bounds_type;
+  }
+
+  if (found_any) {
+    nassertv(!pmin.is_nan());
+    nassertv(!pmax.is_nan());
+
+    // Then we put the bounding volume around both of those points.
+    PN_stdfloat avg_box_area;
+    switch (btype) {
+    case BoundingVolume::BT_best:
+    case BoundingVolume::BT_fastest:
+    case BoundingVolume::BT_default:
+      {
+        // When considering a box, calculate (roughly) the average area of the
+        // sides.  We will use this to determine whether a sphere or box is a
+        // better fit.
+        PN_stdfloat min_extent = std::min(pmax[0] - pmin[0],
+                                 std::min(pmax[1] - pmin[1],
+                                          pmax[2] - pmin[2]));
+        PN_stdfloat max_extent = std::max(pmax[0] - pmin[0],
+                                 std::max(pmax[1] - pmin[1],
+                                          pmax[2] - pmin[2]));
+        avg_box_area = ((min_extent * min_extent) + (max_extent * max_extent)) / 2;
+      }
+      // Fall through
+    case BoundingVolume::BT_sphere:
+      {
+        // Determine the best radius for a bounding sphere.
+        LPoint3 aabb_center = (pmin + pmax) * 0.5f;
+        PN_stdfloat best_sq_radius = (pmax - aabb_center).length_squared();
+
+        if (btype != BoundingVolume::BT_fastest && best_sq_radius > 0.0f &&
+            aabb_center.length_squared() / best_sq_radius >= (0.2f * 0.2f)) {
+          // Hmm, this is an off-center model.  Maybe we can do a better job
+          // by calculating the bounding sphere from the AABB center.
+
+          PN_stdfloat better_sq_radius;
+          bool found_any = false;
+          do_calc_sphere_radius(aabb_center, better_sq_radius, found_any,
+                                vertex_data);
+
+          if (found_any && better_sq_radius > 0.0f &&
+              better_sq_radius <= best_sq_radius) {
+            // Great.  This is as good a sphere as we're going to get.
+            if (btype == BoundingVolume::BT_best &&
+                avg_box_area < better_sq_radius * MathNumbers::pi) {
+              // But the box is better, anyway.  Use that instead.
+              _internal_bounds = new BoundingBox(pmin, pmax);
+              break;
+            }
+            _internal_bounds =
+              new BoundingSphere(aabb_center, csqrt(better_sq_radius));
+            break;
+          }
+        }
+
+        if (btype != BoundingVolume::BT_sphere &&
+            avg_box_area < sq_center_dist * MathNumbers::pi) {
+          // A box is probably a tighter fit.
+          _internal_bounds = new BoundingBox(pmin, pmax);
+          break;
+
+        } else if (sq_center_dist >= 0.0f && sq_center_dist <= best_sq_radius) {
+          // No, but a sphere centered on the origin is apparently still
+          // better than a sphere around the bounding box.
+          _internal_bounds =
+            new BoundingSphere(LPoint3::origin(), csqrt(sq_center_dist));
+          break;
+
+        } else if (btype == BoundingVolume::BT_sphere) {
+          // This is the worst sphere we can make, which is why we will only
+          // do it when the user specifically requests a sphere.
+          _internal_bounds =
+            new BoundingSphere(aabb_center,
+              (best_sq_radius > 0.0f) ? csqrt(best_sq_radius) : 0.0f);
+          break;
+        }
+      }
+      // Fall through.
+
+    case BoundingVolume::BT_box:
+      _internal_bounds = new BoundingBox(pmin, pmax);
+    }
+
+    num_vertices += get_num_vertices();
+
+  } else {
+    // No points; empty bounding volume.
+    if (btype == BoundingVolume::BT_sphere) {
+      _internal_bounds = new BoundingSphere;
+    } else {
+      _internal_bounds = new BoundingBox;
+    }
+  }
+
+  _nested_vertices = num_vertices;
+  _internal_bounds_stale = false;
+}
+
+/**
+ * The private implementation of calc_tight_bounds().
+ */
+void Geom::
+do_calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                     PN_stdfloat &sq_center_dist, bool &found_any,
+                     const GeomVertexData *vertex_data,
+                     bool got_mat, const LMatrix4 &mat,
+                     const InternalName *column_name) const {
+
+  GeomVertexReader reader(vertex_data, column_name);
+  if (!reader.has_column()) {
+    // No vertex data.
+    return;
+  }
+
+  int i = 0;
+
+  if (!is_indexed()) {
+    // Non-indexed case.
+
+    if (_num_indices == 0) {
+      return;
+    }
+
+    if (got_mat) {
+      // FInd the first non-NaN vertex.
+      while (!found_any && i < _num_indices) {
+        reader.set_row(_first_index + i);
+        LPoint3 first_vertex = mat.xform_point_general(reader.get_data3());
+        if (!first_vertex.is_nan()) {
+          min_point = first_vertex;
+          max_point = first_vertex;
+          sq_center_dist = first_vertex.length_squared();
+          found_any = true;
+        }
+        ++i;
+      }
+
+      for (; i < _num_indices; ++i) {
+        reader.set_row_unsafe(_first_index + i);
+        nassertv(!reader.is_at_end());
+
+        LPoint3 vertex = mat.xform_point_general(reader.get_data3());
+
+        min_point.set(std::min(min_point[0], vertex[0]),
+                      std::min(min_point[1], vertex[1]),
+                      std::min(min_point[2], vertex[2]));
+        max_point.set(std::max(max_point[0], vertex[0]),
+                      std::max(max_point[1], vertex[1]),
+                      std::max(max_point[2], vertex[2]));
+        sq_center_dist = std::max(sq_center_dist, vertex.length_squared());
+      }
+    } else {
+      // Find the first non-NaN vertex.
+      while (!found_any && i < _num_indices) {
+        reader.set_row(_first_index + i);
+        LPoint3 first_vertex = reader.get_data3();
+        if (!first_vertex.is_nan()) {
+          min_point = first_vertex;
+          max_point = first_vertex;
+          sq_center_dist = first_vertex.length_squared();
+          found_any = true;
+        }
+        ++i;
+      }
+
+      for (; i < _num_indices; ++i) {
+        reader.set_row_unsafe(_first_index + i);
+        nassertv(!reader.is_at_end());
+
+        const LVecBase3 &vertex = reader.get_data3();
+
+        min_point.set(std::min(min_point[0], vertex[0]),
+                      std::min(min_point[1], vertex[1]),
+                      std::min(min_point[2], vertex[2]));
+        max_point.set(std::max(max_point[0], vertex[0]),
+                      std::max(max_point[1], vertex[1]),
+                      std::max(max_point[2], vertex[2]));
+        sq_center_dist = std::max(sq_center_dist, vertex.length_squared());
+      }
+    }
+  } else {
+    // Indexed case.
+    GeomVertexReader index(get_index_data(), 0);
+    if (index.is_at_end()) {
+      return;
+    }
+
+    if (got_mat) {
+      // Find the first non-NaN vertex.
+      while (!found_any && !index.is_at_end()) {
+        int ii = index.get_data1i();
+        reader.set_row(ii);
+        LPoint3 first_vertex = mat.xform_point_general(reader.get_data3());
+        if (!first_vertex.is_nan()) {
+          min_point = first_vertex;
+          max_point = first_vertex;
+          sq_center_dist = first_vertex.length_squared();
+          found_any = true;
+        }
+      }
+
+      while (!index.is_at_end()) {
+        int ii = index.get_data1i();
+        reader.set_row_unsafe(ii);
+        nassertv(!reader.is_at_end());
+
+        LPoint3 vertex = mat.xform_point_general(reader.get_data3());
+
+        min_point.set(std::min(min_point[0], vertex[0]),
+                      std::min(min_point[1], vertex[1]),
+                      std::min(min_point[2], vertex[2]));
+        max_point.set(std::max(max_point[0], vertex[0]),
+                      std::max(max_point[1], vertex[1]),
+                      std::max(max_point[2], vertex[2]));
+        sq_center_dist = std::max(sq_center_dist, vertex.length_squared());
+      }
+    } else {
+      // Find the first non-NaN vertex.
+      while (!found_any && !index.is_at_end()) {
+        int ii = index.get_data1i();
+        reader.set_row(ii);
+        LVecBase3 first_vertex = reader.get_data3();
+        if (!first_vertex.is_nan()) {
+          min_point = first_vertex;
+          max_point = first_vertex;
+          sq_center_dist = first_vertex.length_squared();
+          found_any = true;
+        }
+      }
+
+      while (!index.is_at_end()) {
+        int ii = index.get_data1i();
+        reader.set_row_unsafe(ii);
+        nassertv(!reader.is_at_end());
+
+        const LVecBase3 &vertex = reader.get_data3();
+
+        min_point.set(std::min(min_point[0], vertex[0]),
+                      std::min(min_point[1], vertex[1]),
+                      std::min(min_point[2], vertex[2]));
+        max_point.set(std::max(max_point[0], vertex[0]),
+                      std::max(max_point[1], vertex[1]),
+                      std::max(max_point[2], vertex[2]));
+        sq_center_dist = std::max(sq_center_dist, vertex.length_squared());
+      }
+    }
+  }
+}
+
+/**
+ *
+ */
+void Geom::
+do_calc_sphere_radius(const LPoint3 &center, PN_stdfloat &sq_radius,
+                      bool &found_any, const GeomVertexData *vertex_data) const {
+  GeomVertexReader reader(vertex_data, InternalName::get_vertex());
+  if (!reader.has_column()) {
+    // No vertex data.
+    return;
+  }
+
+  if (!found_any) {
+    sq_radius = 0.0;
+  }
+
+  if (!is_indexed()) {
+    // Non-indexed case.
+    if (_num_indices == 0) {
+      return;
+    }
+    found_any = true;
+
+    for (int i = 0; i < _num_indices; ++i) {
+      reader.set_row_unsafe(_first_index + i);
+      const LVecBase3 &vertex = reader.get_data3();
+
+      sq_radius = std::max(sq_radius, (vertex - center).length_squared());
+    }
+
+  } else {
+    // Indexed case.
+    GeomVertexReader index(_index_data.get_read_pointer(), 0);
+    if (index.is_at_end()) {
+      return;
+    }
+    found_any = true;
+
+    while (!index.is_at_end()) {
+      int ii = index.get_data1i();
+      reader.set_row_unsafe(ii);
+      const LVecBase3 &vertex = reader.get_data3();
+
+      sq_radius = std::max(sq_radius, (vertex - center).length_squared());
+    }
+  }
+}
+
+/**
+ *
+ */
+PT(CopyOnWriteObject) Geom::
+make_cow_copy() {
+  return new Geom(*this);
+}
+
+/**
+ * Returns the number of vertices rendered by all primitives within the Geom.
+ */
+int Geom::
+get_nested_vertices() const {
+  if (_internal_bounds_stale) {
+    ((Geom *)this)->compute_internal_bounds();
+  }
+  return _nested_vertices;
 }

@@ -20,7 +20,13 @@ Geom(const Geom &copy) :
   _index_data(copy._index_data),
   _primitive_type(copy._primitive_type),
   _first_index(copy._first_index),
-  _num_indices(copy._num_indices)
+  _num_indices(copy._num_indices),
+  _num_vertices_per_patch(copy._num_vertices_per_patch),
+  _nested_vertices(copy._nested_vertices),
+  _bounds_type(copy._bounds_type),
+  _internal_bounds(copy._internal_bounds),
+  _internal_bounds_stale(copy._internal_bounds_stale),
+  _user_bounds(copy._user_bounds)
 {
 }
 
@@ -33,7 +39,13 @@ Geom(Geom &&other) :
   _index_data(std::move(other._index_data)),
   _primitive_type(std::move(other._primitive_type)),
   _first_index(std::move(other._first_index)),
-  _num_indices(std::move(other._num_indices))
+  _num_indices(std::move(other._num_indices)),
+  _num_vertices_per_patch(std::move(other._num_vertices_per_patch)),
+  _nested_vertices(std::move(other._nested_vertices)),
+  _bounds_type(std::move(other._bounds_type)),
+  _internal_bounds(std::move(other._internal_bounds)),
+  _internal_bounds_stale(std::move(other._internal_bounds_stale)),
+  _user_bounds(std::move(other._user_bounds))
 {
 }
 
@@ -47,6 +59,12 @@ operator = (const Geom &copy) {
   _primitive_type = copy._primitive_type;
   _first_index = copy._first_index;
   _num_indices = copy._num_indices;
+  _num_vertices_per_patch = copy._num_vertices_per_patch;
+  _nested_vertices = copy._nested_vertices;
+  _bounds_type = copy._bounds_type;
+  _internal_bounds = copy._internal_bounds;
+  _internal_bounds_stale = copy._internal_bounds_stale;
+  _user_bounds = copy._user_bounds;
 }
 
 /**
@@ -59,6 +77,12 @@ operator = (Geom &&other) {
   _primitive_type = std::move(other._primitive_type);
   _first_index = std::move(other._first_index);
   _num_indices = std::move(other._num_indices);
+  _num_vertices_per_patch = std::move(other._num_vertices_per_patch);
+  _nested_vertices = std::move(other._nested_vertices);
+  _bounds_type = std::move(other._bounds_type);
+  _internal_bounds = std::move(other._internal_bounds);
+  _internal_bounds_stale = std::move(other._internal_bounds_stale);
+  _user_bounds = std::move(other._user_bounds);
 }
 
 /**
@@ -71,6 +95,7 @@ set_buffers(GeomVertexData *vertex_data, GeomIndexData *index_data) {
   _vertex_data = vertex_data;
   _index_data = index_data;
   compute_index_range();
+  mark_internal_bounds_stale();
 }
 
 /**
@@ -82,6 +107,7 @@ INLINE void Geom::
 set_vertex_data(const GeomVertexData *data) {
   _vertex_data = (GeomVertexData *)data;
   compute_index_range();
+  mark_internal_bounds_stale();
 }
 
 /**
@@ -97,6 +123,7 @@ get_vertex_data() const {
  */
 INLINE PT(GeomVertexData) Geom::
 modify_vertex_data() {
+  mark_internal_bounds_stale();
   return _vertex_data.get_write_pointer();
 }
 
@@ -109,6 +136,7 @@ INLINE void Geom::
 set_index_data(const GeomIndexData *data) {
   _index_data = (GeomIndexData *)data;
   compute_index_range();
+  mark_internal_bounds_stale();
 }
 
 /**
@@ -124,6 +152,7 @@ get_index_data() const {
  */
 INLINE PT(GeomIndexData) Geom::
 modify_index_data() {
+  mark_internal_bounds_stale();
   return _index_data.get_write_pointer();
 }
 
@@ -213,6 +242,7 @@ INLINE void Geom::
 set_index_range(unsigned int first_index, unsigned int num_indices) {
   _first_index = first_index;
   _num_indices = num_indices;
+  mark_internal_bounds_stale();
 }
 
 /**
@@ -336,4 +366,122 @@ get_num_faces() const {
 INLINE int Geom::
 get_primitive_num_faces(int n) const {
   return 1;
+}
+
+/**
+ * Expands min_point and max_point to include all of the vertices in the Geom,
+ * if any.  found_any is set true if any points are found.  It is the caller's
+ * responsibility to initialize min_point, max_point, and found_any before
+ * calling this function.
+ *
+ * This version of the method allows the Geom to specify an alternate vertex
+ * data table (for instance, if the vertex data has already been munged), and
+ * also allows the result to be computed in any coordinate space by specifying
+ * a transform matrix.
+ */
+INLINE void Geom::
+calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                  bool &found_any,
+                  const GeomVertexData *vertex_data,
+                  bool got_mat, const LMatrix4 &mat) const {
+
+  PN_stdfloat sq_radius;
+  do_calc_tight_bounds(min_point, max_point, sq_radius, found_any,
+                       vertex_data, got_mat, mat,
+                       InternalName::get_vertex());
+}
+
+/**
+ * Expands min_point and max_point to include all of the vertices in the Geom,
+ * if any.  found_any is set true if any points are found.  It is the caller's
+ * responsibility to initialize min_point, max_point, and found_any before
+ * calling this function.
+ *
+ * This version of the method assumes the Geom will use its own vertex data,
+ * and the results are computed in the Geom's own coordinate space.
+ */
+INLINE void Geom::
+calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                  bool &found_any) const {
+
+  calc_tight_bounds(min_point, max_point, found_any,
+                    get_vertex_data(), false,
+                    LMatrix4::ident_mat());
+}
+
+/**
+ * Similar to calc_tight_bounds(), for UV coordinates or other named columns.
+ */
+INLINE void Geom::
+calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                  bool &found_any,
+                  const GeomVertexData *vertex_data,
+                  bool got_mat, const LMatrix4 &mat,
+                  const InternalName *column_name) const {
+
+  PN_stdfloat sq_radius;
+  do_calc_tight_bounds(min_point, max_point, sq_radius, found_any,
+                       vertex_data, got_mat, mat,
+                       column_name);
+}
+
+/**
+ * Sets an explicit type of bounding volume that should be computed for the
+ * Geom.
+ */
+INLINE void Geom::
+set_bounds_type(BoundingVolume::BoundsType type) {
+  _bounds_type = type;
+  mark_internal_bounds_stale();
+}
+
+/**
+ * Returns the bounding volume type set with set_bounds_type().
+ */
+INLINE BoundingVolume::BoundsType Geom::
+get_bounds_type() const {
+  return _bounds_type;
+}
+
+/**
+ * Sets an explicit bounding volume for the Geom to be used during view
+ * culling.
+ */
+INLINE void Geom::
+set_bounds(const BoundingVolume *volume) {
+  if (volume == nullptr) {
+    _user_bounds = nullptr;
+  } else {
+    _user_bounds = volume->make_copy();
+  }
+}
+
+/**
+ * Clears the user specified bounding volume for the Geom and forces the
+ * Geom's bounding volume to be recomputed the next time it is asked for.
+ */
+INLINE void Geom::
+clear_bounds() {
+  _user_bounds = nullptr;
+  mark_internal_bounds_stale();
+}
+
+/**
+ * Notes that something in the Geom has changes that warrants the bounding
+ * volume being recomputed.  It will be recomputed the next time the bounds
+ * are asked for.
+ */
+INLINE void Geom::
+mark_bounds_stale() const {
+  ((Geom *)this)->mark_internal_bounds_stale();
+}
+
+/**
+ * Notes that something in the Geom has changes that warrants the bounding
+ * volume being recomputed.  It will be recomputed the next time the bounds
+ * are asked for.
+ */
+INLINE void Geom::
+mark_internal_bounds_stale() {
+  _internal_bounds_stale = true;
 }

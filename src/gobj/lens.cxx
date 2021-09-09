@@ -563,7 +563,7 @@ is_orthographic() const {
  * representation of the frustum used for this kind of lens, if it makes sense
  * to do so.  If a visible representation cannot be created, returns NULL.
  */
-Geom Lens::
+PT(Geom) Lens::
 make_geometry() {
   CDWriter cdata(_cycler, true);
 
@@ -579,7 +579,7 @@ make_geometry() {
   if (num_segments == 0) {
     // Can't do a frustum.
     cdata->_geom_data.clear();
-    return Geom();
+    return nullptr;
   }
 
   // Now string together the line segments.
@@ -626,7 +626,7 @@ make_geometry() {
   line->add_vertex(num_segments * (4 * 2) + 1);
   line->close_primitive();
 
-  return Geom(Geom::GPT_lines, cdata->_geom_data, line);
+  return new Geom(Geom::GPT_lines, cdata->_geom_data, line);
 }
 
 /**

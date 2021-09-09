@@ -463,8 +463,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
     const Geom *geom = &(*gi)._geom;
     geom->calc_tight_bounds(min_point, max_point, found_any,
                             geom->get_animated_vertex_data(true, current_thread),
-                            !next_transform->is_identity(), mat,
-                            current_thread);
+                            !next_transform->is_identity(), mat);
   }
 
   return next_transform;

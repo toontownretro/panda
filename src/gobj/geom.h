@@ -21,6 +21,8 @@
 #include "geomEnums.h"
 #include "updateSeq.h"
 #include "bitArray.h"
+#include "boundingVolume.h"
+#include "copyOnWriteObject.h"
 
 /**
  * A Geom is the smallest atomic piece of renderable geometry that can be sent
@@ -28,17 +30,17 @@
  * buffer pairing.  Each Geom has an associated primitive type that is used
  * to interpret the index buffer when rendering the Geom.  Examples of
  * primitive types are triangles, lines, or points.
- *
- * This is not a reference-counted object and is intended to be stored by
- * value.
  */
-class EXPCL_PANDA_GOBJ Geom : public GeomEnums {
+class EXPCL_PANDA_GOBJ Geom : public CopyOnWriteObject, public GeomEnums {
 PUBLISHED:
   Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data,
        const GeomIndexData *index_data);
   Geom();
+  virtual ~Geom() override;
 
   void compute_index_range();
+
+  virtual Geom *make_copy() const;
 
   INLINE Geom(const Geom &copy);
   INLINE Geom(Geom &&other);
@@ -88,10 +90,10 @@ PUBLISHED:
 
   void make_indexed();
 
-  Geom reverse() const;
+  PT(Geom) reverse() const;
   void reverse_in_place();
 
-  Geom doubleside() const;
+  PT(Geom) doubleside() const;
   void doubleside_in_place();
 
   void offset_vertices(const GeomVertexData *data, int offset);
@@ -102,14 +104,53 @@ PUBLISHED:
 
   CPT(GeomVertexData) get_animated_vertex_data(bool force, Thread *current_thread) const;
 
+  int get_nested_vertices() const;
+  CPT(BoundingVolume) get_bounds() const;
+
+  INLINE void calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                                bool &found_any,
+                                const GeomVertexData *vertex_data,
+                                bool got_mat, const LMatrix4 &mat) const;
+  INLINE void calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                                bool &found_any) const;
+  INLINE void calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                                bool &found_any,
+                                const GeomVertexData *vertex_data,
+                                bool got_mat, const LMatrix4 &mat,
+                                const InternalName *column_name) const;
+
+  INLINE void set_bounds_type(BoundingVolume::BoundsType type);
+  INLINE BoundingVolume::BoundsType get_bounds_type() const;
+  INLINE void set_bounds(const BoundingVolume *volume);
+  INLINE void clear_bounds();
+  INLINE void mark_bounds_stale() const;
+  INLINE void mark_internal_bounds_stale();
+
+private:
+  void compute_internal_bounds();
+  void do_calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
+                            PN_stdfloat &sq_center_dist, bool &found_any,
+                            const GeomVertexData *vertex_data,
+                            bool got_mat, const LMatrix4 &mat,
+                            const InternalName *column_name) const;
+  void do_calc_sphere_radius(const LPoint3 &center,
+                             PN_stdfloat &sq_radius, bool &found_any,
+                             const GeomVertexData *vertex_data) const;
+
 public:
-  void write_datagram(BamWriter *manager, Datagram &me) const;
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
   void fillin(DatagramIterator &scan, BamReader *manager);
 
-  int complete_pointers(TypedWritable **p_list, BamReader *manager, int pi);
+  virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 public:
   static UpdateSeq get_next_modified();
+
+protected:
+  virtual PT(CopyOnWriteObject) make_cow_copy() override;
 
 private:
   // Pointer to the vertex buffer the Geom should render with.
@@ -139,8 +180,36 @@ private:
   // Specific to the patch primitive type.
   int _num_vertices_per_patch;
 
+  // Bounds information.
+  int _nested_vertices;
+  CPT(BoundingVolume) _internal_bounds;
+  bool _internal_bounds_stale;
+  BoundingVolume::BoundsType _bounds_type;
+  CPT(BoundingVolume) _user_bounds;
+
 public:
   static UpdateSeq _next_modified;
+
+public:
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+PUBLISHED:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+
+public:
+  static void init_type() {
+    CopyOnWriteObject::init_type();
+    register_type(_type_handle, "Geom",
+                  CopyOnWriteObject::get_class_type());
+  }
+
+private:
+  static TypeHandle _type_handle;
 };
 
 #include "geom.I"

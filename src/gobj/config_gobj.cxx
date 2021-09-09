@@ -539,6 +539,7 @@ ConfigureFn(config_gobj) {
   GeomVertexDataPipelineWriter::init_type();
   GeomVertexFormat::init_type();
   GeomIndexData::init_type();
+  Geom::init_type();
   IndexBufferContext::init_type();
   InternalName::init_type();
   Lens::init_type();
@@ -590,6 +591,7 @@ ConfigureFn(config_gobj) {
   GeomVertexData::register_with_read_factory();
   GeomVertexFormat::register_with_read_factory();
   GeomIndexData::register_with_read_factory();
+  Geom::register_with_read_factory();
   InternalName::register_with_read_factory();
   MatrixLens::register_with_read_factory();
   OrthographicLens::register_with_read_factory();

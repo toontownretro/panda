@@ -29,6 +29,9 @@
  *
  * It also provides a user-friendly interface to write and read vertex indices
  * to and from the index buffer.
+ *
+ * It has no knowledge of the primitive type that is represented by the index
+ * buffer -- it is simply a list of integers.
  */
 class EXPCL_PANDA_GOBJ GeomIndexData : public GeomVertexArrayData {
 protected:
