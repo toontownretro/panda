@@ -80,6 +80,8 @@ extern ConfigVariableBool allow_live_flatten;
 
 extern ConfigVariableString default_render_state_script_extension;
 
+extern ConfigVariableBool filled_wireframe_apply_shader;
+
 extern EXPCL_PANDA_PGRAPH void init_libpgraph();
 
 #endif

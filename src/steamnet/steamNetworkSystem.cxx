@@ -33,7 +33,7 @@ SteamNetworkSystem::
 SteamNetworkSystem() {
   _client_connection = 0;
   SteamNetworkingErrMsg err_msg;
-  _interface = GameNetworkingSockets_CreateInstance(nullptr, err_msg);
+  _interface = SteamNetworkingSockets();
   if (!_interface) {
     steamnet_cat.error()
       << "Unable to initialize SteamNetworkingSockets! (" << std::string(err_msg) << ")\n";
@@ -47,7 +47,7 @@ SteamNetworkSystem() {
 SteamNetworkSystem::
 ~SteamNetworkSystem() {
   if (_interface) {
-    GameNetworkingSockets_KillInstance(_interface);
+    //GameNetworkingSockets_KillInstance(_interface);
     _interface = nullptr;
   }
 }

@@ -16,6 +16,12 @@
                    dtoolutil:c dtoolbase:c dtool:m prc
 
 #begin metalib_target
+  #if $[HAVE_X11]
+    #define C++FLAGS $[C++FLAGS] -DUSE_X11
+  #else
+    #define C++FLAGS $[C++FLAGS] -DEGL_NO_X11
+  #endif
+
   #define TARGET pandagles2
   #define SOURCES pandagles2.cxx pandagles2.h
   #define INSTALL_HEADERS pandagles2.h

@@ -1,4 +1,4 @@
-#define BUILD_DIRECTORY $[and $[HAVE_EGL],$[HAVE_X11]]
+#define BUILD_DIRECTORY $[and $[HAVE_EGL]]
 
 #define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m
 
@@ -9,6 +9,12 @@
   #define EXTRA_CDEFS OPENGLES_1
   #define LOCAL_LIBS \
     glesgsg x11display
+
+  #if $[HAVE_X11]
+    #define C++FLAGS $[C++FLAGS] -DUSE_X11
+  #else
+    #define C++FLAGS $[C++FLAGS] -DEGL_NO_X11
+  #endif
 
   #define BUILDING_DLL BUILDING_PANDAGLES
 
@@ -34,6 +40,12 @@
   #define EXTRA_CDEFS OPENGLES_2
   #define LOCAL_LIBS \
     gles2gsg x11display
+
+  #if $[HAVE_X11]
+    #define C++FLAGS $[C++FLAGS] -DUSE_X11
+  #else
+    #define C++FLAGS $[C++FLAGS] -DEGL_NO_X11
+  #endif
 
   #define BUILDING_DLL BUILDING_PANDAGLES2
 

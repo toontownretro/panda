@@ -410,9 +410,18 @@ init_geoms() {
   int i,j;
 
   // Setup format
-  PT(GeomVertexArrayFormat) array_format = new GeomVertexArrayFormat
+  PT(GeomVertexArrayFormat) array_format;
+
+  if (vertex_colors_prefer_packed) {
+    array_format = new GeomVertexArrayFormat
+    (InternalName::get_vertex(), 3, Geom::NT_stdfloat, Geom::C_point,
+     InternalName::get_color(), 1, Geom::NT_packed_dabc, Geom::C_color);
+
+  } else {
+    array_format = new GeomVertexArrayFormat
     (InternalName::get_vertex(), 3, Geom::NT_stdfloat, Geom::C_point,
      InternalName::get_color(), 4, Geom::NT_uint8, Geom::C_color);
+  }
   array_format->add_column(InternalName::get_size(), 2, Geom::NT_stdfloat, Geom::C_other);
   array_format->add_column(InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
 

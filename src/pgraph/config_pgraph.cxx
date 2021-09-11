@@ -32,6 +32,7 @@
 #include "cullTraverser.h"
 #include "cullableObject.h"
 #include "decalEffect.h"
+#include "depthBiasAttrib.h"
 #include "depthOffsetAttrib.h"
 #include "depthTestAttrib.h"
 #include "depthWriteAttrib.h"
@@ -410,6 +411,13 @@ ConfigVariableString default_render_state_script_extension
           "is analyzed to determine if the script is binary or text. (.mat "
           "for text, .pmat for binary)"));
 
+ConfigVariableBool filled_wireframe_apply_shader
+("filled-wireframe-apply-shader", false,
+ PRC_DESC("Set this true to apply any shader configured on nodes onto the "
+          "filled wireframe overlay.  The wireframe color is multiplied with "
+          "the result of the fragment shader.  This is helpful when the shader "
+          "alters the position of the vertices and makes the overlay wrong."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
@@ -446,6 +454,7 @@ init_libpgraph() {
   CullTraverser::init_type();
   CullableObject::init_type();
   DecalEffect::init_type();
+  DepthBiasAttrib::init_type();
   DepthOffsetAttrib::init_type();
   DepthTestAttrib::init_type();
   DepthWriteAttrib::init_type();
@@ -519,6 +528,7 @@ init_libpgraph() {
   CullBinAttrib::register_with_read_factory();
   CullFaceAttrib::register_with_read_factory();
   DecalEffect::register_with_read_factory();
+  DepthBiasAttrib::register_with_read_factory();
   DepthOffsetAttrib::register_with_read_factory();
   DepthTestAttrib::register_with_read_factory();
   DepthWriteAttrib::register_with_read_factory();

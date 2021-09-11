@@ -12,6 +12,10 @@
   #define LOCAL_LIBS \
     glgsg x11display
 
+  #if $[HAVE_X11]
+    #define C++FLAGS $[C++FLAGS] -DUSE_X11
+  #endif
+
   #define SOURCES \
     config_glxdisplay.h \
     glxGraphicsBuffer.h glxGraphicsBuffer.I \
