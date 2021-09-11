@@ -95,7 +95,7 @@ public:
   virtual bool read (char c[/*n*/], int n) {
     _strm.read(c, n);
     if (_strm.gcount() != n) {
-      throw std::exception();
+      //throw std::exception();
     }
 
     bool not_eof = !_strm.eof();
@@ -328,13 +328,13 @@ read_pfm(PfmFile &pfm) {
 
   _imf_file.setFrameBuffer(frameBuffer);
 
-  try {
+  //try {
     _imf_file.readPixels(dw.min.y, dw.max.y);
-  } catch (const std::exception &exc) {
-    pnmimage_exr_cat.error()
-      << exc.what() << "\n";
-    return false;
-  }
+  //} catch (const std::exception &exc) {
+  //  pnmimage_exr_cat.error()
+  //    << exc.what() << "\n";
+  //  return false;
+  //}
 
   pfm.swap_table(table);
   return true;
@@ -441,13 +441,13 @@ write_pfm(const PfmFile &pfm) {
   IMF::OutputFile file(strm, header);
   file.setFrameBuffer(frameBuffer);
 
-  try {
+  //try {
     file.writePixels(pfm.get_y_size());
-  } catch (const std::exception &exc) {
-    pnmimage_exr_cat.error()
-      << exc.what() << "\n";
-    return false;
-  }
+  //} catch (const std::exception &exc) {
+  //  pnmimage_exr_cat.error()
+  //    << exc.what() << "\n";
+  //  return false;
+  //}
 
   return true;
 }
