@@ -1,4 +1,10 @@
-#define BUILD_DIRECTORY $[and $[HAVE_EGL]]
+#if $[or $[not $[HAVE_EGL]],$[not $[HAVE_X11]]]
+  #define BUILD_DIRECTORY
+#endif
+
+#if $[and $[not $[HAVE_GLES]], $[not $[HAVE_GLES2]]]
+  #define BUILD_DIRECTORY
+#endif
 
 #define OTHER_LIBS dtoolutil:c dtoolbase:c dtool:m
 

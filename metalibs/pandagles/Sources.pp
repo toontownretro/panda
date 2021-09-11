@@ -6,7 +6,7 @@
 
 #define DIR_TYPE metalib
 #define BUILDING_DLL BUILDING_PANDAGLES
-#define BUILD_DIRECTORY $[HAVE_GLES]
+#define BUILD_DIRECTORY $[and $[HAVE_GLES],$[HAVE_EGL]]
 
 #define COMPONENT_LIBS \
     glesgsg egldisplay_gles1
