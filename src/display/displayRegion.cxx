@@ -520,7 +520,7 @@ get_screenshot() {
 void DisplayRegion::
 clear_cull_result() {
   CDCullWriter cdata_cull(_cycler_cull, true);
-  cdata_cull->_cull_result = nullptr;
+  cdata_cull->_cull_result.clear();
 }
 
 /**

@@ -61,7 +61,7 @@ upcall() {
   node_reader->release();
   int num_children = children.get_num_children();
   for (int i = 0; i < num_children; ++i) {
-    CullTraverserData next_data(_data, children.get_child(i));
-    _trav->traverse(next_data);
+    const PandaNode::DownConnection &child = children.get_child_connection(i);
+    _trav->traverse_child(_data, child, _data._state);
   }
 }
