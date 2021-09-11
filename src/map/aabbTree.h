@@ -59,7 +59,7 @@ PUBLISHED:
 
   INLINE const T &get_leaf_value(int leaf) const;
 
-  INLINE const typename Node *get_node(int n) const;
+  INLINE const typename AABBTree<T>::Node *get_node(int n) const;
   INLINE int get_num_nodes() const;
 
   INLINE void clear();
@@ -78,7 +78,7 @@ public:
 private:
   INLINE void split_node(int index, const vector_int &leaves, int depth);
 
-  INLINE void r_output(const typename Node *node, std::ostream &out, int indent_level) const;
+  INLINE void r_output(const typename AABBTree<T>::Node *node, std::ostream &out, int indent_level) const;
 
   INLINE PN_stdfloat partition_leaves(int axis, const vector_int &leaves, vector_int &left,
                                       vector_int &right, bool use_min);
