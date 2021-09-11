@@ -16,7 +16,6 @@
 #include "displayRegion.h"
 #include "displayRegionCullCallbackData.h"
 #include "displayRegionDrawCallbackData.h"
-#include "standardMunger.h"
 #include "graphicsStateGuardian.h"
 #include "graphicsPipe.h"
 #include "graphicsOutput.h"
@@ -523,7 +522,6 @@ init_libdisplay() {
   MouseAndKeyboard::init_type();
   NativeWindowHandle::init_type();
   ParasiteBuffer::init_type();
-  StandardMunger::init_type();
   StereoDisplayRegion::init_type();
 #ifdef SUPPORT_SUBPROCESS_WINDOW
   SubprocessWindow::init_type();

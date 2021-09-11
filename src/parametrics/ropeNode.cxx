@@ -25,8 +25,7 @@
 #include "datagramIterator.h"
 #include "pStatTimer.h"
 #include "geom.h"
-#include "geomLines.h"
-#include "geomTristrips.h"
+#include "geomIndexData.h"
 #include "geomVertexWriter.h"
 #include "boundingSphere.h"
 
@@ -314,7 +313,7 @@ render_thread(CullTraverser *trav, CullTraverserData &data,
 
   // We use GeomLines instead of GeomLinestrips, since that can more easily be
   // rendered directly.
-  PT(GeomLines) lines = new GeomLines(Geom::UH_stream);
+  PT(GeomIndexData) lines = new GeomIndexData(Geom::UH_stream);
   lines->reserve_num_vertices((num_curve_verts - 1) * 2);
 
   for (int vi = 0; vi < num_curve_verts - 1; ++vi) {
@@ -323,8 +322,7 @@ render_thread(CullTraverser *trav, CullTraverserData &data,
     lines->close_primitive();
   }
 
-  PT(Geom) geom = new Geom(vdata);
-  geom->add_primitive(lines);
+  PT(Geom) geom = new Geom(Geom::GPT_lines, vdata, lines);
 
   CPT(RenderAttrib) thick = RenderModeAttrib::make(RenderModeAttrib::M_unchanged, get_thickness());
   CPT(RenderState) state = data._state->add_attrib(thick);
@@ -360,7 +358,7 @@ render_tape(CullTraverser *trav, CullTraverserData &data,
 
   // Since this will be a nonindexed primitive, no need to pre-reserve the
   // number of vertices.
-  PT(GeomTristrips) strip = new GeomTristrips(Geom::UH_stream);
+  PT(GeomIndexData) strip = new GeomIndexData(Geom::UH_stream);
   CurveSegments::const_iterator si;
   for (si = curve_segments.begin(); si != curve_segments.end(); ++si) {
     const CurveSegment &segment = (*si);
@@ -369,8 +367,7 @@ render_tape(CullTraverser *trav, CullTraverserData &data,
     strip->close_primitive();
   }
 
-  PT(Geom) geom = new Geom(vdata);
-  geom->add_primitive(strip);
+  PT(Geom) geom = new Geom(Geom::GPT_triangles, vdata, strip);
 
   CPT(RenderState) state = data._state;
   if (get_use_vertex_color()) {
@@ -412,7 +409,7 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
 
   // Since this will be a nonindexed primitive, no need to pre-reserve the
   // number of vertices.
-  PT(GeomTristrips) strip = new GeomTristrips(Geom::UH_stream);
+  PT(GeomIndexData) strip = new GeomIndexData(Geom::UH_stream);
   CurveSegments::const_iterator si;
   for (si = curve_segments.begin(); si != curve_segments.end(); ++si) {
     const CurveSegment &segment = (*si);
@@ -421,8 +418,7 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
     strip->close_primitive();
   }
 
-  PT(Geom) geom = new Geom(vdata);
-  geom->add_primitive(strip);
+  PT(Geom) geom = new Geom(Geom::GPT_triangles, vdata, strip);
 
   CPT(RenderState) state = data._state;
   if (get_use_vertex_color()) {
@@ -462,7 +458,7 @@ render_tube(CullTraverser *trav, CullTraverserData &data,
   // Finally, go through and build up the index array, to tie all the triangle
   // strips together.  This is difficult to pre-calculate the number of
   // vertices we'll use, so we'll just let it dynamically allocate.
-  PT(GeomTristrips) strip = new GeomTristrips(Geom::UH_stream);
+  PT(GeomIndexData) strip = new GeomIndexData(Geom::UH_stream);
   int vi = 0;
   CurveSegments::const_iterator si;
   for (si = curve_segments.begin(); si != curve_segments.end(); ++si) {
@@ -481,8 +477,7 @@ render_tube(CullTraverser *trav, CullTraverserData &data,
     vi += (int)segment.size();
   }
 
-  PT(Geom) geom = new Geom(vdata);
-  geom->add_primitive(strip);
+  PT(Geom) geom = new Geom(Geom::GPT_triangles, vdata, strip);
 
   CPT(RenderState) state = data._state;
   if (get_use_vertex_color()) {

@@ -19,7 +19,7 @@
 #include "geomVertexFormat.h"
 #include "geomNode.h"
 #include "geom.h"
-#include "geomTriangles.h"
+#include "geomIndexData.h"
 #include "geomVertexWriter.h"
 #include "renderState.h"
 #include "textureAttrib.h"
@@ -128,8 +128,7 @@ load_models() {
 
     pmap<DVertex *, int> prim_vert_indices;
 
-    PT(Geom) geom = new Geom(vertex_data);
-    PT(GeomTriangles) triangles = new GeomTriangles(GeomEnums::UH_static);
+    PT(GeomIndexData) triangles = new GeomIndexData(GeomEnums::UH_static);
 
     // Regular brush face.
     int num_tris = face.num_edges - 2;
@@ -157,7 +156,7 @@ load_models() {
       triangles->close_primitive();
     }
 
-    geom->add_primitive(triangles);
+    PT(Geom) geom = new Geom(Geom::GPT_triangles, vertex_data, triangles);
 
     CPT(RenderState) state = RenderState::make_empty();
 
@@ -166,7 +165,7 @@ load_models() {
       const TexInfo *tinfo = &_data->texinfo[face.texinfo];
       if (tinfo->flags & (SURF_SKY | SURF_SKY2D | SURF_SKIP | SURF_NODRAW)) {
         FaceGeom face_geom;
-        face_geom.geom = new Geom(vertex_data);
+        face_geom.geom = new Geom;
         face_geom.state = state;
         face_geom.cluster = -1;
         _face_geoms[face_num] = std::move(face_geom);

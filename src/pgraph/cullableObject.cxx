@@ -47,7 +47,7 @@ munge_geom(GraphicsStateGuardianBase *gsg,
   Thread *current_thread = traverser->get_current_thread();
   PStatTimer timer(_munge_pcollector, current_thread);
 
-  if (!_geom.is_empty()) {
+  if (_geom != nullptr) {
     GraphicsStateGuardianBase *gsg = traverser->get_gsg();
 
     // If there is any animation left in the vertex data after it has been
@@ -115,8 +115,8 @@ munge_geom(GraphicsStateGuardianBase *gsg,
  */
 void CullableObject::
 output(std::ostream &out) const {
-  if (_geom.is_empty()) {
-    out << _geom;
+  if (_geom != nullptr) {
+    out << *_geom;
   } else {
     out << "(null)";
   }

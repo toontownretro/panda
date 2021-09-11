@@ -20,7 +20,7 @@
 #include "geomVertexFormat.h"
 #include "geomVertexData.h"
 #include "geomVertexWriter.h"
-#include "geomLines.h"
+#include "geomIndexData.h"
 #include "geom.h"
 #include "cullHandler.h"
 #include "cullableObject.h"
@@ -249,7 +249,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     vw.add_data3f(origin + (look_right * _radius));
     cw.add_data4f(LColor(1, 0, 0, 1));
 
-    PT(GeomLines) lines = new GeomLines(GeomEnums::UH_static);
+    PT(GeomIndexData) lines = new GeomIndexData(GeomEnums::UH_static);
     lines->add_vertices(0, 1);
     lines->close_primitive();
     lines->add_vertices(2, 3);
@@ -257,8 +257,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     lines->add_vertices(4, 5);
     lines->close_primitive();
 
-    PT(Geom) geom = new Geom(vdata);
-    geom->add_primitive(lines);
+    PT(Geom) geom = new Geom(Geom::GPT_lines, vdata, lines);
 
     CullableObject obj(geom, RenderState::make_empty(), trav->get_scene()->get_cs_world_transform());
     trav->get_cull_handler()->record_object(obj, trav);

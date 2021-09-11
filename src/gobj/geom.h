@@ -23,6 +23,7 @@
 #include "bitArray.h"
 #include "boundingVolume.h"
 #include "copyOnWriteObject.h"
+#include "pta_int.h"
 
 /**
  * A Geom is the smallest atomic piece of renderable geometry that can be sent
@@ -33,19 +34,19 @@
  */
 class EXPCL_PANDA_GOBJ Geom : public CopyOnWriteObject, public GeomEnums {
 PUBLISHED:
-  Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data,
-       const GeomIndexData *index_data);
+  Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data, UsageHint usage_hint);
   Geom();
+
   virtual ~Geom() override;
 
   void compute_index_range();
 
   virtual Geom *make_copy() const;
 
-  INLINE Geom(const Geom &copy);
-  INLINE Geom(Geom &&other);
-  INLINE void operator = (const Geom &copy);
-  INLINE void operator = (Geom &&other);
+  Geom(const Geom &copy);
+  Geom(Geom &&other);
+  void operator = (const Geom &copy);
+  void operator = (Geom &&other);
 
   INLINE void set_buffers(GeomVertexData *vertex_data, GeomIndexData *index_data);
 
@@ -102,6 +103,8 @@ PUBLISHED:
 
   void clear();
 
+  bool copy_primitives_from(CPT(Geom) other, int max_indices, bool preserve_order);
+
   CPT(GeomVertexData) get_animated_vertex_data(bool force, Thread *current_thread) const;
 
   int get_nested_vertices() const;
@@ -125,6 +128,9 @@ PUBLISHED:
   INLINE void clear_bounds();
   INLINE void mark_bounds_stale() const;
   INLINE void mark_internal_bounds_stale();
+
+  void output(std::ostream &out) const;
+  void write(std::ostream &out, int indent_level = 0) const;
 
 private:
   void compute_internal_bounds();
@@ -153,6 +159,10 @@ protected:
   virtual PT(CopyOnWriteObject) make_cow_copy() override;
 
 private:
+  // The geometric primitive type of the Geom.  Can be triangles,
+  // lines, points, or patches.  No strips or triangle fans.
+  GeomPrimitiveType _primitive_type;
+
   // Pointer to the vertex buffer the Geom should render with.
   COWPT(GeomVertexData) _vertex_data;
 
@@ -160,11 +170,11 @@ private:
   // If this is NULL, the Geom is non-indexed, and the _first_index
   // and _num_indices variables define the range of consecutive
   // vertices from the vertex buffer to render.
-  COWPT(GeomIndexData) _index_data;
+  COWPT(GeomVertexArrayData) _vertices;
 
-  // The geometric primitive type of the Geom.  Can be triangles,
-  // lines, points, or patches.  No strips or triangle fans.
-  GeomPrimitiveType _primitive_type;
+  // Numeric type of the index buffer indices.
+  // Can be uin8, uint16, or uint32.
+  NumericType _index_type;
 
   /////////////////////////////////////////////////////////////////////////////
   // For an indexed Geom, this is a range of consective indices
@@ -173,19 +183,34 @@ private:
   // For a non-indexed Geom, this is the range of consecutive indices
   // into the *vertex* buffer.
   //
-  unsigned int _first_index;
-  unsigned int _num_indices;
+  unsigned int _first_vertex;
+  unsigned int _num_vertices;
   /////////////////////////////////////////////////////////////////////////////
 
   // Specific to the patch primitive type.
   int _num_vertices_per_patch;
 
+  // Min/max vertex index.
+  bool _got_minmax;
+  unsigned int _min_vertex;
+  unsigned int _max_vertex;
+  COWPT(GeomVertexArrayData) _mins;
+  COWPT(GeomVertexArrayData) _maxs;
+
+  PTA_int _ends;
+
+  // To note if the index buffer needs to be reuploaded.
+  UpdateSeq _modified;
+
+  // Usage hint to give to the index buffer.
+  UsageHint _usage_hint;
+
   // Bounds information.
-  int _nested_vertices;
-  CPT(BoundingVolume) _internal_bounds;
-  bool _internal_bounds_stale;
-  BoundingVolume::BoundsType _bounds_type;
   CPT(BoundingVolume) _user_bounds;
+  bool _internal_bounds_stale;
+  CPT(BoundingVolume) _internal_bounds;
+  BoundingVolume::BoundsType _bounds_type;
+  int _nested_vertices;
 
 public:
   static UpdateSeq _next_modified;
@@ -211,6 +236,8 @@ public:
 private:
   static TypeHandle _type_handle;
 };
+
+INLINE std::ostream &operator << (std::ostream &out, const Geom &obj);
 
 #include "geom.I"
 

@@ -12,80 +12,6 @@
  */
 
 /**
- *
- */
-INLINE Geom::
-Geom(const Geom &copy) :
-  _vertex_data(copy._vertex_data),
-  _index_data(copy._index_data),
-  _primitive_type(copy._primitive_type),
-  _first_index(copy._first_index),
-  _num_indices(copy._num_indices),
-  _num_vertices_per_patch(copy._num_vertices_per_patch),
-  _nested_vertices(copy._nested_vertices),
-  _bounds_type(copy._bounds_type),
-  _internal_bounds(copy._internal_bounds),
-  _internal_bounds_stale(copy._internal_bounds_stale),
-  _user_bounds(copy._user_bounds)
-{
-}
-
-/**
- *
- */
-INLINE Geom::
-Geom(Geom &&other) :
-  _vertex_data(std::move(other._vertex_data)),
-  _index_data(std::move(other._index_data)),
-  _primitive_type(std::move(other._primitive_type)),
-  _first_index(std::move(other._first_index)),
-  _num_indices(std::move(other._num_indices)),
-  _num_vertices_per_patch(std::move(other._num_vertices_per_patch)),
-  _nested_vertices(std::move(other._nested_vertices)),
-  _bounds_type(std::move(other._bounds_type)),
-  _internal_bounds(std::move(other._internal_bounds)),
-  _internal_bounds_stale(std::move(other._internal_bounds_stale)),
-  _user_bounds(std::move(other._user_bounds))
-{
-}
-
-/**
- *
- */
-INLINE void Geom::
-operator = (const Geom &copy) {
-  _vertex_data = copy._vertex_data;
-  _index_data = copy._index_data;
-  _primitive_type = copy._primitive_type;
-  _first_index = copy._first_index;
-  _num_indices = copy._num_indices;
-  _num_vertices_per_patch = copy._num_vertices_per_patch;
-  _nested_vertices = copy._nested_vertices;
-  _bounds_type = copy._bounds_type;
-  _internal_bounds = copy._internal_bounds;
-  _internal_bounds_stale = copy._internal_bounds_stale;
-  _user_bounds = copy._user_bounds;
-}
-
-/**
- *
- */
-INLINE void Geom::
-operator = (Geom &&other) {
-  _vertex_data = std::move(other._vertex_data);
-  _index_data = std::move(other._index_data);
-  _primitive_type = std::move(other._primitive_type);
-  _first_index = std::move(other._first_index);
-  _num_indices = std::move(other._num_indices);
-  _num_vertices_per_patch = std::move(other._num_vertices_per_patch);
-  _nested_vertices = std::move(other._nested_vertices);
-  _bounds_type = std::move(other._bounds_type);
-  _internal_bounds = std::move(other._internal_bounds);
-  _internal_bounds_stale = std::move(other._internal_bounds_stale);
-  _user_bounds = std::move(other._user_bounds);
-}
-
-/**
  * Simultaneously sets both the vertex buffer and index buffer of the Geom.
  *
  * This causes the index range of the Geom to be recomputed automatically.
@@ -149,10 +75,16 @@ get_index_data() const {
 
 /**
  * Returns a writable pointer to the Geom's index data.
+ *
+ * If the Geom is not already indexed, implicitly converts it to an
+ * indexed Geom.
  */
 INLINE PT(GeomIndexData) Geom::
 modify_index_data() {
   mark_internal_bounds_stale();
+  if (!is_indexed()) {
+    make_indexed();
+  }
   return _index_data.get_write_pointer();
 }
 
@@ -484,4 +416,10 @@ mark_bounds_stale() const {
 INLINE void Geom::
 mark_internal_bounds_stale() {
   _internal_bounds_stale = true;
+}
+
+INLINE std::ostream &
+operator << (std::ostream &out, const Geom &obj) {
+  obj.output(out);
+  return out;
 }

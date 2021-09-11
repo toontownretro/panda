@@ -86,7 +86,6 @@ RenderState() :
     init_states();
   }
   _saved_entry = -1;
-  _last_mi = -1;
   _cache_stats.add_num_states(1);
   _read_overrides = nullptr;
   _generated_shader = nullptr;
@@ -111,7 +110,6 @@ RenderState(const RenderState &copy) :
   }
 
   _saved_entry = -1;
-  _last_mi = -1;
   _cache_stats.add_num_states(1);
   _read_overrides = nullptr;
   _generated_shader = nullptr;

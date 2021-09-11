@@ -871,17 +871,17 @@ r_make_nonindexed(PandaNode *node, int nonindexed_bits) {
           Geom::AT_none) {
         this_geom_bits |= MN_avoid_animated;
       }
-      if (data->get_usage_hint() != Geom::UH_static ||
-          geom->get_usage_hint() != Geom::UH_static) {
-        this_geom_bits |= MN_avoid_dynamic;
-      }
+      //if (data->get_usage_hint() != Geom::UH_static ||
+      //    geom->get_usage_hint() != Geom::UH_static) {
+      //  this_geom_bits |= MN_avoid_dynamic;
+      //}
 
-      if ((nonindexed_bits & this_geom_bits) == 0) {
+      //if ((nonindexed_bits & this_geom_bits) == 0) {
         // The geom meets the user's qualifications for making nonindexed, so
         // do it.
-        PT(Geom) mgeom = geom_node->modify_geom(i);
-        num_changed += mgeom->make_nonindexed((nonindexed_bits & MN_composite_only) != 0);
-      }
+      //  PT(Geom) mgeom = geom_node->modify_geom(i);
+      //  num_changed += mgeom->make_nonindexed((nonindexed_bits & MN_composite_only) != 0);
+      //}
     }
   }
 

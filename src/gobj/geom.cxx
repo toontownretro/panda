@@ -27,14 +27,21 @@ TypeHandle Geom::_type_handle;
  *
  */
 Geom::
-Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data, const GeomIndexData *index_data) :
+Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data, UsageHint usage_hint) :
   _vertex_data((GeomVertexData *)vertex_data),
-  _index_data((GeomIndexData *)index_data),
+  _vertices(nullptr),
   _primitive_type(type),
   _internal_bounds_stale(true),
+  _bounds_type(BoundingVolume::BT_default),
   _num_vertices_per_patch(0),
   _nested_vertices(0),
-  _bounds_type(BoundingVolume::BT_default)
+  _usage_hint(usage_hint),
+  _first_vertex(0),
+  _num_vertices(0),
+  _index_type(NT_uint16),
+  _got_minmax(true),
+  _min_vertex(0),
+  _max_vertex(0)
 {
   compute_index_range();
 }
@@ -44,15 +51,20 @@ Geom(GeomPrimitiveType type, const GeomVertexData *vertex_data, const GeomIndexD
  */
 Geom::
 Geom() :
-  _primitive_type(GPT_triangles),
+  _primitive_type(GPT_none),
   _vertex_data(nullptr),
-  _index_data(nullptr),
-  _first_index(0),
-  _num_indices(0),
+  _vertices(nullptr),
+  _first_vertex(0),
+  _num_vertices(0),
+  _got_minmax(false),
+  _min_vertex(0),
+  _max_vertex(0),
+  _index_type(NT_uint16),
   _num_vertices_per_patch(0),
   _nested_vertices(0),
   _internal_bounds_stale(true),
-  _bounds_type(BoundingVolume::BT_default)
+  _bounds_type(BoundingVolume::BT_default),
+  _usage_hint(UH_static)
 {
 }
 
@@ -61,6 +73,120 @@ Geom() :
  */
 Geom::
 ~Geom() {
+}
+
+/**
+ *
+ */
+INLINE Geom::
+Geom(const Geom &copy) :
+  CopyOnWriteObject(copy),
+  _vertex_data(copy._vertex_data),
+  _vertices(copy._vertices),
+  _primitive_type(copy._primitive_type),
+  _usage_hint(copy._usage_hint),
+  _index_type(copy._index_type),
+  _ends(copy._ends),
+  _mins(copy._mins),
+  _maxs(copy._maxs),
+  _modified(copy._modified),
+  _got_minmax(copy._got_minmax),
+  _min_vertex(copy._min_vertex),
+  _max_vertex(copy._max_vertex),
+  _first_vertex(copy._first_vertex),
+  _num_vertices(copy._num_vertices),
+  _num_vertices_per_patch(copy._num_vertices_per_patch),
+  _nested_vertices(copy._nested_vertices),
+  _bounds_type(copy._bounds_type),
+  _internal_bounds(copy._internal_bounds),
+  _internal_bounds_stale(copy._internal_bounds_stale),
+  _user_bounds(copy._user_bounds)
+{
+}
+
+/**
+ *
+ */
+Geom::
+Geom(Geom &&other) :
+  CopyOnWriteObject(std::move(other)),
+  _vertex_data(std::move(other._vertex_data)),
+  _vertices(std::move(other._vertices)),
+  _primitive_type(std::move(other._primitive_type)),
+  _usage_hint(std::move(other._usage_hint)),
+  _index_type(std::move(other._index_type)),
+  _ends(std::move(other._ends)),
+  _mins(std::move(other._mins)),
+  _maxs(std::move(other._maxs)),
+  _modified(std::move(other._modified)),
+  _got_minmax(std::move(other._got_minmax)),
+  _min_vertex(std::move(other._min_vertex)),
+  _max_vertex(std::move(other._max_vertex)),
+  _first_vertex(std::move(other._first_vertex)),
+  _num_vertices(std::move(other._num_vertices)),
+  _num_vertices_per_patch(std::move(other._num_vertices_per_patch)),
+  _nested_vertices(std::move(other._nested_vertices)),
+  _bounds_type(std::move(other._bounds_type)),
+  _internal_bounds(std::move(other._internal_bounds)),
+  _internal_bounds_stale(std::move(other._internal_bounds_stale)),
+  _user_bounds(std::move(other._user_bounds))
+{
+}
+
+/**
+ *
+ */
+void Geom::
+operator = (const Geom &copy) {
+  CopyOnWriteObject::operator = (copy);
+  _vertex_data = copy._vertex_data;
+  _vertices = copy._vertices;
+  _primitive_type = copy._primitive_type;
+  _usage_hint = copy._usage_hint;
+  _index_type = copy._index_type;
+  _ends = copy._ends;
+  _mins = copy._mins;
+  _maxs = copy._maxs;
+  _modified = copy._modified;
+  _got_minmax = copy._got_minmax;
+  _min_vertex = copy._min_vertex;
+  _max_vertex = copy._max_vertex;
+  _first_vertex = copy._first_vertex;
+  _num_vertices = copy._num_vertices;
+  _num_vertices_per_patch = copy._num_vertices_per_patch;
+  _nested_vertices = copy._nested_vertices;
+  _bounds_type = copy._bounds_type;
+  _internal_bounds = copy._internal_bounds;
+  _internal_bounds_stale = copy._internal_bounds_stale;
+  _user_bounds = copy._user_bounds;
+}
+
+/**
+ *
+ */
+void Geom::
+operator = (Geom &&other) {
+  CopyOnWriteObject::operator = (std::move(other));
+  _vertex_data = std::move(other._vertex_data);
+  _vertices = std::move(other._vertices);
+  _primitive_type = std::move(other._primitive_type);
+  _usage_hint = std::move(other._usage_hint);
+  _index_type = std::move(other._index_type);
+  _ends = std::move(other._ends);
+  _mins = std::move(other._mins);
+  _maxs = std::move(other._maxs);
+  _modified = std::move(other._modified);
+  _got_minmax = std::move(other._got_minmax);
+  _min_vertex = std::move(other._min_vertex);
+  _max_vertex = std::move(other._max_vertex);
+  _first_vertex = std::move(other._first_vertex);
+  _num_vertices = std::move(other._num_vertices);
+  _num_vertices_per_patch = std::move(other._num_vertices_per_patch);
+  _nested_vertices = std::move(other._nested_vertices);
+  _bounds_type = std::move(other._bounds_type);
+  _internal_bounds = std::move(other._internal_bounds);
+  _internal_bounds_stale = std::move(other._internal_bounds_stale);
+  _user_bounds = std::move(other._user_bounds);
 }
 
 /**
@@ -288,6 +414,75 @@ clear() {
   _index_data = nullptr;
   _first_index = 0;
   _num_indices = 0;
+}
+
+/**
+ * Merges the index data from the other Geom onto this one.
+ *
+ * Returns true if the Geom's were successfully merged, or false if there
+ * was an incompatibility preventing merge.
+ *
+ * The Geoms must have the same vertex data and primitive type.
+ */
+bool Geom::
+copy_primitives_from(CPT(Geom) other, int max_indices, bool preserve_order) {
+  if (this == other) {
+    // We can't combine with ourself.
+    return false;
+  }
+
+  if (get_primitive_type() != other->get_primitive_type()) {
+    return false;
+  }
+
+  if (get_vertex_data() != other->get_vertex_data()) {
+    return false;
+  }
+
+  if (get_type() != other->get_type()) {
+    return false;
+  }
+
+  if ((get_num_vertices() + other->get_num_vertices()) > max_indices) {
+    // We would exceed the maximum index threshold anyways.
+    return false;
+  }
+
+  // We can combine this Geom with the other one.
+
+  // Make ourselves indexed if we aren't.
+  make_indexed();
+
+  if (!other->is_indexed()) {
+    PT(Geom) other_copy = other->make_copy();
+    other_copy->make_indexed();
+    other = other_copy;
+  }
+
+  PT(GeomIndexData) indices = modify_index_data();
+  CPT(GeomIndexData) other_indices = other->get_index_data();
+  if (indices->get_index_type() != other_indices->get_index_type()) {
+    Geom::NumericType index_type = std::max(indices->get_index_type(), other_indices->get_index_type());
+    indices->set_index_type(index_type);
+    if (other_indices->get_index_type() != index_type) {
+      PT(GeomIndexData) other_copy = new GeomIndexData(*other_indices);
+      other_copy->set_index_type(index_type);
+      other_indices = other_copy;
+    }
+  }
+
+  GeomVertexArrayDataHandle a_handle((GeomVertexArrayData *)indices, Thread::get_current_thread());
+  const GeomVertexArrayDataHandle b_handle((const GeomVertexArrayData *)other_indices, Thread::get_current_thread());
+
+  size_t orig_a_vertices = a_handle.get_num_rows();
+
+  a_handle.copy_subdata_from(a_handle.get_data_size_bytes(), 0,
+                             &b_handle, 0, b_handle.get_data_size_bytes());
+  indices->clear_minmax();
+
+  set_index_data(indices);
+
+  return true;
 }
 
 /**
@@ -738,4 +933,18 @@ get_nested_vertices() const {
     ((Geom *)this)->compute_internal_bounds();
   }
   return _nested_vertices;
+}
+
+/**
+ *
+ */
+void Geom::
+output(std::ostream &out) const {
+}
+
+/**
+ *
+ */
+void Geom::
+write(std::ostream &out, int indent_level) const {
 }

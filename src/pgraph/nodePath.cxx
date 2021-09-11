@@ -6154,7 +6154,7 @@ r_force_recompute_bounds(PandaNode *node) {
     int num_geoms = gnode->get_num_geoms();
     for (int i = 0; i < num_geoms; i++) {
       const Geom *geom = gnode->get_geom(i);
-      //geom->mark_bounds_stale();
+      geom->mark_bounds_stale();
     }
   }
 

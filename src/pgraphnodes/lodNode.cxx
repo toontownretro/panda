@@ -19,7 +19,7 @@
 #include "geomVertexData.h"
 #include "geomVertexWriter.h"
 #include "geomVertexFormat.h"
-#include "geomTristrips.h"
+#include "geomIndexData.h"
 #include "mathNumbers.h"
 #include "geom.h"
 #include "geomNode.h"
@@ -958,7 +958,7 @@ compute_ring_viz() {
   }
 
   // Now create the triangle strips.  One tristrip for each ring.
-  PT(GeomTristrips) strips = new GeomTristrips(Geom::UH_static);
+  PT(GeomIndexData) strips = new GeomIndexData(Geom::UH_static);
   for (ri = 0; ri < num_rings; ++ri) {
     for (si = 0; si < num_slices; ++si) {
       strips->add_vertex(ri * num_slices + si);
@@ -980,8 +980,7 @@ compute_ring_viz() {
     strips->close_primitive();
   }
 
-  PT(Geom) ring_geom = new Geom(vdata);
-  ring_geom->add_primitive(strips);
+  PT(Geom) ring_geom = new Geom(Geom::GPT_lines, vdata, strips);
 
   PT(GeomNode) geom_node = new GeomNode("ring");
   geom_node->add_geom(ring_geom);
@@ -1045,7 +1044,7 @@ compute_spindle_viz() {
   }
 
   // Now create the triangle strips.  One tristrip for each ring.
-  PT(GeomTristrips) strips = new GeomTristrips(Geom::UH_static);
+  PT(GeomIndexData) strips = new GeomIndexData(Geom::UH_static);
   for (ri = 0; ri < num_rings; ++ri) {
     for (si = 0; si < num_slices; ++si) {
       strips->add_vertex(ri * num_slices + si);
@@ -1056,8 +1055,8 @@ compute_spindle_viz() {
     strips->close_primitive();
   }
 
-  PT(Geom) spindle_geom = new Geom(vdata);
-  spindle_geom->add_primitive(strips);
+  PT(Geom) spindle_geom = new Geom(Geom::GPT_lines, vdata, strips);
+  //spindle_geom->add_primitive(strips);
 
   PT(GeomNode) geom_node = new GeomNode("spindle");
   geom_node->add_geom(spindle_geom);

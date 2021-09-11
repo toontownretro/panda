@@ -43,11 +43,6 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  */
 void CullBinStateSorted::
 add_object(CullableObject &object, Thread *current_thread) {
-  if (object._munged_data != nullptr) {
-    object._sort_data._format = object._munged_data->get_format();
-  } else {
-    object._sort_data._format = nullptr;
-  }
   _objects.emplace_back(std::move(object));
 }
 
@@ -77,8 +72,16 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
   }
 
   // Vertex format changes are also fairly slow.
-  if (a._sort_data._format != b._sort_data._format) {
-    return a._sort_data._format < b._sort_data._format;
+  const GeomVertexFormat *fmta = nullptr;
+  const GeomVertexFormat *fmtb = nullptr;
+  if (a._munged_data != nullptr) {
+    fmta = a._munged_data->get_format();
+  }
+  if (b._munged_data != nullptr) {
+    fmtb = b._munged_data->get_format();
+  }
+  if (fmta != fmtb) {
+    return fmta < fmtb;
   }
 
   return false;

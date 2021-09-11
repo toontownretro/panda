@@ -29,8 +29,7 @@
 #include "cullHandler.h"
 #include "boundingSphere.h"
 #include "geomVertexData.h"
-#include "geomTriangles.h"
-#include "geomLinestrips.h"
+#include "geomIndexData.h"
 #include "geomVertexWriter.h"
 #include "geom.h"
 #include "datagram.h"
@@ -242,22 +241,20 @@ get_occluder_viz(CullTraverser *trav, CullTraverserData &data) {
     normal.add_data3(poly_normal);
     texcoord.add_data2(0.0, 8.0);
 
-    PT(GeomTriangles) triangles = new GeomTriangles(Geom::UH_static);
+    PT(GeomIndexData) triangles = new GeomIndexData(Geom::UH_static);
     triangles->add_vertices(0, 1, 2);
     triangles->close_primitive();
     triangles->add_vertices(0, 2, 3);
     triangles->close_primitive();
 
-    _occluder_viz = new Geom(vdata);
-    _occluder_viz->add_primitive(triangles);
+    _occluder_viz = new Geom(Geom::GPT_triangles, vdata, triangles);
 
-    PT(GeomLinestrips) lines = new GeomLinestrips(Geom::UH_static);
+    PT(GeomIndexData) lines = new GeomIndexData(Geom::UH_static);
     lines->add_vertices(0, 1, 2, 3);
     lines->add_vertex(0);
     lines->close_primitive();
 
-    _frame_viz = new Geom(vdata);
-    _frame_viz->add_primitive(lines);
+    _frame_viz = new Geom(Geom::GPT_lines, vdata, lines);
   }
 
   return _occluder_viz;

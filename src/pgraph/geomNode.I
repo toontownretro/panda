@@ -44,12 +44,12 @@ get_num_geoms() const {
  * since the same object might be shared between multiple different GeomNodes,
  * but see modify_geom().
  */
-INLINE const Geom *GeomNode::
+INLINE CPT(Geom) GeomNode::
 get_geom(int n) const {
   CDReader cdata(_cycler);
   CPT(GeomList) geoms = cdata->get_geoms();
   nassertr(n >= 0 && n < (int)geoms->size(), nullptr);
-  return &(*geoms)[n]._geom;
+  return (*geoms)[n]._geom.get_read_pointer();
 }
 
 /**
@@ -64,13 +64,13 @@ get_geom(int n) const {
  * all the way to pipeline stage 0, which may step on changes that were made
  * independently in pipeline stage 0. Use with caution.
  */
-INLINE Geom *GeomNode::
+INLINE PT(Geom) GeomNode::
 modify_geom(int n) {
   CDWriter cdata(_cycler, true);
   PT(GeomList) geoms = cdata->modify_geoms();
   nassertr(n >= 0 && n < (int)geoms->size(), nullptr);
   mark_internal_bounds_stale();
-  return &(*geoms)[n]._geom;
+  return (*geoms)[n]._geom.get_write_pointer();
 }
 
 /**
@@ -183,7 +183,7 @@ get_geoms(Thread *current_thread) const {
  *
  */
 INLINE GeomNode::GeomEntry::
-GeomEntry(const Geom &geom, const RenderState *state) :
+GeomEntry(Geom *geom, const RenderState *state) :
   _geom(geom),
   _state(state)
 {
@@ -285,11 +285,11 @@ get_num_geoms() const {
  * Returns the nth geom of the node.  This object should not be modified,
  * since the same object might be shared between multiple different GeomNodes.
  */
-INLINE const Geom *GeomNode::Geoms::
+INLINE CPT(Geom) GeomNode::Geoms::
 get_geom(int n) const {
   nassertr(!_geoms.is_null(), nullptr);
   nassertr(n >= 0 && n < (int)_geoms->size(), nullptr);
-  return &(*_geoms)[n]._geom;
+  return (*_geoms)[n]._geom.get_read_pointer();
 }
 
 /**

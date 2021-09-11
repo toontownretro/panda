@@ -11,7 +11,6 @@
   #define BUILDING_DLL BUILDING_PANDA_DISPLAY
 
   #define SOURCES  \
-    standardMunger.I standardMunger.h \
     config_display.h \
     callbackGraphicsWindow.I callbackGraphicsWindow.h \
     drawableRegion.I drawableRegion.h \
@@ -50,7 +49,6 @@
 
 
  #define COMPOSITE_SOURCES  \
-    standardMunger.cxx \
     config_display.cxx \
     callbackGraphicsWindow.cxx \
     drawableRegion.cxx \
@@ -81,7 +79,6 @@
     touchInfo.cxx
 
   #define INSTALL_HEADERS \
-    standardMunger.I standardMunger.h \
     config_display.h \
     callbackGraphicsWindow.I callbackGraphicsWindow.h \
     drawableRegion.I drawableRegion.h \

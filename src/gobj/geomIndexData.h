@@ -70,6 +70,7 @@ PUBLISHED:
 
   INLINE bool close_primitive() { return true; }
 
+  void clear_minmax();
   void check_minmax() const;
   void recompute_minmax();
 

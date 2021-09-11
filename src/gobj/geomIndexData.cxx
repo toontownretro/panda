@@ -187,6 +187,14 @@ get_vertex(int i) const {
 }
 
 /**
+ *
+ */
+void GeomIndexData::
+clear_minmax() {
+  _got_minmax = false;
+}
+
+/**
  * Ensures that the index buffer's minmax cache has been computed.
  */
 void GeomIndexData::

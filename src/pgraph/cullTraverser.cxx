@@ -223,9 +223,9 @@ end_traverse() {
 void CullTraverser::
 draw_bounding_volume(const BoundingVolume *vol,
                      const TransformState *internal_transform) const {
-  Geom bounds_viz = make_bounds_viz(vol);
+  PT(Geom) bounds_viz = make_bounds_viz(vol);
 
-  if (!bounds_viz.is_empty()) {
+  if (bounds_viz != nullptr) {
     _geoms_pcollector.add_level(2);
     CullableObject outer_viz(bounds_viz, get_bounds_outer_viz_state(),
                              internal_transform);
@@ -246,9 +246,9 @@ show_bounds(CullTraverserData &data, bool tight) {
   CPT(TransformState) internal_transform = data.get_internal_transform(this);
 
   if (tight) {
-    Geom bounds_viz = make_tight_bounds_viz(node);
+    PT(Geom) bounds_viz = make_tight_bounds_viz(node);
 
-    if (!bounds_viz.is_empty()) {
+    if (bounds_viz != nullptr) {
       _geoms_pcollector.add_level(1);
       CullableObject outer_viz(std::move(bounds_viz), get_bounds_outer_viz_state(),
                                internal_transform);
@@ -258,16 +258,16 @@ show_bounds(CullTraverserData &data, bool tight) {
   } else if (/*data._instances == nullptr*/true) {
     draw_bounding_volume(node->get_bounds(), internal_transform);
 
-    //if (node->is_geom_node()) {
+    if (node->is_geom_node()) {
       // Also show the bounding volumes of included Geoms.
-    /// internal_transform = internal_transform->compose(node->get_transform());
-    //  GeomNode *gnode = (GeomNode *)node;
-    //  int num_geoms = gnode->get_num_geoms();
-    //  for (int i = 0; i < num_geoms; ++i) {
-    //    draw_bounding_volume(gnode->get_geom(i)->get_bounds(),
-    //                         internal_transform);
-    //  }
-    //}
+      internal_transform = internal_transform->compose(node->get_transform());
+      GeomNode *gnode = (GeomNode *)node;
+      int num_geoms = gnode->get_num_geoms();
+      for (int i = 0; i < num_geoms; ++i) {
+        draw_bounding_volume(gnode->get_geom(i)->get_bounds(),
+                             internal_transform);
+      }
+    }
   } else {
     #if 0
     // Draw bounds for every instance.
@@ -292,9 +292,9 @@ show_bounds(CullTraverserData &data, bool tight) {
 /**
  * Returns an appropriate visualization of the indicated bounding volume.
  */
-Geom CullTraverser::
+PT(Geom) CullTraverser::
 make_bounds_viz(const BoundingVolume *vol) {
-  Geom geom;
+  PT(Geom) geom;
   if (vol->is_infinite() || vol->is_empty()) {
     // No way to draw an infinite or empty bounding volume.
 
@@ -325,8 +325,7 @@ make_bounds_viz(const BoundingVolume *vol) {
       strip->close_primitive();
     }
 
-    geom.set_primitive_type(Geom::GPT_triangles);
-    geom.set_buffers(vdata, strip);
+    geom = new Geom(Geom::GPT_triangles, vdata, strip);
 
   } else if (vol->is_of_type(BoundingHexahedron::get_class_type())) {
     const BoundingHexahedron *fvol = DCAST(BoundingHexahedron, vol);
@@ -358,8 +357,7 @@ make_bounds_viz(const BoundingVolume *vol) {
     lines->add_vertices(2, 6);
     lines->add_vertices(3, 7);
 
-    geom.set_primitive_type(Geom::GPT_lines);
-    geom.set_buffers(vdata, lines);
+    geom = new Geom(Geom::GPT_lines, vdata, lines);
 
   } else if (vol->is_of_type(FiniteBoundingVolume::get_class_type())) {
     const FiniteBoundingVolume *fvol = DCAST(FiniteBoundingVolume, vol);
@@ -392,8 +390,7 @@ make_bounds_viz(const BoundingVolume *vol) {
     tris->add_vertices(2, 6, 4);
     tris->add_vertices(2, 4, 0);
 
-    geom.set_primitive_type(Geom::GPT_triangles);
-    geom.set_buffers(vdata, tris);
+    geom = new Geom(Geom::GPT_triangles, vdata, tris);
 
   } else {
     pgraph_cat.warning()
@@ -408,9 +405,9 @@ make_bounds_viz(const BoundingVolume *vol) {
  * Returns a bounding-box visualization of the indicated node's "tight"
  * bounding volume.
  */
-Geom CullTraverser::
+PT(Geom) CullTraverser::
 make_tight_bounds_viz(PandaNode *node) const {
-  Geom geom;
+  PT(Geom) geom;
 
   NodePath np = NodePath::any_path(node);
 
@@ -458,8 +455,7 @@ make_tight_bounds_viz(PandaNode *node) const {
     strip->add_vertex(1);
     strip->close_primitive();
 
-    geom.set_primitive_type(Geom::GPT_lines);
-    geom.set_buffers(vdata, strip);
+    geom = new Geom(Geom::GPT_lines, vdata, strip);
   }
 
   return geom;

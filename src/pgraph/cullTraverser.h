@@ -103,8 +103,8 @@ public:
 
 private:
   void show_bounds(CullTraverserData &data, bool tight);
-  static Geom make_bounds_viz(const BoundingVolume *vol);
-  Geom make_tight_bounds_viz(PandaNode *node) const;
+  static PT(Geom) make_bounds_viz(const BoundingVolume *vol);
+  PT(Geom) make_tight_bounds_viz(PandaNode *node) const;
   static LVertex compute_point(const BoundingSphere *sphere,
                                PN_stdfloat latitude, PN_stdfloat longitude);
   static CPT(RenderState) get_bounds_outer_viz_state();

@@ -124,7 +124,7 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
     size_t num_geoms = geoms->size();
     for (size_t i = 0; i < num_geoms; ++i) {
       GeomEntry *entry = &(*geoms)[i];
-      Geom *new_geom = &entry->_geom;
+      PT(Geom) new_geom = entry->_geom.get_read_pointer()->make_copy();
 
       AccumulatedAttribs geom_attribs = attribs;
       entry->_state = geom_attribs.collect(entry->_state, attrib_types);
@@ -264,8 +264,8 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
               if (has_normals) {
                 // If the geometry has normals, we have to duplicate it to
                 // reverse the normals on the duplicate copy.
-                Geom dup_geom = new_geom->reverse();
-                transformer.reverse_normals(&dup_geom);
+                PT(Geom) dup_geom = new_geom->reverse();
+                transformer.reverse_normals(dup_geom);
 
                 geoms->push_back(GeomEntry(dup_geom, entry->_state));
 
@@ -295,9 +295,9 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
         }
       }
 
-      //if (any_changed) {
-      //  entry->_geom = new_geom;
-      //}
+      if (any_changed) {
+        entry->_geom = new_geom;
+      }
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
@@ -369,7 +369,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     CPT(RenderState) geom_state = node_state->compose(entry._state);
-    const Geom *geom = &entry._geom;
+    const Geom *geom = entry._geom.get_read_pointer();
 
     // Prepare each of the vertex arrays in the munged Geom.
     CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(false, current_thread);
@@ -460,7 +460,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
   GeomList::const_iterator gi;
   const GeomList *geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
-    const Geom *geom = &(*gi)._geom;
+    const Geom *geom = (*gi)._geom.get_read_pointer();
     geom->calc_tight_bounds(min_point, max_point, found_any,
                             geom->get_animated_vertex_data(true, current_thread),
                             !next_transform->is_identity(), mat);
@@ -511,7 +511,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     if (!geom->is_empty()) {
       CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
-        CullableObject object(*geom, std::move(state), std::move(internal_transform));
+        CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
@@ -534,7 +534,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       if (data._instances != nullptr) {
         // Draw each individual instance.  We don't bother culling each
         // individual Geom for each instance; that is probably way too slow.
-        CullableObject object(*geom, std::move(state), internal_transform);
+        CullableObject object(std::move(geom), std::move(state), internal_transform);
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
         continue;
@@ -574,7 +574,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       }
 #endif
 
-      CullableObject object(*geom, std::move(state), internal_transform);
+      CullableObject object(std::move(geom), std::move(state), internal_transform);
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
@@ -599,8 +599,8 @@ get_legal_collide_mask() const {
  * scene graph).
  */
 void GeomNode::
-add_geom(const Geom &geom, const RenderState *state) {
-  nassertv(!geom.is_empty());
+add_geom(Geom *geom, const RenderState *state) {
+  nassertv(geom != nullptr);
   //nassertv(geom->check_valid());
   nassertv(state != nullptr);
 
@@ -650,8 +650,8 @@ add_geoms_from(const GeomNode *other) {
  * independently in pipeline stage 0. Use with caution.
  */
 void GeomNode::
-set_geom(int n, const Geom &geom) {
-  nassertv(!geom.is_empty());
+set_geom(int n, Geom *geom) {
+  nassertv(geom != nullptr);
   //nassertv(geom->check_valid());
 
   CDWriter cdata(_cycler, true);
@@ -756,7 +756,7 @@ unify(int max_indices, bool preserve_order) {
           // Both states match, so try to combine the primitives.
           CPT(Geom) old_geom = old_entry._geom.get_read_pointer();
           PT(Geom) new_geom = new_entry._geom.get_write_pointer();
-          if (new_geom->copy_primitives_from(old_geom)) {
+          if (new_geom->copy_primitives_from(old_geom, max_indices, preserve_order)) {
             // Successfully combined!
             unified = true;
             any_changed = true;
@@ -779,15 +779,6 @@ unify(int max_indices, bool preserve_order) {
 
     // Done!  We'll keep whatever's left in the output list.
     cdata->set_geoms(new_geoms);
-
-    // Finally, go back through and unify the resulting geom(s).
-    GeomList::iterator wgi;
-    for (wgi = new_geoms->begin(); wgi != new_geoms->end(); ++wgi) {
-      GeomEntry &entry = (*wgi);
-      nassertv(entry._geom.test_ref_count_integrity());
-      PT(Geom) geom = entry._geom.get_write_pointer();
-      geom->unify_in_place(max_indices, preserve_order);
-    }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
 
@@ -831,7 +822,7 @@ write_geoms(std::ostream &out, int indent_level) const {
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     indent(out, indent_level + 2)
-      << entry._geom << " " << *entry._state << "\n";
+      << *entry._geom.get_read_pointer() << " " << *entry._state << "\n";
   }
 }
 
@@ -846,9 +837,10 @@ write_verbose(std::ostream &out, int indent_level) const {
   CPT(GeomList) geoms = cdata->get_geoms();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
+    const Geom *geom = entry._geom.get_read_pointer();
     indent(out, indent_level + 2)
-      << entry._geom << " " << *entry._state << "\n";
-    entry._geom.write(out, indent_level + 4);
+      << *geom << " " << *entry._state << "\n";
+    geom->write(out, indent_level + 4);
   }
 }
 
@@ -1082,7 +1074,7 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
   GeomList::const_iterator gi;
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
-    entry._geom.write_datagram(manager, dg);
+    manager->write_pointer(dg, entry._geom.get_read_pointer());
     manager->write_pointer(dg, entry._state);
   }
 }
@@ -1100,7 +1092,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   PT(GeomList) geoms = _geoms.get_write_pointer();
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     GeomEntry &entry = (*gi);
-    pi = entry._geom.complete_pointers(p_list, manager, pi);
+    entry._geom = DCAST(Geom, p_list[pi++]);
     entry._state = DCAST(RenderState, p_list[pi++]);
   }
 
@@ -1118,10 +1110,9 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   PT(GeomList) geoms = new GeomList;
   geoms->reserve(num_geoms);
   for (int i = 0; i < num_geoms; i++) {
-    Geom geom;
-    geom.fillin(scan, manager);
     manager->read_pointer(scan);
-    geoms->push_back(GeomEntry(geom, nullptr));
+    manager->read_pointer(scan);
+    geoms->push_back(GeomEntry(nullptr, nullptr));
   }
   _geoms = geoms;
 }

@@ -41,7 +41,7 @@ class CullTraverser;
 class EXPCL_PANDA_PGRAPH CullableObject {
 public:
   INLINE CullableObject();
-  INLINE CullableObject(const Geom &geom, CPT(RenderState) state,
+  INLINE CullableObject(const Geom *geom, CPT(RenderState) state,
                         CPT(TransformState) internal_transform);
 
   INLINE CullableObject(const CullableObject &copy);
@@ -76,7 +76,9 @@ public:
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;
 
-  Geom _geom;
+  // The Geom to render.  Should weigh storing the pointer with
+  // directly storing the information needed to render the Geom.
+  CPT(Geom) _geom;
   const GeomVertexData *_munged_data;
 
   int _num_instances = 1;
@@ -86,7 +88,6 @@ public:
   // parameters to sort the objects, so a union is used to reduce the memory
   // requirements.
   union {
-    const GeomVertexFormat *_format;
     PN_stdfloat _dist;
     int _draw_order;
   } _sort_data;

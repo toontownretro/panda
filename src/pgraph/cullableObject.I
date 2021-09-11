@@ -17,6 +17,7 @@
 INLINE CullableObject::
 CullableObject() {
   _num_instances = 1;
+  _munged_data = nullptr;
   memset(&_sort_data, 0, sizeof(_sort_data));
 }
 
@@ -25,15 +26,15 @@ CullableObject() {
  * render state and transform.
  */
 INLINE CullableObject::
-CullableObject(const Geom &geom, CPT(RenderState) state,
+CullableObject(const Geom *geom, CPT(RenderState) state,
                CPT(TransformState) internal_transform) :
   _state(std::move(state)),
   _internal_transform(std::move(internal_transform)),
-  _geom(geom),
+  _geom(std::move(geom)),
   _num_instances(1)
 {
-  if (!_geom.is_empty()) {
-    _munged_data = _geom.get_vertex_data();
+  if (_geom != nullptr) {
+    _munged_data = _geom->get_vertex_data();
   } else {
     _munged_data = nullptr;
   }
@@ -147,8 +148,8 @@ draw(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
 INLINE bool CullableObject::
 request_resident() const {
   bool resident = true;
-  if (_geom.is_indexed()) {
-    if (!_geom.get_index_data()->request_resident()) {
+  if (_geom->is_indexed()) {
+    if (!_geom->get_index_data()->request_resident()) {
       resident = false;
     }
   }

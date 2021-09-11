@@ -22,7 +22,6 @@
 #include "datagramIterator.h"
 #include "pStatTimer.h"
 #include "geom.h"
-#include "geomTristrips.h"
 #include "geomVertexWriter.h"
 #include "boundingSphere.h"
 #include "colorAttrib.h"
@@ -241,6 +240,7 @@ do_recompute_bounds(const NodePath &rel_to, int pipeline_stage,
 void SheetNode::
 render_sheet(CullTraverser *trav, CullTraverserData &data,
              NurbsSurfaceResult *result) {
+#if 0
   bool use_vertex_color = get_use_vertex_color();
 
   int num_u_segments = result->get_num_u_segments();
@@ -332,6 +332,7 @@ render_sheet(CullTraverser *trav, CullTraverserData &data,
   CullableObject object(geom, state,
                         data.get_internal_transform(trav));
   trav->get_cull_handler()->record_object(object, trav);
+#endif
 }
 
 /**

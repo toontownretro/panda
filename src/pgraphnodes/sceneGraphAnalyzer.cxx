@@ -19,14 +19,6 @@
 #include "geomNode.h"
 #include "geomVertexData.h"
 #include "geom.h"
-#include "geomPrimitive.h"
-#include "geomPoints.h"
-#include "geomLines.h"
-#include "geomLinestrips.h"
-#include "geomTriangles.h"
-#include "geomTristrips.h"
-#include "geomTrifans.h"
-#include "geomPatches.h"
 #include "transformState.h"
 #include "textureAttrib.h"
 #include "pta_ushort.h"
@@ -436,59 +428,26 @@ collect_statistics(const Geom *geom) {
   VDataTracker &tracker = (*(result.first)).second;
 
   // Now consider the primitives in the Geom.
-  int num_primitives = geom->get_num_primitives();
-  for (int i = 0; i < num_primitives; ++i) {
-    CPT(GeomPrimitive) prim = geom->get_primitive(i);
 
-    int num_vertices = prim->get_num_vertices();
-    int strip_cut_index = prim->get_strip_cut_index();
-    for (int vi = 0; vi < num_vertices; ++vi) {
-      int index = prim->get_vertex(vi);
-      if (index != strip_cut_index) {
-        tracker._referenced_vertices.set_bit(index);
-      }
-    }
+  if (geom->is_indexed()) {
+    collect_prim_statistics(geom->get_index_data());
+  }
 
-    if (prim->is_indexed()) {
-      collect_prim_statistics(prim->get_vertices());
-      if (prim->is_composite()) {
-        collect_statistics(prim->get_mins());
-        collect_statistics(prim->get_maxs());
-      }
-    }
-
-    if (prim->is_of_type(GeomPoints::get_class_type())) {
-      _num_points += prim->get_num_primitives();
-
-    } else if (prim->is_of_type(GeomLines::get_class_type())) {
-      _num_lines += prim->get_num_primitives();
-
-    } else if (prim->is_of_type(GeomLinestrips::get_class_type())) {
-      _num_lines += prim->get_num_faces();
-
-    } else if (prim->is_of_type(GeomTriangles::get_class_type())) {
-      _num_tris += prim->get_num_primitives();
-      _num_individual_tris += prim->get_num_primitives();
-
-    } else if (prim->is_of_type(GeomTristrips::get_class_type())) {
-      _num_tris += prim->get_num_faces();
-      _num_tristrips += prim->get_num_primitives();
-      _num_triangles_in_strips += prim->get_num_faces();
-
-    } else if (prim->is_of_type(GeomTrifans::get_class_type())) {
-      _num_tris += prim->get_num_faces();
-      _num_trifans += prim->get_num_primitives();
-      _num_triangles_in_fans += prim->get_num_faces();
-
-    } else if (prim->is_of_type(GeomPatches::get_class_type())) {
-      _num_patches += prim->get_num_primitives();
-      _num_vertices_in_patches += prim->get_num_vertices();
-
-    } else {
-      pgraph_cat.warning()
-        << "Unknown GeomPrimitive type in SceneGraphAnalyzer: "
-        << prim->get_type() << "\n";
-    }
+  switch (geom->get_primitive_type()) {
+  case Geom::GPT_triangles:
+    _num_tris += geom->get_num_primitives();
+    break;
+  case Geom::GPT_lines:
+    _num_lines += geom->get_num_primitives();
+    break;
+  case Geom::GPT_points:
+    _num_points += geom->get_num_primitives();
+    break;
+  case Geom::GPT_patches:
+    _num_patches += geom->get_num_primitives();
+    break;
+  default:
+    break;
   }
 }
 

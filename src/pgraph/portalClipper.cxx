@@ -27,8 +27,7 @@
 #include "cullFaceAttrib.h"
 #include "depthOffsetAttrib.h"
 #include "geomVertexWriter.h"
-#include "geomLinestrips.h"
-#include "geomPoints.h"
+#include "geomIndexData.h"
 
 using std::endl;
 using std::max;
@@ -151,8 +150,8 @@ draw_lines() {
     GeomVertexWriter vertex(vdata, InternalName::get_vertex());
     GeomVertexWriter color(vdata, InternalName::get_color());
 
-    PT(GeomLinestrips) lines = new GeomLinestrips(Geom::UH_static);
-    PT(GeomPoints) points = new GeomPoints(Geom::UH_static);
+    PT(GeomIndexData) lines = new GeomIndexData(Geom::UH_static);
+    PT(GeomIndexData) points = new GeomIndexData(Geom::UH_static);
 
     int v = 0;
     LineList::const_iterator ll;
@@ -184,13 +183,11 @@ draw_lines() {
     }
 
     if (lines->get_num_vertices() != 0) {
-      PT(Geom) geom = new Geom(vdata);
-      geom->add_primitive(lines);
+      PT(Geom) geom = new Geom(Geom::GPT_lines, vdata, lines);
       _previous->add_geom(geom);
     }
     if (points->get_num_vertices() != 0) {
-      PT(Geom) geom = new Geom(vdata);
-      geom->add_primitive(points);
+      PT(Geom) geom = new Geom(Geom::GPT_points, vdata, points);
       _previous->add_geom(geom);
     }
   }

@@ -46,33 +46,27 @@ void RayTraceTriangleMesh::add_triangles_from_geom( const Geom *geom, const Tran
 
         const LMatrix4 &mat = ts->get_mat();
 
-        PT( Geom ) dgeom = geom->decompose();
+        nassertv( geom->get_primitive_type() == Geom::GPT_triangles );
 
-        nassertv( dgeom->get_primitive_type() == Geom::PT_polygons );
-
-        const GeomVertexData *vdata = dgeom->get_vertex_data();
+        const GeomVertexData *vdata = geom->get_vertex_data();
         GeomVertexReader reader( vdata, InternalName::get_vertex() );
 
-        for ( int i = 0; i < dgeom->get_num_primitives(); i++ )
-        {
-                const GeomPrimitive *prim = dgeom->get_primitive( i );
+#if 0
 
-                nassertv( prim->get_num_vertices_per_primitive() == 3 );
+        //for ( int i = 0; i < geom->get_num_primitives(); i++ )
+        ///{
+        //        int start = geom->get_primitive_start( j );
 
-                for ( int j = 0; j < prim->get_num_primitives(); j++ )
-                {
-                        int start = prim->get_primitive_start( j );
+                reader.set_row( geom->get_vertex( start ) );
+                LPoint3 p1 = reader.get_data3f();
+                reader.set_row( geom->get_vertex( start + 1 ) );
+                LPoint3 p2 = reader.get_data3f();
+                reader.set_row( prim->get_vertex( start + 2 ) );
+                LPoint3 p3 = reader.get_data3f();
 
-                        reader.set_row( prim->get_vertex( start ) );
-                        LPoint3 p1 = reader.get_data3f();
-                        reader.set_row( prim->get_vertex( start + 1 ) );
-                        LPoint3 p2 = reader.get_data3f();
-                        reader.set_row( prim->get_vertex( start + 2 ) );
-                        LPoint3 p3 = reader.get_data3f();
-
-                        add_triangle( mat.xform_point( p1 ), mat.xform_point( p2 ), mat.xform_point( p3 ) );
-                }
+                add_triangle( mat.xform_point( p1 ), mat.xform_point( p2 ), mat.xform_point( p3 ) );
         }
+#endif
 }
 
 void RayTraceTriangleMesh::build()
