@@ -4373,7 +4373,7 @@ end_frame(Thread *current_thread) {
   }
 #endif
 
-#ifdef DO_PSTATS && defined(SUPPORT_FIXED_FUNCTION)
+#if defined(DO_PSTATS) && defined(SUPPORT_FIXED_FUNCTION)
   // Check for textures, etc., that are no longer resident.  These calls might
   // be measurably expensive, and they don't have any benefit unless we are
   // actually viewing PStats, so don't do them unless we're connected.  That
