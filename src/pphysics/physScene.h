@@ -23,7 +23,7 @@
 #include "refCallbackData.h"
 #include "callbackObject.h"
 
-#include "physx_includes.h"
+#include "physx_utils.h"
 
 class PhysRayCastResult;
 class PhysSweepResult;

@@ -25,6 +25,7 @@
 class PandaNode;
 class Character;
 class AnimChannelTable;
+class AnimChannel;
 
 /**
  * A single material group.
