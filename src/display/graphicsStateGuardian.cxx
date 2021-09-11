@@ -2659,13 +2659,13 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
   size_t count = objects.size();
 
   bool all_ok = true;
-  for (size_t i = 0; i < objects.size(); i++) {
+  for (size_t i = 0; i < count; i++) {
     const CullableObject &object = objects[i];
 
     if (/*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
       nassertr(object._geom != nullptr, false);
       set_state_and_transform(object._state, object._internal_transform);
-      if (!draw_geom(object._geom, object._munged_data, 1/*object._num_instances*/,
+      if (!draw_geom(object._geom, object._munged_data, object._num_instances,
                      force, Thread::get_current_thread())) {
         all_ok = false;
       }
@@ -2683,9 +2683,11 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
       // Now the callback has taken care of drawing.
 
     } else {
-      // TODO: instances.
+      // TODO: instance list.
     }
   }
+
+  return all_ok;
 }
 
 /**
@@ -2696,7 +2698,7 @@ draw_object(CullableObject *object, bool force) {
   if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
-    return draw_geom(object->_geom, object->_munged_data, 1/*object->_num_instances*/,
+    return draw_geom(object->_geom, object->_munged_data, object->_num_instances,
                      force, Thread::get_current_thread());
 
   } else if (object->_draw_callback != nullptr) {
@@ -2739,12 +2741,10 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
   }
 
   // Draw all the primitives of the Geom.
-  const Geom::CData *cdata = geom_reader._cdata;
-  const pvector<COWPT(GeomPrimitive)> &primitives = cdata->_primitives;
+  const pvector<COWPT(GeomPrimitive)> &primitives = geom_reader._cdata->_primitives;
   size_t count = primitives.size();
-  const GeomPrimitive *prim;
   for (size_t i = 0; i < count; i++) {
-    prim = primitives[i].get_read_pointer(current_thread);
+    const GeomPrimitive *prim = primitives[i].get_read_pointer(current_thread);
 
     GeomPrimitivePipelineReader prim_reader(prim, current_thread);
     if (prim_reader.get_num_vertices() != 0) {
@@ -2811,11 +2811,13 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
         if (!draw_linestrips_adj(&prim_reader, force)) {
           all_ok = false;
         }
+        break;
 
       case GeomPrimitive::GPT_patches:
         if (!draw_patches(&prim_reader, force)) {
           all_ok = false;
         }
+        break;
 
       default:
         all_ok = false;

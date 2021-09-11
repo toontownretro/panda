@@ -80,7 +80,7 @@ public:
   CPT(Geom) _geom;
   const GeomVertexData *_munged_data;
 
-  //int _num_instances = 1;
+  int _num_instances = 1;
 
   // This union contains the data used by various CullBins to sort their list
   // of CullableObjects.  Each bin type will only use one of the three

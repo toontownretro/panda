@@ -100,6 +100,13 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
       }
     }
 
+    if (sattr != nullptr) {
+      int count = sattr->get_instance_count();
+      _num_instances = (count > 0) ? (size_t)count : 1;
+    } else {
+      _num_instances = 1;
+    }
+
 #if 0
     if (sattr != nullptr) {
       if (_instances != nullptr &&
