@@ -370,7 +370,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     const GeomEntry &entry = (*gi);
     CPT(RenderState) geom_state = node_state->compose(entry._state);
-    const Geom *geom = entry._geom.get_read_pointer();
+    CPT(Geom) geom = entry._geom.get_read_pointer();
 
     // Munge the geom as required by the GSG.
     PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
