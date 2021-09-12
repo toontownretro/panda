@@ -314,7 +314,10 @@ get_sort(Thread *current_thread) const {
  */
 NodePath NodePath::
 find(const string &path) const {
-  nassertr_always(!is_empty(), fail());
+  // If the NodePath is empty, return a fail path.
+  if (is_empty()) {
+    return NodePath::fail();
+  }
 
   NodePathCollection col;
   find_matches(col, path, 1);
