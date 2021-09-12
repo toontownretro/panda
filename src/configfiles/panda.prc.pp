@@ -165,7 +165,7 @@ support-stencil 0
 garbage-collect-states 0
 auto-break-cycles 0
 
-rescale-normals 0
+rescale-normals none
 support-rescale-normal 0
 
 hardware-animated-vertices 1
