@@ -13832,6 +13832,11 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
               GLenum page_target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + z;
               const unsigned char *page_ptr = image_ptr + page_size * z;
 
+              if (page_ptr == nullptr) {
+                // Temp hack fix until real fix is made.
+                break;
+              }
+
               if (image_compression == Texture::CM_off) {
                 glTexSubImage2D(page_target, n - mipmap_bias, 0, 0, width, height,
                                 external_format, component_type, page_ptr);
@@ -14038,6 +14043,11 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
             GLenum page_target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + z;
             const unsigned char *page_ptr = image_ptr + page_size * z;
 
+            if (page_ptr == nullptr) {
+              // Temp hack fix until real fix is made.
+              break;
+            }
+
             if (image_compression == Texture::CM_off) {
               glTexImage2D(page_target, n - mipmap_bias, internal_format,
                            width, height, 0,
@@ -14048,7 +14058,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
             }
           }
         } else {
-          report_my_gl_errors();
+          report_my_gl_errors(this);
           return false;
         }
         break;
@@ -14062,6 +14072,7 @@ upload_texture_image(CLP(TextureContext) *gtc, bool needs_reload,
           _glCompressedTexImage2D(texture_target, n - mipmap_bias, external_format,
                                   width, height, 0, view_size, image_ptr);
         }
+        break;
       }
     }
 
