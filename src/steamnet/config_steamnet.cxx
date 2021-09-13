@@ -28,5 +28,8 @@ init_libsteamnet() {
     return;
   }
 
+  // Initialization of GameNetworkingSockets is deferred until
+  // SteamNetworkSystem construction.
+
   initialized = true;
 }
