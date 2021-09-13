@@ -125,7 +125,7 @@ set_contents_mask(BitMask32 mask) {
  * collide if the two groups do not have collisions enabled between them,
  * regardless of the solid mask.
  */
-INLINE void PhysController::
+void PhysController::
 set_collision_group(unsigned int group) {
   nassertv(_actor_node != nullptr);
   _actor_node->set_collision_group(group);
