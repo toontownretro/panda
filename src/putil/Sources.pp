@@ -50,6 +50,7 @@
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \
+    ioPtaDatagramChar.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
     ioPtaDatagramShort.h keyboardButton.h \
     keyValues.h \
@@ -108,6 +109,7 @@
     factoryParam.cxx factoryParams.cxx \
     gamepadButton.cxx \
     globalPointerRegistry.cxx \
+    ioPtaDatagramChar.cxx \
     ioPtaDatagramFloat.cxx \
     ioPtaDatagramInt.cxx ioPtaDatagramShort.cxx \
     keyboardButton.cxx \
@@ -173,6 +175,7 @@
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \
+    ioPtaDatagramChar.h \
     ioPtaDatagramFloat.h ioPtaDatagramInt.h \
     ioPtaDatagramShort.h keyboardButton.h \
     keyValues.h \
