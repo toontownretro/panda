@@ -175,6 +175,7 @@ init_libanim() {
   CharacterNode::register_with_read_factory();
   CharacterJointEffect::register_with_read_factory();
   CharacterVertexSlider::register_with_read_factory();
+  EyeballNode::register_with_read_factory();
   JointVertexTransform::register_with_read_factory();
 
   WeightList::register_with_read_factory();

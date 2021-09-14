@@ -29,6 +29,9 @@ class Character;
  * matrices for the eyeball shader.
  */
 class EXPCL_PANDA_ANIM EyeballNode final : public PandaNode {
+private:
+  EyeballNode();
+
 PUBLISHED:
   EyeballNode(const std::string &name, Character *character, int parent_joint);
   EyeballNode(const EyeballNode &copy);
@@ -56,6 +59,15 @@ public:
   virtual bool is_renderable() const override;
   virtual bool safe_to_flatten() const override;
   virtual bool safe_to_combine() const override;
+
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+
+protected:
+  void fillin(DatagramIterator &scan, BamReader *manager);
 
 private:
   WPT(Character) _character;
