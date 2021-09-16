@@ -126,6 +126,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _params.size(); i++) {
     manager->write_pointer(me, _params.get_data(i));
   }
+
+  me.add_uint8(_tags.size());
+  for (size_t i = 0; i < _tags.size(); i++) {
+    me.add_string(_tags[i]);
+  }
 }
 
 /**
@@ -153,4 +158,9 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
   _num_params = scan.get_uint8();
   manager->read_pointers(scan, _num_params);
+
+  _tags.resize(scan.get_uint8());
+  for (size_t i = 0; i < _tags.size(); i++) {
+    _tags[i] = scan.get_string();
+  }
 }
