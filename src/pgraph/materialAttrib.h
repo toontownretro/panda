@@ -40,9 +40,6 @@ private:
 
   bool _is_off;
 
-  // Used only during Bam reading.
-  bool _has_raw_data;
-
 protected:
   virtual int compare_to_impl(const RenderAttrib *other) const;
   virtual size_t get_hash_impl() const;

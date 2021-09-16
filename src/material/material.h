@@ -81,10 +81,15 @@ protected:
 private:
   // Only used during Bam reading.
   int _num_params;
+  bool _read_rawdata;
 
 public:
   virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
   virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+
+  static TypedWritable *change_this(TypedWritable *old_ptr, BamReader *manager);
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 protected:
   void fillin(DatagramIterator &scan, BamReader *manager);

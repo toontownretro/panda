@@ -87,62 +87,8 @@ register_with_read_factory() {
 void MaterialAttrib::
 write_datagram(BamWriter *manager, Datagram &dg) {
   RenderAttrib::write_datagram(manager, dg);
-
-  BamWriter::BamTextureMode file_material_mode = manager->get_file_material_mode();
-
-  bool raw_data = file_material_mode == BamEnums::BTM_rawdata ||
-                  _material == nullptr ||
-                  _material->get_filename().empty();
-
-  dg.add_bool(raw_data);
   dg.add_bool(_is_off);
-
-  if (raw_data) {
-    // We're putting the material directly in the Bam file.
-    manager->write_pointer(dg, _material);
-
-  } else {
-    // We're just putting a filename reference to the material.
-
-    bool has_bam_dir = !manager->get_filename().empty();
-    Filename bam_dir = manager->get_filename().get_dirname();
-    Filename filename = _material->get_filename();
-
-    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-
-    switch (file_material_mode) {
-    case BamWriter::BTM_unchanged:
-    case BamWriter::BTM_rawdata:
-      break;
-
-    case BamWriter::BTM_fullpath:
-      filename = _material->get_fullpath();
-      break;
-
-    case BamWriter::BTM_relative:
-      filename = _material->get_fullpath();
-      bam_dir.make_absolute(vfs->get_cwd());
-      if (!has_bam_dir || !filename.make_relative_to(bam_dir, true)) {
-        filename.find_on_searchpath(get_model_path());
-      }
-      if (pgraph_cat.is_debug()) {
-        pgraph_cat.debug()
-          << "Material " << _material->get_fullpath()
-          << " found as " << filename << "\n";
-      }
-      break;
-
-    case BamWriter::BTM_basename:
-      filename = _material->get_fullpath().get_basename();
-      break;
-
-    default:
-      pgraph_cat.error()
-        << "Unsupported bam-material-mode: " << (int)file_material_mode << "\n";
-    }
-
-    dg.add_string(filename.get_fullpath());
-  }
+  manager->write_pointer(dg, _material);
 }
 
 /**
@@ -165,17 +111,8 @@ make_from_bam(const FactoryParams &params) {
 void MaterialAttrib::
 fillin(DatagramIterator &scan, BamReader *manager) {
   RenderAttrib::fillin(scan, manager);
-
-  _has_raw_data = scan.get_bool();
   _is_off = scan.get_bool();
-
-  if (_has_raw_data) {
-    manager->read_pointer(scan);
-
-  } else {
-    Filename filename = scan.get_string();
-    _material = MaterialPool::load_material(filename);
-  }
+  manager->read_pointer(scan);
 }
 
 /**
@@ -185,11 +122,9 @@ int MaterialAttrib::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = RenderAttrib::complete_pointers(p_list, manager);
 
-  if (_has_raw_data) {
-    Material *mat;
-    DCAST_INTO_R(mat, p_list[pi++], pi);
-    _material = mat;
-  }
+  Material *mat;
+  DCAST_INTO_R(mat, p_list[pi++], pi);
+  _material = mat;
 
   return pi;
 }

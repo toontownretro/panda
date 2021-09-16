@@ -20,6 +20,7 @@
 #include "pdxElement.h"
 #include "pdxList.h"
 #include "pdxValue.h"
+#include "materialPool.h"
 
 TypeHandle Material::_type_handle;
 
@@ -29,7 +30,8 @@ TypeHandle Material::_type_handle;
 Material::
 Material(const std::string &name) :
   Namable(name),
-  _num_params(0)
+  _num_params(0),
+  _read_rawdata(false)
 {
 }
 
@@ -107,6 +109,9 @@ write_mto(const Filename &filename) {
     return false;
   }
 
+  // Always write raw data if we're using this method.
+  writer.set_file_material_mode(BamWriter::BTM_rawdata);
+
   if (!writer.write_object(this)) {
     return false;
   }
@@ -120,16 +125,65 @@ write_mto(const Filename &filename) {
  */
 void Material::
 write_datagram(BamWriter *manager, Datagram &me) {
-  me.add_string(get_name());
+  BamWriter::BamTextureMode file_material_mode = manager->get_file_material_mode();
+  bool has_rawdata = (file_material_mode == BamWriter::BTM_rawdata ||
+                      _filename.empty());
+  me.add_bool(has_rawdata);
 
-  me.add_uint8(_params.size());
-  for (size_t i = 0; i < _params.size(); i++) {
-    manager->write_pointer(me, _params.get_data(i));
-  }
+  if (has_rawdata) {
+    // Chuck the material guts into the Bam file.
+    me.add_string(get_name());
 
-  me.add_uint8(_tags.size());
-  for (size_t i = 0; i < _tags.size(); i++) {
-    me.add_string(_tags[i]);
+    me.add_uint8(_params.size());
+    for (size_t i = 0; i < _params.size(); i++) {
+      manager->write_pointer(me, _params.get_data(i));
+    }
+
+    me.add_uint8(_tags.size());
+    for (size_t i = 0; i < _tags.size(); i++) {
+      me.add_string(_tags[i]);
+    }
+
+  } else {
+    // Just reference the filename.
+    bool has_bam_dir = !manager->get_filename().empty();
+    Filename bam_dir = manager->get_filename().get_dirname();
+    Filename filename = get_filename();
+
+    VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+
+    switch (file_material_mode) {
+    case BamWriter::BTM_unchanged:
+    case BamWriter::BTM_rawdata:
+      break;
+
+    case BamWriter::BTM_fullpath:
+      filename = get_fullpath();
+      break;
+
+    case BamWriter::BTM_relative:
+      filename = get_fullpath();
+      bam_dir.make_absolute(vfs->get_cwd());
+      if (!has_bam_dir || !filename.make_relative_to(bam_dir, true)) {
+        filename.find_on_searchpath(get_model_path());
+      }
+      if (material_cat.is_debug()) {
+        material_cat.debug()
+          << "Material " << get_fullpath()
+          << " found as " << filename << "\n";
+      }
+      break;
+
+    case BamWriter::BTM_basename:
+      filename = get_fullpath().get_basename();
+      break;
+
+    default:
+      material_cat.error()
+        << "Unsupported bam-material-mode: " << (int)file_material_mode << "\n";
+    }
+
+    me.add_string(filename.get_fullpath());
   }
 }
 
@@ -138,6 +192,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
  */
 int Material::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  if (!_read_rawdata) {
+    return 0;
+  }
+
   int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
 
   for (int i = 0; i < _num_params; i++) {
@@ -154,13 +212,58 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void Material::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  set_name(scan.get_string());
+  _read_rawdata = scan.get_bool();
 
-  _num_params = scan.get_uint8();
-  manager->read_pointers(scan, _num_params);
+  if (_read_rawdata) {
+    // Guts included.
+    set_name(scan.get_string());
 
-  _tags.resize(scan.get_uint8());
-  for (size_t i = 0; i < _tags.size(); i++) {
-    _tags[i] = scan.get_string();
+    _num_params = scan.get_uint8();
+    manager->read_pointers(scan, _num_params);
+
+    _tags.resize(scan.get_uint8());
+    for (size_t i = 0; i < _tags.size(); i++) {
+      _tags[i] = scan.get_string();
+    }
+
+  } else {
+    // It's just a filename reference to the real thing.
+    _filename = scan.get_string();
+    manager->register_change_this(change_this, this);
   }
+}
+
+/**
+ *
+ */
+TypedWritable *Material::
+change_this(TypedWritable *old_ptr, BamReader *manager) {
+  // This method is called when the material read in just contains a filename
+  // reference to the real thing.  We'll change the pointer to the real thing
+  // loaded from disk using the MaterialPool.
+  Material *old_mat = DCAST(Material, old_ptr);
+  Material *new_mat = MaterialPool::load_material(old_mat->_filename);
+  return new_mat;
+}
+
+/**
+ *
+ */
+void Material::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+TypedWritable *Material::
+make_from_bam(const FactoryParams &params) {
+  Material *mat = new Material("");
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  mat->fillin(scan, manager);
+  return mat;
 }

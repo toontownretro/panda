@@ -17,7 +17,6 @@
 INLINE MaterialAttrib::
 MaterialAttrib() :
   _material(nullptr),
-  _has_raw_data(false),
   _is_off(false)
 {
 }
