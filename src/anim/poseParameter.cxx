@@ -62,6 +62,7 @@ get_value() const {
  */
 void PoseParameter::
 write_datagram(BamWriter *manager, Datagram &dg) {
+  dg.add_string(get_name());
   dg.add_stdfloat(_min);
   dg.add_stdfloat(_max);
   dg.add_stdfloat(_value);
@@ -73,6 +74,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void PoseParameter::
 fillin(DatagramIterator &scan, BamReader *manager) {
+  set_name(scan.get_string());
   _min = scan.get_stdfloat();
   _max = scan.get_stdfloat();
   _value = scan.get_stdfloat();
