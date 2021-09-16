@@ -52,6 +52,7 @@
 
 class DrawableRegion;
 class GraphicsEngine;
+class GeomNode;
 
 /**
  * Encapsulates all the communication with a particular instance of a given
@@ -480,6 +481,10 @@ protected:
   AsyncFuture *async_reload_texture(TextureContext *tc);
 
 protected:
+#ifdef RENDER_TRACK_GEOM_NODES
+  GeomNode *_geom_node;
+#endif
+
   PT(SceneSetup) _scene_null;
   PT(SceneSetup) _scene_setup;
 

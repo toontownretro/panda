@@ -80,6 +80,10 @@ public:
   CPT(Geom) _geom;
   const GeomVertexData *_munged_data;
 
+#ifdef RENDER_TRACK_GEOM_NODES
+  GeomNode *_geom_node;
+#endif
+
   int _num_instances = 1;
 
   // This union contains the data used by various CullBins to sort their list

@@ -59,6 +59,7 @@
 #include "shaderManagerBase.h"
 #include "config_pstatclient.h"
 #include "cullableObject.h"
+#include "geomNode.h"
 
 #include <limits.h>
 
@@ -277,6 +278,10 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
 
   _gamma = 1.0f;
   _texture_quality_override = Texture::QL_default;
+
+#ifdef RENDER_TRACK_GEOM_NODES
+  _geom_node = nullptr;
+#endif
 
   // Give it a unique identifier.  Unlike a pointer, we can guarantee that
   // this value will never be reused.
@@ -2662,6 +2667,10 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
   for (size_t i = 0; i < count; i++) {
     const CullableObject &object = objects[i];
 
+#ifdef RENDER_TRACK_GEOM_NODES
+    _geom_node = object._geom_node;
+#endif
+
     if (/*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
       nassertr(object._geom != nullptr, false);
       set_state_and_transform(object._state, object._internal_transform);
@@ -2685,6 +2694,10 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
     } else {
       // TODO: instance list.
     }
+
+#ifdef RENDER_TRACK_GEOM_NODES
+    _geom_node = nullptr;
+#endif
   }
 
   return all_ok;
@@ -2695,6 +2708,9 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
  */
 bool GraphicsStateGuardian::
 draw_object(CullableObject *object, bool force) {
+#ifdef RENDER_TRACK_GEOM_NODES
+  _geom_node = object->_geom_node;
+#endif
   if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
@@ -2718,6 +2734,9 @@ draw_object(CullableObject *object, bool force) {
     // TODO: instances.
     return true;
   }
+#ifdef RENDER_TRACK_GEOM_NODES
+  _geom_node = nullptr;
+#endif
 }
 
 /**
@@ -2993,6 +3012,10 @@ reset() {
   _supported_shader_caps = 0;
 
   _is_valid = true;
+
+#ifdef RENDER_TRACK_GEOM_NODES
+  _geom_node = nullptr;
+#endif
 }
 
 /**

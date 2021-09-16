@@ -525,6 +525,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
         CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
+#ifdef RENDER_TRACK_GEOM_NODES
+        object._geom_node = this;
+#endif
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
@@ -586,6 +589,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       }
 
       CullableObject object(std::move(geom), std::move(state), internal_transform);
+#ifdef RENDER_TRACK_GEOM_NODES
+      object._geom_node = this;
+#endif
       trav->get_cull_handler()->record_object(object, trav);
     }
   }
