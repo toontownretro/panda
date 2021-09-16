@@ -106,7 +106,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = ModelNode::complete_pointers(p_list, manager);
 
   for (size_t i = 0; i < _material_groups.size(); i++) {
-    for (int j = 0; j < _material_groups[i].get_num_materials(); i++) {
+    for (int j = 0; j < _material_groups[i].get_num_materials(); j++) {
       TypedWritable *p = p_list[pi++];
       Material *mat;
       DCAST_INTO_R(mat, p, pi);
