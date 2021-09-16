@@ -33,12 +33,13 @@ static const unsigned short _bam_major_ver = 7;
 // Bumped to major version 7 on 2021-06-13 due to major animation system changes.
 
 static const unsigned short _bam_first_minor_ver = 0;
-static const unsigned short _bam_last_minor_ver = 0;
-static const unsigned short _bam_minor_ver = 0;
+static const unsigned short _bam_last_minor_ver = 1;
+static const unsigned short _bam_minor_ver = 1;
 
 //
 // BAM 7.x minor version history
 //
+// Bumped to minor version 1 on 2021-09-15 for ModelRoot collision info.
 
 
 //

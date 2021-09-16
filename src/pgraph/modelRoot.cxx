@@ -82,16 +82,18 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     dg.add_bool(false);
   }
 
-  // FIXME: Maybe think of a better way of storing this information instead of
-  // stuffing it in the ModelRoot.
-  if (_collision_info != nullptr) {
-    dg.add_bool(true);
-    dg.add_stdfloat(_collision_info->get_mass());
-    dg.add_stdfloat(_collision_info->get_damping());
-    dg.add_stdfloat(_collision_info->get_rot_damping());
-    WRITE_PTA(manager, dg, IPD_uchar::write_datagram, _collision_info->get_mesh_data());
-  } else {
-    dg.add_bool(false);
+  if (manager->get_file_minor_ver() >= 1) {
+    // FIXME: Maybe think of a better way of storing this information instead of
+    // stuffing it in the ModelRoot.
+    if (_collision_info != nullptr) {
+      dg.add_bool(true);
+      dg.add_stdfloat(_collision_info->get_mass());
+      dg.add_stdfloat(_collision_info->get_damping());
+      dg.add_stdfloat(_collision_info->get_rot_damping());
+      WRITE_PTA(manager, dg, IPD_uchar::write_datagram, _collision_info->get_mesh_data());
+    } else {
+      dg.add_bool(false);
+    }
   }
 }
 
@@ -155,14 +157,16 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _custom_data->from_datagram(scan);
   }
 
-  bool has_collision_info = scan.get_bool();
-  if (has_collision_info) {
-    _collision_info = new CollisionInfo;
-    _collision_info->set_mass(scan.get_stdfloat());
-    _collision_info->set_damping(scan.get_stdfloat());
-    _collision_info->set_rot_damping(scan.get_stdfloat());
-    PTA_uchar mesh_data;
-    READ_PTA(manager, scan, IPD_uchar::read_datagram, mesh_data);
-    _collision_info->set_mesh_data(mesh_data);
+  if (manager->get_file_minor_ver() >= 1) {
+    bool has_collision_info = scan.get_bool();
+    if (has_collision_info) {
+      _collision_info = new CollisionInfo;
+      _collision_info->set_mass(scan.get_stdfloat());
+      _collision_info->set_damping(scan.get_stdfloat());
+      _collision_info->set_rot_damping(scan.get_stdfloat());
+      PTA_uchar mesh_data;
+      READ_PTA(manager, scan, IPD_uchar::read_datagram, mesh_data);
+      _collision_info->set_mesh_data(mesh_data);
+    }
   }
 }
