@@ -322,7 +322,7 @@ public:
 /**
  * Main data structure for a .pmdl file loaded from disk.
  */
-class PMDLDataDesc : public AssetBase {
+class EXPCL_PANDA_EGG2PG PMDLDataDesc : public AssetBase {
 public:
   PMDLDataDesc() { _scale.set(1, 1, 1); _pos.set(0, 0, 0); _hpr.set(0, 0, 0); }
 
