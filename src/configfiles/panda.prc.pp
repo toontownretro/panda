@@ -41,7 +41,7 @@ audio-library-name openal_audio
 #endif
 
 # OpenGL renderer configurations.
-gl-coordiate-system default
+gl-coordinate-system default
 gl-version 4 0
 gl-compile-and-execute 1
 gl-force-depth-stencil 0
