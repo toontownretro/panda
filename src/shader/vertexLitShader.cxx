@@ -274,7 +274,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     //}
 
     set_input(ShaderInput("envmapTint", envmap_tint));
-    set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.ptex")));
+    set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.txo")));
   }
 
   if (add_csm(state)) {

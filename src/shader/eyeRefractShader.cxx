@@ -86,7 +86,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
   }
 
-  set_input(ShaderInput("brdfLutSampler", TexturePool::load_texture("maps/brdf_lut.ptex")));
+  set_input(ShaderInput("brdfLutSampler", TexturePool::load_texture("maps/brdf_lut.txo")));
 
   param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
