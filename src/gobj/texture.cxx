@@ -5157,6 +5157,7 @@ do_read_ptex(CData *cdata, PDXElement *data, const Filename &fullpath, bool head
   DSearchPath search_path = get_model_path();
   search_path.append_directory(fullpath.get_dirname());
   PTexture ptex;
+  ptex.local_object();
   if (!ptex.load(data, search_path)) {
     return false;
   }

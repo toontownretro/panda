@@ -41,10 +41,13 @@
 #include "material.h"
 #include "geomVertexReader.h"
 #include "internalName.h"
+#include "executionEnvironment.h"
 
 #ifdef HAVE_PHYSX
 #include "physConvexMeshData.h"
 #endif
+
+TypeHandle PMDLDataDesc::_type_handle;
 
 /**
  *
@@ -1270,4 +1273,81 @@ load_anim(const std::string &anim_name, const Filename &filename) {
   }
   _anims_by_name[anim_name] = anim_bundle;
   return anim_bundle;
+}
+
+/**
+ *
+ */
+std::string PMDLDataDesc::
+get_name() {
+  return "model";
+}
+
+/**
+ *
+ */
+std::string PMDLDataDesc::
+get_source_extension() {
+  return "pmdl";
+}
+
+/**
+ *
+ */
+std::string PMDLDataDesc::
+get_built_extension() {
+  return "bam";
+}
+
+/**
+ *
+ */
+void PMDLDataDesc::
+get_dependencies(vector_string &filenames) {
+  // We depend on the model .egg file and any animation .egg files.
+  // They must be exported before the .pmdl is built, and we must
+  // rebuild the .pmdl if any of the .eggs change.
+
+  DSearchPath search_path = get_model_path();
+  search_path.append_directory(ExecutionEnvironment::get_cwd());
+  search_path.append_directory(_fullpath.get_dirname());
+
+  Filename fullpath = _model_filename;
+  fullpath.resolve_filename(search_path);
+  filenames.push_back(fullpath);
+
+  for (const PMDLAnim &anim : _anims) {
+    fullpath = anim._anim_filename;
+    fullpath.resolve_filename(search_path);
+    filenames.push_back(fullpath.get_fullpath());
+  }
+
+  for (const PMDLSequence &seq : _sequences) {
+    if (!seq._animation_name.empty()) {
+      if (!Filename(seq._animation_name).get_extension().empty()) {
+        // Depend on the single-animation file.
+        fullpath = seq._animation_name;
+        fullpath.resolve_filename(search_path);
+        filenames.push_back(fullpath.get_fullpath());
+      }
+
+    } else if (!seq._blend._animations.empty()) {
+      // If it's a blend sequence, depend on all the .egg files.
+      for (const std::string &anim_filename : seq._blend._animations) {
+        if (!Filename(anim_filename).get_extension().empty()) {
+          fullpath = anim_filename;
+          fullpath.resolve_filename(search_path);
+          filenames.push_back(fullpath.get_fullpath());
+        }
+      }
+    }
+  }
+}
+
+/**
+ *
+ */
+PT(AssetBase) PMDLDataDesc::
+make_new() const {
+  return new PMDLDataDesc;
 }

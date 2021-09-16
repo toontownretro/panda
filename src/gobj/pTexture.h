@@ -21,15 +21,15 @@
 #include "pointerTo.h"
 #include "luse.h"
 #include "texture.h"
+#include "assetBase.h"
 
 class PDXElement;
 
 /**
  * Texture description as read in from a .ptex file.
  */
-class EXPCL_PANDA_GOBJ PTexture {
+class EXPCL_PANDA_GOBJ PTexture : public AssetBase {
 PUBLISHED:
-
   enum Flags {
     F_anisotropic_degree = 0x1,
     F_border_color = 0x2,
@@ -115,6 +115,17 @@ PUBLISHED:
   INLINE void set_num_pages(int pages);
   INLINE int get_num_pages() const;
 
+  // AssetBase interface.
+  virtual std::string get_name() override;
+  virtual std::string get_source_extension() override;
+  virtual std::string get_built_extension() override;
+  virtual bool load(const Filename &filename, const DSearchPath &search_path) override;
+
+public:
+  // AssetBase interface.
+  virtual void get_dependencies(vector_string &filenames) override;
+  virtual PT(AssetBase) make_new() const override;
+
 private:
   Filename _image_filename;
   Filename _image_fullpath;
@@ -139,6 +150,23 @@ private:
   int _num_pages;
 
   unsigned int _flags;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    AssetBase::init_type();
+    register_type(_type_handle, "PTexture",
+                  AssetBase::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 EXPCL_PANDA_GOBJ std::ostream &operator << (std::ostream &out, const PTexture &ptex);

@@ -21,6 +21,9 @@
 #include "configVariableCore.h"
 #include "eggRenderState.h"
 
+#include "pmdlLoader.h"
+#include "assetRegistry.h"
+
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_EGG2PG)
   #error Buildsystem error: BUILDING_PANDA_EGG2PG not defined
 #endif
@@ -231,4 +234,8 @@ init_libegg2pg() {
 
   reg->register_type(new LoaderFileTypeEgg);
   reg->register_type(new LoaderFileTypePMDL);
+
+  PMDLDataDesc::init_type();
+  AssetRegistry *areg = AssetRegistry::get_global_ptr();
+  areg->register_asset_type(new PMDLDataDesc);
 }

@@ -68,6 +68,9 @@
 #include "indexBufferContext.h"
 #include "internalName.h"
 
+#include "pTexture.h"
+#include "assetRegistry.h"
+
 #include "shaderCompilerRegistry.h"
 #include "shaderCompilerGlslang.h"
 #include "shaderCompilerGlslPreProc.h"
@@ -621,6 +624,10 @@ ConfigureFn(config_gobj) {
   VertexDataPage::init_type();
   VertexTransform::init_type();
   VideoTexture::init_type();
+
+  PTexture::init_type();
+  AssetRegistry *areg = AssetRegistry::get_global_ptr();
+  areg->register_asset_type(new PTexture);
 
   ShaderCompilerGlslang::init_type();
   ShaderModuleSpirV::init_type();

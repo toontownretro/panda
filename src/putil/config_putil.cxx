@@ -46,6 +46,7 @@
 #include "keyboardButton.h"
 #include "mouseButton.h"
 #include "modelIndex.h"
+#include "assetBase.h"
 
 #include "dconfig.h"
 
@@ -251,6 +252,7 @@ init_libputil() {
   WritableConfigurable::init_type();
   WritableParam::init_type();
   ModelIndex::Tree::init_type();
+  AssetBase::init_type();
 
   GamepadButton::init_gamepad_buttons();
   KeyboardButton::init_keyboard_buttons();

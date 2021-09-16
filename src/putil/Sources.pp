@@ -10,6 +10,8 @@
 
   #define SOURCES \
     animInterface.h animInterface.I \
+    assetBase.h assetBase.I \
+    assetRegistry.h assetRegistry.I \
     autoTextureScale.h \
     bam.h \
     bamCache.h bamCache.I \
@@ -83,6 +85,8 @@
 
  #define COMPOSITE_SOURCES \
     animInterface.cxx \
+    assetBase.cxx \
+    assetRegistry.cxx \
     autoTextureScale.cxx \
     bamCache.cxx \
     bamCacheIndex.cxx \
@@ -137,6 +141,8 @@
 
   #define INSTALL_HEADERS \
     animInterface.h animInterface.I \
+    assetBase.h assetBase.I \
+    assetRegistry.h assetRegistry.I \
     autoTextureScale.h \
     bam.h \
     bamCache.h bamCache.I \

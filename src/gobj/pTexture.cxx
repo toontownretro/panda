@@ -16,6 +16,9 @@
 #include "string_utils.h"
 #include "pdxElement.h"
 #include "pdxValue.h"
+#include "executionEnvironment.h"
+
+TypeHandle PTexture::_type_handle;
 
 /**
  *
@@ -106,18 +109,21 @@ bool PTexture::
 resolve_filenames(const DSearchPath &search_path) {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
+  DSearchPath path = search_path;
+  path.append_directory(ExecutionEnvironment::get_cwd());
+
   bool all_ok = true;
 
   if (!_image_filename.empty()) {
     _image_fullpath = _image_filename;
-    if (!vfs->resolve_filename(_image_fullpath, search_path)) {
+    if (!vfs->resolve_filename(_image_fullpath, path)) {
       all_ok = false;
     }
   }
 
   if (!_alpha_image_filename.empty()) {
     _alpha_image_fullpath = _alpha_image_filename;
-    if (!vfs->resolve_filename(_alpha_image_fullpath, search_path)) {
+    if (!vfs->resolve_filename(_alpha_image_fullpath, path)) {
       all_ok = false;
     }
   }
@@ -233,4 +239,103 @@ operator << (std::ostream &out, const PTexture &ptex) {
   out << "lod bias " << ptex.get_lod_bias() << "\n";
   out << "num pages " << ptex.get_num_pages() << "\n";
   return out;
+}
+
+/**
+ *
+ */
+void PTexture::
+get_dependencies(vector_string &filenames) {
+  // We depend on the image filename(s).  If they change, the ptex
+  // needs to be rebuilt.
+
+  Texture::TextureType type = get_texture_type();
+  if (type == Texture::TT_1d_texture ||
+      type == Texture::TT_2d_texture) {
+    // Single-faced texture.  We depend on the image file and the alpha file.
+    if (!_image_fullpath.empty()) {
+      filenames.push_back(_image_fullpath.get_fullpath());
+    }
+    if (!_alpha_image_fullpath.empty()) {
+      filenames.push_back(_alpha_image_fullpath.get_fullpath());
+    }
+
+  } else {
+    // A texture with multiple slices.  We depend on all the slice files.
+    Filename pattern = _image_fullpath;
+    pattern.set_pattern(true);
+
+    Filename alpha_pattern = _alpha_image_fullpath;
+    alpha_pattern.set_pattern(true);
+
+    for (int i = 0; i < _num_pages; i++) {
+      Filename page_filename = pattern.get_filename_index(i);
+      if (!page_filename.empty()) {
+        filenames.push_back(page_filename);
+      }
+      page_filename = alpha_pattern.get_filename_index(i);
+      if (!page_filename.empty()) {
+        filenames.push_back(page_filename);
+      }
+    }
+  }
+}
+
+/**
+ *
+ */
+std::string PTexture::
+get_name() {
+  return "texture";
+}
+
+/**
+ *
+ */
+std::string PTexture::
+get_source_extension() {
+  return "ptex";
+}
+
+/**
+ *
+ */
+std::string PTexture::
+get_built_extension() {
+  return "txo";
+}
+
+/**
+ *
+ */
+bool PTexture::
+load(const Filename &filename, const DSearchPath &search_path) {
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  Filename fullpath = filename;
+  if (!vfs->resolve_filename(fullpath, search_path)) {
+    gobj_cat.error()
+      << "Failed to find ptex file " << filename << " on search path "
+      << search_path << "\n";
+    return false;
+  }
+
+  DSearchPath path = search_path;
+  path.append_directory(fullpath.get_dirname());
+
+  PDXValue data;
+  if (!data.read(fullpath, path)) {
+    return false;
+  }
+
+  PDXElement *elem = data.get_element();
+  if (elem == nullptr) {
+    return false;
+  }
+
+  return load(elem, path);
+}
+
+PT(AssetBase) PTexture::
+make_new() const {
+  return new PTexture;
 }

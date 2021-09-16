@@ -21,6 +21,7 @@
 #include "vector_string.h"
 #include "luse.h"
 #include "pdxElement.h"
+#include "assetBase.h"
 
 class PandaNode;
 class Character;
@@ -321,11 +322,17 @@ public:
 /**
  * Main data structure for a .pmdl file loaded from disk.
  */
-class PMDLDataDesc : public ReferenceCount {
+class PMDLDataDesc : public AssetBase {
 public:
   PMDLDataDesc() { _scale.set(1, 1, 1); _pos.set(0, 0, 0); _hpr.set(0, 0, 0); }
 
-  bool load(const Filename &filename, const DSearchPath &search_path = get_model_path());
+  // AssetBase interface.
+  virtual bool load(const Filename &filename, const DSearchPath &search_path = get_model_path()) override;
+  virtual std::string get_name() override;
+  virtual std::string get_source_extension() override;
+  virtual std::string get_built_extension() override;
+  virtual void get_dependencies(vector_string &filenames) override;
+  virtual PT(AssetBase) make_new() const override;
 
   // Filename of the .egg model file.
   Filename _model_filename; //
@@ -351,6 +358,23 @@ public:
 
   Filename _filename;
   Filename _fullpath;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    AssetBase::init_type();
+    register_type(_type_handle, "PMDLDataDesc",
+                  AssetBase::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
 };
 
 /**

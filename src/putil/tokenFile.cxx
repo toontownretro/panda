@@ -60,6 +60,8 @@ read(Filename filename, const DSearchPath &search_path) {
   Filename resolved = filename;
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
   if (!vfs->resolve_filename(resolved, search_path)) {
+    tokenfile_cat.error()
+      << "Failed to resolve " << filename << " on search path " << search_path << "\n";
     return false;
   }
 
