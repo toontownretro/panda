@@ -790,13 +790,25 @@ void ShaderAttrib::
 write_datagram(BamWriter *manager, Datagram &dg) {
   RenderAttrib::write_datagram(manager, dg);
 
-  dg.add_string(_shader_name->get_name());
+  manager->write_pointer(dg, _shader_name);
   dg.add_bool(_auto_shader);
   dg.add_bool(_has_shader);
   dg.add_int32(_shader_priority);
   dg.add_int32(_flags);
   dg.add_int32(_has_flags);
   dg.add_int32(_instance_count);
+}
+
+/**
+ *
+ */
+int ShaderAttrib::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = RenderAttrib::complete_pointers(p_list, manager);
+
+  _shader_name = DCAST(InternalName, p_list[pi++]);
+
+  return pi;
 }
 
 /**
@@ -824,7 +836,7 @@ void ShaderAttrib::
 fillin(DatagramIterator &scan, BamReader *manager) {
   RenderAttrib::fillin(scan, manager);
 
-  _shader_name = InternalName::make(scan.get_string());
+  manager->read_pointer(scan);
   _auto_shader = scan.get_bool();
   _has_shader = scan.get_bool();
   _shader_priority = scan.get_int32();
