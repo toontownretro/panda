@@ -401,7 +401,7 @@ tokenize(std::istream &is) {
  */
 bool TokenFile::
 next_token(bool cross_line) {
-  if (_token->_next == nullptr || _token == nullptr) {
+  if (_token == nullptr || _token->_next == nullptr) {
     // End of all tokens.
     if (!cross_line && _token) {
       tokenfile_cat.error()
@@ -435,7 +435,7 @@ next_token(bool cross_line) {
  */
 bool TokenFile::
 token_available(bool cross_line) const {
-  if (_token->_next == nullptr) {
+  if (_token == nullptr || _token->_next == nullptr) {
     return false;
   }
 
