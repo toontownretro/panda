@@ -32,6 +32,14 @@ PhysSystem() {
 /**
  *
  */
+PhysSystem::
+~PhysSystem() {
+  shutdown();
+}
+
+/**
+ *
+ */
 PhysSystem *PhysSystem::
 ptr() {
   if (_ptr == nullptr) {

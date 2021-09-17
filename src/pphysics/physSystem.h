@@ -30,6 +30,8 @@ private:
   PhysSystem();
 
 PUBLISHED:
+  ~PhysSystem();
+
   static PhysSystem *ptr();
 
   bool initialize();

@@ -34,9 +34,6 @@ PhysRagdoll(const NodePath &character_np) {
   physx::PxPhysics *physics = sys->get_physics();
   _aggregate = physics->createAggregate(_char->get_num_joints(), true);
 
-  _total_mass = 0.0f;
-  _total_volume = 0.0f;
-
   _soft_impact_force = 100;
   _hard_impact_force = 500;
 
@@ -75,18 +72,9 @@ joint_default_net_transform(int joint) {
  */
 void PhysRagdoll::
 add_joint(const std::string &parent, const std::string &child,
-          PhysShape *shape, PN_stdfloat mass_bias, PN_stdfloat rot_damping, PN_stdfloat density,
-          PN_stdfloat damping, PN_stdfloat thickness, PN_stdfloat inertia,
+          PhysShape *shape, PN_stdfloat mass, PN_stdfloat rot_damping,
+          PN_stdfloat damping,
           const LVecBase2 &limit_x, const LVecBase2 &limit_y, const LVecBase2 &limit_z) {
-
-  physx::PxShape *pxshape = shape->get_shape();
-  nassertv(pxshape->getGeometryType() == physx::PxGeometryType::eCONVEXMESH);
-  physx::PxConvexMeshGeometry geom;
-  pxshape->getConvexMeshGeometry(geom);
-  physx::PxReal volume;
-  physx::PxMat33 it;
-  physx::PxVec3 com;
-  geom.convexMesh->getMassInformation(volume, it, com);
 
   PT(Joint) joint = new Joint;
   if (!parent.empty()) {
@@ -96,14 +84,9 @@ add_joint(const std::string &parent, const std::string &child,
   }
   joint->joint = _char->find_joint(child);
 
-  joint->mass = 1.0f;
+  joint->mass = mass;
   joint->damping = damping;
   joint->angular_damping = rot_damping;
-  joint->inertia = inertia;
-  joint->mass_bias = mass_bias;
-  joint->density = density;
-  joint->volume = volume;
-  //joint->surface_area = get_surface_area(geom);
 
   joint->limit_x = limit_x;
   joint->limit_y = limit_y;
@@ -128,40 +111,7 @@ add_joint(const std::string &parent, const std::string &child,
  *
  */
 void PhysRagdoll::
-compute_mass() {
-  if (_total_mass == 0.0) {
-    for (size_t i = 0; i < _all_joints.size(); i++) {
-      Joint *joint = _all_joints[i];
-      //if (joint->thickness > 0) {
-      //  _total_mass += joint->surface_area * joint->thickness * CUBIC_METERS_PER_CUBIC_INCH * joint->density;
-      //} else {
-        _total_mass += joint->volume * joint->density;
-      //}
-    }
-  }
-
-  _total_volume = 0.0;
-  for (size_t i = 0; i < _all_joints.size(); i++) {
-    Joint *joint = _all_joints[i];
-    _total_volume += joint->volume * joint->mass_bias;
-  }
-
-  for (size_t i = 0; i < _all_joints.size(); i++) {
-    Joint *joint = _all_joints[i];
-    joint->mass = ((joint->volume * joint->mass_bias) / _total_volume) * _total_mass;
-    if (joint->mass < 1.0) {
-      joint->mass = 1.0;
-    }
-  }
-}
-
-/**
- *
- */
-void PhysRagdoll::
 create_joints() {
-  compute_mass();
-
   for (size_t i = 0; i < _all_joints.size(); i++) {
     Joint *joint = _all_joints[i];
 
@@ -169,7 +119,6 @@ create_joints() {
 
     joint->actor = new PhysRigidDynamicNode(_char->get_joint_name(joint->joint));
     joint->actor->add_shape(joint->shape);
-    //joint->actor->compute_mass_properties();
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
     joint->actor->set_transform(joint_pose);
@@ -294,6 +243,15 @@ get_joint_actor(const std::string &name) const {
 }
 
 /**
+ * Returns the rigid body node corresponding to the given character joint.
+ */
+PhysRigidDynamicNode *PhysRagdoll::
+get_joint_actor(int n) const {
+  nassertr(n >= 0 && n < (int)_all_joints.size(), nullptr);
+  return _all_joints[n]->actor;
+}
+
+/**
  * Returns the constraint between the given character joint and its parent.
  */
 PhysD6Joint *PhysRagdoll::
@@ -311,8 +269,10 @@ get_joint_constraint(const std::string &name) const {
  */
 void PhysRagdoll::
 clear_joints() {
-  for (size_t i = 0; i < _all_joints.size(); i++) {
-    _aggregate->removeActor(*(_all_joints[i]->actor->get_rigid_actor()));
+  if (_aggregate != nullptr) {
+    for (size_t i = 0; i < _all_joints.size(); i++) {
+      _aggregate->removeActor(*(_all_joints[i]->actor->get_rigid_actor()));
+    }
   }
 
   _joints.clear();
@@ -325,24 +285,20 @@ clear_joints() {
  */
 void PhysRagdoll::
 destroy() {
-  if (_aggregate->getScene() != nullptr) {
-    _aggregate->getScene()->removeAggregate(*_aggregate);
+  if (_aggregate != nullptr) {
+    if (_aggregate->getScene() != nullptr) {
+      _aggregate->getScene()->removeAggregate(*_aggregate);
+    }
   }
 
   clear_joints();
 
-  _aggregate->release();
-  _aggregate = nullptr;
+  if (_aggregate != nullptr) {
+    _aggregate->release();
+    _aggregate = nullptr;
+  }
 
   _enabled = false;
-}
-
-/**
- *
- */
-void PhysRagdoll::
-set_total_mass(PN_stdfloat mass) {
-  _total_mass = mass;
 }
 
 /**
@@ -352,6 +308,36 @@ void PhysRagdoll::
 set_debug(bool flag, PN_stdfloat scale) {
   _debug = flag;
   _debug_scale = scale;
+}
+
+/**
+ * Returns the number of ragdoll joints.
+ */
+int PhysRagdoll::
+get_num_joints() const {
+  return (int)_all_joints.size();
+}
+
+/**
+ * Returns the ragdoll joint with the indicated name, or nullptr if no such
+ * joint exists.
+ */
+PhysRagdoll::Joint *PhysRagdoll::
+get_joint_by_name(const std::string &name) const {
+  auto it = _joints.find(name);
+  if (it != _joints.end()) {
+    return (*it).second;
+  }
+  return nullptr;
+}
+
+/**
+ * Returns the nth ragdoll joint.
+ */
+PhysRagdoll::Joint *PhysRagdoll::
+get_joint(int n) const {
+  nassertr(n >= 0 && n < (int)_all_joints.size(), nullptr);
+  return _all_joints[n];
 }
 
 /**
@@ -377,10 +363,14 @@ update() {
     int parent = _char->get_joint_parent(limb->joint);
     if (parent != -1) {
       net_inverse = _char->get_joint_net_transform(parent);
+    } else {
+      net_inverse = _char->get_root_xform();
     }
     net_inverse.invert_in_place();
-    LMatrix4 joint_trans = char_net->invert_compose(
-      limb->actor->get_transform())->get_mat();
+    CPT(TransformState) limb_actor_transform = limb->actor->get_transform();
+    CPT(TransformState) joint_trans_state = char_net->
+      invert_compose(limb_actor_transform);
+    LMatrix4 joint_trans = joint_trans_state->get_mat();
     _char->set_joint_forced_value(limb->joint, joint_trans * net_inverse);
 
     if (_debug) {
@@ -422,8 +412,23 @@ void PhysRagdoll::LimbContactCallback::
 do_callback(CallbackData *cbdata) {
   PhysContactCallbackData *data = (PhysContactCallbackData *)cbdata;
 
+  if (_ragdoll.was_deleted()) {
+    return;
+  }
+
+  if (_ragdoll->_hard_impact_sounds.empty() && _ragdoll->_soft_impact_sounds.empty()) {
+    return;
+  }
+
+  if (data->get_num_contact_pairs() == 0) {
+    return;
+  }
+
   const PhysContactPair *pair = data->get_contact_pair(0);
   if (!pair->is_contact_type(PhysEnums::CT_found)) {
+    return;
+  }
+  if (pair->get_num_contact_points() == 0) {
     return;
   }
   PhysContactPoint point = pair->get_contact_point(0);
@@ -449,13 +454,13 @@ do_callback(CallbackData *cbdata) {
   float volume = speed * speed * (1.0f / (320.0f * 320.0f));
   volume = std::min(1.0f, volume);
 
-  if (speed >= _ragdoll->_hard_impact_force) {
+  if (speed >= _ragdoll->_hard_impact_force && !_ragdoll->_hard_impact_sounds.empty()) {
     int index = random.random_int(_ragdoll->_hard_impact_sounds.size());
     _ragdoll->_hard_impact_sounds[index]->set_volume(volume);
     _ragdoll->_hard_impact_sounds[index]->set_3d_attributes(
       position[0], position[1], position[2], 0.0, 0.0, 0.0);
     _ragdoll->_hard_impact_sounds[index]->play();
-  } else if (speed >= _ragdoll->_soft_impact_force) {
+  } else if (speed >= _ragdoll->_soft_impact_force && !_ragdoll->_soft_impact_sounds.empty()) {
     int index = random.random_int(_ragdoll->_soft_impact_sounds.size());
     _ragdoll->_soft_impact_sounds[index]->set_volume(volume);
     _ragdoll->_soft_impact_sounds[index]->set_3d_attributes(

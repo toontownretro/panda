@@ -26,6 +26,8 @@
 #include "pmap.h"
 #include "physScene.h"
 #include "audioSound.h"
+#include "modelRoot.h"
+#include "weakPointerTo.h"
 
 #include "physx_includes.h"
 
@@ -43,25 +45,17 @@ PUBLISHED:
     virtual void do_callback(CallbackData *cbdata) override;
 
   private:
-    PhysRagdoll *_ragdoll;
+    WPT(PhysRagdoll) _ragdoll;
   };
 
-  class Joint : public ReferenceCount {
-  public:
+  class EXPCL_PANDA_PPHYSICS Joint : public ReferenceCount {
+  PUBLISHED:
     Joint *parent;
     int joint;
 
-    // Computed automatically:
     PN_stdfloat mass;
-    PN_stdfloat volume;
-    PN_stdfloat surface_area;
-
     PN_stdfloat damping;
     PN_stdfloat angular_damping;
-    PN_stdfloat inertia;
-    PN_stdfloat mass_bias;
-    PN_stdfloat thickness;
-    PN_stdfloat density;
 
     LVecBase2 limit_x;
     LVecBase2 limit_y;
@@ -78,17 +72,20 @@ PUBLISHED:
   ~PhysRagdoll();
 
   void add_joint(const std::string &parent, const std::string &child,
-                 PhysShape *shape, PN_stdfloat mass_bias, PN_stdfloat rot_damping, PN_stdfloat density,
-                 PN_stdfloat damping, PN_stdfloat thickness, PN_stdfloat inertia,
+                 PhysShape *shape, PN_stdfloat mass, PN_stdfloat rot_damping,
+                 PN_stdfloat damping,
                  const LVecBase2 &limit_x, const LVecBase2 &limit_y, const LVecBase2 &limit_z);
-
-  void compute_mass();
 
   void start_ragdoll(PhysScene *scene, NodePath render);
   void stop_ragdoll();
 
   PhysRigidDynamicNode *get_joint_actor(const std::string &name) const;
+  PhysRigidDynamicNode *get_joint_actor(int n) const;
   PhysD6Joint *get_joint_constraint(const std::string &name) const;
+
+  Joint *get_joint_by_name(const std::string &name) const;
+  Joint *get_joint(int n) const;
+  int get_num_joints() const;
 
   void update();
 
@@ -97,7 +94,6 @@ PUBLISHED:
 
   void destroy();
 
-  void set_total_mass(PN_stdfloat mass);
   void set_debug(bool flag, PN_stdfloat scale = 1.0f);
 
   void set_impact_forces(PN_stdfloat soft, PN_stdfloat hard);
@@ -121,11 +117,6 @@ private:
   PN_stdfloat _soft_impact_force;
 
   physx::PxAggregate *_aggregate;
-
-  // Mass of ragdoll.  The code will distribute this mass to each part based
-  // on the collision model's volume.
-  PN_stdfloat _total_mass;
-  PN_stdfloat _total_volume;
 
   bool _enabled;
 
