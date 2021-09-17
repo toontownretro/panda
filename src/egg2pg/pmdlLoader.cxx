@@ -42,6 +42,9 @@
 #include "geomVertexReader.h"
 #include "internalName.h"
 #include "executionEnvironment.h"
+#include "geomVertexReader.h"
+#include "transformTable.h"
+#include "jointVertexTransform.h"
 
 #ifdef HAVE_PHYSX
 #include "physConvexMeshData.h"
@@ -602,6 +605,49 @@ load(const Filename &filename, const DSearchPath &search_path) {
     if (pme->has_attribute("damping")) {
       _phy._damping = pme->get_attribute_value("damping").get_float();
     }
+    if (pme->has_attribute("density")) {
+      _phy._density = pme->get_attribute_value("density").get_float();
+    }
+
+    if (pme->has_attribute("joints")) {
+      // Defines a jointed collision model.  The physics mesh is expected to
+      // be associated with joints on the character model, each "piece"
+      // hard-skinned to one joint.
+      PDXList *joints_list = pme->get_attribute_value("joints").get_list();
+      nassertr(joints_list != nullptr, false);
+
+      for (size_t i = 0; i < joints_list->size(); i++) {
+        PDXElement *jointe = joints_list->get(i).get_element();
+        nassertr(jointe != nullptr, false);
+        PMDLPhysicsJoint joint;
+        if (jointe->has_attribute("name")) {
+          joint._joint_name = jointe->get_attribute_value("name").get_string();
+        }
+        if (jointe->has_attribute("mass_bias")) {
+          joint._mass_bias = jointe->get_attribute_value("mass_bias").get_float();
+        }
+        if (jointe->has_attribute("rot_damping")) {
+          joint._rot_damping = jointe->get_attribute_value("rot_damping").get_float();
+        }
+        if (jointe->has_attribute("limit_x")) {
+          jointe->get_attribute_value("limit_x").to_vec2(joint._limit_x);
+        }
+        if (jointe->has_attribute("limit_y")) {
+          jointe->get_attribute_value("limit_y").to_vec2(joint._limit_y);
+        }
+        if (jointe->has_attribute("limit_z")) {
+          jointe->get_attribute_value("limit_z").to_vec2(joint._limit_z);
+        }
+        if (jointe->has_attribute("collide")) {
+          // Explicit collide-with list.
+          PDXList *collide = jointe->get_attribute_value("collide").get_list();
+          for (size_t j = 0; j < collide->size(); j++) {
+            joint._collide_with.push_back(collide->get(j).get_string());
+          }
+        }
+        _phy._joints.push_back(joint);
+      }
+    }
   }
 
   if (data->has_attribute("pos")) {
@@ -1043,56 +1089,217 @@ build_graph() {
     // Turn all the primitives into triangles.
     phy_mesh_node->decompose();
 
-    PN_stdfloat mass = _data->_phy._mass_override;
+    if (_data->_phy._joints.empty()) {
+      // Non-jointed, single-part collision model.
 
-    // Fill the convex mesh.
-    PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
-    for (size_t i = 0; i < phy_mesh_node->get_num_geoms(); i++) {
-      const Geom *geom = phy_mesh_node->get_geom(i);
-      const GeomVertexData *vdata = geom->get_vertex_data();
-      GeomVertexReader reader(vdata, InternalName::get_vertex());
-      for (size_t j = 0; j < geom->get_num_primitives(); j++) {
-        const GeomPrimitive *prim = geom->get_primitive(j);
-        for (size_t k = 0; k < prim->get_num_primitives(); k++) {
-          size_t start = prim->get_primitive_start(k);
-          size_t end = prim->get_primitive_end(k);
-          for (size_t l = start; l < end; l++) {
-            reader.set_row(prim->get_vertex(l));
-            mesh_data->add_point(reader.get_data3f());
+      PN_stdfloat mass = _data->_phy._mass_override;
+
+      // Fill the convex mesh.
+      PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
+      for (size_t i = 0; i < phy_mesh_node->get_num_geoms(); i++) {
+        const Geom *geom = phy_mesh_node->get_geom(i);
+        const GeomVertexData *vdata = geom->get_vertex_data();
+        GeomVertexReader reader(vdata, InternalName::get_vertex());
+        for (size_t j = 0; j < geom->get_num_primitives(); j++) {
+          const GeomPrimitive *prim = geom->get_primitive(j);
+          for (size_t k = 0; k < prim->get_num_primitives(); k++) {
+            size_t start = prim->get_primitive_start(k);
+            size_t end = prim->get_primitive_end(k);
+            for (size_t l = start; l < end; l++) {
+              reader.set_row(prim->get_vertex(l));
+              mesh_data->add_point(reader.get_data3f());
+            }
           }
         }
       }
-    }
-    if (!mesh_data->cook_mesh()) {
-      egg2pg_cat.error()
-        << "Failed to build convex mesh from physics geometry\n";
-    } else if (!mesh_data->generate_mesh()) {
-      egg2pg_cat.error()
-        << "Failed to generate convex mesh\n";
-    } else {
-      if (_data->_phy._auto_mass) {
-        mesh_data->get_mass_information(&mass, nullptr, nullptr);
+      if (!mesh_data->cook_mesh()) {
+        egg2pg_cat.error()
+          << "Failed to build convex mesh from physics geometry\n";
+      } else if (!mesh_data->generate_mesh()) {
+        egg2pg_cat.error()
+          << "Failed to generate convex mesh\n";
+      } else {
+        if (_data->_phy._auto_mass) {
+          mesh_data->get_mass_information(&mass, nullptr, nullptr);
+        }
       }
+
+      PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
+      ModelRoot::CollisionPart part;
+      part.parent = -1;
+      part.mass = mass;
+      part.damping = _data->_phy._damping;
+      part.rot_damping = std::max(0.0f, _data->_phy._rot_damping);
+      part.mesh_data = mesh_data->get_mesh_data();
+      cinfo->add_part(part);
+      mdl_root->set_collision_info(cinfo);
+
+    } else {
+      // A multi-part jointed collision model.
+
+      // Construct a convex mesh for each part of the collision model.
+      // For each listed joint, find all the vertices inside the physics
+      // mesh that are associated with the joint.
+
+      PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
+
+      for (size_t i = 0; i < _data->_phy._joints.size(); i++) {
+        const PMDLPhysicsJoint &pjoint = _data->_phy._joints[i];
+
+        int char_joint = _part_bundle->find_joint(pjoint._joint_name);
+        if (char_joint == -1) {
+          egg2pg_cat.error()
+            << "Collision model joint " << pjoint._joint_name << " does not exist in the Character!\n";
+          continue;
+        }
+
+        // Now collect all the vertices in the physics mesh that are associated
+        // with the corresponding character joint.
+        PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
+
+        for (size_t j = 0; j < phy_mesh_node->get_num_geoms(); j++) {
+          const Geom *geom = phy_mesh_node->get_geom(j);
+          const GeomVertexData *vdata = geom->get_vertex_data();
+          const TransformTable *table = vdata->get_transform_table();
+          nassertv(table != nullptr);
+          GeomVertexReader vreader(vdata, InternalName::get_vertex());
+          GeomVertexReader ireader(vdata, InternalName::get_transform_index());
+          for (size_t k = 0; k < geom->get_num_primitives(); k++) {
+            const GeomPrimitive *prim = geom->get_primitive(k);
+            for (size_t l = 0; l < prim->get_num_primitives(); l++) {
+              size_t start = prim->get_primitive_start(l);
+              size_t end = prim->get_primitive_end(l);
+              for (size_t m = start; m < end; m++) {
+                size_t vertex = prim->get_vertex(m);
+                vreader.set_row(vertex);
+                ireader.set_row(vertex);
+                int transform_index = ireader.get_data4i()[0];
+                const JointVertexTransform *jvt = (JointVertexTransform *)table->get_transform(transform_index);
+                nassertv(jvt != nullptr);
+                if (jvt->get_joint() == char_joint) {
+                  // Vertex is associated with this joint, add it to the convex mesh.
+                  LPoint3 point = vreader.get_data3f();
+                  // Move the vertex to be relative to the joint.
+                  point = _part_bundle->get_joint_initial_net_transform_inverse(char_joint).xform_point(point);
+                  mesh_data->add_point(point);
+                }
+              }
+            }
+          }
+        }
+
+        // We've now built up a list of vertices that are all associated with
+        // the corresponding character joint.  Bake the convex mesh.
+        if (!mesh_data->cook_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to build convex mesh from physics geometry for joint " << pjoint._joint_name << "\n";
+          return;
+        } else if (!mesh_data->generate_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to generate convex mesh for joint " << pjoint._joint_name << "\n";
+          return;
+        }
+
+        PN_stdfloat part_volume;
+        mesh_data->get_mass_information(&part_volume, nullptr, nullptr);
+
+        ModelRoot::CollisionPart part;
+        part.name = pjoint._joint_name;
+        part.limit_x = pjoint._limit_x;
+        part.limit_y = pjoint._limit_y;
+        part.limit_z = pjoint._limit_z;
+        part.mass = part_volume;
+        part.damping = _data->_phy._damping;
+        if (pjoint._rot_damping < 0.0f) {
+          part.rot_damping = _data->_phy._rot_damping;
+        } else {
+          part.rot_damping = pjoint._rot_damping;
+        }
+        part.mesh_data = mesh_data->get_mesh_data();
+
+        bool got_parent = false;
+        int curr_char_joint = char_joint;
+        do {
+          int consider_parent = _part_bundle->get_joint_parent(curr_char_joint);
+          if (consider_parent == -1) {
+            // Hit top of hierarchy, no parent.
+            part.parent = -1;
+            got_parent = true;
+            break;
+          }
+          std::string parent_name = _part_bundle->get_joint_name(consider_parent);
+          // Find the part that is associated with this character joint.  If
+          // none, continue searching up.
+          for (size_t j = 0; j < _data->_phy._joints.size(); j++) {
+            const PMDLPhysicsJoint &ppjoint = _data->_phy._joints[j];
+            if (ppjoint._joint_name == parent_name) {
+              // There is a collision part associated with our considered
+              // parent joint!
+              part.parent = (int)j;
+              got_parent = true;
+              break;
+            }
+          }
+          // This is not a valid parent, try the next character joint one level
+          // higher in the hierarchy.
+          curr_char_joint = consider_parent;
+
+        } while (!got_parent);
+
+        // Build explicit collide list.
+        for (const std::string &collide_name : pjoint._collide_with) {
+          for (size_t j = 0; j < _data->_phy._joints.size(); j++) {
+            if (_data->_phy._joints[j]._joint_name == collide_name) {
+              part.collide_with.push_back((int)j);
+            }
+          }
+        }
+
+        cinfo->add_part(part);
+      }
+
+      PN_stdfloat total_mass = _data->_phy._mass_override;
+      if (_data->_phy._auto_mass) {
+        total_mass = 0.0f;
+        for (size_t i = 0; i < _data->_phy._joints.size(); i++) {
+          const ModelRoot::CollisionPart *part = cinfo->get_part(i);
+          total_mass += part->mass * _data->_phy._density;
+        }
+      }
+
+      PN_stdfloat total_volume = 0.0f;
+      for (size_t i = 0; i < _data->_phy._joints.size(); i++) {
+        const ModelRoot::CollisionPart *part = cinfo->get_part(i);
+        const PMDLPhysicsJoint &pjoint = _data->_phy._joints[i];
+        total_volume += part->mass * pjoint._mass_bias;
+      }
+
+      // Distribute total mass to parts.
+      for (size_t i = 0; i < _data->_phy._joints.size(); i++) {
+        const PMDLPhysicsJoint &pjoint = _data->_phy._joints[i];
+        ModelRoot::CollisionPart *part = cinfo->modify_part(i);
+        part->mass = ((part->mass * pjoint._mass_bias) / total_volume) * total_mass;
+        if (part->mass < 1.0f) {
+          part->mass = 1.0f;
+        }
+      }
+
+      cinfo->total_mass = total_mass;
+
+      mdl_root->set_collision_info(cinfo);
     }
 
     // Now remove the GeomNode that contained the physics geometry.
     phy_mesh_np.remove_node();
-
-    PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
-    cinfo->set_mass(mass);
-    cinfo->set_damping(_data->_phy._damping);
-    cinfo->set_rot_damping(_data->_phy._rot_damping);
-    cinfo->set_mesh_data(mesh_data->get_mesh_data());
-    mdl_root->set_collision_info(cinfo);
   }
-#endif
+#endif // HAVE_PHYSX
 
   mdl_root->set_custom_data(_data->_custom_data);
   mdl_root->set_final(true);
 
   // Lightly flatten any extra transforms or attributes we applied to the
   // leaves.
-  //root_np.flatten_light();
+  root_np.flatten_light();
 }
 
 /**

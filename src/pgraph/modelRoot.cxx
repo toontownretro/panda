@@ -14,6 +14,7 @@
 #include "modelRoot.h"
 #include "nodePath.h"
 #include "ioPtaDatagramChar.h"
+#include "ioPtaDatagramInt.h"
 
 TypeHandle ModelRoot::_type_handle;
 
@@ -87,10 +88,24 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     // stuffing it in the ModelRoot.
     if (_collision_info != nullptr) {
       dg.add_bool(true);
-      dg.add_stdfloat(_collision_info->get_mass());
-      dg.add_stdfloat(_collision_info->get_damping());
-      dg.add_stdfloat(_collision_info->get_rot_damping());
-      WRITE_PTA(manager, dg, IPD_uchar::write_datagram, _collision_info->get_mesh_data());
+      dg.add_uint8(_collision_info->get_num_parts());
+      for (int i = 0; i < _collision_info->get_num_parts(); i++) {
+        const CollisionPart *part = _collision_info->get_part(i);
+        dg.add_int8(part->parent);
+        if (part->parent >= 0) {
+          part->limit_x.write_datagram(dg);
+          part->limit_y.write_datagram(dg);
+          part->limit_z.write_datagram(dg);
+          WRITE_PTA(manager, dg, IPD_int::write_datagram, part->collide_with);
+        }
+        dg.add_string(part->name);
+        dg.add_stdfloat(part->mass);
+        dg.add_stdfloat(part->damping);
+        dg.add_stdfloat(part->rot_damping);
+        WRITE_PTA(manager, dg, IPD_uchar::write_datagram, part->mesh_data);
+      }
+      dg.add_uint8(_collision_info->root_part);
+      dg.add_stdfloat(_collision_info->total_mass);
     } else {
       dg.add_bool(false);
     }
@@ -161,12 +176,27 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     bool has_collision_info = scan.get_bool();
     if (has_collision_info) {
       _collision_info = new CollisionInfo;
-      _collision_info->set_mass(scan.get_stdfloat());
-      _collision_info->set_damping(scan.get_stdfloat());
-      _collision_info->set_rot_damping(scan.get_stdfloat());
-      PTA_uchar mesh_data;
-      READ_PTA(manager, scan, IPD_uchar::read_datagram, mesh_data);
-      _collision_info->set_mesh_data(mesh_data);
+      size_t num_parts = scan.get_uint8();
+      for (size_t i = 0; i < num_parts; i++) {
+        CollisionPart part;
+        part.parent = scan.get_int8();
+        if (part.parent >= 0) {
+          part.limit_x.read_datagram(scan);
+          part.limit_y.read_datagram(scan);
+          part.limit_z.read_datagram(scan);
+          READ_PTA(manager, scan, IPD_int::read_datagram, part.collide_with);
+        }
+        part.name = scan.get_string();
+        part.mass = scan.get_stdfloat();
+        part.damping = scan.get_stdfloat();
+        part.rot_damping = scan.get_stdfloat();
+        PTA_uchar mesh_data;
+        READ_PTA(manager, scan, IPD_uchar::read_datagram, mesh_data);
+        part.mesh_data = mesh_data;
+        _collision_info->add_part(part);
+      }
+      _collision_info->root_part = scan.get_uint8();
+      _collision_info->total_mass = scan.get_stdfloat();
     }
   }
 }

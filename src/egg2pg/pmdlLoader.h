@@ -290,8 +290,9 @@ public:
 class PMDLPhysicsJoint {
 public:
   std::string _joint_name = "";
-  float _mass_bias;
-  float _rot_damping;
+  vector_string _collide_with;
+  float _mass_bias = 1;
+  float _rot_damping = -1;
   LVecBase2 _limit_x;
   LVecBase2 _limit_y;
   LVecBase2 _limit_z;

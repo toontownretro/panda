@@ -240,9 +240,8 @@ ModelReference() {
  */
 INLINE ModelRoot::CollisionInfo::
 CollisionInfo() :
-  _mass(100.0f),
-  _damping(0.0f),
-  _rot_damping(0.0f)
+  root_part(0),
+  total_mass(0.0f)
 {
 }
 
@@ -250,62 +249,32 @@ CollisionInfo() :
  *
  */
 INLINE void ModelRoot::CollisionInfo::
-set_mass(PN_stdfloat mass) {
-  _mass = mass;
+add_part(const CollisionPart &part) {
+  _parts.push_back(part);
 }
 
 /**
  *
  */
-INLINE PN_stdfloat ModelRoot::CollisionInfo::
-get_mass() const {
-  return _mass;
+INLINE int ModelRoot::CollisionInfo::
+get_num_parts() const {
+  return (int)_parts.size();
 }
 
 /**
  *
  */
-INLINE void ModelRoot::CollisionInfo::
-set_damping(PN_stdfloat damping) {
-  _damping = damping;
+INLINE const ModelRoot::CollisionPart *ModelRoot::CollisionInfo::
+get_part(int n) const {
+  nassertr(n >= 0 && n < (int)_parts.size(), nullptr);
+  return &_parts[n];
 }
 
 /**
  *
  */
-INLINE PN_stdfloat ModelRoot::CollisionInfo::
-get_damping() const {
-  return _damping;
-}
-
-/**
- *
- */
-INLINE void ModelRoot::CollisionInfo::
-set_rot_damping(PN_stdfloat damping) {
-  _rot_damping = damping;
-}
-
-/**
- *
- */
-INLINE PN_stdfloat ModelRoot::CollisionInfo::
-get_rot_damping() const {
-  return _rot_damping;
-}
-
-/**
- *
- */
-INLINE void ModelRoot::CollisionInfo::
-set_mesh_data(CPTA_uchar data) {
-  _mesh_data = data;
-}
-
-/**
- *
- */
-INLINE CPTA_uchar ModelRoot::CollisionInfo::
-get_mesh_data() const {
-  return _mesh_data;
+INLINE ModelRoot::CollisionPart *ModelRoot::CollisionInfo::
+modify_part(int n) {
+  nassertr(n >= 0 && n < (int)_parts.size(), nullptr);
+  return &_parts[n];
 }
