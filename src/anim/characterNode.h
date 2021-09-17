@@ -47,6 +47,7 @@ public:
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
   virtual bool safe_to_flatten() const override;
   virtual bool safe_to_combine() const override;
+  virtual void xform(const LMatrix4 &mat) override;
   virtual CPT(TransformState)
     calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
                       bool &found_any,

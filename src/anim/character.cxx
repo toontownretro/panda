@@ -64,6 +64,24 @@ Character(const std::string &name) :
 }
 
 /**
+ * Transforms all the joints of the character by the indicated transform
+ * matrix.
+ */
+void Character::
+xform(const LMatrix4 &mat) {
+  {
+    CDWriter cdata(_cycler);
+    cdata->_root_xform = cdata->_root_xform * mat;
+  }
+
+  LMatrix4 inv = invert(mat);
+
+  for (CharacterJointPoseData &joint : _joint_poses) {
+    joint._initial_net_transform_inverse = inv * joint._initial_net_transform_inverse;
+  }
+}
+
+/**
  * Creates a new CharacterJoint with the indicated name and parent
  * joint, and returns the index of the new joint.
  */

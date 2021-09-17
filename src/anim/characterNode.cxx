@@ -132,6 +132,16 @@ safe_to_combine() const {
 /**
  *
  */
+void CharacterNode::
+xform(const LMatrix4 &mat) {
+  if (_char != nullptr) {
+    _char->xform(mat);
+  }
+}
+
+/**
+ *
+ */
 PandaNode *CharacterNode::
 make_copy() const {
   return new CharacterNode(*this);

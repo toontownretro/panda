@@ -63,7 +63,7 @@ PUBLISHED:
   INLINE bool get_frame_blend_flag() const;
 
   INLINE void set_root_xform(const LMatrix4 &root_xform);
-  //INLINE void xform(const LMatrix4 &mat);
+  void xform(const LMatrix4 &mat);
   INLINE const LMatrix4 &get_root_xform() const;
 
   INLINE int get_num_nodes() const;
