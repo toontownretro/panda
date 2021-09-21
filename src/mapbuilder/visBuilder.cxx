@@ -685,7 +685,7 @@ voxelize_world_polygon(int i) {
       // Check if the triangle overlaps with the volume of this voxel.  If
       // it does, the voxel is solid.  Also ignore the voxel in front of the
       // winding plane when it borders two voxels on both sides.
-      if (plane.dist_to_plane(voxel_mid) < voxel_half[0] &&
+      if (/*plane.dist_to_plane(voxel_mid) < voxel_half[0] &&*/
           tri_box_overlap(voxel_mid, voxel_half, verts)) {
         if (tri_box_check_edge(voxel_mid, voxel_half, verts)) {
           // Mark voxel as solid.
