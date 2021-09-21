@@ -13,3 +13,4 @@
 
 #include "winding.h"
 
+template class BaseWinding<MAX_WINDING_POINTS>;
