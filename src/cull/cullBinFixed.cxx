@@ -60,7 +60,7 @@ auto compare_objects_fixed = [](const CullableObject &a, const CullableObject &b
 void CullBinFixed::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-  std::sort(_objects.begin(), _objects.end(), compare_objects_fixed);
+  std::stable_sort(_objects.begin(), _objects.end(), compare_objects_fixed);
 }
 
 /**
