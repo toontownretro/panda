@@ -137,42 +137,16 @@ build() {
       geom_node->get_name(), GeomVertexFormat::get_v3n3t2(),
       GeomEnums::UH_static);
 
+    PT(PhysTriangleMeshData) phys_mesh_data = new PhysTriangleMeshData;
+    int phys_polygons = 0;
+
     // The world mesh is assigned to mesh groups on a per-polygon basis.
     for (MapPoly *poly : group.world_polys) {
       add_poly_to_geom_node(poly, vdata, geom_node);
-    }
 
-    // These are non-world meshes, like func_details.  They are treated as
-    // single units.
-    for (MapMesh *mesh : group.meshes) {
-      for (MapPoly *poly : mesh->_polys) {
-        add_poly_to_geom_node(poly, vdata, geom_node);
-      }
-    }
+      Material *mat = poly->_material;
+      Winding *w = &poly->_winding;
 
-    // Try to combine all the polygon Geoms into as few Geoms as possible.
-    geom_node->unify(UINT16_MAX, false);
-
-    // The node we parent the mesh group to will decide which mesh group(s) to
-    // render based on the current view cluster.
-    _out_node->add_child(geom_node);
-
-    mesh_group_index++;
-  }
-
-#if 0
-  for (size_t i = 0; i < _meshes.size(); i++) {
-    MapMesh *mesh = _meshes[i];
-
-    PT(PhysTriangleMeshData) phys_mesh_data = new PhysTriangleMeshData;
-
-    PT(GeomNode) gn = new GeomNode("map-mesh-node");
-    PT(GeomVertexData) vdata = new GeomVertexData("map-mesh", GeomVertexFormat::get_v3n3t2(),
-                                                  GeomEnums::UH_static);
-
-    int vertex = 0;
-    int phys_polygons = 0;
-#if 0
       bool add_phys = (mat != nullptr) ?
         (!mat->has_tag("compile_trigger") && !mat->has_tag("compile_nodraw")) : true;
 
@@ -188,20 +162,40 @@ build() {
         phys_mesh_data->add_polygon(phys_verts);
         phys_polygons++;
       }
-
-
     }
-#endif
 
-    NodePath gnnp(gn);
-    gnnp.reparent_to(NodePath(_out_node));
-    gnnp.flatten_strong();
+    // These are non-world meshes, like func_details.  They are treated as
+    // single units.
+    for (MapMesh *mesh : group.meshes) {
+      for (MapPoly *poly : mesh->_polys) {
+        add_poly_to_geom_node(poly, vdata, geom_node);
+
+        Material *mat = poly->_material;
+        Winding *w = &poly->_winding;
+
+        bool add_phys = (mat != nullptr) ?
+          (!mat->has_tag("compile_trigger") && !mat->has_tag("compile_nodraw")) : true;
+
+        if (add_phys) {
+          // Add the polygon to the physics triangle mesh.
+          // Need to reverse them.
+          pvector<LPoint3> phys_verts;
+          phys_verts.resize(w->get_num_points());
+          for (int k = 0; k < w->get_num_points(); k++) {
+            phys_verts[k] = w->get_point(k);
+          }
+          std::reverse(phys_verts.begin(), phys_verts.end());
+          phys_mesh_data->add_polygon(phys_verts);
+          phys_polygons++;
+        }
+      }
+    }
 
     if (phys_polygons > 0) {
       // Cook the physics mesh.
       if (!phys_mesh_data->cook_mesh()) {
         mapbuilder_cat.error()
-          << "Failed to cook physics mesh for mesh " << i << "\n";
+          << "Failed to cook physics mesh for mesh group " << mesh_group_index << "\n";
         _out_data->add_model_phys_data(CPTA_uchar());
       } else {
         _out_data->add_model_phys_data(phys_mesh_data->get_mesh_data());
@@ -210,8 +204,15 @@ build() {
       _out_data->add_model_phys_data(CPTA_uchar());
     }
 
+    // Try to combine all the polygon Geoms into as few Geoms as possible.
+    geom_node->unify(UINT16_MAX, false);
+
+    // The node we parent the mesh group to will decide which mesh group(s) to
+    // render based on the current view cluster.
+    _out_node->add_child(geom_node);
+
+    mesh_group_index++;
   }
-#endif
 
   if (_options.get_vis_show_solid_voxels()) {
     LineSegs lines("debug-solid-voxels");

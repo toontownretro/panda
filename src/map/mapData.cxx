@@ -14,6 +14,7 @@
 #include "mapData.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "ioPtaDatagramChar.h"
 
 IMPLEMENT_CLASS(MapData);
 
@@ -37,8 +38,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
 
   me.add_uint16(_model_phys_data.size());
   for (size_t i = 0; i < _model_phys_data.size(); i++) {
-    me.add_uint32(_model_phys_data[i].size());
-    me.append_data(_model_phys_data[i].v());
+    WRITE_PTA(manager, me, IPD_uchar::write_datagram, _model_phys_data[i]);
   }
 
   _cluster_tree.write_datagram(me);
@@ -72,8 +72,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   size_t num_phys_datas = scan.get_uint16();
   _model_phys_data.resize(num_phys_datas);
   for (size_t i = 0; i < num_phys_datas; i++) {
-    size_t count = scan.get_uint32();
-    PTA_uchar data = PTA_uchar(scan.extract_bytes(count));
+    PTA_uchar data;
+    READ_PTA(manager, scan, IPD_uchar::read_datagram, data);
     _model_phys_data[i] = data;
   }
 
