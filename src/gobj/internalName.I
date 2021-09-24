@@ -17,7 +17,7 @@
  * first time the particular name has been requested; if the name is already
  * in use, it will return the existing pointer.
  *
- * If the string contains the '.' character, the string will be divided at the
+ * If the string contains the '_' character, the string will be divided at the
  * dots and the so-defined hierarchy of names will be registered.  This is
  * handled transparently.
  */

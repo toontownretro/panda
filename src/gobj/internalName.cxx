@@ -107,7 +107,7 @@ unref() const {
 /**
  * Constructs a new InternalName based on this name, with the indicated string
  * following it.  This is a cheaper way to construct a hierarchical name than
- * InternalName::make(parent->get_name() + ".basename").
+ * InternalName::make(parent->get_name() + "_basename").
  */
 PT(InternalName) InternalName::
 append(const string &name) {
@@ -117,9 +117,9 @@ append(const string &name) {
     return this;
   }
 
-  size_t dot = name.rfind('.');
-  if (dot != string::npos) {
-    return append(name.substr(0, dot))->append(name.substr(dot + 1));
+  size_t under = name.rfind('_');
+  if (under != string::npos) {
+    return append(name.substr(0, under))->append(name.substr(under + 1));
   }
 
   //LightMutexHolder holder(_name_table_lock);
@@ -147,12 +147,12 @@ get_name() const {
     return string();
 
   } else {
-    return _parent->get_name() + "." + _basename;
+    return _parent->get_name() + "_" + _basename;
   }
 }
 
 /**
- * Like get_name, but uses a custom separator instead of ".".
+ * Like get_name, but uses a custom separator instead of "_".
  */
 string InternalName::
 join(const string &sep) const {
@@ -228,8 +228,8 @@ get_top() const {
 
 /**
  * Returns the basename of this name prefixed by the indicated number of
- * ancestors.  0 is this name's basename, 1 is parent.basename, 2 is
- * grandparent.parent.basename, and so on.
+ * ancestors.  0 is this name's basename, 1 is parent_basename, 2 is
+ * grandparent_parent_basename, and so on.
  */
 string InternalName::
 get_net_basename(int n) const {
@@ -240,7 +240,7 @@ get_net_basename(int n) const {
     return _basename;
 
   } else if (_parent != nullptr && _parent != get_root()) {
-    return _parent->get_net_basename(n - 1) + "." + _basename;
+    return _parent->get_net_basename(n - 1) + "_" + _basename;
 
   } else {
     return _basename;
@@ -260,7 +260,7 @@ output(std::ostream &out) const {
 
   } else {
     _parent->output(out);
-    out << '.' << _basename;
+    out << '_' << _basename;
   }
 }
 
