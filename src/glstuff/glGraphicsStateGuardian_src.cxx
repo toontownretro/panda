@@ -7654,8 +7654,13 @@ framebuffer_copy_to_ram(Texture *tex, int view, int z,
   // TODO: should be extended to support 3D textures, 2D arrays and cube map
   // arrays.
   if (z >= 0) {
-    texture_type = Texture::TT_cube_map;
-    z_size = 6;
+    if (tex->get_texture_type() == Texture::TT_2d_texture_array) {
+      texture_type = Texture::TT_2d_texture_array;
+      z_size = tex->get_z_size();
+    } else {
+      texture_type = Texture::TT_cube_map;
+      z_size = 6;
+    }
   } else {
     texture_type = Texture::TT_2d_texture;
     z_size = 1;
