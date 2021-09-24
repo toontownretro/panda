@@ -10,7 +10,21 @@
  */
 
 #include "imagePacker.h"
-#include "mathutil_misc.h"
+
+/**
+ *
+ */
+int
+ceil_pow_2(int in) {
+	int retval;
+
+	retval = 1;
+	while( retval < in ) {
+		retval <<= 1;
+  }
+
+	return retval;
+}
 
 float ImagePacker::
 get_efficiency() {
@@ -63,8 +77,8 @@ get_max_y_index(int first_x, int width) {
 
 #define ADD_ONE_TEXEL_BORDER
 
-bool ImagePacker::
-add_block(int width, int height, int *return_x, int *return_y) {
+LVecBase2i ImagePacker::
+add_block(int width, int height) {
 #ifdef ADD_ONE_TEXEL_BORDER
   width += _border * 2;
   height += _border * 2;
@@ -75,7 +89,7 @@ add_block(int width, int height, int *return_x, int *return_y) {
   // If we've already determined that a block this big couldn't fit
   // then blow off checking again...
   if ((width >= _max_block_width) && (height >= _max_block_height)) {
-    return false;
+    return LVecBase2i(-1);
   }
 
   int best_x = -1;
@@ -111,30 +125,29 @@ add_block(int width, int height, int *return_x, int *return_y) {
       _max_block_height = height;
     }
 
-    return false;
+    return LVecBase2i(-1);
   }
 
   // Set the return positions for the block.
-  *return_x = best_x;
-  *return_y = outer_min_y + 1;
+  LVecBase2i offset(best_x, outer_min_y + 1);
 
   // Check if it actually fits height-wise.
-  if (*return_y + height >= _max_height - 1) {
+  if (offset[1] + height >= _max_height - 1) {
     if ((width <= _max_block_width) && (height <= _max_block_height)) {
       _max_block_width = width;
       _max_block_height = height;
     }
 
-    return false;
+    return LVecBase2i(-1);
   }
 
   // It fit!
   // Keep up with the smallest possible size for the image so far.
-  if (*return_y + height > _minimum_height) {
-    _minimum_height = *return_y + height;
+  if (offset[1] + height > _minimum_height) {
+    _minimum_height = offset[1] + height;
   }
-  if (*return_x + width > _minimum_width) {
-    _minimum_width = *return_x + width;
+  if (offset[0] + width > _minimum_width) {
+    _minimum_width = offset[0] + width;
   }
 
   // Update the wavefront info.
@@ -146,15 +159,17 @@ add_block(int width, int height, int *return_x, int *return_y) {
   _area_used += width * height;
 
 #ifdef ADD_ONE_TEXEL_BORDER
-  (*return_x) += _border;
-  (*return_y) += _border;
+  offset[0] += _border;
+  offset[1] += _border;
 #endif
 
-  return true;
+  return offset;
 }
 
-void ImagePacker::
-get_minimum_dimensions(int *return_width, int *return_height) {
-  *return_width = ceil_pow_2(_minimum_width);
-  *return_height = ceil_pow_2(_minimum_height);
+LVecBase2i ImagePacker::
+get_minimum_dimensions() {
+  return LVecBase2i(
+    ceil_pow_2(_minimum_width),
+    ceil_pow_2(_minimum_height)
+  );
 }

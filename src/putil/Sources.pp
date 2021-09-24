@@ -49,6 +49,7 @@
     firstOfPairLess.I firstOfPairLess.h \
     gamepadButton.h \
     globalPointerRegistry.I globalPointerRegistry.h \
+    imagePacker.h \
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \
@@ -113,6 +114,7 @@
     factoryParam.cxx factoryParams.cxx \
     gamepadButton.cxx \
     globalPointerRegistry.cxx \
+    imagePacker.cxx \
     ioPtaDatagramChar.cxx \
     ioPtaDatagramFloat.cxx \
     ioPtaDatagramInt.cxx ioPtaDatagramShort.cxx \
@@ -178,6 +180,7 @@
     firstOfPairLess.I firstOfPairLess.h \
     gamepadButton.h \
     globalPointerRegistry.I globalPointerRegistry.h \
+    imagePacker.h \
     indirectCompareNames.I indirectCompareNames.h \
     indirectCompareSort.I indirectCompareSort.h \
     indirectCompareTo.I indirectCompareTo.h \

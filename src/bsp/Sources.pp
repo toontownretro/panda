@@ -15,7 +15,6 @@
     bspLumps.h bspLumps.I \
     bspRoot.h bspRoot.I \
     bspWorld.h bspWorld.I \
-    imagePacker.h \
     lightmapPalettizer.h \
     load_bsp_file.h \
     loaderFileTypeBSP.h
@@ -27,7 +26,6 @@
     bspLumps.cxx \
     bspRoot.cxx \
     bspWorld.cxx \
-    imagePacker.cxx \
     lightmapPalettizer.cxx \
     load_bsp_file.cxx \
     loaderFileTypeBSP.cxx

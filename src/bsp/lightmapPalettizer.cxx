@@ -119,7 +119,10 @@ palettize_lightmaps() {
     size_t palcount = dir->palettes.size();
     for (size_t i = 0; i < palcount; i++) {
       LightmapPalette *pal = dir->palettes[i];
-      if (pal->packer.add_block(face->lightmap_size[0] + 1, face->lightmap_size[1] + 1, &entry->offset[0], &entry->offset[1])) {
+      LVecBase2i offset = pal->packer.add_block(face->lightmap_size[0] + 1, face->lightmap_size[1] + 1);
+      if (offset[0] != -1) {
+        entry->offset[0] = offset[0];
+        entry->offset[1] = offset[1];
         pal->entries.push_back(entry);
         entry->palette = pal;
         added = true;
@@ -129,11 +132,14 @@ palettize_lightmaps() {
 
     if (!added) {
       PT(LightmapPalette) pal = new LightmapPalette;
-      if (!pal->packer.add_block(face->lightmap_size[0] + 1, face->lightmap_size[1] + 1, &entry->offset[0], &entry->offset[1])) {
+      LVecBase2i offset = pal->packer.add_block(face->lightmap_size[0] + 1, face->lightmap_size[1] + 1);
+      if (offset[0] == -1) {
         lightmapPalettizer_cat.error()
           << "lightmap (" << face->lightmap_size[0] + 1 << "x" << face->lightmap_size[1] + 1
           << ") too big to fit in palette (" << max_palette << "x" << max_palette << ")\n";
       }
+      entry->offset[0] = offset[0];
+      entry->offset[1] = offset[1];
       pal->entries.push_back(entry);
       entry->palette = pal;
       dir->palettes.push_back(pal);
@@ -158,7 +164,9 @@ palettize_lightmaps() {
   // for each palette that can be applied to geometry.
   for (size_t i = 0; i < dir->palettes.size(); i++) {
     LightmapPalette *pal = dir->palettes[i];
-    pal->packer.get_minimum_dimensions(&pal->size[0], &pal->size[1]);
+    LVecBase2i dim = pal->packer.get_minimum_dimensions();
+    pal->size[0] = dim[0];
+    pal->size[1] = dim[1];
     int width = pal->size[0];
     int height = pal->size[1];
 

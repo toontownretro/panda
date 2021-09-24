@@ -12,7 +12,9 @@
 #ifndef IMAGEPACKER_H
 #define IMAGEPACKER_H
 
-#include "config_bsp.h"
+#include "pandabase.h"
+#include "config_putil.h"
+#include "luse.h"
 
 #define MAX_MAX_IMAGE_WIDTH 8192
 
@@ -20,11 +22,11 @@
  * This class attempts to pack several small images onto a single large image.
  * It is currently used for creating lightmap palettes.
  */
-class EXPCL_PANDA_BSP ImagePacker {
-public:
+class EXPCL_PANDA_PUTIL ImagePacker {
+PUBLISHED:
   bool reset(int sort_id, int max_width, int max_height, int border = 2);
-  bool add_block(int width, int height, int *return_x, int *return_y);
-  void get_minimum_dimensions(int *return_width, int *return_height);
+  LVecBase2i add_block(int width, int height);
+  LVecBase2i get_minimum_dimensions();
   float get_efficiency();
   int get_sort_id() const;
   void increment_sort_id();
