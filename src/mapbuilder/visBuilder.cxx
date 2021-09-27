@@ -22,6 +22,7 @@
 //#include "rayTraceHitResult4.h"
 #include "keyValues.h"
 #include "kdTree.h"
+#include "mathutil_misc.h"
 
 #ifndef CPPPARSER
 #include <array>
@@ -36,10 +37,6 @@
 NotifyCategoryDeclNoExport(visbuilder);
 NotifyCategoryDef(visbuilder, "mapbuilder");
 
-#define X 0
-#define Y 1
-#define Z 2
-
 #define CheckBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] & ( 1 << ( (bitNumber) & 7 ) ) )
 #define SetBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] |= ( 1 << ( (bitNumber) & 7 ) ) )
 #define ClearBit( bitstring, bitNumber )	( (bitstring)[ ((bitNumber) >> 3) ] &= ~( 1 << ( (bitNumber) & 7 ) ) )
@@ -53,151 +50,6 @@ count_bits(const unsigned char *bits, size_t num_bits) {
     }
   }
   return c;
-}
-
-/*======================== X-tests ========================*/
-
-#define AXISTEST_X01(a, b, fa, fb)			   \
-	p0 = a*v0[Y] - b*v0[Z];			       	   \
-	p2 = a*v2[Y] - b*v2[Z];			       	   \
-        if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
-	rad = fa * box_half[Y] + fb * box_half[Z];   \
-	if(min>rad || max<-rad) return 0;
-
-
-
-#define AXISTEST_X2(a, b, fa, fb)			   \
-	p0 = a*v0[Y] - b*v0[Z];			           \
-	p1 = a*v1[Y] - b*v1[Z];			       	   \
-        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * box_half[Y] + fb * box_half[Z];   \
-	if(min>rad || max<-rad) return 0;
-
-
-
-/*======================== Y-tests ========================*/
-
-#define AXISTEST_Y02(a, b, fa, fb)			   \
-	p0 = -a*v0[X] + b*v0[Z];		      	   \
-	p2 = -a*v2[X] + b*v2[Z];	       	       	   \
-        if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
-	rad = fa * box_half[X] + fb * box_half[Z];   \
-	if(min>rad || max<-rad) return 0;
-
-
-
-#define AXISTEST_Y1(a, b, fa, fb)			   \
-	p0 = -a*v0[X] + b*v0[Z];		      	   \
-	p1 = -a*v1[X] + b*v1[Z];	     	       	   \
-        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * box_half[X] + fb * box_half[Z];   \
-	if(min>rad || max<-rad) return 0;
-
-
-
-/*======================== Z-tests ========================*/
-
-
-
-#define AXISTEST_Z12(a, b, fa, fb)			   \
-	p1 = a*v1[X] - b*v1[Y];			           \
-	p2 = a*v2[X] - b*v2[Y];			       	   \
-        if(p2<p1) {min=p2; max=p1;} else {min=p1; max=p2;} \
-	rad = fa * box_half[X] + fb * box_half[Y];   \
-	if(min>rad || max<-rad) return 0;
-
-
-
-#define AXISTEST_Z0(a, b, fa, fb)			   \
-	p0 = a*v0[X] - b*v0[Y];				   \
-	p1 = a*v1[X] - b*v1[Y];			           \
-        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * box_half[X] + fb * box_half[Y];   \
-	if(min>rad || max<-rad) return 0;
-
-#define FINDMINMAX(x0,x1,x2,min,max) \
-  min = max = x0;   \
-  if(x1<min) min=x1;\
-  if(x1>max) max=x1;\
-  if(x2<min) min=x2;\
-  if(x2>max) max=x2;
-
-/**
- *
- */
-static bool
-plane_box_overlap(const LPlane &plane, const LVector3 &box_half, const LPoint3 &center) {
-  PN_stdfloat r = box_half[0] * std::abs(plane[0]) +
-                  box_half[1] * std::abs(plane[1]) +
-                  box_half[2] * std::abs(plane[2]);
-
-  PN_stdfloat s = plane.dist_to_plane(center);
-
-  return std::abs(s) <= r;
-}
-
-/**
- *
- */
-static bool
-tri_box_overlap(const LPoint3 &box_center, const LVector3 &box_half, const pvector<LPoint3> &vertices) {
-  LPoint3 v0, v1, v2;
-  LVector3 e0, e1, e2;
-  PN_stdfloat min, max, p0, p1, p2, rad, fex, fey, fez;
-
-  v0 = vertices[0] - box_center;
-  v1 = vertices[1] - box_center;
-  v2 = vertices[2] - box_center;
-
-  e0 = v1 - v0;
-  e1 = v2 - v1;
-  e2 = v0 - v2;
-
-  fex = std::abs(e0[0]);
-  fey = std::abs(e0[1]);
-  fez = std::abs(e0[2]);
-  AXISTEST_X01(e0[2], e0[1], fez, fey);
-  AXISTEST_Y02(e0[2], e0[0], fez, fex);
-  AXISTEST_Z12(e0[1], e0[0], fey, fex);
-
-  fex = std::abs(e1[0]);
-  fey = std::abs(e1[1]);
-  fez = std::abs(e1[2]);
-  AXISTEST_X01(e1[2], e1[1], fez, fey);
-  AXISTEST_Y02(e1[2], e1[0], fez, fex);
-  AXISTEST_Z0(e1[1], e1[0], fey, fex);
-
-  fex = std::abs(e2[0]);
-  fey = std::abs(e2[1]);
-  fez = std::abs(e2[2]);
-  AXISTEST_X2(e2[2], e2[1], fez, fey);
-  AXISTEST_Y1(e2[2], e2[0], fez, fex);
-  AXISTEST_Z12(e2[1], e2[0], fey, fex);
-
-  // test in x direction
-  FINDMINMAX(v0[0], v1[0], v2[0], min, max);
-  if (min > box_half[0] || max < -box_half[0]) {
-    return false;
-  }
-
-  FINDMINMAX(v0[1], v1[1], v2[1], min, max);
-  if (min > box_half[1] || max < -box_half[1]) {
-    return false;
-  }
-
-  FINDMINMAX(v0[2], v1[2], v2[2], min, max);
-  if (min > box_half[2] || max < -box_half[2]) {
-    return false;
-  }
-
-  LVector3 u = vertices[1] - vertices[0];
-  LVector3 v = vertices[2] - vertices[0];
-
-  if (!plane_box_overlap(LPlane(u.cross(v).normalized(), vertices[0]), box_half, box_center)) {
-    return false;
-  }
-
-  return true;
 }
 
 /**
@@ -499,9 +351,6 @@ place_world_polygon(int i) {
     offset.componentwise_mult(_voxels._voxel_size * 0.5f);
     //w->translate(offset);
 
-    pvector<LPoint3> verts;
-    verts.resize(3);
-
     // Get the set of clusters that the offsetted winding intersects with.
 
     for (AreaCluster *cluster : _area_clusters) {
@@ -520,10 +369,7 @@ place_world_polygon(int i) {
         half += LPoint3(0.1);
 
         for (int j = 1; j < (w->get_num_points() - 1); j++) {
-          verts[0] = w->get_point(0);
-          verts[1] = w->get_point(j);
-          verts[2] = w->get_point(j + 1);
-          if (tri_box_overlap(center, half, verts)) {
+          if (tri_box_overlap(center, half, w->get_point(0), w->get_point(j), w->get_point(j + 1))) {
             poly->_clusters.insert(cluster->_id);
             got_cluster = true;
             break;
@@ -686,7 +532,7 @@ voxelize_world_polygon(int i) {
       // it does, the voxel is solid.  Also ignore the voxel in front of the
       // winding plane when it borders two voxels on both sides.
       if (/*plane.dist_to_plane(voxel_mid) < voxel_half[0] &&*/
-          tri_box_overlap(voxel_mid, voxel_half, verts)) {
+          tri_box_overlap(voxel_mid, voxel_half, verts[0], verts[1], verts[2])) {
         if (tri_box_check_edge(voxel_mid, voxel_half, verts)) {
           // Mark voxel as solid.
           ThreadManager::lock();

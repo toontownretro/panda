@@ -19,6 +19,7 @@
 #include "config_mathutil.h"
 #include "deg_2_rad.h"
 #include "luse.h"
+#include "plane.h"
 
 #define NORMAL_EPSILON 0.00001
 #define ON_EPSILON 0.1 // we should ensure that (float)BOGUS_RANGE < (float)(BOGUA_RANGE + 0.2 * ON_EPSILON)
@@ -392,6 +393,155 @@ inline planetypes PlaneTypeForNormal(vec3_t normal)
 }
 
 INLINE PN_stdfloat simple_spline(PN_stdfloat s);
+
+/*======================== X-tests ========================*/
+
+#define AXISTEST_X01(a, b, fa, fb)			   \
+	p0 = a*v0[1] - b*v0[2];			       	   \
+	p2 = a*v2[1] - b*v2[2];			       	   \
+        if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
+	rad = fa * box_half[1] + fb * box_half[2];   \
+	if(min>rad || max<-rad) return 0;
+
+
+
+#define AXISTEST_X2(a, b, fa, fb)			   \
+	p0 = a*v0[1] - b*v0[2];			           \
+	p1 = a*v1[1] - b*v1[2];			       	   \
+        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
+	rad = fa * box_half[1] + fb * box_half[2];   \
+	if(min>rad || max<-rad) return 0;
+
+
+
+/*======================== Y-tests ========================*/
+
+#define AXISTEST_Y02(a, b, fa, fb)			   \
+	p0 = -a*v0[0] + b*v0[2];		      	   \
+	p2 = -a*v2[0] + b*v2[2];	       	       	   \
+        if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
+	rad = fa * box_half[0] + fb * box_half[2];   \
+	if(min>rad || max<-rad) return 0;
+
+
+
+#define AXISTEST_Y1(a, b, fa, fb)			   \
+	p0 = -a*v0[0] + b*v0[2];		      	   \
+	p1 = -a*v1[0] + b*v1[2];	     	       	   \
+        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
+	rad = fa * box_half[0] + fb * box_half[2];   \
+	if(min>rad || max<-rad) return 0;
+
+
+
+/*======================== Z-tests ========================*/
+
+
+
+#define AXISTEST_Z12(a, b, fa, fb)			   \
+	p1 = a*v1[0] - b*v1[1];			           \
+	p2 = a*v2[0] - b*v2[1];			       	   \
+        if(p2<p1) {min=p2; max=p1;} else {min=p1; max=p2;} \
+	rad = fa * box_half[0] + fb * box_half[1];   \
+	if(min>rad || max<-rad) return 0;
+
+
+
+#define AXISTEST_Z0(a, b, fa, fb)			   \
+	p0 = a*v0[0] - b*v0[1];				   \
+	p1 = a*v1[0] - b*v1[1];			           \
+        if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
+	rad = fa * box_half[0] + fb * box_half[1];   \
+	if(min>rad || max<-rad) return 0;
+
+#define FINDMINMAX(x0,x1,x2,min,max) \
+  min = max = x0;   \
+  if(x1<min) min=x1;\
+  if(x1>max) max=x1;\
+  if(x2<min) min=x2;\
+  if(x2>max) max=x2;
+
+BEGIN_PUBLISH
+/**
+ * Returns true if the given plane intersects the given box.
+ */
+INLINE bool
+plane_box_overlap(const LPlane &plane, const LVector3 &box_half, const LPoint3 &center) {
+  PN_stdfloat r = box_half[0] * std::abs(plane[0]) +
+                  box_half[1] * std::abs(plane[1]) +
+                  box_half[2] * std::abs(plane[2]);
+
+  PN_stdfloat s = plane.dist_to_plane(center);
+
+  return std::abs(s) <= r;
+}
+
+/**
+ * Returns true if the triangle defined by the points "va", "vb", and "vc"
+ * intersects the given box.
+ */
+INLINE bool
+tri_box_overlap(const LPoint3 &box_center, const LVector3 &box_half, const LPoint3 &va,
+                const LPoint3 &vb, const LPoint3 &vc) {
+  LPoint3 v0, v1, v2;
+  LVector3 e0, e1, e2;
+  PN_stdfloat min, max, p0, p1, p2, rad, fex, fey, fez;
+
+  v0 = va - box_center;
+  v1 = vb - box_center;
+  v2 = vc - box_center;
+
+  e0 = v1 - v0;
+  e1 = v2 - v1;
+  e2 = v0 - v2;
+
+  fex = std::abs(e0[0]);
+  fey = std::abs(e0[1]);
+  fez = std::abs(e0[2]);
+  AXISTEST_X01(e0[2], e0[1], fez, fey);
+  AXISTEST_Y02(e0[2], e0[0], fez, fex);
+  AXISTEST_Z12(e0[1], e0[0], fey, fex);
+
+  fex = std::abs(e1[0]);
+  fey = std::abs(e1[1]);
+  fez = std::abs(e1[2]);
+  AXISTEST_X01(e1[2], e1[1], fez, fey);
+  AXISTEST_Y02(e1[2], e1[0], fez, fex);
+  AXISTEST_Z0(e1[1], e1[0], fey, fex);
+
+  fex = std::abs(e2[0]);
+  fey = std::abs(e2[1]);
+  fez = std::abs(e2[2]);
+  AXISTEST_X2(e2[2], e2[1], fez, fey);
+  AXISTEST_Y1(e2[2], e2[0], fez, fex);
+  AXISTEST_Z12(e2[1], e2[0], fey, fex);
+
+  // test in x direction
+  FINDMINMAX(v0[0], v1[0], v2[0], min, max);
+  if (min > box_half[0] || max < -box_half[0]) {
+    return false;
+  }
+
+  FINDMINMAX(v0[1], v1[1], v2[1], min, max);
+  if (min > box_half[1] || max < -box_half[1]) {
+    return false;
+  }
+
+  FINDMINMAX(v0[2], v1[2], v2[2], min, max);
+  if (min > box_half[2] || max < -box_half[2]) {
+    return false;
+  }
+
+  LVector3 u = vb - va;
+  LVector3 v = vc - va;
+
+  if (!plane_box_overlap(LPlane(u.cross(v).normalized(), va), box_half, box_center)) {
+    return false;
+  }
+
+  return true;
+}
+END_PUBLISH
 
 #include "mathutil_misc.I"
 #include "mathutil_misc.T"
