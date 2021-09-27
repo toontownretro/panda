@@ -1183,7 +1183,7 @@ extract_texture_data(Texture *tex, GraphicsStateGuardian *gsg) {
  * The return value is true if the operation is successful, false otherwise.
  */
 void GraphicsEngine::
-dispatch_compute(const LVecBase3i &work_groups, const RenderState *state, GraphicsStateGuardian *gsg) {
+dispatch_compute(const LVecBase3i &work_groups, const RenderState *state, GraphicsStateGuardian *gsg, bool block) {
   const ShaderAttrib *sattr;
   state->get_attrib_def(sattr);
   const Shader *shader = sattr->get_shader();
@@ -1197,7 +1197,7 @@ dispatch_compute(const LVecBase3i &work_groups, const RenderState *state, Graphi
     // A single-threaded environment.  No problem.
     gsg->push_group_marker(std::string("Compute ") + shader->get_filename(Shader::ST_compute).get_basename());
     gsg->set_state_and_transform(state, TransformState::make_identity());
-    gsg->dispatch_compute(work_groups[0], work_groups[1], work_groups[2]);
+    gsg->dispatch_compute(work_groups[0], work_groups[1], work_groups[2], block);
     gsg->pop_group_marker();
 
   } else {
@@ -1220,6 +1220,7 @@ dispatch_compute(const LVecBase3i &work_groups, const RenderState *state, Graphi
     thread->_gsg = gsg;
     thread->_state = state;
     thread->_work_groups = work_groups;
+    thread->_block = block;
     thread->_thread_state = TS_do_compute;
     thread->_cv_start.notify();
     thread->_cv_mutex.release();
@@ -2720,7 +2721,8 @@ RenderThread(const string &name, GraphicsEngine *engine) :
   _engine(engine),
   _cv_mutex(string("GraphicsEngine::RenderThread ") + name),
   _cv_start(_cv_mutex),
-  _cv_done(_cv_mutex)
+  _cv_done(_cv_mutex),
+  _block(false)
 {
   _thread_state = TS_wait;
 }
@@ -2766,7 +2768,7 @@ thread_main() {
         _state->get_attrib(sattr);
         _gsg->push_group_marker(std::string("Compute ") + sattr->get_shader()->get_filename(Shader::ST_compute).get_basename());
         _gsg->set_state_and_transform(_state, TransformState::make_identity());
-        _gsg->dispatch_compute(_work_groups[0], _work_groups[1], _work_groups[2]);
+        _gsg->dispatch_compute(_work_groups[0], _work_groups[1], _work_groups[2], _block);
         _gsg->pop_group_marker();
       }
       break;

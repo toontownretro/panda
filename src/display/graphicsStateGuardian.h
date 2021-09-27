@@ -320,7 +320,7 @@ public:
 
   virtual PT(TimerQueryContext) issue_timer_query(int pstats_index);
 
-  virtual void dispatch_compute(int size_x, int size_y, int size_z);
+  virtual void dispatch_compute(int size_x, int size_y, int size_z, bool block = false);
 
   virtual PT(GeomMunger) get_geom_munger(const RenderState *state,
                                          Thread *current_thread);

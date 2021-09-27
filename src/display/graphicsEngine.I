@@ -168,7 +168,7 @@ make_parasite(GraphicsOutput *host, const std::string &name,
  * instead of a whole RenderState.
  */
 void GraphicsEngine::
-dispatch_compute(const LVecBase3i &work_groups, const ShaderAttrib *sattr, GraphicsStateGuardian *gsg) {
+dispatch_compute(const LVecBase3i &work_groups, const ShaderAttrib *sattr, GraphicsStateGuardian *gsg, bool block) {
   CPT(RenderState) state = RenderState::make(sattr);
-  dispatch_compute(work_groups, state, gsg);
+  dispatch_compute(work_groups, state, gsg, block);
 }

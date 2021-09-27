@@ -781,7 +781,7 @@ issue_timer_query(int pstats_index) {
  * counts.
  */
 void GraphicsStateGuardian::
-dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z) {
+dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z, bool block) {
   nassert_raise("Compute shaders not supported by GSG");
 }
 

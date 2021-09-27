@@ -171,7 +171,7 @@ public:
   virtual void release_shader_buffer(BufferContext *ibc)=0;
   virtual void release_shader_buffers(const pvector<BufferContext *> &contexts)=0;
 
-  virtual void dispatch_compute(int size_x, int size_y, int size_z)=0;
+  virtual void dispatch_compute(int size_x, int size_y, int size_z, bool block = false)=0;
 
   virtual PT(GeomMunger) get_geom_munger(const RenderState *state,
                                          Thread *current_thread)=0;

@@ -112,10 +112,10 @@ PUBLISHED:
   bool extract_texture_data(Texture *tex, GraphicsStateGuardian *gsg);
   void dispatch_compute(const LVecBase3i &work_groups,
                         const RenderState *state,
-                        GraphicsStateGuardian *gsg);
+                        GraphicsStateGuardian *gsg, bool block = false);
   INLINE void dispatch_compute(const LVecBase3i &work_groups,
                                const ShaderAttrib *sattr,
-                               GraphicsStateGuardian *gsg);
+                               GraphicsStateGuardian *gsg, bool block = false);
 
   static GraphicsEngine *get_global_ptr();
 
@@ -313,6 +313,7 @@ private:
     const RenderState *_state;
     DisplayRegion *_region;
     LVecBase3i _work_groups;
+    bool _block;
     bool _result;
   };
 

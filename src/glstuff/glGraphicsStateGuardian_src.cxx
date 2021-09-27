@@ -2232,6 +2232,19 @@ reset() {
   }
 #endif
 
+#ifndef OPENGLES
+  _supports_fence_objects = false;
+  if (is_at_least_gl_version(3, 2) || has_extension("GL_ARB_sync")) {
+    _glFenceSync = (PFNGLFENCESYNCPROC)
+      get_extension_func("glFenceSync");
+    _glDeleteSync = (PFNGLDELETESYNCPROC)
+      get_extension_func("glDeleteSync");
+    _glClientWaitSync = (PFNGLCLIENTWAITSYNCPROC)
+      get_extension_func("glClientWaitSync");
+    _supports_fence_objects = true;
+  }
+#endif
+
   // We need to have a default shader to apply in case something didn't happen
   // to have a shader applied, or if it failed to compile.  This default
   // shader just outputs a red color, indicating that something went wrong.
@@ -7272,7 +7285,7 @@ issue_timer_query(int pstats_index) {
  * counts.
  */
 void CLP(GraphicsStateGuardian)::
-dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z) {
+dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z, bool block) {
   maybe_gl_finish();
 
   PStatGPUTimer timer(this, _compute_dispatch_pcollector);
@@ -7280,7 +7293,39 @@ dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z) {
   nassertv(_current_shader_context != nullptr);
   _glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
 
-  maybe_gl_finish();
+  if (block) {
+    glFinish();
+
+  } else {
+    maybe_gl_finish();
+  }
+
+#if 0
+#ifndef OPENGLES
+  std::cout << "block? " << block << "\n";
+  std::cout << "Supports fences? " << _supports_fence_objects << "\n";
+  if (block && _supports_fence_objects) {
+    std::cout << _glFenceSync << ", " << _glClientWaitSync << ", " << _glDeleteSync << "\n";
+    // Insert a fence after glDispatchCompute to get a signal that
+    // the compute dispatch (and all prior commands) are complete.
+    GLsync sync = _glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    while (true) {
+      GLenum ret = _glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, 0);
+      std::cout << "glClientWaitSync ret " << ret << "\n";
+      if (ret != GL_TIMEOUT_EXPIRED) {
+        std::cout << "signaled or errored\n";
+        // Signaled or errored.
+        break;
+      }
+    }
+
+    _glDeleteSync(sync);
+  }
+#endif
+#endif
+
+  report_my_gl_errors(this);
 }
 #endif  // !OPENGLES_1
 

@@ -274,6 +274,11 @@ typedef void *(APIENTRYP PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
 typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERPROC) (GLenum target);
 typedef void (APIENTRYP PFNGLGETBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, void *data);
 #endif  // OPENGLES
+#ifndef OPENGLES
+typedef GLsync (APIENTRYP PFNGLFENCESYNCPROC) (GLenum condition, GLbitfield flags);
+typedef void (APIENTRYP PFNGLDELETESYNCPROC) (GLsync sync);
+typedef GLenum (APIENTRYP PFNGLCLIENTWAITSYNCPROC) (GLsync sync, GLbitfield flags, GLuint64 timeout);
+#endif
 #endif  // __EDG__
 
 /**
@@ -405,7 +410,7 @@ public:
   virtual PT(TimerQueryContext) issue_timer_query(int pstats_index);
 
 #ifndef OPENGLES_1
-  virtual void dispatch_compute(int size_x, int size_y, int size_z);
+  virtual void dispatch_compute(int size_x, int size_y, int size_z, bool block = false);
 #endif
 
   virtual PT(GeomMunger) make_geom_munger(const RenderState *state,
@@ -1094,6 +1099,14 @@ public:
   PFNGLUNIFORMHANDLEUI64VPROC _glUniformHandleui64v;
   PFNGLSHADERSTORAGEBLOCKBINDINGPROC _glShaderStorageBlockBinding;
 #endif  // !OPENGLES
+
+#ifndef OPENGLES
+  // Fence objects.
+  PFNGLFENCESYNCPROC _glFenceSync;
+  PFNGLDELETESYNCPROC _glDeleteSync;
+  PFNGLCLIENTWAITSYNCPROC _glClientWaitSync;
+  bool _supports_fence_objects;
+#endif
 
 #ifndef OPENGLES_1
   PFNGLGETPROGRAMINTERFACEIVPROC _glGetProgramInterfaceiv;
