@@ -620,7 +620,12 @@ compare_to(const BitArray &other) const {
     return _highest_bits ? 1 : -1;
   }
 
-  int num_words = max(get_num_words(), other.get_num_words());
+  int num_words = get_num_words();
+  int other_num_words = other.get_num_words();
+
+  if (num_words != other_num_words) {
+    return num_words < other_num_words ? -1 : 1;
+  }
 
   // Compare from highest-order to lowest-order word.
   for (int i = num_words - 1; i >= 0; --i) {
