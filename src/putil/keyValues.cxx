@@ -224,8 +224,10 @@ vector_float KeyValues::parse_float_list(const std::string &str)
     char let = str[current];
     if (let == ' ')
     {
-      result.push_back(stof(curr_num_string));
-      curr_num_string = "";
+      if (!curr_num_string.empty()) {
+        result.push_back(stof(curr_num_string));
+        curr_num_string = "";
+      }
     }
     else
     {
@@ -253,8 +255,10 @@ vector_int KeyValues::parse_int_list(const std::string &str)
     char let = str[current];
     if (let == ' ')
     {
-      result.push_back(stoi(curr_num_string));
-      curr_num_string = "";
+      if (!curr_num_string.empty()) {
+        result.push_back(stoi(curr_num_string));
+        curr_num_string = "";
+      }
     }
     else
     {
