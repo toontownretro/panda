@@ -80,7 +80,8 @@ TypeHandle RenderState::_type_handle;
 RenderState::
 RenderState() :
   _flags(0),
-  _lock("RenderState")
+  _lock("RenderState"),
+  _hash(0)
 {
   if (_states_lock == nullptr) {
     init_states();
@@ -103,7 +104,8 @@ RenderState::
 RenderState(const RenderState &copy) :
   _filled_slots(copy._filled_slots),
   _flags(0),
-  _lock("RenderState")
+  _lock("RenderState"),
+  _hash(0)
 {
   // Copy over the attributes.
   for (int i = 0; i < RenderAttribRegistry::_max_slots; ++i) {
@@ -1216,6 +1218,8 @@ validate_filled_slots() const {
  */
 void RenderState::
 do_calc_hash() {
+  _hash = 0;
+
   SlotMask mask = _filled_slots;
   int slot = mask.get_lowest_on_bit();
   while (slot >= 0) {

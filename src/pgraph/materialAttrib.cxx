@@ -56,8 +56,8 @@ int MaterialAttrib::
 compare_to_impl(const RenderAttrib *other) const {
   const MaterialAttrib *that = (const MaterialAttrib *)other;
 
-  if (this->_material != that->_material) {
-    return this->_material < that->_material ? -1 : 1;
+  if (_material != that->_material) {
+    return _material < that->_material ? -1 : 1;
   }
 
   return 0;
@@ -68,9 +68,7 @@ compare_to_impl(const RenderAttrib *other) const {
  */
 size_t MaterialAttrib::
 get_hash_impl() const {
-  size_t hash = 0;
-  hash = pointer_hash::add_hash(hash, _material.p());
-  return hash;
+  return pointer_hash::add_hash(0, _material);
 }
 
 /**
