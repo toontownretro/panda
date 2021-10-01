@@ -32,7 +32,32 @@
 /**
  *
  */
-class MapPoly : public ReferenceCount {
+class MapGeomBase : public ReferenceCount {
+public:
+  PT(BoundingBox) _bounds;
+  bool _is_mesh;
+  bool _in_group;
+
+  virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const=0;
+};
+
+/**
+ * A collection of nearby world polygons and mesh entities that should be
+ * treated as a single unit (aka flattened together).  If vis is active,
+ * the vis builder will assign the group to the set of area clusters that
+ * it intersects with.
+ */
+struct MapGeomGroup {
+public:
+  PT(BoundingBox) bounds;
+  pvector<MapGeomBase *> geoms;
+  BitArray clusters;
+};
+
+/**
+ *
+ */
+class MapPoly : public MapGeomBase {
 public:
   // The winding defines the vertices of the polygon and the plane that it
   // lies on.
@@ -41,6 +66,8 @@ public:
   PT(Material) _material;
   LVector4 _texture_vecs[2];
   LVector4 _lightmap_vecs[2];
+  LVecBase2i _lightmap_mins;
+  LVecBase2i _lightmap_size;
 
   // Contents of the surface as specified in the material.  Examples are
   // skybox, clip, nodraw, etc.
@@ -56,10 +83,13 @@ public:
   PNMImage _direct_light[NUM_LIGHTMAPS];
 
   bool _vis_occluder;
-  // The set of area clusters that the polygon belongs to.  This is only used
-  // for polygons that belong to the world.  All other meshes (and external
-  // models) are placed into clusters at the model level.
-  pset<int> _clusters;
+
+  // Where the Geom of the polygon lives in the output scene graph.
+  // Needed to keep track of polys for the lightmapper.
+  GeomNode *_geom_node = nullptr;
+  int _geom_index = -1;
+
+  virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
 };
 
 /**
@@ -68,19 +98,18 @@ public:
  * Displacements are also turned into meshes, and each triangle of the
  * displacement becomes a MapPoly.
  */
-class MapMesh : public ReferenceCount {
+class MapMesh : public MapGeomBase {
 public:
   pvector<PT(MapPoly)> _polys;
-  PT(BoundingBox) _bounds;
   // If true, the polygons of the mesh block visibility.  This only applies to
   // world meshes.
   //bool _vis_occluder;
 
-  // The set of area clusters that the mesh belongs to.  For the world mesh,
-  // this is determined for each polygon.
-  pset<int> _clusters;
-
   bool _in_mesh_group;
+
+  int _entity;
+
+  virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
 };
 
 class EXPCL_PANDA_MAPBUILDER MapBuilder {
@@ -91,6 +120,7 @@ PUBLISHED:
     EC_input_not_found,
     EC_input_invalid,
     EC_invalid_solid_side,
+    EC_lightmap_failed,
   };
 
   MapBuilder(const MapBuildOptions &options);
@@ -98,6 +128,11 @@ PUBLISHED:
   ErrorCode build();
 
   ErrorCode build_polygons();
+
+  ErrorCode build_lighting();
+
+  //void build_mesh_groups();
+  void divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs);
 
   void add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node);
 
@@ -108,6 +143,8 @@ public:
   PT(MapFile) _source_map;
   MapBuildOptions _options;
 
+  pvector<MapGeomGroup> _mesh_groups;
+
   pvector<PT(MapMesh)> _meshes;
 
   int _world_mesh_index;
@@ -115,6 +152,10 @@ public:
   PT(MapData) _out_data;
   PT(PandaNode) _out_top;
   PT(MapRoot) _out_node;
+
+  LPoint3 _scene_mins;
+  LPoint3 _scene_maxs;
+  PT(BoundingBox) _scene_bounds;
 };
 
 #include "mapBuilder.I"

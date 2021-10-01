@@ -35,6 +35,9 @@
 #include "colorAttrib.h"
 #include "modelRoot.h"
 #include "config_pgraph.h"
+#include "lightBuilder.h"
+#include "keyValues.h"
+#include "sceneGraphAnalyzer.h"
 
 // DEBUG INCLUDES
 #include "geomVertexData.h"
@@ -52,6 +55,42 @@ static LColor cluster_colors[6] = {
   LColor(0.5, 1.0, 1.0, 1.0),
   LColor(0.5, 0.5, 1.0, 1.0),
 };
+
+/**
+ *
+ */
+bool MapPoly::
+overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const {
+  LPoint3 verts[3];
+
+  for (size_t j = 1; j < (_winding.get_num_points() - 1); j++) {
+    verts[0] = _winding.get_point(0);
+    verts[1] = _winding.get_point(j);
+    verts[2] = _winding.get_point(j + 1);
+
+    if (tri_box_overlap(box_center, box_half, verts[0], verts[1], verts[2])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ *
+ */
+bool MapMesh::
+overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const {
+  LPoint3 verts[3];
+
+  for (size_t i = 0; i < _polys.size(); i++) {
+    if (_polys[i]->overlaps_box(box_center, box_half)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /**
  *
@@ -108,40 +147,170 @@ build() {
     return ec;
   }
 
-  VisBuilder vis(this);
-  if (!vis.build()) {
-    return EC_unknown_error;
+  // Calculate scene bounds.
+  _scene_mins.set(1e+9, 1e+9, 1e+9);
+  _scene_maxs.set(-1e+9, -1e+9, -1e+9);
+
+  for (size_t i = 0; i < _meshes.size(); i++) {
+    MapMesh *mesh = _meshes[i];
+    for (size_t j = 0; j < mesh->_polys.size(); j++) {
+      MapPoly *poly = mesh->_polys[j];
+      Winding *w = &(poly->_winding);
+      for (int k = 0; k < w->get_num_points(); k++) {
+        LPoint3 point = w->get_point(k);
+
+        _scene_mins[0] = std::min(point[0], _scene_mins[0]);
+        _scene_mins[1] = std::min(point[1], _scene_mins[1]);
+        _scene_mins[2] = std::min(point[2], _scene_mins[2]);
+
+        _scene_maxs[0] = std::max(point[0], _scene_maxs[0]);
+        _scene_maxs[1] = std::max(point[1], _scene_maxs[1]);
+        _scene_maxs[2] = std::max(point[2], _scene_maxs[2]);
+      }
+    }
   }
+
+  _scene_bounds = new BoundingBox(_scene_mins, _scene_maxs);
+
+  // Make the octree bounds cubic and closest pow 2.
+  LVector3 scene_size = _scene_maxs - _scene_mins;
+  PN_stdfloat octree_size = ceil_pow_2(std::ceil(std::max(scene_size[0], std::max(scene_size[1], scene_size[2]))));
+  LPoint3 octree_mins = _scene_mins;
+  LPoint3 octree_maxs(_scene_mins + LPoint3(octree_size));
+
+  lightbuilder_cat.info()
+    << "Octree mins: " << octree_mins << " Octree maxs: " << octree_maxs << "\n";
+
+  // Now build mesh groups by recursively dividing all polygons in an octree
+  // fashion.
+  pvector<MapGeomBase *> all_geoms;
+  for (MapMesh *mesh : _meshes) {
+    for (MapPoly *poly : mesh->_polys) {
+      all_geoms.push_back(poly);
+    }
+  }
+  divide_meshes(all_geoms, octree_mins, octree_maxs);
+
+  mapbuilder_cat.info()
+    << "Grouped " << all_geoms.size() << " polygons into " << _mesh_groups.size()
+    << " groups\n";
+
+  //
+  // VISIBILITY
+  //
+  if (_options.get_vis()) {
+    VisBuilder vis(this);
+    if (!vis.build()) {
+      return EC_unknown_error;
+    }
+
+    if (_options.get_vis_show_solid_voxels()) {
+      LineSegs lines("debug-solid-voxels");
+      lines.set_color(LColor(0, 0, 1, 1));
+      pvector<LPoint3i> solid_voxels = vis._voxels.get_solid_voxels();
+      for (size_t i = 0; i < solid_voxels.size(); i++) {
+        PT(BoundingBox) bounds = vis._voxels.get_voxel_bounds(solid_voxels[i]);
+        const LPoint3 &mins = bounds->get_minq();
+        const LPoint3 &maxs = bounds->get_maxq();
+        lines.move_to(mins);
+        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+        lines.draw_to(mins);
+        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+        lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+        lines.draw_to(maxs);
+        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+        lines.move_to(maxs);
+        lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+        lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+      }
+      _out_top->add_child(lines.create());
+    }
+
+    if (_options.get_vis_show_areas()) {
+      for (size_t i = 0; i < vis._area_clusters.size(); i++) {
+        AreaCluster *cluster = vis._area_clusters[i];
+
+        std::ostringstream ss;
+        ss << "area-cluster-" << cluster->_id;
+        LineSegs lines(ss.str());
+
+        lines.set_color(cluster_colors[cluster->_id % 6]);
+
+        for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
+          PT(BoundingBox) bbox = vis._voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
+          const LPoint3 &mins = bbox->get_minq();
+          const LPoint3 &maxs = bbox->get_maxq();
+          lines.move_to(mins);
+          lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+          lines.draw_to(mins);
+          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+          lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+          lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+          lines.draw_to(maxs);
+          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+          lines.move_to(maxs);
+          lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+          lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+        }
+
+        _out_top->add_child(lines.create());
+      }
+    }
+  }
+
+  PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
+  arr->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);
+  arr->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
+  arr->add_column(InternalName::get_texcoord(), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
+  arr->add_column(InternalName::get_texcoord_name("lightmap"), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
+  CPT(GeomVertexFormat) format = GeomVertexFormat::register_format(arr);
 
   // Now write out the meshes to GeomNodes.
 
   // Start with the mesh groups.
-  int mesh_group_index = 0;
-  for (auto it = vis._vis_mesh_groups.begin(); it != vis._vis_mesh_groups.end(); ++it) {
-    const VisMeshGroup &group = it->second;
-
-    MapMeshGroup out_group;
-    for (auto cit = it->first.begin(); cit != it->first.end(); ++cit) {
-      out_group._clusters.set_bit(*cit);
-    }
-    _out_data->add_mesh_group(out_group);
+  for (size_t i = 0; i < _mesh_groups.size(); i++) {
+    const MapGeomGroup &group = _mesh_groups[i];
 
     // Now build the Geoms within the group.
 
     std::ostringstream ss;
-    ss << "mesh-group-" << mesh_group_index;
+    ss << "mesh-group-" << i;
     PT(GeomNode) geom_node = new GeomNode(ss.str());
-    //geom_node->set_attrib(ColorAttrib::make_flat(cluster_colors[mesh_group_index % 6]));
-
-    PT(GeomVertexData) vdata = new GeomVertexData(
-      geom_node->get_name(), GeomVertexFormat::get_v3n3t2(),
-      GeomEnums::UH_static);
+    //geom_node->set_attrib(ColorAttrib::make_flat(cluster_colors[i % 6]));
 
     PT(PhysTriangleMeshData) phys_mesh_data = new PhysTriangleMeshData;
     int phys_polygons = 0;
 
-    // The world mesh is assigned to mesh groups on a per-polygon basis.
-    for (MapPoly *poly : group.world_polys) {
+    pvector<MapPoly *> group_polys;
+
+    for (MapGeomBase *geom : group.geoms) {
+      if (geom->_is_mesh) {
+        MapMesh *mesh = (MapMesh *)geom;
+        for (MapPoly *poly : mesh->_polys) {
+          group_polys.push_back(poly);
+        }
+
+      } else {
+        group_polys.push_back((MapPoly *)geom);
+      }
+    }
+
+    for (MapPoly *poly : group_polys) {
+      PT(GeomVertexData) vdata = new GeomVertexData(
+        geom_node->get_name(), format,
+        GeomEnums::UH_static);
+
       add_poly_to_geom_node(poly, vdata, geom_node);
 
       Material *mat = poly->_material;
@@ -164,38 +333,24 @@ build() {
       }
     }
 
-    // These are non-world meshes, like func_details.  They are treated as
-    // single units.
-    for (MapMesh *mesh : group.meshes) {
-      for (MapPoly *poly : mesh->_polys) {
-        add_poly_to_geom_node(poly, vdata, geom_node);
+    //if (geom_node->get_num_geoms() == 0 && phys_polygons == 0) {
+      // No geometry or physics polygons.  Skip it.
+    //  continue;
+    //}
 
-        Material *mat = poly->_material;
-        Winding *w = &poly->_winding;
+    MapMeshGroup out_group;
+    out_group._clusters = group.clusters;
+    _out_data->add_mesh_group(out_group);
 
-        bool add_phys = (mat != nullptr) ?
-          (!mat->has_tag("compile_trigger") && !mat->has_tag("compile_nodraw")) : true;
-
-        if (add_phys) {
-          // Add the polygon to the physics triangle mesh.
-          // Need to reverse them.
-          pvector<LPoint3> phys_verts;
-          phys_verts.resize(w->get_num_points());
-          for (int k = 0; k < w->get_num_points(); k++) {
-            phys_verts[k] = w->get_point(k);
-          }
-          std::reverse(phys_verts.begin(), phys_verts.end());
-          phys_mesh_data->add_polygon(phys_verts);
-          phys_polygons++;
-        }
-      }
-    }
+    // The node we parent the mesh group to will decide which mesh group(s) to
+    // render based on the current view cluster.
+    _out_node->add_child(geom_node);
 
     if (phys_polygons > 0) {
       // Cook the physics mesh.
       if (!phys_mesh_data->cook_mesh()) {
         mapbuilder_cat.error()
-          << "Failed to cook physics mesh for mesh group " << mesh_group_index << "\n";
+          << "Failed to cook physics mesh for mesh group " << i << "\n";
         _out_data->add_model_phys_data(CPTA_uchar());
       } else {
         _out_data->add_model_phys_data(phys_mesh_data->get_mesh_data());
@@ -203,79 +358,37 @@ build() {
     } else {
       _out_data->add_model_phys_data(CPTA_uchar());
     }
-
-    // Try to combine all the polygon Geoms into as few Geoms as possible.
-    geom_node->unify(UINT16_MAX, false);
-
-    // The node we parent the mesh group to will decide which mesh group(s) to
-    // render based on the current view cluster.
-    _out_node->add_child(geom_node);
-
-    mesh_group_index++;
   }
 
-  if (_options.get_vis_show_solid_voxels()) {
-    LineSegs lines("debug-solid-voxels");
-    lines.set_color(LColor(0, 0, 1, 1));
-    pvector<LPoint3i> solid_voxels = vis._voxels.get_solid_voxels();
-    for (size_t i = 0; i < solid_voxels.size(); i++) {
-      PT(BoundingBox) bounds = vis._voxels.get_voxel_bounds(solid_voxels[i]);
-      const LPoint3 &mins = bounds->get_minq();
-      const LPoint3 &maxs = bounds->get_maxq();
-      lines.move_to(mins);
-      lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-      lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-      lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-      lines.draw_to(mins);
-      lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-      lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-      lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-      lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-      lines.draw_to(maxs);
-      lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-      lines.move_to(maxs);
-      lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-      lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-      lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-      lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-    }
-    _out_top->add_child(lines.create());
+  if (mapbuilder_cat.is_debug()) {
+    mapbuilder_cat.debug()
+      << "Pre flatten graph:\n";
+    SceneGraphAnalyzer analyzer;
+    analyzer.add_node(_out_top);
+    analyzer.write(mapbuilder_cat.debug(false));
   }
 
-  if (_options.get_vis_show_areas()) {
-    for (size_t i = 0; i < vis._area_clusters.size(); i++) {
-      AreaCluster *cluster = vis._area_clusters[i];
-
-      std::ostringstream ss;
-      ss << "area-cluster-" << cluster->_id;
-      LineSegs lines(ss.str());
-
-      lines.set_color(cluster_colors[cluster->_id % 6]);
-
-      for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-        PT(BoundingBox) bbox = vis._voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
-        const LPoint3 &mins = bbox->get_minq();
-        const LPoint3 &maxs = bbox->get_maxq();
-        lines.move_to(mins);
-        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(mins);
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-        lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(maxs);
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-        lines.move_to(maxs);
-        lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-        lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-      }
-
-      _out_top->add_child(lines.create());
+  if (_options.get_light()) {
+    // Now compute lighting.
+    ec = build_lighting();
+    if (ec != EC_ok) {
+      return ec;
     }
+  }
+
+  // After building the lightmaps, we can flatten the Geoms within each mesh
+  // group to reduce draw calls.  If we flattened before building lightmaps,
+  // Geoms would have overlapping lightmap UVs.
+  for (size_t i = 0; i < _out_data->get_num_mesh_groups(); i++) {
+    NodePath(_out_node->get_child(i)).flatten_strong();
+  }
+
+  if (mapbuilder_cat.is_debug()) {
+    mapbuilder_cat.debug()
+      << "Post flatten graph:\n";
+    SceneGraphAnalyzer analyzer;
+    analyzer.add_node(_out_top);
+    analyzer.write(mapbuilder_cat.debug(false));
   }
 
   NodePath(_out_top).write_bam_file(_options._output_filename);
@@ -294,12 +407,14 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   GeomVertexWriter vwriter(vdata, InternalName::get_vertex());
   GeomVertexWriter nwriter(vdata, InternalName::get_normal());
   GeomVertexWriter twriter(vdata, InternalName::get_texcoord());
+  GeomVertexWriter lwriter(vdata, InternalName::get_texcoord_name("lightmap"));
   vwriter.set_row(start);
   nwriter.set_row(start);
   twriter.set_row(start);
+  lwriter.set_row(start);
 
   const Winding *w = &(poly->_winding);
-  LVector3 normal = -(w->get_plane().get_normal());
+  LVector3 normal = w->get_plane().get_normal();
 
   Material *mat = poly->_material;
 
@@ -342,17 +457,32 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   }
 
   for (size_t k = 0; k < w->get_num_points(); k++) {
-    vwriter.add_data3f(w->get_point(k));
+    LPoint3 point = w->get_point(k);
+    vwriter.add_data3f(point);
     nwriter.add_data3f(normal);
 
     // Calcuate the UV coordinate for the vertex.
     LVecBase2 uv(
-      poly->_texture_vecs[0].get_xyz().dot(w->get_point(k)) + poly->_texture_vecs[0][3],
-      poly->_texture_vecs[1].get_xyz().dot(w->get_point(k)) + poly->_texture_vecs[1][3]
+      poly->_texture_vecs[0].get_xyz().dot(point) + poly->_texture_vecs[0][3],
+      poly->_texture_vecs[1].get_xyz().dot(point) + poly->_texture_vecs[1][3]
     );
     uv[0] /= tex_dim[0];
     uv[1] /= -tex_dim[1];
     twriter.add_data2f(uv);
+
+    // Now do the lightmap coordinate.
+    LVecBase2 lightcoord;
+    lightcoord[0] = point.dot(poly->_lightmap_vecs[0].get_xyz()) + poly->_lightmap_vecs[0][3];
+    lightcoord[0] -= poly->_lightmap_mins[0];
+    lightcoord[0] += 0.5;
+    lightcoord[0] /= poly->_lightmap_size[0] + 1;
+
+    lightcoord[1] = point.dot(poly->_lightmap_vecs[1].get_xyz()) + poly->_lightmap_vecs[1][3];
+    lightcoord[1] -= poly->_lightmap_mins[1];
+    lightcoord[1] += 0.5;
+    lightcoord[1] /= poly->_lightmap_size[1] + 1;
+
+    lwriter.add_data2f(lightcoord);
   }
 
   PT(GeomTriangles) tris = new GeomTriangles(GeomEnums::UH_static);
@@ -361,9 +491,89 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
     tris->close_primitive();
   }
 
+  // Keep track of this for when we compute lightmaps.
+  poly->_geom_index = geom_node->get_num_geoms();
+  poly->_geom_node = geom_node;
+
   PT(Geom) geom = new Geom(vdata);
   geom->add_primitive(tris);
   geom_node->add_geom(geom, state);
+}
+
+/**
+ *
+ */
+void MapBuilder::
+divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs) {
+
+  pvector<MapGeomBase *> unassigned_geoms = geoms;
+
+  for (int i = 0; i < 8; i++) {
+    LPoint3 this_mins = node_mins;
+    LPoint3 this_maxs = node_maxs;
+
+    LVector3 size = this_maxs - this_mins;
+    size *= 0.5;
+
+    if ((i & 4) != 0) {
+      this_mins[0] += size[0];
+    }
+    if ((i & 2) != 0) {
+      this_mins[1] += size[1];
+    }
+    if ((i & 1) != 0) {
+      this_mins[2] += size[2];
+    }
+
+    this_maxs = this_mins + size;
+
+    LVector3 qsize = size * 0.5f;
+
+    BoundingBox node_bounds(this_mins, this_maxs);
+    node_bounds.local_object();
+
+    // The list of geoms at this node.
+    pvector<MapGeomBase *> node_geoms;
+
+    // Go through all the unassigned geoms at this node and see if they
+    // can be assigned to us.
+    for (auto it = unassigned_geoms.begin(); it != unassigned_geoms.end();) {
+      MapGeomBase *geom = *it;
+      if (geom->overlaps_box(this_mins + qsize, qsize)) {
+        // Yes!  This geom can be assigned to us.
+        node_geoms.push_back(geom);
+        // Remove it from the unassigned list.
+        it = unassigned_geoms.erase(it);
+      } else {
+        ++it;
+      }
+    }
+
+    if (node_geoms.empty()) {
+      // Nothing in this part of the world.
+      continue;
+    }
+
+    if (size[0] <= _options.get_mesh_group_size()) {
+      // We've reached the mesh group size threshold and we have a set of
+      // map geometry contained within this node.  Create a mesh group here.
+
+      MapGeomGroup group;
+      group.geoms = node_geoms;
+      group.bounds = new BoundingBox;
+      for (MapGeomBase *geom : node_geoms) {
+        assert(!geom->_in_group);
+        group.bounds->extend_by(geom->_bounds);
+        geom->_in_group = true;
+      }
+      _mesh_groups.push_back(std::move(group));
+
+    } else {
+      // Keep dividing meshes amongst octants until we reach the mesh group
+      // size threshold.
+      divide_meshes(node_geoms, this_mins, this_maxs);
+    }
+  }
 }
 
 /**
@@ -373,9 +583,13 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
 MapBuilder::ErrorCode MapBuilder::
 build_polygons() {
   _world_mesh_index = -1;
-  ThreadManager::run_threads_on_individual(
-    "BuildPolygons", _source_map->_entities.size(),
-    false, std::bind(&MapBuilder::build_entity_polygons, this, std::placeholders::_1));
+  for (size_t i = 0; i < _source_map->_entities.size(); i++) {
+    build_entity_polygons(i);
+  }
+
+  //ThreadManager::run_threads_on_individual(
+  //  "BuildPolygons", _source_map->_entities.size(),
+  // false, std::bind(&MapBuilder::build_entity_polygons, this, std::placeholders::_1));
   return EC_ok;
 }
 
@@ -391,6 +605,9 @@ build_entity_polygons(int i) {
   }
 
   PT(MapMesh) ent_mesh = new MapMesh;
+  ent_mesh->_in_group = false;
+  ent_mesh->_is_mesh = true;
+  ent_mesh->_entity = i;
   LPoint3 minp, maxp;
   minp.set(1e+9, 1e+9, 1e+9);
   maxp.set(-1e+9, -1e+9, -1e+9);
@@ -478,6 +695,11 @@ build_entity_polygons(int i) {
 
       PT(MapPoly) poly = new MapPoly;
       poly->_winding = w;
+      poly->_in_group = false;
+      poly->_is_mesh = false;
+      LPoint3 polymin, polymax;
+      w.get_bounds(polymin, polymax);
+      poly->_bounds = new BoundingBox(polymin, polymax);
       poly->_material = poly_material;
 
       if (side->_displacement != nullptr) {
@@ -505,6 +727,43 @@ build_entity_polygons(int i) {
       poly->_texture_vecs[1][1] = side->_v_axis[1] / side->_uv_scale[1];
       poly->_texture_vecs[1][2] = side->_v_axis[2] / side->_uv_scale[1];
       poly->_texture_vecs[1][3] = side->_uv_shift[1] + origin.dot(poly->_texture_vecs[1].get_xyz());
+
+      // Twice the resolution for the GPU lightmapper.
+      PN_stdfloat lightmap_scale = side->_lightmap_scale * 0.5f;
+      poly->_lightmap_vecs[0][0] = side->_u_axis[0] / lightmap_scale;
+      poly->_lightmap_vecs[0][1] = side->_u_axis[1] / lightmap_scale;
+      poly->_lightmap_vecs[0][2] = side->_u_axis[2] / lightmap_scale;
+      poly->_lightmap_vecs[1][0] = side->_v_axis[0] / lightmap_scale;
+      poly->_lightmap_vecs[1][1] = side->_v_axis[1] / lightmap_scale;
+      poly->_lightmap_vecs[1][2] = side->_v_axis[2] / lightmap_scale;
+      PN_stdfloat shift_scale_u = side->_uv_scale[0] / lightmap_scale;
+      PN_stdfloat shift_scale_v = side->_uv_scale[1] / lightmap_scale;
+      poly->_lightmap_vecs[0][3] = shift_scale_u * side->_uv_shift[0] + origin.dot(poly->_lightmap_vecs[0].get_xyz());
+      poly->_lightmap_vecs[1][3] = shift_scale_v * side->_uv_shift[1] + origin.dot(poly->_lightmap_vecs[1].get_xyz());
+
+      // Calc lightmap size and mins.
+      LVecBase2 lmins(1e24);
+      LVecBase2 lmaxs(-1e24);
+
+      for (int ivert = 0; ivert < w.get_num_points(); ivert++) {
+        LPoint3 wpt = w.get_point(ivert);
+        for (int l = 0; l < 2; l++) {
+          PN_stdfloat val = wpt[0] * poly->_lightmap_vecs[l][0] +
+                            wpt[1] * poly->_lightmap_vecs[l][1] +
+                            wpt[2] * poly->_lightmap_vecs[l][2] +
+                            poly->_lightmap_vecs[l][3];
+          lmins[l] = std::min(val, lmins[l]);
+          lmaxs[l] = std::max(val, lmaxs[l]);
+        }
+      }
+
+      for (int l = 0; l < 2; l++) {
+        lmins[l] = std::floor(lmins[l]);
+        lmaxs[l] = std::ceil(lmaxs[l]);
+        poly->_lightmap_mins[l] = (int)lmins[l];
+        poly->_lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+      }
+
       solid_polys.push_back(poly);
 
       if (mapbuilder_cat.is_debug()) {
@@ -546,4 +805,169 @@ build_entity_polygons(int i) {
   }
   _meshes.push_back(ent_mesh);
   ThreadManager::unlock();
+}
+
+/**
+ * Computes a lightmap for all polygons in the level.
+ */
+MapBuilder::ErrorCode MapBuilder::
+build_lighting() {
+  LightBuilder builder;
+
+  // Make the lights 5000 times as bright as the original .vmf lights.
+  // Works better with the physically based camera.
+  static constexpr PN_stdfloat light_scale_factor = 1.0f;//5000.0f;
+
+  // Add map polygons to lightmapper.
+  for (size_t i = 0; i < _meshes.size(); i++) {
+    MapMesh *mesh = _meshes[i];
+    for (size_t j = 0; j < mesh->_polys.size(); j++) {
+      MapPoly *poly = mesh->_polys[j];
+
+      if (poly->_geom_node == nullptr || poly->_geom_index == -1) {
+        continue;
+      }
+
+      if (poly->_material != nullptr && poly->_material->has_tag("compile_sky")) {
+        // Skip sky polygons.  The lightmapper treats emptiness as the sky.
+        continue;
+      }
+
+      NodePath geom_np(poly->_geom_node);
+
+      builder.add_geom(poly->_geom_node->get_geom(poly->_geom_index),
+                       poly->_geom_node->get_geom_state(poly->_geom_index),
+                       geom_np.get_net_transform(), poly->_lightmap_size,
+                       poly->_geom_node, poly->_geom_index);
+    }
+  }
+
+  // Now add the lights.
+  for (size_t i = 0; i < _source_map->_entities.size(); i++) {
+    MapEntitySrc *ent = _source_map->_entities[i];
+    if (ent->_class_name != "light" &&
+        ent->_class_name != "light_spot" &&
+        ent->_class_name != "light_environment") {
+      // Not a light entity.
+      continue;
+    }
+
+    LightBuilder::LightmapLight light;
+
+    if (ent->_properties.find("origin") != ent->_properties.end()) {
+      light.pos = KeyValues::to_3f(ent->_properties["origin"]);
+
+    } else {
+      light.pos.set(0, 0, 0);
+    }
+
+    if (ent->_properties.find("angles") != ent->_properties.end()) {
+      // pitch raw roll -> (yaw - 90) pitch roll
+      LVecBase3 phr = KeyValues::to_3f(ent->_properties["angles"]);
+      light.hpr[0] = phr[1] - 90;
+      light.hpr[1] = phr[0];
+      light.hpr[2] = phr[2];
+
+    } else {
+      light.hpr.set(0, 0, 0);
+    }
+
+    if (ent->_properties.find("pitch") != ent->_properties.end()) {
+      light.hpr[1] = atof(ent->_properties["pitch"].c_str());
+    }
+
+    if (ent->_properties.find("_light") != ent->_properties.end()) {
+      light.color = KeyValues::to_4f(ent->_properties["_light"]);
+      PN_stdfloat scalar = (light.color[3] / 255.0f) * light_scale_factor;
+      light.color[0] = std::pow(light.color[0] / 255.0f, 2.2f) * scalar;
+      light.color[1] = std::pow(light.color[1] / 255.0f, 2.2f) * scalar;
+      light.color[2] = std::pow(light.color[2] / 255.0f, 2.2f) * scalar;
+      light.color[3] = 1.0f;
+
+    } else {
+      light.color.set(1, 1, 1, 1);
+    }
+
+    if (ent->_properties.find("_constant_attn") != ent->_properties.end()) {
+      light.constant = std::max(0.0f, (float)atof(ent->_properties["_constant_attn"].c_str()));
+    } else {
+      light.constant = 0;
+    }
+
+    if (ent->_properties.find("_linear_attn") != ent->_properties.end()) {
+      light.linear = std::max(0.0f, (float)atof(ent->_properties["_linear_attn"].c_str()));
+    } else {
+      light.linear = 0;
+    }
+
+    if (ent->_properties.find("_quadratic_attn") != ent->_properties.end()) {
+      light.quadratic = std::max(0.0f, (float)atof(ent->_properties["_quadratic_attn"].c_str()));
+    } else {
+      light.quadratic = 0;
+    }
+
+    if (ent->_properties.find("_exponent") != ent->_properties.end()) {
+      light.exponent = atof(ent->_properties["_exponent"].c_str());
+    } else {
+      light.exponent = 1;
+    }
+
+    if (light.constant == 0 &&
+        light.linear == 0 &&
+        light.quadratic == 0) {
+      light.constant = 1;
+    }
+
+    // Scale intensity for unit 100 distance.
+    PN_stdfloat ratio = (light.constant + 100 * light.linear + 100 * 100 * light.quadratic);
+    if (ratio > 0) {
+      light.color[0] *= ratio;
+      light.color[1] *= ratio;
+      light.color[2] *= ratio;
+    }
+
+    if (ent->_properties.find("_inner_cone") != ent->_properties.end()) {
+      light.inner_cone = atof(ent->_properties["_inner_cone"].c_str());
+    } else {
+      light.inner_cone = 30.0f;
+    }
+
+    if (ent->_properties.find("_cone") != ent->_properties.end()) {
+      light.outer_cone = atof(ent->_properties["_cone"].c_str());
+    } else {
+      light.outer_cone = 45.0f;
+    }
+
+    if (ent->_class_name == "light") {
+      light.type = LightBuilder::LT_point;
+
+    } else if (ent->_class_name == "light_spot") {
+      light.type = LightBuilder::LT_spot;
+
+    } else {
+      light.type = LightBuilder::LT_directional;
+
+      // Use the ambient color from the light_environment as the sky color
+      // for the lightmapper.
+
+      if (ent->_properties.find("_ambient") != ent->_properties.end()) {
+        LColor sky_color = KeyValues::to_4f(ent->_properties["_ambient"]);
+        PN_stdfloat scalar = (sky_color[3] / 255.0f) * light_scale_factor;
+        sky_color[0] = std::pow(sky_color[0] / 255.0f, 2.2f) * scalar;
+        sky_color[1] = std::pow(sky_color[1] / 255.0f, 2.2f) * scalar;
+        sky_color[2] = std::pow(sky_color[2] / 255.0f, 2.2f) * scalar;
+        sky_color[3] = 1.0f;
+
+        builder.set_sky_color(sky_color);
+      }
+    }
+
+    builder._lights.push_back(light);
+  }
+
+  if (!builder.solve()) {
+    return EC_lightmap_failed;
+  }
+
+  return EC_ok;
 }

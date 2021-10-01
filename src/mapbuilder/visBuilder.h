@@ -28,16 +28,7 @@
 #include "rayTraceTriangleMesh.h"
 #include "vector_uchar.h"
 #include "mapBuilder.h"
-
-/**
- * A collection of world polygons and non-world meshes that belong to the
- * same set of area clusters.
- */
-class VisMeshGroup {
-public:
-  pvector<MapPoly *> world_polys;
-  pvector<MapMesh *> meshes;
-};
+#include "bitArray.h"
 
 class PFStack {
 public:
@@ -89,8 +80,6 @@ public:
 
   bool build();
 
-  void calc_scene_bounds();
-
   void voxelize_scene();
 
   void create_tiles();
@@ -106,11 +95,9 @@ public:
 
   void build_pvs();
 
-  void build_vis_mesh_groups();
-
 private:
-  void place_world_polygon(int i);
-  void place_mesh_entity(int i);
+
+  void find_mesh_group_clusters(int i);
 
   void final_cluster_pvs(int i);
 
@@ -182,8 +169,6 @@ public:
 
   size_t _portal_bytes;
   size_t _portal_longs;
-
-  pmap<pset<int>, VisMeshGroup> _vis_mesh_groups;
 };
 
 #include "visBuilder.I"

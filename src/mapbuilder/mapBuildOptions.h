@@ -64,6 +64,9 @@ PUBLISHED:
   INLINE void set_vis_show_portals(bool flag);
   INLINE bool get_vis_show_portals() const;
 
+  INLINE void set_mesh_group_size(PN_stdfloat size);
+  INLINE PN_stdfloat get_mesh_group_size() const;
+
 public:
   Filename _input_filename;
   Filename _output_filename;
@@ -80,6 +83,8 @@ public:
   LVecBase3 _vis_voxel_size;
   LVecBase3i _vis_tile_size;
   LVecBase3 _vis_max_cell_size;
+
+  PN_stdfloat _mesh_group_size;
 };
 
 #include "mapBuildOptions.I"

@@ -27,6 +27,7 @@ MapBuildOptions() {
   _vis_voxel_size.set(16, 16, 16);
   _vis_max_cell_size.set(1e+9, 1e+9, 1e+9);
   _vis_tile_size.set(128, 128, 128);
+  _mesh_group_size = 256.0f;
 }
 
 /**
@@ -241,4 +242,24 @@ set_vis_show_portals(bool flag) {
 INLINE bool MapBuildOptions::
 get_vis_show_portals() const {
   return _vis_show_portals;
+}
+
+/**
+ * Sets the cubic size in world units of mesh groups.  The larger the size,
+ * the more meshes and polygons will be flattened together, but culling will
+ * be less effective.  Each map may have a different ideal mesh group size.
+ */
+INLINE void MapBuildOptions::
+set_mesh_group_size(PN_stdfloat size) {
+  _mesh_group_size = size;
+}
+
+/**
+ * Returns the cubic size in world units of mesh groups.
+ *
+ * See set_mesh_group_size().
+ */
+INLINE PN_stdfloat MapBuildOptions::
+get_mesh_group_size() const {
+  return _mesh_group_size;
 }

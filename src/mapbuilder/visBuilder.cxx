@@ -98,7 +98,9 @@ build() {
   visbuilder_cat.info()
     << "Vis start\n";
 
-  calc_scene_bounds();
+  _scene_mins = _builder->_scene_mins;
+  _scene_maxs = _builder->_scene_maxs;
+  _scene_bounds = _builder->_scene_bounds;
 
   visbuilder_cat.info()
     << "Scene bounds: mins " << _scene_mins << ", maxs " << _scene_maxs << "\n";
@@ -168,49 +170,6 @@ build() {
   _areas.clear();
   _portals.clear();
 
-  // Rebuild the AABB tree using the area clusters instead of the individual
-  // areas.  We need this to quickly place models and world polygons inside
-  // clusters.
-  for (size_t i = 0; i < _area_clusters.size(); i++) {
-    AreaCluster *cluster = _area_clusters[i];
-    for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-      PT(BoundingBox) area_bounds = _voxels.get_voxel_bounds(
-        ab._min_voxel, ab._max_voxel);
-      _area_tree.add_leaf(
-        area_bounds->get_minq(), area_bounds->get_maxq(), cluster->_id);
-    }
-  }
-  _area_tree.build();
-
-  // Associate world polygons with area clusters.
-  MapMesh *world_mesh = _builder->_meshes[_builder->_world_mesh_index];
-  ThreadManager::run_threads_on_individual(
-    "PlaceWorldPolygons", world_mesh->_polys.size(), false,
-    std::bind(&VisBuilder::place_world_polygon, this, std::placeholders::_1));
-
-  size_t start_num_polys = world_mesh->_polys.size();
-  // Now prune out world polygons that weren't assigned to any clusters.
-  for (auto it = world_mesh->_polys.begin(); it != world_mesh->_polys.end();) {
-    MapPoly *poly = *it;
-    if (poly->_clusters.empty()) {
-      it = world_mesh->_polys.erase(it);
-    } else {
-      ++it;
-    }
-  }
-  size_t end_num_polys = world_mesh->_polys.size();
-  visbuilder_cat.info()
-    << "Pruned " << (start_num_polys - end_num_polys) << " outside world polygons\n";
-
-  // Now associate non-world meshes with area clusters.
-  ThreadManager::run_threads_on_individual(
-    "PlaceMeshEntities", _builder->_meshes.size(), false,
-    std::bind(&VisBuilder::place_mesh_entity, this, std::placeholders::_1));
-
-  _area_tree.clear();
-
-  build_vis_mesh_groups();
-
   visbuilder_cat.info()
     << "Building final area cluster k-d tree...\n";
 
@@ -231,220 +190,74 @@ build() {
     << cluster_tree.get_num_nodes() << " nodes, " << cluster_tree.get_num_leaves() << " leaves\n";
   _builder->_out_data->set_area_cluster_tree(std::move(cluster_tree));
 
+  // Assign each mesh group created by the MapBuilder to the area clusters that
+  // it intersects with.
+  ThreadManager::run_threads_on_individual(
+    "AssignMeshGroupClusters", _builder->_mesh_groups.size(), false,
+    std::bind(&VisBuilder::find_mesh_group_clusters, this, std::placeholders::_1));
+
   build_pvs();
 
   return true;
 }
 
 /**
- * Places world polygons and meshes belonging to the same set of area clusters
- * into groups.
+ * Assigns a mesh group to the area clusters that it intersects with.
  */
 void VisBuilder::
-build_vis_mesh_groups() {
-  visbuilder_cat.info()
-    << "Building vis mesh groups...\n";
+find_mesh_group_clusters(int i) {
+  MapGeomGroup *group = &_builder->_mesh_groups[i];
 
-  MapMesh *world_mesh = _builder->_meshes[_builder->_world_mesh_index];
-  for (MapPoly *poly : world_mesh->_polys) {
-    auto it = _vis_mesh_groups.find(poly->_clusters);
-    if (it == _vis_mesh_groups.end()) {
-      VisMeshGroup group;
-      group.world_polys.push_back(poly);
-      _vis_mesh_groups[poly->_clusters] = group;
+  // Traverse K-D tree to get the set of clusters.
+
+  const KDTree *tree = _builder->_out_data->get_area_cluster_tree();
+
+  std::stack<int> stack;
+  stack.push(0);
+
+  while (!stack.empty()) {
+    int node_index = stack.top();
+    stack.pop();
+
+    if (node_index >= 0) {
+      const KDTree::Node *node = tree->get_node(node_index);
+
+      LPlane node_plane(0, 0, 0, -node->dist);
+      node_plane[node->axis] = 1;
+
+      bool got_front = false;
+      bool got_back = false;
+
+      for (size_t i = 0; i < group->geoms.size(); i++) {
+        MapPoly *poly = (MapPoly *)group->geoms[i];
+        PlaneSide side = poly->_winding.get_plane_side(node_plane);
+        if (side == PS_front) {
+          got_front = true;
+
+        } else if (side == PS_back) {
+          got_back = true;
+
+        } else {
+          got_front = got_back = true;
+        }
+
+        if (got_front && got_back) {
+          break;
+        }
+      }
+
+      if (got_front) {
+        stack.push(node->right_child);
+      }
+      if (got_back) {
+        stack.push(node->left_child);
+      }
 
     } else {
-      it->second.world_polys.push_back(poly);
-    }
-  }
-
-  for (size_t i = 0; i < _builder->_meshes.size(); i++) {
-    if (i == _builder->_world_mesh_index) {
-      // World polys handled above.
-      continue;
-    }
-
-    MapMesh *mesh = _builder->_meshes[i];
-
-    auto it = _vis_mesh_groups.find(mesh->_clusters);
-    if (it == _vis_mesh_groups.end()) {
-      VisMeshGroup group;
-      group.meshes.push_back(mesh);
-      _vis_mesh_groups[mesh->_clusters] = group;
-
-    } else {
-      it->second.meshes.push_back(mesh);
-    }
-  }
-
-  visbuilder_cat.info()
-    << _vis_mesh_groups.size() << " vis mesh groups\n";
-}
-
-/**
- * Places the indicated mesh entity into the area cluster(s) that it
- * intersects with.  This operates on non-world meshes.  World meshes are
- * assigned to area clusters on a per-polygon level, while mesh entities are
- * treated as single units.
- */
-void VisBuilder::
-place_mesh_entity(int i) {
-  if (i == _builder->_world_mesh_index) {
-    return;
-  }
-
-  MapMesh *mesh = _builder->_meshes[i];
-
-  const LPoint3 &mins = mesh->_bounds->get_minq();
-  const LPoint3 &maxs = mesh->_bounds->get_maxq();
-
-  for (AreaCluster *cluster : _area_clusters) {
-    for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-      LPoint3 bmin, bmax;
-      _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel, bmin, bmax);
-      bmin -= _voxels._voxel_size;
-      bmin -= LPoint3(0.1);
-      bmax += _voxels._voxel_size;
-      bmax += LPoint3(0.1);
-
-      if (maxs[0] >= bmin[0] && mins[0] <= bmax[0] &&
-          maxs[1] >= bmin[1] && mins[1] <= bmax[1] &&
-          maxs[2] >= bmin[2] && mins[2] <= bmax[2]) {
-        mesh->_clusters.insert(cluster->_id);
-        break;
-      }
-    }
-  }
-}
-
-/**
- * Places the indicated world occluder polygon into the area cluster(s) that
- * it intersects with.  Polygons that intersect the same set of clusters are
- * flattened together.  Polygons that do not intersect any clusters are
- * removed entirely.
- */
-void VisBuilder::
-place_world_polygon(int i) {
-  //
-  // Occluders - Intersect triangles with surrounding voxels of each
-  //                     cluster.
-  // Non-occluders - Bounding box cluster check?
-  //
-  //
-  //
-
-  MapMesh *world_mesh = _builder->_meshes[_builder->_world_mesh_index];
-  MapPoly *poly = world_mesh->_polys[i];
-
-  Winding *w = &poly->_winding;
-
-  if (poly->_vis_occluder) {
-    // Occluder polygons are inside solid voxels and therefore not directly
-    // inside an area cluster.  However, if we offset the polygon's winding
-    // along the normal by the size of a voxel, the polygon should end up in
-    // the adjacent area cluster(s).
-
-    LPlane poly_plane = w->get_plane();
-    LVector3 poly_normal = -poly_plane.get_normal();
-
-    LVector3 offset = poly_normal;
-    offset.componentwise_mult(_voxels._voxel_size * 0.5f);
-    //w->translate(offset);
-
-    // Get the set of clusters that the offsetted winding intersects with.
-
-    for (AreaCluster *cluster : _area_clusters) {
-      bool got_cluster = false;
-
-      for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-        if (got_cluster) {
-          break;
-        }
-
-        LPoint3 bmin, bmax;
-        _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel, bmin, bmax);
-        LPoint3 center = (bmin + bmax) * 0.5f;
-        LPoint3 half = (bmax - bmin) * 0.5f;
-        half += _voxels._voxel_size;
-        half += LPoint3(0.1);
-
-        for (int j = 1; j < (w->get_num_points() - 1); j++) {
-          if (tri_box_overlap(center, half, w->get_point(0), w->get_point(j), w->get_point(j + 1))) {
-            poly->_clusters.insert(cluster->_id);
-            got_cluster = true;
-            break;
-          }
-        }
-      }
-    }
-
-#if 0
-    std::stack<int> node_stack;
-    node_stack.push(0);
-    while (!node_stack.empty()) {
-      int node_index = node_stack.top();
-      node_stack.pop();
-
-      if (node_index == -1) {
-        continue;
-      }
-
-      const AABBTreeInt::Node *node = _area_tree.get_node(node_index);
-      LPoint3 node_center = (node->min + node->max) * 0.5f;
-      LPoint3 node_half = (node->max - node->min) * 0.5f;
-      node_half += _voxels._voxel_size;
-      node_half += LPoint3(0.1);
-
-      for (int j = 1; j < (w->get_num_points() - 1); j++) {
-        verts[0] = w->get_point(0);
-        verts[1] = w->get_point(j);
-        verts[2] = w->get_point(j + 1);
-
-        if (tri_box_overlap(node_center, node_half, verts)) {
-          // Triangle intersects the node's bbox.
-
-          if (node->is_leaf()) {
-            if (node->value != -1) {
-              poly->_clusters.set_bit(node->value);
-            }
-
-          } else {
-            // Traverse children.
-            node_stack.push(node->children[0]);
-            node_stack.push(node->children[1]);
-          }
-
-          break;
-        }
-      }
-    }
-#endif
-
-    // Undo the offset.
-    //w->translate(-offset);
-
-  } else {
-    // If the polygon is not an occluder, simply query the cluster tree with
-    // the polygon's bounding box.
-
-    LPoint3 mins, maxs;
-    w->get_bounds(mins, maxs);
-
-    for (AreaCluster *cluster : _area_clusters) {
-      for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-        LPoint3 bmin, bmax;
-        _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel, bmin, bmax);
-        bmin -= _voxels._voxel_size;
-        bmin -= LPoint3(0.1);
-        bmax += _voxels._voxel_size;
-        bmax += LPoint3(0.1);
-
-        if (maxs[0] >= bmin[0] && mins[0] <= bmax[0] &&
-            maxs[1] >= bmin[1] && mins[1] <= bmax[1] &&
-            maxs[2] >= bmin[2] && mins[2] <= bmax[2]) {
-          poly->_clusters.insert(cluster->_id);
-          break;
-        }
+      // Hit a leaf.  Add cluster to mesh group.
+      const KDTree::Leaf *leaf = tree->get_leaf(~node_index);
+      if (leaf->value != -1) {
+        group->clusters.set_bit(leaf->value);
       }
     }
   }
@@ -1039,6 +852,7 @@ build_pvs() {
   //    << "\n";
   //}
 
+  // Store PVS data on the output map.
   for (size_t i = 0; i < _area_clusters.size(); i++) {
     AreaClusterPVS pvs;
 
@@ -1048,8 +862,8 @@ build_pvs() {
 
     // Assign mesh groups to the cluster.
     int mesh_group_index = 0;
-    for (auto it = _vis_mesh_groups.begin(); it != _vis_mesh_groups.end(); ++it) {
-      if (it->first.find(_area_clusters[i]->_id) != it->first.end()) {
+    for (auto it = _builder->_mesh_groups.begin(); it != _builder->_mesh_groups.end(); ++it) {
+      if (it->clusters.get_bit(_area_clusters[i]->_id)) {
         // Mesh group resides in this area cluster.
         pvs.set_mesh_group(mesh_group_index);
       }
@@ -1555,7 +1369,10 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
   // To not check the same rejected neighbor over and over again.
   pset<Area *> rejected_neighbors;
 
-  constexpr int num_rays = 1000;
+  constexpr int num_rays = 5000;
+  // The largest allowed size of a cluster on any AABB axis.
+  // 256 hammer units, roughly 16 feet.  TODO: make this configurable.
+  constexpr PN_stdfloat cluster_size_limit = 256.0f;
 #if SSE_VIS_RAYS
   constexpr int rays_per_group = 4;
   constexpr int ray_groups = num_rays / rays_per_group;
@@ -1575,6 +1392,21 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
 #endif
 
   while (true) {
+    // If the world-space size of the cluster has a reached the threshold
+    // on any axis, this cluster is done.  It is an optimization to limit
+    // the size of area clusters.  The bigger the area cluster, the more of
+    // the world will be potentially visible to the cluster, which reduces
+    // culling.
+    LPoint3 curr_mins(FLT_MAX), curr_maxs(FLT_MIN);
+    _voxels.get_voxel_bounds(group->_min_voxel, group->_max_voxel, curr_mins, curr_maxs);
+    LVector3 curr_size = curr_maxs - curr_mins;
+    if (curr_size[0] >= cluster_size_limit ||
+        curr_size[1] >= cluster_size_limit ||
+        curr_size[2] >= cluster_size_limit) {
+      // Size limit reached.  Cluster is complete.
+      break;
+    }
+
     // Get the current set of eligible neighbors for the cluster.
     pset<PT(Area)> neighbors;
     for (Portal *portal : group->_portals) {
@@ -1708,7 +1540,7 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
             num_occluded_rays++;
 
             PN_stdfloat curr_value = ((PN_stdfloat)num_occluded_rays / (PN_stdfloat)num_rays) * outgoing_portal_area;
-            if (curr_value > 32.0f*32.0f) {
+            if (curr_value > 48.0f*48.0f) {
               // If the occlusion value is already above the threshold, early out.
               break;
             }
@@ -1750,7 +1582,7 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
 #else
       PN_stdfloat occluded_ratio = (PN_stdfloat)num_occluded_rays / (PN_stdfloat)num_rays;
       PN_stdfloat occlusion_value = occluded_ratio * outgoing_portal_area;
-      if (occlusion_value > 32.0f*32.0f) {
+      if (occlusion_value > 48.0f*48.0f) {
         // Reject this neighbor from the cluster.
         rejected_neighbors.insert(neighbor);
 
@@ -2089,34 +1921,4 @@ try_new_bbox(LPoint3i &min_voxel, LPoint3i &max_voxel, VoxelSpace::NeighborDirec
   }
 
   return true;
-}
-
-/**
- *
- */
-void VisBuilder::
-calc_scene_bounds() {
-  _scene_mins.set(1e+9, 1e+9, 1e+9);
-  _scene_maxs.set(-1e+9, -1e+9, -1e+9);
-
-  for (size_t i = 0; i < _builder->_meshes.size(); i++) {
-    MapMesh *mesh = _builder->_meshes[i];
-    for (size_t j = 0; j < mesh->_polys.size(); j++) {
-      MapPoly *poly = mesh->_polys[j];
-      Winding *w = &(poly->_winding);
-      for (int k = 0; k < w->get_num_points(); k++) {
-        LPoint3 point = w->get_point(k);
-
-        _scene_mins[0] = std::min(point[0], _scene_mins[0]);
-        _scene_mins[1] = std::min(point[1], _scene_mins[1]);
-        _scene_mins[2] = std::min(point[2], _scene_mins[2]);
-
-        _scene_maxs[0] = std::max(point[0], _scene_maxs[0]);
-        _scene_maxs[1] = std::max(point[1], _scene_maxs[1]);
-        _scene_maxs[2] = std::max(point[2], _scene_maxs[2]);
-      }
-    }
-  }
-
-  _scene_bounds = new BoundingBox(_scene_mins, _scene_maxs);
 }

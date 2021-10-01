@@ -34,7 +34,7 @@ MapRoot(MapData *data) :
  */
 bool MapRoot::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
-  if (_data == nullptr || !_pvs_cull) {
+  if (_data == nullptr || !_pvs_cull || _data->get_num_clusters() == 0) {
     return true;
   }
 
