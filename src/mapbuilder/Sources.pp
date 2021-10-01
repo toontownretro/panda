@@ -1,6 +1,8 @@
-#define BUILD_DIRECTORY $[HAVE_MAPBUILDER]
+#define BUILD_DIRECTORY $[and $[HAVE_MAPBUILDER], $[HAVE_OIDN]]
 
 #define LOCAL_LIBS map pgraph pphysics grutil raytrace
+
+#define USE_PACKAGES oidn
 
 #begin lib_target
   #define TARGET mapbuilder
@@ -9,6 +11,7 @@
   #define SOURCES \
     area.h area.I \
     config_mapbuilder.h \
+    lightBuilder.h lightBuilder.I \
     mapBuilder.h mapBuilder.I \
     mapBuildOptions.h mapBuildOptions.I \
     mapObjects.h mapObjects.I \
@@ -23,6 +26,7 @@
   #define COMPOSITE_SOURCES \
     area.cxx \
     config_mapbuilder.cxx \
+    lightBuilder.cxx \
     mapBuilder.cxx \
     mapBuildOptions.cxx \
     mapObjects.cxx \
