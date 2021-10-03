@@ -293,11 +293,6 @@ voxelize_scene() {
  */
 void VisBuilder::
 voxelize_world_polygon(int i) {
-  pvector<LPoint3> verts;
-  verts.resize(3);
-
-  LVecBase3 voxel_half = (_builder->_options._vis_voxel_size * 0.5f);
-
   MapMesh *world_mesh = _builder->_meshes[_builder->_world_mesh_index];
   MapPoly *poly = world_mesh->_polys[i];
 
@@ -305,6 +300,11 @@ voxelize_world_polygon(int i) {
     // Polygon does not block visibility.
     return;
   }
+
+  pvector<LPoint3> verts;
+  verts.resize(3);
+
+  LVecBase3 voxel_half = (_builder->_options._vis_voxel_size * 0.5f);
 
   Winding *w = &poly->_winding;
   LPlane plane = w->get_plane();
@@ -341,11 +341,16 @@ voxelize_world_polygon(int i) {
       BoundingBox *voxel_bounds = voxels_bounds[k];
       LPoint3 voxel_mid = voxel_bounds->get_approx_center();
 
-      // Check if the triangle overlaps with the volume of this voxel.  If
-      // it does, the voxel is solid.  Also ignore the voxel in front of the
-      // winding plane when it borders two voxels on both sides.
-      if (/*plane.dist_to_plane(voxel_mid) < voxel_half[0] &&*/
-          tri_box_overlap(voxel_mid, voxel_half, verts[0], verts[1], verts[2])) {
+      // If the distance from the voxel center to the polygon plane is
+      // greater than or equal to the half size of the voxel, then the polygon
+      // is sandwiched between two voxels, one on each side of the polygon.
+      // Ignore the voxel that is in front of the polygon.
+      if (plane.dist_to_plane(voxel_mid) >= voxel_half[0]) {
+        continue;
+      }
+
+      // Nudge the voxel size a bit to account for floating-point imprecision.
+      if (tri_box_overlap(voxel_mid, voxel_half + 0.01f, verts[0], verts[1], verts[2])) {
         if (tri_box_check_edge(voxel_mid, voxel_half, verts)) {
           // Mark voxel as solid.
           ThreadManager::lock();
@@ -1397,7 +1402,7 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
     // the size of area clusters.  The bigger the area cluster, the more of
     // the world will be potentially visible to the cluster, which reduces
     // culling.
-    LPoint3 curr_mins(FLT_MAX), curr_maxs(FLT_MIN);
+    LPoint3 curr_mins(1e24), curr_maxs(-1e24);
     _voxels.get_voxel_bounds(group->_min_voxel, group->_max_voxel, curr_mins, curr_maxs);
     LVector3 curr_size = curr_maxs - curr_mins;
     if (curr_size[0] >= cluster_size_limit ||
@@ -1760,7 +1765,9 @@ get_portal_facing_wall_plane(const LPoint3i &min, const LPoint3i &max, const Are
     return LVector3::down();
   }
 
-  nassert_raise("Wrong portal shared areas.");
+  visbuilder_cat.error()
+    << "Wrong portal shared areas.\n";
+  return LVector3::forward();
 }
 
 /**
@@ -1779,6 +1786,10 @@ find_seed_point_in_tile(VisTile *tile) const {
       }
     }
   }
+
+  visbuilder_cat.error()
+    << "Vis tile has no empty voxels\n";
+  return voxel;
 }
 
 /**
