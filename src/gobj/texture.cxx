@@ -7571,7 +7571,7 @@ get_ram_image_as(const string &requested_format) {
     gobj_cat.error() << "Couldn't find an uncompressed RAM image!\n";
     return CPTA_uchar(get_class_type());
   }
-  int imgsize = cdata->_x_size * cdata->_y_size;
+  int imgsize = cdata->_x_size * cdata->_y_size * cdata->_z_size * cdata->_num_views;
   nassertr(cdata->_num_components > 0 && cdata->_num_components <= 4, CPTA_uchar(get_class_type()));
   nassertr(data.size() == (size_t)(cdata->_component_width * cdata->_num_components * imgsize), CPTA_uchar(get_class_type()));
 
