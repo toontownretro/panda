@@ -2365,6 +2365,14 @@ begin_frame(Thread *current_thread) {
 }
 
 /**
+ * Blocks until all previously issued graphics commands have executed to
+ * completion.
+ */
+void GraphicsStateGuardian::
+finish() {
+}
+
+/**
  * Called between begin_frame() and end_frame() to mark the beginning of
  * drawing commands for a "scene" (usually a particular DisplayRegion) within
  * a frame.  All 3-D drawing commands, except the clear operation, must be

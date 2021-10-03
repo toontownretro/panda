@@ -459,7 +459,8 @@ public:
                                        const TransformState *transform);
 
   void bind_fbo(GLuint fbo);
-  void finish();
+
+  virtual void finish() override;
 
 protected:
   void do_issue_transform();

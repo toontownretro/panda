@@ -355,9 +355,13 @@ public:
   virtual bool prepare_lens();
 
   virtual bool begin_frame(Thread *current_thread);
+
+  virtual void finish();
+
 PUBLISHED:
   virtual bool begin_scene();
   virtual void end_scene();
+
 public:
   virtual void end_frame(Thread *current_thread);
 

@@ -3828,9 +3828,9 @@ finish() {
   // Rather than call glfinish which returns immediately if draw commands have
   // been submitted, we will read a single pixel from the frame.  That will
   // force the graphics card to finish drawing before it is called
-  char data[4];
-  glReadPixels(0,0,1,1,GL_RGBA,GL_UNSIGNED_BYTE,&data);
-  // glFinish();
+  //char data[4];
+  //glReadPixels(0,0,1,1,GL_RGBA,GL_UNSIGNED_BYTE,&data);
+  glFinish();
 }
 
 /**
@@ -7294,7 +7294,7 @@ dispatch_compute(int num_groups_x, int num_groups_y, int num_groups_z, bool bloc
   _glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
 
   if (block) {
-    glFinish();
+    finish();
 
   } else {
     maybe_gl_finish();
