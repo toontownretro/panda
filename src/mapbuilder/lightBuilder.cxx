@@ -42,6 +42,8 @@
 #include "materialParamColor.h"
 #include "pfmFile.h"
 #include "load_prc_file.h"
+#include "antialiasAttrib.h"
+#include "colorBlendAttrib.h"
 
 #ifndef CPPPARSER
 #include "OpenImageDenoise/oidn.hpp"
@@ -418,7 +420,7 @@ make_textures() {
   PT(Texture) position = new Texture("lm_position");
   position->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
                                    Texture::T_float, Texture::F_rgba32);
-  position->set_clear_color(LColor(0, 0, 0, 1));
+  position->set_clear_color(LColor(0, 0, 0, 0));
   position->set_default_sampler(sampler);
   position->set_compression(Texture::CM_off);
   position->clear_image();
@@ -428,7 +430,7 @@ make_textures() {
   PT(Texture) normal = new Texture("lm_normal");
   normal->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
                                  Texture::T_float, Texture::F_rgb32);
-  normal->set_clear_color(LColor(0, 0, 0, 1));
+  normal->set_clear_color(LColor(0, 0, 0, 0));
   normal->set_default_sampler(sampler);
   normal->set_compression(Texture::CM_off);
   normal->clear_image();
@@ -526,8 +528,8 @@ collect_vertices_and_triangles() {
         tri.contents = geom.contents;
 
         // Compute triangle bounds.
-        tri.mins.set(FLT_MAX, FLT_MAX, FLT_MAX);
-        tri.maxs.set(FLT_MIN, FLT_MIN, FLT_MIN);
+        tri.mins.set(1e24, 1e24, 1e24);
+        tri.maxs.set(-1e24, -1e24, -1e24);
         for (int l = 0; l < 3; l++) {
           // Expand the bounds by a tiny bit to avoid precision errors.
           tri.mins[0] = std::min(tri.mins[0], _vertices[tri.indices[l]].pos[0] - 0.001f);
@@ -686,8 +688,8 @@ make_gpu_buffers() {
 
   // First, determine the scene AABB.  This is the union of all triangle
   // AABBs.
-  _scene_mins.set(FLT_MAX, FLT_MAX, FLT_MAX);
-  _scene_maxs.set(FLT_MIN, FLT_MIN, FLT_MIN);
+  _scene_mins.set(1e24, 1e24, 1e24);
+  _scene_maxs.set(-1e24, -1e24, -1e24);
   for (size_t i = 0; i < _triangles.size(); i++) {
     const LightmapTri &tri = _triangles[i];
     _scene_mins[0] = std::min(_scene_mins[0], tri.mins[0]);
@@ -864,6 +866,7 @@ rasterize_geoms_into_lightmap_textures() {
   fbprops.set_aux_float(3);
   fbprops.set_rgba_bits(8, 8, 8, 8);
   fbprops.set_force_hardware(true);
+  //fbprops.set_multisamples(16);
 
   unsigned int flags = GraphicsPipe::BF_refuse_window;
 
@@ -886,6 +889,53 @@ rasterize_geoms_into_lightmap_textures() {
   pvector<NodePath> scenes;
   pvector<PT(DisplayRegion)> display_regions;
 
+  CPT(RenderState) wireframe_state = RenderState::make(
+    RenderModeAttrib::make(RenderModeAttrib::M_wireframe), 10
+  );
+
+  LVecBase2 uv_offsets[25] = {
+    LVecBase2(-2, -2),
+    LVecBase2(2, -2),
+    LVecBase2(-2, 2),
+    LVecBase2(2, 2),
+
+    LVecBase2(-1, -2),
+    LVecBase2(1, -2),
+    LVecBase2(-2, -1),
+    LVecBase2(2, -1),
+    LVecBase2(-2, 1),
+    LVecBase2(2, 1),
+    LVecBase2(-1, 2),
+    LVecBase2(1, 2),
+
+    LVecBase2(-2, 0),
+    LVecBase2(2, 0),
+    LVecBase2(0, -2),
+    LVecBase2(0, 2),
+
+    LVecBase2(-1, -1),
+    LVecBase2(1, -1),
+    LVecBase2(-1, 0),
+    LVecBase2(1, 0),
+    LVecBase2(-1, 1),
+    LVecBase2(1, 1),
+    LVecBase2(0, -1),
+    LVecBase2(0, 1),
+
+    LVecBase2(0, 0)
+  };
+
+  CPT(RenderState) uv_offset_states[25];
+  for (size_t i = 0; i < 25; i++) {
+    CPT(RenderAttrib) sattr = ShaderAttrib::make();
+    uv_offset_states[i] = RenderState::make(
+      DCAST(ShaderAttrib, sattr)->set_shader_input(
+        ShaderInput("u_uv_offset", LVecBase2(uv_offsets[i][0] * (1.0f / (PN_stdfloat)_lightmap_size[0]),
+                                             uv_offsets[i][1] * (1.0f / (PN_stdfloat)_lightmap_size[1])))),
+      10
+    );
+  }
+
   // Now create a display region for each lightmap palette that will render
   // the Geoms that are part of that palette.  Each display region will
   // render into the correct page of the array texture.
@@ -898,11 +948,13 @@ rasterize_geoms_into_lightmap_textures() {
     root.set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none), 10);
     // Don't allow Panda to do dualing transparency if a Geom enables it.
     root.set_transparency(TransparencyAttrib::M_none, 10);
+    //root.set_antialias(AntialiasAttrib::M_multisample, 10);
     // If we write to or test against the depth buffer, Geoms rendered in one
     // page may be occluded by Geoms that were rendered in a different page.
-    root.set_depth_write(false, 10);
-    root.set_depth_test(false, 10);
+    root.set_depth_write(true, 10);
+    root.set_depth_test(true, 10);
     root.set_bin("unsorted", 10);
+    root.set_attrib(ColorBlendAttrib::make_off(), 10);
 
     //root.set_render_mode_filled_wireframe()
 
@@ -918,6 +970,15 @@ rasterize_geoms_into_lightmap_textures() {
     PT(DisplayRegion) dr = buffer->make_display_region();
     // Instruct the display region to render into this lightmap page.
     dr->set_target_tex_page(i);
+    dr->set_clear_color_active(true);
+    dr->set_clear_depth_active(true);
+    dr->set_clear_color(LColor(0, 0, 0, 0));
+    dr->set_clear_active(GraphicsOutput::RTP_aux_float_0, true);
+    dr->set_clear_active(GraphicsOutput::RTP_aux_float_1, true);
+    dr->set_clear_active(GraphicsOutput::RTP_aux_float_2, true);
+    dr->set_clear_value(GraphicsOutput::RTP_aux_float_0, LColor(0, 0, 0, 0));
+    dr->set_clear_value(GraphicsOutput::RTP_aux_float_1, LColor(0, 0, 0, 0));
+    dr->set_clear_value(GraphicsOutput::RTP_aux_float_2, LColor(0, 0, 0, 0));
 
     PT(Camera) cam = new Camera("cam");
     PT(OrthographicLens) lens = new OrthographicLens;
@@ -980,7 +1041,11 @@ rasterize_geoms_into_lightmap_textures() {
       }
 
       PT(GeomNode) geom_node = new GeomNode("lm_geom");
-      geom_node->add_geom(geom.ni_geom, geom.state);
+
+      for (size_t k = 0; k < 25; k++) {
+        geom_node->add_geom(geom.ni_geom, geom.state->compose(uv_offset_states[k]));
+      }
+
       geom_node->set_transform(geom.net_transform);
       NodePath geom_np = root.attach_new_node(geom_node);
       geom_np.set_shader_input("base_texture_sampler", base_tex, 10);
@@ -991,6 +1056,8 @@ rasterize_geoms_into_lightmap_textures() {
   // Now render everything and block until it's done.
   _graphics_engine->render_frame();
   _graphics_engine->sync_frame();
+
+  _gsg->finish();
 
   _graphics_engine->remove_window(buffer);
 
@@ -1033,9 +1100,12 @@ compute_unocclude() {
   for (size_t i = 0; i < _pages.size(); i++) {
     np.set_shader_input("u_palette_size_page", LVecBase3i(_lightmap_size[0], _lightmap_size[1], i));
 
-    // Run all pages simultaneously, but sync on the last page.
-    _graphics_engine->dispatch_compute(group_size, np.get_state(), _gsg, i == (_pages.size() - 1));
+    // Run all pages simultaneously.
+    _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+    _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
   }
+
+  _gsg->finish();
 
   // Free up memory.
   _lm_textures["unocclude"]->clear_image();
@@ -1084,9 +1154,12 @@ compute_direct() {
   for (size_t i = 0; i < _pages.size(); i++) {
     np.set_shader_input("u_palette_size_page", LVecBase3i(_lightmap_size[0], _lightmap_size[1], i));
 
-    // Run all pages simultaneously, but sync on the last page.
-    _graphics_engine->dispatch_compute(group_size, np.get_state(), _gsg, i == (_pages.size() - 1));
+    // Run all pages simultaneously.
+    _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+    _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
   }
+
+  _gsg->finish();
 
   lightbuilder_cat.info()
     << "Done.\n";
@@ -1165,7 +1238,9 @@ compute_indirect() {
 
             np.set_shader_input("u_ray_params", LVecBase3i(ray_from, ray_to, _rays_per_luxel));
 
-            _graphics_engine->dispatch_compute(group_size, np.get_state(), _gsg, true);
+            _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+            _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+            _gsg->finish();
           }
         }
       }
@@ -1273,9 +1348,12 @@ dialate_lightmaps() {
   for (size_t i = 0; i < _pages.size(); i++) {
     np.set_shader_input("u_palette_size_page", LVecBase3i(_lightmap_size[0], _lightmap_size[1], i));
 
-    // Run all pages simultaneously, but sync on the last page.
-    _graphics_engine->dispatch_compute(group_size, np.get_state(), _gsg, i == (_pages.size() - 1));
+    // Run all pages simultaneously.
+    _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+    _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
   }
+
+  _gsg->finish();
 
   // Free up memory.
   _lm_textures["direct"]->clear_image();
@@ -1449,6 +1527,9 @@ solve() {
   //    << "Failed to compute luxel unocclusion\n";
   //  return false;
   //}
+
+  //_graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
+  //_lm_textures["position"]->write("lm_position_#.png", 0, 0, true, false);
 
   if (!compute_direct()) {
     lightbuilder_cat.info()
