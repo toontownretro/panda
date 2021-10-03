@@ -272,9 +272,14 @@ build() {
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
   arr->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);
   arr->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
+  arr->add_column(InternalName::get_tangent(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
+  arr->add_column(InternalName::get_binormal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
   arr->add_column(InternalName::get_texcoord(), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
   arr->add_column(InternalName::get_texcoord_name("lightmap"), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format(arr);
+
+  //arr->add_column(InternalName::make("blend"), 1, GeomEnums::NT_stdfloat, GeomEnums::C_other);
+  //CPT(GeomVertexFormat) blend_format = GeomVertexFormat::register_format(arr);
 
   // Now write out the meshes to GeomNodes.
 
@@ -308,7 +313,7 @@ build() {
 
     for (MapPoly *poly : group_polys) {
       PT(GeomVertexData) vdata = new GeomVertexData(
-        geom_node->get_name(), format,
+        geom_node->get_name(), format/*poly->_blends.empty() ? format : blend_format*/,
         GeomEnums::UH_static);
 
       add_poly_to_geom_node(poly, vdata, geom_node);
@@ -408,22 +413,24 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   GeomVertexWriter nwriter(vdata, InternalName::get_normal());
   GeomVertexWriter twriter(vdata, InternalName::get_texcoord());
   GeomVertexWriter lwriter(vdata, InternalName::get_texcoord_name("lightmap"));
+  GeomVertexWriter bwriter(vdata, InternalName::make("blend"));
+  GeomVertexWriter tanwriter(vdata, InternalName::get_tangent());
+  GeomVertexWriter binwriter(vdata, InternalName::get_binormal());
   vwriter.set_row(start);
   nwriter.set_row(start);
   twriter.set_row(start);
   lwriter.set_row(start);
+  bwriter.set_row(start);
+  tanwriter.set_row(start);
+  binwriter.set_row(start);
 
   const Winding *w = &(poly->_winding);
-  LVector3 normal = w->get_plane().get_normal();
 
   Material *mat = poly->_material;
 
   // Fill up the render state for the polygon.
   CPT(RenderState) state = RenderState::make_empty();
-  Texture *tex = nullptr;
-  LVecBase2i tex_dim(1, 1);
   if (mat != nullptr) {
-
     if (mat->has_tag("compile_clip") ||
         mat->has_tag("compile_trigger") ||
         mat->has_tag("compile_nodraw")) {
@@ -438,51 +445,38 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
       state = state->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
       state = state->set_attrib(CullBinAttrib::make("background", 0));
     }
+  }
 
-    // Check if the render state needs transparency.
-    MaterialParamBase *base_p = mat->get_param("base_color");
-    if (base_p != nullptr && base_p->is_of_type(MaterialParamTexture::get_class_type())) {
-      MaterialParamTexture *base_tex_p = DCAST(MaterialParamTexture, base_p);
-      tex = base_tex_p->get_value();
-      if (tex != nullptr && Texture::has_alpha(tex->get_format())) {
-        state = state->set_attrib(TransparencyAttrib::make(TransparencyAttrib::M_dual));
-      }
-
-      if (tex != nullptr) {
-        // Extract texture dimensions to calculate UVs.
-        tex_dim[0] = tex->get_orig_file_x_size();
-        tex_dim[1] = tex->get_orig_file_y_size();
-      }
-    }
+  // Check if the render state needs transparency.
+  if (poly->_base_tex != nullptr && Texture::has_alpha(poly->_base_tex->get_format())) {
+    state = state->set_attrib(TransparencyAttrib::make(TransparencyAttrib::M_dual));
   }
 
   for (size_t k = 0; k < w->get_num_points(); k++) {
     LPoint3 point = w->get_point(k);
     vwriter.add_data3f(point);
+    LPoint3 normal = poly->_normals[k].normalized();
     nwriter.add_data3f(normal);
+    twriter.add_data2f(poly->_uvs[k]);
+    lwriter.add_data2f(poly->_lightmap_uvs[k]);
+    if (bwriter.has_column()) {
+      bwriter.add_data1f(poly->_blends[k]);
+    }
 
-    // Calcuate the UV coordinate for the vertex.
-    LVecBase2 uv(
-      poly->_texture_vecs[0].get_xyz().dot(point) + poly->_texture_vecs[0][3],
-      poly->_texture_vecs[1].get_xyz().dot(point) + poly->_texture_vecs[1][3]
-    );
-    uv[0] /= tex_dim[0];
-    uv[1] /= -tex_dim[1];
-    twriter.add_data2f(uv);
-
-    // Now do the lightmap coordinate.
-    LVecBase2 lightcoord;
-    lightcoord[0] = point.dot(poly->_lightmap_vecs[0].get_xyz()) + poly->_lightmap_vecs[0][3];
-    lightcoord[0] -= poly->_lightmap_mins[0];
-    lightcoord[0] += 0.5;
-    lightcoord[0] /= poly->_lightmap_size[0] + 1;
-
-    lightcoord[1] = point.dot(poly->_lightmap_vecs[1].get_xyz()) + poly->_lightmap_vecs[1][3];
-    lightcoord[1] -= poly->_lightmap_mins[1];
-    lightcoord[1] += 0.5;
-    lightcoord[1] /= poly->_lightmap_size[1] + 1;
-
-    lwriter.add_data2f(lightcoord);
+    // Calculate tangent and binormal from the normal.
+    LVector3 x;
+    if (cabs(normal[0]) >= cabs(normal[1]) && cabs(normal[0]) >= cabs(normal[2])) {
+      x = LVector3::unit_x();
+    } else if (cabs(normal[1]) >= cabs(normal[2])) {
+      x = LVector3::unit_y();
+    } else {
+      x = LVector3::unit_z();
+    }
+    LVector3 v0 = (x == LVector3::unit_z()) ? LVector3::unit_x() : LVector3::unit_z();
+    LVector3 tangent = v0.cross(normal).normalized();
+    LVector3 binormal = tangent.cross(normal).normalized();
+    tanwriter.add_data3f(tangent);
+    binwriter.add_data3f(binormal);
   }
 
   PT(GeomTriangles) tris = new GeomTriangles(GeomEnums::UH_static);
@@ -693,78 +687,339 @@ build_entity_polygons(int i) {
         maxp[2] = std::max(p[2], maxp[2]);
       }
 
-      PT(MapPoly) poly = new MapPoly;
-      poly->_winding = w;
-      poly->_in_group = false;
-      poly->_is_mesh = false;
-      LPoint3 polymin, polymax;
-      w.get_bounds(polymin, polymax);
-      poly->_bounds = new BoundingBox(polymin, polymax);
-      poly->_material = poly_material;
+      // Extract texture dimensions.
+      PT(Texture) base_tex;
+      LVecBase2i tex_dim(1, 1);
+      if (poly_material != nullptr) {
+        MaterialParamBase *base_color_p = poly_material->get_param("base_color");
+        if (base_color_p != nullptr && base_color_p->is_of_type(MaterialParamTexture::get_class_type())) {
+          base_tex = ((MaterialParamTexture *)base_color_p)->get_value();
+          if (base_tex != nullptr) {
+            tex_dim[0] = base_tex->get_x_size();
+            tex_dim[1] = base_tex->get_y_size();
+          }
+        }
+      }
 
-      if (side->_displacement != nullptr) {
-        poly->_vis_occluder = false;
+      LPoint3 origin(0);
 
-      } else if (poly_material != nullptr) {
-        if (poly_material->has_tag("compile_clip") ||
-            poly_material->has_tag("compile_trigger")) {
-          poly->_vis_occluder = false;
+      // Calculate texture vectors.
+      LVector4 texture_vecs[2];
+      texture_vecs[0][0] = side->_u_axis[0] / side->_uv_scale[0];
+      texture_vecs[0][1] = side->_u_axis[1] / side->_uv_scale[0];
+      texture_vecs[0][2] = side->_u_axis[2] / side->_uv_scale[0];
+      texture_vecs[0][3] = side->_uv_shift[0] + origin.dot(texture_vecs[0].get_xyz());
+      texture_vecs[1][0] = side->_v_axis[0] / side->_uv_scale[1];
+      texture_vecs[1][1] = side->_v_axis[1] / side->_uv_scale[1];
+      texture_vecs[1][2] = side->_v_axis[2] / side->_uv_scale[1];
+      texture_vecs[1][3] = side->_uv_shift[1] + origin.dot(texture_vecs[1].get_xyz());
+
+      // Calculate lightmap vectors.
+      // Twice the resolution for the GPU lightmapper.
+      PN_stdfloat lightmap_scale = side->_lightmap_scale * 0.5f;
+      LVector4 lightmap_vecs[2];
+      lightmap_vecs[0][0] = side->_u_axis[0] / lightmap_scale;
+      lightmap_vecs[0][1] = side->_u_axis[1] / lightmap_scale;
+      lightmap_vecs[0][2] = side->_u_axis[2] / lightmap_scale;
+      lightmap_vecs[1][0] = side->_v_axis[0] / lightmap_scale;
+      lightmap_vecs[1][1] = side->_v_axis[1] / lightmap_scale;
+      lightmap_vecs[1][2] = side->_v_axis[2] / lightmap_scale;
+      PN_stdfloat shift_scale_u = side->_uv_scale[0] / lightmap_scale;
+      PN_stdfloat shift_scale_v = side->_uv_scale[1] / lightmap_scale;
+      lightmap_vecs[0][3] = shift_scale_u * side->_uv_shift[0] + origin.dot(lightmap_vecs[0].get_xyz());
+      lightmap_vecs[1][3] = shift_scale_v * side->_uv_shift[1] + origin.dot(lightmap_vecs[1].get_xyz());
+
+      if (side->_displacement == nullptr) {
+        // A regular non-displacement brush face.
+        PT(MapPoly) poly = new MapPoly;
+        poly->_winding = w;
+        poly->_in_group = false;
+        poly->_is_mesh = false;
+        LPoint3 polymin, polymax;
+        w.get_bounds(polymin, polymax);
+        poly->_bounds = new BoundingBox(polymin, polymax);
+        poly->_material = poly_material;
+        poly->_base_tex = base_tex;
+
+        LVector3 winding_normal = w.get_plane().get_normal().normalized();
+        for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
+          poly->_normals.push_back(winding_normal);
+        }
+
+        if (poly_material != nullptr) {
+          if (poly_material->has_tag("compile_clip") ||
+              poly_material->has_tag("compile_trigger")) {
+            poly->_vis_occluder = false;
+
+          } else {
+            poly->_vis_occluder = true;
+          }
 
         } else {
           poly->_vis_occluder = true;
         }
 
-      } else {
-        poly->_vis_occluder = true;
-      }
+        for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
+          const LPoint3 &point = w.get_point(ivert);
+          LVecBase2 uv(
+            texture_vecs[0].get_xyz().dot(point) + texture_vecs[0][3],
+            texture_vecs[1].get_xyz().dot(point) + texture_vecs[1][3]
+          );
+          uv[0] /= tex_dim[0];
+          uv[1] /= -tex_dim[1];
+          poly->_uvs.push_back(uv);
+        }
 
-      LPoint3 origin(0);
-      poly->_texture_vecs[0][0] = side->_u_axis[0] / side->_uv_scale[0];
-      poly->_texture_vecs[0][1] = side->_u_axis[1] / side->_uv_scale[0];
-      poly->_texture_vecs[0][2] = side->_u_axis[2] / side->_uv_scale[0];
-      poly->_texture_vecs[0][3] = side->_uv_shift[0] + origin.dot(poly->_texture_vecs[0].get_xyz());
-      poly->_texture_vecs[1][0] = side->_v_axis[0] / side->_uv_scale[1];
-      poly->_texture_vecs[1][1] = side->_v_axis[1] / side->_uv_scale[1];
-      poly->_texture_vecs[1][2] = side->_v_axis[2] / side->_uv_scale[1];
-      poly->_texture_vecs[1][3] = side->_uv_shift[1] + origin.dot(poly->_texture_vecs[1].get_xyz());
+        // Calc lightmap size and mins.
+        LVecBase2 lmins(1e24);
+        LVecBase2 lmaxs(-1e24);
 
-      // Twice the resolution for the GPU lightmapper.
-      PN_stdfloat lightmap_scale = side->_lightmap_scale * 0.5f;
-      poly->_lightmap_vecs[0][0] = side->_u_axis[0] / lightmap_scale;
-      poly->_lightmap_vecs[0][1] = side->_u_axis[1] / lightmap_scale;
-      poly->_lightmap_vecs[0][2] = side->_u_axis[2] / lightmap_scale;
-      poly->_lightmap_vecs[1][0] = side->_v_axis[0] / lightmap_scale;
-      poly->_lightmap_vecs[1][1] = side->_v_axis[1] / lightmap_scale;
-      poly->_lightmap_vecs[1][2] = side->_v_axis[2] / lightmap_scale;
-      PN_stdfloat shift_scale_u = side->_uv_scale[0] / lightmap_scale;
-      PN_stdfloat shift_scale_v = side->_uv_scale[1] / lightmap_scale;
-      poly->_lightmap_vecs[0][3] = shift_scale_u * side->_uv_shift[0] + origin.dot(poly->_lightmap_vecs[0].get_xyz());
-      poly->_lightmap_vecs[1][3] = shift_scale_v * side->_uv_shift[1] + origin.dot(poly->_lightmap_vecs[1].get_xyz());
+        LVecBase2i lightmap_mins;
 
-      // Calc lightmap size and mins.
-      LVecBase2 lmins(1e24);
-      LVecBase2 lmaxs(-1e24);
+        for (int ivert = 0; ivert < w.get_num_points(); ivert++) {
+          LPoint3 wpt = w.get_point(ivert);
+          for (int l = 0; l < 2; l++) {
+            PN_stdfloat val = wpt[0] * lightmap_vecs[l][0] +
+                              wpt[1] * lightmap_vecs[l][1] +
+                              wpt[2] * lightmap_vecs[l][2] +
+                              lightmap_vecs[l][3];
+            lmins[l] = std::min(val, lmins[l]);
+            lmaxs[l] = std::max(val, lmaxs[l]);
+          }
+        }
 
-      for (int ivert = 0; ivert < w.get_num_points(); ivert++) {
-        LPoint3 wpt = w.get_point(ivert);
         for (int l = 0; l < 2; l++) {
-          PN_stdfloat val = wpt[0] * poly->_lightmap_vecs[l][0] +
-                            wpt[1] * poly->_lightmap_vecs[l][1] +
-                            wpt[2] * poly->_lightmap_vecs[l][2] +
-                            poly->_lightmap_vecs[l][3];
-          lmins[l] = std::min(val, lmins[l]);
-          lmaxs[l] = std::max(val, lmaxs[l]);
+          lmins[l] = std::floor(lmins[l]);
+          lmaxs[l] = std::ceil(lmaxs[l]);
+          lightmap_mins[l] = (int)lmins[l];
+          poly->_lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+        }
+
+        for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
+          const LPoint3 &point = w.get_point(ivert);
+          LVecBase2 lightcoord;
+          lightcoord[0] = point.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
+          lightcoord[0] -= lightmap_mins[0];
+          lightcoord[0] += 0.5;
+          lightcoord[0] /= poly->_lightmap_size[0] + 1;
+
+          lightcoord[1] = point.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
+          lightcoord[1] -= lightmap_mins[1];
+          lightcoord[1] += 0.5;
+          lightcoord[1] /= poly->_lightmap_size[1] + 1;
+
+          poly->_lightmap_uvs.push_back(lightcoord);
+        }
+
+        solid_polys.push_back(poly);
+
+      } else {
+        // This is a displacement brush face.  Build up a set of MapPolys
+        // for each displacement triangle.
+
+        int start_index = w.get_closest_point(side->_displacement->_start_position);
+        int ul = start_index;
+        int ur = (start_index + 3) % w.get_num_points();
+        int lr = (start_index + 2) % w.get_num_points();
+        int ll = (start_index + 1) % w.get_num_points();
+
+        LVector3 winding_normal = w.get_plane().get_normal().normalized();
+
+        //LVector3 ad = w.get_point((start_index + 3) % w.get_num_points()) - w.get_point(start_index);
+        //LVector3 ab = w.get_point((start_index + 1) % w.get_num_points()) - w.get_point(start_index);
+
+        pvector<LPoint3> disp_points;
+        pvector<LVector3> disp_normals;
+        pvector<LVecBase2> disp_uvs;
+        pvector<LVecBase2> disp_lightmap_uvs;
+        vector_stdfloat disp_blends;
+
+        size_t num_rows = side->_displacement->_rows.size();
+        size_t num_cols = side->_displacement->_rows[0]._vertices.size();
+
+        // Collect all displacement vertex data.
+        for (size_t irow = 0; irow < num_rows; irow++) {
+          for (size_t icol = 0; icol < num_cols; icol++) {
+            const MapDisplacementVertex &dvert = side->_displacement->_rows[irow]._vertices[icol];
+
+            disp_normals.push_back(dvert._normal.normalized());
+
+            disp_blends.push_back(dvert._alpha);
+
+            PN_stdfloat ooint = 1.0f / (PN_stdfloat)(num_rows - 1);
+
+            LPoint3 end_pts[2];
+            end_pts[0] = (w.get_point(ul) * (1.0f - irow * ooint)) + (w.get_point(ll) * irow * ooint);
+            end_pts[1] = (w.get_point(ur) * (1.0f - irow * ooint)) + (w.get_point(lr) * irow * ooint);
+
+            LPoint3 dpoint = (end_pts[0] * (1.0f - icol * ooint)) + (end_pts[1] * icol * ooint);
+            dpoint += winding_normal * side->_displacement->_elevation;
+            dpoint += dvert._normal * dvert._distance;
+            LVector3 offset = dvert._offset;
+            offset.componentwise_mult(dvert._offset_normal);
+            dpoint += offset;
+
+            disp_points.push_back(dpoint);
+
+            LVecBase2 duv(
+              texture_vecs[0].get_xyz().dot(dpoint) + texture_vecs[0][3],
+              texture_vecs[1].get_xyz().dot(dpoint) + texture_vecs[1][3]
+            );
+            duv[0] /= tex_dim[0];
+            duv[1] /= -tex_dim[1];
+            disp_uvs.push_back(duv);
+          }
+        }
+
+        // Now build a MapPoly for each displacement triangle.
+
+        for (size_t irow = 0; irow < num_rows - 1; irow++) {
+          for (size_t icol = 0; icol < num_cols - 1; icol++) {
+
+            std::pair<size_t, size_t> tri_verts[2][3];
+            if (irow % 2 == icol % 2) {
+              tri_verts[0][2] = { irow + 1, icol };
+              tri_verts[0][1] = { irow, icol };
+              tri_verts[0][0] = { irow + 1, icol + 1};
+
+              tri_verts[1][2] = { irow, icol };
+              tri_verts[1][1] = { irow, icol + 1 };
+              tri_verts[1][0] = { irow + 1, icol + 1 };
+
+            } else {
+              tri_verts[0][2] = { irow + 1, icol };
+              tri_verts[0][1] = { irow, icol };
+              tri_verts[0][0] = { irow, icol + 1 };
+
+              tri_verts[1][2] = { irow + 1, icol };
+              tri_verts[1][1] = { irow, icol + 1 };
+              tri_verts[1][0] = { irow + 1, icol + 1 };
+            }
+
+            // Do lightmap coordinates per quad on the displacement.
+            std::pair<size_t, size_t> quad_verts[4] = {
+              { irow, icol },
+              { irow, icol + 1 },
+              { irow + 1, icol },
+              { irow + 1, icol + 1 }
+            };
+            LVecBase2 lmins(1e24), lmaxs(-1e24);
+            LVecBase2i lightmap_mins, lightmap_size;
+            for (size_t ivert = 0; ivert < 4; ivert++) {
+              size_t row = quad_verts[ivert].first;
+              size_t col = quad_verts[ivert].second;
+              size_t dvertindex = (row * num_cols) + col;
+              const LPoint3 &dpoint = disp_points[dvertindex];
+              for (int l = 0; l < 2; l++) {
+                PN_stdfloat val = dpoint[0] * lightmap_vecs[l][0] +
+                                  dpoint[1] * lightmap_vecs[l][1] +
+                                  dpoint[2] * lightmap_vecs[l][2] +
+                                  lightmap_vecs[l][3];
+                lmins[l] = std::min(val, lmins[l]);
+                lmaxs[l] = std::max(val, lmaxs[l]);
+              }
+            }
+            for (int l = 0; l < 2; l++) {
+              lmins[l] = std::floor(lmins[l]);
+              lmaxs[l] = std::ceil(lmaxs[l]);
+              lightmap_mins[l] = (int)lmins[l];
+              lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+            }
+
+            //
+            // TRIANGLE 1
+            //
+            PT(MapPoly) tri0 = new MapPoly;
+            tri0->_vis_occluder = false;
+            tri0->_in_group = false;
+            tri0->_is_mesh = false;
+            tri0->_lightmap_size = lightmap_size;
+            LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
+            LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
+            LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
+            LVector3 tri_normal = ((p1 - p0).cross(p2 - p0)).normalized();
+            for (size_t ivert = 0; ivert < 3; ivert++) {
+              size_t row = tri_verts[0][ivert].first;
+              size_t col = tri_verts[0][ivert].second;
+              size_t dvertindex = row * num_cols;
+              dvertindex += col;
+              const LPoint3 &dpoint = disp_points[dvertindex];
+              tri0->_winding.add_point(dpoint);
+              tri0->_normals.push_back(tri_normal);
+              tri0->_uvs.push_back(disp_uvs[dvertindex]);
+              tri0->_blends.push_back(disp_blends[dvertindex]);
+            }
+
+            for (size_t ivert = 0; ivert < 3; ivert++) {
+              const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
+              LVecBase2 lightcoord;
+              lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
+              lightcoord[0] -= lightmap_mins[0];
+              lightcoord[0] += 0.5;
+              lightcoord[0] /= tri0->_lightmap_size[0] + 1;
+
+              lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
+              lightcoord[1] -= lightmap_mins[1];
+              lightcoord[1] += 0.5;
+              lightcoord[1] /= tri0->_lightmap_size[1] + 1;
+
+              tri0->_lightmap_uvs.push_back(lightcoord);
+            }
+            tri0->_material = poly_material;
+            tri0->_base_tex = base_tex;
+            LPoint3 tmins(1e24), tmaxs(-1e24);
+            tri0->_winding.get_bounds(tmins, tmaxs);
+            tri0->_bounds = new BoundingBox(tmins, tmaxs);
+            solid_polys.push_back(tri0);
+
+            //
+            // TRIANGLE 2
+            //
+            tri0 = new MapPoly;
+            tri0->_vis_occluder = false;
+            tri0->_in_group = false;
+            tri0->_is_mesh = false;
+            tri0->_lightmap_size = lightmap_size;
+            p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
+            p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
+            p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
+            tri_normal = ((p1 - p0).cross(p2 - p0)).normalized();
+            for (size_t ivert = 0; ivert < 3; ivert++) {
+              size_t row = tri_verts[1][ivert].first;
+              size_t col = tri_verts[1][ivert].second;
+              size_t dvertindex = row * num_cols;
+              dvertindex += col;
+              const LPoint3 &dpoint = disp_points[dvertindex];
+              tri0->_winding.add_point(dpoint);
+              tri0->_normals.push_back(tri_normal);
+              tri0->_uvs.push_back(disp_uvs[dvertindex]);
+              tri0->_blends.push_back(disp_blends[dvertindex]);
+            }
+            for (size_t ivert = 0; ivert < 3; ivert++) {
+              const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
+              LVecBase2 lightcoord;
+              lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
+              lightcoord[0] -= lightmap_mins[0];
+              lightcoord[0] += 0.5;
+              lightcoord[0] /= tri0->_lightmap_size[0] + 1;
+
+              lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
+              lightcoord[1] -= lightmap_mins[1];
+              lightcoord[1] += 0.5;
+              lightcoord[1] /= tri0->_lightmap_size[1] + 1;
+
+              tri0->_lightmap_uvs.push_back(lightcoord);
+            }
+            tri0->_material = poly_material;
+            tri0->_base_tex = base_tex;
+            tmins.set(1e24, 1e24, 1e24);
+            tmaxs.set(-1e24, -1e24, -1e24);
+            tri0->_winding.get_bounds(tmins, tmaxs);
+            tri0->_bounds = new BoundingBox(tmins, tmaxs);
+            solid_polys.push_back(tri0);
+          }
         }
       }
-
-      for (int l = 0; l < 2; l++) {
-        lmins[l] = std::floor(lmins[l]);
-        lmaxs[l] = std::ceil(lmaxs[l]);
-        poly->_lightmap_mins[l] = (int)lmins[l];
-        poly->_lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
-      }
-
-      solid_polys.push_back(poly);
 
       if (mapbuilder_cat.is_debug()) {
         mapbuilder_cat.debug()

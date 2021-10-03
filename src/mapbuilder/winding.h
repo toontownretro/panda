@@ -69,6 +69,8 @@ PUBLISHED:
 
   INLINE void remove_colinear_points();
 
+  INLINE void round_points(PN_stdfloat epsilon = 0.01f);
+
   INLINE PlaneSide get_plane_side(const LPlane &plane) const;
 
   INLINE void add_point(const LPoint3 &point);
@@ -82,6 +84,8 @@ PUBLISHED:
                     BaseWinding &front, BaseWinding &back) const;
   INLINE void clip_epsilon_offset(const LPlane &plane, PN_stdfloat epsilon, BaseWinding &front, BaseWinding &back,
                            const LVecBase3 &offset);
+
+  INLINE int get_closest_point(const LPoint3 &point);
 
 public:
   INLINE const LPoint3 *get_points() const;

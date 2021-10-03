@@ -286,6 +286,9 @@ clip_epsilon(const LPlane &plane, PN_stdfloat epsilon, BaseWinding &front, BaseW
     back.add_point(mid);
   }
 
+  front.round_points();
+  back.round_points();
+
   //front->remove_colinear_points();
   //back->remove_colinear_points();
 }
@@ -397,6 +400,23 @@ remove_colinear_points() {
 }
 
 /**
+ * Rounds all winding points that are within "epsilon" of integer values.
+ */
+template<int MaxPoints>
+void BaseWinding<MaxPoints>::
+round_points(PN_stdfloat epsilon) {
+  //for (int i = 0; i < _num_points; i++) {
+  //  for (int j = 0; j < 3; j++) {
+  //    PN_stdfloat v = _points[i][j];
+  //    PN_stdfloat v1 = std::round(v);
+  //    if ((v != v1) && std::abs(v - v1) < epsilon) {
+  //      _points[i][j] = v1;
+  //    }
+  //  }
+  //}
+}
+
+/**
  * Returns the side of the indicated plane that the winding lies on.
  */
 template<int MaxPoints>
@@ -487,4 +507,32 @@ template<int MaxPoints>
 INLINE void BaseWinding<MaxPoints>::
 clear() {
   _num_points = 0;
+}
+
+/**
+ * Returns the index of the point in the winding that is closest to the
+ * indicated point.
+ */
+template<int MaxPoints>
+INLINE int BaseWinding<MaxPoints>::
+get_closest_point(const LPoint3 &point) {
+  if (_num_points == 0) {
+    return -1;
+
+  } else if (_num_points == 1) {
+    return 0;
+
+  } else {
+    int index = 0;
+    PN_stdfloat dist = (point - _points[0]).length();
+    for (int i = 1; i < _num_points; i++) {
+      PN_stdfloat this_dist = (point - _points[i]).length();
+      if (this_dist < dist) {
+        index = i;
+        dist = this_dist;
+      }
+    }
+
+    return index;
+  }
 }

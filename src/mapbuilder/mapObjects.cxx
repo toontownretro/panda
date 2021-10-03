@@ -226,6 +226,7 @@ read_displacement(MapSide *side, KeyValues *data) {
     } else if (child->get_name() == "distances") {
       for (size_t j = 0; j < child->get_num_keys(); j++) {
         vector_float distances = KeyValues::parse_float_list(child->get_value(j));
+        assert(distances.size() == num_disp_sides);
         for (size_t k = 0; k < num_disp_sides; k++) {
           disp->_rows[j]._vertices[k]._distance = distances[k];
         }

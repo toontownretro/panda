@@ -55,7 +55,7 @@ public:
 };
 
 /**
- *
+ * A single planar polygon of a MapMesh.
  */
 class MapPoly : public MapGeomBase {
 public:
@@ -63,24 +63,19 @@ public:
   // lies on.
   Winding _winding;
 
+  pvector<LVector3> _normals;
+  pvector<LVecBase2> _uvs;
+  pvector<LVecBase2> _lightmap_uvs;
+  vector_stdfloat _blends;
+
   PT(Material) _material;
-  LVector4 _texture_vecs[2];
-  LVector4 _lightmap_vecs[2];
-  LVecBase2i _lightmap_mins;
+  PT(Texture) _base_tex;
+
   LVecBase2i _lightmap_size;
 
   // Contents of the surface as specified in the material.  Examples are
   // skybox, clip, nodraw, etc.
   unsigned int _contents;
-
-  // The lightmaps for the polygon.  Bounced and direct light are separated
-  // to support "stationary" lights, which are rendered dynamically but have
-  // baked indirect contribution.  There are 4 separate lightmaps for the
-  // indirect and direct lighting, to support normal mapped radiosity.  There
-  // is one lightmap for the flat non-normal mapped polygon, and 3 extra
-  // lightmaps for each normal basis direction.
-  PNMImage _indirect_light[NUM_LIGHTMAPS];
-  PNMImage _direct_light[NUM_LIGHTMAPS];
 
   bool _vis_occluder;
 
