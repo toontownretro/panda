@@ -253,6 +253,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     } else if (env_cubemap && stage_name == "envmap") {
       cubemap_tex = ta->get_on_texture(stage);
+
+    } else if (stage_name == "lightmap") {
+      set_vertex_shader_define("HAS_LIGHTMAP");
+      set_pixel_shader_define("HAS_LIGHTMAP");
+      set_input(ShaderInput("lightmapSampler", ta->get_on_texture(stage)));
     }
   }
 
