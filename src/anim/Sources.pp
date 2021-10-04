@@ -34,6 +34,8 @@
     ikSolver.h \
     jointVertexTransform.h jointVertexTransform.I \
     poseParameter.h poseParameter.I \
+    pt_AnimChannelTable.h \
+    pt_Character.h \
     sharedEnum.h sharedEnum.I \
     weightList.h weightList.I
 
@@ -61,6 +63,8 @@
     ikSolver.cxx \
     jointVertexTransform.cxx \
     poseParameter.cxx \
+    pt_AnimChannelTable.cxx \
+    pt_Character.cxx \
     sharedEnum.cxx \
     weightList.cxx
 
