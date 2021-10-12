@@ -11,12 +11,12 @@
  * @date 2001-05-01
  */
 
-#ifndef PT_CHARACTER_H
-#define PT_CHARACTER_H
+#ifndef PT_ANIMCHANNELTABLE_H
+#define PT_ANIMCHANNELTABLE_H
 
 #include "pandabase.h"
 
-#include "character.h"
+#include "animChannelTable.h"
 #include "pointerTo.h"
 
 /**
@@ -31,4 +31,4 @@ EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerTo<AnimCha
 typedef PointerTo<AnimChannelTable> PT_AnimChannelTable;
 typedef ConstPointerTo<AnimChannelTable> CPT_AnimChannelTable;
 
-#endif
+#endif // PT_ANIMCHANNELTABLE_H

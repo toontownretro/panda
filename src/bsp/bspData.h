@@ -24,6 +24,7 @@
 #include "zipArchive.h"
 #include "pta_ushort.h"
 #include "bspClusterVisibility.h"
+#include "vector_int.h"
 
 /**
  * The root object in the BSP file.
@@ -188,7 +189,7 @@ public:
   pvector<unsigned short> dleaffaces;
   pvector<unsigned short> dleafbrushes;
 
-  pvector<int> dsurfedges;
+  vector_int dsurfedges;
 
   pvector<DArea> dareas;
   pvector<DAreaPortal> dareaportals;
@@ -210,7 +211,7 @@ public:
   pvector<DWaterOverlay> water_overlays;
 
   pvector<char> tex_data_string_data;
-  pvector<int> tex_data_string_table;
+  vector_int tex_data_string_table;
 
   pvector<DLeafWaterData> dleafwaterdata;
 
@@ -218,7 +219,7 @@ public:
 
   pvector<DOccluderData> occluder_data;
   pvector<DOccluderPolyData> occluder_poly_data;
-  pvector<int> occluder_vertex_indices;
+  vector_int occluder_vertex_indices;
 
   uint32_t level_flags;
 

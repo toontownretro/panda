@@ -17,10 +17,11 @@
 #include "pandabase.h"
 #include "characterPart.h"
 #include "pset.h"
-#include "characterVertexSlider.h"
 
+class CharacterVertexSlider;
 class Datagram;
 class DatagramIterator;
+class Thread;
 
 /**
  * A single slider of a Character.  Corresponds to a morph target on a mesh.

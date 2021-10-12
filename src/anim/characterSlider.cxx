@@ -12,6 +12,8 @@
  */
 
 #include "characterSlider.h"
+#include "characterVertexSlider.h"
+#include "thread.h"
 
 /**
  *

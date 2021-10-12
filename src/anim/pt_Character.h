@@ -31,4 +31,4 @@ EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_ANIM, EXPTP_PANDA_ANIM, ConstPointerTo<Charact
 typedef PointerTo<Character> PT_Character;
 typedef ConstPointerTo<Character> CPT_Character;
 
-#endif
+#endif // PT_CHARACTER_H

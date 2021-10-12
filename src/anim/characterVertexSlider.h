@@ -18,9 +18,9 @@
 #include "vertexSlider.h"
 #include "pointerTo.h"
 #include "weakPointerTo.h"
+#include "character.h"
 
 class FactoryParams;
-class Character;
 
 /**
  * This is a specialization on VertexSlider that returns the slider value
