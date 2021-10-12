@@ -45,6 +45,8 @@ PUBLISHED:
   PNMFileType *get_type_from_magic_number(const std::string &magic_number) const;
   PNMFileType *get_type_by_handle(TypeHandle handle) const;
 
+  void load_plugin_types();
+
   void write(std::ostream &out, int indent_level = 0) const;
 
   static PNMFileTypeRegistry *get_global_ptr();

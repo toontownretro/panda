@@ -67,6 +67,8 @@ gl-enable-memory-barriers 0
 load-file-type egg pandaegg
 load-file-type pmdl pandaegg
 
+# Load the built-in PNM file types through this plugin library.
+pnm-image-type pnmimagetypes
 
 # These entries work very similar to load-file-type, except they are
 # used by the MovieVideo and MovieAudio code to determine which module
