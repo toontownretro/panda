@@ -81,6 +81,8 @@
 #include "dconfig.h"
 #include "string_utils.h"
 
+#include "config_pnmimagetypes.h"
+
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_GOBJ)
   #error Buildsystem error: BUILDING_PANDA_GOBJ not defined
 #endif
@@ -562,6 +564,22 @@ ConfigVariableInt glsl_include_recursion_limit
           "two shader files include each other."));
 
 ConfigureFn(config_gobj) {
+  init_libgobj();
+}
+
+/**
+ *
+ */
+void
+init_libgobj() {
+  static bool initialized = false;
+  if (initialized) {
+    return;
+  }
+  initialized = true;
+
+  init_libpnmimagetypes();
+
   AnimateVerticesRequest::init_type();
   BufferContext::init_type();
   Geom::init_type();

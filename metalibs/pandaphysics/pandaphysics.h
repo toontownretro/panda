@@ -9,6 +9,6 @@
 
 #include "pandabase.h"
 
-EXPCL_PANDAPHYSICS void init_libpandaphysics();
+EXPCL_PANDAPHYSICS_STUB void init_libpandaphysics();
 
 #endif

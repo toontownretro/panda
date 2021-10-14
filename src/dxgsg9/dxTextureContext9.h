@@ -21,7 +21,7 @@
 /**
  *
  */
-class EXPCL_PANDADX DXTextureContext9 : public TextureContext {
+class EXPCL_PANDA_DXGSG9 DXTextureContext9 : public TextureContext {
 public:
   DXTextureContext9(PreparedGraphicsObjects *pgo, Texture *tex, int view);
   virtual ~DXTextureContext9();

@@ -14,8 +14,8 @@
 #include "config_pstatclient.h"
 #endif
 
-#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_LIBPANDA)
-  #error Buildsystem error: BUILDING_LIBPANDA not defined
+#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_STUB)
+  #error Buildsystem error: BUILDING_PANDA_STUB not defined
 #endif
 
 /**

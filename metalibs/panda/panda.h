@@ -9,6 +9,6 @@
 
 #include "pandabase.h"
 
-EXPCL_LIBPANDA void init_libpanda();
+EXPCL_PANDA_STUB void init_libpanda();
 
 #endif

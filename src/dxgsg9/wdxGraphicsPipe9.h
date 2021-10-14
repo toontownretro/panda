@@ -24,7 +24,7 @@
  * This graphics pipe represents the interface for creating DirectX9 graphics
  * windows.
  */
-class EXPCL_PANDADX wdxGraphicsPipe9 : public WinGraphicsPipe {
+class EXPCL_PANDA_DXGSG9 wdxGraphicsPipe9 : public WinGraphicsPipe {
 public:
   wdxGraphicsPipe9();
   virtual ~wdxGraphicsPipe9();

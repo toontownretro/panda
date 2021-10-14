@@ -20,6 +20,7 @@
 #include "geom.h"
 #include "geomNode.h"
 #include "eyeballNode.h"
+#include "characterVertexSlider.h"
 
 TypeHandle CharacterNode::_type_handle;
 

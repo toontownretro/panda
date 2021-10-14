@@ -24,7 +24,7 @@ class DXGraphicsStateGuardian9;
 /**
  * Caches a GeomVertexArrayData in the DirectX device as a vertex buffer.
  */
-class EXPCL_PANDADX DXVertexBufferContext9 : public VertexBufferContext {
+class EXPCL_PANDA_DXGSG9 DXVertexBufferContext9 : public VertexBufferContext {
 public:
   DXVertexBufferContext9(DXGraphicsStateGuardian9 *dxgsg,
                            PreparedGraphicsObjects *pgo,

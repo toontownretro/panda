@@ -24,7 +24,7 @@
 /**
  * A GraphicsDevice necessary for multi-window rendering in DX.
  */
-class EXPCL_PANDADX DXGraphicsDevice9 : public GraphicsDevice {
+class EXPCL_PANDA_DXGSG9 DXGraphicsDevice9 : public GraphicsDevice {
   friend class wdxGraphicsPipe9;
 
 public:

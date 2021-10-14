@@ -17,6 +17,7 @@
 #include "virtualFileHTTP.h"
 #include "virtualFileMountHTTP.h"
 #include "pandaSystem.h"
+#include "config_express.h"
 
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_DOWNLOADER)
@@ -138,6 +139,8 @@ init_libdownloader() {
     return;
   }
   initialized = true;
+
+  init_libexpress();
 
 #ifdef HAVE_OPENSSL
   HTTPChannel::init_type();

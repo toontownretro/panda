@@ -5,7 +5,12 @@
 // under Windows).
 
 #define DIR_TYPE metalib
+
+#if $[BUILD_COMPONENTS]
+#define BUILDING_DLL BUILDING_PANDAPHYSICS_STUB
+#else
 #define BUILDING_DLL BUILDING_PANDAPHYSICS
+#endif
 
 #define COMPONENT_LIBS \
     physics particlesystem

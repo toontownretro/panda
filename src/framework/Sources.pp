@@ -6,7 +6,7 @@
   #define BUILDING_DLL BUILDING_FRAMEWORK
   #define LOCAL_LIBS \
     recorder pgui pgraph putil collide text \
-    pnmimage pnmimagetypes event anim
+    pnmimage pnmimagetypes event anim shader
 
 #if $[LINK_ALL_STATIC]
   // If we're statically linking, we need to explicitly link with

@@ -40,6 +40,7 @@
      pnmFileTypeTGA.cxx
 
   #define INSTALL_HEADERS \
-    config_pnmimagetypes.h
+    config_pnmimagetypes.h \
+    sgi.h
 
 #end lib_target

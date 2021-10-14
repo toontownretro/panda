@@ -15,6 +15,7 @@
 #include "config_fmodAudio.h"
 #include "string_utils.h"
 #include "fmodAudioManager.h"
+#include "fmodAudioSound.h"
 #include "virtualFileSystem.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"

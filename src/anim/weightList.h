@@ -20,6 +20,7 @@
 #include "namable.h"
 #include "referenceCount.h"
 #include "typedWritableReferenceCount.h"
+#include "vector_stdfloat.h"
 
 class Character;
 class FactoryParams;
@@ -62,7 +63,7 @@ private:
   void r_fill_weights(Character *character, const WeightListDesc &desc,
                       int joint, PN_stdfloat weight);
 
-  typedef pvector<PN_stdfloat> Weights;
+  typedef vector_stdfloat Weights;
   Weights _weights;
 
 public:

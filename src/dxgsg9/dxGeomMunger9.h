@@ -26,7 +26,7 @@
  * format, and that all relevant components are packed into a single array, in
  * the correct order.
  */
-class EXPCL_PANDADX DXGeomMunger9 : public StandardMunger, public WeakPointerCallback {
+class EXPCL_PANDA_DXGSG9 DXGeomMunger9 : public StandardMunger, public WeakPointerCallback {
 public:
   DXGeomMunger9(GraphicsStateGuardian *gsg, const RenderState *state);
   virtual ~DXGeomMunger9();

@@ -28,7 +28,7 @@ class DXGraphicsStateGuardian9;
  * Shader back-end for DX9.  We only support SPIR-V shaders, which are
  * transpiled to HLSL by spirv-cross, then compiled using D3DXCompileShader.
  */
-class EXPCL_PANDADX DXShaderContext9 : public ShaderContext {
+class EXPCL_PANDA_DXGSG9 DXShaderContext9 : public ShaderContext {
 public:
   typedef DXGraphicsStateGuardian9 GSG;
 

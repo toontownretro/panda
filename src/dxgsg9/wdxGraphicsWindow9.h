@@ -24,7 +24,7 @@ class wdxGraphicsPipe9;
 /**
  * A single graphics window for rendering DirectX under Microsoft Windows.
  */
-class EXPCL_PANDADX wdxGraphicsWindow9 : public WinGraphicsWindow {
+class EXPCL_PANDA_DXGSG9 wdxGraphicsWindow9 : public WinGraphicsWindow {
 public:
   wdxGraphicsWindow9(GraphicsEngine *engine, GraphicsPipe *pipe,
                      const std::string &name,

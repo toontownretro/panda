@@ -11,7 +11,7 @@
     gsgbase gobj display windisplay \
     putil linmath mathutil pnmimage event
 
-  #define BUILDING_DLL BUILDING_PANDADX
+  #define BUILDING_DLL BUILDING_PANDA_DXGSG9
 
   #define C++FLAGS -DUSE_GENERIC_DXERR_LIBRARY
 

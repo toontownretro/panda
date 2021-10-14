@@ -63,6 +63,19 @@ ConfigVariableDouble pfm_resize_radius
           "a specific radius."));
 
 /**
+ *
+ */
+ConfigVariableList &
+get_pnm_image_type_libraries() {
+  static ConfigVariableList *pnm_image_type = nullptr;
+  if (pnm_image_type == nullptr) {
+    pnm_image_type = new ConfigVariableList("pnm-image-type",
+      PRC_DESC("Specifies the set of plugin libraries that define PNMImage file types."));
+  }
+  return *pnm_image_type;
+}
+
+/**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be
  * called by the static initializers and need not be called explicitly, but

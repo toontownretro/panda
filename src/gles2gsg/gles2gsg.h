@@ -36,8 +36,8 @@
 #define GLSYSTEM_NAME "OpenGL ES 2"
 #define CONFIGOBJ config_gles2gsg
 #define GLCAT gles2gsg_cat
-#define EXPCL_GL EXPCL_PANDAGLES2
-#define EXPTP_GL EXPTP_PANDAGLES2
+#define EXPCL_GL EXPCL_PANDA_GLES2GSG
+#define EXPTP_GL EXPTP_PANDA_GLES2GSG
 #ifdef OPENGLES_1
   #error OPENGLES_1 should not be defined!
 #endif

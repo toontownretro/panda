@@ -32,8 +32,8 @@
 #define GLSYSTEM_NAME "OpenGL ES"
 #define CONFIGOBJ config_glesgsg
 #define GLCAT glesgsg_cat
-#define EXPCL_GL EXPCL_PANDAGLES
-#define EXPTP_GL EXPTP_PANDAGLES
+#define EXPCL_GL EXPCL_PANDA_GLESGSG
+#define EXPTP_GL EXPTP_PANDA_GLESGSG
 #ifndef OPENGLES
   #define OPENGLES
 #endif

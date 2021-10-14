@@ -6,7 +6,12 @@
 
 #define DIR_TYPE metalib
 #define BUILD_DIRECTORY $[HAVE_EGG]
+
+#if $[BUILD_COMPONENTS]
+#define BUILDING_DLL BUILDING_PANDAEGG_STUB
+#else
 #define BUILDING_DLL BUILDING_PANDAEGG
+#endif
 
 #define COMPONENT_LIBS \
     egg2pg egg2sg egg
