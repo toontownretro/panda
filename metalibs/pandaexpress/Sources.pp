@@ -5,7 +5,13 @@
 // under Windows).
 
 #define DIR_TYPE metalib
+
+#if $[BUILD_COMPONENTS]
+#define BUILDING_DLL BUILDING_PANDAEXPRESS_STUB
+#else
 #define BUILDING_DLL BUILDING_PANDAEXPRESS
+#endif
+
 #define USE_PACKAGES net
 
 #define COMPONENT_LIBS downloader express pandabase

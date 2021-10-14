@@ -21,8 +21,8 @@
 #include "configVariableInt.h"
 #include "configVariableDouble.h"
 
-NotifyCategoryDecl(dxgsg9, EXPCL_PANDADX, EXPTP_PANDADX);
-NotifyCategoryDecl(wdxdisplay9, EXPCL_PANDADX, EXPTP_PANDADX);
+NotifyCategoryDecl(dxgsg9, EXPCL_PANDA_DXGSG9, EXPTP_PANDA_DXGSG9);
+NotifyCategoryDecl(wdxdisplay9, EXPCL_PANDA_DXGSG9, EXPTP_PANDA_DXGSG9);
 
 extern ConfigVariableBool dx_no_vertex_fog;
 extern ConfigVariableBool dx_show_cursor_watermark;
@@ -84,6 +84,6 @@ extern ConfigVariableBool dx_disable_driver_management_ex;
 // nVidia's performace heads up display
 extern ConfigVariableBool dx_use_nvperfhud;
 
-extern EXPCL_PANDADX void init_libdxgsg9();
+extern EXPCL_PANDA_DXGSG9 void init_libdxgsg9();
 
 #endif

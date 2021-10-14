@@ -23,7 +23,7 @@ class GraphicsStateGuardian;
 /**
  *
  */
-class EXPCL_PANDADX DXOcclusionQueryContext9 : public OcclusionQueryContext {
+class EXPCL_PANDA_DXGSG9 DXOcclusionQueryContext9 : public OcclusionQueryContext {
 public:
   INLINE DXOcclusionQueryContext9(IDirect3DQuery9 *query);
   virtual ~DXOcclusionQueryContext9();

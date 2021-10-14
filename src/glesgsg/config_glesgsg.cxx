@@ -16,8 +16,8 @@
 
 #include "dconfig.h"
 
-#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDAGLES)
-  #error Buildsystem error: BUILDING_PANDAGLES not defined
+#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_GLESGSG)
+  #error Buildsystem error: BUILDING_PANDA_GLESGSG not defined
 #endif
 
 ConfigureDef(config_glesgsg);

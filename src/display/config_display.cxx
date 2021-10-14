@@ -12,6 +12,7 @@
  */
 
 #include "config_display.h"
+#include "config_cull.h"
 #include "callbackGraphicsWindow.h"
 #include "displayRegion.h"
 #include "displayRegionCullCallbackData.h"
@@ -511,6 +512,8 @@ init_libdisplay() {
     return;
   }
   initialized = true;
+
+  init_libcull();
 
   CallbackGraphicsWindow::init_type();
   DisplayRegion::init_type();

@@ -6,7 +6,8 @@
 #begin lib_target
   #define TARGET gobj
   #define LOCAL_LIBS \
-    pstatclient event linmath mathutil pnmimage gsgbase putil pdx
+    pstatclient event linmath mathutil pnmimage \
+    pnmimagetypes gsgbase putil pdx
 
   #define BUILDING_DLL BUILDING_PANDA_GOBJ
 

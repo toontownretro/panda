@@ -5,7 +5,12 @@
 // under Windows).
 
 #define DIR_TYPE metalib
+
+#if $[BUILD_COMPONENTS]
+#define BUILDING_DLL BUILDING_PANDA_STUB
+#else
 #define BUILDING_DLL BUILDING_PANDA
+#endif
 
 #define COMPONENT_LIBS \
   anim collide cull device dgraph display dxml \

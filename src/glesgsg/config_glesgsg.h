@@ -18,9 +18,9 @@
 #include "notifyCategoryProxy.h"
 #include "dconfig.h"
 
-ConfigureDecl(config_glesgsg, EXPCL_PANDAGLES, EXPTP_PANDAGLES);
-NotifyCategoryDecl(glesgsg, EXPCL_PANDAGLES, EXPTP_PANDAGLES);
+ConfigureDecl(config_glesgsg, EXPCL_PANDA_GLESGSG, EXPTP_PANDA_GLESGSG);
+NotifyCategoryDecl(glesgsg, EXPCL_PANDA_GLESGSG, EXPTP_PANDA_GLESGSG);
 
-extern EXPCL_PANDAGLES void init_libglesgsg();
+extern EXPCL_PANDA_GLESGSG void init_libglesgsg();
 
 #endif

@@ -8,7 +8,7 @@
     glstuff gsgbase gobj display \
     putil linmath mathutil pnmimage
 
-  #define BUILDING_DLL BUILDING_PANDAGLES
+  #define BUILDING_DLL BUILDING_PANDA_GLESGSG
 
   #define SOURCES \
     config_glesgsg.h \

@@ -14,8 +14,6 @@
 #include "pnmFileTypeRegistry.h"
 #include "pnmFileType.h"
 #include "config_pnmimage.h"
-#include "config_putil.h"
-#include "load_dso.h"
 
 #include "string_utils.h"
 #include "indent.h"
@@ -240,33 +238,6 @@ get_type_by_handle(TypeHandle handle) const {
   }
 
   return nullptr;
-}
-
-/**
- * Loads the PNMImage file types from the set of plugin libraries specified in
- * the config variable.
- */
-void PNMFileTypeRegistry::
-load_plugin_types() {
-  const ConfigVariableList &image_types = get_pnm_image_type_libraries();
-  for (size_t i = 0; i < image_types.get_num_unique_values(); i++) {
-    std::string lib_name = image_types.get_unique_value(i);
-    Filename lib_filename = Filename::dso_filename("lib" + lib_name + ".so");
-
-    pnmimage_cat.info()
-      << "Loading file type plugin " << lib_name << "\n";
-
-    void *handle = load_dso(get_plugin_path().get_value(), lib_filename);
-    if (handle == nullptr) {
-      pnmimage_cat.warning()
-        << "Unable to load file type plugin " << lib_filename.get_fullpath()
-        << ": " << load_dso_error() << "\n";
-      continue;
-    } else if (pnmimage_cat.is_debug()) {
-      pnmimage_cat.debug()
-        << "Done loading file type plugin: " << lib_name << "\n";
-    }
-  }
 }
 
 /**

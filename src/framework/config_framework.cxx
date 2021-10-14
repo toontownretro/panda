@@ -15,6 +15,7 @@
 
 #include "dconfig.h"
 #include "windowFramework.h"
+#include "config_shader.h"
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_FRAMEWORK)
   #error Buildsystem error: BUILDING_FRAMEWORK not defined
@@ -43,5 +44,6 @@ ConfigVariableString playback_session
 
 
 ConfigureFn(config_framework) {
+  init_libshader();
   WindowFramework::init_type();
 }

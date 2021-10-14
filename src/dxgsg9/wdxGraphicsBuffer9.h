@@ -26,7 +26,7 @@
  * we can use, and thus makes it difficult to support one GSG rendering into
  * an offscreen buffer and also into a window.
  */
-class EXPCL_PANDADX wdxGraphicsBuffer9 : public GraphicsBuffer {
+class EXPCL_PANDA_DXGSG9 wdxGraphicsBuffer9 : public GraphicsBuffer {
 public:
   wdxGraphicsBuffer9(GraphicsEngine *engine, GraphicsPipe *pipe,
                      const std::string &name,

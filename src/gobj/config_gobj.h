@@ -93,4 +93,6 @@ extern EXPCL_PANDA_GOBJ ConfigVariableBool stereo_lens_old_convergence;
 extern EXPCL_PANDA_GOBJ ConfigVariableBool glsl_preprocess;
 extern EXPCL_PANDA_GOBJ ConfigVariableInt glsl_include_recursion_limit;
 
+extern EXPCL_PANDA_GOBJ void init_libgobj();
+
 #endif

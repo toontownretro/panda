@@ -27,8 +27,8 @@
 
 #include "dconfig.h"
 
-#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDADX)
-  #error Buildsystem error: BUILDING_PANDADX not defined
+#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_DXGSG9)
+  #error Buildsystem error: BUILDING_PANDA_DXGSG9 not defined
 #endif
 
 DToolConfigure(config_dxgsg9);

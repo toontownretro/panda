@@ -90,7 +90,4 @@ init_libpnmimage() {
   initialized = true;
 
   PNMFileType::init_type();
-
-  pnmimage_cat.init();
-  PNMFileTypeRegistry::get_global_ptr()->load_plugin_types();
 }

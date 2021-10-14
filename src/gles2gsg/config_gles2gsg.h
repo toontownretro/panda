@@ -18,9 +18,9 @@
 #include "notifyCategoryProxy.h"
 #include "dconfig.h"
 
-ConfigureDecl(config_gles2gsg, EXPCL_PANDAGLES2, EXPTP_PANDAGLES2);
-NotifyCategoryDecl(gles2gsg, EXPCL_PANDAGLES2, EXPTP_PANDAGLES2);
+ConfigureDecl(config_gles2gsg, EXPCL_PANDA_GLES2GSG, EXPTP_PANDA_GLES2GSG);
+NotifyCategoryDecl(gles2gsg, EXPCL_PANDA_GLES2GSG, EXPTP_PANDA_GLES2GSG);
 
-extern EXPCL_PANDAGLES2 void init_libgles2gsg();
+extern EXPCL_PANDA_GLES2GSG void init_libgles2gsg();
 
 #endif

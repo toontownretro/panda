@@ -54,7 +54,7 @@ class wdxGraphicsBuffer9;
 /**
  * A GraphicsStateGuardian for rendering into DirectX9 contexts.
  */
-class EXPCL_PANDADX DXGraphicsStateGuardian9 : public GraphicsStateGuardian {
+class EXPCL_PANDA_DXGSG9 DXGraphicsStateGuardian9 : public GraphicsStateGuardian {
 public:
   DXGraphicsStateGuardian9(GraphicsEngine *engine, GraphicsPipe *pipe);
   ~DXGraphicsStateGuardian9();

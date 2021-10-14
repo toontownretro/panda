@@ -9,7 +9,7 @@
 
 #include "pandabase.h"
 
-EXPCL_PANDAGLES void init_libpandagles();
-extern "C" EXPCL_PANDAGLES int get_pipe_type_pandagles();
+EXPCL_PANDAGLES_STUB void init_libpandagles();
+extern "C" EXPCL_PANDAGLES_STUB int get_pipe_type_pandagles();
 
 #endif

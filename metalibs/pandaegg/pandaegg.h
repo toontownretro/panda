@@ -9,6 +9,6 @@
 
 #include "pandabase.h"
 
-extern "C" EXPCL_PANDAEGG void init_libpandaegg();
+extern "C" EXPCL_PANDAEGG_STUB void init_libpandaegg();
 
 #endif
