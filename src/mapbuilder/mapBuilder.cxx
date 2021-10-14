@@ -195,6 +195,34 @@ build() {
     << "Grouped " << all_geoms.size() << " polygons into " << _mesh_groups.size()
     << " groups\n";
 
+  // Output entity information.
+  for (size_t i = 0; i < _source_map->_entities.size(); i++) {
+    MapEntitySrc *src_ent = _source_map->_entities[i];
+    if (src_ent->_class_name == "func_detail") {
+      continue;
+    }
+
+    PT(MapEntity) ent = new MapEntity;
+    ent->set_class_name(src_ent->_class_name);
+
+    PT(PDXElement) props = new PDXElement;
+    for (auto it = src_ent->_properties.begin(); it != src_ent->_properties.end(); ++it) {
+      const std::string &key = (*it).first;
+      if (key == "origin" ||
+          key == "angles") {
+        PDXValue value;
+        value.from_vec3(KeyValues::to_3f((*it).second));
+        props->set_attribute(key, value);
+
+      } else {
+        props->set_attribute(key, (*it).second);
+      }
+    }
+    ent->set_properties(props);
+
+    _out_data->add_entity(ent);
+  }
+
   //
   // VISIBILITY
   //
@@ -594,6 +622,12 @@ void MapBuilder::
 build_entity_polygons(int i) {
   MapEntitySrc *ent = _source_map->_entities[i];
 
+  if (ent->_class_name == "func_door" ||
+      ent->_class_name == "func_respawnroomvisualizer") {
+    // TEMPORARY
+    return;
+  }
+
   if (ent->_solids.size() == 0) {
     return;
   }
@@ -746,7 +780,10 @@ build_entity_polygons(int i) {
           poly->_normals.push_back(winding_normal);
         }
 
-        if (poly_material != nullptr) {
+        if (side->_displacement != nullptr) {
+          poly->_vis_occluder = false;
+
+        } else if (poly_material != nullptr) {
           if (poly_material->has_tag("compile_clip") ||
               poly_material->has_tag("compile_trigger")) {
             poly->_vis_occluder = false;

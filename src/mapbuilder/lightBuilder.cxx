@@ -40,6 +40,8 @@
 #include "materialAttrib.h"
 #include "materialParamTexture.h"
 #include "materialParamColor.h"
+#include "materialParamBool.h"
+#include "materialParamFloat.h"
 #include "pfmFile.h"
 #include "load_prc_file.h"
 #include "antialiasAttrib.h"
@@ -233,7 +235,7 @@ make_palette() {
       // existing palette.  Try again on a fresh palette.
       LightmapPage page;
       page.index = _pages.size();
-      page.packer.reset(0, 4096, 4096, 4);
+      page.packer.reset(0, 8192, 8192, 4);
       LVecBase2i offset = page.packer.add_block(lmgeom.lightmap_size[0], lmgeom.lightmap_size[1]);
       if (offset[0] != -1) {
         // Geom was successfully added into this palette.
@@ -401,6 +403,15 @@ make_textures() {
   reflectivity->set_compression(Texture::CM_off);
   reflectivity->clear_image();
   _lm_textures["reflectivity"] = reflectivity;
+
+  PT(Texture) emission = new Texture("lm_emission");
+  emission->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
+                                   Texture::T_float, Texture::F_rgba32);
+  emission->set_clear_color(LColor(0, 0, 0, 0));
+  emission->set_default_sampler(sampler);
+  emission->set_compression(Texture::CM_off);
+  emission->clear_image();
+  _lm_textures["emission"] = emission;
 
   //
   // Rasterization outputs.
@@ -863,7 +874,7 @@ rasterize_geoms_into_lightmap_textures() {
 
   FrameBufferProperties fbprops;
   fbprops.clear();
-  fbprops.set_aux_float(3);
+  fbprops.set_aux_float(4);
   fbprops.set_rgba_bits(8, 8, 8, 8);
   fbprops.set_force_hardware(true);
   //fbprops.set_multisamples(16);
@@ -885,6 +896,8 @@ rasterize_geoms_into_lightmap_textures() {
                              GraphicsOutput::RTP_aux_float_1);
   buffer->add_render_texture(_lm_textures["unocclude"], GraphicsOutput::RTM_bind_or_copy,
                              GraphicsOutput::RTP_aux_float_2);
+  buffer->add_render_texture(_lm_textures["emission"], GraphicsOutput::RTM_bind_or_copy,
+                             GraphicsOutput::RTP_aux_float_3);
 
   pvector<NodePath> scenes;
   pvector<PT(DisplayRegion)> display_regions;
@@ -976,9 +989,11 @@ rasterize_geoms_into_lightmap_textures() {
     dr->set_clear_active(GraphicsOutput::RTP_aux_float_0, true);
     dr->set_clear_active(GraphicsOutput::RTP_aux_float_1, true);
     dr->set_clear_active(GraphicsOutput::RTP_aux_float_2, true);
+    dr->set_clear_active(GraphicsOutput::RTP_aux_float_3, true);
     dr->set_clear_value(GraphicsOutput::RTP_aux_float_0, LColor(0, 0, 0, 0));
     dr->set_clear_value(GraphicsOutput::RTP_aux_float_1, LColor(0, 0, 0, 0));
     dr->set_clear_value(GraphicsOutput::RTP_aux_float_2, LColor(0, 0, 0, 0));
+    dr->set_clear_value(GraphicsOutput::RTP_aux_float_3, LColor(0, 0, 0, 1));
 
     PT(Camera) cam = new Camera("cam");
     PT(OrthographicLens) lens = new OrthographicLens;
@@ -1002,6 +1017,7 @@ rasterize_geoms_into_lightmap_textures() {
       PT(Texture) base_tex;
       bool has_base_color = false;
       LColor base_color(1);
+      LVecBase3 emission_color(0, 0, 0);
 
       const MaterialAttrib *mattr;
       if (geom.state->get_attrib(mattr)) {
@@ -1017,6 +1033,25 @@ rasterize_geoms_into_lightmap_textures() {
             } else if (base_color_param->is_of_type(MaterialParamTexture::get_class_type())) {
               // The base color comes from a texture.
               base_tex = ((MaterialParamTexture *)base_color_param)->get_value();
+            }
+          }
+
+          // Check for emission.
+          MaterialParamBase *selfillum_param = mat->get_param("self_illum");
+          if (selfillum_param != nullptr && DCAST(MaterialParamBool, selfillum_param)->get_value()) {
+            PN_stdfloat emission_factor = 255.0f;
+            MaterialParamBase *emission_param = mat->get_param("emission");
+            if (emission_param != nullptr && emission_param->is_of_type(MaterialParamFloat::get_class_type())) {
+              emission_factor = DCAST(MaterialParamFloat, emission_param)->get_value();
+            }
+            emission_color.set(emission_factor / 255.0f, emission_factor / 255.0f, emission_factor / 255.0f);
+            MaterialParamBase *tint_param = mat->get_param("self_illum_tint");
+            if (tint_param != nullptr) {
+              emission_color = DCAST(MaterialParamColor, tint_param)->get_value().get_xyz();
+              emission_color[0] = std::pow(emission_color[0], 2.2f);
+              emission_color[1] = std::pow(emission_color[1], 2.2f);
+              emission_color[2] = std::pow(emission_color[2], 2.2f);
+              emission_color *= emission_factor / 255.0f;
             }
           }
         }
@@ -1049,6 +1084,7 @@ rasterize_geoms_into_lightmap_textures() {
       geom_node->set_transform(geom.net_transform);
       NodePath geom_np = root.attach_new_node(geom_node);
       geom_np.set_shader_input("base_texture_sampler", base_tex, 10);
+      geom_np.set_shader_input("emission_color", emission_color, 10);
       geom_np.set_shader_input("first_triangle", LVecBase2i(geom.first_triangle), 10);
     }
   }
@@ -1138,6 +1174,7 @@ compute_direct() {
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
   np.set_shader_input("luxel_position", _lm_textures["position"]);
   np.set_shader_input("luxel_normal", _lm_textures["normal"]);
+  np.set_shader_input("luxel_emission", _lm_textures["emission"]);
 
   np.set_shader_input("u_bias_", LVecBase2(_bias));
   np.set_shader_input("u_region_ofs_grid_size", LVecBase3i(0, 0, _grid_size));

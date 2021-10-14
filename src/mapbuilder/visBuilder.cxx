@@ -345,9 +345,9 @@ voxelize_world_polygon(int i) {
       // greater than or equal to the half size of the voxel, then the polygon
       // is sandwiched between two voxels, one on each side of the polygon.
       // Ignore the voxel that is in front of the polygon.
-      if (plane.dist_to_plane(voxel_mid) >= voxel_half[0]) {
-        continue;
-      }
+      //if (plane.dist_to_plane(voxel_mid) >= voxel_half[0]) {
+      //  continue;
+      //}
 
       // Nudge the voxel size a bit to account for floating-point imprecision.
       if (tri_box_overlap(voxel_mid, voxel_half + 0.01f, verts[0], verts[1], verts[2])) {
