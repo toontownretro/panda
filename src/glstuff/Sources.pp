@@ -4,7 +4,7 @@
 // Most of the files here are not actually compiled into anything;
 // they're just included by various other directories.
 
-#begin lib_target
+#begin interface_target
   #define TARGET glstuff
   #define LOCAL_LIBS \
     gsgbase gobj display \
@@ -45,10 +45,7 @@
   #define SOURCES \
     $[HEADERS]
 
-  #define COMPOSITE_SOURCES \
-    glpure.cxx
-
   #define INSTALL_HEADERS \
      $[HEADERS]
 
-#end lib_target
+#end interface_target
