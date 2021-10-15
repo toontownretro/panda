@@ -249,12 +249,12 @@ private:
  */
 class EXPCL_PANDA_GOBJ GeomVertexArrayDataHandle : public GeomEnums {
 private:
-  INLINE GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
-                                   Thread *current_thread);
+  //INLINE GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
+  //                                 Thread *current_thread);
   INLINE GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
                                    Thread *current_thread);
-  INLINE GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
-                                   Thread *current_thread);
+  //INLINE GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
+  //                                 Thread *current_thread);
   INLINE GeomVertexArrayDataHandle(GeomVertexArrayData *object,
                                    Thread *current_thread);
 
@@ -326,7 +326,7 @@ PUBLISHED:
 
 private:
   GeomVertexArrayData::CData *_cdata;
-  PT(GeomVertexArrayData) _object;
+  GeomVertexArrayData *_object;
   Thread * _current_thread;
   bool _writable;
 

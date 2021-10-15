@@ -2266,7 +2266,7 @@ check_minmax() const {
 #ifdef DO_PIPELINING
       unref_delete((CycleData *)_cdata);
 #endif
-      GeomPrimitive::CDWriter fresh_cdata(((GeomPrimitive *)_object.p())->_cycler,
+      GeomPrimitive::CDWriter fresh_cdata(((GeomPrimitive *)_object)->_cycler,
                                           false, _current_thread);
       ((GeomPrimitivePipelineReader *)this)->_cdata = fresh_cdata;
 #ifdef DO_PIPELINING
@@ -2275,7 +2275,7 @@ check_minmax() const {
 
       if (!fresh_cdata->_got_minmax) {
         // The cache is still stale.  We have to do the work of freshening it.
-        ((GeomPrimitive *)_object.p())->recompute_minmax(fresh_cdata);
+        ((GeomPrimitive *)_object)->recompute_minmax(fresh_cdata);
         nassertv(fresh_cdata->_got_minmax);
       }
 
@@ -2293,7 +2293,7 @@ check_minmax() const {
  */
 int GeomPrimitivePipelineReader::
 get_first_vertex() const {
-  if (_vertices.is_null()) {
+  if (_vertices == nullptr) {
     return _cdata->_first_vertex;
   }
 
@@ -2311,7 +2311,7 @@ get_first_vertex() const {
  */
 int GeomPrimitivePipelineReader::
 get_vertex(int i) const {
-  if (!_vertices.is_null()) {
+  if (_vertices != nullptr) {
     // The indexed case.
     nassertr(i >= 0 && i < get_num_vertices(), -1);
 

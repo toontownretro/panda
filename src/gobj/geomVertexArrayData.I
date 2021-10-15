@@ -271,6 +271,7 @@ operator = (const GeomVertexArrayData::CData &copy) {
   _modified = copy._modified;
 }
 
+#if 0
 /**
  *
  */
@@ -294,6 +295,7 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
   _current_thread = current_thread;
   _writable = false;
 }
+#endif
 
 /**
  *
@@ -317,6 +319,7 @@ GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
   //_cdata->_rw_lock.acquire();
 }
 
+#if 0
 /**
  *
  */
@@ -340,6 +343,7 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
   _current_thread = current_thread;
   _writable = true;
 }
+#endif
 
 /**
  *

@@ -2669,10 +2669,8 @@ finish_decal() {
  */
 bool GraphicsStateGuardian::
 draw_objects(const pvector<CullableObject> &objects, bool force) {
-  size_t count = objects.size();
-
   bool all_ok = true;
-  for (size_t i = 0; i < count; i++) {
+  for (size_t i = 0; i < objects.size(); i++) {
     const CullableObject &object = objects[i];
 
 #ifdef RENDER_TRACK_GEOM_NODES
@@ -2768,10 +2766,8 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
   }
 
   // Draw all the primitives of the Geom.
-  const pvector<COWPT(GeomPrimitive)> &primitives = geom_reader._cdata->_primitives;
-  size_t count = primitives.size();
-  for (size_t i = 0; i < count; i++) {
-    const GeomPrimitive *prim = primitives[i].get_read_pointer(current_thread);
+  for (size_t i = 0; i < geom_reader._cdata->_primitives.size(); i++) {
+    const GeomPrimitive *prim = geom_reader._cdata->_primitives[i].get_read_pointer(current_thread);
 
     GeomPrimitivePipelineReader prim_reader(prim, current_thread);
     if (prim_reader.get_num_vertices() != 0) {

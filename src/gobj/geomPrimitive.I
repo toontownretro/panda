@@ -506,13 +506,14 @@ CData(const GeomPrimitive::CData &copy) :
  *
  */
 INLINE GeomPrimitivePipelineReader::
-GeomPrimitivePipelineReader(CPT(GeomPrimitive) object,
+GeomPrimitivePipelineReader(const GeomPrimitive *object,
                             Thread *current_thread) :
 #ifndef CPPPARSER
   _cdata(object->_cycler.read_unlocked(current_thread)),
 #endif
   _object(std::move(object)),
   _vertices_cdata(nullptr),
+  _vertices(nullptr),
   _current_thread(current_thread)
 {
   nassertv(_object->test_ref_count_nonzero());
@@ -607,7 +608,7 @@ get_index_type() const {
  */
 INLINE bool GeomPrimitivePipelineReader::
 is_indexed() const {
-  return (!_vertices.is_null());
+  return (_vertices != nullptr);
 }
 
 /**
@@ -618,7 +619,7 @@ get_num_vertices() const {
   if (_cdata->_num_vertices != -1) {
     return _cdata->_num_vertices;
   } else {
-    nassertr(!_vertices.is_null(), 0);
+    nassertr(_vertices != nullptr, 0);
     size_t stride = _vertices->_array_format->get_stride();
     nassertr(stride != 0, 0);
     return get_data_size_bytes() / stride;
@@ -673,7 +674,7 @@ get_index_stride() const {
  */
 INLINE const unsigned char *GeomPrimitivePipelineReader::
 get_read_pointer(bool force) const {
-  ((GeomVertexArrayData *)_vertices.p())->mark_used();
+  ((GeomVertexArrayData *)_vertices)->mark_used();
   return _vertices_cdata->_buffer.get_read_pointer(force);
 }
 
@@ -719,7 +720,7 @@ get_maxs() const {
 INLINE IndexBufferContext *GeomPrimitivePipelineReader::
 prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) const {
-  return ((GeomPrimitive *)_object.p())->prepare_now(prepared_objects, gsg);
+  return ((GeomPrimitive *)_object)->prepare_now(prepared_objects, gsg);
 }
 
 /**

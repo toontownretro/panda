@@ -363,7 +363,7 @@ private:
  */
 class EXPCL_PANDA_GOBJ GeomPrimitivePipelineReader : public GeomEnums {
 public:
-  INLINE GeomPrimitivePipelineReader(CPT(GeomPrimitive) object, Thread *current_thread);
+  INLINE GeomPrimitivePipelineReader(const GeomPrimitive *object, Thread *current_thread);
   GeomPrimitivePipelineReader(const GeomPrimitivePipelineReader &copy) = delete;
   INLINE ~GeomPrimitivePipelineReader();
 
@@ -403,8 +403,8 @@ public:
 
 private:
   const GeomPrimitive::CData *_cdata;
-  CPT(GeomPrimitive) _object;
-  CPT(GeomVertexArrayData) _vertices;
+  const GeomPrimitive *_object;
+  const GeomVertexArrayData *_vertices;
   const GeomVertexArrayData::CData *_vertices_cdata;
 
   Thread *_current_thread;

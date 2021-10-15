@@ -183,33 +183,10 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
       AnimEvalData::Joint &pose = data._pose[i];
 
-      if (jf.pos == jf_next.pos) {
-        pose._position = jf.pos;
-
-      } else {
-        pose._position = (jf.pos * e0) + (jf_next.pos * frac);
-      }
-
-      if (jf.scale == jf_next.scale) {
-        pose._scale = jf.scale;
-
-      } else {
-        pose._scale = (jf.scale * e0) + (jf_next.scale * frac);
-      }
-
-      if (jf.shear == jf_next.shear) {
-        pose._shear = jf.shear;
-
-      } else {
-        pose._shear = (jf.shear * e0) + (jf_next.shear * frac);
-      }
-
-      if (jf.quat == jf_next.quat) {
-        pose._rotation = jf.quat;
-
-      } else {
-        LQuaternion::blend(jf.quat, jf_next.quat, frac, pose._rotation);
-      }
+      pose._position = (jf.pos * e0) + (jf_next.pos * frac);
+      pose._scale = (jf.scale * e0) + (jf_next.scale * frac);
+      pose._shear = (jf.shear * e0) + (jf_next.shear * frac);
+      LQuaternion::blend(jf.quat, jf_next.quat, frac, pose._rotation);
     }
   }
 }
