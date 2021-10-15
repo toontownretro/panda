@@ -12,3 +12,8 @@
  */
 
 #include "pandabase.h"
+
+#if defined(_WIN32) && !defined(CPPPARSER) && !defined(LINK_ALL_STATIC)
+__declspec(dllexport)
+#endif
+int pandabase;
