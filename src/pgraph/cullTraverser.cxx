@@ -56,6 +56,7 @@ CullTraverser() :
   _cull_handler = nullptr;
   _portal_clipper = nullptr;
   _effective_incomplete_render = true;
+  _has_custom_is_in_view = false;
 }
 
 /**
@@ -73,7 +74,8 @@ CullTraverser(const CullTraverser &copy) :
   _view_frustum(copy._view_frustum),
   _cull_handler(copy._cull_handler),
   _portal_clipper(copy._portal_clipper),
-  _effective_incomplete_render(copy._effective_incomplete_render)
+  _effective_incomplete_render(copy._effective_incomplete_render),
+  _has_custom_is_in_view(copy._has_custom_is_in_view)
 {
 }
 
@@ -209,6 +211,20 @@ traverse_below(CullTraverserData &data) {
       i = node->get_next_visible_child(i);
     }
   }
+}
+
+/**
+ * Intended to be overridden by derived classes to implement a custom method
+ * for view-culling.  This is called after the view-frustum test has already
+ * passed for this node.
+ *
+ * Returns BoundingVolume::IntersectionFlags.  IF_no_intersection means the
+ * node is completely out of view and should not be traversed any further.
+ * Otherwise, keep traversing down the node.
+ */
+int CullTraverser::
+custom_is_in_view(const CullTraverserData &data) {
+  return BoundingVolume::IF_all;
 }
 
 /**

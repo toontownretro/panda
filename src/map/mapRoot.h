@@ -19,7 +19,10 @@
 #include "mapData.h"
 
 /**
- *
+ * The parent node of static geometry in a map.  It contains a static table
+ * of area clusters to child node indices, so static map geometry can be very
+ * quickly culled instead of having to test the bounding volumes against
+ * the area cluster tree, which is done for dynamic nodes.
  */
 class EXPCL_PANDA_MAP MapRoot : public PandaNode {
   DECLARE_CLASS(MapRoot, PandaNode);

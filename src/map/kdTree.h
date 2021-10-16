@@ -22,6 +22,8 @@
 #include "pset.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "bitArray.h"
+#include "boundingPlane.h"
 
 class GeometricBoundingVolume;
 
@@ -46,6 +48,8 @@ PUBLISHED:
     // Node's partitioning hyperplane.
     PN_stdfloat dist;
     unsigned char axis;
+
+    BoundingPlane plane;
   };
 
   class Leaf {
@@ -88,8 +92,9 @@ PUBLISHED:
   int make_subtree(const vector_int &objects);
 
   int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const;
+  bool is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set, int head_node = 0) const;
   void get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
-                                         pset<int> &values, int head_node = 0) const;
+                                         BitArray &values, int head_node = 0) const;
 
   size_t get_memory_size() const;
 

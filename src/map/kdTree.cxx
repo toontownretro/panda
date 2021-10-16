@@ -175,7 +175,7 @@ get_leaf_value_from_point(const LPoint3 &point, int head_node) const {
  */
 void KDTree::
 get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
-                                  pset<int> &values, int head_node) const {
+                                  BitArray &values, int head_node) const {
   std::stack<int> stack;
   stack.push(head_node);
 
@@ -189,10 +189,7 @@ get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
       // Construct a BoundingPlane for the node's splitting plane.  This is
       // unfortunate, but it makes it convenient to test against
       // BoundingVolumes of any type.
-      LPlane plane(0, 0, 0, -node->dist);
-      plane[node->axis] = 1;
-      BoundingPlane bplane(plane);
-      int flags = bplane.contains(volume);
+      int flags = node->plane.contains(volume);
 
       if (flags == BoundingVolume::IF_no_intersection) {
         // Completely in front of the plane.  Traverse right.
@@ -211,10 +208,54 @@ get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
     } else {
       const Leaf *leaf = &_leaves[~node_index];
       if (leaf->value != -1) {
-        values.insert(leaf->value);
+        values.set_bit(leaf->value);
       }
     }
   }
+}
+
+/**
+ * Returns true if the indicated volume is contained within a leaf that
+ * has a value from the indicated set.
+ */
+bool KDTree::
+is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set,
+                      int head_node) const {
+  std::stack<int> stack;
+  stack.push(head_node);
+
+  while (!stack.empty()) {
+    int node_index = stack.top();
+    stack.pop();
+
+    if (node_index >= 0) {
+      const Node *node = &_nodes[node_index];
+
+      int flags = node->plane.contains(vol);
+
+      if (flags == BoundingVolume::IF_no_intersection) {
+        // Completely in front of the plane.  Traverse right.
+        stack.push(node->right_child);
+
+      } else if ((flags & BoundingVolume::IF_all) != 0) {
+        // Completely behind the plane.  Traverse left.
+        stack.push(node->left_child);
+
+      } else {
+        // The volume spans the plane.  Traverse both directions.
+        stack.push(node->right_child);
+        stack.push(node->left_child);
+      }
+
+    } else {
+      const Leaf *leaf = &_leaves[~node_index];
+      if (leaf->value != -1 && set.get_bit(leaf->value)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -271,6 +312,10 @@ int KDTree::
 make_node(unsigned char axis, PN_stdfloat dist) {
   int index = (int)_nodes.size();
   _nodes.push_back(Node());
+  LPlane plane(0, 0, 0, -dist);
+  plane[axis] = 1;
+  _nodes[index].plane = BoundingPlane(plane);
+  _nodes[index].plane.local_object();
   _nodes[index].axis = axis;
   _nodes[index].dist = dist;
   _nodes[index].left_child = INVALID_NODE;
@@ -461,6 +506,10 @@ read_datagram(DatagramIterator &scan) {
     _nodes[i].right_child = scan.get_int32();
     _nodes[i].dist = scan.get_stdfloat();
     _nodes[i].axis = scan.get_uint8();
+    LPlane plane(0, 0, 0, -_nodes[i].dist);
+    plane[_nodes[i].axis] = 1;
+    _nodes[i].plane = BoundingPlane(plane);
+    _nodes[i].plane.local_object();
   }
 
   _leaves.resize(scan.get_uint32());

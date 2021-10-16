@@ -172,6 +172,25 @@ get_portal_clipper() const {
 }
 
 /**
+ * Indicates whether or not a derived class implements a custom method for
+ * view culling nodes.  If true, custom_is_in_view() will be called for each
+ * visited node after the view-frustum test has passed.
+ */
+INLINE void CullTraverser::
+set_custom_is_in_view(bool flag) {
+  _has_custom_is_in_view = flag;
+}
+
+/**
+ * Returns true if a dervied class implements a custom method for view
+ * culling nodes.  See set_custom_is_in_view().
+ */
+INLINE bool CullTraverser::
+has_custom_is_in_view() const {
+  return _has_custom_is_in_view;
+}
+
+/**
  * Returns true if the cull traversal is effectively in incomplete_render
  * state, considering both the GSG's incomplete_render and the current
  * DisplayRegion's incomplete_render flags.  This returns the flag during the
@@ -286,7 +305,7 @@ do_traverse(CullTraverserData &data) {
   PandaNodePipelineReader *node_reader = data.node_reader();
   int fancy_bits = node_reader->get_fancy_bits();
 
-  if (fancy_bits == 0 && data._cull_planes->is_empty() && data._cull_lights->is_empty()) {
+  if (fancy_bits == 0 && data._cull_planes->is_empty() && data._cull_lights->is_empty() && !_has_custom_is_in_view) {
     // Nothing interesting in this node; just move on.
 
   } else {
@@ -299,6 +318,14 @@ do_traverse(CullTraverserData &data) {
     }
 
     data.apply_transform_and_state(this);
+
+    // If a derived class implements a custom view cull, allow it to test the
+    // node now.
+    if (_has_custom_is_in_view) {
+      if (custom_is_in_view(data) == BoundingVolume::IF_no_intersection) {
+        return;
+      }
+    }
 
     const FogAttrib *fog = (const FogAttrib *)
       node_reader->get_state()->get_attrib(FogAttrib::get_class_slot());

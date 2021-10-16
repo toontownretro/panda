@@ -12,10 +12,11 @@
  */
 
 #include "config_map.h"
-#include "loaderFileTypeRegistry.h"
 #include "mapData.h"
 #include "mapEntity.h"
 #include "mapRoot.h"
+#include "mapRender.h"
+#include "mapCullTraverser.h"
 
 NotifyCategoryDef(map, "");
 
@@ -36,6 +37,8 @@ init_libmap() {
   MapData::init_type();
   MapEntity::init_type();
   MapRoot::init_type();
+  MapRender::init_type();
+  MapCullTraverser::init_type();
 
   MapData::register_with_read_factory();
   MapEntity::register_with_read_factory();
