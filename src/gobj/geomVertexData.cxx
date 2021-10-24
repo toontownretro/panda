@@ -940,24 +940,33 @@ reverse_normals() const {
  */
 CPT(GeomVertexData) GeomVertexData::
 animate_vertices(bool force, Thread *current_thread) const {
-#ifdef DO_PIPELINING
-  {
+//#ifdef DO_PIPELINING
+  //{
     // In the pipelining case, we take a simple short-route optimization: if
     // the vdata isn't animated, we don't need to grab any mutex first.
-    CDReader cdata(_cycler, current_thread);
-    if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
-      return this;
-    }
-  }
-#endif  // DO_PIPELINING
+    //CDReader cdata(_cycler, current_thread);
+    //if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
+    //  return this;
+    //}
+  //}
+//#endif  // DO_PIPELINING
 
   // Now that we've short-circuited the short route, we reasonably believe the
   // vdata is animated.  Grab the mutex and make sure it's still animated
   // after we've acquired it.
   CDLockedReader cdata(_cycler, current_thread);
-  if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
-    return this;
-  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // NOTE: This is not the case anymore.  If the vertex data has a slider table,
+  // Panda will perform morphing on the CPU no matter what.  However, Panda will
+  // only perform CPU joint skinning if the vertex data has a TransformBlendTable,
+  // but not if it has a TransformTable, which is the GPU-skinning format.  The
+  // Egg loader is currently set up to create a TransformTable for GPU-skinning.
+  /////////////////////////////////////////////////////////////////////////////
+
+  //if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
+  //  return this;
+  //}
 
   PStatTimer timer(((GeomVertexData *)this)->_char_pcollector, current_thread);
 
