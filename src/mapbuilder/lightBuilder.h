@@ -90,6 +90,9 @@ PUBLISHED:
   INLINE void set_sky_color(const LColor &color);
   INLINE LColor get_sky_color() const;
 
+  INLINE void set_sun_angular_extent(PN_stdfloat angle);
+  INLINE PN_stdfloat get_sun_angular_extent() const;
+
   static const InternalName *get_lightmap_uv_name();
 
 private:
@@ -106,6 +109,7 @@ private:
   bool denoise_lightmaps();
   bool dialate_lightmaps();
   bool write_geoms();
+  bool compute_probes();
 
 public:
   /**
@@ -157,6 +161,14 @@ public:
     PT(GeomNode) source_geom_node;
     // and the Geom's index into the GeomNode.
     int geom_index = -1;
+
+    // If true, this indicates that the Geom comes from an instanced model in
+    // the scene, such as a static prop.  The lightmap and UV offsets for the
+    // Geom should not be applied to the source geom, but be stored in an
+    // index that can be looked up and applied to the model when it's loaded.
+    // This way, the prop can have different lightmaps applied to it when used
+    // in different levels or multiple times in the same level.
+    bool proxy;
 
     PT(Geom) geom;
     CPT(GeomVertexData) vdata;
@@ -239,6 +251,18 @@ public:
   typedef pvector<LightmapLight> Lights;
   Lights _lights;
 
+  /**
+   * A single ambient lighting probe.  Uses spherical harmonics.
+   */
+  struct LightmapAmbientProbe {
+    LPoint3 pos;
+
+    // Output spherical harmonics ambient lighting after computation.
+    LVecBase3 data[9];
+  };
+  typedef pvector<LightmapAmbientProbe> AmbientProbes;
+  AmbientProbes _probes;
+
   // The width and height of the lightmap palette.
   LVecBase2i _lightmap_size;
 
@@ -265,6 +289,7 @@ public:
   // Color of the sky.  Could potentially use an environment map for this in
   // the future, or an option to use one or the other.
   LColor _sky_color;
+  PN_stdfloat _sun_angular_extent;
 
   // Light bouncing parameters:
   int _bounces; // Number of bounce passes.

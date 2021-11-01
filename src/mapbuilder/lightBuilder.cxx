@@ -63,14 +63,15 @@ LightBuilder() :
   _lightmap_size(-1),
   _grid_size(128),
   _bias(0.005f),
-  _bounces(3),
+  _bounces(5), // 5
   _rays_per_luxel(1024),
   _ray_region_size(512),
   _rays_per_region(64),
   _graphics_engine(GraphicsEngine::get_global_ptr()),
   _host_output(nullptr),
   _gsg(nullptr),
-  _sky_color(0, 0, 0, 1)
+  _sky_color(0, 0, 0, 1),
+  _sun_angular_extent(0.0f)
 {
 }
 
@@ -413,6 +414,26 @@ make_textures() {
   emission->clear_image();
   _lm_textures["emission"] = emission;
 
+  // This texture contains the output data for each ambient probe.
+  // The data for each probe occupies nine texels for spherical harmonics.
+  // The probe shader writes to this texture, which is then read back in on
+  // the CPU to transfer to a friendly format.
+  PT(Texture) probes = new Texture("lm_probes");
+  probes->setup_buffer_texture(_probes.size() * 9, Texture::T_float, Texture::F_rgba32, GeomEnums::UH_static);
+  probes->set_clear_color(LColor(0, 0, 0, 0));
+  probes->set_default_sampler(sampler);
+  probes->set_compression(Texture::CM_off);
+  probes->clear_image();
+  _lm_textures["probes"] = probes;
+
+  PT(Texture) probes_flat = new Texture("lm_probes_flat");
+  probes_flat->setup_buffer_texture(_probes.size(), Texture::T_float, Texture::F_rgba32, GeomEnums::UH_static);
+  probes_flat->set_clear_color(LColor(0, 0, 0, 0));
+  probes_flat->set_default_sampler(sampler);
+  probes_flat->set_compression(Texture::CM_off);
+  probes_flat->clear_image();
+  _lm_textures["probes_flat"] = probes_flat;
+
   //
   // Rasterization outputs.
   //
@@ -691,6 +712,24 @@ make_gpu_buffers() {
   }
   lights->set_ram_image(light_data);
   _gpu_buffers["lights"] = lights;
+
+  // Buffer of ambient probe positions.  One three-channel texel per probe.
+  PT(Texture) probes = new Texture("lm_probes");
+  probes->setup_buffer_texture(_probes.size(), Texture::T_float,
+                               Texture::F_rgb32, GeomEnums::UH_static);
+  probes->set_keep_ram_image(false);
+  PTA_uchar probe_data;
+  probe_data.resize(sizeof(float) * _probes.size() * 3);
+  nassertr(probes->get_expected_ram_image_size() == probe_data.size(), false);
+  float *probe_datap = (float *)probe_data.p();
+  for (size_t i = 0; i < _probes.size(); i++) {
+    const LightmapAmbientProbe &probe = _probes[i];
+    probe_datap[i * 3] = probe.pos[0];
+    probe_datap[i * 3 + 1] = probe.pos[1];
+    probe_datap[i * 3 + 2] = probe.pos[2];
+  }
+  probes->set_ram_image(probe_data);
+  _gpu_buffers["probes"] = probes;
 
   // Now build the triangle acceleration stucture for ray tracing.  Currently
   // it is a uniform grid of cells.  Each cell contains a list of triangles
@@ -1176,7 +1215,7 @@ compute_direct() {
   np.set_shader_input("luxel_normal", _lm_textures["normal"]);
   np.set_shader_input("luxel_emission", _lm_textures["emission"]);
 
-  np.set_shader_input("u_bias_", LVecBase2(_bias));
+  np.set_shader_input("u_bias_sun_extent", LVecBase2(_bias, std::sin(deg_2_rad(_sun_angular_extent))));
   np.set_shader_input("u_region_ofs_grid_size", LVecBase3i(0, 0, _grid_size));
   np.set_shader_input("u_to_cell_offset", _scene_mins);
 
@@ -1287,7 +1326,7 @@ compute_indirect() {
   // Free up memory.
   _lm_textures["indirect_accum"]->clear_image();
   _lm_textures["indirect"]->clear_image();
-  _lm_textures["albedo"]->clear_image();
+  //_lm_textures["albedo"]->clear_image();
   _lm_textures["position"]->clear_image();
   _lm_textures["normal"]->clear_image();
 
@@ -1479,6 +1518,98 @@ write_geoms() {
   return true;
 }
 
+/**
+ * Computes spherical harmonics ambient lighting probes for applying to
+ * dynamic models.
+ */
+bool LightBuilder::
+compute_probes() {
+  lightbuilder_cat.info()
+    << "Computing ambient probes...\n";
+
+  NodePath np("state");
+
+  np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_probes.compute.glsl"));
+
+  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
+  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
+  np.set_shader_input("lights", _gpu_buffers["lights"]);
+  np.set_shader_input("triangle_cells", _gpu_buffers["triangle_cells"]);
+  np.set_shader_input("grid", _gpu_buffers["grid"]);
+
+  // Probe positions.
+  np.set_shader_input("probes", _gpu_buffers["probes"]);
+  // Probe output data.
+  np.set_shader_input("probe_output", _lm_textures["probes"]);
+  np.set_shader_input("probe_output_flat", _lm_textures["probes_flat"]);
+
+  // Use denoised+dialated indirect+direct lightmap.
+  np.set_shader_input("luxel_light", _lm_textures["direct"]);
+  np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
+
+  np.set_shader_input("u_bias_", LVecBase2(_bias, 0));
+  np.set_shader_input("u_grid_size_probe_count", LVecBase2i(_grid_size, _probes.size()));
+  np.set_shader_input("u_to_cell_offset", _scene_mins);
+  np.set_shader_input("u_sky_color", _sky_color.get_xyz());
+
+  LVector3 size = _scene_maxs - _scene_mins;
+  np.set_shader_input("u_to_cell_size", LVecBase3((1.0f / size[0]) * (float)_grid_size,
+                                                  (1.0f / size[1]) * (float)_grid_size,
+                                                  (1.0f / size[2]) * (float)_grid_size));
+
+  int ray_count = 2048;
+  int max_rays = 64;
+  int ray_iters = (ray_count - 1) / max_rays + 1;
+
+  np.set_shader_input("u_ray_params", LVecBase3i(0, ray_count, ray_count));
+
+  //for (int i = 0; i < ray_iters; i++) {
+  //  int ray_from = i * max_rays;
+  //  int ray_to = std::min((i + 1) * max_rays, ray_count);
+  //  np.set_shader_input("u_ray_params", LVecBase3i(ray_from, ray_to, ray_count));
+
+    LVecBase3i group_size((_probes.size() - 1) / 64 + 1, 1, 1);
+    _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+    _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+    _gsg->finish();
+  //}
+
+  // Retrieve probe data back onto CPU.
+  _graphics_engine->extract_texture_data(_lm_textures["probes"], _gsg);
+  _graphics_engine->extract_texture_data(_lm_textures["probes_flat"], _gsg);
+  CPTA_uchar probe_data = _lm_textures["probes"]->get_ram_image();
+  const float *probe_datap = (const float *)probe_data.p();
+
+  CPTA_uchar probe_flat_data = _lm_textures["probes_flat"]->get_ram_image();
+  assert(probe_flat_data.size() == (sizeof(float) * 4 * _probes.size()));
+  const float *probe_flat_datap = (const float *)probe_flat_data.p();
+
+  // Now output the data to a friendly format.
+  for (size_t i = 0; i < _probes.size(); i++) {
+    LightmapAmbientProbe &probe = _probes[i];
+    for (int j = 0; j < 9; j++) {
+      probe.data[j][0] = probe_datap[i * 36 + j * 4];
+      probe.data[j][1] = probe_datap[i * 36 + j * 4 + 1];
+      probe.data[j][2] = probe_datap[i * 36 + j * 4 + 2];
+    }
+
+    LVecBase3 color;
+    color[0] = probe_flat_datap[i * 4];
+    color[1] = probe_flat_datap[i * 4 + 1];
+    color[2] = probe_flat_datap[i * 4 + 2];
+    std::cout << "probe " << i << " flat: " << color << "\n";
+  }
+
+  _lm_textures["probes"]->clear_image();
+  _lm_textures["probes_flat"]->clear_image();
+  _lm_textures["albedo"]->clear_image();
+  //_lm_textures["reflectivity"]->clear_image();
+
+  lightbuilder_cat.info()
+    << "Done.\n";
+
+  return true;
+}
 
 /**
  * Does the lightmap solve.  Returns true on success or false if something
@@ -1569,31 +1700,36 @@ solve() {
   //_lm_textures["position"]->write("lm_position_#.png", 0, 0, true, false);
 
   if (!compute_direct()) {
-    lightbuilder_cat.info()
+    lightbuilder_cat.error()
       << "Failed to compute luxel direct lighting\n";
     return false;
   }
 
   if (!compute_indirect()) {
-    lightbuilder_cat.info()
+    lightbuilder_cat.error()
       << "Failed to compute luxel indirect lighting\n";
     return false;
   }
 
+  if (!compute_probes()) {
+    lightbuilder_cat.error()
+      << "Failed to compute ambient probes\n";
+  }
+
   if (!denoise_lightmaps()) {
-    lightbuilder_cat.info()
+    lightbuilder_cat.error()
       << "Failed to denoise lightmaps\n";
     return false;
   }
 
   if (!dialate_lightmaps()) {
-    lightbuilder_cat.info()
+    lightbuilder_cat.error()
       << "Failed to dialate lightmaps\n";
     return false;
   }
 
   if (!write_geoms()) {
-    lightbuilder_cat.info()
+    lightbuilder_cat.error()
       << "Failed to write lightmaps to input Geoms\n";
     return false;
   }

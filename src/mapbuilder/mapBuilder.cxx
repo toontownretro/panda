@@ -22,6 +22,7 @@
 #include "mapEntity.h"
 #include "materialAttrib.h"
 #include "materialParamTexture.h"
+#include "materialParamBool.h"
 #include "texture.h"
 #include "renderState.h"
 #include "transparencyAttrib.h"
@@ -38,6 +39,26 @@
 #include "lightBuilder.h"
 #include "keyValues.h"
 #include "sceneGraphAnalyzer.h"
+#include "camera.h"
+#include "frameBufferProperties.h"
+#include "windowProperties.h"
+#include "graphicsOutput.h"
+#include "graphicsStateGuardian.h"
+#include "displayRegion.h"
+#include "perspectiveLens.h"
+#include "graphicsEngine.h"
+#include "graphicsPipeSelection.h"
+#include "graphicsPipe.h"
+#include "lightRampAttrib.h"
+#include "antialiasAttrib.h"
+#include "textureStage.h"
+#include "vector_int.h"
+#include "vector_string.h"
+#include "shaderManager.h"
+#include "config_shader.h"
+#include "pointLight.h"
+#include "directionalLight.h"
+#include "spotlight.h"
 
 // DEBUG INCLUDES
 #include "geomVertexData.h"
@@ -409,6 +430,12 @@ build() {
     }
   }
 
+  // Render cube maps.
+  ec = render_cube_maps();
+  if (ec != EC_ok) {
+    return ec;
+  }
+
   // After building the lightmaps, we can flatten the Geoms within each mesh
   // group to reduce draw calls.  If we flattened before building lightmaps,
   // Geoms would have overlapping lightmap UVs.
@@ -766,6 +793,7 @@ build_entity_polygons(int i) {
       if (side->_displacement == nullptr) {
         // A regular non-displacement brush face.
         PT(MapPoly) poly = new MapPoly;
+        poly->_side_id = side->_editor_id;
         poly->_winding = w;
         poly->_in_group = false;
         poly->_is_mesh = false;
@@ -780,20 +808,18 @@ build_entity_polygons(int i) {
           poly->_normals.push_back(winding_normal);
         }
 
+        poly->_vis_occluder = true;
+
         if (side->_displacement != nullptr) {
           poly->_vis_occluder = false;
 
-        } else if (poly_material != nullptr) {
-          if (poly_material->has_tag("compile_clip") ||
-              poly_material->has_tag("compile_trigger")) {
-            poly->_vis_occluder = false;
+        } else if (base_tex != nullptr && Texture::has_alpha(base_tex->get_format())) {
+          poly->_vis_occluder = false;
 
-          } else {
-            poly->_vis_occluder = true;
-          }
-
-        } else {
-          poly->_vis_occluder = true;
+        } else if (poly_material != nullptr &&
+                   (poly_material->has_tag("compile_clip") ||
+                    poly_material->has_tag("compile_trigger"))) {
+          poly->_vis_occluder = false;
         }
 
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
@@ -967,6 +993,7 @@ build_entity_polygons(int i) {
             // TRIANGLE 1
             //
             PT(MapPoly) tri0 = new MapPoly;
+            tri0->_side_id = side->_editor_id;
             tri0->_vis_occluder = false;
             tri0->_in_group = false;
             tri0->_is_mesh = false;
@@ -1013,6 +1040,7 @@ build_entity_polygons(int i) {
             // TRIANGLE 2
             //
             tri0 = new MapPoly;
+            tri0->_side_id = side->_editor_id;
             tri0->_vis_occluder = false;
             tri0->_in_group = false;
             tri0->_is_mesh = false;
@@ -1180,42 +1208,73 @@ build_lighting() {
       light.color.set(1, 1, 1, 1);
     }
 
-    if (ent->_properties.find("_constant_attn") != ent->_properties.end()) {
-      light.constant = std::max(0.0f, (float)atof(ent->_properties["_constant_attn"].c_str()));
-    } else {
-      light.constant = 0;
+    PN_stdfloat d50 = 0.0f;
+    if (ent->_properties.find("_fifty_percent_distance") != ent->_properties.end()) {
+      d50 = atof(ent->_properties["_fifty_percent_distance"].c_str());
     }
 
-    if (ent->_properties.find("_linear_attn") != ent->_properties.end()) {
-      light.linear = std::max(0.0f, (float)atof(ent->_properties["_linear_attn"].c_str()));
-    } else {
-      light.linear = 0;
-    }
+    if (d50) {
+      PN_stdfloat d0 = 0.0f;
+      if (ent->_properties.find("_zero_percent_distance") != ent->_properties.end()) {
+        d0 = atof(ent->_properties["_zero_percent_distance"].c_str());
+      }
+      if (d0 < d50) {
+        d0 = d50 * 2.0f;
+      }
+      PN_stdfloat a = 0, b = 1, c = 0;
+      if (!solve_inverse_quadratic_monotonic(0, 1.0f, d50, 2.0f, d0, 256.0f, a, b, c)) {
+      }
 
-    if (ent->_properties.find("_quadratic_attn") != ent->_properties.end()) {
-      light.quadratic = std::max(0.0f, (float)atof(ent->_properties["_quadratic_attn"].c_str()));
+      PN_stdfloat v50 = c + d50 * (b + d50 * a);
+      PN_stdfloat scale = 2.0f / v50;
+      a *= scale;
+      b *= scale;
+      c *= scale;
+      light.constant = c;
+      light.linear = b;
+      light.quadratic = a;
+
     } else {
-      light.quadratic = 0;
+      if (ent->_properties.find("_constant_attn") != ent->_properties.end()) {
+        light.constant = std::max(0.0f, (float)atof(ent->_properties["_constant_attn"].c_str()));
+      } else {
+        light.constant = 0;
+      }
+
+      if (ent->_properties.find("_linear_attn") != ent->_properties.end()) {
+        light.linear = std::max(0.0f, (float)atof(ent->_properties["_linear_attn"].c_str()));
+      } else {
+        light.linear = 0;
+      }
+
+      if (ent->_properties.find("_quadratic_attn") != ent->_properties.end()) {
+        light.quadratic = std::max(0.0f, (float)atof(ent->_properties["_quadratic_attn"].c_str()));
+      } else {
+        light.quadratic = 0;
+      }
+
+      if (light.constant == 0 &&
+          light.linear == 0 &&
+          light.quadratic == 0) {
+        light.constant = 1;
+      }
+
+      // Scale intensity for unit 100 distance.
+      PN_stdfloat ratio = (light.constant + 100 * light.linear + 100 * 100 * light.quadratic);
+      if (ratio > 0) {
+        light.color[0] *= ratio;
+        light.color[1] *= ratio;
+        light.color[2] *= ratio;
+      }
     }
 
     if (ent->_properties.find("_exponent") != ent->_properties.end()) {
       light.exponent = atof(ent->_properties["_exponent"].c_str());
+      if (!light.exponent) {
+        light.exponent = 1;
+      }
     } else {
       light.exponent = 1;
-    }
-
-    if (light.constant == 0 &&
-        light.linear == 0 &&
-        light.quadratic == 0) {
-      light.constant = 1;
-    }
-
-    // Scale intensity for unit 100 distance.
-    PN_stdfloat ratio = (light.constant + 100 * light.linear + 100 * 100 * light.quadratic);
-    if (ratio > 0) {
-      light.color[0] *= ratio;
-      light.color[1] *= ratio;
-      light.color[2] *= ratio;
     }
 
     if (ent->_properties.find("_inner_cone") != ent->_properties.end()) {
@@ -1233,8 +1292,26 @@ build_lighting() {
     if (ent->_class_name == "light") {
       light.type = LightBuilder::LT_point;
 
+      PT(PointLight) pl = new PointLight("pl");
+      pl->set_color(light.color);
+      pl->set_attenuation(LVecBase3(light.constant, light.linear, light.quadratic));
+      NodePath plnp(pl);
+      plnp.set_pos(light.pos);
+      _out_data->add_light(plnp);
+
     } else if (ent->_class_name == "light_spot") {
       light.type = LightBuilder::LT_spot;
+
+      PT(Spotlight) sl = new Spotlight("sl");
+      sl->set_color(light.color);
+      sl->set_attenuation(LVecBase3(light.constant, light.linear, light.quadratic));
+      sl->set_inner_cone(light.inner_cone);
+      sl->set_outer_cone(light.outer_cone);
+      sl->set_exponent(light.exponent);
+      NodePath slnp(sl);
+      slnp.set_pos(light.pos);
+      slnp.set_hpr(light.hpr);
+      _out_data->add_light(slnp);
 
     } else {
       light.type = LightBuilder::LT_directional;
@@ -1252,14 +1329,264 @@ build_lighting() {
 
         builder.set_sky_color(sky_color);
       }
+
+      if (ent->_properties.find("SunSpreadAngle") != ent->_properties.end()) {
+        builder.set_sun_angular_extent(atof(ent->_properties["SunSpreadAngle"].c_str()));
+      }
     }
 
     builder._lights.push_back(light);
   }
 
+  // Add ambient probes.  We will use a uniform grid of configurable density.
+  // If visibility is enabled, only probes within area clusters are computed.
+  // UNDONE: Make this configurable.
+  PN_stdfloat probe_density = 128.0f;
+  // Start at the lowest corner of the level bounds and work our way to the top.
+  for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += probe_density) {
+    for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += probe_density) {
+      for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += probe_density) {
+        LPoint3 pos(x, y, z);
+        if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
+          // Probe is not in valid cluster.  Skip it.
+          continue;
+        }
+        builder._probes.push_back({ pos });
+      }
+    }
+  }
+
   if (!builder.solve()) {
     return EC_lightmap_failed;
   }
+
+  // Now output the probes to the output map data.
+  for (size_t i = 0; i < builder._probes.size(); i++) {
+    const LightBuilder::LightmapAmbientProbe &probe = builder._probes[i];
+    MapAmbientProbe mprobe;
+    mprobe._pos = probe.pos;
+    for (int j = 0; j < 9; j++) {
+      //std::cout << probe.data[j] << "\n";
+      mprobe._color[j] = probe.data[j];
+    }
+    _out_data->add_ambient_probe(mprobe);
+  }
+
+  return EC_ok;
+}
+
+/**
+ * Bakes and prefilters a cube map texture for each env_cubemap entity in the
+ * map.
+ */
+MapBuilder::ErrorCode MapBuilder::
+render_cube_maps() {
+  mapbuilder_cat.info()
+    << "Baking cube map textures...\n";
+
+  GraphicsEngine *engine = GraphicsEngine::get_global_ptr();
+  GraphicsPipeSelection *selection = GraphicsPipeSelection::get_global_ptr();
+  PT(GraphicsPipe) pipe = selection->make_module_pipe("pandagl");
+  if (pipe == nullptr) {
+    return EC_unknown_error;
+  }
+
+  // Make sure we don't render any cube maps on surfaces when rendering
+  // cube maps.
+  //default_cube_map = "";
+
+  //ShaderManager::get_global_ptr()->set_default_cube_map(nullptr);
+
+  PT(Shader) filter_shader = Shader::load_compute(Shader::SL_GLSL, "shaders/cubemap_filter.compute.glsl");
+  NodePath filter_state("cm_filter");
+  filter_state.set_shader(filter_shader);
+
+  FrameBufferProperties props;
+  props.clear();
+  WindowProperties winprops;
+  winprops.clear();
+  winprops.set_size(1, 1);
+
+  PT(GraphicsOutput) output = engine->make_output(pipe, "cubemap_host", -1, props, winprops,
+                                                  GraphicsPipe::BF_refuse_window);
+  if (output == nullptr) {
+    return EC_unknown_error;
+  }
+  GraphicsStateGuardian *gsg = output->get_gsg();
+
+  props.set_rgba_bits(16, 16, 16, 16);
+  props.set_depth_bits(1);
+  //props.set_multisamples(0);
+  props.set_force_hardware(true);
+  props.set_float_color(true);
+
+  // Make sure we antialias and render an HDR cube map.
+  //_out_top->set_attrib(AntialiasAttrib::make(AntialiasAttrib::M_multisample));
+  _out_top->set_attrib(LightRampAttrib::make_identity());
+
+  PT(TextureStage) cm_stage = new TextureStage("envmap");
+
+  pvector<vector_int> cm_side_lists;
+  pvector<CPT(RenderState)> cm_states;
+
+  for (auto it = _source_map->_entities.begin(); it != _source_map->_entities.end();) {
+    MapEntitySrc *ent = *it;
+    if (ent->_class_name != "env_cubemap") {
+      ++it;
+      continue;
+    }
+
+    // Place the cube map camera rig into the level scene graph.
+    NodePath cam_rig("cubemap_cam_rig");
+    cam_rig.reparent_to(NodePath(_out_top));
+
+    // Position the camera at the origin of the cube map entity.
+    LPoint3 pos = KeyValues::to_3f(ent->_properties["origin"]);
+    cam_rig.set_pos(pos);
+
+    vector_int side_list;
+    // The cube map may have a list of sides that should be explicitly given
+    // this cube map and not the closest one.
+    if (ent->_properties.find("sides") != ent->_properties.end()) {
+      vector_string str_side_list;
+      extract_words(ent->_properties["sides"], str_side_list);
+      for (size_t i = 0; i < str_side_list.size(); i++) {
+        int side_id;
+        if (!string_to_int(str_side_list[i], side_id)) {
+          return EC_unknown_error;
+        }
+        side_list.push_back(side_id);
+      }
+    }
+    cm_side_lists.push_back(side_list);
+
+    //int size_option = atoi(ent->_properties["cubemapsize"].c_str());
+    int size = 512;
+    //if (size_option == 0) {
+    //  size = 128;
+
+    //} else {
+    //  size = 1 << (size_option - 1);
+    //}
+
+    // Create the offscreen buffer and a camera/display region pair for each
+    // cube map face.
+    PT(GraphicsOutput) buffer = output->make_cube_map("cubemap_render", size, cam_rig,
+                                                      PandaNode::get_all_camera_mask(), true, &props);
+    if (buffer == nullptr) {
+      return EC_unknown_error;
+    }
+
+    engine->open_windows();
+
+    // Now render into the cube map texture.
+    engine->render_frame();
+    engine->render_frame();
+    engine->sync_frame();
+
+    gsg->finish();
+
+    engine->remove_window(buffer);
+
+    Texture *cm_tex = buffer->get_texture();
+    // Make sure mipmaps are enabled.
+    cm_tex->set_minfilter(SamplerState::FT_linear_mipmap_linear);
+    cm_tex->set_magfilter(SamplerState::FT_linear);
+
+    filter_state.set_shader_input("inputTexture", cm_tex);
+
+    // Now filter the cube map down the mip chain.
+    int mip = 0;
+    while (size > 1) {
+      size /= 2;
+      mip++;
+      filter_state.set_shader_input("outputTexture", cm_tex, false, true, -1, mip, 0);
+      filter_state.set_shader_input("mipLevel_mipSize_numMips", LVecBase3i(mip, size, 10));
+      gsg->set_state_and_transform(filter_state.get_state(), TransformState::make_identity());
+      gsg->dispatch_compute(size / 16, size / 16, 6);
+    }
+    gsg->finish();
+
+    engine->extract_texture_data(cm_tex, gsg);
+
+    CPT(RenderAttrib) tattr = TextureAttrib::make();
+    tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_stage, cm_tex);
+    cm_states.push_back(RenderState::make(tattr));
+
+    // Save cube map texture in output map data.
+    _out_data->add_cube_map(cm_tex, pos);
+
+    // Dissolve the env_cubemap entity.
+    it = _source_map->_entities.erase(it);
+
+    cam_rig.remove_node();
+  }
+
+  engine->remove_window(output);
+
+  //_out_top->clear_attrib(AntialiasAttrib::get_class_slot());
+  _out_top->clear_attrib(LightRampAttrib::get_class_slot());
+
+  // Now apply the cube map textures to map polygons.
+  for (size_t i = 0; i < _meshes.size(); i++) {
+    MapMesh *mesh = _meshes[i];
+    for (size_t j = 0; j < mesh->_polys.size(); j++) {
+      MapPoly *poly = mesh->_polys[j];
+      if (poly->_material == nullptr) {
+        continue;
+      }
+
+      MaterialParamBase *envmap_p = poly->_material->get_param("env_map");
+      if (envmap_p == nullptr || !envmap_p->is_of_type(MaterialParamBool::get_class_type())) {
+        continue;
+      }
+
+      if (!DCAST(MaterialParamBool, envmap_p)->get_value()) {
+        // Env map disabled for this poly's material.
+        continue;
+      }
+
+      LPoint3 center = poly->_winding.get_center();
+      PN_stdfloat closest_distance = 1e24;
+      int closest = -1;
+      for (size_t k = 0; k < cm_states.size(); k++) {
+        const MapCubeMap *mcm = _out_data->get_cube_map(k);
+
+        if (std::find(cm_side_lists[k].begin(), cm_side_lists[k].end(), poly->_side_id) != cm_side_lists[k].end()) {
+          // This side was explicitly assigned to this cube map.  Use it.
+          closest = k;
+          break;
+        }
+
+        // Otherwise compute if it's the closest to the polygon's center.
+        PN_stdfloat dist = (center - mcm->_pos).length_squared();
+        if (dist < closest_distance) {
+          closest_distance = dist;
+          closest = k;
+        }
+      }
+
+      if (closest != -1 && poly->_geom_node != nullptr && poly->_geom_index >= 0) {
+        // Apply the texture of the selected cube map to the polygon's render state.
+        CPT(RenderState) state = poly->_geom_node->get_geom_state(poly->_geom_index);
+        state = state->compose(cm_states[closest]);
+        poly->_geom_node->set_geom_state(poly->_geom_index, state);
+      }
+    }
+  }
+
+  // Now build a K-D tree of cube map positions for locating the
+  // closest cube map to use for a model.
+  //KDTree cm_tree;
+  //for (int i = 0; i < _out_data->get_num_cube_maps(); i++) {
+  //  const MapCubeMap *mcm = _out_data->get_cube_map(i);
+  //  cm_tree.add_input(mcm->_pos, mcm->_pos, i);
+  //}
+  //cm_tree.build();
+  //_out_data->set_cube_map_tree(std::move(cm_tree));
+
+  mapbuilder_cat.info()
+    << "Done.\n";
 
   return EC_ok;
 }

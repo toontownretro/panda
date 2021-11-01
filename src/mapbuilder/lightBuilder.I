@@ -129,3 +129,19 @@ INLINE LColor LightBuilder::
 get_sky_color() const {
   return _sky_color;
 }
+
+/**
+ *
+ */
+INLINE void LightBuilder::
+set_sun_angular_extent(PN_stdfloat angle) {
+  _sun_angular_extent = angle;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat LightBuilder::
+get_sun_angular_extent() const {
+  return _sun_angular_extent;
+}

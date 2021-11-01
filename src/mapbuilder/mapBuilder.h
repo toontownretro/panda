@@ -84,6 +84,9 @@ public:
   GeomNode *_geom_node = nullptr;
   int _geom_index = -1;
 
+  // Original side ID in the .vmf file.
+  int _side_id;
+
   virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
 };
 
@@ -125,6 +128,8 @@ PUBLISHED:
   ErrorCode build_polygons();
 
   ErrorCode build_lighting();
+
+  ErrorCode render_cube_maps();
 
   //void build_mesh_groups();
   void divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs);
