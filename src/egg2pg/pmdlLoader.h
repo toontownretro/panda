@@ -290,6 +290,10 @@ public:
 class PMDLPhysicsJoint {
 public:
   std::string _joint_name = "";
+  // Non-zero if explicitly specified, otherwise uses the
+  // `_use_exact_geometry` property of the collision model, which
+  // indicates if the geometry is a convex hull or triangle mesh.
+  int _concave = -1;
   vector_string _collide_with;
   float _mass_bias = 1;
   float _rot_damping = -1;
@@ -308,7 +312,7 @@ public:
   std::string _mesh_name = "";
   // Create triangle mesh instead of convex mesh.
   bool _use_exact_geometry = false;
-  // Automatically calculate mass from volume of mesh.
+  // Automatically calculate mass from volume of mesh.  Only for convex meshes.
   bool _auto_mass = true;
   // Explicit mass if auto mass is false.
   float _mass_override = 100.0f;

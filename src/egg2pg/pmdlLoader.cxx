@@ -48,6 +48,7 @@
 
 #ifdef HAVE_PHYSX
 #include "physConvexMeshData.h"
+#include "physTriangleMeshData.h"
 #endif
 
 TypeHandle PMDLDataDesc::_type_handle;
@@ -588,11 +589,14 @@ load(const Filename &filename, const DSearchPath &search_path) {
     if (pme->has_attribute("mesh")) {
       _phy._mesh_name = pme->get_attribute_value("mesh").get_string();
     }
-    if (pme->has_attribute("concave")) {
-      _phy._use_exact_geometry = pme->get_attribute_value("concave").get_bool();
-    }
     if (pme->has_attribute("auto_mass")) {
       _phy._auto_mass = pme->get_attribute_value("auto_mass").get_bool();
+    }
+    if (pme->has_attribute("concave")) {
+      _phy._use_exact_geometry = pme->get_attribute_value("concave").get_bool();
+      if (_phy._use_exact_geometry) {
+        _phy._auto_mass = false;
+      }
     }
     if (pme->has_attribute("mass")) {
       // If we got explicit mass then we are not doing auto-mass.
@@ -622,6 +626,9 @@ load(const Filename &filename, const DSearchPath &search_path) {
         PMDLPhysicsJoint joint;
         if (jointe->has_attribute("name")) {
           joint._joint_name = jointe->get_attribute_value("name").get_string();
+        }
+        if (jointe->has_attribute("concave")) {
+          joint._concave = jointe->get_attribute_value("concave").get_int();
         }
         if (jointe->has_attribute("mass_bias")) {
           joint._mass_bias = jointe->get_attribute_value("mass_bias").get_float();
@@ -1085,6 +1092,7 @@ build_graph() {
     NodePath phy_mesh_np = root_np.find("**/" + _data->_phy._mesh_name);
     nassertv(!phy_mesh_np.is_empty());
     GeomNode *phy_mesh_node;
+    LMatrix4 mat = phy_mesh_np.get_mat(NodePath());
     DCAST_INTO_V(phy_mesh_node, phy_mesh_np.node());
     // Turn all the primitives into triangles.
     phy_mesh_node->decompose();
@@ -1094,43 +1102,68 @@ build_graph() {
 
       PN_stdfloat mass = _data->_phy._mass_override;
 
-      // Fill the convex mesh.
-      PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
-      for (size_t i = 0; i < phy_mesh_node->get_num_geoms(); i++) {
-        const Geom *geom = phy_mesh_node->get_geom(i);
-        const GeomVertexData *vdata = geom->get_vertex_data();
-        GeomVertexReader reader(vdata, InternalName::get_vertex());
-        for (size_t j = 0; j < geom->get_num_primitives(); j++) {
-          const GeomPrimitive *prim = geom->get_primitive(j);
-          for (size_t k = 0; k < prim->get_num_primitives(); k++) {
-            size_t start = prim->get_primitive_start(k);
-            size_t end = prim->get_primitive_end(k);
-            for (size_t l = start; l < end; l++) {
-              reader.set_row(prim->get_vertex(l));
-              mesh_data->add_point(reader.get_data3f());
+      PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
+      ModelRoot::CollisionPart part;
+      part.concave = _data->_phy._use_exact_geometry;
+
+      if (!part.concave) {
+        // Fill the convex mesh.
+        PT(PhysConvexMeshData) mesh_data = new PhysConvexMeshData;
+        for (size_t i = 0; i < phy_mesh_node->get_num_geoms(); i++) {
+          const Geom *geom = phy_mesh_node->get_geom(i);
+          const GeomVertexData *vdata = geom->get_vertex_data();
+          GeomVertexReader reader(vdata, InternalName::get_vertex());
+          for (size_t j = 0; j < geom->get_num_primitives(); j++) {
+            const GeomPrimitive *prim = geom->get_primitive(j);
+            for (size_t k = 0; k < prim->get_num_primitives(); k++) {
+              size_t start = prim->get_primitive_start(k);
+              size_t end = prim->get_primitive_end(k);
+              for (size_t l = start; l < end; l++) {
+                reader.set_row(prim->get_vertex(l));
+                mesh_data->add_point(mat.xform_point(reader.get_data3f()));
+              }
             }
           }
         }
-      }
-      if (!mesh_data->cook_mesh()) {
-        egg2pg_cat.error()
-          << "Failed to build convex mesh from physics geometry\n";
-      } else if (!mesh_data->generate_mesh()) {
-        egg2pg_cat.error()
-          << "Failed to generate convex mesh\n";
-      } else {
-        if (_data->_phy._auto_mass) {
-          mesh_data->get_mass_information(&mass, nullptr, nullptr);
+        if (!mesh_data->cook_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to build convex mesh from physics geometry\n";
+        } else if (!mesh_data->generate_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to generate convex mesh\n";
+        } else {
+          if (_data->_phy._auto_mass) {
+            mesh_data->get_mass_information(&mass, nullptr, nullptr);
+          }
         }
+
+        part.mesh_data = mesh_data->get_mesh_data();
+
+      } else {
+        // Fill a concave triangle mesh.
+        PT(PhysTriangleMeshData) mesh_data = new PhysTriangleMeshData;
+        mesh_data->add_triangles_from_geom_node(phy_mesh_node, true);
+        if (!mesh_data->cook_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to build triangle mesh from physics geometry\n";
+        } else if (!mesh_data->generate_mesh()) {
+          egg2pg_cat.error()
+            << "Failed to generate triangle mesh\n";
+        } else {
+          if (_data->_phy._auto_mass) {
+            egg2pg_cat.warning()
+              << "Triangle mesh cannot have auto mass, giving arbitrary mass of 100 Kg\n";
+            mass = 100.0f;
+          }
+        }
+
+        part.mesh_data = mesh_data->get_mesh_data();
       }
 
-      PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
-      ModelRoot::CollisionPart part;
       part.parent = -1;
       part.mass = mass;
       part.damping = _data->_phy._damping;
       part.rot_damping = std::max(0.0f, _data->_phy._rot_damping);
-      part.mesh_data = mesh_data->get_mesh_data();
       cinfo->add_part(part);
       mdl_root->set_collision_info(cinfo);
 
@@ -1142,6 +1175,11 @@ build_graph() {
       // mesh that are associated with the joint.
 
       PT(ModelRoot::CollisionInfo) cinfo = new ModelRoot::CollisionInfo;
+
+      if (_data->_phy._use_exact_geometry) {
+        egg2pg_cat.error()
+          << "Jointed collision model cannot be concave!\n";
+      }
 
       for (size_t i = 0; i < _data->_phy._joints.size(); i++) {
         const PMDLPhysicsJoint &pjoint = _data->_phy._joints[i];
