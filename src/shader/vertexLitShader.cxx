@@ -22,6 +22,7 @@
 #include "light.h"
 #include "shaderManager.h"
 #include "texturePool.h"
+#include "shaderAttrib.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -63,6 +64,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   bool put_shadowed_light = false;
   bool put_shadowed_point_light = false;
   bool put_shadowed_spotlight = false;
+
+  const ShaderAttrib *sa;
+  state->get_attrib_def(sa);
+  if (sa->has_shader_input("ambientProbe")) {
+    set_pixel_shader_define("AMBIENT_PROBE");
+  }
 
   // Break out the lights by type.
   const LightAttrib *la;

@@ -25,6 +25,7 @@
 #include "material.h"
 #include "materialAttrib.h"
 #include "texturePool.h"
+#include "graphicsStateGuardianBase.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -48,6 +49,17 @@ get_default_cube_map() {
     _default_cubemap = TexturePool::load_texture(default_cube_map);
   }
   return _default_cubemap;
+}
+
+/**
+ * Forces all shaders to be reloaded and regenerated.
+ */
+void ShaderManager::
+reload_shaders() {
+  GraphicsStateGuardianBase::mark_rehash_generated_shaders();
+  //for (auto it = _shaders.begin(); it != _shaders.end(); ++it) {
+  //  (*it).second->clear_cache();
+ // }
 }
 
 /**

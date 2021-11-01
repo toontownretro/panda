@@ -48,6 +48,15 @@ register_shader(ShaderBase *shader, TypeHandle material_type) {
 }
 
 /**
+ *
+ */
+void ShaderBase::
+clear_cache() {
+  _cache.clear();
+  _obj_cache.clear();
+}
+
+/**
  * Sets up #defines for hardware skinning.
  */
 bool ShaderBase::

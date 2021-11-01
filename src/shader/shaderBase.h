@@ -116,6 +116,8 @@ public:
   INLINE size_t get_num_aliases() const;
   INLINE const std::string &get_alias(size_t n) const;
 
+  void clear_cache();
+
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
                                Material *material,
