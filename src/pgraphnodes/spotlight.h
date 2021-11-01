@@ -51,17 +51,13 @@ PUBLISHED:
   INLINE void set_exponent(PN_stdfloat exponent);
   MAKE_PROPERTY(exponent, get_exponent, set_exponent);
 
-  INLINE PN_stdfloat get_falloff() const final;
-  INLINE void set_falloff(PN_stdfloat falloff);
-  MAKE_PROPERTY(falloff, get_falloff, set_falloff);
+  INLINE const LVecBase3 &get_attenuation() const final;
+  INLINE void set_attenuation(const LVecBase3 &attenuation);
+  MAKE_PROPERTY(attenuation, get_attenuation, set_attenuation);
 
-  INLINE PN_stdfloat get_inner_radius() const final;
-  INLINE void set_inner_radius(PN_stdfloat radius);
-  MAKE_PROPERTY(inner_radius, get_inner_radius, set_inner_radius);
-
-  INLINE PN_stdfloat get_outer_radius() const final;
-  INLINE void set_outer_radius(PN_stdfloat radius);
-  MAKE_PROPERTY(outer_radius, get_outer_radius, set_outer_radius);
+  INLINE PN_stdfloat get_max_distance() const;
+  INLINE void set_max_distance(PN_stdfloat max_distance);
+  MAKE_PROPERTY(max_distance, get_max_distance, set_max_distance);
 
   INLINE PN_stdfloat get_outer_cone() const;
   INLINE void set_outer_cone(PN_stdfloat angle);
@@ -102,9 +98,8 @@ private:
     }
 
     PN_stdfloat _exponent;
-    PN_stdfloat _falloff;
-    PN_stdfloat _inner_radius;
-    PN_stdfloat _outer_radius;
+    LVecBase3 _attenuation;
+    PN_stdfloat _max_distance;
     PN_stdfloat _inner_cone;
   };
 

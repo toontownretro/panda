@@ -1122,8 +1122,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       // Finally the spotlight parameters (exponent, stopdot, stopdot2, oodot)
       if (is_spot) {
         Spotlight *slight = DCAST(Spotlight, node);
-        PN_stdfloat stopdot = std::cos(deg_2_rad(slight->get_inner_cone()) * 0.5f);
-        PN_stdfloat stopdot2 = std::cos(deg_2_rad(slight->get_outer_cone()) * 0.5f);
+        PN_stdfloat stopdot = std::cos(deg_2_rad(slight->get_inner_cone()));
+        PN_stdfloat stopdot2 = std::cos(deg_2_rad(slight->get_outer_cone()));
         PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
         into[i].set_row(3, LVecBase4(slight->get_exponent(), stopdot, stopdot2, oodot));
       } else {
@@ -1156,15 +1156,13 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       LightLensNode *light_lens;
       DCAST_INTO_V(light_lens, node);
 
-      PN_stdfloat falloff = light->get_falloff();
-      PN_stdfloat inner_radius = light->get_inner_radius();
-      PN_stdfloat outer_radius = light->get_outer_radius();
+      const LVecBase3 &atten = light->get_attenuation();
       bool shadows = light_lens->is_shadow_caster();
       if (light->get_light_type() == Light::LT_directional) {
         shadows = false;
       }
 
-      into[i].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, falloff, inner_radius, outer_radius, (float)shadows);
+      into[i].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, atten[0], atten[1], atten[2], (float)shadows);
     }
 
     for (; i < count; i++) {
@@ -1765,8 +1763,8 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
       Spotlight *light;
       DCAST_INTO_V(light, node);
 
-      PN_stdfloat stopdot = ccos(deg_2_rad(light->get_outer_cone() * 0.5f));
-      PN_stdfloat stopdot2 = ccos(deg_2_rad(light->get_inner_cone() * 0.5f));
+      PN_stdfloat stopdot = ccos(deg_2_rad(light->get_outer_cone()));
+      PN_stdfloat stopdot2 = ccos(deg_2_rad(light->get_inner_cone()));
       PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
       t.set_row(3, LVecBase4(light->get_exponent(), stopdot, stopdot2, oodot));
     } else {
@@ -1778,11 +1776,7 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
     if (node != nullptr) {
       Light *light = node->as_light();
       nassertv(light != nullptr);
-
-      PN_stdfloat falloff = light->get_falloff();
-      PN_stdfloat inner = light->get_inner_radius();
-      PN_stdfloat outer = light->get_outer_radius();
-      t.set_row(3, LVecBase3(falloff, inner, outer));
+      t.set_row(3, light->get_attenuation());
     } else {
       t.set_row(3, LVecBase3(1, 0, 0));
     }

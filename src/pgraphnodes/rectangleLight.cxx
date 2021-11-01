@@ -17,6 +17,7 @@
 #include "bamReader.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "omniBoundingVolume.h"
 
 TypeHandle RectangleLight::_type_handle;
 
@@ -34,9 +35,7 @@ make_copy() const {
  */
 void RectangleLight::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  dg.add_stdfloat(_falloff);
-  dg.add_stdfloat(_inner_radius);
-  dg.add_stdfloat(_outer_radius);
+  dg.add_stdfloat(_max_distance);
 }
 
 /**
@@ -45,9 +44,7 @@ write_datagram(BamWriter *manager, Datagram &dg) const {
  */
 void RectangleLight::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _falloff = scan.get_stdfloat();
-  _inner_radius = scan.get_stdfloat();
-  _outer_radius = scan.get_stdfloat();
+  _max_distance = scan.get_stdfloat();
 }
 
 /**
@@ -57,8 +54,6 @@ RectangleLight::
 RectangleLight(const std::string &name) :
   LightLensNode(name)
 {
-  _light_type = Light::LT_rectangle;
-  _lenses[0]._lens->set_near_far(0.01, get_outer_radius());
 }
 
 /**
@@ -89,12 +84,6 @@ void RectangleLight::
 write(std::ostream &out, int indent_level) const {
   LightLensNode::write(out, indent_level);
   indent(out, indent_level) << *this << "\n";
-  indent(out, indent_level + 2)
-    << "falloff " << get_falloff() << "\n";
-  indent(out, indent_level + 2)
-    << "inner radius " << get_inner_radius() << "\n";
-  indent(out, indent_level + 2)
-    << "outer radius " << get_outer_radius() << "\n";
 }
 
 /**
@@ -109,28 +98,18 @@ get_class_priority() const {
 }
 
 /**
- * Creates and returns a bounding volume that encloses all of the space this
- * light might illuminate.
+ *
  */
-PT(GeometricBoundingVolume) RectangleLight::
-make_light_bounds() const {
-  // Use the underlying Lens' bounds.
-  PT(BoundingVolume) bounds = get_lens()->make_bounds();
-  if (bounds == nullptr) {
-    return nullptr;
-  }
-
-  PT(GeometricBoundingVolume) gbv = DCAST(GeometricBoundingVolume, bounds);
-  gbv->xform(get_lens()->get_view_mat());
-
-  return gbv;
+void RectangleLight::
+bind(GraphicsStateGuardianBase *gsg, const NodePath &light, int light_id) {
 }
 
 /**
  *
  */
-void RectangleLight::
-bind(GraphicsStateGuardianBase *gsg, const NodePath &light, int light_id) {
+PT(GeometricBoundingVolume) RectangleLight::
+make_light_bounds() const {
+  return new OmniBoundingVolume;
 }
 
 /**

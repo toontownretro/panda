@@ -139,29 +139,14 @@ get_exponent() const {
 }
 
 /**
- * Returns the inverse-square falloff coefficient for the light.
+ * Returns the terms of the attenuation equation for the light.  These are, in
+ * order, the constant, linear, and quadratic terms based on the distance from
+ * the point to the vertex.
  */
-PN_stdfloat Light::
-get_falloff() const {
-  return 0.0;
-}
-
-/**
- * Returns the inner radius of the light.  This is the area of the light that
- * attenuates according to the inverse-square falloff coefficient.
- */
-PN_stdfloat Light::
-get_inner_radius() const {
-  return 0.0;
-}
-
-/**
- * Returns the outer radius of the light.  This is the area of the light that
- * linearly attenuates to 0 at the edge of the sphere.
- */
-PN_stdfloat Light::
-get_outer_radius() const {
-  return 0.0;
+const LVecBase3 &Light::
+get_attenuation() const {
+  static const LVecBase3 no_atten(1, 0, 0);
+  return no_atten;
 }
 
 /**

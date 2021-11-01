@@ -63,6 +63,8 @@ PUBLISHED:
   CPT(RenderAttrib) add_light(Light *light) const;
   CPT(RenderAttrib) remove_light(Light *light) const;
 
+  CPT(RenderAttrib) distance_sort_lights(const LPoint3 &point, int max_lights) const;
+
 
   // The following is the new, more general interface to the LightAttrib.
   static CPT(RenderAttrib) make();

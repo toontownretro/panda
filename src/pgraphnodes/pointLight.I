@@ -16,9 +16,8 @@
  */
 INLINE PointLight::CData::
 CData() :
-  _falloff(1.0),
-  _inner_radius(1.0),
-  _outer_radius(2.0),
+  _attenuation(0.0, 0.0, 1.0),
+  _max_distance(make_inf((PN_stdfloat)0)),
   _point(0.0f, 0.0f, 0.0f)
 {
 }
@@ -28,71 +27,54 @@ CData() :
  */
 INLINE PointLight::CData::
 CData(const PointLight::CData &copy) :
-  _falloff(copy._falloff),
-  _inner_radius(copy._inner_radius),
-  _outer_radius(copy._outer_radius),
+  _attenuation(copy._attenuation),
+  _max_distance(copy._max_distance),
   _point(copy._point)
 {
 }
 
 /**
- * Returns the inverse-square falloff coefficient for the light.
+ * Returns the terms of the attenuation equation for the light.  These are, in
+ * order, the constant, linear, and quadratic terms based on the distance from
+ * the point to the vertex.
  */
-INLINE PN_stdfloat PointLight::
-get_falloff() const {
+INLINE const LVecBase3 &PointLight::
+get_attenuation() const {
   CDReader cdata(_cycler);
-  return cdata->_falloff;
+  return cdata->_attenuation;
 }
 
 /**
- * Sets the inverse-square falloff coefficient for the light.
+ * Sets the terms of the attenuation equation for the light.  These are, in
+ * order, the constant, linear, and quadratic terms based on the distance from
+ * the point to the vertex.
  */
 INLINE void PointLight::
-set_falloff(PN_stdfloat falloff) {
+set_attenuation(const LVecBase3 &attenuation) {
   CDWriter cdata(_cycler);
-  cdata->_falloff = falloff;
+  cdata->_attenuation = attenuation;
 }
 
 /**
- * Returns the inner radius of the light.  This is the area of the light that
- * attenuates according to the inverse-square falloff coefficient.
+ * Returns the maximum distance at which the light has any effect, as previously
+ * specified by set_max_distance.
  */
 INLINE PN_stdfloat PointLight::
-get_inner_radius() const {
+get_max_distance() const {
   CDReader cdata(_cycler);
-  return cdata->_inner_radius;
+  return cdata->_max_distance;
 }
 
 /**
- * Sets the inner radius of the light.  This is the area of the light that
- * attenuates according to the inverse-square falloff coefficient.
+ * Sets the radius of the light's sphere of influence.  Beyond this distance, the
+ * light may be attenuated to zero, if this is supported by the shader.
  */
 INLINE void PointLight::
-set_inner_radius(PN_stdfloat radius) {
+set_max_distance(PN_stdfloat max_distance) {
   CDWriter cdata(_cycler);
-  cdata->_inner_radius = radius;
-}
-
-/**
- * Returns the outer radius of the light.  This is the area of the light that
- * linearly attenuates to 0 at the edge of the sphere.
- */
-INLINE PN_stdfloat PointLight::
-get_outer_radius() const {
-  CDReader cdata(_cycler);
-  return cdata->_outer_radius;
-}
-
-/**
- * Sets the outer radius of the light.  This is the area of the light that
- * linearly attenuates to 0 at the edge of the sphere.
- */
-INLINE void PointLight::
-set_outer_radius(PN_stdfloat radius) {
-  CDWriter cdata(_cycler);
-  cdata->_outer_radius = radius;
+  cdata->_max_distance = max_distance;
   for (int i = 0; i < get_num_lenses(); i++) {
-    get_lens(i)->set_far(radius);
+    get_lens(i)->set_far(max_distance);
   }
 }
 

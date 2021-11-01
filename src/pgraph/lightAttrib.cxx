@@ -21,6 +21,7 @@
 #include "datagramIterator.h"
 #include "config_pgraph.h"
 #include "attribNodeRegistry.h"
+//#include "directionalLight.h"
 #include "indent.h"
 #include <iterator>
 
@@ -369,6 +370,38 @@ remove_light(Light *light) const {
   } else {
     return remove_off_light(NodePath(light->as_node()));
   }
+}
+
+/**
+ * Returns a new LightAttrib that is exactly the same as this one,
+ * but sorts the turned-on lights by distance from the indicated point,
+ * and limits the number of on lights to the specified count, after
+ * sorting.
+ */
+CPT(RenderAttrib) LightAttrib::
+distance_sort_lights(const LPoint3 &point, int max_lights) const {
+#if 1
+  LightAttrib *la = new LightAttrib(*this);
+  std::sort(la->_on_lights.begin(), la->_on_lights.end(), [point](const NodePath &a, const NodePath &b) -> bool {
+    //Light *light_a = a.node()->as_light();
+    //if (light_a->is_of_type(DirectionalLight::get_class_type())) {
+    //  return true;
+    //}
+    //Light *light_b = b.node();
+    //if (light_b->is_of_type(DirectionalLight::get_class_type())) {
+    //  return false;
+    //}
+    return (point - a.get_pos()).length_squared() < (point - b.get_pos()).length_squared();
+  });
+
+  if (la->_on_lights.size() > max_lights) {
+    la->_on_lights.resize(max_lights);
+  }
+
+  la->_sort_seq = UpdateSeq::old();
+
+  return return_new(la);
+#endif
 }
 
 /**
