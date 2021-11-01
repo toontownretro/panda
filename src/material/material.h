@@ -44,6 +44,26 @@ public:
   virtual void write_pdx(PDXElement *data, const Filename &filename);
 
 PUBLISHED:
+  enum Flags {
+    F_none = 0,
+    // Flags for what render state modifying attributes are specified in the
+    // material.  The render state is created in MaterialAttrib in libpgraph
+    // because libpgraph depends on libmaterial, and we don't want to create
+    // circular dependencies.
+    F_transparency = 1 << 0,
+    F_color = 1 << 1,
+    F_alpha_test = 1 << 2,
+    F_cull_face = 1 << 3,
+    F_depth_write = 1 << 4,
+    F_depth_test = 1 << 5,
+    F_light = 1 << 6,
+    F_fog = 1 << 7,
+    F_bin = 1 << 8,
+    F_render_mode = 1 << 9,
+    F_color_blend = 1 << 10,
+    F_color_scale = 1 << 11,
+  };
+
   INLINE size_t get_num_params() const;
   INLINE MaterialParamBase *get_param(size_t n) const;
   INLINE MaterialParamBase *get_param(CPT_InternalName name) const;
@@ -69,7 +89,7 @@ PUBLISHED:
   INLINE void set_param(MaterialParamBase *param);
   INLINE void clear_param(MaterialParamBase *param);
 
-protected:
+public:
   Filename _filename;
   Filename _fullpath;
 
@@ -77,6 +97,32 @@ protected:
   Params _params;
 
   vector_string _tags;
+
+  unsigned int _attrib_flags;
+
+  std::string _bin_name;
+  int _bin_sort;
+
+  LColor _color;
+  LColor _color_scale;
+
+  int _transparency_mode;
+
+  int _alpha_test_mode;
+  PN_stdfloat _alpha_test_ref;
+
+  int _cull_face_mode;
+
+  bool _depth_write;
+  int _depth_test_mode;
+
+  bool _light_off;
+  bool _fog_off;
+
+  // Filled, wireframe, etc.
+  int _render_mode;
+
+  int _color_blend_mode;
 
 private:
   // Only used during Bam reading.

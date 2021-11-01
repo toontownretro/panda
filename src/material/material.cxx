@@ -31,7 +31,21 @@ Material::
 Material(const std::string &name) :
   Namable(name),
   _num_params(0),
-  _read_rawdata(false)
+  _read_rawdata(false),
+  _attrib_flags(F_none),
+  _color(1),
+  _color_scale(1),
+  _transparency_mode(0), // TransparencyAttrib::M_none
+  _alpha_test_mode(8), // PandaCompareFunc::M_always
+  _alpha_test_ref(0.6f),
+  _bin_sort(0),
+  _depth_write(true),
+  _depth_test_mode(2), // PandaCompareFunc::M_less
+  _light_off(false),
+  _fog_off(false),
+  _render_mode(0), // RenderModeAttrib::M_unchanged
+  _cull_face_mode(0), // CullFaceAttrib::M_unchanged
+  _color_blend_mode(0) // No color blending
 {
 }
 
@@ -47,6 +61,239 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     nassertv(tags != nullptr);
     for (size_t i = 0; i < tags->size(); i++) {
       _tags.push_back(tags->get(i).get_string());
+    }
+  }
+
+  if (data->has_attribute("transparency")) {
+    _attrib_flags |= F_transparency;
+
+    std::string mode = data->get_attribute_value("transparency").get_string();
+    if (mode == "off" || mode == "none" || mode == "no" || mode == "0") {
+      _transparency_mode = 0;
+
+    } else if (mode == "on" || mode == "yes" || mode == "alpha" || mode == "1") {
+      _transparency_mode = 1;
+
+    } else if (mode == "premultiplied_alpha" || mode == "premult_alpha" ||
+               mode == "premult" || mode == "pm" || mode == "2") {
+      _transparency_mode = 2;
+
+    } else if (mode == "multisample" || mode == "ms" || mode == "3") {
+      _transparency_mode = 3;
+
+    } else if (mode == "multisample_mask" || mode == "ms_mask" || mode == "4") {
+      _transparency_mode = 4;
+
+    } else if (mode == "binary" || mode == "5") {
+      _transparency_mode = 5;
+
+    } else if (mode == "dual" || mode == "6") {
+      _transparency_mode = 6;
+
+    } else {
+      material_cat.error()
+        << "Unknown material transparency mode: " << mode << "\n";
+    }
+  }
+
+  if (data->has_attribute("color")) {
+    _attrib_flags |= F_color;
+    _color.set(1, 1, 1, 1);
+    data->get_attribute_value("color").to_vec4(_color);
+  }
+
+  if (data->has_attribute("color_scale")) {
+    _attrib_flags |= F_color_scale;
+    _color_scale.set(1, 1, 1, 1);
+    data->get_attribute_value("color_scale").to_vec4(_color_scale);
+  }
+
+  if (data->has_attribute("alpha_test")) {
+    _attrib_flags |= F_alpha_test;
+
+    std::string mode = data->get_attribute_value("alpha_test").get_string();
+    if (mode == "off" || mode == "no" || mode == "none" || mode == "0") {
+      _alpha_test_mode = 0;
+
+    } else if (mode == "never_draw" || mode == "never" || mode == "1") {
+      _alpha_test_mode = 1;
+
+    } else if (mode == "less" || mode == "l" || mode == "2") {
+      _alpha_test_mode = 2;
+
+    } else if (mode == "equal" || mode == "eq" || mode == "3") {
+      _alpha_test_mode = 3;
+
+    } else if (mode == "less_equal" || mode == "le" || mode == "leq" || mode == "4") {
+      _alpha_test_mode = 4;
+
+    } else if (mode == "greater" || mode == "gr" || mode == "5") {
+      _alpha_test_mode = 5;
+
+    } else if (mode == "not_equal" || mode == "ne" || mode == "neq" || mode == "6") {
+      _alpha_test_mode = 6;
+
+    } else if (mode == "greater_equal" || mode == "ge" || mode == "geq" || mode == "7") {
+      _alpha_test_mode = 7;
+
+    } else if (mode == "always" || mode == "8") {
+      _alpha_test_mode = 8;
+
+    } else {
+      material_cat.error()
+        << "Unknown material alpha test mode: " << mode << "\n";
+    }
+  }
+
+  if (data->has_attribute("alpha_test_ref")) {
+    _attrib_flags |= F_alpha_test;
+    _alpha_test_ref = data->get_attribute_value("alpha_test_ref").get_float();
+  }
+
+  if (data->has_attribute("cull")) {
+
+    _attrib_flags |= F_cull_face;
+    std::string mode = data->get_attribute_value("cull").get_string();
+    if (mode == "off" || mode == "none" || mode == "no" || mode == "double_sided" ||
+        mode == "two_sided" || mode == "0") {
+      _cull_face_mode = 0;
+
+    } else if (mode == "on" || mode == "cw" || mode == "clockwise" || mode == "back" ||
+               mode == "back_faces" || mode == "yes" || mode == "1") {
+      _cull_face_mode = 1;
+
+    } else if (mode == "ccw" || mode == "counter_clockwise" || mode == "front" ||
+               mode == "front_faces" || mode == "2") {
+      _cull_face_mode = 2;
+
+    } else if (mode == "unchanged" || mode == "3") {
+      _cull_face_mode = 3;
+
+    } else {
+      material_cat.error()
+        << "Unknown material cull mode: " << mode << "\n";
+    }
+  }
+
+  if (data->has_attribute("depth_write")) {
+    _attrib_flags |= F_depth_write;
+    std::string mode = data->get_attribute_value("depth_write").get_string();
+    if (mode == "off" || mode == "no" || mode == "0") {
+      _depth_write = false;
+    } else {
+      _depth_write = true;
+    }
+  }
+
+  if (data->has_attribute("depth_test")) {
+    _attrib_flags |= F_depth_test;
+
+    std::string mode = data->get_attribute_value("depth_test").get_string();
+    if (mode == "off" || mode == "no" || mode == "none" || mode == "0") {
+      _depth_test_mode = 0;
+
+    } else if (mode == "never_draw" || mode == "never" || mode == "1") {
+      _depth_test_mode = 1;
+
+    } else if (mode == "less" || mode == "l" || mode == "2") {
+      _depth_test_mode = 2;
+
+    } else if (mode == "equal" || mode == "eq" || mode == "3") {
+      _depth_test_mode = 3;
+
+    } else if (mode == "less_equal" || mode == "le" || mode == "leq" || mode == "4") {
+      _depth_test_mode = 4;
+
+    } else if (mode == "greater" || mode == "gr" || mode == "5") {
+      _depth_test_mode = 5;
+
+    } else if (mode == "not_equal" || mode == "ne" || mode == "neq" || mode == "6") {
+      _depth_test_mode = 6;
+
+    } else if (mode == "greater_equal" || mode == "ge" || mode == "geq" || mode == "7") {
+      _depth_test_mode = 7;
+
+    } else if (mode == "always" || mode == "8") {
+      _depth_test_mode = 8;
+
+    } else {
+      material_cat.error()
+        << "Unknown material depth test mode: " << mode << "\n";
+    }
+  }
+
+  if (data->has_attribute("light")) {
+    _attrib_flags |= F_light;
+
+    std::string mode = data->get_attribute_value("light").get_string();
+    if (mode == "off" || mode == "no" || mode == "0") {
+      _light_off = true;
+
+    } else {
+      _light_off = false;
+    }
+  }
+
+  if (data->has_attribute("fog")) {
+    _attrib_flags |= F_fog;
+
+    std::string mode = data->get_attribute_value("fog").get_string();
+    if (mode == "off" || mode == "no" || mode == "0") {
+      _fog_off = true;
+
+    } else {
+      _fog_off = false;
+    }
+  }
+
+  if (data->has_attribute("bin")) {
+    _attrib_flags |= F_bin;
+    _bin_name = data->get_attribute_value("bin").get_string();
+  }
+
+  if (data->has_attribute("bin_sort")) {
+    _attrib_flags |= F_bin;
+    _bin_sort = data->get_attribute_value("bin_sort").get_int();
+  }
+
+  if (data->has_attribute("render_mode")) {
+    _attrib_flags |= F_render_mode;
+
+    std::string mode = data->get_attribute_value("render_mode").get_string();
+    if (mode == "unchanged" || mode == "0") {
+      _render_mode = 0;
+
+    } else if (mode == "filled" || mode == "1") {
+      _render_mode = 1;
+
+    } else if (mode == "wireframe" || mode == "wire" || mode == "2") {
+      _render_mode = 2;
+
+    } else if (mode == "filled_wireframe" || mode == "filled_wire" || mode == "5") {
+      _render_mode = 5;
+
+    } else {
+      material_cat.error()
+        << "Unknown material render mode: " << mode << "\n";
+    }
+  }
+
+  if (data->has_attribute("color_blend")) {
+    _attrib_flags |= F_color_blend;
+
+    std::string mode = data->get_attribute_value("color_blend").get_string();
+    if (mode == "off" || mode == "none" || mode == "no" || mode == "0") {
+      _color_blend_mode = 0;
+
+    } else if (mode == "modulate" || mode == "1") {
+      _color_blend_mode = 1;
+
+    } else if (mode == "additive" || mode == "2") {
+      _color_blend_mode = 2;
+
+    } else {
+      material_cat.error()
+        << "Unknown material color blend mode: " << mode << "\n";
     }
   }
 }
@@ -144,6 +391,46 @@ write_datagram(BamWriter *manager, Datagram &me) {
       me.add_string(_tags[i]);
     }
 
+    me.add_uint32(_attrib_flags);
+    if (_attrib_flags & F_color) {
+      _color.write_datagram(me);
+    }
+    if (_attrib_flags & F_color_scale) {
+      _color_scale.write_datagram(me);
+    }
+    if (_attrib_flags & F_transparency) {
+      me.add_uint8(_transparency_mode);
+    }
+    if (_attrib_flags & F_alpha_test) {
+      me.add_uint8(_alpha_test_mode);
+      me.add_stdfloat(_alpha_test_ref);
+    }
+    if (_attrib_flags & F_cull_face) {
+      me.add_uint8(_cull_face_mode);
+    }
+    if (_attrib_flags & F_depth_write) {
+      me.add_bool(_depth_write);
+    }
+    if (_attrib_flags & F_depth_test) {
+      me.add_uint8(_depth_test_mode);
+    }
+    if (_attrib_flags & F_light) {
+      me.add_bool(_light_off);
+    }
+    if (_attrib_flags & F_fog) {
+      me.add_bool(_fog_off);
+    }
+    if (_attrib_flags & F_bin) {
+      me.add_string(_bin_name);
+      me.add_int32(_bin_sort);
+    }
+    if (_attrib_flags & F_render_mode) {
+      me.add_uint8(_render_mode);
+    }
+    if (_attrib_flags & F_color_blend) {
+      me.add_uint8(_color_blend_mode);
+    }
+
   } else {
     // Just reference the filename.
     bool has_bam_dir = !manager->get_filename().empty();
@@ -224,6 +511,46 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _tags.resize(scan.get_uint8());
     for (size_t i = 0; i < _tags.size(); i++) {
       _tags[i] = scan.get_string();
+    }
+
+    _attrib_flags = scan.get_uint32();
+    if (_attrib_flags & F_color) {
+      _color.read_datagram(scan);
+    }
+    if (_attrib_flags & F_color_scale) {
+      _color_scale.read_datagram(scan);
+    }
+    if (_attrib_flags & F_transparency) {
+      _transparency_mode = scan.get_uint8();
+    }
+    if (_attrib_flags & F_alpha_test) {
+      _alpha_test_mode = scan.get_uint8();
+      _alpha_test_ref = scan.get_stdfloat();
+    }
+    if (_attrib_flags & F_cull_face) {
+      _cull_face_mode = scan.get_uint8();
+    }
+    if (_attrib_flags & F_depth_write) {
+      _depth_write = scan.get_bool();
+    }
+    if (_attrib_flags & F_depth_test) {
+      _depth_test_mode = scan.get_uint8();
+    }
+    if (_attrib_flags & F_light) {
+      _light_off = scan.get_bool();
+    }
+    if (_attrib_flags & F_fog) {
+      _fog_off = scan.get_bool();
+    }
+    if (_attrib_flags & F_bin) {
+      _bin_name = scan.get_string();
+      _bin_sort = scan.get_int32();
+    }
+    if (_attrib_flags & F_render_mode) {
+      _render_mode = scan.get_uint8();
+    }
+    if (_attrib_flags & F_color_blend) {
+      _color_blend_mode = scan.get_uint8();
     }
 
   } else {

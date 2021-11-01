@@ -294,41 +294,8 @@ fill_state(EggPrimitive *egg_prim) {
     }
 
   } else {
-    // See if we should apply an implicit alpha based on the base_color of the
-    // material.
-    Material *mat = DCAST(MaterialAttrib, pmat_material)->get_material();
-    MaterialParamBase *param = mat->get_param("base_color");
-    if (param != nullptr) {
-      if (param->is_of_type(MaterialParamTexture::get_class_type())) {
-        Texture *tex = DCAST(MaterialParamTexture, param)->get_value();
-        Texture::Format format = tex->get_format();
-        if (Texture::has_alpha(format) && !Texture::has_binary_alpha(format)) {
-          // This texture specifies a gradient alpha format.
-          binary_alpha_only = false;
-        }
-
-        if (am == EggRenderMode::AM_unspecified) {
-          // If neither the primitive nor the texture specified an alpha mode,
-          // assume it should be alpha'ed if the texture has an alpha channel
-          // (unless the texture environment type is one that doesn't apply
-          // its alpha to the result).
-          int num_components = tex->get_num_components();
-          if (num_components == 2 || num_components == 4) {
-            implicit_alpha = true;
-          }
-        }
-
-      } else if (param->is_of_type(MaterialParamColor::get_class_type())) {
-        LColor color = DCAST(MaterialParamColor, param)->get_value();
-        if (am == EggRenderMode::AM_unspecified) {
-          if (color[3] < 1.0f) {
-            // Not fully opaque.
-            implicit_alpha = true;
-          }
-        }
-      }
-    }
-
+    // The textures (and potentially other pieces of render state) come from
+    // the .pmat file.
     add_attrib(pmat_material);
   }
 

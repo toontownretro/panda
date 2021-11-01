@@ -17,6 +17,7 @@
 INLINE MaterialAttrib::
 MaterialAttrib() :
   _material(nullptr),
+  _modifier_state(nullptr),
   _is_off(false)
 {
 }
@@ -35,4 +36,21 @@ get_material() const {
 INLINE bool MaterialAttrib::
 is_off() const {
   return _is_off;
+}
+
+/**
+ * Returns the RenderState object containing the attributes modified by the
+ * material itself.
+ */
+INLINE const RenderState *MaterialAttrib::
+get_modifier_state() const {
+  if (_material == nullptr) {
+    return nullptr;
+  }
+
+  if (_modifier_state == nullptr) {
+    ((MaterialAttrib *)this)->create_modifier_state();
+  }
+
+  return _modifier_state;
 }

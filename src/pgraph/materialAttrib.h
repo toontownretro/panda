@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "renderAttrib.h"
 #include "material.h"
+#include "renderState.h"
 
 /**
  * A render attribute that contains a material object.
@@ -33,10 +34,21 @@ PUBLISHED:
   INLINE Material *get_material() const;
   MAKE_PROPERTY(material, get_material);
 
+  INLINE const RenderState *get_modifier_state() const;
+  MAKE_PROPERTY(modifier_state, get_modifier_state);
+
   INLINE bool is_off() const;
 
 private:
+  void create_modifier_state();
+
+private:
   PT(Material) _material;
+  // This is a RenderState that contains the attributes modified by the
+  // material itself, such as transparency, color scale, etc.  It is composed
+  // with the RenderState of Geoms that use the material when recorded during
+  // the Cull traversal.
+  CPT(RenderState) _modifier_state;
 
   bool _is_off;
 

@@ -29,6 +29,7 @@
 #include "depthOffsetAttrib.h"
 #include "colorBlendAttrib.h"
 #include "shaderAttrib.h"
+#include "materialAttrib.h"
 
 TypeHandle CullResult::_type_handle;
 
@@ -182,6 +183,16 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
     object._state = object._state->compose(get_rescale_normal_state(mode));
   }
 #endif
+
+  // If the state has a material, add the attributes modified by the
+  // material onto the object's state.
+  const MaterialAttrib *ma;
+  if (object._state->get_attrib(ma)) {
+    const RenderState *modifier_state = ma->get_modifier_state();
+    if (modifier_state != nullptr) {
+      object._state = object._state->compose(modifier_state);
+    }
+  }
 
   // Check for a special wireframe setting.
   const RenderModeAttrib *rmode;
