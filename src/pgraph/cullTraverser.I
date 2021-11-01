@@ -234,12 +234,29 @@ traverse_child(const CullTraverserData &data, PandaNode *node,
     return;
   }
 
+  // If a derived class implements a custom view cull, allow it to test the
+  // node now.
+  bool keep_testing = data._keep_testing_custom_in_view;
+  if (_has_custom_is_in_view && keep_testing) {
+    int custom_result = custom_is_in_view(data, node_reader, net_transform);
+
+    if (custom_result == BoundingVolume::IF_no_intersection) {
+      return;
+
+    } else if ((custom_result & BoundingVolume::IF_all) != 0 || node_reader.is_final()) {
+      // This is the final answer for the rest of the subgraph.
+      keep_testing = false;
+    }
+  }
+
   GeometricBoundingVolume *view_frustum = nullptr;
   if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
     view_frustum = data._view_frustum;
   }
 
   CullTraverserData next_data(data, std::move(node_reader), net_transform, state, view_frustum);
+  next_data._keep_testing_custom_in_view = keep_testing;
+
   if (!data._cull_planes->is_empty() &&
       !next_data.apply_cull_planes(data._cull_planes, next_data._node_reader.get_bounds()->as_geometric_bounding_volume())) {
     return;
@@ -272,12 +289,28 @@ traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &c
 
   PandaNodePipelineReader node_reader(child.get_child(), data._node_reader.get_current_thread());
 
+  // If a derived class implements a custom view cull, allow it to test the
+  // node now.
+  bool keep_testing = data._keep_testing_custom_in_view;
+  if (_has_custom_is_in_view && keep_testing) {
+    int custom_result = custom_is_in_view(data, node_reader, data._net_transform);
+
+    if (custom_result == BoundingVolume::IF_no_intersection) {
+      return;
+
+    } else if ((custom_result & BoundingVolume::IF_all) != 0 || node_reader.is_final()) {
+      // This is the final answer for the rest of the subgraph.
+      keep_testing = false;
+    }
+  }
+
   GeometricBoundingVolume *view_frustum = nullptr;
   if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
     view_frustum = data._view_frustum;
   }
 
   CullTraverserData next_data(data, std::move(node_reader), data._net_transform, state, view_frustum);
+  next_data._keep_testing_custom_in_view = keep_testing;
 
   if (!data._cull_planes->is_empty() &&
       !next_data.apply_cull_planes(data._cull_planes, child.get_bounds())) {
@@ -305,7 +338,7 @@ do_traverse(CullTraverserData &data) {
   PandaNodePipelineReader *node_reader = data.node_reader();
   int fancy_bits = node_reader->get_fancy_bits();
 
-  if (fancy_bits == 0 && data._cull_planes->is_empty() && data._cull_lights->is_empty() && !_has_custom_is_in_view) {
+  if (fancy_bits == 0 && data._cull_planes->is_empty() && data._cull_lights->is_empty()) {
     // Nothing interesting in this node; just move on.
 
   } else {
@@ -318,14 +351,6 @@ do_traverse(CullTraverserData &data) {
     }
 
     data.apply_transform_and_state(this);
-
-    // If a derived class implements a custom view cull, allow it to test the
-    // node now.
-    if (_has_custom_is_in_view) {
-      if (custom_is_in_view(data) == BoundingVolume::IF_no_intersection) {
-        return;
-      }
-    }
 
     const FogAttrib *fog = (const FogAttrib *)
       node_reader->get_state()->get_attrib(FogAttrib::get_class_slot());

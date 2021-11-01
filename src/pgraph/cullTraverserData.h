@@ -102,6 +102,7 @@ public:
   CPT(InstanceList) _instances;
   DrawMask _draw_mask;
   int _portal_depth;
+  bool _keep_testing_custom_in_view;
 
 private:
   PT(NodePathComponent) r_get_node_path() const;

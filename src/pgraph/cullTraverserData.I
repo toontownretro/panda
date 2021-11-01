@@ -29,7 +29,8 @@ CullTraverserData(const NodePath &start,
   _cull_planes(CullPlanes::make_empty()),
   _cull_lights(CullLights::make_empty()),
   _draw_mask(DrawMask::all_on()),
-  _portal_depth(0)
+  _portal_depth(0),
+  _keep_testing_custom_in_view(true)
 {
   // Only update the bounding volume if we're going to end up needing it.
   bool check_bounds = (view_frustum != nullptr);
@@ -57,7 +58,8 @@ CullTraverserData(const CullTraverserData &parent, PandaNode *child,
   _cull_lights(parent._cull_lights),
   _draw_mask(parent._draw_mask),
   _portal_depth(parent._portal_depth),
-  _instances(parent._instances)
+  _instances(parent._instances),
+  _keep_testing_custom_in_view(parent._keep_testing_custom_in_view)
 {
   // Only update the bounding volume if we're going to end up needing it.
   bool check_bounds = (!_cull_planes->is_empty()) ||
@@ -88,7 +90,8 @@ CullTraverserData(const CullTraverserData &parent,
   _cull_lights(parent._cull_lights),
   _draw_mask(parent._draw_mask),
   _portal_depth(parent._portal_depth),
-  _instances(parent._instances)
+  _instances(parent._instances),
+  _keep_testing_custom_in_view(parent._keep_testing_custom_in_view)
 {
   // Only update the bounding volume if we're going to end up needing it.
   bool check_bounds = (!_cull_planes->is_empty()) ||

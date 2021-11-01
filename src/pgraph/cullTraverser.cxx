@@ -223,7 +223,8 @@ traverse_below(CullTraverserData &data) {
  * Otherwise, keep traversing down the node.
  */
 int CullTraverser::
-custom_is_in_view(const CullTraverserData &data) {
+custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
+                  const TransformState *net_transform) {
   return BoundingVolume::IF_all;
 }
 
