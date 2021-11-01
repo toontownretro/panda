@@ -964,9 +964,9 @@ animate_vertices(bool force, Thread *current_thread) const {
   // Egg loader is currently set up to create a TransformTable for GPU-skinning.
   /////////////////////////////////////////////////////////////////////////////
 
-  //if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
-  //  return this;
-  //}
+  if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
+    return this;
+  }
 
   PStatTimer timer(((GeomVertexData *)this)->_char_pcollector, current_thread);
 
