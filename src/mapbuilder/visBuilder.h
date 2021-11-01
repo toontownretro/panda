@@ -157,6 +157,13 @@ public:
   // Simplification of area/portal graph.  Multiple areas are combined into a
   // single cluster based on amount of occlusion between neighboring areas.
   pvector<PT(AreaCluster)> _area_clusters;
+  // When an area cluster is not reachable by any entities during the entity
+  // flood, it is removed from the cluster list above and added to this list
+  // here.  We keep them around and add them into the K-D tree as invalid
+  // leaves so we can know when something is outside the playable world.
+  // If we didn't include these in the K-D tree, reachable clusters at the
+  // edges of the map would extend out into infinity.
+  pvector<PT(AreaCluster)> _unoccupied_clusters;
   pvector<PT(Portal)> _cluster_portals;
   pvector<Portal *> _sorted_portals;
 

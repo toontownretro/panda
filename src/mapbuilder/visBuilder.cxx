@@ -146,6 +146,8 @@ build() {
 
   create_area_clusters();
 
+  simplify_area_clusters();
+
   flood_entities();
 
   for (size_t i = 0; i < _area_clusters.size(); i++) {
@@ -154,8 +156,6 @@ build() {
       _cluster_portals.push_back(_area_clusters[i]->_portals[j]);
     }
   }
-
-  simplify_area_clusters();
 
   // Fix up cluster ID's
   for (size_t i = 0; i < _area_clusters.size(); i++) {
@@ -181,6 +181,17 @@ build() {
     for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
       PT(BoundingBox) bbox = _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
       cluster_tree.add_input(bbox->get_minq(), bbox->get_maxq(), (int)i);
+    }
+  }
+  // Also add the unoccupied clusters so stuff outside the world is correctly
+  // a solid/invalid leaf.
+  for (size_t i = 0; i < _unoccupied_clusters.size(); i++) {
+    const AreaCluster *cluster = _unoccupied_clusters[i];
+    for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
+      PT(BoundingBox) bbox = _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
+      // Use -1 to denote a solid/invalid leaf.  The K-D tree should merge
+      // siblings with the same value.
+      cluster_tree.add_input(bbox->get_minq(), bbox->get_maxq(), -1);
     }
   }
   cluster_tree.build();
@@ -748,6 +759,10 @@ flood_entities() {
           }
         }
       }
+
+      // Remember the cluster as unoccupied so we can still add its bounding
+      // box to the K-D tree as a solid/invalid leaf.
+      _unoccupied_clusters.push_back(cluster);
 
       it = _area_clusters.erase(it);
     }

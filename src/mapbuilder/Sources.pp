@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[and $[HAVE_MAPBUILDER], $[HAVE_OIDN]]
 
-#define LOCAL_LIBS map pgraph pphysics grutil raytrace
+#define LOCAL_LIBS map pgraph pphysics grutil raytrace shader
 
 #define USE_PACKAGES oidn
 
