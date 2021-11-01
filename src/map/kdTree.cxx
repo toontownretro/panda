@@ -16,6 +16,11 @@
 #include "geometricBoundingVolume.h"
 #include "boundingPlane.h"
 #include "indent.h"
+#include "boundingBox.h"
+#include "boundingSphere.h"
+#include "boundingHexahedron.h"
+#include "boundingLine.h"
+#include "boundingPlane.h"
 
 #include <algorithm>
 #include <stack>
@@ -147,6 +152,23 @@ make_subtree(const vector_int &objects) {
 }
 
 /**
+ * Returns the value associated with the leaf node that is closest to the
+ * indicated point in space.  This is a nearest neighbor search.
+ */
+int KDTree::
+get_nearest_leaf_value_from_point(const LPoint3 &point, int node) const {
+  if (node == INVALID_NODE) {
+    return -1;
+  }
+
+  int next_branch = INVALID_NODE;
+  int other_branch = INVALID_NODE;
+
+  //if (point[])
+  return -1;
+}
+
+/**
  * Returns the value associated with the leaf node that contains the indicated
  * point in space.
  */
@@ -224,6 +246,8 @@ is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set,
   std::stack<int> stack;
   stack.push(head_node);
 
+  TypeHandle vol_type_handle = vol->get_type();
+
   while (!stack.empty()) {
     int node_index = stack.top();
     stack.pop();
@@ -231,7 +255,20 @@ is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set,
     if (node_index >= 0) {
       const Node *node = &_nodes[node_index];
 
-      int flags = node->plane.contains(vol);
+      int flags;
+      if (vol_type_handle == BoundingSphere::get_class_type()) {
+        flags = node->plane.contains_sphere((const BoundingSphere *)vol);
+      } else if (vol_type_handle == BoundingBox::get_class_type()) {
+        flags = node->plane.contains_box((const BoundingBox *)vol);
+      } else if (vol_type_handle == BoundingHexahedron::get_class_type()) {
+        flags = node->plane.contains_hexahedron((const BoundingHexahedron *)vol);
+      } else if (vol_type_handle == BoundingPlane::get_class_type()) {
+        flags = node->plane.contains_plane((const BoundingPlane *)vol);
+      } else if (vol_type_handle == BoundingLine::get_class_type()) {
+        flags = node->plane.contains_line((const BoundingLine *)vol);
+      } else {
+        assert(false);
+      }
 
       if (flags == BoundingVolume::IF_no_intersection) {
         // Completely in front of the plane.  Traverse right.

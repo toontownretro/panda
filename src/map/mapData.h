@@ -21,6 +21,9 @@
 #include "factoryParams.h"
 #include "kdTree.h"
 #include "bitArray.h"
+#include "texture.h"
+#include "luse.h"
+#include "nodePath.h"
 
 /**
  * PVS for a single area cluster.
@@ -54,6 +57,28 @@ public:
 };
 
 /**
+ * A specular reflection probe placed at a point in the scene.
+ * Texture is baked at map build time.
+ */
+class EXPCL_PANDA_MAP MapCubeMap {
+PUBLISHED:
+  PT(Texture) _texture;
+  LPoint3 _pos;
+};
+
+/**
+ * An ambient light probe in the scene.  Encoded using spherical harmonics.
+ * Applied to dynamic models.
+ */
+class EXPCL_PANDA_MAP MapAmbientProbe {
+PUBLISHED:
+  LPoint3 _pos;
+  INLINE LVecBase3 get_color(int i) const { return _color[i]; }
+public:
+  LVecBase3 _color[9];
+};
+
+/**
  * The main data store for a map.
  */
 class EXPCL_PANDA_MAP MapData : public TypedWritableReferenceCount {
@@ -81,6 +106,21 @@ PUBLISHED:
   INLINE int get_num_mesh_groups() const;
   INLINE const MapMeshGroup *get_mesh_group(int n) const;
 
+  INLINE void add_cube_map(Texture *tex, const LPoint3 &pos);
+  INLINE int get_num_cube_maps() const;
+  INLINE const MapCubeMap *get_cube_map(int n) const;
+
+  INLINE void set_cube_map_tree(KDTree &&tree);
+  INLINE const KDTree *get_cube_map_tree() const;
+
+  INLINE void add_light(NodePath light);
+  INLINE int get_num_lights() const;
+  INLINE NodePath get_light(int n) const;
+
+  INLINE void add_ambient_probe(const MapAmbientProbe &probe);
+  INLINE int get_num_ambient_probes() const;
+  INLINE const MapAmbientProbe *get_ambient_probe(int n) const;
+
 public:
   static void register_with_read_factory();
 
@@ -99,6 +139,14 @@ private:
   pvector<AreaClusterPVS> _cluster_pvs;
 
   pvector<MapMeshGroup> _mesh_groups;
+
+  pvector<MapCubeMap> _cube_maps;
+  // For doing nearest neighbor cube map search.
+  KDTree _cube_map_tree;
+
+  pvector<MapAmbientProbe> _ambient_probes;
+
+  pvector<NodePath> _lights;
 };
 
 #include "mapData.I"

@@ -199,3 +199,97 @@ get_mesh_group(int n) const {
   nassertr(n >= 0 && n < (int)_mesh_groups.size(), nullptr);
   return &_mesh_groups[n];
 }
+
+/**
+ *
+ */
+INLINE void MapData::
+add_cube_map(Texture *tex, const LPoint3 &pos) {
+  MapCubeMap cm;
+  cm._texture = tex;
+  cm._pos = pos;
+  _cube_maps.push_back(cm);
+}
+
+/**
+ *
+ */
+INLINE int MapData::
+get_num_cube_maps() const {
+  return (int)_cube_maps.size();
+}
+
+/**
+ *
+ */
+INLINE const MapCubeMap *MapData::
+get_cube_map(int n) const {
+  nassertr(n >= 0 && n < (int)_cube_maps.size(), nullptr);
+  return &_cube_maps[n];
+}
+
+/**
+ *
+ */
+INLINE void MapData::
+set_cube_map_tree(KDTree &&tree) {
+  _cube_map_tree = std::move(tree);
+}
+
+/**
+ *
+ */
+INLINE const KDTree *MapData::
+get_cube_map_tree() const {
+  return &_cube_map_tree;
+}
+
+/**
+ *
+ */
+INLINE void MapData::
+add_light(NodePath light) {
+  _lights.push_back(light);
+}
+
+/**
+ *
+ */
+INLINE int MapData::
+get_num_lights() const {
+  return (int)_lights.size();
+}
+
+/**
+ *
+ */
+INLINE NodePath MapData::
+get_light(int n) const {
+  nassertr(n >= 0 && n < (int)_lights.size(), NodePath());
+  return _lights[n];
+}
+
+/**
+ *
+ */
+INLINE void MapData::
+add_ambient_probe(const MapAmbientProbe &probe) {
+  _ambient_probes.push_back(probe);
+}
+
+/**
+ *
+ */
+INLINE int MapData::
+get_num_ambient_probes() const {
+  return (int)_ambient_probes.size();
+}
+
+/**
+ *
+ */
+INLINE const MapAmbientProbe *MapData::
+get_ambient_probe(int n) const {
+  nassertr(n >= 0 && n < (int)_ambient_probes.size(), nullptr);
+  return &_ambient_probes[n];
+}

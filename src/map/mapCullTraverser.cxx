@@ -15,6 +15,13 @@
 #include "cullTraverserData.h"
 #include "pandaNode.h"
 #include "mapData.h"
+#include "mapNodeData.h"
+#include "modelNode.h"
+#include "lightAttrib.h"
+#include "renderState.h"
+#include "textureAttrib.h"
+#include "textureStage.h"
+#include "shaderAttrib.h"
 
 IMPLEMENT_CLASS(MapCullTraverser);
 
@@ -34,37 +41,234 @@ MapCullTraverser(const CullTraverser &copy, MapData *data) :
  *
  */
 int MapCullTraverser::
-custom_is_in_view(const CullTraverserData &data) {
+custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
+                  const TransformState *net_transform) {
   if (_view_cluster == -1) {
     return BoundingVolume::IF_all;
   }
 
-  // Test the node against the cluster tree.
-  CPT(GeometricBoundingVolume) vol;
+  node_reader.check_cached(true);
 
-  if (!data._net_transform->is_identity()) {
-    // The node has a non-identity net transform.  Make a copy of
-    // the bounds and transform it into world space.
-    PT(GeometricBoundingVolume) gbv = DCAST(GeometricBoundingVolume,
-      data.node_reader()->get_bounds()->make_copy());
-    gbv->xform(data._net_transform->get_mat());
-    vol = gbv;
+  const PandaNode *node = node_reader.get_node();
+
+  // Look up cached node data.
+  MapNodeData *ndata = nullptr;
+  TypedReferenceCount *udata = node->get_user_data();
+  if (udata == nullptr) {
+    PT(MapNodeData) new_data = new MapNodeData;
+    new_data->_map_data = nullptr;
+    ((PandaNode *)node)->set_user_data(new_data);
+    ndata = new_data;
+  } else {
+    ndata = (MapNodeData *)udata;
+  }
+
+  const BoundingVolume *bounds = node_reader.get_bounds();
+  if (net_transform != ndata->_net_transform ||
+      bounds != ndata->_bounds ||
+      _data != ndata->_map_data) {
+    // Node area clusters are stale.  Recompute them.
+    ndata->_net_transform = net_transform;
+    ndata->_bounds = bounds;
+    ndata->_map_data = _data;
+    ndata->_clusters.clear();
+
+    // Test the node against the cluster tree.
+    CPT(GeometricBoundingVolume) vol;
+
+    if (!net_transform->is_identity()) {
+      // The node has a non-identity net transform.  Make a copy of
+      // the bounds and transform it into world space.
+      PT(GeometricBoundingVolume) gbv = DCAST(GeometricBoundingVolume,
+        bounds->make_copy());
+      gbv->xform(net_transform->get_mat());
+      vol = gbv;
+
+    } else {
+      vol = DCAST(GeometricBoundingVolume, bounds);
+    }
+
+    const KDTree *tree = _data->get_area_cluster_tree();
+    tree->get_leaf_values_containing_volume(vol, ndata->_clusters);
+  }
+
+  if ((_pvs & ndata->_clusters).is_zero()) {
+    // Node is not in the current PVS.  Cull.
+    return BoundingVolume::IF_no_intersection;
+
+  } else if ((_pvs | ndata->_clusters) == _pvs) {
+    // If the OR of our PVS and the clusters that the node occupies yields
+    // the PVS, we know that the node and everything below it is completely
+    // contained within the PVS, so we don't have to test any further.
+    return BoundingVolume::IF_all;
 
   } else {
-    vol = DCAST(GeometricBoundingVolume, data.node_reader()->get_bounds());
+    // The node is within the PVS, but there might be a descendent that is not,
+    // so we should keep testing further down the graph.
+    return BoundingVolume::IF_some;
+  }
+}
+
+/**
+ * Computes the lighting information for the given model node.
+ */
+void MapCullTraverser::
+update_model_lighting(CullTraverserData &data) {
+  static PT(TextureStage) cm_ts = new TextureStage("envmap");
+
+  const LightAttrib *la;
+  data._state->get_attrib_def(la);
+
+  if (la->has_all_off()) {
+    return;
   }
 
-  const KDTree *tree = _data->get_area_cluster_tree();
+  PandaNode *node = data.node();
 
-  if (!tree->is_volume_in_leaf_set(vol, _pvs)) {
-    // The node is not within any of the potentially visible clusters
-    // from the camera's position.  Cull the node.
-    return BoundingVolume::IF_no_intersection;
+  MapNodeData *ndata = nullptr;
+  TypedReferenceCount *udata = node->get_user_data();
+  if (udata == nullptr) {
+    PT(MapNodeData) new_data = new MapNodeData;
+    new_data->_map_data = nullptr;
+    node->set_user_data(new_data);
+    ndata = new_data;
+  } else {
+    ndata = (MapNodeData *)udata;
   }
 
-  // The node is within 1 or more of the potentially visible clusters.  Keep
-  // traversing down this node.
-  return BoundingVolume::IF_all;
+  if (ndata->_light_data == nullptr) {
+    ndata->_light_data = new MapLightData;
+    ndata->_light_data->_probe = nullptr;
+    ndata->_light_data->_probe_color = PTA_LVecBase3::empty_array(9);
+  }
+
+  bool transform_changed = data._net_transform != ndata->_light_data->_net_transform;
+
+  if (transform_changed) {
+    const LPoint3 &pos = data._net_transform->get_pos();
+    ndata->_light_data->_net_transform = data._net_transform;
+
+    // Locate closest cube map texture.
+    Texture *closest = nullptr;
+    PN_stdfloat closest_dist = 1e24;
+    for (size_t i = 0; i < _data->get_num_cube_maps(); i++) {
+      const MapCubeMap *mcm = _data->get_cube_map(i);
+      PN_stdfloat dist = (pos - mcm->_pos).length_squared();
+      if (dist < closest_dist) {
+        closest = mcm->_texture;
+        closest_dist = dist;
+      }
+    }
+
+    // Located closest ambient probe.
+    closest_dist = 1e24;
+    const MapAmbientProbe *closest_probe = nullptr;
+    for (size_t i = 0; i < _data->get_num_ambient_probes(); i++) {
+      const MapAmbientProbe *map = _data->get_ambient_probe(i);
+      PN_stdfloat dist = (pos - map->_pos).length_squared();
+      if (dist < closest_dist) {
+        closest_probe = map;
+        closest_dist = dist;
+      }
+    }
+
+    CPT(RenderState) state = RenderState::make_empty();
+
+    if (closest != ndata->_light_data->_cube_map && closest != nullptr) {
+      ndata->_light_data->_cube_map = closest;
+      CPT(RenderAttrib) tattr = TextureAttrib::make();
+      tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_ts, closest);
+      state = state->set_attrib(tattr);
+
+    } else {
+      state = state->set_attrib(ndata->_light_data->_lighting_state->get_attrib(TextureAttrib::get_class_slot()));
+    }
+
+    if (closest_probe != ndata->_light_data->_probe && closest_probe != nullptr) {
+      ndata->_light_data->_probe = closest_probe;
+      for (int i = 0; i < 9; i++) {
+        ndata->_light_data->_probe_color[i] = closest_probe->_color[i];
+      }
+      CPT(RenderAttrib) sattr = ShaderAttrib::make();
+      sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", ndata->_light_data->_probe_color));
+      state = state->set_attrib(sattr);
+
+    } else {
+      state = state->set_attrib(ndata->_light_data->_lighting_state->get_attrib(ShaderAttrib::get_class_slot()));
+    }
+
+    pvector<NodePath> sorted_lights;
+    sorted_lights.resize(_data->get_num_lights());
+    for (int i = 0; i < _data->get_num_lights(); i++) {
+      sorted_lights[i] = _data->get_light(i);
+    }
+    std::sort(sorted_lights.begin(), sorted_lights.end(), [pos](const NodePath &a, const NodePath &b) -> bool {
+      return (pos - a.get_pos()).length_squared() < (pos - b.get_pos()).length_squared();
+    });
+
+    CPT(RenderAttrib) lattr = LightAttrib::make();
+    for (size_t i = 0; i < 4 && i < sorted_lights.size(); i++) {
+      lattr = DCAST(LightAttrib, lattr)->add_on_light(sorted_lights[i]);
+    }
+    state = state->set_attrib(lattr);
+
+    ndata->_light_data->_lighting_state = state;
+  }
+
+  data._state = data._state->compose(ndata->_light_data->_lighting_state);
+}
+
+/**
+ *
+ */
+void MapCullTraverser::
+traverse_below(CullTraverserData &data) {
+  _nodes_pcollector.add_level(1);
+  PandaNodePipelineReader *node_reader = data.node_reader();
+  PandaNode *node = data.node();
+
+  if (!data.is_this_node_hidden(_camera_mask)) {
+    // If it's of ModelNode type, we need to update lighting information at
+    // the root of this subgraph.
+    if (node->is_of_type(ModelNode::get_class_type())) {
+      update_model_lighting(data);
+    }
+
+    node->add_for_draw(this, data);
+
+    // Check for a decal effect.
+    const RenderEffects *node_effects = node_reader->get_effects();
+    if (node_effects->has_decal()) {
+      // If we *are* implementing decals with DepthOffsetAttribs, apply it
+      // now, so that each child of this node gets offset by a tiny amount.
+      data._state = data._state->compose(get_depth_offset_state());
+#ifndef NDEBUG
+      // This is just a sanity check message.
+      if (!node->is_geom_node()) {
+        pgraph_cat.error()
+          << "DecalEffect applied to " << *node << ", not a GeomNode.\n";
+      }
+#endif
+    }
+  }
+
+  // Now visit all the node's children.
+  PandaNode::Children children = node_reader->get_children();
+  node_reader->release();
+  int num_children = children.get_num_children();
+  if (!node->has_selective_visibility()) {
+    for (int i = 0; i < num_children; ++i) {
+      const PandaNode::DownConnection &child = children.get_child_connection(i);
+      traverse_child(data, child, data._state);
+    }
+  } else {
+    int i = node->get_first_visible_child();
+    while (i < num_children) {
+      const PandaNode::DownConnection &child = children.get_child_connection(i);
+      traverse_child(data, child, data._state);
+      i = node->get_next_visible_child(i);
+    }
+  }
 }
 
 /**

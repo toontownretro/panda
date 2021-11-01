@@ -12,6 +12,7 @@
     mapData.h mapData.I \
     mapEntity.h mapEntity.I \
     mapModel.h mapModel.I \
+    mapNodeData.h mapNodeData.I \
     mapRender.h mapRender.I \
     mapRoot.h mapRoot.I
 
@@ -23,6 +24,7 @@
     mapData.cxx \
     mapEntity.cxx \
     mapModel.cxx \
+    mapNodeData.cxx \
     mapRender.cxx \
     mapRoot.cxx
 

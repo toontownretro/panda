@@ -91,6 +91,7 @@ PUBLISHED:
 
   int make_subtree(const vector_int &objects);
 
+  int get_nearest_leaf_value_from_point(const LPoint3 &point, int node = 0) const;
   int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const;
   bool is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set, int head_node = 0) const;
   void get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,

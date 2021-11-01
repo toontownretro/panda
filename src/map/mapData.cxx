@@ -58,6 +58,29 @@ write_datagram(BamWriter *manager, Datagram &me) {
     const MapMeshGroup &group = _mesh_groups[i];
     group._clusters.write_datagram(manager, me);
   }
+
+  me.add_uint16(_cube_maps.size());
+  for (size_t i = 0; i < _cube_maps.size(); i++) {
+    const MapCubeMap &cm = _cube_maps[i];
+    manager->write_pointer(me, cm._texture);
+    cm._pos.write_datagram(me);
+  }
+
+  //_cube_map_tree.write_datagram(me);
+
+  me.add_uint16(_lights.size());
+  for (size_t i = 0; i < _lights.size(); i++) {
+    _lights[i].write_datagram(manager, me);
+  }
+
+  me.add_uint32(_ambient_probes.size());
+  for (size_t i = 0; i < _ambient_probes.size(); i++) {
+    const MapAmbientProbe &probe = _ambient_probes[i];
+    probe._pos.write_datagram(me);
+    for (int j = 0; j < 9; j++) {
+      probe._color[j].write_datagram(me);
+    }
+  }
 }
 
 /**
@@ -94,6 +117,29 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     MapMeshGroup &group = _mesh_groups[i];
     group._clusters.read_datagram(scan, manager);
   }
+
+  _cube_maps.resize(scan.get_uint16());
+  for (size_t i = 0; i < _cube_maps.size(); i++) {
+    MapCubeMap &cm = _cube_maps[i];
+    manager->read_pointer(scan);
+    cm._pos.read_datagram(scan);
+  }
+
+  //_cube_map_tree.read_datagram(scan);
+
+  _lights.resize(scan.get_uint16());
+  for (size_t i = 0; i < _lights.size(); i++) {
+    _lights[i].fillin(scan, manager);
+  }
+
+  _ambient_probes.resize(scan.get_uint32());
+  for (size_t i = 0; i < _ambient_probes.size(); i++) {
+    MapAmbientProbe &probe = _ambient_probes[i];
+    probe._pos.read_datagram(scan);
+    for (int j = 0; j < 9; j++) {
+      probe._color[j].read_datagram(scan);
+    }
+  }
 }
 
 /**
@@ -105,6 +151,14 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   for (size_t i = 0; i < _entities.size(); i++) {
     _entities[i] = DCAST(MapEntity, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _cube_maps.size(); i++) {
+    _cube_maps[i]._texture = DCAST(Texture, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _lights.size(); i++) {
+    pi += _lights[i].complete_pointers(p_list + pi, manager);
   }
 
   return pi;

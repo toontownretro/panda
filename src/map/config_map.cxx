@@ -17,6 +17,7 @@
 #include "mapRoot.h"
 #include "mapRender.h"
 #include "mapCullTraverser.h"
+#include "mapNodeData.h"
 
 NotifyCategoryDef(map, "");
 
@@ -39,6 +40,7 @@ init_libmap() {
   MapRoot::init_type();
   MapRender::init_type();
   MapCullTraverser::init_type();
+  MapNodeData::init_type();
 
   MapData::register_with_read_factory();
   MapEntity::register_with_read_factory();
