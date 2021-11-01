@@ -47,7 +47,7 @@ PUBLISHED:
 public:
   virtual const BoundingPlane *as_bounding_plane() const;
 
-protected:
+public:
   virtual bool extend_other(BoundingVolume *other) const;
   virtual bool around_other(BoundingVolume *other,
                             const BoundingVolume **first,
