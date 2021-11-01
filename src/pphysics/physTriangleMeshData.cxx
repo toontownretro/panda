@@ -20,6 +20,7 @@
 #include "physSystem.h"
 #include "streamWrapper.h"
 #include "physXStreams.h"
+#include "nodePath.h"
 
 /**
  * Adds a triangle to the mesh data.
@@ -83,7 +84,7 @@ add_polygon(const pvector<LPoint3> &v) {
  * Adds triangles into the mesh from the indicated Geom object.
  */
 void PhysTriangleMeshData::
-add_triangles_from_geom(const Geom *geom) {
+add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat) {
   PT(Geom) dgeom = geom->decompose();
   GeomVertexReader vreader(dgeom->get_vertex_data(), InternalName::get_vertex());
   for (size_t i = 0; i < dgeom->get_num_primitives(); i++) {
@@ -95,7 +96,7 @@ add_triangles_from_geom(const Geom *geom) {
       size_t first_index = _vertices.size();
       for (int k = start; k < end; k++) {
         vreader.set_row(prim->get_vertex(k));
-        _vertices.push_back(panda_vec_to_physx(vreader.get_data3f()));
+        _vertices.push_back(panda_vec_to_physx(mat.xform_point(vreader.get_data3f())));
       }
       _indices.push_back(first_index);
       _indices.push_back(first_index + 1);
@@ -109,9 +110,14 @@ add_triangles_from_geom(const Geom *geom) {
  * Adds triangles into the mesh from the Geoms of the indicated GeomNode.
  */
 void PhysTriangleMeshData::
-add_triangles_from_geom_node(GeomNode *node) {
+add_triangles_from_geom_node(GeomNode *node, bool world_space) {
+  LMatrix4 mat = LMatrix4::ident_mat();
+  if (world_space) {
+    mat = NodePath(node).get_net_transform()->get_mat();
+  }
+
   for (int i = 0; i < node->get_num_geoms(); i++) {
-    add_triangles_from_geom(node->get_geom(i));
+    add_triangles_from_geom(node->get_geom(i), mat);
   }
   invalidate_mesh();
 }
