@@ -17,6 +17,7 @@
 #include "windowFramework.h"
 #include "config_shader.h"
 #include "config_anim.h"
+#include "config_map.h"
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_FRAMEWORK)
   #error Buildsystem error: BUILDING_FRAMEWORK not defined
@@ -47,5 +48,6 @@ ConfigVariableString playback_session
 ConfigureFn(config_framework) {
   init_libshader();
   init_libanim();
+  init_libmap();
   WindowFramework::init_type();
 }
