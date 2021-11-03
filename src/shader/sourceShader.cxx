@@ -309,6 +309,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     set_input(ShaderInput("envMapTexture", envmap_tex));
     set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.txo")));
+
+    if ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+      set_pixel_shader_define("MAT_ENVMAP");
+    }
   }
 
 }
