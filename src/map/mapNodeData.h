@@ -19,6 +19,7 @@
 #include "pointerTo.h"
 #include "transformState.h"
 #include "boundingVolume.h"
+#include "geometricBoundingVolume.h"
 #include "bitArray.h"
 #include "texture.h"
 #include "renderAttrib.h"
@@ -63,6 +64,8 @@ public:
   // The last recorded bounding volume of the node.  If this differs from
   // the current, we have to recompute the node's occupied area clusters.
   CPT(BoundingVolume) _bounds;
+  // World-space bounding volume, used to test against the area cluster tree.
+  CPT(GeometricBoundingVolume) _net_bounds;
 
   // The map data pointer at the time we last computed the node's area
   // clusters.  We have to recompute it when the map changes because the

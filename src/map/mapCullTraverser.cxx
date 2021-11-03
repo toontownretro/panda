@@ -17,6 +17,7 @@
 #include "mapData.h"
 #include "mapNodeData.h"
 #include "modelNode.h"
+#include "modelRoot.h"
 #include "lightAttrib.h"
 #include "renderState.h"
 #include "textureAttrib.h"
@@ -88,6 +89,8 @@ custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &
       vol = DCAST(GeometricBoundingVolume, bounds);
     }
 
+    ndata->_net_bounds = vol;
+
     const KDTree *tree = _data->get_area_cluster_tree();
     tree->get_leaf_values_containing_volume(vol, ndata->_clusters);
   }
@@ -124,6 +127,7 @@ update_model_lighting(CullTraverserData &data) {
   }
 
   PandaNode *node = data.node();
+  PandaNodePipelineReader *node_reader = data.node_reader();
 
   MapNodeData *ndata = nullptr;
   TypedReferenceCount *udata = node->get_user_data();
@@ -145,7 +149,39 @@ update_model_lighting(CullTraverserData &data) {
   bool transform_changed = data._net_transform != ndata->_light_data->_net_transform;
 
   if (transform_changed) {
-    const LPoint3 &pos = data._net_transform->get_pos();
+    // Use the world-space center of the node's bounding volume to determine
+    // the lighting for the node.  The net transform of the node might not be
+    // the best way to figure out where the node is located, for instance
+    // if the node is flattened.
+    LPoint3 pos;
+    if (ndata->_net_bounds != nullptr) {
+      // Great!  We already computed the world-space bounding volume of the
+      // node when we cull-tested the node.  Get center point from that.
+      if (!ndata->_net_bounds->is_infinite()) {
+        pos = ndata->_net_bounds->get_approx_center();
+      } else {
+        pos = data._net_transform->get_pos();
+      }
+
+    } else {
+      // We don't know the world-space bounding volume of this node.
+      // Get local bounds in parent-space and transform into world-space.
+      const GeometricBoundingVolume *bounds = node_reader->get_bounds()->as_geometric_bounding_volume();
+      if (!bounds->is_infinite()) {
+        pos = bounds->get_approx_center();
+        NodePath parent_path = data.get_node_path().get_parent();
+        if (!parent_path.is_empty()) {
+          CPT(TransformState) parent_net = parent_path.get_net_transform();
+          if (!parent_net->is_identity()) {
+            parent_net->get_mat().xform_point_in_place(pos);
+          }
+        }
+
+      } else {
+        pos = data._net_transform->get_pos();
+      }
+    }
+
     ndata->_light_data->_net_transform = data._net_transform;
 
     // Locate closest cube map texture.
@@ -230,7 +266,7 @@ traverse_below(CullTraverserData &data) {
   if (!data.is_this_node_hidden(_camera_mask)) {
     // If it's of ModelNode type, we need to update lighting information at
     // the root of this subgraph.
-    if (node->is_of_type(ModelNode::get_class_type())) {
+    if (node->is_exact_type(ModelNode::get_class_type()) || node->is_exact_type(ModelRoot::get_class_type())) {
       update_model_lighting(data);
     }
 
