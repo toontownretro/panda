@@ -131,6 +131,46 @@ update_shape_filter_data(size_t n) {
 }
 
 /**
+ * Returns true if it is generally safe to flatten out this particular kind of
+ * PandaNode by duplicating instances (by calling dupe_for_flatten()), false
+ * otherwise (for instance, a Camera cannot be safely flattened, because the
+ * Camera pointer itself is meaningful).
+ */
+bool PhysRigidActorNode::
+safe_to_flatten() const {
+  return false;
+}
+
+/**
+ * Returns true if it is generally safe to combine this particular kind of
+ * PandaNode with other kinds of PandaNodes of compatible type, adding
+ * children or whatever.  For instance, an LODNode should not be combined with
+ * any other PandaNode, because its set of children is meaningful.
+ */
+bool PhysRigidActorNode::
+safe_to_combine() const {
+  return false;
+}
+
+/**
+ * Transforms the contents of this PandaNode by the indicated matrix, if it
+ * means anything to do so.  For most kinds of PandaNodes, this does nothing.
+ */
+void PhysRigidActorNode::
+xform(const LMatrix4 &mat) {
+  // Transform all shapes by the matrix.  Can only be translated and
+  // rotated.
+  CPT(TransformState) trans = TransformState::make_mat(mat);
+  nassertv(trans->get_scale().almost_equal(LVecBase3(1.0f)));
+  nassertv(trans->get_shear().almost_equal(LVecBase3(0.0f)));
+  physx::PxTransform pxtrans = panda_trans_to_physx(trans);
+  for (size_t i = 0; i < _shapes.size(); i++) {
+    physx::PxShape *shape = _shapes[i]->get_shape();
+    shape->setLocalPose(pxtrans.transform(shape->getLocalPose()));
+  }
+}
+
+/**
  *
  */
 void PhysRigidActorNode::

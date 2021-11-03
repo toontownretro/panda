@@ -82,6 +82,10 @@ public:
   INLINE void set_sync_enabled(bool flag);
   INLINE bool get_sync_enabled() const;
 
+  virtual bool safe_to_flatten() const override;
+  virtual bool safe_to_combine() const override;
+  virtual void xform(const LMatrix4 &mat) override;
+
 protected:
   PhysRigidActorNode(const std::string &name);
 
