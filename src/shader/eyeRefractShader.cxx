@@ -21,6 +21,7 @@
 #include "materialParamColor.h"
 #include "shaderManager.h"
 #include "texturePool.h"
+#include "shaderAttrib.h"
 
 TypeHandle EyeRefractShader::_type_handle;
 
@@ -52,9 +53,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   state->get_attrib_def(la);
   size_t num_lights = la->get_num_non_ambient_lights();
   size_t num_ambient_lights = la->get_num_on_lights() - num_lights;
-  if (num_ambient_lights != 0) {
+
+  const ShaderAttrib *sa;
+  state->get_attrib_def(sa);
+  if (sa->has_shader_input("ambientProbe")) {
+    set_pixel_shader_define("AMBIENT_PROBE");
+
+  } else if (num_ambient_lights != 0) {
     set_pixel_shader_define("AMBIENT_LIGHT");
   }
+
   if (num_lights > 0) {
     set_pixel_shader_define("LIGHTING");
     set_pixel_shader_define("NUM_LIGHTS", num_lights);
