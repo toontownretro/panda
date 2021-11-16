@@ -681,11 +681,22 @@ bool Character::
 apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread) {
   PStatTimer timer(apply_pose_collector);
 
-  size_t joint_count = _joints.size();
-
   Character *merge_char = cdata->_joint_merge_character;
+  LMatrix4 parent_to_me;
+  if (merge_char != nullptr) {
+    // Make sure the parent character's animation is up-to-date.
+    merge_char->update();
+
+    // Compute the matrix that will transform joints from the parent
+    // coordinate space to my coordinate space.
+    NodePath my_path = NodePath::any_path(_active_owner);
+    NodePath parent_path = NodePath::any_path(merge_char->_active_owner);
+    parent_to_me = parent_path.get_transform(my_path)->get_mat();
+  }
 
   ap_compose_collector.start();
+
+  size_t joint_count = _joints.size();
 
   for (size_t i = 0; i < joint_count; i++) {
     CharacterJointPoseData &joint = _joint_poses[i];
@@ -714,11 +725,11 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     } else {
       // Use the transform of the parent merge joint.
 
-      // Take the net transform and re-interpret it.
-      // TODO: perhaps do this in world coordinates so we can merge from
-      // anywhere in the scene graph.
+      // Re-compute this joint's local transform such that it ends up
+      // with the same world-space transform as the parent merge joint.
+
       const LMatrix4 &parent_net = merge_char->_joint_poses[joint._merge_joint]._net_transform;
-      joint._net_transform = parent_net;
+      joint._net_transform = parent_net * parent_to_me;
       if (joint._parent != -1) {
         LMatrix4 parent_inverse = invert(_joint_poses[joint._parent]._net_transform);
         joint._value = joint._net_transform * parent_inverse;
