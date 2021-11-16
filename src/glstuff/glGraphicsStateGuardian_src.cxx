@@ -179,30 +179,6 @@ static const string default_vshader =
 #ifndef OPENGLES
 // This version of the shader is used if vertices-float64 is enabled.
 static const string default_vshader_fp64 =
-#ifdef __APPLE__
-  "#version 150\n"
-#else
-  "#version 130\n"
-#endif
-  "#extension GL_ARB_vertex_attrib_64bit : require\n"
-  "#extension GL_ARB_gpu_shader_fp64 : require\n"
-  "in dvec3 p3d_Vertex;\n"
-  "in vec4 p3d_Color;\n"
-  "in dvec2 p3d_MultiTexCoord0;\n"
-  "out vec2 texcoord;\n"
-  "out vec4 color;\n"
-  "uniform mat4 p3d_ModelViewMatrix;\n"
-  "uniform mat4 p3d_ProjectionMatrix;\n"
-  "uniform mat4 p3d_TextureTransform;\n"
-  "uniform vec4 p3d_ColorScale;\n"
-  "void main(void) {\n" // Apply proj & modelview in two steps, more precise
-  "  gl_Position = vec4(dmat4(p3d_ProjectionMatrix) * (dmat4(p3d_ModelViewMatrix) * dvec4(p3d_Vertex, 1)));\n"
-  "  texcoord = (p3d_TextureTransform * vec4(p3d_MultiTexCoord0.x, p3d_MultiTexCoord0.y, 0, 1)).xy;\n"
-  "  color = p3d_Color * p3d_ColorScale;\n"
-  "}\n";
-
-// Same as above, but for OpenGL 4.1.
-static const string default_vshader_fp64_gl41 =
   "#version 410\n"
   "in dvec3 p3d_Vertex;\n"
   "in vec4 p3d_Color;\n"
@@ -215,11 +191,15 @@ static const string default_vshader_fp64_gl41 =
 #else
   "uniform mat3x4 p3d_ModelViewMatrixTranspose;\n"
   "uniform mat4 p3d_ProjectionMatrix;\n"
-  "uniform mat4 p3d_TextureTransform;\n"
+#endif
   "uniform vec4 p3d_ColorScale;\n"
   "void main(void) {\n" // Apply proj & modelview in two steps, more precise
-  "  gl_Position = vec4(dmat4(p3d_ProjectionMatrix) * (dmat4(p3d_ModelViewMatrix) * dvec4(p3d_Vertex, 1)));\n"
-  "  texcoord = (p3d_TextureTransform * vec4(p3d_MultiTexCoord0.x, p3d_MultiTexCoord0.y, 0, 1)).xy;\n"
+#ifdef STDFLOAT_DOUBLE
+  "  gl_Position = vec4(p3d_ProjectionMatrix * dvec4(dvec4(p3d_Vertex, 1) * p3d_ModelViewMatrixTranspose, 1));\n"
+#else
+  "  gl_Position = vec4(dmat4(p3d_ProjectionMatrix) * dvec4(dvec4(p3d_Vertex, 1) * dmat3x4(p3d_ModelViewMatrixTranspose), 1));\n"
+#endif
+  "  texcoord = (p3d_TextureMatrix * vec4(p3d_MultiTexCoord0.x, p3d_MultiTexCoord0.y, 0, 1)).xy;\n"
   "  color = p3d_Color * p3d_ColorScale;\n"
   "}\n";
 #endif
@@ -2282,13 +2262,8 @@ reset() {
 #ifndef OPENGLES
   // Check for SSBOs.
   if (is_at_least_gl_version(4, 3) || has_extension("ARB_shader_storage_buffer_object")) {
-    _supports_shader_buffers = true;
-    _glGetProgramInterfaceiv = (PFNGLGETPROGRAMINTERFACEIVPROC)
-       get_extension_func("glGetProgramInterfaceiv");
-    _glGetProgramResourceName = (PFNGLGETPROGRAMRESOURCENAMEPROC)
-       get_extension_func("glGetProgramResourceName");
-    _glGetProgramResourceiv = (PFNGLGETPROGRAMRESOURCEIVPROC)
-       get_extension_func("glGetProgramResourceiv");
+    _supports_shader_buffers = _supports_program_interface_query;
+
     _glShaderStorageBlockBinding = (PFNGLSHADERSTORAGEBLOCKBINDINGPROC)
        get_extension_func("glShaderStorageBlockBinding");
   } else

@@ -873,7 +873,6 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
     if (noprefix.compare(0, 7, "Texture") == 0) {
       Shader::ShaderTexSpec bind;
       bind._id = param;
-      bind._name = 0;
 
       if (!get_sampler_texture_type(bind._desired_type, param_type)) {
         GLCAT.error()
@@ -895,7 +894,8 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
         }
         _glgsg->_glUniform1i(p, _shader->_tex_spec.size());
         _shader->_tex_spec.push_back(bind);
-      } else {
+      }
+      else {
         // p3d_Texture[] or p3d_TextureModulate[], etc.
         if (size == 7) {
           bind._part = Shader::STO_stage_i;
@@ -3402,7 +3402,7 @@ report_program_errors(GLuint program, bool fatal) {
  * Compiles the given ShaderModuleGlsl and attaches it to the program.
  */
 bool CLP(ShaderContext)::
-attach_shader(const ShaderModule *module) {
+attach_shader(const ShaderModule *module, Shader::ModuleSpecConstants &consts) {
   ShaderModule::Stage stage = module->get_stage();
 
   GLuint handle = 0;
@@ -3507,7 +3507,6 @@ attach_shader(const ShaderModule *module) {
                                 spv->get_data_size() * sizeof(uint32_t));
       }
 
-      const Shader::ModuleSpecConstants &consts = _shader->_module_spec_consts[module];
       _glgsg->_glSpecializeShader(handle, "main", consts._indices.size(),
                                   (GLuint *)consts._indices.data(),
                                   (GLuint *)consts._values.data());
@@ -3697,8 +3696,8 @@ compile_and_link() {
 
   bool valid = true;
 
-  for (COWPT(ShaderModule) const &cow_module : _shader->_modules) {
-    valid &= attach_shader(cow_module.get_read_pointer());
+  for (Shader::LinkedModule &linked_module : _shader->_modules) {
+    valid &= attach_shader(linked_module._module.get_read_pointer(), linked_module._consts);
   }
 
   if (!valid) {

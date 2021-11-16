@@ -68,10 +68,6 @@ PUBLISHED:
     const ShaderType *type;
     CPT(InternalName) name;
     uint32_t id;
-
-  public:
-    void write_datagram(Datagram &dg, BamWriter *manager);
-    void fillin(DatagramIterator &scan, BamReader *manager);
   };
 
 public:

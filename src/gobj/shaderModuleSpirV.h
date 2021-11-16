@@ -25,8 +25,11 @@ class ShaderType;
  * link the module to a previous stage, and strip debug information as needed.
  */
 class EXPCL_PANDA_GOBJ ShaderModuleSpirV final : public ShaderModule {
+private:
+  ShaderModuleSpirV(Stage stage);
+
 public:
-  ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words);
+  ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *record = nullptr);
   virtual ~ShaderModuleSpirV();
 
   virtual PT(CopyOnWriteObject) make_cow_copy() override;
@@ -119,12 +122,12 @@ public:
     DT_none,
     DT_type,
     DT_type_pointer,
-    DT_global,
+    DT_variable,
     DT_constant,
     DT_ext_inst,
     DT_function_parameter,
     DT_function,
-    DT_local,
+    DT_temporary,
     DT_spec_constant,
   };
 
@@ -225,12 +228,12 @@ public:
     void parse_instruction(const Instruction &op, uint32_t &current_function_id);
     void record_type(uint32_t id, const ShaderType *type);
     void record_type_pointer(uint32_t id, spv::StorageClass storage_class, uint32_t type_id);
-    void record_global(uint32_t id, uint32_t type_pointer_id, spv::StorageClass storage_class);
+    void record_variable(uint32_t id, uint32_t type_pointer_id, spv::StorageClass storage_class, uint32_t function_id=0);
     void record_function_parameter(uint32_t id, uint32_t type_id, uint32_t function_id);
     void record_constant(uint32_t id, uint32_t type_id, const uint32_t *words, uint32_t nwords);
     void record_ext_inst_import(uint32_t id, const char *import);
     void record_function(uint32_t id, uint32_t type_id);
-    void record_local(uint32_t id, uint32_t type_id, uint32_t from_id, uint32_t function_id);
+    void record_temporary(uint32_t id, uint32_t type_id, uint32_t from_id, uint32_t function_id);
     void record_spec_constant(uint32_t id, uint32_t type_id);
 
     void mark_used(uint32_t id);
@@ -251,11 +254,12 @@ private:
 
 public:
   static void register_with_read_factory();
-  virtual void write_datagram(BamWriter *manager, Datagram &dg);
+  virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
+  virtual int complete_pointers(TypedWritable **plist, BamReader *manager) override;
 
 protected:
   static TypedWritable *make_from_bam(const FactoryParams &params);
-  virtual void fillin(DatagramIterator &scan, BamReader *manager);
+  void fillin(DatagramIterator &scan, BamReader *manager) override;
 
 public:
   static TypeHandle get_class_type() {

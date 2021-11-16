@@ -58,8 +58,7 @@ init_type() {
   }
 
   TypedWritable::init_type();
-  ::register_type(_type_handle, "ShaderType",
-                  TypedWritable::get_class_type());
+  ::register_type(_type_handle, "ShaderType", TypedWritable::get_class_type());
 
   ::register_type(Scalar::_type_handle, "ShaderType::Scalar", _type_handle);
   ::register_type(Vector::_type_handle, "ShaderType::Vector", _type_handle);
@@ -86,6 +85,56 @@ init_type() {
   Image::register_with_read_factory();
   Sampler::register_with_read_factory();
   SampledImage::register_with_read_factory();
+}
+
+/**
+ * Tells the BamReader how to create objects of type ShaderType.
+ */
+void ShaderType::
+register_with_read_factory() {
+  WritableFactory *factory = BamReader::get_factory();
+  factory->register_factory(Scalar::_type_handle, Scalar::make_from_bam);
+  factory->register_factory(Vector::_type_handle, Vector::make_from_bam);
+  factory->register_factory(Matrix::_type_handle, Matrix::make_from_bam);
+  factory->register_factory(Struct::_type_handle, Struct::make_from_bam);
+  factory->register_factory(Array::_type_handle, Array::make_from_bam);
+  factory->register_factory(Image::_type_handle, Image::make_from_bam);
+  factory->register_factory(Sampler::_type_handle, Sampler::make_from_bam);
+  factory->register_factory(SampledImage::_type_handle, SampledImage::make_from_bam);
+}
+
+/**
+ * Some objects require all of their nested pointers to have been completed
+ * before the objects themselves can be completed.  If this is the case,
+ * override this method to return true, and be careful with circular
+ * references (which would make the object unreadable from a bam file).
+ */
+bool ShaderType::
+require_fully_complete() const {
+  return true;
+}
+
+/**
+ * Called immediately after complete_pointers(), this gives the object a
+ * chance to adjust its own pointer if desired.  Most objects don't change
+ * pointers after completion, but some need to.
+ *
+ * Once this function has been called, the old pointer will no longer be
+ * accessed.
+ */
+TypedWritable *ShaderType::
+change_this(TypedWritable *old_ptr, BamReader *manager) {
+  nassertr(_registered_types != nullptr, old_ptr);
+
+  ShaderType *old_type = (ShaderType *)old_ptr;
+  Registry::iterator it = _registered_types->find(old_type);
+  if (it != _registered_types->end()) {
+    delete old_type;
+    return (ShaderType *)*it;
+  }
+
+  _registered_types->insert(old_type);
+  return old_type;
 }
 
 /**
@@ -219,6 +268,31 @@ get_align_bytes() const {
 }
 
 /**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void ShaderType::Scalar::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  dg.add_uint8(_scalar_type);
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
+ */
+TypedWritable *ShaderType::Scalar::
+make_from_bam(const FactoryParams &params) {
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+
+  ScalarType scalar_type = (ScalarType)scan.get_uint8();
+  return (ShaderType *)ShaderType::register_type(ShaderType::Scalar(scalar_type));
+}
+
+/**
  * Returns true if this type contains the given scalar type.
  */
 bool ShaderType::Vector::
@@ -331,6 +405,33 @@ int ShaderType::Vector::
 get_align_bytes() const {
   int component_align = (_scalar_type == ST_double) ? 8 : 4;
   return component_align * ((_num_components == 3) ? 4 : _num_components);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void ShaderType::Vector::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  dg.add_uint8(_scalar_type);
+  dg.add_uint32(_num_components);
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
+ */
+TypedWritable *ShaderType::Vector::
+make_from_bam(const FactoryParams &params) {
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+
+  ScalarType scalar_type = (ScalarType)scan.get_uint8();
+  uint32_t num_components = scan.get_uint32();
+  return (ShaderType *)ShaderType::register_type(ShaderType::Vector(scalar_type, num_components));
 }
 
 /**
@@ -448,6 +549,35 @@ get_align_bytes() const {
 int ShaderType::Matrix::
 get_num_interface_locations() const {
   return _num_rows;
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void ShaderType::Matrix::
+write_datagram(BamWriter *manager, Datagram &dg) {
+  dg.add_uint8(_scalar_type);
+  dg.add_uint32(_num_rows);
+  dg.add_uint32(_num_columns);
+}
+
+/**
+ * This function is called by the BamReader's factory when a new object of
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
+ */
+TypedWritable *ShaderType::Matrix::
+make_from_bam(const FactoryParams &params) {
+  DatagramIterator scan;
+  BamReader *manager;
+
+  parse_params(params, scan, manager);
+
+  ScalarType scalar_type = (ScalarType)scan.get_uint8();
+  uint32_t num_rows = scan.get_uint32();
+  uint32_t num_columns = scan.get_uint32();
+  return (ShaderType *)ShaderType::register_type(ShaderType::Matrix(scalar_type, num_rows, num_columns));
 }
 
 /**
@@ -582,24 +712,13 @@ get_num_parameter_locations() const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Struct.
- */
-void ShaderType::Struct::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
 void ShaderType::Struct::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
   dg.add_uint32(_members.size());
-  for (size_t i = 0; i < _members.size(); i++) {
-    const Member &member = _members[i];
+  for (const Member &member : _members) {
     manager->write_pointer(dg, member.type);
     dg.add_string(member.name);
     dg.add_uint32(member.offset);
@@ -607,57 +726,48 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 }
 
 /**
- * Called after the object is otherwise completely read from a Bam file, this
- * function's job is to store the pointers that were retrieved from the Bam
- * file for each pointer object written.  The return value is the number of
- * pointers processed from the list.
+ * Receives an array of pointers, one for each time manager->read_pointer()
+ * was called in fillin(). Returns the number of pointers processed.
  */
 int ShaderType::Struct::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
-  int index = ShaderType::complete_pointers(p_list, manager);
-  for (size_t i = 0; i < _members.size(); i++) {
-    if (p_list[index] != nullptr) {
-      _members[i].type = (const ShaderType *)p_list[index];
-    }
-    index++;
+  int pi = ShaderType::complete_pointers(p_list, manager);
+
+  for (Member &member : _members) {
+    member.type = (ShaderType *)p_list[pi++];
+    nassertd(member.type->is_registered()) continue;
   }
-  return index;
+
+  return pi;
 }
 
 /**
  * This function is called by the BamReader's factory when a new object of
- * type Struct is encountered in the Bam file.  It should create the
- * Struct and extract its information from the file.
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
  */
 TypedWritable *ShaderType::Struct::
 make_from_bam(const FactoryParams &params) {
-  ShaderType::Struct type;
   DatagramIterator scan;
   BamReader *manager;
 
   parse_params(params, scan, manager);
-  type.fillin(scan, manager);
 
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Struct.
- */
-void ShaderType::Struct::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
+  ShaderType::Struct *struct_type = new ShaderType::Struct;
 
   size_t num_members = scan.get_uint32();
-  for (size_t i = 0; i < num_members; i++) {
-    Member member;
-    member.type = nullptr;
+  struct_type->_members.resize(num_members);
+  for (size_t i = 0; i < num_members; ++i) {
     manager->read_pointer(scan);
+
+    Member &member = struct_type->_members[i];
+    member.type = nullptr;
     member.name = scan.get_string();
     member.offset = scan.get_uint32();
-    _members.push_back(member);
   }
+
+  manager->register_change_this(change_this, struct_type);
+  return struct_type;
 }
 
 /**
@@ -764,68 +874,45 @@ get_num_parameter_locations() const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Array.
- */
-void ShaderType::Array::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
 void ShaderType::Array::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
   manager->write_pointer(dg, _element_type);
   dg.add_uint32(_num_elements);
 }
 
 /**
- * Called after the object is otherwise completely read from a Bam file, this
- * function's job is to store the pointers that were retrieved from the Bam
- * file for each pointer object written.  The return value is the number of
- * pointers processed from the list.
+ * Receives an array of pointers, one for each time manager->read_pointer()
+ * was called in fillin(). Returns the number of pointers processed.
  */
 int ShaderType::Array::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
-  int index = ShaderType::complete_pointers(p_list, manager);
-  if (p_list[index] != nullptr) {
-    _element_type = (const ShaderType *)p_list[index];
-  }
-  index++;
-  return index;
+  int pi = ShaderType::complete_pointers(p_list, manager);
+  _element_type = (ShaderType *)p_list[pi++];
+  nassertr(_element_type->is_registered(), pi);
+  return pi;
 }
 
 /**
  * This function is called by the BamReader's factory when a new object of
- * type Array is encountered in the Bam file.  It should create the
- * Array and extract its information from the file.
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
  */
 TypedWritable *ShaderType::Array::
 make_from_bam(const FactoryParams &params) {
-  ShaderType::Array type(nullptr, 0);
   DatagramIterator scan;
   BamReader *manager;
 
   parse_params(params, scan, manager);
-  type.fillin(scan, manager);
-
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Array.
- */
-void ShaderType::Array::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
 
   manager->read_pointer(scan);
-  _num_elements = scan.get_uint32();
+  uint32_t num_elements = scan.get_uint32();
+  ShaderType *type = new ShaderType::Array(nullptr, num_elements);
+
+  manager->register_change_this(change_this, type);
+  return type;
 }
 
 /**
@@ -861,54 +948,33 @@ compare_to_impl(const ShaderType &other) const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Image.
- */
-void ShaderType::Image::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
 void ShaderType::Image::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
-  dg.add_int8(_texture_type);
-  dg.add_int8(_sampled_type);
-  dg.add_int8((int8_t)_access);
+  dg.add_uint8(_texture_type);
+  dg.add_uint8(_sampled_type);
+  dg.add_uint8((uint8_t)_access);
 }
 
 /**
  * This function is called by the BamReader's factory when a new object of
- * type Image is encountered in the Bam file.  It should create the
- * Image and extract its information from the file.
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
  */
 TypedWritable *ShaderType::Image::
 make_from_bam(const FactoryParams &params) {
-  ShaderType::Image type(Texture::TT_2d_texture, ShaderType::ST_uint, Access::unknown);
   DatagramIterator scan;
   BamReader *manager;
 
   parse_params(params, scan, manager);
-  type.fillin(scan, manager);
 
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
+  Texture::TextureType texture_type = (Texture::TextureType)scan.get_uint8();
+  ScalarType sampled_type = (ScalarType)scan.get_uint8();
+  Access access = (Access)scan.get_uint8();
 
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Image.
- */
-void ShaderType::Image::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
-
-  _texture_type = (Texture::TextureType)scan.get_int8();
-  _sampled_type = (ShaderType::ScalarType)scan.get_int8();
-  _access = (Access)scan.get_int8();
+  return (ShaderType *)ShaderType::register_type(ShaderType::Image(texture_type, sampled_type, access));
 }
 
 /**
@@ -930,28 +996,13 @@ compare_to_impl(const ShaderType &other) const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Sampler.
- */
-void ShaderType::Sampler::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
  * This function is called by the BamReader's factory when a new object of
- * type Sampler is encountered in the Bam file.  It should create the
- * Sampler and extract its information from the file.
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
  */
 TypedWritable *ShaderType::Sampler::
 make_from_bam(const FactoryParams &params) {
-  ShaderType::Sampler type;
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  type.fillin(scan, manager);
-
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
+  return (ShaderType *)ShaderType::sampler_type;
 }
 
 /**
@@ -990,54 +1041,32 @@ compare_to_impl(const ShaderType &other) const {
 }
 
 /**
- * Tells the BamReader how to create objects of type SampledImage.
- */
-void ShaderType::SampledImage::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
  * Writes the contents of this object to the datagram for shipping out to a
  * Bam file.
  */
 void ShaderType::SampledImage::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
-  dg.add_int8(_texture_type);
-  dg.add_int8(_sampled_type);
+  dg.add_uint8(_texture_type);
+  dg.add_uint8(_sampled_type);
   dg.add_bool(_shadow);
 }
 
 /**
  * This function is called by the BamReader's factory when a new object of
- * type SampledImage is encountered in the Bam file.  It should create the
- * SampledImage and extract its information from the file.
+ * type ShaderType is encountered in the Bam file.  It should create the
+ * ShaderType and extract its information from the file.
  */
 TypedWritable *ShaderType::SampledImage::
 make_from_bam(const FactoryParams &params) {
-  ShaderType::SampledImage type(Texture::TT_2d_texture, ShaderType::ST_uint);
   DatagramIterator scan;
   BamReader *manager;
 
   parse_params(params, scan, manager);
-  type.fillin(scan, manager);
 
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new SampledImage.
- */
-void ShaderType::SampledImage::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
-
-  _texture_type = (Texture::TextureType)scan.get_int8();
-  _sampled_type = (ShaderType::ScalarType)scan.get_int8();
-  _shadow = scan.get_bool();
+  Texture::TextureType texture_type = (Texture::TextureType)scan.get_uint8();
+  ScalarType sampled_type = (ScalarType)scan.get_uint8();
+  bool shadow = scan.get_bool();
+  return (ShaderType *)ShaderType::register_type(ShaderType::SampledImage(texture_type, sampled_type, shadow));
 }
 
 #endif  // CPPPARSER

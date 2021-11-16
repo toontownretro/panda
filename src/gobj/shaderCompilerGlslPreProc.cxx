@@ -112,6 +112,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
   int ext_google_line = 0;
   bool had_include = false;
   bool had_version = false;
+  bool had_code = false;
   int lineno = 0;
   bool write_line_directive = (fileno != 0);
 
@@ -201,6 +202,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
         write_line_directive = false;
       }
       out << line << "\n";
+      had_code = true;
       continue;
     }
 
@@ -246,6 +248,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
         // Restore the line counter.
         write_line_directive = true;
         had_include = true;
+        had_code = true;
         continue;
 
       } else if (strcmp(pragma, "once") == 0) {
@@ -385,6 +388,7 @@ r_preprocess_source(ShaderModuleGlsl *module,
       // Restore the line counter.
       write_line_directive = true;
       had_include = true;
+      had_code = true;
       continue;
 
     } else if (ext_google_line > 0 && strcmp(directive, "line") == 0) {
@@ -418,9 +422,16 @@ r_preprocess_source(ShaderModuleGlsl *module,
     out << line << "\n";
   }
 
-  if (fileno == 0 && !had_version) {
-    shader_cat.warning()
-      << "GLSL shader " << fn << " does not contain a #version line!\n";
+  if (fileno == 0) {
+    if (!had_code) {
+      shader_cat.error()
+        << "GLSL shader " << fn << " does not contain any code!\n";
+      return false;
+    }
+    if (!had_version) {
+      shader_cat.warning()
+        << "GLSL shader " << fn << " does not contain a #version line!\n";
+    }
   }
 
   return true;

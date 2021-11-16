@@ -282,6 +282,8 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 
   vector_uchar code;
   if (!VirtualFile::simple_read_file(&in, code)) {
+    shader_cat.error()
+      << "Failed to read " << stage << " shader from stream.\n";
     return nullptr;
   }
 
@@ -502,7 +504,7 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
     return nullptr;
   }
 
-  return new ShaderModuleSpirV(stage, std::move(optimized));
+  return new ShaderModuleSpirV(stage, std::move(optimized), record);
 }
 
 /**
@@ -599,6 +601,10 @@ preprocess_glsl(vector_uchar &code, int &glsl_version, const Filename &source_fi
           p[-3] = '3';
           p[-2] = '3';
           p[-1] = '0';
+        }
+        else if (glsl_version < 310) {
+          // We're done here, the rest is handled by the GLSL preprocessor.
+          return true;
         }
       }
       else if (directive_size == 6 && glsl_preprocess &&
