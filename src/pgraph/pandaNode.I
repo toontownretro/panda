@@ -799,6 +799,24 @@ get_sort() const {
 }
 
 /**
+ * Returns the net collide mask of this child.  Requires that update_cached()
+ * has been called on the parent.
+ */
+INLINE CollideMask PandaNode::DownConnection::
+get_net_collide_mask() const {
+  return _net_collide_mask;
+}
+
+/**
+ * Returns the external bounding volume of this child.  Requires that
+ * update_cached() has been called on the parent.
+ */
+INLINE const GeometricBoundingVolume *PandaNode::DownConnection::
+get_bounds() const {
+  return _external_bounds;
+}
+
+/**
  * Compares the running draw mask computed during a traversal with this child's
  * net draw masks.  Returns true if the child should be traversed into, or
  * false if there is nothing at this level or below that will be visible to
@@ -1409,6 +1427,18 @@ get_child(int n) const {
   CPT(PandaNode::Down) down = _cdata->get_down();
   nassertr(n >= 0 && n < (int)down->size(), nullptr);
   return (*down)[n].get_child();
+}
+
+/**
+ * Returns the nth child node of this node.  See get_num_children().  Also see
+ * get_children(), if your intention is to iterate through the complete list
+ * of children; get_children() is preferable in this case.
+ */
+INLINE const PandaNode::DownConnection &PandaNodePipelineReader::
+get_child_connection(int n) const {
+  CPT(PandaNode::Down) down = _cdata->get_down();
+  //nassertr(n >= 0 && n < (int)down->size(), nullptr);
+  return (*down)[n];
 }
 
 /**

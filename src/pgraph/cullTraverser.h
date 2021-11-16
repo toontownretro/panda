@@ -79,26 +79,33 @@ PUBLISHED:
   INLINE bool has_custom_is_in_view() const;
 
   INLINE bool get_effective_incomplete_render() const;
-
-  void traverse(const NodePath &root);
-  virtual void traverse_below(CullTraverserData &data);
-  INLINE void do_traverse(CullTraverserData &data);
-
-  virtual int custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
-                                const TransformState *net_transform);
-
-  virtual void end_traverse();
+  INLINE bool get_fake_view_frustum_cull() const;
 
   INLINE static void flush_level();
+
+  void traverse(const NodePath &root);
+  void do_traverse(CullTraverserData &data);
+  INLINE void traverse_below(CullTraverserData &data);
+
+  virtual void end_traverse();
 
   void draw_bounding_volume(const BoundingVolume *vol,
                             const TransformState *internal_transform) const;
 
 public:
-  INLINE void traverse_child(const CullTraverserData &data, PandaNode *child);
-  INLINE void traverse_child(const CullTraverserData &data, PandaNode *child, const TransformState *net_transform, const RenderState *state);
-  INLINE void traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child);
-  INLINE void traverse_child(const CullTraverserData &data, const PandaNode::DownConnection &child, const RenderState *state);
+  INLINE void traverse_down(const CullTraverserData &data, PandaNode *child);
+  INLINE void traverse_down(const CullTraverserData &data, PandaNode *child,
+                            const TransformState *net_transform,
+                            const RenderState *state);
+  INLINE void traverse_down(const CullTraverserData &data,
+                            const PandaNode::DownConnection &child);
+  INLINE void traverse_down(const CullTraverserData &data,
+                            const PandaNode::DownConnection &child,
+                            const RenderState *state);
+
+  void do_fake_cull(const CullTraverserData &data, PandaNode *child,
+                    const TransformState *net_transform,
+                    const RenderState *state);
 
 public:
   // Statistics
@@ -113,14 +120,15 @@ protected:
   PT(Geom) make_tight_bounds_viz(PandaNode *node) const;
   static LVertex compute_point(const BoundingSphere *sphere,
                                PN_stdfloat latitude, PN_stdfloat longitude);
-  static CPT(RenderState) get_bounds_outer_viz_state();
-  static CPT(RenderState) get_bounds_inner_viz_state();
-  static CPT(RenderState) get_depth_offset_state();
+  static const RenderState *get_bounds_outer_viz_state();
+  static const RenderState *get_bounds_inner_viz_state();
+  static const RenderState *get_depth_offset_state();
 
   GraphicsStateGuardianBase *_gsg;
   Thread *_current_thread;
   PT(SceneSetup) _scene_setup;
   DrawMask _camera_mask;
+  bool _fake_view_frustum_cull;
   bool _has_tag_state_key;
   std::string _tag_state_key;
   CPT(RenderState) _initial_state;

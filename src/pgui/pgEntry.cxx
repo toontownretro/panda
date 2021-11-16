@@ -184,7 +184,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   }
 
   // Now render the text.
-  trav->traverse_child(data, _text_render_root.node());
+  trav->traverse_down(data, _text_render_root.node());
 
   // Now continue to render everything else below this node.
   return true;

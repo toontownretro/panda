@@ -43,18 +43,18 @@ class EXPCL_PANDA_PGRAPH CullTraverserData {
 public:
   INLINE CullTraverserData(const NodePath &start,
                            const TransformState *net_transform,
-                           const RenderState *state,
+                           CPT(RenderState) state,
                            GeometricBoundingVolume *view_frustum,
                            Thread *current_thread);
   INLINE CullTraverserData(const CullTraverserData &parent,
                            PandaNode *child,
                            const TransformState *net_transform,
-                           const RenderState *state,
+                           CPT(RenderState) state,
                            GeometricBoundingVolume *view_frustum);
   INLINE CullTraverserData(const CullTraverserData &parent,
                            PandaNodePipelineReader &&node_reader,
                            const TransformState *net_transform,
-                           const RenderState *state,
+                           CPT(RenderState) state,
                            GeometricBoundingVolume *view_frustum);
 
 PUBLISHED:
@@ -83,6 +83,7 @@ PUBLISHED:
   MAKE_PROPERTY(node_path, get_node_path);
 
 public:
+  bool is_instance_in_view(const TransformState *instance_transform, const DrawMask &camera_mask) const;
   INLINE int is_child_in_view(const PandaNodePipelineReader &node_reader, const DrawMask &camera_mask) const;
   INLINE int is_child_in_view(const PandaNode::DownConnection &child, const DrawMask &camera_mask) const;
 
@@ -106,8 +107,6 @@ public:
 
 private:
   PT(NodePathComponent) r_get_node_path() const;
-
-  static const RenderState *get_fake_view_frustum_cull_state();
 };
 
 /* okcircular */

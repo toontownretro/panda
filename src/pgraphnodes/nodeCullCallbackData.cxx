@@ -55,13 +55,6 @@ upcall() {
     }
   }
 
-  // Now visit all the node's children.
-  PandaNodePipelineReader *node_reader = _data.node_reader();
-  PandaNode::Children children = node_reader->get_children();
-  node_reader->release();
-  int num_children = children.get_num_children();
-  for (int i = 0; i < num_children; ++i) {
-    const PandaNode::DownConnection &child = children.get_child_connection(i);
-    _trav->traverse_child(_data, child, _data._state);
-  }
+  // Now traverse below.
+  _trav->traverse_below(_data);
 }

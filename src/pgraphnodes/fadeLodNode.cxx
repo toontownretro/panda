@@ -170,14 +170,14 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           // drawing the old LOD opaque with z writing on
           if (out_child >= 0 && out_child < children.get_num_children()) {
             const PandaNode::DownConnection &child = children.get_child_connection(out_child);
-            trav->traverse_child(data, child,
+            trav->traverse_down(data, child,
               data._state->compose(get_fade_1_old_state()));
           }
 
           if (in_child >= 0 && in_child < children.get_num_children()) {
             const PandaNode::DownConnection &child = children.get_child_connection(in_child);
             PN_stdfloat in_alpha = elapsed / half_fade_time;
-            trav->traverse_child(data, child,
+            trav->traverse_down(data, child,
               data._state->compose(get_fade_1_new_state(in_alpha)));
           }
 
@@ -186,14 +186,14 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           // draw the opaque new LOD with z write on
           if (in_child >= 0 && in_child < children.get_num_children()) {
             const PandaNode::DownConnection &child = children.get_child_connection(in_child);
-            trav->traverse_child(data, child,
+            trav->traverse_down(data, child,
               data._state->compose(get_fade_2_new_state()));
           }
 
           if (out_child >= 0 && out_child < children.get_num_children()) {
             const PandaNode::DownConnection &child = children.get_child_connection(out_child);
             PN_stdfloat out_alpha = 1.0f - (elapsed - half_fade_time) / half_fade_time;
-            trav->traverse_child(data, child,
+            trav->traverse_down(data, child,
               data._state->compose(get_fade_2_old_state(out_alpha)));
           }
         }
@@ -208,7 +208,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     Children children = get_children();
     if (index >= 0 && index < children.get_num_children()) {
       const PandaNode::DownConnection &child = children.get_child_connection(index);
-      trav->traverse_child(data, child, data._state);
+      trav->traverse_down(data, child, data._state);
     }
   }
 

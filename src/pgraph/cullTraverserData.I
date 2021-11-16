@@ -17,24 +17,19 @@
 INLINE CullTraverserData::
 CullTraverserData(const NodePath &start,
                   const TransformState *net_transform,
-                  const RenderState *state,
+                  CPT(RenderState) state,
                   GeometricBoundingVolume *view_frustum,
                   Thread *current_thread) :
   _next(nullptr),
   _start(start._head),
   _node_reader(start.node(), current_thread),
   _net_transform(net_transform),
-  _state(state),
+  _state(std::move(state)),
   _view_frustum(view_frustum),
-  _cull_planes(CullPlanes::make_empty()),
-  _cull_lights(CullLights::make_empty()),
   _draw_mask(DrawMask::all_on()),
   _portal_depth(0),
   _keep_testing_custom_in_view(true)
 {
-  // Only update the bounding volume if we're going to end up needing it.
-  bool check_bounds = (view_frustum != nullptr);
-  _node_reader.check_cached(check_bounds);
 }
 
 /**
@@ -44,7 +39,7 @@ CullTraverserData(const NodePath &start,
 INLINE CullTraverserData::
 CullTraverserData(const CullTraverserData &parent, PandaNode *child,
                   const TransformState *net_transform,
-                  const RenderState *state,
+                  CPT(RenderState) state,
                   GeometricBoundingVolume *view_frustum) :
   _next(&parent),
 #ifdef _DEBUG
@@ -52,12 +47,32 @@ CullTraverserData(const CullTraverserData &parent, PandaNode *child,
 #endif
   _node_reader(child, parent._node_reader.get_current_thread()),
   _net_transform(net_transform),
-  _state(state),
+  _state(std::move(state)),
   _view_frustum(view_frustum),
-  _cull_planes(parent._cull_planes),
-  _cull_lights(parent._cull_lights),
+  _instances(parent._instances),
   _draw_mask(parent._draw_mask),
-  _portal_depth(parent._portal_depth),
+  _portal_depth(parent._portal_depth)
+{
+}
+
+/**
+ * This constructor creates a CullTraverserData object that reflects the next
+ * node down in the traversal.
+ */
+INLINE CullTraverserData::
+CullTraverserData(const CullTraverserData &parent,
+                  PandaNodePipelineReader &&node_reader,
+                  const TransformState *net_transform,
+                  CPT(RenderState) state,
+                  GeometricBoundingVolume *view_frustum) :
+  _next(&parent),
+#ifdef _DEBUG
+  _start(nullptr),
+#endif
+  _node_reader(std::move(node_reader)),
+  _net_transform(net_transform),
+  _state(std::move(state)),
+  _view_frustum(view_frustum),
   _instances(parent._instances),
   _keep_testing_custom_in_view(parent._keep_testing_custom_in_view)
 {
@@ -93,11 +108,6 @@ CullTraverserData(const CullTraverserData &parent,
   _instances(parent._instances),
   _keep_testing_custom_in_view(parent._keep_testing_custom_in_view)
 {
-  // Only update the bounding volume if we're going to end up needing it.
-  bool check_bounds = (!_cull_planes->is_empty()) ||
-                    (!_cull_lights->is_empty()) ||
-                    (_view_frustum != nullptr);
-  _node_reader.check_cached(check_bounds);
 }
 
 /**
@@ -170,7 +180,7 @@ get_net_transform(const CullTraverser *) const {
  */
 INLINE int CullTraverserData::
 is_in_view(const DrawMask &camera_mask) const {
-  bool check_bounds = (_view_frustum != nullptr);
+  bool check_bounds = (_view_frustum != nullptr || _cull_planes != nullptr);
   _node_reader.check_cached(check_bounds);
 
   if (!_node_reader.compare_draw_mask(_draw_mask, camera_mask)) {
@@ -183,7 +193,7 @@ is_in_view(const DrawMask &camera_mask) const {
     return BoundingVolume::IF_no_intersection;
   }
 
-  if (_view_frustum != nullptr && !fake_view_frustum_cull) {
+  if (_view_frustum != nullptr) {
     const GeometricBoundingVolume *node_gbv = _node_reader.get_bounds()->as_geometric_bounding_volume();
     nassertr(node_gbv != nullptr, BoundingVolume::IF_no_intersection);
 
@@ -199,20 +209,22 @@ is_in_view(const DrawMask &camera_mask) const {
  */
 INLINE int CullTraverserData::
 is_child_in_view(const PandaNodePipelineReader &node_reader, const DrawMask &camera_mask) const {
-  bool check_bounds = (_view_frustum != nullptr);
+  bool check_bounds = (_view_frustum != nullptr || _cull_planes != nullptr);
   node_reader.check_cached(check_bounds);
 
   if (!node_reader.compare_draw_mask(_draw_mask, camera_mask)) {
     // If there are no draw bits in common with the camera, the node is out.
     return BoundingVolume::IF_no_intersection;
   }
+  return BoundingVolume::IF_possible;
+}
 
   if (_node_reader.get_transform()->is_invalid()) {
     // If the transform is invalid, forget it.
     return BoundingVolume::IF_no_intersection;
   }
 
-  if (_view_frustum != nullptr && !fake_view_frustum_cull) {
+  if (_view_frustum != nullptr) {
     const GeometricBoundingVolume *node_gbv = node_reader.get_bounds()->as_geometric_bounding_volume();
     nassertr(node_gbv != nullptr, BoundingVolume::IF_no_intersection);
 
@@ -227,12 +239,14 @@ is_child_in_view(const PandaNodePipelineReader &node_reader, const DrawMask &cam
  */
 INLINE int CullTraverserData::
 is_child_in_view(const PandaNode::DownConnection &child, const DrawMask &camera_mask) const {
+  // No need to call check_cached here, since we presumably already called it
+  // on the parent.
   if (!child.compare_draw_mask(_draw_mask, camera_mask)) {
     // If there are no draw bits in common with the camera, the node is out.
     return BoundingVolume::IF_no_intersection;
   }
 
-  if (_view_frustum != nullptr && !fake_view_frustum_cull) {
+  if (_view_frustum != nullptr) {
     const GeometricBoundingVolume *node_gbv = child.get_bounds();
     nassertr(node_gbv != nullptr, BoundingVolume::IF_no_intersection);
 

@@ -15,9 +15,6 @@
 #include "cullTraverser.h"
 #include "config_pgraph.h"
 #include "pandaNode.h"
-#include "colorAttrib.h"
-#include "textureAttrib.h"
-#include "renderModeAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "lightAttrib.h"
 #include "boundingPlane.h"
@@ -65,10 +62,28 @@ apply_transform_and_state(CullTraverser *trav) {
   }
 
   if (clip_plane_cull) {
-    _cull_planes = _cull_planes->apply_state(trav, this,
-      (const ClipPlaneAttrib *)node_state->get_attrib(ClipPlaneAttrib::get_class_slot()),
-      (const ClipPlaneAttrib *)_node_reader.get_off_clip_planes(),
-      (const OccluderEffect *)node_effects->get_effect(OccluderEffect::get_class_type()));
+    const ClipPlaneAttrib *cpa = (const ClipPlaneAttrib *)
+      node_state->get_attrib(ClipPlaneAttrib::get_class_slot());
+    const OccluderEffect *occluders = (const OccluderEffect *)
+      node_effects->get_effect(OccluderEffect::get_class_type());
+
+    if (cpa != nullptr || occluders != nullptr) {
+      CullPlanes::apply_state(_cull_planes, trav, this, cpa,
+        (const ClipPlaneAttrib *)_node_reader.get_off_clip_planes(),
+        occluders);
+    }
+  }
+
+  const FogAttrib *fog_attr;
+  if (node_state->get_attrib(fog_attr)) {
+    Fog *fog = fog_attr->get_fog();
+    if (fog != nullptr) {
+      // If we just introduced a FogAttrib here, call adjust_to_camera()
+      // now.  This maybe isn't the perfect time to call it, but it's good
+      // enough; and at this time we have all the information we need for
+      // it.
+      fog->adjust_to_camera(trav->get_camera_transform());
+    }
   }
 
   if (light_cull) {
@@ -94,39 +109,88 @@ apply_transform(const TransformState *node_transform) {
 
     _net_transform = _net_transform->compose(node_transform);
 
-    if (_view_frustum != nullptr || !_cull_planes->is_empty() || !_cull_lights->is_empty()) {
+    if (_view_frustum != nullptr || _cull_planes != nullptr) {
       // We need to move the viewing frustums into the node's coordinate space
       // by applying the node's inverse transform.
-      if (node_transform->is_singular()) {
-        // But we can't invert a singular transform!  Instead of trying, we'll
-        // just give up on frustum culling from this point down.
-        _view_frustum = nullptr;
-        _cull_planes = CullPlanes::make_empty();
-        _cull_lights = CullLights::make_empty();
-
-      } else {
-        CPT(TransformState) inv_transform =
-          node_transform->invert_compose(TransformState::make_identity());
-
+      const LMatrix4 *inverse_mat = node_transform->get_inverse_mat();
+      if (inverse_mat != nullptr) {
         // Copy the bounding volumes for the frustums so we can transform
         // them.
         if (_view_frustum != nullptr) {
           _view_frustum = _view_frustum->make_copy()->as_geometric_bounding_volume();
           nassertv(_view_frustum != nullptr);
 
-          _view_frustum->xform(inv_transform->get_mat());
+          _view_frustum->xform(*inverse_mat);
         }
 
-        if (!_cull_planes->is_empty()) {
-          _cull_planes = _cull_planes->xform(inv_transform->get_mat());
+        if (_cull_planes != nullptr) {
+          _cull_planes = _cull_planes->xform(*inverse_mat);
         }
-
-        if (!_cull_lights->is_empty()) {
-          _cull_lights = _cull_lights->xform(inv_transform->get_mat());
-        }
+      }
+      else {
+        // But we can't invert a singular transform!  Instead of trying, we'll
+        // just give up on frustum culling from this point down.
+        pgraph_cat.warning()
+          << "Singular transformation detected on node: " << get_node_path() << "\n";
+        _view_frustum = nullptr;
+        _cull_planes = nullptr;
       }
     }
   }
+}
+
+/**
+ * Returns intersection flags if any of the children under the current node are
+ * in view if first transformed by the given transform, false otherwise.
+ */
+bool CullTraverserData::
+is_instance_in_view(const TransformState *instance_transform, const DrawMask &camera_mask) const {
+  PT(GeometricBoundingVolume) view_frustum_p;
+  const GeometricBoundingVolume *view_frustum = nullptr;
+
+  if (_view_frustum != nullptr) {
+    if (!instance_transform->is_identity()) {
+      // We need to move the viewing frustums into the node's coordinate space
+      // by applying the node's inverse transform.
+      const LMatrix4 *inverse_mat = instance_transform->get_inverse_mat();
+      if (inverse_mat != nullptr) {
+        // Copy the bounding volumes for the frustums so we can transform them.
+        view_frustum_p = _view_frustum->make_copy()->as_geometric_bounding_volume();
+        nassertr(view_frustum_p != nullptr, false);
+
+        view_frustum_p->xform(*inverse_mat);
+        view_frustum = view_frustum_p;
+      } else {
+        // Don't render instances with a singular transformation.
+        return false;
+      }
+    } else {
+      view_frustum = _view_frustum;
+    }
+  }
+
+  PandaNode::Children children = _node_reader.get_children();
+  int num_children = children.get_num_children();
+  for (int i = 0; i < num_children; ++i) {
+    const PandaNode::DownConnection &child = children.get_child_connection(i);
+
+    if (!child.compare_draw_mask(_draw_mask, camera_mask)) {
+      // If there are no draw bits in common with the camera, the node is out.
+      continue;
+    }
+
+    if (view_frustum == nullptr) {
+      return true;
+    }
+
+    const GeometricBoundingVolume *node_gbv = child.get_bounds();
+    nassertd(node_gbv != nullptr) continue;
+
+    if (view_frustum->contains(node_gbv)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -169,11 +233,6 @@ r_get_node_path() const {
  */
 bool CullTraverserData::
 apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_gbv) {
-  if (_node_reader.get_transform()->is_invalid()) {
-    // If the transform is invalid, forget it.
-    return false;
-  }
-
   if (!planes->is_empty()) {
     // Also cull against the current clip planes.
     int result;
@@ -181,7 +240,7 @@ apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_
 
     if (pgraph_cat.is_spam()) {
       pgraph_cat.spam()
-        << get_node_path() << " cull planes cull result = " << std::hex
+        << get_node_path() << " cull lights cull result = " << std::hex
         << result << std::dec << "\n";
       new_planes->write(pgraph_cat.spam(false));
     }
@@ -196,56 +255,8 @@ apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_
       // removed all of the clip planes and occluders.
       nassertr(new_planes->is_empty(), true);
     }
-    else if (!_node_reader.is_final()) {
+    else if (!_node_reader.is_final() && !new_planes->is_empty()) {
       _cull_planes = std::move(new_planes);
     }
   }
-
-  return true;
-}
-
-/**
- * Removes any lights from the state that do not intersect with the indicated
- * bounding volume.
- */
-void CullTraverserData::
-apply_cull_lights(const CullLights *lights, const GeometricBoundingVolume *node_gbv) {
-  if (!lights->is_empty()) {
-    int result;
-    CPT(CullLights) new_lights = lights->do_cull(result, _state, node_gbv);
-
-    if (pgraph_cat.is_spam()) {
-      pgraph_cat.spam()
-        << get_node_path() << " cull lights cull result = " << std::hex
-        << result << std::dec << "\n";
-      new_lights->write(pgraph_cat.spam(false));
-    }
-
-    if (!_node_reader.is_final()) {
-      _cull_lights = std::move(new_lights);
-    }
-  }
-}
-
-/**
- * Returns a RenderState for rendering stuff in red wireframe, strictly for
- * the fake_view_frustum_cull effect.
- */
-const RenderState *CullTraverserData::
-get_fake_view_frustum_cull_state() {
-#ifdef NDEBUG
-  return nullptr;
-#else
-  // Once someone asks for this pointer, we hold its reference count and never
-  // free it.
-  static CPT(RenderState) state;
-  if (state == nullptr) {
-    state = RenderState::make
-      (ColorAttrib::make_flat(LColor(1.0f, 0.0f, 0.0f, 1.0f)),
-       TextureAttrib::make_all_off(),
-       RenderModeAttrib::make(RenderModeAttrib::M_wireframe),
-       RenderState::get_max_priority());
-  }
-  return state;
-#endif
 }

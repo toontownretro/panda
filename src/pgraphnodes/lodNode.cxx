@@ -163,7 +163,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       if (in_range) {
         // This switch level is in range.  Draw its children.
         const PandaNode::DownConnection &child = children.get_child_connection(index);
-        trav->traverse_child(data, child);
+        trav->traverse_down(data, child);
       }
     }
   }
@@ -191,13 +191,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       CPT(InstanceList) instances = data._instances->without(in_range[index]);
       if (!instances->empty()) {
         // At least one instance is visible in this switch level.
-        PandaNode *child = get_child(index);
-        if (child != nullptr) {
-          CullTraverserData next_data(data, child, data._net_transform,
-                                      data._state, data._view_frustum);
-          next_data._instances = instances;
-          trav->traverse_below(next_data);
-        }
+        const PandaNode::DownConnection &child = children.get_child_connection(index);
+        trav->traverse_down(data, child);
       }
     }
   }
@@ -482,7 +477,7 @@ show_switches_cull_callback(CullTraverser *trav, CullTraverserData &data) {
         Children children = get_children();
         if (index < children.get_num_children()) {
           const PandaNode::DownConnection &child = children.get_child_connection(index);
-          trav->traverse_child(data, child, data._state->compose(sw.get_viz_model_state()));
+          trav->traverse_down(data, child, data._state->compose(sw.get_viz_model_state()));
         }
 
         // And draw the spindle in this color.
