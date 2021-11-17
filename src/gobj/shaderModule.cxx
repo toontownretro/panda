@@ -37,28 +37,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 }
 
 /**
- * Writes the contents of the SpecializationConstant for shipping out to a Bam
- * file.
- */
-void ShaderModule::SpecializationConstant::
-write_datagram(Datagram &dg, BamWriter *manager) {
-  manager->write_pointer(dg, type);
-  dg.add_string(name->get_name());
-  dg.add_uint32(id);
-}
-
-/**
- * Reads the contents from the Datagram to re-create the SpecializationConstant
- * from a Bam file.
- */
-void ShaderModule::SpecializationConstant::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  manager->read_pointer(scan);
-  name = InternalName::make(scan.get_string());
-  id = scan.get_uint32();
-}
-
-/**
  *
  */
 ShaderModule::

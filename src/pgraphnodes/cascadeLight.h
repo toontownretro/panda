@@ -66,7 +66,6 @@ public:
   virtual void setup_shadow_map();
 
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data);
-  virtual bool is_renderable() const;
 
 private:
   // Used to access the near and far points in the array

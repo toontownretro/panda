@@ -248,7 +248,11 @@ do_traverse(CullTraverserData &data) {
  *
  * Returns BoundingVolume::IntersectionFlags.  IF_no_intersection means the
  * node is completely out of view and should not be traversed any further.
- * Otherwise, keep traversing down the node.
+ * IF_all means the node and all nodes below it are guaranteed to be in view
+ * from this point on, and the custom test no longer needs to be called for the
+ * rest of the subgraph.  IF_some means that the node is in view and the custom
+ * test should continue to be called for nodes below until IF_no_intersection
+ * or IF_all is returned.
  */
 int CullTraverser::
 custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,

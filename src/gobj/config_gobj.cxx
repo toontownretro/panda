@@ -680,6 +680,7 @@ init_libgobj() {
   ParamTextureSampler::register_with_read_factory();
   PerspectiveLens::register_with_read_factory();
   Shader::register_with_read_factory();
+  ShaderModuleGlsl::register_with_read_factory();
   ShaderModuleSpirV::register_with_read_factory();
   ShaderType::register_with_read_factory();
   SliderTable::register_with_read_factory();

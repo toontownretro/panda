@@ -682,21 +682,21 @@ read(const ShaderFile &sfile, BamCacheRecord *record) {
     std::istringstream in(source);
 
     PT(ShaderModule) module;
-    module = compiler->compile_now(Stage::vertex, in, fullpath, record);
+    module = compiler->compile_now(Stage::vertex, in, fullpath, ShaderCompiler::Options(), record);
     if (module == nullptr || !add_module(std::move(module))) {
       return false;
     }
     if (source.find("gshader") != string::npos) {
       in.clear();
       in.seekg(0);
-      module = compiler->compile_now(Stage::geometry, in, fullpath, record);
+      module = compiler->compile_now(Stage::geometry, in, fullpath, ShaderCompiler::Options(), record);
       if (module == nullptr || !add_module(std::move(module))) {
         return false;
       }
     }
     in.clear();
     in.seekg(0);
-    module = compiler->compile_now(Stage::fragment, in, fullpath, record);
+    module = compiler->compile_now(Stage::fragment, in, fullpath, ShaderCompiler::Options(), record);
     if (module == nullptr || !add_module(std::move(module))) {
       return false;
     }
@@ -818,7 +818,7 @@ do_read_source(Stage stage, const Filename &fn, BamCacheRecord *record) {
   ShaderCompiler *compiler = get_compiler(_language);
   nassertr(compiler != nullptr, false);
 
-  PT(ShaderModule) module = compiler->compile_now(stage, fn, record);
+  PT(ShaderModule) module = compiler->compile_now(stage, fn, ShaderCompiler::Options(), record);
   if (!module) {
     return false;
   }

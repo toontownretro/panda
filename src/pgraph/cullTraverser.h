@@ -87,6 +87,9 @@ PUBLISHED:
   void do_traverse(CullTraverserData &data);
   INLINE void traverse_below(CullTraverserData &data);
 
+  virtual int custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
+                                const TransformState *net_transform);
+
   virtual void end_traverse();
 
   void draw_bounding_volume(const BoundingVolume *vol,

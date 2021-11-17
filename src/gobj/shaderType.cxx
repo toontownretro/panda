@@ -76,15 +76,6 @@ init_type() {
   double_type = ShaderType::register_type(ShaderType::Scalar(ST_double));
 
   sampler_type = ShaderType::register_type(ShaderType::Sampler());
-
-  Scalar::register_with_read_factory();
-  Vector::register_with_read_factory();
-  Matrix::register_with_read_factory();
-  Struct::register_with_read_factory();
-  Array::register_with_read_factory();
-  Image::register_with_read_factory();
-  Sampler::register_with_read_factory();
-  SampledImage::register_with_read_factory();
 }
 
 /**
@@ -202,53 +193,6 @@ output(std::ostream &out) const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Scalar.
- */
-void ShaderType::Scalar::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
- * Writes the contents of this object to the datagram for shipping out to a
- * Bam file.
- */
-void ShaderType::Scalar::
-write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
-  dg.add_int8(_scalar_type);
-}
-
-/**
- * This function is called by the BamReader's factory when a new object of
- * type Scalar is encountered in the Bam file.  It should create the
- * Scalar and extract its information from the file.
- */
-TypedWritable *ShaderType::Scalar::
-make_from_bam(const FactoryParams &params) {
-  ShaderType::Scalar type(ShaderType::ST_float);
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  type.fillin(scan, manager);
-
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Scalar.
- */
-void ShaderType::Scalar::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
-
-  _scalar_type = (ShaderType::ScalarType)scan.get_int8();
-}
-
-/**
  * Private implementation of compare_to, only called for types with the same
  * TypeHandle.
  */
@@ -336,55 +280,6 @@ output(std::ostream &out) const {
 }
 
 /**
- * Tells the BamReader how to create objects of type Vector.
- */
-void ShaderType::Vector::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
- * Writes the contents of this object to the datagram for shipping out to a
- * Bam file.
- */
-void ShaderType::Vector::
-write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
-  dg.add_int8(_scalar_type);
-  dg.add_uint32(_num_components);
-}
-
-/**
- * This function is called by the BamReader's factory when a new object of
- * type Vector is encountered in the Bam file.  It should create the
- * Vector and extract its information from the file.
- */
-TypedWritable *ShaderType::Vector::
-make_from_bam(const FactoryParams &params) {
-  ShaderType::Vector type(ShaderType::ST_float, 4);
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  type.fillin(scan, manager);
-
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Vector.
- */
-void ShaderType::Vector::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
-
-  _scalar_type = (ShaderType::ScalarType)scan.get_int8();
-  _num_components = scan.get_uint32();
-}
-
-/**
  * Private implementation of compare_to, only called for types with the same
  * TypeHandle.
  */
@@ -462,57 +357,6 @@ as_scalar_type(ScalarType &type, uint32_t &num_elements,
 void ShaderType::Matrix::
 output(std::ostream &out) const {
   out << _scalar_type << _num_rows << "x" << _num_columns;
-}
-
-/**
- * Tells the BamReader how to create objects of type Matrix.
- */
-void ShaderType::Matrix::
-register_with_read_factory() {
-  BamReader::get_factory()->register_factory(get_class_type(), make_from_bam);
-}
-
-/**
- * Writes the contents of this object to the datagram for shipping out to a
- * Bam file.
- */
-void ShaderType::Matrix::
-write_datagram(BamWriter *manager, Datagram &dg) {
-  ShaderType::write_datagram(manager, dg);
-
-  dg.add_int8(_scalar_type);
-  dg.add_uint32(_num_rows);
-  dg.add_uint32(_num_columns);
-}
-
-/**
- * This function is called by the BamReader's factory when a new object of
- * type Matrix is encountered in the Bam file.  It should create the
- * Matrix and extract its information from the file.
- */
-TypedWritable *ShaderType::Matrix::
-make_from_bam(const FactoryParams &params) {
-  ShaderType::Matrix type(ShaderType::ST_float, 4, 4);
-  DatagramIterator scan;
-  BamReader *manager;
-
-  parse_params(params, scan, manager);
-  type.fillin(scan, manager);
-
-  return (TypedWritable *)ShaderType::register_type(std::move(type));
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new Matrix.
- */
-void ShaderType::Matrix::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  ShaderType::fillin(scan, manager);
-
-  _scalar_type = (ShaderType::ScalarType)scan.get_int8();
-  _num_rows = scan.get_uint32();
-  _num_columns = scan.get_uint32();
 }
 
 /**

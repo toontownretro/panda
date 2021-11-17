@@ -56,7 +56,6 @@ PUBLISHED:
 public:
   virtual PandaNode *make_copy() const override;
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
-  virtual bool is_renderable() const override;
   virtual bool safe_to_flatten() const override;
   virtual bool safe_to_combine() const override;
 

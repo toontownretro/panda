@@ -63,6 +63,7 @@ EyeballNode() :
   set_attrib(sha);
 
   set_cull_callback();
+  set_renderable();
 }
 
 /**
@@ -99,6 +100,7 @@ EyeballNode(const std::string &name, Character *character, int parent_joint) :
   set_attrib(sha);
 
   set_cull_callback();
+  set_renderable();
 }
 
 /**
@@ -142,6 +144,7 @@ EyeballNode(const EyeballNode &copy) :
   set_attrib(sha);
 
   set_cull_callback();
+  set_renderable();
 }
 
 /**
@@ -150,14 +153,6 @@ EyeballNode(const EyeballNode &copy) :
 PandaNode *EyeballNode::
 make_copy() const {
   return new EyeballNode(*this);
-}
-
-/**
- *
- */
-bool EyeballNode::
-is_renderable() const {
-  return true;
 }
 
 /**
