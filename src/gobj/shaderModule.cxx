@@ -16,27 +16,6 @@
 TypeHandle ShaderModule::_type_handle;
 
 /**
- * Writes the contents of the Variable for shipping out to a Bam file.
- */
-void ShaderModule::Variable::
-write_datagram(Datagram &dg, BamWriter *manager) {
-  manager->write_pointer(dg, type);
-  dg.add_string(name->get_name());
-  dg.add_int32(_location);
-}
-
-/**
- * Reads the contents from the Datagram to re-create the Variable from a Bam
- * file.
- */
-void ShaderModule::Variable::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  manager->read_pointer(scan);
-  name = InternalName::make(scan.get_string());
-  _location = scan.get_int32();
-}
-
-/**
  *
  */
 ShaderModule::
@@ -102,8 +81,6 @@ output(std::ostream &out) const {
  */
 void ShaderModule::
 write_datagram(BamWriter *manager, Datagram &dg) {
-  CopyOnWriteObject::write_datagram(manager, dg);
-
   dg.add_uint8((int)_stage);
   dg.add_string(_source_filename);
   dg.add_uint64(_used_caps);
@@ -115,8 +92,6 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void ShaderModule::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  CopyOnWriteObject::fillin(scan, manager);
-
   _stage = (Stage)scan.get_uint8();
   _source_filename = scan.get_string();
   _used_caps = (int)scan.get_uint64();

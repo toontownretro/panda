@@ -27,6 +27,7 @@ MapRoot(MapData *data) :
   _pvs_cull(true)
 {
   set_cull_callback();
+  set_renderable();
 }
 
 /**
@@ -73,14 +74,6 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   // We've taken care of the traversal for this subgraph.
   return false;
-}
-
-/**
- *
- */
-bool MapRoot::
-is_renderable() const {
-  return true;
 }
 
 /**

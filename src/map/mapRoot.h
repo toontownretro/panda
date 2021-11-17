@@ -38,8 +38,6 @@ PUBLISHED:
 public:
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
 
-  virtual bool is_renderable() const override;
-
   static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &me) override;
   virtual void fillin(DatagramIterator &scan, BamReader *manager) override;

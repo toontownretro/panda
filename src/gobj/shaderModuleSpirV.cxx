@@ -555,7 +555,7 @@ make_from_bam(const FactoryParams &params) {
  */
 int ShaderModuleSpirV::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
-  int pi = ShaderModule::complete_pointers(p_list, manager);
+  int pi = 0;
 
   for (Variable &input : _inputs) {
     input.type = DCAST(ShaderType, p_list[pi++]);

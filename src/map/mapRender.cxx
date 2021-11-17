@@ -26,6 +26,7 @@ MapRender(const std::string &name) :
   _map_data(nullptr)
 {
   set_cull_callback();
+  set_renderable();
 }
 
 /**
@@ -46,12 +47,4 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   // The MapCullTraverser has taken care of the traversal for this node and
   // below.
   return false;
-}
-
-/**
- *
- */
-bool MapRender::
-is_renderable() const {
-  return true;
 }

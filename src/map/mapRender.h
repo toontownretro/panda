@@ -36,7 +36,6 @@ PUBLISHED:
 
 public:
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
-  virtual bool is_renderable() const override;
 
 private:
   MapData *_map_data;

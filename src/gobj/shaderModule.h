@@ -47,9 +47,6 @@ PUBLISHED:
     int has_location() const { return _location >= 0; }
     int get_location() const { return _location; }
 
-    void write_datagram(Datagram &dg, BamWriter *manager);
-    void fillin(DatagramIterator &scan, BamReader *manager);
-
   PUBLISHED:
     const ShaderType *type;
     CPT(InternalName) name;
@@ -171,10 +168,7 @@ public:
 
   virtual void output(std::ostream &out) const;
 
-public:
-  virtual void write_datagram(BamWriter *manager, Datagram &dg);
-  virtual int complete_pointers(TypedWritable **p_list,
-                                BamReader *manager);
+  virtual void write_datagram(BamWriter *manager, Datagram &dg) override;
 
 protected:
   void fillin(DatagramIterator &scan, BamReader *manager) override;

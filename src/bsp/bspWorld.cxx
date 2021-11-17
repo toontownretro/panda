@@ -30,6 +30,7 @@ BSPWorld(BSPData *data) :
 {
   _cluster_geom_nodes.resize(data->dvis->num_clusters);
   set_cull_callback();
+  set_renderable();
   set_bounds(new OmniBoundingVolume);
 }
 
@@ -68,7 +69,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     for (size_t i = 0; i < _cluster_geom_nodes.size(); i++) {
       GeomNode *geom_node = _cluster_geom_nodes[i];
       if (geom_node != nullptr) {
-        trav->traverse_child(data, geom_node);
+        trav->traverse_down(data, geom_node);
       }
     }
 
@@ -79,7 +80,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
         bsp_cat.debug()
           << "Drawing local cluster " << cluster_vis->get_cluster_index() << "\n";
       }
-      trav->traverse_child(data, my_geom_node);
+      trav->traverse_down(data, my_geom_node);
     }
     for (int i = 0; i < cluster_vis->get_num_visible_clusters(); i++) {
       int cluster = cluster_vis->get_visible_cluster(i);
@@ -89,19 +90,11 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           bsp_cat.debug()
             << "Drawing potentially visible cluster " << cluster << "\n";
         }
-        trav->traverse_child(data, geom_node);
+        trav->traverse_down(data, geom_node);
       }
     }
   }
 
-  return true;
-}
-
-/**
- *
- */
-bool BSPWorld::
-is_renderable() const {
   return true;
 }
 
