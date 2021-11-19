@@ -219,6 +219,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
     manager->write_cdata(dg, _cycler);
   }
   dg.add_int32(_priority);
+  dg.add_bool(_stationary);
 }
 
 /**
@@ -234,4 +235,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     manager->read_cdata(scan, _cycler);
   }
   _priority = scan.get_int32();
+  _stationary = scan.get_bool();
 }

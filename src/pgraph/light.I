@@ -39,7 +39,8 @@ INLINE Light::
 Light() :
   _priority(0),
   _has_color_temperature(true),
-  _color_temperature(6500)
+  _color_temperature(6500),
+  _stationary(false)
 {
 }
 
@@ -52,8 +53,28 @@ Light(const Light &copy) :
   _has_color_temperature(copy._has_color_temperature),
   _color_temperature(copy._color_temperature),
   _cycler(copy._cycler),
-  _light_type(copy._light_type)
+  _light_type(copy._light_type),
+  _stationary(copy._stationary)
 {
+}
+
+/**
+ * Sets whether or not the light is stationary in the scene.
+ * If true, the light is intended to never be moved after its initial placement
+ * in the scene.
+ */
+INLINE void Light::
+set_stationary(bool flag) {
+  _stationary = flag;
+}
+
+/**
+ * Returns true if the light is stationary, meaning that it is intended
+ * to never be moved in the scene after its initial placement.
+ */
+INLINE bool Light::
+is_stationary() const {
+  return _stationary;
 }
 
 /**

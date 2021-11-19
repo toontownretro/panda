@@ -56,6 +56,10 @@ PUBLISHED:
 
   virtual PT(GeometricBoundingVolume) make_light_bounds() const=0;
 
+  INLINE void set_stationary(bool flag);
+  INLINE bool is_stationary() const;
+  MAKE_PROPERTY(stationary, is_stationary, set_stationary);
+
   INLINE const LColor &get_color() const;
   INLINE void set_color(const LColor &color);
   MAKE_PROPERTY(color, get_color, set_color);
@@ -122,6 +126,9 @@ private:
   // down the computed color anyway.
   bool _has_color_temperature;
   PN_stdfloat _color_temperature;
+
+  // If true, the light is intended to be completely stationary in the scene.
+  bool _stationary;
 
   // This is the data that must be cycled between pipeline stages.
   class EXPCL_PANDA_PGRAPH CData : public CycleData {
