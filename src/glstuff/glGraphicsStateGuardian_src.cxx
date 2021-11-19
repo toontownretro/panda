@@ -203,7 +203,6 @@ static const string default_vshader_fp64 =
   "  color = p3d_Color * p3d_ColorScale;\n"
   "}\n";
 #endif
-#endif
 
 static const string default_fshader =
   "#version 330\n"
