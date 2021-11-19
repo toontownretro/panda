@@ -589,6 +589,26 @@ is_final(Thread *current_thread) const {
 }
 
 /**
+ * Sets whether or not this node and all nodes below should be dynamically
+ * culled against the scene's potentially visible set, if there is one.
+ */
+INLINE void PandaNode::
+set_pvs_cull(bool flag) {
+  CDWriter cdata(_cycler);
+  cdata->set_fancy_bit(FB_no_pvs, !flag);
+}
+
+/**
+ * Returns true if the node should be dynamically culled against the scene's
+ * potentially visible set, if there is one.  See set_pvs_cull().
+ */
+INLINE bool PandaNode::
+get_pvs_cull() const {
+  CDReader cdata(_cycler);
+  return (cdata->_fancy_bits & FB_no_pvs) == 0;
+}
+
+/**
  * Returns the union of all of the enum FancyBits values corresponding to the
  * various "fancy" attributes that are set on the node.  If this returns 0,
  * the node has nothing interesting about it.  This is intended to speed
@@ -1622,6 +1642,13 @@ is_final() const {
   return _cdata->_final_bounds;
 }
 
+/**
+ *
+ */
+INLINE bool PandaNodePipelineReader::
+get_pvs_cull() const {
+  return (_cdata->_fancy_bits & PandaNode::FB_no_pvs) == 0;
+}
 
 /**
  * Returns the union of all of the enum FancyBits values corresponding to the

@@ -66,7 +66,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   int index = visible_mesh_groups.get_lowest_on_bit();
   while (index >= 0) {
-    trav->traverse_child(data, children.get_child_connection(index));
+    trav->traverse_down(data, children.get_child_connection(index));
 
     visible_mesh_groups.clear_bit(index);
     index = visible_mesh_groups.get_lowest_on_bit();

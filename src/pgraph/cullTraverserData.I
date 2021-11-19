@@ -28,8 +28,9 @@ CullTraverserData(const NodePath &start,
   _view_frustum(view_frustum),
   _draw_mask(DrawMask::all_on()),
   _portal_depth(0),
-  _keep_testing_custom_in_view(true)
+  _vis_head_node(0)
 {
+  _check_pvs = _node_reader.get_pvs_cull();
 }
 
 /**
@@ -51,8 +52,14 @@ CullTraverserData(const CullTraverserData &parent, PandaNode *child,
   _view_frustum(view_frustum),
   _instances(parent._instances),
   _draw_mask(parent._draw_mask),
-  _portal_depth(parent._portal_depth)
+  _portal_depth(parent._portal_depth),
+  _vis_head_node(parent._vis_head_node)
 {
+  if (parent._check_pvs) {
+    _check_pvs = _node_reader.get_pvs_cull();
+  } else {
+    _check_pvs = false;
+  }
 }
 
 /**
@@ -74,8 +81,15 @@ CullTraverserData(const CullTraverserData &parent,
   _state(std::move(state)),
   _view_frustum(view_frustum),
   _instances(parent._instances),
-  _keep_testing_custom_in_view(parent._keep_testing_custom_in_view)
+  _draw_mask(parent._draw_mask),
+  _portal_depth(parent._portal_depth),
+  _vis_head_node(parent._vis_head_node)
 {
+  if (parent._check_pvs) {
+    _check_pvs = _node_reader.get_pvs_cull();
+  } else {
+    _check_pvs = false;
+  }
 }
 
 /**

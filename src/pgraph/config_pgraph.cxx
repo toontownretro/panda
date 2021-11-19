@@ -93,6 +93,8 @@
 #include "transformState.h"
 #include "transparencyAttrib.h"
 #include "materialAttrib.h"
+#include "sceneTop.h"
+#include "sceneVisibility.h"
 
 #include "dconfig.h"
 
@@ -500,6 +502,8 @@ init_libpgraph() {
   RenderState::init_type();
   RescaleNormalAttrib::init_type();
   SceneSetup::init_type();
+  SceneTop::init_type();
+  SceneVisibility::init_type();
   ScissorAttrib::init_type();
   ScissorEffect::init_type();
   ShadeModelAttrib::init_type();

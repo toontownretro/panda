@@ -23,9 +23,6 @@
 #include "datagram.h"
 #include "datagramIterator.h"
 #include "bitArray.h"
-#include "boundingPlane.h"
-
-class GeometricBoundingVolume;
 
 /**
  * A k-dimensional (k-d) tree is an axis-aligned binary space partitioning
@@ -36,20 +33,18 @@ class GeometricBoundingVolume;
  * regions of the universe.  For the visibility system, non-empty leaf nodes
  * correspond to area clusters.
  */
-class EXPCL_PANDA_MAP KDTree {
+class EXPCL_PANDA_PGRAPH KDTree {
 PUBLISHED:
 #pragma pack(push, 1)
   class Node {
   PUBLISHED:
-    // < 0 is a leaf node, ~child is leaf index.
-    int left_child; // Child behind the hyperplane.
-    int right_child; // Child on or in front of the hyperplane.
-
     // Node's partitioning hyperplane.
-    PN_stdfloat dist;
     unsigned char axis;
+    PN_stdfloat dist;
 
-    BoundingPlane plane;
+    // < 0 is a leaf node, ~child is leaf index.
+    int right_child; // Child on or in front of the hyperplane.
+    int left_child; // Child behind the hyperplane.
   };
 
   class Leaf {
@@ -79,8 +74,9 @@ PUBLISHED:
   };
 
   KDTree() = default;
-  KDTree(const KDTree &copy) = default;
+  KDTree(const KDTree &copy);
   KDTree(KDTree &&other);
+  void operator = (const KDTree &copy);
   void operator = (KDTree &&other);
 
   void build();
@@ -91,11 +87,7 @@ PUBLISHED:
 
   int make_subtree(const vector_int &objects);
 
-  int get_nearest_leaf_value_from_point(const LPoint3 &point, int node = 0) const;
   int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const;
-  bool is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set, int head_node = 0) const;
-  void get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
-                                         BitArray &values, int head_node = 0) const;
 
   size_t get_memory_size() const;
 
@@ -133,6 +125,8 @@ protected:
   Leaves _leaves;
 
   Inputs _inputs;
+
+  friend class SceneVisibility;
 };
 
 #include "kdTree.I"

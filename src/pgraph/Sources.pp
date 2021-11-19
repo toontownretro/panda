@@ -59,6 +59,7 @@
     instanceList.I instanceList.h \
     instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
+    kdTree.I kdTree.h \
     lensNode.I lensNode.h \
     light.I light.h \
     lightAttrib.I lightAttrib.h \
@@ -98,6 +99,8 @@
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
+    sceneTop.I sceneTop.h \
+    sceneVisibility.I sceneVisibility.h \
     scissorAttrib.I scissorAttrib.h \
     scissorEffect.I scissorEffect.h \
     shadeModelAttrib.I shadeModelAttrib.h \
@@ -115,7 +118,7 @@
     transformState.I transformState.h \
     transparencyAttrib.I transparencyAttrib.h \
     weakNodePath.I weakNodePath.h \
-    workingNodePath.I workingNodePath.h \
+    workingNodePath.I workingNodePath.h
 
   #define COMPOSITE_SOURCES \
     accumulatedAttribs.cxx \
@@ -163,6 +166,7 @@
     instancedNode.cxx \
     internalNameCollection.cxx \
     lensNode.cxx \
+    kdTree.cxx \
     light.cxx \
     lightAttrib.cxx \
     lightRampAttrib.cxx \
@@ -200,6 +204,8 @@
     rescaleNormalAttrib.cxx \
     sceneGraphReducer.cxx \
     sceneSetup.cxx \
+    sceneTop.cxx \
+    sceneVisibility.cxx \
     scissorAttrib.cxx \
     scissorEffect.cxx \
     shadeModelAttrib.cxx \
@@ -264,6 +270,7 @@
     instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
     lensNode.I lensNode.h \
+    kdTree.I kdTree.h \
     light.I light.h \
     lightAttrib.I lightAttrib.h \
     lightRampAttrib.I lightRampAttrib.h \
@@ -302,6 +309,8 @@
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
+    sceneTop.I sceneTop.h \
+    sceneVisibility.I sceneVisibility.h \
     scissorAttrib.I scissorAttrib.h \
     scissorEffect.I scissorEffect.h \
     shadeModelAttrib.I shadeModelAttrib.h \

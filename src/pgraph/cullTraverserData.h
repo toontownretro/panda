@@ -103,7 +103,12 @@ public:
   CPT(InstanceList) _instances;
   DrawMask _draw_mask;
   int _portal_depth;
-  bool _keep_testing_custom_in_view;
+
+  // Should we test this node against the PVS?
+  bool _check_pvs;
+  // The index of the K-D tree node that we should start traversal at
+  // for this node's bounding volume.
+  int _vis_head_node;
 
 private:
   PT(NodePathComponent) r_get_node_path() const;

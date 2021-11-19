@@ -86,10 +86,10 @@ apply_transform_and_state(CullTraverser *trav) {
     }
   }
 
-  if (light_cull) {
-    _cull_lights = _cull_lights->apply_state(trav, this,
-      (const LightAttrib *)node_state->get_attrib(LightAttrib::get_class_slot()));
-  }
+  //if (light_cull) {
+  //  _cull_lights = _cull_lights->apply_state(trav, this,
+  //    (const LightAttrib *)node_state->get_attrib(LightAttrib::get_class_slot()));
+  //}
 }
 
 /**
@@ -259,4 +259,6 @@ apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_
       _cull_planes = std::move(new_planes);
     }
   }
+
+  return true;
 }

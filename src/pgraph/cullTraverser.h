@@ -35,6 +35,7 @@ class CullableObject;
 class CullTraverserData;
 class PortalClipper;
 class NodePath;
+class SceneVisibility;
 
 /**
  * This object performs a depth-first traversal of the scene graph, with
@@ -75,9 +76,6 @@ PUBLISHED:
   INLINE void set_portal_clipper(PortalClipper *portal_clipper);
   INLINE PortalClipper *get_portal_clipper() const;
 
-  INLINE void set_custom_is_in_view(bool flag);
-  INLINE bool has_custom_is_in_view() const;
-
   INLINE bool get_effective_incomplete_render() const;
   INLINE bool get_fake_view_frustum_cull() const;
 
@@ -86,9 +84,6 @@ PUBLISHED:
   void traverse(const NodePath &root);
   void do_traverse(CullTraverserData &data);
   INLINE void traverse_below(CullTraverserData &data);
-
-  virtual int custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
-                                const TransformState *net_transform);
 
   virtual void end_traverse();
 
@@ -110,6 +105,8 @@ public:
                     const TransformState *net_transform,
                     const RenderState *state);
 
+  int is_in_pvs(const CullTraverserData &data, const GeometricBoundingVolume *bounds, PandaNode *node, int &child_head_node) const;
+
 public:
   // Statistics
   static PStatCollector _nodes_pcollector;
@@ -118,6 +115,19 @@ public:
   static PStatCollector _geoms_occluded_pcollector;
 
 protected:
+  // Specifies the virtual methods that the CullTraverser should call
+  // for subclasses.
+  enum VirtualFlags {
+    VF_none = 0,
+    // Call a virtual method before we traverse a child of the current node.
+    // This is called after the view-frustum test for the child has passed,
+    // but the transform and state of the child has not been applied yet.
+    VF_pre_visit_child = 1 << 0,
+    // Call a virtual method after the view-frustum test for a child node has
+    // passed and the transform and state of the child node has been applied.
+    VF_on_visit_child = 1 << 1,
+  };
+
   void show_bounds(CullTraverserData &data, bool tight);
   static PT(Geom) make_bounds_viz(const BoundingVolume *vol);
   PT(Geom) make_tight_bounds_viz(PandaNode *node) const;
@@ -138,13 +148,14 @@ protected:
   PT(GeometricBoundingVolume) _view_frustum;
   CullHandler *_cull_handler;
   PortalClipper *_portal_clipper;
-  bool _effective_incomplete_render;
 
-  // Does a derived CullTraverser implement a custom method for view-culling
-  // nodes?  If this is true, we will call the virtual custom_is_in_view()
-  // method.  This is done to save performance if there is no custom
-  // view-culling implementation.
-  bool _has_custom_is_in_view;
+  SceneVisibility *_vis_info;
+  const BitArray *_pvs;
+  BitArray _inv_pvs;
+  int _view_sector;
+
+  bool _effective_incomplete_render;
+  unsigned char _virtual_flags;
 
 public:
   static TypeHandle get_class_type() {

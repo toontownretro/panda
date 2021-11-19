@@ -13,14 +13,7 @@
 
 #include "kdTree.h"
 #include "vector_stdfloat.h"
-#include "geometricBoundingVolume.h"
-#include "boundingPlane.h"
 #include "indent.h"
-#include "boundingBox.h"
-#include "boundingSphere.h"
-#include "boundingHexahedron.h"
-#include "boundingLine.h"
-#include "boundingPlane.h"
 
 #include <algorithm>
 #include <stack>
@@ -31,11 +24,32 @@
  *
  */
 KDTree::
+KDTree(const KDTree &copy) :
+  _nodes(copy._nodes),
+  _leaves(copy._leaves),
+  _inputs(copy._inputs)
+{
+}
+
+/**
+ *
+ */
+KDTree::
 KDTree(KDTree &&other) :
   _nodes(std::move(other._nodes)),
   _leaves(std::move(other._leaves)),
   _inputs(std::move(other._inputs))
 {
+}
+
+/**
+ *
+ */
+void KDTree::
+operator = (const KDTree &copy) {
+  _nodes = copy._nodes;
+  _leaves = copy._leaves;
+  _inputs = copy._inputs;
 }
 
 /**
@@ -152,23 +166,6 @@ make_subtree(const vector_int &objects) {
 }
 
 /**
- * Returns the value associated with the leaf node that is closest to the
- * indicated point in space.  This is a nearest neighbor search.
- */
-int KDTree::
-get_nearest_leaf_value_from_point(const LPoint3 &point, int node) const {
-  if (node == INVALID_NODE) {
-    return -1;
-  }
-
-  int next_branch = INVALID_NODE;
-  int other_branch = INVALID_NODE;
-
-  //if (point[])
-  return -1;
-}
-
-/**
  * Returns the value associated with the leaf node that contains the indicated
  * point in space.
  */
@@ -188,111 +185,6 @@ get_leaf_value_from_point(const LPoint3 &point, int head_node) const {
   }
 
   return _leaves[~i].value;
-}
-
-/**
- * Returns the unique set of leaf values for leaves that intersect the
- * indicated bounding volume.  Does not report empty leaves with values of
- * -1.
- */
-void KDTree::
-get_leaf_values_containing_volume(const GeometricBoundingVolume *volume,
-                                  BitArray &values, int head_node) const {
-  std::stack<int> stack;
-  stack.push(head_node);
-
-  while (!stack.empty()) {
-    int node_index = stack.top();
-    stack.pop();
-
-    if (node_index >= 0) {
-      const Node *node = &_nodes[node_index];
-
-      // Construct a BoundingPlane for the node's splitting plane.  This is
-      // unfortunate, but it makes it convenient to test against
-      // BoundingVolumes of any type.
-      int flags = node->plane.contains(volume);
-
-      if (flags == BoundingVolume::IF_no_intersection) {
-        // Completely in front of the plane.  Traverse right.
-        stack.push(node->right_child);
-
-      } else if ((flags & BoundingVolume::IF_all) != 0) {
-        // Completely behind the plane.  Traverse left.
-        stack.push(node->left_child);
-
-      } else {
-        // The volume spans the plane.  Traverse both directions.
-        stack.push(node->right_child);
-        stack.push(node->left_child);
-      }
-
-    } else {
-      const Leaf *leaf = &_leaves[~node_index];
-      if (leaf->value != -1) {
-        values.set_bit(leaf->value);
-      }
-    }
-  }
-}
-
-/**
- * Returns true if the indicated volume is contained within a leaf that
- * has a value from the indicated set.
- */
-bool KDTree::
-is_volume_in_leaf_set(const GeometricBoundingVolume *vol, const BitArray &set,
-                      int head_node) const {
-  std::stack<int> stack;
-  stack.push(head_node);
-
-  TypeHandle vol_type_handle = vol->get_type();
-
-  while (!stack.empty()) {
-    int node_index = stack.top();
-    stack.pop();
-
-    if (node_index >= 0) {
-      const Node *node = &_nodes[node_index];
-
-      int flags;
-      if (vol_type_handle == BoundingSphere::get_class_type()) {
-        flags = node->plane.contains_sphere((const BoundingSphere *)vol);
-      } else if (vol_type_handle == BoundingBox::get_class_type()) {
-        flags = node->plane.contains_box((const BoundingBox *)vol);
-      } else if (vol_type_handle == BoundingHexahedron::get_class_type()) {
-        flags = node->plane.contains_hexahedron((const BoundingHexahedron *)vol);
-      } else if (vol_type_handle == BoundingPlane::get_class_type()) {
-        flags = node->plane.contains_plane((const BoundingPlane *)vol);
-      } else if (vol_type_handle == BoundingLine::get_class_type()) {
-        flags = node->plane.contains_line((const BoundingLine *)vol);
-      } else {
-        assert(false);
-      }
-
-      if (flags == BoundingVolume::IF_no_intersection) {
-        // Completely in front of the plane.  Traverse right.
-        stack.push(node->right_child);
-
-      } else if ((flags & BoundingVolume::IF_all) != 0) {
-        // Completely behind the plane.  Traverse left.
-        stack.push(node->left_child);
-
-      } else {
-        // The volume spans the plane.  Traverse both directions.
-        stack.push(node->right_child);
-        stack.push(node->left_child);
-      }
-
-    } else {
-      const Leaf *leaf = &_leaves[~node_index];
-      if (leaf->value != -1 && set.get_bit(leaf->value)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
 }
 
 /**
@@ -349,10 +241,6 @@ int KDTree::
 make_node(unsigned char axis, PN_stdfloat dist) {
   int index = (int)_nodes.size();
   _nodes.push_back(Node());
-  LPlane plane(0, 0, 0, -dist);
-  plane[axis] = 1;
-  _nodes[index].plane = BoundingPlane(plane);
-  _nodes[index].plane.local_object();
   _nodes[index].axis = axis;
   _nodes[index].dist = dist;
   _nodes[index].left_child = INVALID_NODE;
@@ -543,10 +431,6 @@ read_datagram(DatagramIterator &scan) {
     _nodes[i].right_child = scan.get_int32();
     _nodes[i].dist = scan.get_stdfloat();
     _nodes[i].axis = scan.get_uint8();
-    LPlane plane(0, 0, 0, -_nodes[i].dist);
-    plane[_nodes[i].axis] = 1;
-    _nodes[i].plane = BoundingPlane(plane);
-    _nodes[i].plane.local_object();
   }
 
   _leaves.resize(scan.get_uint32());

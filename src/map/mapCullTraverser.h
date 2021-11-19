@@ -30,9 +30,9 @@ PUBLISHED:
   MapCullTraverser(const CullTraverser &other, MapData *data);
 
   void update_model_lighting(CullTraverserData &data);
-  virtual int custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
-                                const TransformState *net_transform) override;
-  virtual void traverse_below(CullTraverserData &data) override;
+  //virtual int custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
+  //                              const TransformState *net_transform) override;
+  //virtual void traverse_below(CullTraverserData &data) override;
 
   void determine_view_cluster();
 

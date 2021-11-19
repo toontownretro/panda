@@ -35,9 +35,10 @@ MapCullTraverser(const CullTraverser &copy, MapData *data) :
   _data(data),
   _view_cluster(-1)
 {
-  set_custom_is_in_view(true);
+  //set_custom_is_in_view(true);
 }
 
+#if 0
 /**
  *
  */
@@ -95,7 +96,7 @@ custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &
     tree->get_leaf_values_containing_volume(vol, ndata->_clusters);
   }
 
-  if ((_pvs & ndata->_clusters).is_zero()) {
+  if (!_pvs.has_bits_in_common(ndata->_clusters)) {
     // Node is not in the current PVS.  Cull.
     return BoundingVolume::IF_no_intersection;
 
@@ -111,6 +112,7 @@ custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &
     return BoundingVolume::IF_some;
   }
 }
+#endif
 
 /**
  * Computes the lighting information for the given model node.
@@ -254,6 +256,7 @@ update_model_lighting(CullTraverserData &data) {
   data._state = data._state->compose(ndata->_light_data->_lighting_state);
 }
 
+#if 0
 /**
  *
  */
@@ -306,6 +309,7 @@ traverse_below(CullTraverserData &data) {
     }
   }
 }
+#endif
 
 /**
  *

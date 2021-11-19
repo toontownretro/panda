@@ -35,6 +35,8 @@
 #include "geomLinestrips.h"
 #include "geomLines.h"
 #include "geomVertexWriter.h"
+#include "sceneTop.h"
+#include "sceneVisibility.h"
 
 PStatCollector CullTraverser::_nodes_pcollector("Nodes");
 PStatCollector CullTraverser::_geom_nodes_pcollector("Nodes:GeomNodes");
@@ -57,7 +59,9 @@ CullTraverser() :
   _cull_handler(nullptr),
   _portal_clipper(nullptr),
   _effective_incomplete_render(false),
-  _has_custom_is_in_view(false)
+  _vis_info(nullptr),
+  _pvs(nullptr),
+  _view_sector(-1)
 {
 }
 
@@ -78,7 +82,9 @@ CullTraverser(const CullTraverser &copy) :
   _cull_handler(copy._cull_handler),
   _portal_clipper(copy._portal_clipper),
   _effective_incomplete_render(copy._effective_incomplete_render),
-  _has_custom_is_in_view(copy._has_custom_is_in_view)
+  _vis_info(copy._vis_info),
+  _pvs(copy._pvs),
+  _view_sector(copy._view_sector)
 {
 }
 
@@ -108,6 +114,35 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
 #ifndef NDEBUG
   _fake_view_frustum_cull = fake_view_frustum_cull;
 #endif
+
+  // If the root node in the scene is a SceneTop, we might have
+  // precomputed visibility information that we can use for
+  // additional culling.
+  _vis_info = nullptr;
+  _view_sector = -1;
+  _pvs = nullptr;
+  PandaNode *top_node = scene_setup->get_scene_root().node();
+  if (top_node->is_exact_type(SceneTop::get_class_type())) {
+    SceneTop *scene_top = (SceneTop *)top_node;
+    _vis_info = scene_top->get_vis_info();
+    // Query the visibility sector that the camera is in.
+    _view_sector = _vis_info->get_point_sector(scene_setup->get_camera_transform()->get_pos());
+    if (_view_sector >= 0) {
+      // If the camera is in a valid vis sector, get the PVS associated with
+      // that sector.
+      _pvs = _vis_info->get_sector_pvs(_view_sector);
+      // Also store the inverse of the PVS.  This is used to quickly check
+      // if a node is completely within the PVS.  If the AND of the inverse
+      // PVS and the node's sectors has no common bits, then the node is
+      // completely in the PVS and we don't have to test the PVS for any
+      // nodes below.  This is faster than OR-ing the regular PVS with the
+      // node's sectors because of how BitArray works internally.
+      _inv_pvs = ~(*_pvs);
+
+     // std::cout << "view sector: " << _view_sector << "\n";
+      //std::cout << "pvs: " << *_pvs << "\n";
+    }
+  }
 }
 
 /**
@@ -239,25 +274,6 @@ do_traverse(CullTraverserData &data) {
     const PandaNode::DownConnection &child = children.get_child_connection(i);
     traverse_down(data, child, data._state);
   }
-}
-
-/**
- * Intended to be overridden by derived classes to implement a custom method
- * for view-culling.  This is called after the view-frustum test has already
- * passed for this node.
- *
- * Returns BoundingVolume::IntersectionFlags.  IF_no_intersection means the
- * node is completely out of view and should not be traversed any further.
- * IF_all means the node and all nodes below it are guaranteed to be in view
- * from this point on, and the custom test no longer needs to be called for the
- * rest of the subgraph.  IF_some means that the node is in view and the custom
- * test should continue to be called for nodes below until IF_no_intersection
- * or IF_all is returned.
- */
-int CullTraverser::
-custom_is_in_view(const CullTraverserData &data, const PandaNodePipelineReader &node_reader,
-                  const TransformState *net_transform) {
-  return BoundingVolume::IF_all;
 }
 
 /**
@@ -608,4 +624,25 @@ get_depth_offset_state() {
       (DepthOffsetAttrib::make(1));
   }
   return state;
+}
+
+/**
+ * Returns true if the given child node of the current node is within the
+ * potentially visible set of the camera's vis sector, or false if not
+ * and the node should be culled.
+ *
+ * If there is no PVS information for the scene, returns true so the node
+ * isn't culled.
+ */
+int CullTraverser::
+is_in_pvs(const CullTraverserData &data, const GeometricBoundingVolume *bounds, PandaNode *node, int &child_head_node) const {
+  child_head_node = data._vis_head_node;
+
+  if (_pvs == nullptr || _vis_info == nullptr) {
+    // No PVS information.
+    return BoundingVolume::IF_all;
+  }
+
+  return _vis_info->is_node_in_pvs(data._net_transform, bounds, node, *_pvs, _inv_pvs,
+                                   child_head_node, /*data._vis_head_node*/0);
 }
