@@ -122,7 +122,7 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
   _view_sector = -1;
   _pvs = nullptr;
   PandaNode *top_node = scene_setup->get_scene_root().node();
-  if (top_node->is_exact_type(SceneTop::get_class_type())) {
+  if (camera->get_pvs_cull() && top_node->is_exact_type(SceneTop::get_class_type())) {
     SceneTop *scene_top = (SceneTop *)top_node;
     _vis_info = scene_top->get_vis_info();
     // Query the visibility sector that the camera is in.
@@ -138,9 +138,6 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
       // nodes below.  This is faster than OR-ing the regular PVS with the
       // node's sectors because of how BitArray works internally.
       _inv_pvs = ~(*_pvs);
-
-     // std::cout << "view sector: " << _view_sector << "\n";
-      //std::cout << "pvs: " << *_pvs << "\n";
     }
   }
 }

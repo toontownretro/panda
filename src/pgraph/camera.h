@@ -86,6 +86,10 @@ PUBLISHED:
   INLINE PN_stdfloat get_lod_scale() const;
   MAKE_PROPERTY(lod_scale, get_lod_scale, set_lod_scale);
 
+  INLINE void set_pvs_cull(bool flag);
+  INLINE bool get_pvs_cull() const;
+  MAKE_PROPERTY(pvs_cull, get_pvs_cull, set_pvs_cull);
+
   void set_tag_state(const std::string &tag_state, const RenderState *state);
   void clear_tag_state(const std::string &tag_state);
   void clear_tag_states();
@@ -126,6 +130,8 @@ private:
 
   typedef pmap<NodePath, PT(AuxSceneData) > AuxData;
   AuxData _aux_data;
+
+  bool _pvs_cull;
 
 public:
   static void register_with_read_factory();

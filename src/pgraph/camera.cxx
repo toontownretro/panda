@@ -29,7 +29,8 @@ Camera(const string &name, Lens *lens) :
   _active(true),
   _camera_mask(~PandaNode::get_overall_bit()),
   _initial_state(RenderState::make_empty()),
-  _lod_scale(1)
+  _lod_scale(1),
+  _pvs_cull(true)
 {
 }
 
@@ -45,7 +46,8 @@ Camera(const Camera &copy) :
   _initial_state(copy._initial_state),
   _lod_scale(copy._lod_scale),
   _tag_state_key(copy._tag_state_key),
-  _tag_states(copy._tag_states)
+  _tag_states(copy._tag_states),
+  _pvs_cull(copy._pvs_cull)
 {
 }
 

@@ -208,3 +208,21 @@ INLINE void Camera::
 set_lod_scale(PN_stdfloat value) {
   _lod_scale = value;
 }
+
+/**
+ * Specifies if the scene rendered by the camera should be culled against its
+ * associated potentially visible set, if it has one.
+ */
+INLINE void Camera::
+set_pvs_cull(bool flag) {
+  _pvs_cull = flag;
+}
+
+/**
+ * Returns true if the scene rendered by the camera should be culled against
+ * its associated potentially visible set, if it has one.
+ */
+INLINE bool Camera::
+get_pvs_cull() const {
+  return _pvs_cull;
+}
