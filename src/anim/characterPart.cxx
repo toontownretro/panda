@@ -39,7 +39,7 @@ CharacterPart(const CharacterPart &other) :
 CharacterPart::
 CharacterPart(CharacterPart &&other) :
   Namable(std::move(other)),
-  _index(std::move(_index))
+  _index(std::move(other._index))
 {
 }
 
