@@ -516,7 +516,9 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
   _vertices(nullptr),
   _current_thread(current_thread)
 {
+#ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
+#endif
 #ifdef DO_PIPELINING
   _cdata->ref();
 #endif  // DO_PIPELINING
@@ -619,9 +621,9 @@ get_num_vertices() const {
   if (_cdata->_num_vertices != -1) {
     return _cdata->_num_vertices;
   } else {
-    nassertr(_vertices != nullptr, 0);
-    size_t stride = _vertices->_array_format->get_stride();
-    nassertr(stride != 0, 0);
+    //nassertr(_vertices != nullptr, 0);
+    size_t stride = (_cdata->_index_type == NT_uint32) ? 4 : 2;
+    //nassertr(stride != 0, 0);
     return get_data_size_bytes() / stride;
   }
 }
@@ -666,7 +668,8 @@ get_modified() const {
 INLINE int GeomPrimitivePipelineReader::
 get_index_stride() const {
   nassertr(is_indexed(), 0);
-  return _vertices->_array_format->get_stride();
+  return (_cdata->_index_type == NT_uint32) ? 4 : 2;
+  //return _vertices->_array_format->get_stride();
 }
 
 /**
