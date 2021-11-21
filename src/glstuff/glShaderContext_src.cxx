@@ -2679,63 +2679,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
 
   const GeomVertexArrayDataHandle *array_reader;
 
-  if (_glgsg->_use_vertex_attrib_binding) {
-    // Use experimental new separated formatbinding state.
-    const GeomVertexDataPipelineReader *data_reader = _glgsg->_data_reader;
-
-    for (size_t ai = 0; ai < data_reader->get_num_arrays(); ++ai) {
-      array_reader = data_reader->get_array_reader(ai);
-
-      // Make sure the vertex buffer is up-to-date.
-      CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext),
-        array_reader->prepare_now(_glgsg->get_prepared_objects(), _glgsg));
-      nassertr(gvbc != (CLP(VertexBufferContext) *)nullptr, false);
-
-      if (!_glgsg->update_vertex_buffer(gvbc, array_reader, force)) {
-        return false;
-      }
-
-      GLintptr stride = array_reader->get_array_format()->get_stride();
-
-      // Bind the vertex buffer to the binding index.
-      if (ai >= _glgsg->_current_vertex_buffers.size()) {
-        GLuint zero = 0;
-        _glgsg->_current_vertex_buffers.resize(ai + 1, zero);
-      }
-      if (_glgsg->_current_vertex_buffers[ai] != gvbc->_index) {
-        _glgsg->_glBindVertexBuffer(ai, gvbc->_index, 0, stride);
-        _glgsg->_current_vertex_buffers[ai] = gvbc->_index;
-      }
-    }
-
-    // Figure out which attributes to enable or disable.
-    BitMask32 enabled_attribs = _enabled_attribs;
-    if (_color_attrib_index != -1 &&
-        color_attrib->get_color_type() != ColorAttrib::T_vertex) {
-      // Vertex colours are disabled.
-      enabled_attribs.clear_bit(_color_attrib_index);
-
-#ifdef STDFLOAT_DOUBLE
-      _glgsg->_glVertexAttrib4dv(_color_attrib_index, color_attrib->get_color().get_data());
-#else
-      _glgsg->_glVertexAttrib4fv(_color_attrib_index, color_attrib->get_color().get_data());
-#endif
-    }
-
-    BitMask32 changed_attribs = enabled_attribs ^ _glgsg->_enabled_vertex_attrib_arrays;
-
-    for (int i = 0; i < 32; ++i) {
-      if (changed_attribs.get_bit(i)) {
-        if (enabled_attribs.get_bit(i)) {
-          _glgsg->_glEnableVertexAttribArray(i);
-        } else {
-          _glgsg->_glDisableVertexAttribArray(i);
-        }
-      }
-    }
-    _glgsg->_enabled_vertex_attrib_arrays = enabled_attribs;
-
-  } else {
+  if (!_glgsg->_use_vertex_attrib_binding) {
     Geom::NumericType numeric_type;
     int start, stride, num_values;
     size_t nvarying = _shader->_var_spec.size();
@@ -2839,6 +2783,62 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
     for (GLint p = max_p; p < highest_p; ++p) {
       _glgsg->disable_vertex_attrib_array(p);
     }
+
+  } else {
+    // Use experimental new separated formatbinding state.
+    const GeomVertexDataPipelineReader *data_reader = _glgsg->_data_reader;
+
+    for (size_t ai = 0; ai < data_reader->get_num_arrays(); ++ai) {
+      array_reader = data_reader->get_array_reader(ai);
+
+      // Make sure the vertex buffer is up-to-date.
+      CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext),
+        array_reader->prepare_now(_glgsg->get_prepared_objects(), _glgsg));
+      nassertr(gvbc != (CLP(VertexBufferContext) *)nullptr, false);
+
+      if (!_glgsg->update_vertex_buffer(gvbc, array_reader, force)) {
+        return false;
+      }
+
+      GLintptr stride = array_reader->get_array_format()->get_stride();
+
+      // Bind the vertex buffer to the binding index.
+      if (ai >= _glgsg->_current_vertex_buffers.size()) {
+        GLuint zero = 0;
+        _glgsg->_current_vertex_buffers.resize(ai + 1, zero);
+      }
+      if (_glgsg->_current_vertex_buffers[ai] != gvbc->_index) {
+        _glgsg->_glBindVertexBuffer(ai, gvbc->_index, 0, stride);
+        _glgsg->_current_vertex_buffers[ai] = gvbc->_index;
+      }
+    }
+
+    // Figure out which attributes to enable or disable.
+    BitMask32 enabled_attribs = _enabled_attribs;
+    if (_color_attrib_index != -1 &&
+        color_attrib->get_color_type() != ColorAttrib::T_vertex) {
+      // Vertex colours are disabled.
+      enabled_attribs.clear_bit(_color_attrib_index);
+
+#ifdef STDFLOAT_DOUBLE
+      _glgsg->_glVertexAttrib4dv(_color_attrib_index, color_attrib->get_color().get_data());
+#else
+      _glgsg->_glVertexAttrib4fv(_color_attrib_index, color_attrib->get_color().get_data());
+#endif
+    }
+
+    BitMask32 changed_attribs = enabled_attribs ^ _glgsg->_enabled_vertex_attrib_arrays;
+
+    for (int i = 0; i < 32; ++i) {
+      if (changed_attribs.get_bit(i)) {
+        if (enabled_attribs.get_bit(i)) {
+          _glgsg->_glEnableVertexAttribArray(i);
+        } else {
+          _glgsg->_glDisableVertexAttribArray(i);
+        }
+      }
+    }
+    _glgsg->_enabled_vertex_attrib_arrays = enabled_attribs;
   }
 
   if (_transform_table_index >= 0) {

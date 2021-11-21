@@ -455,6 +455,7 @@ CLP(GraphicsStateGuardian)(GraphicsEngine *engine, GraphicsPipe *pipe) :
   // calling glGetError() forces a sync, this turns it on if you want to.
   _check_errors = gl_check_errors;
   _force_flush = gl_force_flush;
+  _gl_finish = gl_finish;
 
   // Let's say we have a core profile, to be checked later (Otherwise, if we are
   // wrong the user may ask for some non-available functions)
@@ -482,7 +483,7 @@ CLP(GraphicsStateGuardian)(GraphicsEngine *engine, GraphicsPipe *pipe) :
 #endif
 
 #ifdef DO_PSTATS
-  if (gl_finish) {
+  if (_gl_finish) {
     GLCAT.warning()
       << "The config variable gl-finish is set to true.  This may have a substantial negative impact on your render performance.\n";
   }
@@ -1612,6 +1613,12 @@ reset() {
     }
   }
 #endif
+
+  // Store these config values directly so we can avoid querying the
+  // ConfigVariable during perf-critical code.
+  _vertex_buffers_enabled = vertex_buffers;
+  _min_buffer_usage_hint = gl_min_buffer_usage_hint;
+  _debug_buffers = _debug_buffers;
 
 #ifdef OPENGLES
   if (is_at_least_gles_version(3, 0)) {
@@ -3136,7 +3143,7 @@ reset() {
       << ", max_elements_indices = " << max_elements_indices << "\n";
 #endif
     if (_supports_buffers) {
-      if (vertex_buffers) {
+      if (_vertex_buffers_enabled) {
         GLCAT.debug()
           << "vertex buffer objects are supported.\n";
       } else {
@@ -4919,18 +4926,22 @@ update_standard_vertex_arrays(bool force) {
 void CLP(GraphicsStateGuardian)::
 unbind_buffers() {
   if (_current_vbuffer_index != 0) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "unbinding vertex buffer\n";
     }
+#endif
     _glBindBuffer(GL_ARRAY_BUFFER, 0);
     _current_vbuffer_index = 0;
   }
   if (_current_ibuffer_index != 0) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "unbinding index buffer\n";
     }
+#endif
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     _current_ibuffer_index = 0;
   }
@@ -6527,12 +6538,14 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
     CLP(VertexBufferContext) *gvbc = new CLP(VertexBufferContext)(this, _prepared_objects, data);
     _glGenBuffers(1, &gvbc->_index);
 
-    if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "creating vertex buffer " << (int)gvbc->_index << ": "
         << data->get_num_rows() << " vertices "
         << *data->get_array_format() << "\n";
     }
+#endif
 
     report_my_gl_errors(this);
     const GeomVertexArrayDataHandle handle = data->get_handle();
@@ -6560,11 +6573,13 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
   if (gvbc->was_modified(reader)) {
     int num_bytes = reader->get_data_size_bytes();
-    if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "copying " << num_bytes
         << " bytes into vertex buffer " << (int)gvbc->_index << "\n";
     }
+#endif
     if (num_bytes != 0) {
       const unsigned char *client_pointer = reader->get_read_pointer(force);
       if (client_pointer == nullptr) {
@@ -6573,10 +6588,12 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
       PStatGPUTimer timer(this, _load_vertex_buffer_pcollector, reader->get_current_thread());
       if (_current_vbuffer_index != gvbc->_index) {
-        if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+        if (_debug_buffers && GLCAT.is_spam()) {
           GLCAT.spam()
             << "binding vertex buffer " << (int)gvbc->_index << "\n";
         }
+#endif
         _glBindBuffer(GL_ARRAY_BUFFER, gvbc->_index);
         _current_vbuffer_index = gvbc->_index;
       }
@@ -6611,19 +6628,23 @@ release_vertex_buffer(VertexBufferContext *vbc) {
 
   CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext), vbc);
 
-  if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+  if (_debug_buffers && GLCAT.is_debug()) {
     GLCAT.debug()
       << "deleting vertex buffer " << (int)gvbc->_index << "\n";
   }
+#endif
 
   // Make sure the buffer is unbound before we delete it.  Not strictly
   // necessary according to the OpenGL spec, but it might help out a flaky
   // driver, and we need to keep our internal state consistent anyway.
   if (_current_vbuffer_index == gvbc->_index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "unbinding vertex buffer\n";
     }
+#endif
     _glBindBuffer(GL_ARRAY_BUFFER, 0);
     _current_vbuffer_index = 0;
   }
@@ -6647,7 +6668,10 @@ release_vertex_buffers(const pvector<BufferContext *> &contexts) {
     return;
   }
   nassertv(_supports_buffers);
-  bool debug = GLCAT.is_debug() && gl_debug_buffers;
+
+#ifndef NDEBUG
+  bool debug = _debug_buffers && GLCAT.is_debug();
+#endif
 
   GLuint *indices = (GLuint *)alloca(sizeof(GLuint) * contexts.size());
   size_t num_indices = 0;
@@ -6659,18 +6683,22 @@ release_vertex_buffers(const pvector<BufferContext *> &contexts) {
     // necessary according to the OpenGL spec, but it might help out a flaky
     // driver, and we need to keep our internal state consistent anyway.
     if (_current_vbuffer_index == gvbc->_index) {
+#ifndef NDEBUG
       if (debug && GLCAT.is_spam()) {
         GLCAT.spam()
           << "unbinding vertex buffer " << gvbc->_index << "\n";
       }
+#endif
       _glBindBuffer(GL_ARRAY_BUFFER, 0);
       _current_vbuffer_index = 0;
     }
 
+#ifndef NDEBUG
     if (debug) {
       GLCAT.debug()
         << "deleting vertex buffer " << gvbc->_index << "\n";
     }
+#endif
 
     indices[num_indices++] = gvbc->_index;
     gvbc->_index = 0;
@@ -6704,15 +6732,18 @@ setup_array_data(const unsigned char *&client_pointer,
     client_pointer = array_reader->get_read_pointer(force);
     return (client_pointer != nullptr);
   }
-  if (!vertex_buffers || _geom_display_list != 0 ||
-      array_reader->get_usage_hint() < gl_min_buffer_usage_hint) {
+  if ((array_reader->get_usage_hint() < _min_buffer_usage_hint) ||
+      _geom_display_list != 0 ||
+      !_vertex_buffers_enabled) {
     // The array specifies client rendering only, or buffer objects are
     // configured off.
     if (_current_vbuffer_index != 0) {
-      if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+      if (_debug_buffers && GLCAT.is_spam()) {
         GLCAT.spam()
           << "unbinding vertex buffer\n";
       }
+#endif
       _glBindBuffer(GL_ARRAY_BUFFER, 0);
       _current_vbuffer_index = 0;
     }
@@ -6730,10 +6761,12 @@ setup_array_data(const unsigned char *&client_pointer,
   }
 
   if (_current_vbuffer_index != gvbc->_index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "binding vertex buffer " << (int)gvbc->_index << "\n";
     }
+#endif
     _glBindBuffer(GL_ARRAY_BUFFER, gvbc->_index);
     _current_vbuffer_index = gvbc->_index;
   }
@@ -6760,13 +6793,15 @@ prepare_index_buffer(GeomPrimitive *data) {
     CLP(IndexBufferContext) *gibc = new CLP(IndexBufferContext)(this, _prepared_objects, data);
     _glGenBuffers(1, &gibc->_index);
 
-    if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "creating index buffer " << (int)gibc->_index << ": "
         << data->get_num_vertices() << " indices ("
         << data->get_vertices()->get_array_format()->get_column(0)->get_numeric_type()
         << ")\n";
     }
+#endif
 
     report_my_gl_errors(this);
     GeomPrimitivePipelineReader reader(data, Thread::get_current_thread());
@@ -6793,10 +6828,12 @@ apply_index_buffer(IndexBufferContext *ibc,
   CLP(IndexBufferContext) *gibc = DCAST(CLP(IndexBufferContext), ibc);
 
   if (_current_ibuffer_index != gibc->_index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "binding index buffer " << (int)gibc->_index << "\n";
     }
+#endif
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gibc->_index);
     _current_ibuffer_index = gibc->_index;
     gibc->set_active(true);
@@ -6804,11 +6841,13 @@ apply_index_buffer(IndexBufferContext *ibc,
 
   if (gibc->was_modified(reader)) {
     int num_bytes = reader->get_data_size_bytes();
-    if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "copying " << num_bytes
         << " bytes into index buffer " << (int)gibc->_index << "\n";
     }
+#endif
     if (num_bytes != 0) {
       const unsigned char *client_pointer = reader->get_read_pointer(force);
       if (client_pointer == nullptr) {
@@ -6846,19 +6885,23 @@ release_index_buffer(IndexBufferContext *ibc) {
 
   CLP(IndexBufferContext) *gibc = DCAST(CLP(IndexBufferContext), ibc);
 
-  if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+  if (_debug_buffers && GLCAT.is_debug()) {
     GLCAT.debug()
       << "deleting index buffer " << (int)gibc->_index << "\n";
   }
+#endif
 
   // Make sure the buffer is unbound before we delete it.  Not strictly
   // necessary according to the OpenGL spec, but it might help out a flaky
   // driver, and we need to keep our internal state consistent anyway.
   if (_current_ibuffer_index == gibc->_index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "unbinding index buffer\n";
     }
+#endif
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     _current_ibuffer_index = 0;
   }
@@ -6882,7 +6925,10 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
     return;
   }
   nassertv(_supports_buffers);
-  bool debug = GLCAT.is_debug() && gl_debug_buffers;
+
+#ifndef NDEBUG
+  bool debug = _debug_buffers && GLCAT.is_debug();
+#endif
 
   GLuint *indices = (GLuint *)alloca(sizeof(GLuint) * contexts.size());
   size_t num_indices = 0;
@@ -6894,18 +6940,22 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
     // necessary according to the OpenGL spec, but it might help out a flaky
     // driver, and we need to keep our internal state consistent anyway.
     if (_current_ibuffer_index == gibc->_index) {
+#ifndef NDEBUG
       if (debug && GLCAT.is_spam()) {
         GLCAT.spam()
           << "unbinding index buffer " << gibc->_index << "\n";
       }
+#endif
       _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
       _current_ibuffer_index = 0;
     }
 
+#ifndef NDEBUG
     if (debug) {
       GLCAT.debug()
         << "deleting index buffer " << gibc->_index << "\n";
     }
+#endif
 
     indices[num_indices++] = gibc->_index;
     gibc->_index = 0;
@@ -6939,15 +6989,18 @@ setup_primitive(const unsigned char *&client_pointer,
     client_pointer = reader->get_read_pointer(force);
     return (client_pointer != nullptr);
   }
-  if (!vertex_buffers || _geom_display_list != 0 ||
-      reader->get_usage_hint() == Geom::UH_client) {
+  if (reader->get_usage_hint() == Geom::UH_client ||
+      _geom_display_list != 0 ||
+      !_vertex_buffers_enabled) {
     // The array specifies client rendering only, or buffer objects are
     // configured off.
     if (_current_ibuffer_index != 0) {
-      if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+      if (_debug_buffers && GLCAT.is_spam()) {
         GLCAT.spam()
           << "unbinding index buffer\n";
       }
+#endif
       _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
       _current_ibuffer_index = 0;
     }
@@ -6985,10 +7038,12 @@ prepare_shader_buffer(ShaderBuffer *data) {
     CLP(BufferContext) *gbc = new CLP(BufferContext)(this, _prepared_objects, data);
     _glGenBuffers(1, &gbc->_index);
 
-    if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "creating shader buffer " << (int)gbc->_index << ": "<< *data << "\n";
     }
+#endif
     _glBindBuffer(GL_SHADER_STORAGE_BUFFER, gbc->_index);
     _current_sbuffer_index = gbc->_index;
 
@@ -7034,11 +7089,13 @@ apply_shader_buffer(GLuint base, ShaderBuffer *buffer) {
   }
 
   if (_current_sbuffer_base[base] != index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "binding shader buffer " << (int)index
         << " to index " << base << "\n";
     }
+#endif
     _glBindBufferBase(GL_SHADER_STORAGE_BUFFER, base, index);
     _current_sbuffer_base[base] = index;
     _current_sbuffer_index = index;
@@ -7058,19 +7115,23 @@ release_shader_buffer(BufferContext *bc) {
 
   CLP(BufferContext) *gbc = DCAST(CLP(BufferContext), bc);
 
-  if (GLCAT.is_debug() && gl_debug_buffers) {
+#ifndef NDEBUG
+  if (_debug_buffers && GLCAT.is_debug()) {
     GLCAT.debug()
       << "deleting shader buffer " << (int)gbc->_index << "\n";
   }
+#endif
 
   // Make sure the buffer is unbound before we delete it.  Not strictly
   // necessary according to the OpenGL spec, but it might help out a flaky
   // driver, and we need to keep our internal state consistent anyway.
   if (_current_sbuffer_index == gbc->_index) {
-    if (GLCAT.is_spam() && gl_debug_buffers) {
+#ifndef NDEBUG
+    if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
         << "unbinding shader buffer\n";
     }
+#endif
     _glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     _current_sbuffer_index = 0;
   }
@@ -7094,7 +7155,10 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
     return;
   }
   nassertv(_supports_buffers);
-  bool debug = GLCAT.is_debug() && gl_debug_buffers;
+
+#ifndef NDEBUG
+  bool debug = _debug_buffers && GLCAT.is_debug();
+#endif
 
   GLuint *indices = (GLuint *)alloca(sizeof(GLuint) * contexts.size());
   size_t num_indices = 0;
@@ -7106,18 +7170,22 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
     // necessary according to the OpenGL spec, but it might help out a flaky
     // driver, and we need to keep our internal state consistent anyway.
     if (_current_sbuffer_index == gbc->_index) {
+#ifndef NDEBUG
       if (debug && GLCAT.is_spam()) {
         GLCAT.spam()
           << "unbinding shader buffer " << gbc->_index << "\n";
       }
+#endif
       _glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
       _current_sbuffer_index = 0;
     }
 
+#ifndef NDEBUG
     if (debug) {
       GLCAT.debug()
         << "deleting shader buffer " << gbc->_index << "\n";
     }
+#endif
 
     indices[num_indices++] = gbc->_index;
     gbc->_index = 0;
@@ -11901,7 +11969,7 @@ set_state_and_transform(const RenderState *target,
   if (_target_rs->get_attrib(texture_slot) != _state_rs->get_attrib(texture_slot) ||
       !_state_mask.get_bit(texture_slot)) {
     PStatGPUTimer timer(this, _draw_set_state_texture_pcollector);
-    //determine_target_texture();
+    determine_target_texture();
     do_issue_texture();
 
     // Since the TexGen and TexMatrix states depend partly on the particular

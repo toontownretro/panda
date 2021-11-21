@@ -187,7 +187,7 @@ has_fixed_function_pipeline() const {
 INLINE void CLP(GraphicsStateGuardian)::
 maybe_gl_finish() const {
 #ifdef DO_PSTATS
-  if (gl_finish) {
+  if (_gl_finish) {
     glFinish();
   }
 #endif

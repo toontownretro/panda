@@ -868,11 +868,14 @@ public:
 #endif
 
   bool _supports_buffers;
+  bool _vertex_buffers_enabled;
   PFNGLGENBUFFERSPROC _glGenBuffers;
   PFNGLBINDBUFFERPROC _glBindBuffer;
   PFNGLBUFFERDATAPROC _glBufferData;
   PFNGLBUFFERSUBDATAPROC _glBufferSubData;
   PFNGLDELETEBUFFERSPROC _glDeleteBuffers;
+  GeomEnums::UsageHint _min_buffer_usage_hint;
+  bool _debug_buffers;
 
 #ifndef OPENGLES
   PFNGLMAPBUFFERPROC _glMapBuffer;
@@ -1158,6 +1161,8 @@ public:
   PFNGLOBJECTLABELPROC _glObjectLabel;
 
   GLuint _white_texture;
+
+  bool _gl_finish;
 
 #ifndef NDEBUG
 #ifndef OPENGLES_1
