@@ -42,6 +42,7 @@ Character(const Character &copy) :
 {
   _update_delay = 0.0;
   _active_owner = nullptr;
+  _built_bind_pose = false;
 
   CDWriter cdata(_cycler, true);
   CDReader cdata_from(copy._cycler);
@@ -58,7 +59,8 @@ Character::
 Character(const std::string &name) :
   Namable(name),
   _update_delay(0.0),
-  _active_owner(nullptr)
+  _active_owner(nullptr),
+  _built_bind_pose(false)
 {
   ensure_layer_count(1);
 }
@@ -324,16 +326,19 @@ do_update(double now, CData *cdata, Thread *current_thread) {
 
   AnimEvalData data;
   // Apply the bind poses of each joint as the starting point.
-  for (int i = 0; i < ctx._num_joints; i++) {
-    if (!CheckBit(ctx._joint_mask, i)) {
-      continue;
+  if (!_built_bind_pose) {
+    // Cache the bind pose on the character and then just copy the poses
+    // from here on out.
+    for (size_t i = 0; i < _joints.size(); i++) {
+      AnimEvalData::Joint &pose = _bind_pose._pose[i];
+      pose._position = LVecBase4(_joints[i]._default_pos, 0.0f);
+      pose._scale = LVecBase4(_joints[i]._default_scale, 0.0f);
+      pose._shear = LVecBase4(_joints[i]._default_shear, 0.0f);
+      pose._rotation = _joints[i]._default_quat;
     }
-    AnimEvalData::Joint &pose = data._pose[i];
-    pose._position = _joints[i]._default_pos;
-    pose._scale = _joints[i]._default_scale;
-    pose._shear = _joints[i]._default_shear;
-    pose._rotation = _joints[i]._default_quat;
+    _built_bind_pose = true;
   }
+  data.copy_pose(_bind_pose, _joints.size());
 
   //
   // Evaluate our layers.
@@ -657,6 +662,8 @@ copy_subgraph() const {
 
   copy->_joints = _joints;
   copy->_joint_poses = _joint_poses;
+  copy->_bind_pose.copy_pose(_bind_pose, _joint_poses.size());
+  copy->_built_bind_pose = _built_bind_pose;
 
   // Don't inherit the vertex transforms.
   for (size_t i = 0; i < _joint_poses.size(); i++) {
@@ -706,8 +713,8 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       if (!joint._has_forced_value) {
         // Use the transform calculated during the channel evaluation.
         const AnimEvalData::Joint &pose = data._pose[i];
-        joint._value = LMatrix4::scale_shear_mat(pose._scale, pose._shear) * pose._rotation;
-        joint._value.set_row(3, pose._position);
+        joint._value = LMatrix4::scale_shear_mat(pose._scale.get_xyz(), pose._shear.get_xyz()) * pose._rotation;
+        joint._value.set_row(3, pose._position.get_xyz());
 
       } else {
         // Take the local transform from the forced value.

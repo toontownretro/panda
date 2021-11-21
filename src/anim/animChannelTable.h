@@ -45,9 +45,9 @@ PUBLISHED:
 
 class EXPCL_PANDA_ANIM JointFrame final {
 PUBLISHED:
-  LVecBase3 pos;
-  LVecBase3 scale;
-  LVecBase3 shear;
+  LVecBase4 pos;
+  LVecBase4 scale;
+  LVecBase4 shear;
   LQuaternion quat;
 
   JointFrame() = default;

@@ -31,12 +31,12 @@
 #include "ikChain.h"
 #include "animLayer.h"
 #include "animChannel.h"
+#include "animEvalContext.h"
 
 class FactoryParams;
 class Loader;
 class CharacterNode;
 class AnimChannelTable;
-class AnimEvalData;
 class AnimEventQueue;
 
 /**
@@ -268,6 +268,12 @@ private:
 
   typedef pvector<CharacterNode *> Nodes;
   Nodes _nodes;
+
+  // Contains all of the bind poses for the character's joints.
+  // This gets copied before the anim evaluation for the character so
+  // we don't have to rebuild this structure every time.
+  AnimEvalData _bind_pose;
+  bool _built_bind_pose;
 
   // This is the data that must be cycled between pipeline stages.
   class CData : public CycleData {

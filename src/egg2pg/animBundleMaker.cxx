@@ -391,16 +391,18 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
   joint.num_frames = std::max((size_t)joint.num_frames, std::max(a.size(), std::max(b.size(), c.size())));
 
   for (int i = 0; i < joint.num_frames; i++) {
-    LVecBase3 pos(
+    LVecBase4 pos(
       x[i % x.size()],
       y[i % y.size()],
-      z[i % z.size()]
+      z[i % z.size()],
+      0.0f
     );
 
-    LVecBase3 scale(
+    LVecBase4 scale(
       sx[i % sx.size()],
       sy[i % sy.size()],
-      sz[i % sz.size()]
+      sz[i % sz.size()],
+      0.0f
     );
 
     LVector3 hpr(
@@ -409,10 +411,11 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
       r[i % r.size()]
     );
 
-    LVecBase3 shear(
+    LVecBase4 shear(
       a[i % a.size()],
       b[i % b.size()],
-      c[i % c.size()]
+      c[i % c.size()],
+      0.0f
     );
 
     LQuaternion quat;

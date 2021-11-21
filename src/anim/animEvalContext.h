@@ -86,9 +86,9 @@ public:
       _rotation(LQuaternion::ident_quat()),
       _scale(1)
     { }
-    LPoint3 _position;
-    LVecBase3 _scale;
-    LVecBase3 _shear;
+    LVecBase4 _position;
+    LVecBase4 _scale;
+    LVecBase4 _shear;
     LQuaternion _rotation;
   };
 

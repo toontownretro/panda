@@ -169,7 +169,6 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       if (!CheckBit(context._joint_mask, i)) {
         continue;
       }
-      CharacterJoint &j = context._joints[i];
 
       int anim_joint = joint_map[i];
       if (anim_joint < 0) {
@@ -232,10 +231,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
 
   me.add_uint16(_joint_frames.size());
   for (size_t i = 0; i < _joint_frames.size(); i++) {
-    _joint_frames[i].pos.write_datagram(me);
+    _joint_frames[i].pos.get_xyz().write_datagram(me);
     _joint_frames[i].quat.write_datagram(me);
-    _joint_frames[i].scale.write_datagram(me);
-    _joint_frames[i].shear.write_datagram(me);
+    _joint_frames[i].scale.get_xyz().write_datagram(me);
+    _joint_frames[i].shear.get_xyz().write_datagram(me);
   }
 
   me.add_uint8(_num_slider_entries);
@@ -270,10 +269,14 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
   _joint_frames.resize(scan.get_uint16());
   for (size_t i = 0; i < _joint_frames.size(); i++) {
-    _joint_frames[i].pos.read_datagram(scan);
+    LVecBase3 vec3;
+    vec3.read_datagram(scan);
+    _joint_frames[i].pos.set(vec3[0], vec3[1], vec3[2], 0.0f);
     _joint_frames[i].quat.read_datagram(scan);
-    _joint_frames[i].scale.read_datagram(scan);
-    _joint_frames[i].shear.read_datagram(scan);
+    vec3.read_datagram(scan);
+    _joint_frames[i].scale.set(vec3[0], vec3[1], vec3[2], 0.0f);
+    vec3.read_datagram(scan);
+    _joint_frames[i].shear.set(vec3[0], vec3[1], vec3[2], 0.0f);
   }
 
   _num_slider_entries = scan.get_uint8();
