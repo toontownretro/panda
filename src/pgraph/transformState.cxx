@@ -75,15 +75,18 @@ TransformState() :
  */
 TransformState::
 ~TransformState() {
-  // We'd better not call the destructor twice on a particular object.
-  nassertv(!is_destructing());
-  set_destructing();
-
   // Free the inverse matrix computation, if it has been stored.
   delete _inv_mat;
   _inv_mat = nullptr;
 
+  _cache_stats.add_num_states(-1);
+
   //LightReMutexHolder holder(*_states_lock);
+
+#ifdef _DEBUG
+  // We'd better not call the destructor twice on a particular object.
+  nassertv(!is_destructing());
+  set_destructing();
 
   // unref() should have cleared these.
   nassertv(_saved_entry == -1);
@@ -92,9 +95,7 @@ TransformState::
   // If this was true at the beginning of the destructor, but is no longer
   // true now, probably we've been double-deleted.
   nassertv(get_ref_count() == 0);
-  _cache_stats.add_num_states(-1);
 
-#ifndef NDEBUG
   _flags = F_is_invalid | F_is_destructing;
 #endif
 }
