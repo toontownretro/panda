@@ -102,6 +102,14 @@ consider_yield() {
 /**
  *
  */
+INLINE uint32_t ThreadSimpleImpl::
+get_current_thread_id() {
+  return _unique_id;
+}
+
+/**
+ *
+ */
 INLINE void ThreadSimpleImpl::
 consider_yield_this() {
   double now = _manager->get_current_time();

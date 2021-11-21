@@ -198,6 +198,14 @@ get_num_supported_threads() {
 }
 
 /**
+ *
+ */
+INLINE uint32_t Thread::
+get_current_thread_id() {
+  return ThreadImpl::get_current_thread_id();
+}
+
+/**
  * Suspends the current thread for at least the indicated amount of time.  It
  * might be suspended for longer.
  */

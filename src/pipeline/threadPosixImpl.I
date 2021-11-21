@@ -119,6 +119,14 @@ INLINE void ThreadPosixImpl::
 consider_yield() {
 }
 
+/**
+ *
+ */
+INLINE uint32_t ThreadPosixImpl::
+get_current_thread_id() {
+  return (uint32_t)gettid();
+}
+
 #ifdef ANDROID
 /**
  * Returns the JNIEnv object for the current thread.

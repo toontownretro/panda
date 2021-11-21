@@ -124,3 +124,11 @@ yield() {
 INLINE void ThreadDummyImpl::
 consider_yield() {
 }
+
+/**
+ *
+ */
+INLINE uint32_t ThreadDummyImpl::
+get_current_thread_id() {
+  return 0;
+}

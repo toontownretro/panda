@@ -68,6 +68,7 @@ public:
   INLINE static void sleep(double seconds);
   INLINE static void yield();
   INLINE static void consider_yield();
+  INLINE static uint32_t get_current_thread_id();
 
   void sleep_this(double seconds);
   void yield_this(bool volunteer);

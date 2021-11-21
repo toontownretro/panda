@@ -51,6 +51,7 @@ public:
   INLINE static void sleep(double seconds);
   INLINE static void yield();
   INLINE static void consider_yield();
+  INLINE static uint32_t get_current_thread_id();
 
 private:
   static DWORD WINAPI root_func(LPVOID data);

@@ -80,6 +80,7 @@ PUBLISHED:
   INLINE static bool is_true_threads();
   INLINE static bool is_simple_threads();
   INLINE static int get_num_supported_threads();
+  INLINE static uint32_t get_current_thread_id();
   BLOCKING INLINE static void sleep(double seconds);
 
   BLOCKING INLINE static void force_yield();

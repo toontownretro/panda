@@ -108,3 +108,11 @@ yield() {
 INLINE void ThreadWin32Impl::
 consider_yield() {
 }
+
+/**
+ *
+ */
+INLINE uint32_t ThreadWin32Impl::
+get_current_thread_id() {
+  return (uint32_t)GetCurrentThreadId();
+}
