@@ -154,7 +154,8 @@ ref() const {
   nassertv(test_ref_count_integrity());
 #endif
 
-  AtomicAdjust::inc(_ref_count);
+  //AtomicAdjust::inc(_ref_count);
+  _ref_count++;
 }
 
 /**
@@ -186,7 +187,9 @@ unref() const {
   // you can't use PointerTo's?
   nassertr(_ref_count > 0, 0);
 #endif
-  return AtomicAdjust::dec(_ref_count);
+  //return AtomicAdjust::dec(_ref_count);
+  _ref_count--;
+  return (_ref_count > 0);
 }
 
 /**
