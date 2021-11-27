@@ -344,7 +344,6 @@ ConfigVariableBool gl_depth_zero_to_one
 extern ConfigVariableBool gl_parallel_arrays;
 
 void CLP(init_classes)() {
-  CLP(GeomContext)::init_type();
   CLP(GeomMunger)::init_type();
   CLP(GraphicsStateGuardian)::init_type();
   CLP(IndexBufferContext)::init_type();

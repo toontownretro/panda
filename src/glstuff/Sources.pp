@@ -17,16 +17,12 @@
   #endif
 
   #define HEADERS \
-    glGeomContext_src.I \
-    glGeomContext_src.h \
     glGeomMunger_src.I \
     glGeomMunger_src.h \
     glGraphicsStateGuardian_src.I \
     glGraphicsStateGuardian_src.h \
     glGraphicsBuffer_src.I \
     glGraphicsBuffer_src.h \
-    glImmediateModeSender_src.I \
-    glImmediateModeSender_src.h \
     glIndexBufferContext_src.I \
     glIndexBufferContext_src.h \
     glOcclusionQueryContext_src.I \

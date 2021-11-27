@@ -32,7 +32,7 @@ PUBLISHED:
   // The hint is provided as a performance optimization only, and does not
   // constrain actual usage; although it may be an important optimization.
 
-  enum UsageHint {
+  enum UsageHint : uint8_t {
     // The following are intentionally ordered from most dynamic to most
     // static.  In general, if usage_a < usage_b, then usage_a is more dynamic
     // than usage_b.
@@ -68,7 +68,7 @@ PUBLISHED:
   // rendering requirements of a particular Geom, as well as the rendering
   // capabilities of the GSG.  The difference between the two indicates
   // whether the Geom needs to be munged for the GSG.
-  enum GeomRendering {
+  enum GeomRendering : uint32_t {
     // If there are indexed points.
     GR_indexed_point        = 0x00001,
 
@@ -141,7 +141,7 @@ PUBLISHED:
   // indexed by a given primitive truly represent per-vertex colors and
   // normals, or whether they actually represent per-triangle flat-shaded
   // colors and normals.
-  enum ShadeModel {
+  enum ShadeModel : uint8_t {
     // SM_uniform: all vertices across all faces have the same colors and
     // normals.  It doesn't really matter which ShadeModelAttrib mode is used
     // to render this primitive.
@@ -164,7 +164,7 @@ PUBLISHED:
   // The primitive type represents the core primitive type of a particular
   // GeomPrimitive.  It's used for determining what kind of antialiasing
   // should be enabled.
-  enum PrimitiveType {
+  enum PrimitiveType : uint8_t {
     PT_none,
     PT_polygons,
     PT_lines,
@@ -174,7 +174,8 @@ PUBLISHED:
 
   // The exact type of a GeomPrimitive subclass.  This is the type of primitive
   // that will actually be rendered by the graphics pipe.
-  enum GeomPrimitiveType {
+  enum GeomPrimitiveType : int8_t {
+    GPT_invalid = -1,
     GPT_triangles,
     GPT_triangle_strips,
     GPT_triangle_fans,
@@ -190,7 +191,7 @@ PUBLISHED:
 
   // The numeric type determines what physical representation is used to
   // encode a numeric value within the vertex data.
-  enum NumericType {
+  enum NumericType : uint8_t {
     NT_uint8,        // An integer 0..255
     NT_uint16,       // An integer 0..65535
     NT_uint32,       // An integer 0..4294967295
@@ -208,7 +209,7 @@ PUBLISHED:
   // The contents determine the semantic meaning of a numeric value within the
   // vertex data.  This is also used to determine what automatic transforms
   // might be applied to the various columns.
-  enum Contents {
+  enum Contents : uint8_t {
     C_other,        // Arbitrary meaning, leave it alone
     C_point,        // A point in 3-space or 4-space
     C_clip_point,   // A point pre-transformed into clip coordinates
@@ -229,7 +230,7 @@ PUBLISHED:
 
   // The type of animation data that is represented by a particular
   // GeomVertexFormat.
-  enum AnimationType {
+  enum AnimationType : uint8_t {
     AT_none,     // No vertex animation.
     AT_panda,    // Vertex animation calculated on the CPU by Panda.
     AT_hardware, // Hardware-accelerated animation on the graphics card.

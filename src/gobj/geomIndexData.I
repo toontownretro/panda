@@ -6,11 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file geomContext.cxx
- * @author drose
- * @date 2004-03-19
+ * @file geomIndexData.I
+ * @author brian
+ * @date 2021-11-24
  */
-
-#include "geomContext.h"
-
-TypeHandle GeomContext::_type_handle;

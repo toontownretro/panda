@@ -20,8 +20,6 @@
 #include "weakPointerTo.h"
 #include "weakPointerCallback.h"
 
-class CLP(GeomContext);
-
 /**
  * This specialization on GeomMunger finesses vertices for OpenGL rendering.
  * In particular, it makes sure colors aren't stored in DirectX's packed_argb
@@ -47,9 +45,6 @@ private:
   WCPT(TextureAttrib) _texture;
   WCPT(TexGenAttrib) _tex_gen;
 
-  typedef pset<CLP(GeomContext) *> GeomContexts;
-  GeomContexts _geom_contexts;
-
   enum Flags {
     F_interleaved_arrays   = 0x0001,
     F_parallel_arrays      = 0x0002,
@@ -72,8 +67,6 @@ public:
 
 private:
   static TypeHandle _type_handle;
-
-  friend class CLP(GeomContext);
 };
 
 #include "glGeomMunger_src.I"

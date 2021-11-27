@@ -55,14 +55,6 @@ CLP(GeomMunger)(GraphicsStateGuardian *gsg, const RenderState *state) :
  */
 CLP(GeomMunger)::
 ~CLP(GeomMunger)() {
-  // We need to remove this pointer from all of the geom contexts that
-  // reference this object.
-  GeomContexts::iterator gci;
-  for (gci = _geom_contexts.begin(); gci != _geom_contexts.end(); ++gci) {
-    (*gci)->remove_munger(this);
-  }
-  _geom_contexts.clear();
-
   if ((_flags & F_parallel_arrays) == 0) {
     _texture.remove_callback(this);
     _tex_gen.remove_callback(this);

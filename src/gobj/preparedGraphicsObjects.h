@@ -18,9 +18,8 @@
 #include "referenceCount.h"
 #include "texture.h"
 #include "samplerState.h"
-#include "geom.h"
 #include "geomVertexArrayData.h"
-#include "geomPrimitive.h"
+#include "geomIndexData.h"
 #include "shader.h"
 #include "shaderBuffer.h"
 #include "pointerTo.h"
@@ -33,7 +32,6 @@
 
 class TextureContext;
 class SamplerContext;
-class GeomContext;
 class ShaderContext;
 class VertexBufferContext;
 class IndexBufferContext;
@@ -98,17 +96,6 @@ PUBLISHED:
   SamplerContext *prepare_sampler_now(const SamplerState &sampler,
                                       GraphicsStateGuardianBase *gsg);
 
-  void enqueue_geom(Geom *geom);
-  bool is_geom_queued(const Geom *geom) const;
-  bool dequeue_geom(Geom *geom);
-  bool is_geom_prepared(const Geom *geom) const;
-  void release_geom(GeomContext *gc);
-  int release_all_geoms();
-  int get_num_queued_geoms() const;
-  int get_num_prepared_geoms() const;
-
-  GeomContext *prepare_geom_now(Geom *geom, GraphicsStateGuardianBase *gsg);
-
   void enqueue_shader(Shader *shader);
   bool is_shader_queued(const Shader *shader) const;
   bool dequeue_shader(Shader *shader);
@@ -133,17 +120,17 @@ PUBLISHED:
   prepare_vertex_buffer_now(GeomVertexArrayData *data,
                             GraphicsStateGuardianBase *gsg);
 
-  void enqueue_index_buffer(GeomPrimitive *data);
-  bool is_index_buffer_queued(const GeomPrimitive *data) const;
-  bool dequeue_index_buffer(GeomPrimitive *data);
-  bool is_index_buffer_prepared(const GeomPrimitive *data) const;
+  void enqueue_index_buffer(GeomIndexData *data);
+  bool is_index_buffer_queued(const GeomIndexData *data) const;
+  bool dequeue_index_buffer(GeomIndexData *data);
+  bool is_index_buffer_prepared(const GeomIndexData *data) const;
   void release_index_buffer(IndexBufferContext *ibc);
   int release_all_index_buffers();
   int get_num_queued_index_buffers() const;
   int get_num_prepared_index_buffers() const;
 
   IndexBufferContext *
-  prepare_index_buffer_now(GeomPrimitive *data,
+  prepare_index_buffer_now(GeomIndexData *data,
                            GraphicsStateGuardianBase *gsg);
 
   void enqueue_shader_buffer(ShaderBuffer *data);
@@ -220,13 +207,11 @@ private:
 private:
   typedef pflat_hash_set<TextureContext *, pointer_hash> Textures;
   typedef pflat_hash_map< PT(Texture), PT(EnqueuedObject) > EnqueuedTextures;
-  typedef pflat_hash_set<GeomContext *, pointer_hash> Geoms;
-  typedef pflat_hash_set< PT(Geom) > EnqueuedGeoms;
   typedef pflat_hash_set<ShaderContext *, pointer_hash> Shaders;
   typedef pflat_hash_map< PT(Shader), PT(EnqueuedObject) > EnqueuedShaders;
   typedef pflat_hash_set<BufferContext *, pointer_hash> Buffers;
   typedef pflat_hash_set< PT(GeomVertexArrayData) > EnqueuedVertexBuffers;
-  typedef pflat_hash_set< PT(GeomPrimitive) > EnqueuedIndexBuffers;
+  typedef pflat_hash_set< PT(GeomIndexData) > EnqueuedIndexBuffers;
   typedef pflat_hash_set< PT(ShaderBuffer) > EnqueuedShaderBuffers;
 
   // Sampler states are stored a little bit differently, as they are mapped by
@@ -268,8 +253,6 @@ private:
   PreparedSamplers _prepared_samplers;
   ReleasedSamplers _released_samplers;
   EnqueuedSamplers _enqueued_samplers;
-  Geoms _prepared_geoms, _released_geoms;
-  EnqueuedGeoms _enqueued_geoms;
   Shaders _prepared_shaders, _released_shaders;
   EnqueuedShaders _enqueued_shaders;
   Buffers _prepared_vertex_buffers;

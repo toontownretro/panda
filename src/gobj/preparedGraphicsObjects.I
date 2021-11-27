@@ -37,7 +37,6 @@ INLINE void PreparedGraphicsObjects::
 release_all() {
   release_all_textures();
   release_all_samplers();
-  release_all_geoms();
   release_all_shaders();
   release_all_vertex_buffers();
   release_all_index_buffers();
@@ -56,7 +55,6 @@ INLINE int PreparedGraphicsObjects::
 get_num_queued() const {
   return (get_num_queued_textures() +
           get_num_queued_samplers() +
-          get_num_queued_geoms() +
           get_num_queued_shaders() +
           get_num_queued_vertex_buffers() +
           get_num_queued_index_buffers() +
@@ -71,7 +69,6 @@ INLINE int PreparedGraphicsObjects::
 get_num_prepared() const {
   return (get_num_prepared_textures() +
           get_num_prepared_samplers() +
-          get_num_prepared_geoms() +
           get_num_prepared_shaders() +
           get_num_prepared_vertex_buffers() +
           get_num_prepared_index_buffers() +

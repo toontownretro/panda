@@ -163,25 +163,6 @@ has_core_profile() const {
 }*/
 
 /**
- * Returns whether the fixed function pipeline is supported.
- */
-INLINE bool CLP(GraphicsStateGuardian)::
-has_fixed_function_pipeline() const {
-#ifndef SUPPORT_FIXED_FUNCTION
-  return false;
-#elif defined(OPENGLES_1)
-  return true;
-#elif defined(OPENGLES)
-  return false;
-#else
-  // Otherwise, we can just check whether we are using a core profile or a
-  // compatibility mode. The variable _core_profile is already taking into
-  // account if a GL < 3.2 is considered (becoming false)
-  return !_core_profile;
-#endif
-}
-
-/**
  * Calls glFinish() if the config variable gl-finish is set True.
  */
 INLINE void CLP(GraphicsStateGuardian)::
@@ -412,24 +393,6 @@ enable_line_smooth(bool val) {
  *
  */
 INLINE void CLP(GraphicsStateGuardian)::
-enable_point_smooth(bool val) {
-#ifdef SUPPORT_FIXED_FUNCTION
-  if (has_fixed_function_pipeline() && _point_smooth_enabled != val) {
-    _state_mask.clear_bit(TransparencyAttrib::get_class_slot());
-    _point_smooth_enabled = val;
-    if (val) {
-      glEnable(GL_POINT_SMOOTH);
-    } else {
-      glDisable(GL_POINT_SMOOTH);
-    }
-  }
-#endif
-}
-
-/**
- *
- */
-INLINE void CLP(GraphicsStateGuardian)::
 enable_polygon_smooth(bool val) {
 #ifndef OPENGLES  // GL_POLYGON_SMOOTH not supported in OpenGL ES.
   if (_polygon_smooth_enabled != val) {
@@ -467,7 +430,6 @@ setup_antialias_point() {
     // Points supposedly look better using point smoothing, even if we have
     // multisample available.
     enable_multisample_antialias(false);
-    enable_point_smooth(true);
   }
 }
 
@@ -488,19 +450,18 @@ setup_antialias_polygon() {
     case RenderModeAttrib::M_point:
       // In point mode, we're drawing points.
       enable_multisample_antialias(false);
-      enable_point_smooth(true);
       break;
 
     default:
       // For polygons, multisample is best if it's available, otherwise
       // polygon smoothing will do.
       enable_line_smooth(false);
-      enable_point_smooth(false);
       if (_supports_multisample) {
         enable_multisample_antialias(true);
       } else {
         enable_polygon_smooth(true);
       }
+      break;
     }
   }
 }
@@ -574,56 +535,6 @@ enable_depth_test(bool val) {
   }
 }
 
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- *
- */
-INLINE void CLP(GraphicsStateGuardian)::
-enable_fog(bool val) {
-  if (_fog_enabled != val) {
-    _fog_enabled = val;
-    if (val) {
-#ifdef GSG_VERBOSE
-      GLCAT.spam()
-        << "glEnable(GL_FOG)" << std::endl;
-#endif
-      glEnable(GL_FOG);
-    } else {
-#ifdef GSG_VERBOSE
-      GLCAT.spam()
-        << "glDisable(GL_FOG)" << std::endl;
-#endif
-      glDisable(GL_FOG);
-    }
-  }
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- *
- */
-INLINE void CLP(GraphicsStateGuardian)::
-enable_alpha_test(bool val) {
-  if (_alpha_test_enabled != val) {
-    _alpha_test_enabled = val;
-    if (val) {
-#ifdef GSG_VERBOSE
-      GLCAT.spam()
-        << "glEnable(GL_ALPHA_TEST)" << std::endl;
-#endif
-      glEnable(GL_ALPHA_TEST);
-    } else {
-#ifdef GSG_VERBOSE
-      GLCAT.spam()
-        << "glDisable(GL_ALPHA_TEST)" << std::endl;
-#endif
-      glDisable(GL_ALPHA_TEST);
-    }
-  }
-}
-#endif
-
 /**
  *
  */
@@ -676,113 +587,6 @@ clear_color_write_mask() {
   }
 }
 
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- *
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glLoadMatrix(const LMatrix4 &mat) {
-#if defined(OPENGLES) && defined(STDFLOAT_DOUBLE)
-  LMatrix4f matf = LCAST(float, mat);
-  glLoadMatrixf(matf.get_data());
-#elif defined(STDFLOAT_DOUBLE)
-  glLoadMatrixd(mat.get_data());
-#else
-  glLoadMatrixf(mat.get_data());
-#endif
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glFogdv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glFogfv(GLenum pname, const LColor &color) {
-#ifndef STDFLOAT_DOUBLE
-  glFogfv(pname, color.get_data());
-#else  // STDFLOAT_DOUBLE
-  LColorf fcolor = LCAST(float, color);
-  glFogfv(pname, fcolor.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glMaterialdv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glMaterialfv(GLenum face, GLenum pname, const LColor &color) {
-#ifndef STDFLOAT_DOUBLE
-  glMaterialfv(face, pname, color.get_data());
-#else  // STDFLOAT_DOUBLE
-  LColorf fcolor = LCAST(float, color);
-  glMaterialfv(face, pname, fcolor.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glLightdv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glLightfv(GLenum light, GLenum pname, const LVecBase4 &value) {
-#ifndef STDFLOAT_DOUBLE
-  glLightfv(light, pname, value.get_data());
-#else  // STDFLOAT_DOUBLE
-  LVecBase4f fvalue = LCAST(float, value);
-  glLightfv(light, pname, fvalue.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glLightdv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glLightfv(GLenum light, GLenum pname, const LVecBase3 &value) {
-#ifndef STDFLOAT_DOUBLE
-  glLightfv(light, pname, value.get_data());
-#else  // STDFLOAT_DOUBLE
-  LVecBase3f fvalue = LCAST(float, value);
-  glLightfv(light, pname, fvalue.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glLightModeldv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glLightModelfv(GLenum pname, const LVecBase4 &value) {
-#ifndef STDFLOAT_DOUBLE
-  glLightModelfv(pname, value.get_data());
-#else  // STDFLOAT_DOUBLE
-  LVecBase4f fvalue = LCAST(float, value);
-  glLightModelfv(pname, fvalue.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * This method is necessary because there is no glTexEnvdv().
- */
-INLINE void CLP(GraphicsStateGuardian)::
-call_glTexEnvfv(GLenum target, GLenum pname, const LVecBase4 &value) {
-#ifndef STDFLOAT_DOUBLE
-  glTexEnvfv(target, pname, value.get_data());
-#else  // STDFLOAT_DOUBLE
-  LVecBase4f fvalue = LCAST(float, value);
-  glTexEnvfv(target, pname, fvalue.get_data());
-#endif  //  STDFLOAT_DOUBLE
-}
-#endif
-
 /**
  * This method is necessary because there is no glTexParameterdv().
  */
@@ -795,26 +599,6 @@ call_glTexParameterfv(GLenum target, GLenum pname, const LVecBase4 &value) {
   glTexParameterfv(target, pname, fvalue.get_data());
 #endif  //  STDFLOAT_DOUBLE
 }
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * Convert index to gl light id
- */
-INLINE GLenum CLP(GraphicsStateGuardian)::
-get_light_id(int index) const {
-  return GL_LIGHT0 + index;
-}
-#endif
-
-#ifdef SUPPORT_FIXED_FUNCTION
-/**
- * Convert index to gl clip plane id
- */
-INLINE GLenum CLP(GraphicsStateGuardian)::
-get_clip_plane_id(int index) const {
-  return GL_CLIP_PLANE0 + index;
-}
-#endif
 
 /**
  * Returns if this glGsg supports multisample antialiasing for framebuffer
