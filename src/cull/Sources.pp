@@ -5,6 +5,12 @@
 #begin lib_target
   #define TARGET cull
 
+  #if $[HAVE_TBB]
+    // Currently we just use TBB for parallel cull bin sorting.
+    #define USE_PACKAGES tbb
+    #define C++FLAGS $[C++FLAGS] -DHAVE_TBB
+  #endif
+
   #define BUILDING_DLL BUILDING_PANDA_CULL
 
   #define SOURCES \
