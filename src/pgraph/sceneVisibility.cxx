@@ -28,6 +28,8 @@ TypeHandle SceneVisibility::_type_handle;
 static LightMutex vis_cache_lock("vis_cache");
 
 static PStatCollector vis_test_collector("Cull:SceneVisTest");
+static PStatCollector vis_cache_lookup("Cull:SceneVisTest:CacheLookup");
+static PStatCollector vis_compare_transforms("Cull:SceneVisTest:CompareTransforms");
 
 /**
  *
@@ -331,9 +333,19 @@ is_node_in_pvs(const TransformState *parent_net_transform, const GeometricBoundi
   // Otherwise, we need to compare the actual transforms.
   static bool using_transform_cache = transform_cache;
 
-  bool transform_changed = using_transform_cache ?
-    (vis_data->parent_net_transform != parent_net_transform) :
-    (*vis_data->parent_net_transform != *parent_net_transform);
+  bool transform_changed;
+  vis_compare_transforms.start();
+  if (using_transform_cache) {
+    transform_changed = vis_data->parent_net_transform != parent_net_transform;
+
+  } else if (vis_data->parent_net_transform != nullptr) {
+    transform_changed = *vis_data->parent_net_transform != *parent_net_transform;
+
+  } else {
+    // It's fresh.
+    transform_changed = true;
+  }
+  vis_compare_transforms.stop();
 
   if (transform_changed ||
       vis_data->node_bounds != bounds) {
@@ -343,7 +355,11 @@ is_node_in_pvs(const TransformState *parent_net_transform, const GeometricBoundi
     vis_data->parent_net_transform = parent_net_transform;
     vis_data->node_bounds = bounds;
 
-    if (bounds->is_exact_type(BoundingBox::get_class_type())) {
+    if (bounds->is_infinite()) {
+      vis_data->vis_sectors = BitArray::all_on();
+      vis_data->vis_head_node = head_node;
+
+    } else if (bounds->is_exact_type(BoundingBox::get_class_type())) {
       const BoundingBox *bbox = (const BoundingBox *)bounds;
 
       LPoint3 mins = bbox->get_minq();
@@ -437,7 +453,9 @@ is_node_in_pvs(const TransformState *parent_net_transform, const GeometricBoundi
  */
 SceneVisibility::NodeVisData *SceneVisibility::
 get_node_vis(PandaNode *node) {
-  LightMutexHolder holder(vis_cache_lock);
+  //LightMutexHolder holder(vis_cache_lock);
+
+  PStatTimer timer(vis_cache_lookup);
 
   auto it = _node_vis_cache.find(node);
   if (it != _node_vis_cache.end()) {
