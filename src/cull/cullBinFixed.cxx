@@ -20,7 +20,6 @@
 
 #include <algorithm>
 
-
 TypeHandle CullBinFixed::_type_handle;
 
 /**
