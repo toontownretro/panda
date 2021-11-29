@@ -39,32 +39,6 @@ VertexTransform::
 }
 
 /**
- * Premultiplies this transform's matrix with the indicated previous matrix,
- * so that the result is the net composition of the given transform with this
- * transform.  The result is stored in the parameter "result", which should
- * not be the same matrix as previous.
- */
-void VertexTransform::
-mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
-  nassertv(&result != &previous);
-  LMatrix4 me;
-  get_matrix(me);
-  result.multiply(me, previous);
-}
-
-/**
- * Adds the value of this transform's matrix, modified by the indicated
- * weight, into the indicated accumulation matrix.  This is used to compute
- * the result of several blended transforms.
- */
-void VertexTransform::
-accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
-  LMatrix4 me;
-  get_matrix(me);
-  accum.accumulate(me, weight);
-}
-
-/**
  *
  */
 void VertexTransform::
@@ -79,9 +53,7 @@ void VertexTransform::
 write(std::ostream &out, int indent_level) const {
   indent(out, indent_level)
     << *this << ":\n";
-  LMatrix4 mat;
-  get_matrix(mat);
-  mat.write(out, indent_level + 2);
+  get_matrixq().write(out, indent_level + 2);
 }
 
 /**
@@ -112,10 +84,18 @@ mark_modified(Thread *current_thread) {
   CDWriter cdata(_cycler, true, current_thread);
   cdata->_modified = get_next_modified(current_thread);
 
-  Palettes::iterator pi;
-  for (pi = _tables.begin(); pi != _tables.end(); ++pi) {
-    (*pi)->update_modified(cdata->_modified, current_thread);
-  }
+  //Palettes::iterator pi;
+  //for (pi = _tables.begin(); pi != _tables.end(); ++pi) {
+  //  (*pi)->update_modified(cdata->_modified, current_thread);
+  //}
+}
+
+/**
+ *
+ */
+void VertexTransform::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -125,6 +105,22 @@ mark_modified(Thread *current_thread) {
 void VertexTransform::
 write_datagram(BamWriter *manager, Datagram &dg) {
   TypedWritable::write_datagram(manager, dg);
+
+  manager->write_cdata(dg, _cycler);
+}
+
+/**
+ *
+ */
+TypedWritable *VertexTransform::
+make_from_bam(const FactoryParams &params) {
+  VertexTransform *tform = new VertexTransform;
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  tform->fillin(scan, manager);
+  return tform;
 }
 
 /**
@@ -134,6 +130,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 void VertexTransform::
 fillin(DatagramIterator &scan, BamReader *manager) {
   TypedWritable::fillin(scan, manager);
+  manager->read_cdata(scan, _cycler);
 }
 
 /**
@@ -150,6 +147,7 @@ make_copy() const {
  */
 void VertexTransform::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
+  _matrix.write_datagram(dg);
 }
 
 /**
@@ -169,4 +167,5 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void VertexTransform::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
+  _matrix.read_datagram(scan);
 }

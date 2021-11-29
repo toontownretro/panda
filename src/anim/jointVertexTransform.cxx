@@ -55,35 +55,6 @@ JointVertexTransform::
 }
 
 /**
- * Stores the transform's matrix in the indicated object.
- */
-void JointVertexTransform::
-get_matrix(LMatrix4 &matrix) const {
-  matrix = _matrix;
-}
-
-/**
- * Premultiplies this transform's matrix with the indicated previous matrix,
- * so that the result is the net composition of the given transform with this
- * transform.  The result is stored in the parameter "result", which should
- * not be the same matrix as previous.
- */
-void JointVertexTransform::
-mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
-  result.multiply(_matrix, previous);
-}
-
-/**
- * Adds the value of this transform's matrix, modified by the indicated
- * weight, into the indicated accumulation matrix.  This is used to compute
- * the result of several blended transforms.
- */
-void JointVertexTransform::
-accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
-  accum.accumulate(_matrix, weight);
-}
-
-/**
  *
  */
 void JointVertexTransform::

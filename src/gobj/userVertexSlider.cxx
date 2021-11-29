@@ -36,23 +36,6 @@ UserVertexSlider(const InternalName *name) :
 }
 
 /**
- * Returns the current slider value.
- */
-PN_stdfloat UserVertexSlider::
-get_slider() const {
-  CDReader cdata(_cycler);
-  return cdata->_slider;
-}
-
-/**
- *
- */
-CycleData *UserVertexSlider::CData::
-make_copy() const {
-  return new CData(*this);
-}
-
-/**
  * Tells the BamReader how to create objects of type UserVertexSlider.
  */
 void UserVertexSlider::
@@ -67,8 +50,6 @@ register_with_read_factory() {
 void UserVertexSlider::
 write_datagram(BamWriter *manager, Datagram &dg) {
   VertexSlider::write_datagram(manager, dg);
-
-  manager->write_cdata(dg, _cycler);
 }
 
 /**
@@ -95,24 +76,4 @@ make_from_bam(const FactoryParams &params) {
 void UserVertexSlider::
 fillin(DatagramIterator &scan, BamReader *manager) {
   VertexSlider::fillin(scan, manager);
-
-  manager->read_cdata(scan, _cycler);
-}
-
-/**
- * Writes the contents of this object to the datagram for shipping out to a
- * Bam file.
- */
-void UserVertexSlider::CData::
-write_datagram(BamWriter *manager, Datagram &dg) const {
-  dg.add_stdfloat(_slider);
-}
-
-/**
- * This internal function is called by make_from_bam to read in all of the
- * relevant data from the BamFile for the new UserVertexSlider.
- */
-void UserVertexSlider::CData::
-fillin(DatagramIterator &scan, BamReader *manager) {
-  _slider = scan.get_stdfloat();
 }

@@ -44,17 +44,12 @@ PUBLISHED:
   INLINE const Character *get_character() const;
   INLINE int get_joint() const;
 
-  virtual void get_matrix(LMatrix4 &matrix) const;
-  virtual void mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const;
-  virtual void accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const;
-
   virtual void output(std::ostream &out) const;
 
   MAKE_PROPERTY(joint, get_joint);
   MAKE_PROPERTY(character, get_character);
 
 private:
-  LMatrix4 _matrix;
   PT(Character) _char;
   int _joint;
 

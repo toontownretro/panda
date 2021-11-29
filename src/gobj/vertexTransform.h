@@ -25,6 +25,7 @@
 #include "pipelineCycler.h"
 
 class TransformTable;
+class FactoryParams;
 
 /**
  * This is an abstract base class that holds a pointer to some transform,
@@ -37,9 +38,12 @@ PUBLISHED:
   VertexTransform();
   virtual ~VertexTransform();
 
-  virtual void get_matrix(LMatrix4 &matrix) const=0;
-  virtual void mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const;
-  virtual void accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const;
+  INLINE void set_matrix(const LMatrix4 &matrix, Thread *current_thread = Thread::get_current_thread());
+  INLINE void get_matrix(LMatrix4 &matrix) const;
+  INLINE void mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const;
+  INLINE void accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const;
+
+  INLINE const LMatrix4 &get_matrixq() const;
 
   INLINE UpdateSeq get_modified(Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_PROPERTY(modified, get_modified);
@@ -71,6 +75,7 @@ private:
       return VertexTransform::get_class_type();
     }
 
+    LMatrix4 _matrix;
     UpdateSeq _modified;
   };
 
@@ -82,9 +87,11 @@ private:
   static UpdateSeq _next_modified;
 
 public:
+  static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &dg);
 
 protected:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
   void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:

@@ -36,7 +36,7 @@ PUBLISHED:
   MAKE_PROPERTY(node, get_node);
   MAKE_PROPERTY(prev, get_prev);
 
-  virtual void get_matrix(LMatrix4 &matrix) const;
+  //virtual void get_matrix(LMatrix4 &matrix) const;
 
   virtual void output(std::ostream &out) const;
 

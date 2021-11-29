@@ -132,7 +132,7 @@ clear_val_changed() {
 void CharacterSlider::
 update(Thread *current_thread) {
   if (_val_changed && _vertex_slider != nullptr) {
-    _vertex_slider->mark_modified(current_thread);
+    _vertex_slider->set_slider(_value, current_thread);
     _val_changed = false;
   }
 }

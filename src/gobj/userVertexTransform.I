@@ -18,32 +18,3 @@ INLINE const std::string &UserVertexTransform::
 get_name() const {
   return _name;
 }
-
-/**
- * Stores the indicated matrix.
- */
-INLINE void UserVertexTransform::
-set_matrix(const LMatrix4 &matrix) {
-  Thread *current_thread = Thread::get_current_thread();
-  CDWriter cdata(_cycler, true, current_thread);
-  cdata->_matrix = matrix;
-  mark_modified(current_thread);
-}
-
-/**
- *
- */
-INLINE UserVertexTransform::CData::
-CData() :
-  _matrix(LMatrix4::ident_mat())
-{
-}
-
-/**
- *
- */
-INLINE UserVertexTransform::CData::
-CData(const UserVertexTransform::CData &copy) :
-  _matrix(copy._matrix)
-{
-}

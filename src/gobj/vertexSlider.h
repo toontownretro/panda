@@ -42,7 +42,8 @@ PUBLISHED:
   INLINE const InternalName *get_name() const;
   MAKE_PROPERTY(name, get_name);
 
-  virtual PN_stdfloat get_slider() const=0;
+  INLINE void set_slider(PN_stdfloat slider, Thread *current_thread = Thread::get_current_thread());
+  INLINE PN_stdfloat get_slider() const;
   INLINE UpdateSeq get_modified(Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_PROPERTY(slider, get_slider);
   MAKE_PROPERTY(modified, get_modified);
@@ -73,6 +74,7 @@ private:
       return VertexSlider::get_class_type();
     }
 
+    PN_stdfloat _slider;
     UpdateSeq _modified;
   };
 

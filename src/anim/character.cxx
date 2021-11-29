@@ -749,8 +749,7 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
 
     // Compute the skinning matrix to transform the vertices.
     if (joint._vertex_transform != nullptr) {
-      joint._vertex_transform->_matrix = joint._initial_net_transform_inverse * joint._net_transform;
-      joint._vertex_transform->mark_modified(current_thread);
+      joint._vertex_transform->set_matrix(joint._initial_net_transform_inverse * joint._net_transform, current_thread);
     }
   }
   ap_compose_collector.stop();

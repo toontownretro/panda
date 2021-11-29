@@ -12,6 +12,58 @@
  */
 
 /**
+ *
+ */
+INLINE void VertexTransform::
+set_matrix(const LMatrix4 &matrix, Thread *current_thread) {
+  {
+    CDWriter cdata(_cycler, current_thread);
+    cdata->_matrix = matrix;
+  }
+  mark_modified(current_thread);
+}
+
+/**
+ *
+ */
+INLINE void VertexTransform::
+get_matrix(LMatrix4 &result) const {
+  CDReader cdata(_cycler);
+  result = cdata->_matrix;
+}
+
+/**
+ * Premultiplies this transform's matrix with the indicated previous matrix,
+ * so that the result is the net composition of the given transform with this
+ * transform.  The result is stored in the parameter "result", which should
+ * not be the same matrix as previous.
+ */
+INLINE void VertexTransform::
+mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const {
+  nassertv(&result != &previous);
+  result.multiply(get_matrixq(), previous);
+}
+
+/**
+ * Adds the value of this transform's matrix, modified by the indicated
+ * weight, into the indicated accumulation matrix.  This is used to compute
+ * the result of several blended transforms.
+ */
+INLINE void VertexTransform::
+accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const {
+  accum.accumulate(get_matrixq(), weight);
+}
+
+/**
+ *
+ */
+INLINE const LMatrix4 &VertexTransform::
+get_matrixq() const {
+  CDReader cdata(_cycler);
+  return cdata->_matrix;
+}
+
+/**
  * Returns a sequence number that's guaranteed to change at least every time
  * the value reported by get_matrix() changes.
  */
@@ -36,7 +88,8 @@ get_global_modified(Thread *current_thread) {
  *
  */
 INLINE VertexTransform::CData::
-CData() {
+CData() :
+  _matrix(LMatrix4::ident_mat()) {
 }
 
 /**
@@ -44,7 +97,8 @@ CData() {
  */
 INLINE VertexTransform::CData::
 CData(const VertexTransform::CData &copy) :
-  _modified(copy._modified)
+  _modified(copy._modified),
+  _matrix(copy._matrix)
 {
 }
 

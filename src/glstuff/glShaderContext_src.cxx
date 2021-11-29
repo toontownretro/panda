@@ -2569,21 +2569,16 @@ update_transform_table(const TransformTable *table) {
       size_t num_transforms = min(num_matrices, table->get_num_transforms());
       for (; i < num_transforms; ++i) {
 #ifdef STDFLOAT_DOUBLE
-        LMatrix4 matrix;
-        table->get_transform(i)->get_matrix(matrix);
-        matrices[i] = LCAST(float, matrix);
+        matrices[i] = LCAST(float, table->get_transform(i)->get_matrixq());
 #else
-        table->get_transform(i)->get_matrix(matrices[i]);
+        matrices[i] = table->get_transform(i)->get_matrixq();
 #endif
       }
+    } else {
+      for (; i < num_matrices; ++i) {
+        matrices[i] = LMatrix4f::ident_mat();
+      }
     }
-    // I think leaving this out should be okay.  It is a mistake for a vertex
-    // to index transforms outside of its transform table.  You'll get a nice
-    // visual clue if a vertex does by reading from junk memory.
-    //
-    //for (; i < num_matrices; ++i) {
-    //  matrices[i] = LMatrix4f::ident_mat();
-    //}
     _glgsg->_glUniformMatrix4fv(_transform_table_index, _transform_table_size,
                                 (_shader->get_language() == Shader::SL_Cg),
                                 (float *)matrices);
@@ -2596,28 +2591,24 @@ update_transform_table(const TransformTable *table) {
     if (table != nullptr) {
       size_t num_transforms = std::min(num_matrices, table->get_num_transforms());
       for (; i < num_transforms; ++i) {
-        LMatrix4f matrix;
 #ifdef STDFLOAT_DOUBLE
-        LMatrix4d matrixd;
-        table->get_transform(i)->get_matrix(matrixd);
-        matrix = LCAST(float, matrixd);
+        LMatrix4f matrix;
+        const LMatrix4d &matrixd = table->get_transform(i)->get_matrixq(matrixd);
+        matrix = LCAST(float, table->get_transform(i));
 #else
-        table->get_transform(i)->get_matrix(matrix);
+        const LMatrix4f &matrix = table->get_transform(i)->get_matrixq();
 #endif
-        vectors[i * 3 + 0] = matrix.get_col(0);
-        vectors[i * 3 + 1] = matrix.get_col(1);
-        vectors[i * 3 + 2] = matrix.get_col(2);
+        vectors[i * 3 + 0] = matrix.get_row(0);
+        vectors[i * 3 + 1] = matrix.get_row(1);
+        vectors[i * 3 + 2] = matrix.get_row(2);
+      }
+    } else {
+      for (; i < num_matrices; ++i) {
+        vectors[i * 3 + 0].set(1, 0, 0, 0);
+        vectors[i * 3 + 1].set(0, 1, 0, 0);
+        vectors[i * 3 + 2].set(0, 0, 1, 0);
       }
     }
-    // I think leaving this out should be okay.  It is a mistake for a vertex
-    // to index transforms outside of its transform table.  You'll get a nice
-    // visual clue if a vertex does by reading from junk memory.
-    //
-    //for (; i < num_matrices; ++i) {
-    //  vectors[i * 3 + 0].set(1, 0, 0, 0);
-    //  vectors[i * 3 + 1].set(0, 1, 0, 0);
-    //  vectors[i * 3 + 2].set(0, 0, 1, 0);
-    //}
     _glgsg->_glUniformMatrix3x4fv(_transform_table_index, _transform_table_size,
                                   GL_FALSE, (float *)vectors);
   }

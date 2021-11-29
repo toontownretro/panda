@@ -26,6 +26,7 @@ NodeVertexTransform(const PandaNode *node,
 {
 }
 
+#if 0
 /**
  * Returns the transform of the associated node, composed with the previous
  * VertexTransform if any, expressed as a matrix.
@@ -41,6 +42,7 @@ get_matrix(LMatrix4 &matrix) const {
     matrix = _node->get_transform()->get_mat();
   }
 }
+#endif
 
 /**
  *

@@ -76,6 +76,7 @@ mark_modified(Thread *current_thread) {
 void VertexSlider::
 write_datagram(BamWriter *manager, Datagram &dg) {
   TypedWritable::write_datagram(manager, dg);
+  manager->write_cdata(dg, _cycler);
 }
 
 /**
@@ -85,6 +86,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
 void VertexSlider::
 fillin(DatagramIterator &scan, BamReader *manager) {
   TypedWritable::fillin(scan, manager);
+  manager->read_cdata(scan, _cycler);
 }
 
 /**
@@ -101,6 +103,7 @@ make_copy() const {
  */
 void VertexSlider::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
+  dg.add_stdfloat(_slider);
 }
 
 /**
@@ -120,4 +123,5 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void VertexSlider::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
+  _slider = scan.get_stdfloat();
 }
