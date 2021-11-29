@@ -451,7 +451,7 @@ add_attachment_parent(int n, int parent, const LPoint3 &local_pos,
   } //else {
     //_changed_joints.set_bit(parent);
   //}
-  attach._parents[parent] = inf;
+  attach._parents.push_back(std::move(inf));
 
   compute_attachment_transform(n);
 }
@@ -464,9 +464,11 @@ void Character::
 remove_attachment_parent(int n, int parent) {
   nassertv(n >= 0 && n < (int)_attachments.size());
   CharacterAttachment &attach = _attachments[n];
-  auto it = attach._parents.find(parent);
-  if (it != attach._parents.end()) {
-    attach._parents.erase(it);
+  for (auto it = attach._parents.begin(); it != attach._parents.end(); ++it) {
+    if ((*it)._parent == parent) {
+      attach._parents.erase(it);
+      break;
+    }
   }
 }
 
@@ -573,13 +575,12 @@ compute_attachment_transform(int index) {
   CharacterAttachment &attach = _attachments[index];
   LMatrix4 transform = LMatrix4::zeros_mat();
   for (auto it = attach._parents.begin(); it != attach._parents.end(); ++it) {
-    int parent = (*it).first;
-    CharacterAttachment::ParentInfluence &inf = (*it).second;
-    if (parent != -1) {
+    CharacterAttachment::ParentInfluence &inf = *it;
+    if (inf._parent != -1) {
       //if (!_changed_joints.get_bit(parent)) {
       //  continue;
       //}
-      inf._transform = _joint_poses[parent]._net_transform * inf._offset * inf._weight;
+      inf._transform = _joint_poses[inf._parent]._net_transform * inf._offset * inf._weight;
     }
     transform += inf._transform;
   }

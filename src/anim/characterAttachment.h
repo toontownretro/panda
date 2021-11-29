@@ -49,7 +49,7 @@ public:
 
 private:
   // An attachment may be influenced by multiple parent joints with weights.
-  typedef phash_map<int, ParentInfluence, int_hash> ParentInfluences;
+  typedef pvector<ParentInfluence> ParentInfluences;
   ParentInfluences _parents;
 
   // Current transform of the attachment relative to the root of the character.

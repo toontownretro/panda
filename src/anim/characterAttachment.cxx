@@ -77,9 +77,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_string(get_name());
   me.add_uint8(_parents.size());
   for (auto it = _parents.begin(); it != _parents.end(); ++it) {
-    me.add_uint16((*it).first);
-    (*it).second._offset.write_datagram(me);
-    me.add_float32((*it).second._weight);
+    const ParentInfluence &inf = *it;
+    me.add_uint16(inf._parent);
+    inf._offset.write_datagram(me);
+    me.add_float32(inf._weight);
   }
   manager->write_pointer(me, (TypedWritable *)_curr_transform.p());
   manager->write_pointer(me, (TypedWritable *)_node.p());
@@ -98,7 +99,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     inf._parent = parent;
     inf._offset.read_datagram(scan);
     inf._weight = scan.get_float32();
-    _parents[parent] = inf;
+    _parents.push_back(std::move(inf));
   }
   manager->read_pointer(scan); // current transform
   manager->read_pointer(scan); // node
