@@ -16,6 +16,16 @@
 #include "cullableObject.h"
 #include "cullHandler.h"
 #include "pStatTimer.h"
+#include "lightMutex.h"
+#include "shaderAttrib.h"
+#include "depthWriteAttrib.h"
+#include "depthTestAttrib.h"
+#include "depthOffsetAttrib.h"
+#include "transparencyAttrib.h"
+#include "colorScaleAttrib.h"
+#include "colorAttrib.h"
+#include "textureAttrib.h"
+#include "materialAttrib.h"
 
 #include <algorithm>
 
@@ -57,18 +67,60 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
   const RenderState *sa = a._state;
   const RenderState *sb = b._state;
 
-  if (sa == sb) {
-    return false;
+  const ShaderAttrib *sha = nullptr, *shb = nullptr;
+
+  if (sa != sb) {
+
+    if (sa->_generated_shader != nullptr) {
+      sha = (const ShaderAttrib *)sa->_generated_shader.p();
+    } else {
+      sha = (const ShaderAttrib *)sa->get_attrib(ShaderAttrib::get_class_slot());
+    }
+
+    if (sb->_generated_shader != nullptr) {
+      shb = (const ShaderAttrib *)sb->_generated_shader.p();
+    } else {
+      shb = (const ShaderAttrib *)sb->get_attrib(ShaderAttrib::get_class_slot());
+    }
+
+    if (sha != shb) {
+      // Program changes are the heaviest.
+      const Shader *shader_a = nullptr;
+      const Shader *shader_b = nullptr;
+      if (sha != nullptr) {
+        shader_a = sha->get_shader();
+      }
+      if (shb != nullptr) {
+        shader_b = shb->get_shader();
+      }
+      if (shader_a != shader_b) {
+        return shader_a < shader_b;
+      }
+    }
+
+    // TextureAttribs result in different generated ShaderAttribs with the
+    // textures from the TextureAttrib.  They come second to programs in terms
+    // of state change cost.
+
+    const RenderAttrib *ra, *rb;
+
+    ra = sa->get_attrib(TextureAttrib::get_class_slot());
+    rb = sb->get_attrib(TextureAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    // Same goes for MaterialAttrib.
+    ra = sa->get_attrib(MaterialAttrib::get_class_slot());
+    rb = sb->get_attrib(MaterialAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
   }
 
-  int compare = sa->compare_sort(*sb);
-  if (compare != 0) {
-    return compare < 0;
-  }
-
-  // Uniform updates are actually pretty fast.
-  if (a._internal_transform != b._internal_transform) {
-    return a._internal_transform < b._internal_transform;
+  // Vertex format changes are also fairly slow.
+  if (a._sort_data._format != b._sort_data._format) {
+    return a._sort_data._format < b._sort_data._format;
   }
 
   // Prevent unnecessary vertex buffer rebinds.
@@ -76,9 +128,58 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
     return a._munged_data < b._munged_data;
   }
 
-  // Vertex format changes are also fairly slow.
-  if (a._sort_data._format != b._sort_data._format) {
-    return a._sort_data._format < b._sort_data._format;
+  if (sa != sb) {
+    const RenderAttrib *ra = sa->get_attrib(ColorAttrib::get_class_slot());
+    const RenderAttrib *rb = sb->get_attrib(ColorAttrib::get_class_slot());
+    // Color attribs are a vertex attribute change.
+    if (ra != rb) {
+      return ra < rb;
+    }
+  }
+
+  if (sha != shb) {
+    return sha < shb;
+  }
+
+  // Uniform updates are actually pretty fast.
+  if (a._internal_transform != b._internal_transform) {
+    return a._internal_transform < b._internal_transform;
+  }
+
+  if (sa != sb) {
+    const RenderAttrib *ra, *rb;
+
+    // Color scale is a uniform update.
+    ra = sa->get_attrib(ColorScaleAttrib::get_class_slot());
+    rb = sb->get_attrib(ColorScaleAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    // Now handle cheaper fixed-function attribs.
+    ra = sa->get_attrib(TransparencyAttrib::get_class_slot());
+    rb = sb->get_attrib(TransparencyAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    ra = sa->get_attrib(DepthWriteAttrib::get_class_slot());
+    rb = sb->get_attrib(DepthWriteAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    ra = sa->get_attrib(DepthTestAttrib::get_class_slot());
+    rb = sb->get_attrib(DepthTestAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    ra = sa->get_attrib(DepthOffsetAttrib::get_class_slot());
+    rb = sb->get_attrib(DepthOffsetAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
   }
 
   return false;
