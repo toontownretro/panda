@@ -17,6 +17,8 @@
   #endif
 
   #define HEADERS \
+    glBufferContext_src.I \
+    glBufferContext_src.h \
     glGeomContext_src.I \
     glGeomContext_src.h \
     glGeomMunger_src.I \
@@ -43,7 +45,20 @@
     panda_glext.h
 
   #define SOURCES \
-    $[HEADERS]
+    $[HEADERS] \
+    glBufferContext_src.cxx \
+    glGeomContext_src.cxx \
+    glGeomMunger_src.cxx \
+    glGraphicsStateGuardian_src.cxx \
+    glGraphicsBuffer_src.cxx \
+    glImmediateModeSender_src.cxx \
+    glIndexBufferContext_src.cxx \
+    glOcclusionQueryContext_src.cxx \
+    glShaderContext_src.cxx \
+    glTextureContext_src.cxx \
+    glVertexBufferContext_src.cxx \
+    glmisc_src.cxx \
+    glstuff_src.cxx
 
   #define INSTALL_HEADERS \
      $[HEADERS]

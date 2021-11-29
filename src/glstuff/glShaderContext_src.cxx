@@ -2068,10 +2068,12 @@ bind() {
     _glgsg->_glUseProgram(_glsl_program);
   }
 
+#ifndef NDEBUG
   if (GLCAT.is_spam()) {
     GLCAT.spam() << "glUseProgram(" << _glsl_program << "): "
                  << _shader->get_filename() << "\n";
   }
+#endif
 
   report_my_gl_errors(_glgsg);
 }
@@ -2081,9 +2083,11 @@ bind() {
  */
 void CLP(ShaderContext)::
 unbind() {
+#ifndef NDEBUG
   if (GLCAT.is_spam()) {
     GLCAT.spam() << "glUseProgram(0)\n";
   }
+#endif
 
   _glgsg->_glUseProgram(0);
   report_my_gl_errors(_glgsg);
@@ -2191,13 +2195,15 @@ set_state_and_transform(const RenderState *target_rs,
  */
 void CLP(ShaderContext)::
 issue_parameters(int altered) {
-  PStatGPUTimer timer(_glgsg, _glgsg->_draw_set_state_shader_parameters_pcollector);
+  //PStatGPUTimer timer(_glgsg, _glgsg->_draw_set_state_shader_parameters_pcollector);
 
+#ifndef NDEBUG
   if (GLCAT.is_spam()) {
     GLCAT.spam()
       << "Setting uniforms for " << _shader->get_filename()
       << " (altered 0x" << hex << altered << dec << ")\n";
   }
+#endif
 
   // We have no way to track modifications to PTAs, so we assume that they are
   // modified every frame and when we switch ShaderAttribs.
@@ -2667,6 +2673,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
   // Get the active ColorAttrib.  We'll need it to determine how to apply
   // vertex colors.
   const ColorAttrib *color_attrib = _color_attrib.p();
+  LColor scene_graph_color = _glgsg->_scene_graph_color;
 
   const GeomVertexArrayDataHandle *array_reader;
 
@@ -2745,9 +2752,9 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
         if (p == _color_attrib_index) {
           // Vertex colors are disabled or not present.  Apply flat color.
 #ifdef STDFLOAT_DOUBLE
-          _glgsg->_glVertexAttrib4dv(p, _glgsg->_scene_graph_color.get_data());
+          _glgsg->_glVertexAttrib4dv(p, scene_graph_color.get_data());
 #else
-          _glgsg->_glVertexAttrib4fv(p, _glgsg->_scene_graph_color.get_data());
+          _glgsg->_glVertexAttrib4fv(p, scene_graph_color.get_data());
 #endif
         }
         else if (name == InternalName::get_transform_index() &&
@@ -2807,14 +2814,15 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
     // Figure out which attributes to enable or disable.
     BitMask32 enabled_attribs = _enabled_attribs;
     if (_color_attrib_index != -1 &&
-        color_attrib->get_color_type() != ColorAttrib::T_vertex) {
-      // Vertex colours are disabled.
+        (color_attrib->get_color_type() != ColorAttrib::T_vertex ||
+         !enabled_attribs.get_bit(_color_attrib_index))) {
+      // Vertex colours are disabled or not present.  Apply a flat color.
       enabled_attribs.clear_bit(_color_attrib_index);
 
 #ifdef STDFLOAT_DOUBLE
-      _glgsg->_glVertexAttrib4dv(_color_attrib_index, color_attrib->get_color().get_data());
+      _glgsg->_glVertexAttrib4dv(_color_attrib_index, scene_graph_color.get_data());
 #else
-      _glgsg->_glVertexAttrib4fv(_color_attrib_index, color_attrib->get_color().get_data());
+      _glgsg->_glVertexAttrib4fv(_color_attrib_index, scene_graph_color.get_data());
 #endif
     }
 

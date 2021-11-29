@@ -1618,7 +1618,7 @@ reset() {
   // ConfigVariable during perf-critical code.
   _vertex_buffers_enabled = vertex_buffers;
   _min_buffer_usage_hint = gl_min_buffer_usage_hint;
-  _debug_buffers = _debug_buffers;
+  _debug_buffers = gl_debug_buffers;
 
 #ifdef OPENGLES
   if (is_at_least_gles_version(3, 0)) {
@@ -5001,30 +5001,36 @@ disable_standard_vertex_arrays() {
  */
 void CLP(GraphicsStateGuardian)::
 update_shader_vertex_format(const GeomVertexFormat *format) {
+  if (_current_shader == nullptr) {
+    return;
+  }
+
+  CLP(ShaderContext) *context = (CLP(ShaderContext) *)_current_shader_context;
+  context->_enabled_attribs.clear();
+
   size_t num_columns = format->get_num_columns();
   for (size_t ci = 0; ci < num_columns; ++ci) {
     GLuint binding = format->get_array_with(ci);
     const GeomVertexColumn *column = format->get_column(ci);
 
-    // Needs improvement, obviously.
     const InternalName *name = column->get_name();
     GLuint loc;
-    if (name == InternalName::get_vertex()) {
-      loc = 0;
-    } else if (name == InternalName::get_transform_weight()) {
-      loc = 1;
-    } else if (name == InternalName::get_normal()) {
-      loc = 2;
-    } else if (name == InternalName::get_color()) {
-      loc = 3;
-    } else if (name == InternalName::get_transform_index()) {
-      loc = 7;
-    } else if (name == InternalName::get_texcoord()) {
-      loc = 8;
-    } else {
-      // Not yet supported, ignore for now.  This system will be improved.
+    bool got_loc = false;
+    // Find the ShaderVarSpec corresponding to this column.
+    for (size_t vi = 0; vi < _current_shader->_var_spec.size(); ++vi) {
+      const Shader::ShaderVarSpec &var = _current_shader->_var_spec[vi];
+      if (var._name == name && var._id._location >= 0) {
+        loc = (GLuint)var._id._location;
+        got_loc = true;
+        break;
+      }
+    }
+
+    if (!got_loc) {
       continue;
     }
+
+    context->_enabled_attribs.set_bit(loc);
 
     if (_vertex_attrib_columns[loc] != nullptr &&
         _vertex_attrib_columns[loc]->compare_to(*column) == 0) {
@@ -5032,12 +5038,13 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
     }
     _vertex_attrib_columns[loc] = column;
 
+    GeomEnums::NumericType nt = column->get_numeric_type();
     GLuint offset = column->get_start();
-    GLenum type = get_numeric_type(column->get_numeric_type());
+    GLenum type = get_numeric_type(nt);
     GLboolean normalized = (column->get_contents() == GeomEnums::C_color);
     GLint size = column->get_num_values();
 
-    if (column->get_numeric_type() == GeomEnums::NT_packed_dabc) {
+    if (nt == GeomEnums::NT_packed_dabc) {
       // GL_BGRA is a special accepted value available since OpenGL 3.2. It
       // requires us to pass GL_TRUE for normalized.
       size = GL_BGRA;
@@ -5045,10 +5052,24 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
     }
 
     for (int i = 0; i < column->get_num_elements(); ++i) {
-      if (loc == 7) { // Temp hack
-        _glVertexAttribIFormat(loc, size, type, offset);
-      } else {
+      if (normalized) {
         _glVertexAttribFormat(loc, size, type, normalized, offset);
+
+      } else {
+        switch (nt) {
+        case GeomEnums::NT_uint8:
+        case GeomEnums::NT_uint16:
+        case GeomEnums::NT_uint32:
+        case GeomEnums::NT_int8:
+        case GeomEnums::NT_int16:
+        case GeomEnums::NT_int32:
+          _glVertexAttribIFormat(loc, size, type, offset);
+          break;
+
+        default:
+          _glVertexAttribFormat(loc, size, type, GL_FALSE, offset);
+          break;
+        }
       }
       _glVertexAttribBinding(loc, binding);
 
@@ -8015,7 +8036,7 @@ do_issue_shade_model() {
  */
 void CLP(GraphicsStateGuardian)::
 do_issue_shader() {
-  PStatTimer timer(_draw_set_state_shader_pcollector);
+  //PStatTimer timer(_draw_set_state_shader_pcollector);
 
   ShaderContext *context = 0;
   Shader *shader = (Shader *)_target_shader->get_shader();
@@ -8063,6 +8084,10 @@ do_issue_shader() {
       }
       context->bind();
       _current_shader = shader;
+
+      // Invalidate the current vertex format.  The new shader might have
+      // different vertex attributes and locations.
+      _current_vertex_format.clear();
     }
 
     // Bind the shader storage buffers.
@@ -11833,7 +11858,7 @@ set_state_and_transform(const RenderState *target,
 #endif
 
   //_state_pcollector.add_level(1);
-  PStatGPUTimer timer1(this, _draw_set_state_pcollector);
+  //PStatGPUTimer timer1(this, _draw_set_state_pcollector);
 
   bool transform_changed = transform != _internal_transform;
   if (transform_changed) {
@@ -11858,7 +11883,7 @@ set_state_and_transform(const RenderState *target,
   }
   _target_rs = target;
 
-  _state_pcollector.add_level(1);
+  //_state_pcollector.add_level(1);
 
 #ifndef OPENGLES_1
   determine_target_shader();
@@ -11968,7 +11993,7 @@ set_state_and_transform(const RenderState *target,
   int texture_slot = TextureAttrib::get_class_slot();
   if (_target_rs->get_attrib(texture_slot) != _state_rs->get_attrib(texture_slot) ||
       !_state_mask.get_bit(texture_slot)) {
-    PStatGPUTimer timer(this, _draw_set_state_texture_pcollector);
+    //PStatGPUTimer timer(this, _draw_set_state_texture_pcollector);
     determine_target_texture();
     do_issue_texture();
 
