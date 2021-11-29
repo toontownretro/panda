@@ -14,6 +14,10 @@
 #include "mapRoot.h"
 #include "cullTraverser.h"
 #include "cullTraverserData.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector world_geometry_coll("Cull:MapRoot");
 
 IMPLEMENT_CLASS(MapRoot);
 
@@ -35,16 +39,14 @@ MapRoot(MapData *data) :
  */
 bool MapRoot::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
+  PStatTimer timer(world_geometry_coll);
+
   if (_data == nullptr || !_pvs_cull || _data->get_num_clusters() == 0) {
     return true;
   }
 
-  CPT(TransformState) cull_transform = trav->get_scene()
-    ->get_cull_center().get_net_transform();
-
   // Query the cluster that the camera/cull target is currently in.
-  int cluster = _data->get_area_cluster_tree()
-    ->get_leaf_value_from_point(cull_transform->get_pos());
+  int cluster = trav->_view_sector;
 
   if (cluster < 0) {
     // Invalid cluster.  Don't render anything.
@@ -57,13 +59,12 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     return false;
   }
 
+  Children children = get_children();
+
   BitArray visible_mesh_groups;
   for (size_t i = 0; i < pvs->get_num_visible_clusters(); i++) {
     visible_mesh_groups |= _data->get_cluster_pvs(pvs->get_visible_cluster(i))->_mesh_groups;
   }
-
-  Children children = get_children();
-
   int index = visible_mesh_groups.get_lowest_on_bit();
   while (index >= 0) {
     trav->traverse_down(data, children.get_child_connection(index));

@@ -28,6 +28,7 @@
 #include "geomTriangles.h"
 #include "light.h"
 #include "lightMutexHolder.h"
+#include "thread.h"
 
 PStatCollector CullableObject::_munge_pcollector("*:Munge");
 PStatCollector CullableObject::_munge_geom_pcollector("*:Munge:Geom");
@@ -46,11 +47,17 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
            const CullTraverser *traverser, bool force) {
   //nassertr(munger != nullptr, false);
 
-  Thread *current_thread = traverser->get_current_thread();
+  Thread *current_thread;
+  if (traverser != nullptr) {
+    current_thread = traverser->get_current_thread();
+  } else {
+    current_thread = Thread::get_current_thread();
+  }
+
   PStatTimer timer(_munge_pcollector, current_thread);
 
   if (_geom != nullptr) {
-    GraphicsStateGuardianBase *gsg = traverser->get_gsg();
+    //GraphicsStateGuardianBase *gsg = traverser->get_gsg();
 
     // If there is any animation left in the vertex data after it has been
     // munged--that is, we couldn't arrange to handle the animation in

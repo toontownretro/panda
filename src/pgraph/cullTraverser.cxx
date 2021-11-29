@@ -126,7 +126,7 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
     SceneTop *scene_top = (SceneTop *)top_node;
     _vis_info = scene_top->get_vis_info();
     // Query the visibility sector that the camera is in.
-    _view_sector = _vis_info->get_point_sector(scene_setup->get_camera_transform()->get_pos());
+    _view_sector = _vis_info->get_point_sector(scene_setup->get_cull_center().get_net_transform()->get_pos());
     if (_view_sector >= 0) {
       // If the camera is in a valid vis sector, get the PVS associated with
       // that sector.

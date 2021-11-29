@@ -23,6 +23,8 @@
 #include "weakPointerTo.h"
 #include "weakPointerCallback.h"
 #include "pandaNode.h"
+#include "referenceCount.h"
+#include "pointerTo.h"
 
 class TransformState;
 class BoundingVolume;
@@ -51,11 +53,11 @@ class BoundingVolume;
 class EXPCL_PANDA_PGRAPH SceneVisibility : public TypedWritableReferenceCount, public WeakPointerCallback {
 PUBLISHED:
 
-  class NodeVisData {
+  class NodeVisData : public ReferenceCount {
   public:
     // Relevant state of node at the time we last computed its vis sectors.
     // If any of these change, we have to recompute the node's vis sectors.
-    const TransformState *parent_net_transform;
+    CPT(TransformState) parent_net_transform;
     const BoundingVolume *node_bounds;
 
     // Set of visibility sectors that the node's external bounding volume
@@ -106,7 +108,7 @@ private:
   // simplicity.
   pvector<BitArray> _sector_pvs;
 
-  typedef pflat_hash_map<PandaNode *, NodeVisData, pointer_hash> NodeVisCache;
+  typedef pflat_hash_map<PandaNode *, PT(NodeVisData), pointer_hash> NodeVisCache;
   NodeVisCache _node_vis_cache;
 
 public:

@@ -17,8 +17,17 @@
 #include "boundingBox.h"
 #include "luse.h"
 #include "boundingSphere.h"
+#include "lightMutex.h"
+#include "lightMutexHolder.h"
+#include "config_pgraph.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
 
 TypeHandle SceneVisibility::_type_handle;
+
+static LightMutex vis_cache_lock("vis_cache");
+
+static PStatCollector vis_test_collector("Cull:SceneVisTest");
 
 /**
  *
@@ -61,19 +70,19 @@ is_box_in_pvs(const LPoint3 &mins, const LPoint3 &maxs, const BitArray &pvs, int
         // Completely behind the plane, traverse left.
         node_stack.push({ node->left_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->left_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->left_child;
+        //}
 
       } else if (mins[node->axis] >= node->dist) {
         // Completely in front of the plane, traverse right.
         node_stack.push({ node->right_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->right_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->right_child;
+       // }
 
       } else {
         // The box spans the plane, traverse both directions.
@@ -122,19 +131,19 @@ is_sphere_in_pvs(const LPoint3 &center, PN_stdfloat radius, const BitArray &pvs,
         // Completely behind the plane, traverse left.
         node_stack.push({ node->left_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->left_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->left_child;
+        //}
 
       } else if ((center[node->axis] - radius) >= node->dist) {
         // Completely in front of the plane, traverse right.
         node_stack.push({ node->right_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->right_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->right_child;
+        //}
 
       } else {
         // The sphere spans the plane, traverse both directions.
@@ -178,19 +187,19 @@ get_box_sectors(const LPoint3 &mins, const LPoint3 &maxs, BitArray &sectors, int
         // Completely behind the plane, traverse left.
         node_stack.push({ node->left_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->left_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->left_child;
+        //}
 
       } else if (mins[node->axis] >= node->dist) {
         // Completely in front of the plane, traverse right.
         node_stack.push({ node->right_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->right_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->right_child;
+       // }
 
       } else {
         // The box spans the plane, traverse both directions.
@@ -232,19 +241,19 @@ get_sphere_sectors(const LPoint3 &center, PN_stdfloat radius, BitArray &sectors,
         // Completely behind the plane, traverse left.
         node_stack.push({ node->left_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->left_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->left_child;
+        //}
 
       } else if ((center[node->axis] - radius) >= node->dist) {
         // Completely in front of the plane, traverse right.
         node_stack.push({ node->right_child, depth + 1 });
 
-        if (depth + 1 > lowest_depth) {
-          lowest_depth = depth + 1;
-          lowest_node = node->right_child;
-        }
+        //if (depth + 1 > lowest_depth) {
+        //  lowest_depth = depth + 1;
+        //  lowest_node = node->right_child;
+        //}
 
       } else {
         // The sphere spans the plane, traverse both directions.
@@ -313,9 +322,20 @@ int SceneVisibility::
 is_node_in_pvs(const TransformState *parent_net_transform, const GeometricBoundingVolume *bounds,
                PandaNode *node, const BitArray &pvs, const BitArray &inv_pvs,
                int &lowest_kd_node, int head_node) {
+  PStatTimer timer(vis_test_collector);
+
   NodeVisData *vis_data = get_node_vis(node);
 
-  if (vis_data->parent_net_transform != parent_net_transform ||
+  // If the transform cache is in use, we can just compare the transforms by
+  // pointer, as identical transforms are guaranteed to have the same pointer.
+  // Otherwise, we need to compare the actual transforms.
+  static bool using_transform_cache = transform_cache;
+
+  bool transform_changed = using_transform_cache ?
+    (vis_data->parent_net_transform != parent_net_transform) :
+    (*vis_data->parent_net_transform != *parent_net_transform);
+
+  if (transform_changed ||
       vis_data->node_bounds != bounds) {
     // The vis cache for the node is out of date.  Recompute it.
 
@@ -417,22 +437,25 @@ is_node_in_pvs(const TransformState *parent_net_transform, const GeometricBoundi
  */
 SceneVisibility::NodeVisData *SceneVisibility::
 get_node_vis(PandaNode *node) {
+  LightMutexHolder holder(vis_cache_lock);
+
   auto it = _node_vis_cache.find(node);
   if (it != _node_vis_cache.end()) {
-    return &(*it).second;
+    return (*it).second;
   }
 
   // Node not in cache.  Create new entry.
-  NodeVisData data;
-  data.node_bounds = nullptr;
-  data.parent_net_transform = nullptr;
-  data.vis_head_node = 0;
-  it = _node_vis_cache.insert({ node, data }).first;
+  PT(NodeVisData) data = new NodeVisData;
+  data->node_bounds = nullptr;
+  data->parent_net_transform = nullptr;
+  data->vis_head_node = 0;
+
+  _node_vis_cache.insert({ node, data });
 
   WeakReferenceList *weak_list = node->get_weak_list();
   weak_list->add_callback(this, node);
 
-  return &(it->second);
+  return data;
 }
 
 /**

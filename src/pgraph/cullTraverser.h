@@ -114,7 +114,7 @@ public:
   static PStatCollector _geoms_pcollector;
   static PStatCollector _geoms_occluded_pcollector;
 
-protected:
+public:
   // Specifies the virtual methods that the CullTraverser should call
   // for subclasses.
   enum VirtualFlags {
