@@ -42,7 +42,7 @@ audio-library-name openal_audio
 
 # OpenGL renderer configurations.
 gl-coordinate-system default
-gl-version 4 0
+gl-version 4 6
 gl-compile-and-execute 1
 gl-force-depth-stencil 0
 gl-force-fbo-color 0
@@ -51,6 +51,18 @@ gl-force-no-flush 1
 gl-force-no-scissor 1
 gl-check-errors 0
 gl-enable-memory-barriers 0
+# This enables OpenGL 4.3+ vertex buffer binding if it's available.
+gl-fixed-vertex-attrib-locations 1
+gl-immutable-texture-storage 1
+
+# These appear to be old fixed-function and/or munger left overs.
+color-scale-via-lighting 0
+alpha-scale-via-texture 0
+
+# This makes TransformStates compose by multiplying matrices instead
+# of composing the individual transform components, such as pos, hpr,
+# and scale.  It is likely to be faster because it is vectorized.
+compose-componentwise 0
 
 # The egg loader is handy to have available by default.  This allows
 # clients to load egg files.  (The bam loader is built-in so bam files
@@ -161,11 +173,6 @@ use-vertex-lit-for-no-material 1
 
 framebuffer-stencil 0
 support-stencil 0
-
-# This requires a task that clears the cache every so often.
-# ShowBase does this automatically.
-garbage-collect-states 0
-auto-break-cycles 0
 
 rescale-normals none
 support-rescale-normal 0
