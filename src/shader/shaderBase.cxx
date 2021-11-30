@@ -67,7 +67,7 @@ add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec) {
 	  set_vertex_shader_define("HARDWARE_SKINNING");
     int num_transforms;
     if (anim_spec.get_indexed_transforms()) {
-      num_transforms = 64;
+      num_transforms = 120;
     } else {
       num_transforms = anim_spec.get_num_transforms();
     }
