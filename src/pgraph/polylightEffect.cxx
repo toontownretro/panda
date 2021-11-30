@@ -86,7 +86,7 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void PolylightEffect::
+bool PolylightEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &node_state) const {
@@ -96,6 +96,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
   CPT(RenderAttrib) poly_light_attrib = do_poly_light(trav->get_scene(), &data, node_transform);
   CPT(RenderState) poly_light_state = RenderState::make(poly_light_attrib);
   node_state = node_state->compose(poly_light_state);
+
+  return true;
 }
 
 /**

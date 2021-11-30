@@ -29,7 +29,7 @@
  * Applies the transform and state from the current node onto the current
  * data.  This also evaluates billboards, etc.
  */
-void CullTraverserData::
+bool CullTraverserData::
 apply_transform_and_state(CullTraverser *trav) {
   CPT(RenderState) node_state = _node_reader.get_state();
 
@@ -47,10 +47,13 @@ apply_transform_and_state(CullTraverser *trav) {
   const RenderEffects *node_effects = _node_reader.get_effects();
   if (!node_effects->has_cull_callback()) {
     apply_transform(_node_reader.get_transform());
+
   } else {
     // The cull callback may decide to modify the node_transform.
     CPT(TransformState) node_transform = _node_reader.get_transform();
-    node_effects->cull_callback(trav, *this, node_transform, node_state);
+    if (!node_effects->cull_callback(trav, *this, node_transform, node_state)) {
+      return false;
+    }
     apply_transform(node_transform);
 
     // The cull callback may have changed the node properties.
@@ -90,6 +93,8 @@ apply_transform_and_state(CullTraverser *trav) {
   //  _cull_lights = _cull_lights->apply_state(trav, this,
   //    (const LightAttrib *)node_state->get_attrib(LightAttrib::get_class_slot()));
   //}
+
+  return true;
 }
 
 /**

@@ -90,6 +90,7 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
+    pvsCullEffect.I pvsCullEffect.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \
@@ -195,6 +196,7 @@
     polylightNode.cxx \
     portalNode.cxx \
     portalClipper.cxx \
+    pvsCullEffect.cxx \
     renderAttrib.cxx \
     renderAttribRegistry.cxx \
     renderEffect.cxx \
@@ -300,6 +302,7 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
+    pvsCullEffect.I pvsCullEffect.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \

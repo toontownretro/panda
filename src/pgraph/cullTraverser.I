@@ -246,30 +246,12 @@ traverse_down(const CullTraverserData &data, PandaNode *node,
 #endif
   }
 
-  int child_head_node = data._vis_head_node;
-  int pvs_result = BoundingVolume::IF_all;
-
-  if (data._check_pvs && _pvs != nullptr && _vis_info != nullptr) {
-    if (data._view_frustum == nullptr && data._cull_planes == nullptr) {
-      // If we don't have these then the bounds weren't checked above.
-      node_reader.check_cached(true);
-    }
-    pvs_result = is_in_pvs(data, (const GeometricBoundingVolume *)node_reader.get_bounds(), node, child_head_node);
-    if (pvs_result == BoundingVolume::IF_no_intersection) {
-      return;
-    }
-  }
-
   GeometricBoundingVolume *view_frustum = nullptr;
   if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
     view_frustum = data._view_frustum;
   }
 
   CullTraverserData next_data(data, std::move(node_reader), net_transform, state, view_frustum);
-  next_data._vis_head_node = child_head_node;
-  if ((pvs_result & BoundingVolume::IF_all) != 0 || node_reader.is_final()) {
-    next_data._check_pvs = false;
-  }
   if (data._cull_planes != nullptr) {
     const GeometricBoundingVolume *node_gbv = node_reader.get_bounds()->as_geometric_bounding_volume();
     if (!next_data.apply_cull_planes(data._cull_planes, node_gbv)) {
@@ -308,15 +290,6 @@ traverse_down(const CullTraverserData &data, const PandaNode::DownConnection &ch
 #endif
   }
 
-  int child_head_node = data._vis_head_node;
-  int pvs_result = BoundingVolume::IF_all;
-  if (data._check_pvs && _pvs != nullptr && _vis_info != nullptr) {
-    pvs_result = is_in_pvs(data, child.get_bounds(), child.get_child(), child_head_node);
-    if (pvs_result == BoundingVolume::IF_no_intersection) {
-      return;
-    }
-  }
-
   PandaNodePipelineReader node_reader(child.get_child(), data._node_reader.get_current_thread());
 
   GeometricBoundingVolume *view_frustum = nullptr;
@@ -325,10 +298,6 @@ traverse_down(const CullTraverserData &data, const PandaNode::DownConnection &ch
   }
 
   CullTraverserData next_data(data, std::move(node_reader), data._net_transform, state, view_frustum);
-  next_data._vis_head_node = child_head_node;
-  if ((pvs_result & BoundingVolume::IF_all) != 0 || node_reader.is_final()) {
-    next_data._check_pvs = false;
-  }
   if (data._cull_planes != nullptr &&
       !next_data.apply_cull_planes(data._cull_planes, child.get_bounds())) {
     return;

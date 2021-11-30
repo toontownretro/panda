@@ -131,13 +131,6 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
       // If the camera is in a valid vis sector, get the PVS associated with
       // that sector.
       _pvs = _vis_info->get_sector_pvs(_view_sector);
-      // Also store the inverse of the PVS.  This is used to quickly check
-      // if a node is completely within the PVS.  If the AND of the inverse
-      // PVS and the node's sectors has no common bits, then the node is
-      // completely in the PVS and we don't have to test the PVS for any
-      // nodes below.  This is faster than OR-ing the regular PVS with the
-      // node's sectors because of how BitArray works internally.
-      _inv_pvs = ~(*_pvs);
     }
   }
 }
@@ -233,7 +226,9 @@ do_traverse(CullTraverserData &data) {
       show_bounds(data, (fancy_bits & PandaNode::FB_show_tight_bounds) != 0);
     }
 
-    data.apply_transform_and_state(this);
+    if (!data.apply_transform_and_state(this)) {
+      return;
+    }
 
     if (fancy_bits & PandaNode::FB_cull_callback) {
       if (!node->cull_callback(this, data)) {
@@ -621,25 +616,4 @@ get_depth_offset_state() {
       (DepthOffsetAttrib::make(1));
   }
   return state;
-}
-
-/**
- * Returns true if the given child node of the current node is within the
- * potentially visible set of the camera's vis sector, or false if not
- * and the node should be culled.
- *
- * If there is no PVS information for the scene, returns true so the node
- * isn't culled.
- */
-int CullTraverser::
-is_in_pvs(const CullTraverserData &data, const GeometricBoundingVolume *bounds, PandaNode *node, int &child_head_node) const {
-  child_head_node = data._vis_head_node;
-
-  if (_pvs == nullptr || _vis_info == nullptr) {
-    // No PVS information.
-    return BoundingVolume::IF_all;
-  }
-
-  return _vis_info->is_node_in_pvs(data._net_transform, bounds, node, *_pvs, _inv_pvs,
-                                   child_head_node, /*data._vis_head_node*/0);
 }

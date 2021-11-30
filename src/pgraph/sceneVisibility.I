@@ -78,11 +78,3 @@ INLINE const KDTree *SceneVisibility::
 get_sector_tree() const {
   return &_sector_tree;
 }
-
-/**
- * Clears the per-node visibility cache.
- */
-INLINE void SceneVisibility::
-clear_node_vis_cache() {
-  _node_vis_cache.clear();
-}

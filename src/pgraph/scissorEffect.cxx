@@ -201,7 +201,7 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void ScissorEffect::
+bool ScissorEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &node_state) const {
@@ -211,7 +211,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
   CPT(TransformState) net_transform = modelview_transform->compose(node_transform);
   if (net_transform->is_singular()) {
     // If we're under a singular transform, never mind.
-    return;
+    return true;
   }
 
   if (is_screen()) {
@@ -280,6 +280,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
     frustum->xform(modelview_transform->get_inverse()->get_mat());
     data._view_frustum = frustum;
   }
+
+  return true;
 }
 
 /**

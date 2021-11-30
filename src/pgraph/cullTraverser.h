@@ -105,8 +105,6 @@ public:
                     const TransformState *net_transform,
                     const RenderState *state);
 
-  int is_in_pvs(const CullTraverserData &data, const GeometricBoundingVolume *bounds, PandaNode *node, int &child_head_node) const;
-
 public:
   // Statistics
   static PStatCollector _nodes_pcollector;
@@ -115,19 +113,6 @@ public:
   static PStatCollector _geoms_occluded_pcollector;
 
 public:
-  // Specifies the virtual methods that the CullTraverser should call
-  // for subclasses.
-  enum VirtualFlags {
-    VF_none = 0,
-    // Call a virtual method before we traverse a child of the current node.
-    // This is called after the view-frustum test for the child has passed,
-    // but the transform and state of the child has not been applied yet.
-    VF_pre_visit_child = 1 << 0,
-    // Call a virtual method after the view-frustum test for a child node has
-    // passed and the transform and state of the child node has been applied.
-    VF_on_visit_child = 1 << 1,
-  };
-
   void show_bounds(CullTraverserData &data, bool tight);
   static PT(Geom) make_bounds_viz(const BoundingVolume *vol);
   PT(Geom) make_tight_bounds_viz(PandaNode *node) const;
@@ -151,11 +136,9 @@ public:
 
   SceneVisibility *_vis_info;
   const BitArray *_pvs;
-  BitArray _inv_pvs;
   int _view_sector;
 
   bool _effective_incomplete_render;
-  unsigned char _virtual_flags;
 
 public:
   static TypeHandle get_class_type() {

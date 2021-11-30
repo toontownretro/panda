@@ -95,6 +95,7 @@
 #include "materialAttrib.h"
 #include "sceneTop.h"
 #include "sceneVisibility.h"
+#include "pvsCullEffect.h"
 
 #include "dconfig.h"
 
@@ -492,6 +493,7 @@ init_libpgraph() {
   PolylightNode::init_type();
   PolylightEffect::init_type();
   PortalNode::init_type();
+  PVSCullEffect::init_type();
   OccluderEffect::init_type();
   OccluderNode::init_type();
   PortalClipper::init_type();

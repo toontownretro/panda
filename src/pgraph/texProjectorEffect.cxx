@@ -176,7 +176,7 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void TexProjectorEffect::
+bool TexProjectorEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &node_state) const {
@@ -221,6 +221,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
   if (!tex_matrix->is_empty()) {
     node_state = node_state->compose(RenderState::make(tex_matrix));
   }
+
+  return true;
 }
 
 /**

@@ -120,14 +120,14 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void BillboardEffect::
+bool BillboardEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
   CPT(TransformState) modelview_transform = data.get_modelview_transform(trav);
   if (modelview_transform->is_singular()) {
     // If we're under a singular transform, never mind.
-    return;
+    return true;
   }
 
   // Since the "modelview" transform from the cull traverser already includes
@@ -159,6 +159,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
     // We've already applied this onto the instances.
     node_transform = TransformState::make_identity();
   }
+
+  return true;
 }
 
 /**

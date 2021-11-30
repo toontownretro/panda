@@ -453,15 +453,21 @@ validate_states() {
 /**
  * Calls cull_callback() on all effects.  You may check has_cull_callback()
  * first to see if any effects define this method to do anything useful.
+ *
+ * Returns false if any of the effects determined that the node should be
+ * culled.
  */
-void RenderEffects::
+bool RenderEffects::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &node_state) const {
   Effects::const_iterator ei;
   for (ei = _effects.begin(); ei != _effects.end(); ++ei) {
-    (*ei)._effect->cull_callback(trav, data, node_transform, node_state);
+    if (!(*ei)._effect->cull_callback(trav, data, node_transform, node_state)) {
+      return false;
+    }
   }
+  return true;
 }
 
 /**

@@ -318,10 +318,6 @@ PUBLISHED:
   INLINE bool is_final(Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_PROPERTY(final, is_final, set_final);
 
-  INLINE void set_pvs_cull(bool flag);
-  INLINE bool get_pvs_cull() const;
-  MAKE_PROPERTY(pvs_cull, get_pvs_cull, set_pvs_cull);
-
   virtual bool is_geom_node() const;
   virtual bool is_lod_node() const;
   virtual bool is_collision_node() const;
@@ -341,7 +337,6 @@ PUBLISHED:
     FB_decal                = 0x0100,
     FB_show_bounds          = 0x0200,
     FB_show_tight_bounds    = 0x0400,
-    FB_no_pvs               = 0x0800,
   };
   INLINE int get_fancy_bits(Thread *current_thread = Thread::get_current_thread()) const;
 
@@ -928,7 +923,6 @@ public:
   INLINE const BoundingVolume *get_bounds() const;
   INLINE int get_nested_vertices() const;
   INLINE bool is_final() const;
-  INLINE bool get_pvs_cull() const;
   INLINE int get_fancy_bits() const;
 
   INLINE PandaNode::Children get_children() const;

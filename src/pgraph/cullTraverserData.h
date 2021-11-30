@@ -77,7 +77,7 @@ PUBLISHED:
   bool apply_cull_planes(const CullPlanes *planes, const GeometricBoundingVolume *node_gbv);
   void apply_cull_lights(const CullLights *lights, const GeometricBoundingVolume *node_gbv);
 
-  void apply_transform_and_state(CullTraverser *trav);
+  bool apply_transform_and_state(CullTraverser *trav);
   void apply_transform(const TransformState *node_transform);
 
   MAKE_PROPERTY(node_path, get_node_path);
@@ -103,12 +103,6 @@ public:
   CPT(InstanceList) _instances;
   DrawMask _draw_mask;
   int _portal_depth;
-
-  // Should we test this node against the PVS?
-  bool _check_pvs;
-  // The index of the K-D tree node that we should start traversal at
-  // for this node's bounding volume.
-  int _vis_head_node;
 
 private:
   PT(NodePathComponent) r_get_node_path() const;

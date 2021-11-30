@@ -119,7 +119,7 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void CharacterJointEffect::
+bool CharacterJointEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
@@ -127,6 +127,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
     _character->update();
   }
   node_transform = data.node()->get_transform();
+  return true;
 }
 
 /**

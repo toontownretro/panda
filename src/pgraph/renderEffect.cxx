@@ -118,10 +118,13 @@ has_cull_callback() const {
  * have not yet been applied to the net_transform and net_state.  This
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
+ *
+ * Returns false if the node should be culled and not traversed any further.
  */
-void RenderEffect::
+bool RenderEffect::
 cull_callback(CullTraverser *, CullTraverserData &,
               CPT(TransformState) &, CPT(RenderState) &) const {
+  return true;
 }
 
 /**

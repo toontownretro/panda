@@ -98,7 +98,7 @@ public:
   INLINE bool has_show_tight_bounds() const;
 
   INLINE bool has_cull_callback() const;
-  void cull_callback(CullTraverser *trav, CullTraverserData &data,
+  bool cull_callback(CullTraverser *trav, CullTraverserData &data,
                      CPT(TransformState) &node_transform,
                      CPT(RenderState) &node_state) const;
 

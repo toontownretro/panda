@@ -111,13 +111,13 @@ has_cull_callback() const {
  * callback may modify the node_transform and node_state to apply an effective
  * change to the render state at this level.
  */
-void CompassEffect::
+bool CompassEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
   if (_properties == 0) {
     // Nothing to do.
-    return;
+    return true;
   }
 
   if (data._instances == nullptr) {
@@ -170,6 +170,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
       }
     }
   }
+
+  return true;
 }
 
 /**
