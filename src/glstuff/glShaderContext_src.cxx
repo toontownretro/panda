@@ -2567,13 +2567,15 @@ void CLP(ShaderContext)::
 update_transform_table(const TransformTable *table) {
   size_t num_matrices = (size_t)_transform_table_size;
 
+  if (table != nullptr) {
+    num_matrices = min(num_matrices, table->get_num_transforms());
+  }
+
   if (!_shader->_transform_table_reduced) {
     LMatrix4f *matrices = (LMatrix4f *)alloca(num_matrices * sizeof(LMatrix4f));
 
-    size_t i = 0;
     if (table != nullptr) {
-      size_t num_transforms = min(num_matrices, table->get_num_transforms());
-      for (; i < num_transforms; ++i) {
+      for (size_t i = 0; i < num_matrices; ++i) {
 #ifdef STDFLOAT_DOUBLE
         matrices[i] = LCAST(float, table->get_transform(i)->get_matrixq());
 #else
@@ -2581,11 +2583,12 @@ update_transform_table(const TransformTable *table) {
 #endif
       }
     } else {
-      for (; i < num_matrices; ++i) {
-        matrices[i] = LMatrix4f::ident_mat();
+      for (size_t i = 0; i < num_matrices; i++) {
+        matrices[i] = LMatrix4::ident_mat();
       }
     }
-    _glgsg->_glUniformMatrix4fv(_transform_table_index, _transform_table_size,
+
+    _glgsg->_glUniformMatrix4fv(_transform_table_index, num_matrices,
                                 (_shader->get_language() == Shader::SL_Cg),
                                 (float *)matrices);
   }
