@@ -69,8 +69,11 @@ public:
     // The node maintains its own counter that increments every time the node
     // is visited.
     int _last_trav_counter;
+
     PandaNode *_node;
 
+    // The set of visgroups the node is in.  This is only needed so we can
+    // remove the node from all of the buckets its in when it gets removed.
     ov_set<int> _visgroups;
   };
 
