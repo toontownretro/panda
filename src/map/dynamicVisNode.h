@@ -62,7 +62,7 @@ public:
 
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
 
-  class ChildInfo : public MemoryBase {
+  class ChildInfo : public ReferenceCount {
   public:
     // This counter is used to check if we've already traversed this child if
     // the child spans multiple visgroups.
@@ -85,7 +85,7 @@ private:
   typedef pvector<ChildSet> VisGroupChildren;
   VisGroupChildren _visgroups;
 
-  typedef pflat_hash_map<PandaNode *, ChildInfo *, pointer_hash> ChildInfos;
+  typedef pflat_hash_map<PandaNode *, PT(ChildInfo), pointer_hash> ChildInfos;
   ChildInfos _children;
 
   ChildSet _dirty_children;

@@ -110,7 +110,6 @@ child_removed(PandaNode *node) {
   _dirty_children.erase(info);
   remove_from_tree(info);
   _children.erase(it);
-  delete info;
 }
 
 
