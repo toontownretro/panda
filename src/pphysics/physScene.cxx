@@ -321,9 +321,9 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
   data.data.word3 = collision_group;
 
   physx::PxTransform trans;
-  trans.p.x = pos[0];
-  trans.p.y = pos[1];
-  trans.p.z = pos[2];
+  trans.p.x = panda_length_to_physx(pos[0]);
+  trans.p.y = panda_length_to_physx(pos[1]);
+  trans.p.z = panda_length_to_physx(pos[2]);
   LQuaternion quat;
   quat.set_hpr(hpr);
   trans.q = panda_quat_to_physx(quat);
