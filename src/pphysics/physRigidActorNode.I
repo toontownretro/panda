@@ -22,6 +22,7 @@ add_shape(PhysShape *shape) {
     _shapes.push_back(shape);
     update_shape_filter_data(_shapes.size() - 1);
   }
+  mark_internal_bounds_stale();
 }
 
 /**
@@ -35,6 +36,7 @@ remove_shape(PhysShape *shape) {
   if (it != _shapes.end()) {
     _shapes.erase(it);
   }
+  mark_internal_bounds_stale();
 }
 
 /**

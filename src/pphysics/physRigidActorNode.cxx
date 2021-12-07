@@ -13,6 +13,7 @@
 
 #include "physRigidActorNode.h"
 #include "physScene.h"
+#include "boundingBox.h"
 
 #include "nodePath.h"
 
@@ -29,6 +30,31 @@ PhysRigidActorNode(const std::string &name) :
   _contents_mask(BitMask32::all_on()),
   _solid_mask(BitMask32::all_on())
 {
+}
+
+/**
+ * Returns a newly-allocated BoundingVolume that represents the internal
+ * contents of the node.  Should be overridden by PandaNode classes that
+ * contain something internally.
+ */
+void PhysRigidActorNode::
+compute_internal_bounds(CPT(BoundingVolume) &internal_bounds,
+                        int &internal_vertices,
+                        int pipeline_stage,
+                        Thread *current_thread) const {
+  internal_vertices = 0;
+
+  // We take the world-space bounds given to us by PhysX and transform it
+  // to be relative to this node.  That way we only have to re-query PhysX
+  // when a shape is added or removed.  When the node's transform changes,
+  // we can efficiently just transform this computed bounding volume
+  // by the new node local transform.
+  physx::PxBounds3 px_bounds = get_rigid_actor()->getWorldBounds();
+  PT(BoundingBox) bbox = new BoundingBox(physx_vec_to_panda(px_bounds.minimum), physx_vec_to_panda(px_bounds.maximum));
+  // The BoundingBox is currently in world-space.  Transform it by the inverse of the node's net transform.
+  NodePath this_np = NodePath::any_path((PandaNode *)this);
+  bbox->xform(this_np.get_net_transform()->get_inverse()->get_mat());
+  internal_bounds = bbox;
 }
 
 /**
@@ -168,6 +194,7 @@ xform(const LMatrix4 &mat) {
     physx::PxShape *shape = _shapes[i]->get_shape();
     shape->setLocalPose(pxtrans.transform(shape->getLocalPose()));
   }
+  mark_internal_bounds_stale();
 }
 
 /**

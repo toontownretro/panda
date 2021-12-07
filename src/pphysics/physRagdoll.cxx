@@ -354,7 +354,13 @@ update() {
   for (size_t i = 0; i < _char_joints.size(); i++) {
     Joint *limb = _char_joints[i];
 
-    if (limb == nullptr) {
+    if (limb == nullptr || limb->actor == nullptr) {
+      _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
+      continue;
+    }
+
+    CPT(TransformState) limb_actor_transform = limb->actor->get_transform();
+    if (limb_actor_transform == nullptr) {
       _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
       continue;
     }
@@ -367,7 +373,6 @@ update() {
       net_inverse = _char->get_root_xform();
     }
     net_inverse.invert_in_place();
-    CPT(TransformState) limb_actor_transform = limb->actor->get_transform();
     CPT(TransformState) joint_trans_state = char_net->
       invert_compose(limb_actor_transform);
     LMatrix4 joint_trans = joint_trans_state->get_mat();

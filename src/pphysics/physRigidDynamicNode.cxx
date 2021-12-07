@@ -102,6 +102,7 @@ PhysRigidDynamicNode(physx::PxRigidDynamic *actor) :
   update_shape_filter_data();
   //_sync_enabled = false;
   _self_created = false;
+  mark_internal_bounds_stale();
 }
 
 /**

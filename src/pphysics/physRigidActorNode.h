@@ -91,6 +91,11 @@ public:
 protected:
   PhysRigidActorNode(const std::string &name);
 
+  virtual void compute_internal_bounds(CPT(BoundingVolume) &internal_bounds,
+                                       int &internal_vertices,
+                                       int pipeline_stage,
+                                       Thread *current_thread) const override;
+
   virtual void parents_changed() override;
   virtual void transform_changed() override;
 
