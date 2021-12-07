@@ -23,6 +23,7 @@
 #include "datagram.h"
 #include "datagramIterator.h"
 #include "bitArray.h"
+#include "ordered_vector.h"
 
 /**
  * A k-dimensional (k-d) tree is an axis-aligned binary space partitioning
@@ -33,7 +34,7 @@
  * regions of the universe.  For the visibility system, non-empty leaf nodes
  * correspond to area clusters.
  */
-class EXPCL_PANDA_PGRAPH KDTree {
+class EXPCL_PANDA_MAP KDTree {
 PUBLISHED:
 #pragma pack(push, 1)
   class Node {
@@ -88,6 +89,8 @@ PUBLISHED:
   int make_subtree(const vector_int &objects);
 
   int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const;
+  void get_leaf_values_containing_box(const LPoint3 &mins, const LPoint3 &maxs, ov_set<int> &values) const;
+  void get_leaf_values_containing_sphere(const LPoint3 &center, PN_stdfloat radius, ov_set<int> &values) const;
 
   size_t get_memory_size() const;
 
@@ -125,8 +128,6 @@ protected:
   Leaves _leaves;
 
   Inputs _inputs;
-
-  friend class SceneVisibility;
 };
 
 #include "kdTree.I"

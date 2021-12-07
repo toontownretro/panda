@@ -16,6 +16,7 @@
 #include "cullTraverserData.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
+#include "mapCullTraverser.h"
 
 static PStatCollector world_geometry_coll("Cull:MapRoot");
 
@@ -31,7 +32,6 @@ MapRoot(MapData *data) :
   _pvs_cull(true)
 {
   set_cull_callback();
-  set_renderable();
 }
 
 /**
@@ -45,8 +45,15 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     return true;
   }
 
-  // Query the cluster that the camera/cull target is currently in.
-  int cluster = trav->_view_sector;
+  int cluster;
+  if (trav->is_exact_type(MapCullTraverser::get_class_type())) {
+    // We can use the cluster that was computed by the MapCullTraverser.
+    cluster = ((MapCullTraverser *)trav)->_view_cluster;
+  } else {
+    // Otherwise look it up in our tree.
+    // Isn't this line a beauty.
+    cluster = _data->get_area_cluster_tree()->get_leaf_value_from_point(trav->get_scene()->get_camera_path().get_net_transform()->get_pos());
+  }
 
   if (cluster < 0) {
     // Invalid cluster.  Don't render anything.

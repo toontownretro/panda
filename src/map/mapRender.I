@@ -22,6 +22,14 @@ set_map_data(MapData *data) {
 /**
  *
  */
+INLINE void MapRender::
+clear_map_data() {
+  _map_data = nullptr;
+}
+
+/**
+ *
+ */
 INLINE MapData *MapRender::
 get_map_data() const {
   return _map_data;

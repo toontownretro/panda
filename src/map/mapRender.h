@@ -32,6 +32,7 @@ PUBLISHED:
   MapRender(const std::string &name);
 
   INLINE void set_map_data(MapData *data);
+  INLINE void clear_map_data();
   INLINE MapData *get_map_data() const;
 
 public:

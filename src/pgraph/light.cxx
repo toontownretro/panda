@@ -235,5 +235,5 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     manager->read_cdata(scan, _cycler);
   }
   _priority = scan.get_int32();
-  _stationary = scan.get_bool();
+  //_stationary = scan.get_bool();
 }

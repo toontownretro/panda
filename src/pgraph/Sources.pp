@@ -59,7 +59,6 @@
     instanceList.I instanceList.h \
     instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
-    kdTree.I kdTree.h \
     lensNode.I lensNode.h \
     light.I light.h \
     lightAttrib.I lightAttrib.h \
@@ -90,7 +89,6 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
-    pvsCullEffect.I pvsCullEffect.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \
@@ -100,8 +98,6 @@
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
-    sceneTop.I sceneTop.h \
-    sceneVisibility.I sceneVisibility.h \
     scissorAttrib.I scissorAttrib.h \
     scissorEffect.I scissorEffect.h \
     shadeModelAttrib.I shadeModelAttrib.h \
@@ -167,7 +163,6 @@
     instancedNode.cxx \
     internalNameCollection.cxx \
     lensNode.cxx \
-    kdTree.cxx \
     light.cxx \
     lightAttrib.cxx \
     lightRampAttrib.cxx \
@@ -196,7 +191,6 @@
     polylightNode.cxx \
     portalNode.cxx \
     portalClipper.cxx \
-    pvsCullEffect.cxx \
     renderAttrib.cxx \
     renderAttribRegistry.cxx \
     renderEffect.cxx \
@@ -206,8 +200,6 @@
     rescaleNormalAttrib.cxx \
     sceneGraphReducer.cxx \
     sceneSetup.cxx \
-    sceneTop.cxx \
-    sceneVisibility.cxx \
     scissorAttrib.cxx \
     scissorEffect.cxx \
     shadeModelAttrib.cxx \
@@ -272,7 +264,6 @@
     instancedNode.I instancedNode.h \
     internalNameCollection.I internalNameCollection.h \
     lensNode.I lensNode.h \
-    kdTree.I kdTree.h \
     light.I light.h \
     lightAttrib.I lightAttrib.h \
     lightRampAttrib.I lightRampAttrib.h \
@@ -302,7 +293,6 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
-    pvsCullEffect.I pvsCullEffect.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \
@@ -312,8 +302,6 @@
     rescaleNormalAttrib.I rescaleNormalAttrib.h \
     sceneGraphReducer.I sceneGraphReducer.h \
     sceneSetup.I sceneSetup.h \
-    sceneTop.I sceneTop.h \
-    sceneVisibility.I sceneVisibility.h \
     scissorAttrib.I scissorAttrib.h \
     scissorEffect.I scissorEffect.h \
     shadeModelAttrib.I shadeModelAttrib.h \

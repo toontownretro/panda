@@ -26,7 +26,6 @@ MapRender(const std::string &name) :
   _map_data(nullptr)
 {
   set_cull_callback();
-  set_renderable();
 }
 
 /**
@@ -34,10 +33,6 @@ MapRender(const std::string &name) :
  */
 bool MapRender::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
-  if (_map_data == nullptr) {
-    return true;
-  }
-
   MapCullTraverser mtrav(*trav, _map_data);
   mtrav.local_object();
   mtrav.determine_view_cluster();

@@ -319,6 +319,10 @@ determine_view_cluster() {
   _view_cluster = -1;
   _pvs.clear();
 
+  if (_data == nullptr) {
+    return;
+  }
+
   const KDTree *tree = _data->get_area_cluster_tree();
   if (tree == nullptr) {
     return;

@@ -6,20 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file sceneTop.cxx
+ * @file dynamicVisNode.I
  * @author brian
- * @date 2021-11-17
+ * @date 2021-12-03
  */
-
-#include "sceneTop.h"
-
-TypeHandle SceneTop::_type_handle;
-
-/**
- *
- */
-SceneTop::
-SceneTop(const std::string &name) :
-  PandaNode(name)
-{
-}

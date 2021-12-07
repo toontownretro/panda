@@ -35,8 +35,7 @@
 #include "geomLinestrips.h"
 #include "geomLines.h"
 #include "geomVertexWriter.h"
-#include "sceneTop.h"
-#include "sceneVisibility.h"
+#include "configVariableBool.h"
 
 PStatCollector CullTraverser::_nodes_pcollector("Nodes");
 PStatCollector CullTraverser::_geom_nodes_pcollector("Nodes:GeomNodes");
@@ -58,10 +57,7 @@ CullTraverser() :
   _initial_state(RenderState::make_empty()),
   _cull_handler(nullptr),
   _portal_clipper(nullptr),
-  _effective_incomplete_render(false),
-  _vis_info(nullptr),
-  _pvs(nullptr),
-  _view_sector(-1)
+  _effective_incomplete_render(false)
 {
 }
 
@@ -81,10 +77,7 @@ CullTraverser(const CullTraverser &copy) :
   _view_frustum(copy._view_frustum),
   _cull_handler(copy._cull_handler),
   _portal_clipper(copy._portal_clipper),
-  _effective_incomplete_render(copy._effective_incomplete_render),
-  _vis_info(copy._vis_info),
-  _pvs(copy._pvs),
-  _view_sector(copy._view_sector)
+  _effective_incomplete_render(copy._effective_incomplete_render)
 {
 }
 
@@ -114,25 +107,6 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
 #ifndef NDEBUG
   _fake_view_frustum_cull = fake_view_frustum_cull;
 #endif
-
-  // If the root node in the scene is a SceneTop, we might have
-  // precomputed visibility information that we can use for
-  // additional culling.
-  _vis_info = nullptr;
-  _view_sector = -1;
-  _pvs = nullptr;
-  PandaNode *top_node = scene_setup->get_scene_root().node();
-  if (camera->get_pvs_cull() && top_node->is_exact_type(SceneTop::get_class_type())) {
-    SceneTop *scene_top = (SceneTop *)top_node;
-    _vis_info = scene_top->get_vis_info();
-    // Query the visibility sector that the camera is in.
-    _view_sector = _vis_info->get_point_sector(scene_setup->get_cull_center().get_net_transform()->get_pos());
-    if (_view_sector >= 0) {
-      // If the camera is in a valid vis sector, get the PVS associated with
-      // that sector.
-      _pvs = _vis_info->get_sector_pvs(_view_sector);
-    }
-  }
 }
 
 /**

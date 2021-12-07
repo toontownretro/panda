@@ -526,6 +526,7 @@ add_child(PandaNode *child_node, int sort, Thread *current_thread) {
   force_bounds_stale();
 
   children_changed();
+  child_added(child_node);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -556,6 +557,7 @@ remove_child(int child_index, Thread *current_thread) {
   force_bounds_stale(pipeline_stage, current_thread);
 
   children_changed();
+  child_removed(child_node);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -590,6 +592,7 @@ remove_child(PandaNode *child_node, Thread *current_thread) {
   if (any_removed) {
     // Call callback hooks.
     children_changed();
+    child_removed(child_node);
     child_node->parents_changed();
   }
 
@@ -635,6 +638,8 @@ replace_child(PandaNode *orig_child, PandaNode *new_child,
 
   if (any_replaced) {
     children_changed();
+    child_removed(orig_child);
+    child_added(new_child);
     orig_child->parents_changed();
     new_child->parents_changed();
   }
@@ -678,6 +683,7 @@ stash_child(int child_index, Thread *current_thread) {
   force_bounds_stale(pipeline_stage, current_thread);
 
   children_changed();
+  child_removed(child_node);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -720,6 +726,7 @@ unstash_child(int stashed_index, Thread *current_thread) {
 
   force_bounds_stale();
   children_changed();
+  child_added(child_node);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -802,6 +809,8 @@ remove_stashed(int child_index, Thread *current_thread) {
  */
 void PandaNode::
 remove_all_children(Thread *current_thread) {
+  pset<PT(PandaNode)> removed_children;
+
   // We have to do this for each upstream pipeline stage.
   OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
@@ -816,6 +825,7 @@ remove_all_children(Thread *current_thread) {
       sever_connection(this, child_node, pipeline_stage, current_thread);
       child_node->parents_changed();
       child_node->mark_bam_modified();
+      removed_children.insert(child_node);
     }
     down->clear();
 
@@ -836,6 +846,9 @@ remove_all_children(Thread *current_thread) {
 
   force_bounds_stale();
   children_changed();
+  for (auto it = removed_children.begin(); it != removed_children.end(); ++it) {
+    child_removed(*it);
+  }
   mark_bam_modified();
 }
 
@@ -2281,6 +2294,7 @@ force_bounds_stale(int pipeline_stage, Thread *current_thread) {
   int num_parents = parents.get_num_parents();
   for (int i = 0; i < num_parents; ++i) {
     PandaNode *parent = parents.get_parent(i);
+    parent->child_bounds_stale(this);
     parent->mark_bounds_stale(pipeline_stage, current_thread);
   }
 }
@@ -2391,6 +2405,31 @@ parents_changed() {
 void PandaNode::
 children_changed() {
   nassertv((_unexpected_change_flags & UC_children) == 0);
+}
+
+/**
+ * Called after a scene graph update that adds a child to this node, this just
+ * provides a hook for derived PandaNode objects that need to update themselves
+ * based on the set of children the node has.
+ */
+void PandaNode::
+child_added(PandaNode *node) {
+}
+
+/**
+ * Called after a scene graph update that removes a child from this node, this
+ * just provides a hook for derived PandaNode objects that need to update
+ * themselves based on the set of children the node has.
+ */
+void PandaNode::
+child_removed(PandaNode *node) {
+}
+
+/**
+ * Called when the indicated child node's bounds have been marked stale.
+ */
+void PandaNode::
+child_bounds_stale(PandaNode *node) {
 }
 
 /**
@@ -2856,6 +2895,7 @@ detach_one_stage(NodePathComponent *child, int pipeline_stage,
 
   parent_node->force_bounds_stale(pipeline_stage, current_thread);
   parent_node->children_changed();
+  parent_node->child_removed(child->get_node());
   parent_node->mark_bam_modified();
 }
 
@@ -2891,6 +2931,7 @@ reparent(NodePathComponent *new_parent, NodePathComponent *child, int sort,
 
   if (new_parent != nullptr) {
     new_parent->get_node()->children_changed();
+    new_parent->get_node()->child_added(child->get_node());
     new_parent->get_node()->mark_bam_modified();
   }
   child->get_node()->parents_changed();
@@ -3345,12 +3386,12 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
     // not holding a lock on our set of children right now).  But we also need
     // the regular pointers, to pass to BoundingVolume::around().
     const BoundingVolume **child_volumes;
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-    pvector<CPT(BoundingVolume) > child_volumes_ref;
-    if (update_bounds) {
-      child_volumes_ref.reserve(num_children + 1);
-    }
-#endif
+//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+//    pvector<CPT(BoundingVolume) > child_volumes_ref;
+//    if (update_bounds) {
+//      child_volumes_ref.reserve(num_children + 1);
+//    }
+//#endif
     int child_volumes_i = 0;
 
     CPT(BoundingVolume) internal_bounds = nullptr;
@@ -3360,9 +3401,9 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
       internal_bounds = get_internal_bounds(pipeline_stage, current_thread);
 
       if (!internal_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-        child_volumes_ref.push_back(internal_bounds);
-#endif
+//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+//        child_volumes_ref.push_back(internal_bounds);
+//#endif
         nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
         child_volumes[child_volumes_i++] = internal_bounds;
       }
@@ -3458,9 +3499,9 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
         if (update_bounds) {
           if (!child_cdataw->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdataw->_external_bounds);
-#endif
+//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+//            child_volumes_ref.push_back(child_cdataw->_external_bounds);
+//#endif
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
           }
@@ -3517,9 +3558,9 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
         if (update_bounds) {
           if (!child_cdata->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdata->_external_bounds);
-#endif
+//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+//            child_volumes_ref.push_back(child_cdata->_external_bounds);
+//#endif
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
           }

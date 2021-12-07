@@ -48,6 +48,10 @@
 #include "simpleHashMap.h"
 #include "geometricBoundingVolume.h"
 
+#ifndef CPPPARSER
+#include <functional>
+#endif
+
 class NodePathComponent;
 class CullTraverser;
 class CullTraverserData;
@@ -77,6 +81,14 @@ protected:
   PandaNode &operator = (const PandaNode &copy) = delete;
 
 public:
+  // Function type for hooks that should be called when something interesting
+  // on the node changes (such as its bounding volume or transform).
+  typedef std::function<void(PandaNode *)> ChangedHook;
+  // We actually allow storing multiple hooks per change type.  There may be
+  // several external systems that are interested when a property on the node
+  // changes (such as the DynamicVisNode and PhysObjects linked to this node).
+  typedef SimpleHashMap<int, ChangedHook, int_hash> ChangedHooks;
+
   virtual ReferenceCount *as_reference_count();
   virtual PandaNode *dupe_for_flatten() const;
 
@@ -370,6 +382,9 @@ protected:
                                        Thread *current_thread) const;
   virtual void parents_changed();
   virtual void children_changed();
+  virtual void child_added(PandaNode *node);
+  virtual void child_removed(PandaNode *node);
+  virtual void child_bounds_stale(PandaNode *node);
   virtual void transform_changed();
   virtual void state_changed();
   virtual void draw_mask_changed();

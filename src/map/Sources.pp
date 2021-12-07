@@ -7,6 +7,8 @@
   #define SOURCES \
     aabbTree.h aabbTree.I \
     config_map.h \
+    dynamicVisNode.h dynamicVisNode.I \
+    kdTree.h kdTree.I \
     mapCullTraverser.h mapCullTraverser.I \
     mapData.h mapData.I \
     mapEntity.h mapEntity.I \
@@ -18,6 +20,8 @@
   #define COMPOSITE_SOURCES \
     aabbTree.cxx \
     config_map.cxx \
+    dynamicVisNode.cxx \
+    kdTree.cxx \
     mapCullTraverser.cxx \
     mapData.cxx \
     mapEntity.cxx \

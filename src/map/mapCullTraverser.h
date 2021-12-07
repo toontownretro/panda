@@ -20,12 +20,17 @@
 class MapData;
 
 /**
- *
+ * This is a special kind of CullTraverser that is utilized by the map system.
+ * Its only purpose is to determine and store the current visgroup of the
+ * camera and its associated PVS for later processes to utilize, such as the
+ * DynamicVisNode (dynamic model culling) and MapRoot (static world culling).
  */
 class EXPCL_PANDA_MAP MapCullTraverser : public CullTraverser {
   DECLARE_CLASS(MapCullTraverser, CullTraverser);
 
 PUBLISHED:
+  // The MapCullTraverser must be initialized from an existing CullTraverser
+  // instance.  This is done in the MapRender cull callback.
   MapCullTraverser() = delete;
   MapCullTraverser(const CullTraverser &other, MapData *data);
 
@@ -36,7 +41,7 @@ PUBLISHED:
 
   void determine_view_cluster();
 
-private:
+public:
   // What cluster does the camera currently reside in?  Determined before
   // traversal starts.
   int _view_cluster;

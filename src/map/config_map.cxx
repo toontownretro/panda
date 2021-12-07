@@ -18,6 +18,8 @@
 #include "mapRender.h"
 #include "mapCullTraverser.h"
 #include "mapNodeData.h"
+#include "dynamicVisNode.h"
+#include "mapLightingEffect.h"
 
 NotifyCategoryDef(map, "");
 
@@ -41,6 +43,8 @@ init_libmap() {
   MapRender::init_type();
   MapCullTraverser::init_type();
   MapNodeData::init_type();
+  DynamicVisNode::init_type();
+  MapLightingEffect::init_type();
 
   MapData::register_with_read_factory();
   MapEntity::register_with_read_factory();

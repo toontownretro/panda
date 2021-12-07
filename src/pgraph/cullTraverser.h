@@ -35,7 +35,6 @@ class CullableObject;
 class CullTraverserData;
 class PortalClipper;
 class NodePath;
-class SceneVisibility;
 
 /**
  * This object performs a depth-first traversal of the scene graph, with
@@ -133,10 +132,6 @@ public:
   PT(GeometricBoundingVolume) _view_frustum;
   CullHandler *_cull_handler;
   PortalClipper *_portal_clipper;
-
-  SceneVisibility *_vis_info;
-  const BitArray *_pvs;
-  int _view_sector;
 
   bool _effective_incomplete_render;
 

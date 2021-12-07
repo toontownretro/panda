@@ -188,6 +188,90 @@ get_leaf_value_from_point(const LPoint3 &point, int head_node) const {
 }
 
 /**
+ * Returns a unique set of leaf values for leaves that the indicated box
+ * overlaps with.
+ */
+void KDTree::
+get_leaf_values_containing_box(const LPoint3 &mins, const LPoint3 &maxs, ov_set<int> &values) const {
+  std::stack<int> node_stack;
+  node_stack.push(0);
+
+  while (!node_stack.empty()) {
+    int node_index = node_stack.top();
+    node_stack.pop();
+
+    if (node_index >= 0) {
+      const Node *node = &_nodes[node_index];
+
+      if (maxs[node->axis] < node->dist) {
+        // Completely behind the plane, traverse left.
+        node_stack.push(node->left_child);
+
+      } else if (mins[node->axis] >= node->dist) {
+        // Completely in front of the plane, traverse right.
+        node_stack.push(node->right_child);
+
+      } else {
+        // The box spans the plane, traverse both directions.
+        node_stack.push(node->right_child);
+        node_stack.push(node->left_child);
+      }
+
+    } else {
+      // We reached a leaf node.
+      const Leaf *leaf = &_leaves[~node_index];
+      if (leaf->value != -1) {
+        values.push_back(leaf->value);
+      }
+    }
+  }
+
+  values.sort();
+}
+
+/**
+ * Returns a unique set of leaf values for leaves that the indicated sphere
+ * overlaps with.
+ */
+void KDTree::
+get_leaf_values_containing_sphere(const LPoint3 &center, PN_stdfloat radius, ov_set<int> &values) const {
+  std::stack<int> node_stack;
+  node_stack.push(0);
+
+  while (!node_stack.empty()) {
+    int node_index = node_stack.top();
+    node_stack.pop();
+
+    if (node_index >= 0) {
+      const Node *node = &_nodes[node_index];
+
+      if ((center[node->axis] + radius) < node->dist) {
+        // Completely behind the plane, traverse left.
+        node_stack.push(node->left_child);
+
+      } else if ((center[node->axis] - radius) >= node->dist) {
+        // Completely in front of the plane, traverse right.
+        node_stack.push(node->right_child);
+
+      } else {
+        // The sphere spans the plane, traverse both directions.
+        node_stack.push(node->right_child);
+        node_stack.push(node->left_child);
+      }
+
+    } else {
+      // We reached a leaf node.
+      const Leaf *leaf = &_leaves[~node_index];
+      if (leaf->value != -1) {
+        values.push_back(leaf->value);
+      }
+    }
+  }
+
+  values.sort();
+}
+
+/**
  *
  */
 void KDTree::
