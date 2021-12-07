@@ -28,6 +28,7 @@
 class PhysRayCastResult;
 class PhysSweepResult;
 class PhysBaseQueryFilter;
+class PhysGeometry;
 
 /**
  * A scene is a collection of bodies and constraints which can interact.
@@ -69,6 +70,13 @@ PUBLISHED:
                CollideMask touch_mask = CollideMask::all_off(),
                unsigned int collision_group = 0,
                PhysBaseQueryFilter *filter = nullptr) const;
+  bool sweep(PhysSweepResult &result, PhysGeometry &geometry,
+             const LPoint3 &pos, const LVecBase3 &hpr,
+             const LVector3 &direction, PN_stdfloat distance,
+             CollideMask solid_mask = CollideMask::all_on(),
+             CollideMask touch_mask = CollideMask::all_off(),
+             unsigned int collision_group = 0,
+             PhysBaseQueryFilter *filter = nullptr) const;
 
 public:
   INLINE void enqueue_callback(CallbackObject *obj, RefCallbackData *data);

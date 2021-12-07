@@ -21,6 +21,7 @@
 #include "physXSimulationEventCallback.h"
 #include "physQueryFilter.h"
 #include "physx_utils.h"
+#include "physGeometry.h"
 
 /**
  *
@@ -285,6 +286,64 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
     // Explicit filter was specified.
     return _scene->sweep(
       box, trans,
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      filter);
+  }
+}
+
+/**
+ * Casts a generic physics geometry object into the scene and records the
+ * intersections.
+ *
+ * block_mask is the bitmask of collision groups that should prevent the ray
+ * from continuing, while touch_mask is the bitmask of collision groups that
+ * should allow the ray to continue (but still record an intersection).
+ *
+ * Returns true if there was at least one intersection, false otherwise.
+ */
+bool PhysScene::
+sweep(PhysSweepResult &result, PhysGeometry &geometry,
+      const LPoint3 &pos, const LVecBase3 &hpr,
+      const LVector3 &direction, PN_stdfloat distance,
+      CollideMask solid_mask, CollideMask touch_mask,
+      unsigned int collision_group, PhysBaseQueryFilter *filter) const {
+
+  physx::PxQueryFilterData data;
+  data.flags |= physx::PxQueryFlag::ePREFILTER;
+  // word0 is used during the fixed-function filtering.
+  data.data.word0 = (solid_mask | touch_mask).get_word();
+  data.data.word1 = solid_mask.get_word();
+  data.data.word2 = touch_mask.get_word();
+  data.data.word3 = collision_group;
+
+  physx::PxTransform trans;
+  trans.p.x = pos[0];
+  trans.p.y = pos[1];
+  trans.p.z = pos[2];
+  LQuaternion quat;
+  quat.set_hpr(hpr);
+  trans.q = panda_quat_to_physx(quat);
+
+  if (filter == nullptr) {
+    // Use the base filter that just checks for common block or touch bits.
+    PhysBaseQueryFilter default_filter;
+    return _scene->sweep(
+      *geometry.get_geometry(), trans,
+      panda_norm_vec_to_physx(direction),
+      panda_length_to_physx(distance),
+      result.get_buffer(),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      data,
+      &default_filter);
+
+  } else {
+    // Explicit filter was specified.
+    return _scene->sweep(
+      *geometry.get_geometry(), trans,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
