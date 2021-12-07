@@ -201,6 +201,9 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
       ChildInfo *child = *it;
       if (child->_last_trav_counter != _trav_counter) {
         // We haven't traversed this child yet.
+        // TODO: Figure out if there's a way we can store DownConnections
+        // instead of node pointers to take advantage of bounds being stored
+        // on DownConnection.
         trav->traverse_down(data, child->_node);
         child->_last_trav_counter = _trav_counter;
       }

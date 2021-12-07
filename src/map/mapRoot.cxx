@@ -29,7 +29,8 @@ MapRoot::
 MapRoot(MapData *data) :
   PandaNode("map-root"),
   _data(data),
-  _pvs_cull(true)
+  _pvs_cull(true),
+  _built_mesh_groups(false)
 {
   set_cull_callback();
 }
@@ -43,6 +44,23 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   if (_data == nullptr || !_pvs_cull || _data->get_num_clusters() == 0) {
     return true;
+  }
+
+  if (!_built_mesh_groups) {
+    _cluster_mesh_groups.resize(_data->get_num_clusters());
+    for (int i = 0; i < _data->get_num_clusters(); ++i) {
+      const AreaClusterPVS *pvs = _data->get_cluster_pvs(i);
+      for (int j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+        BitArray mesh_groups = _data->get_cluster_pvs(pvs->get_visible_cluster(j))->_mesh_groups;
+        int index = mesh_groups.get_lowest_on_bit();
+        while (index >= 0) {
+          _cluster_mesh_groups[i].insert(index);
+          mesh_groups.clear_bit(index);
+          index = mesh_groups.get_lowest_on_bit();
+        }
+      }
+    }
+    _built_mesh_groups = true;
   }
 
   int cluster;
@@ -60,24 +78,10 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     return false;
   }
 
-  // Build up a bit array of all the mesh groups we will render.
-  const AreaClusterPVS *pvs = _data->get_cluster_pvs(cluster);
-  if (pvs == nullptr) {
-    return false;
-  }
-
-  Children children = get_children();
-
-  BitArray visible_mesh_groups;
-  for (size_t i = 0; i < pvs->get_num_visible_clusters(); i++) {
-    visible_mesh_groups |= _data->get_cluster_pvs(pvs->get_visible_cluster(i))->_mesh_groups;
-  }
-  int index = visible_mesh_groups.get_lowest_on_bit();
-  while (index >= 0) {
-    trav->traverse_down(data, children.get_child_connection(index));
-
-    visible_mesh_groups.clear_bit(index);
-    index = visible_mesh_groups.get_lowest_on_bit();
+  // Very quickly iterate through all the mesh groups in the PVS and traverse
+  // them.
+  for (auto it = _cluster_mesh_groups[cluster].begin(); it != _cluster_mesh_groups[cluster].end(); ++it) {
+    trav->traverse_down(data, data._node_reader.get_child_connection(*it));
   }
 
   // We've taken care of the traversal for this subgraph.
@@ -150,7 +154,8 @@ MapRoot::
 MapRoot() :
   PandaNode("map-root"),
   _data(nullptr),
-  _pvs_cull(true)
+  _pvs_cull(true),
+  _built_mesh_groups(false)
 {
   set_cull_callback();
 }
@@ -162,7 +167,9 @@ MapRoot::
 MapRoot(const MapRoot &copy) :
   PandaNode(copy),
   _data(copy._data),
-  _pvs_cull(copy._pvs_cull)
+  _pvs_cull(copy._pvs_cull),
+  _built_mesh_groups(copy._built_mesh_groups),
+  _cluster_mesh_groups(copy._cluster_mesh_groups)
 {
   set_cull_callback();
 }

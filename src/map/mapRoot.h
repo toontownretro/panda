@@ -54,6 +54,12 @@ private:
 private:
   PT(MapData) _data;
   bool _pvs_cull;
+
+  // This contains a set of mesh groups in the PVS of each vis cluster.
+  // This allows us to know the complete set of meshes to render when the
+  // camera is in a particular vis cluster.
+  pvector<pset<int>> _cluster_mesh_groups;
+  bool _built_mesh_groups;
 };
 
 #include "mapRoot.I"
