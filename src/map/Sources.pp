@@ -12,6 +12,7 @@
     mapCullTraverser.h mapCullTraverser.I \
     mapData.h mapData.I \
     mapEntity.h mapEntity.I \
+    mapLightingEffect.h mapLightingEffect.I \
     mapModel.h mapModel.I \
     mapNodeData.h mapNodeData.I \
     mapRender.h mapRender.I \
@@ -25,6 +26,7 @@
     mapCullTraverser.cxx \
     mapData.cxx \
     mapEntity.cxx \
+    mapLightingEffect.cxx \
     mapModel.cxx \
     mapNodeData.cxx \
     mapRender.cxx \
