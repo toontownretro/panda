@@ -78,6 +78,8 @@ PUBLISHED:
 
   virtual bool is_self_created() const { return true; }
 
+  void sync_transform();
+
 public:
   INLINE void set_sync_enabled(bool flag);
   INLINE bool get_sync_enabled() const;

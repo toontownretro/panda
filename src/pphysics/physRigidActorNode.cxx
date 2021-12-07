@@ -223,3 +223,12 @@ do_transform_changed() {
   CPT(TransformState) net_transform = np.get_net_transform();
   get_rigid_actor()->setGlobalPose(panda_trans_to_physx(net_transform));
 }
+
+/**
+ * Copies the world-space transform of this node onto the PhysX actor
+ * immediately.
+ */
+void PhysRigidActorNode::
+sync_transform() {
+  do_transform_changed();
+}
