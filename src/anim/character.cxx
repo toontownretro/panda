@@ -580,7 +580,7 @@ compute_attachment_transform(int index) {
       //if (!_changed_joints.get_bit(parent)) {
       //  continue;
       //}
-      inf._transform = _joint_poses[inf._parent]._net_transform * inf._offset * inf._weight;
+      inf._transform = (inf._offset * _joint_poses[inf._parent]._net_transform) * inf._weight;
     }
     transform += inf._transform;
   }
