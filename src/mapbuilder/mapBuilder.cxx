@@ -428,12 +428,12 @@ build() {
     if (ec != EC_ok) {
       return ec;
     }
-  }
 
-  // Render cube maps.
-  ec = render_cube_maps();
-  if (ec != EC_ok) {
-    return ec;
+    // Render cube maps.
+    ec = render_cube_maps();
+    if (ec != EC_ok) {
+      return ec;
+    }
   }
 
   // After building the lightmaps, we can flatten the Geoms within each mesh
