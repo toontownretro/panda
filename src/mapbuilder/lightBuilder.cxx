@@ -426,14 +426,6 @@ make_textures() {
   probes->clear_image();
   _lm_textures["probes"] = probes;
 
-  PT(Texture) probes_flat = new Texture("lm_probes_flat");
-  probes_flat->setup_buffer_texture(_probes.size(), Texture::T_float, Texture::F_rgba32, GeomEnums::UH_static);
-  probes_flat->set_clear_color(LColor(0, 0, 0, 0));
-  probes_flat->set_default_sampler(sampler);
-  probes_flat->set_compression(Texture::CM_off);
-  probes_flat->clear_image();
-  _lm_textures["probes_flat"] = probes_flat;
-
   //
   // Rasterization outputs.
   //
@@ -1541,7 +1533,6 @@ compute_probes() {
   np.set_shader_input("probes", _gpu_buffers["probes"]);
   // Probe output data.
   np.set_shader_input("probe_output", _lm_textures["probes"]);
-  np.set_shader_input("probe_output_flat", _lm_textures["probes_flat"]);
 
   // Use denoised+dialated indirect+direct lightmap.
   np.set_shader_input("luxel_light", _lm_textures["direct"]);
@@ -1576,13 +1567,8 @@ compute_probes() {
 
   // Retrieve probe data back onto CPU.
   _graphics_engine->extract_texture_data(_lm_textures["probes"], _gsg);
-  _graphics_engine->extract_texture_data(_lm_textures["probes_flat"], _gsg);
   CPTA_uchar probe_data = _lm_textures["probes"]->get_ram_image();
   const float *probe_datap = (const float *)probe_data.p();
-
-  CPTA_uchar probe_flat_data = _lm_textures["probes_flat"]->get_ram_image();
-  assert(probe_flat_data.size() == (sizeof(float) * 4 * _probes.size()));
-  const float *probe_flat_datap = (const float *)probe_flat_data.p();
 
   // Now output the data to a friendly format.
   for (size_t i = 0; i < _probes.size(); i++) {
@@ -1592,16 +1578,9 @@ compute_probes() {
       probe.data[j][1] = probe_datap[i * 36 + j * 4 + 1];
       probe.data[j][2] = probe_datap[i * 36 + j * 4 + 2];
     }
-
-    LVecBase3 color;
-    color[0] = probe_flat_datap[i * 4];
-    color[1] = probe_flat_datap[i * 4 + 1];
-    color[2] = probe_flat_datap[i * 4 + 2];
-    std::cout << "probe " << i << " flat: " << color << "\n";
   }
 
   _lm_textures["probes"]->clear_image();
-  _lm_textures["probes_flat"]->clear_image();
   _lm_textures["albedo"]->clear_image();
   //_lm_textures["reflectivity"]->clear_image();
 
