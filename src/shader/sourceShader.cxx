@@ -273,45 +273,49 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_pixel_shader_define("HALFLAMBERT");
   }
 
-  Texture *envmap_tex = nullptr;
+  // If we're using the original source shader, respect the "envmap" material property.
+  // Otherwise, always apply an envmap.
+  if (!use_orig_source_shader || ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value())) {
+    Texture *envmap_tex = nullptr;
 
-  const TextureAttrib *ta;
-  state->get_attrib_def(ta);
-  for (int i = 0; i < ta->get_num_on_stages(); i++) {
-    TextureStage *stage = ta->get_on_stage(i);
-    const std::string &stage_name = stage->get_name();
-    if (stage_name == "envmap") {
-      envmap_tex = ta->get_on_texture(stage);
-      break;
-    }
-  }
-
-  if (envmap_tex == nullptr) {
-    envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
-  }
-
-  if (envmap_tex != nullptr) {
-    envmap_tex->set_wrap_u(SamplerState::WM_clamp);
-    envmap_tex->set_wrap_v(SamplerState::WM_clamp);
-    set_pixel_shader_define("ENVMAP");
-    if ((param = src_mat->get_param("basealphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-      set_pixel_shader_define("BASEMAPALPHAENVMAPMASK");
-
-    } else if ((param = src_mat->get_param("normalmapalphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-      set_pixel_shader_define("NORMALMAPALPHAENVMAPMASK");
+    const TextureAttrib *ta;
+    state->get_attrib_def(ta);
+    for (int i = 0; i < ta->get_num_on_stages(); i++) {
+      TextureStage *stage = ta->get_on_stage(i);
+      const std::string &stage_name = stage->get_name();
+      if (stage_name == "envmap") {
+        envmap_tex = ta->get_on_texture(stage);
+        break;
+      }
     }
 
-    LVecBase3 envmap_tint(0.5f, 0.5f, 0.5f);
-    if ((param = src_mat->get_param("envmaptint")) != nullptr) {
-      envmap_tint = DCAST(MaterialParamVector, param)->get_value();
+    if (envmap_tex == nullptr) {
+      envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
     }
-    set_input(ShaderInput("envMapTint", envmap_tint));
 
-    set_input(ShaderInput("envMapTexture", envmap_tex));
-    set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.txo")));
+    if (envmap_tex != nullptr) {
+      envmap_tex->set_wrap_u(SamplerState::WM_clamp);
+      envmap_tex->set_wrap_v(SamplerState::WM_clamp);
+      set_pixel_shader_define("ENVMAP");
+      if ((param = src_mat->get_param("basealphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+        set_pixel_shader_define("BASEMAPALPHAENVMAPMASK");
 
-    if ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-      set_pixel_shader_define("MAT_ENVMAP");
+      } else if ((param = src_mat->get_param("normalmapalphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+        set_pixel_shader_define("NORMALMAPALPHAENVMAPMASK");
+      }
+
+      LVecBase3 envmap_tint(0.5f, 0.5f, 0.5f);
+      if ((param = src_mat->get_param("envmaptint")) != nullptr) {
+        envmap_tint = DCAST(MaterialParamVector, param)->get_value();
+      }
+      set_input(ShaderInput("envMapTint", envmap_tint));
+
+      set_input(ShaderInput("envMapTexture", envmap_tex));
+      set_input(ShaderInput("brdfLut", TexturePool::load_texture("maps/brdf_lut.txo")));
+
+      if ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+        set_pixel_shader_define("MAT_ENVMAP");
+      }
     }
   }
 
