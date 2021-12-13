@@ -24,6 +24,10 @@
 #include "texture.h"
 #include "luse.h"
 #include "nodePath.h"
+#include "geomNode.h"
+#include "rayTrace.h"
+#include "rayTraceTriangleMesh.h"
+#include "rayTraceScene.h"
 
 /**
  * PVS for a single area cluster.
@@ -38,12 +42,18 @@ PUBLISHED:
   INLINE void clear_mesh_group(int index);
   INLINE const BitArray &get_mesh_groups() const;
 
+  INLINE size_t get_num_boxes() const;
+  INLINE void get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const;
+
 public:
   vector_int _pvs;
 
   // Indices of mesh groups that reside in this cluster.
   // A 1 bit means the mesh group is in there.
   BitArray _mesh_groups;
+
+  // Cluster bounds for visualization purposes.
+  pvector<LPoint3> _box_bounds;
 };
 
 class EXPCL_PANDA_MAP MapMeshGroup {
@@ -54,6 +64,7 @@ PUBLISHED:
 
 public:
   BitArray _clusters;
+  PT(GeomNode) _geom_node;
 };
 
 /**
@@ -121,6 +132,11 @@ PUBLISHED:
   INLINE int get_num_ambient_probes() const;
   INLINE const MapAmbientProbe *get_ambient_probe(int n) const;
 
+  RayTraceScene *get_trace_scene() const;
+
+private:
+  void build_trace_scene();
+
 public:
   static void register_with_read_factory();
 
@@ -147,6 +163,13 @@ private:
   pvector<MapAmbientProbe> _ambient_probes;
 
   pvector<NodePath> _lights;
+  NodePath _dir_light;
+  LVector3 _dir_light_dir;
+
+  PT(RayTraceScene) _trace_scene;
+  pvector<PT(RayTraceTriangleMesh)> _trace_meshes;
+
+  friend class MapLightingEffect;
 };
 
 #include "mapData.I"

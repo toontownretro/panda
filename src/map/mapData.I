@@ -61,6 +61,25 @@ get_mesh_groups() const {
 }
 
 /**
+ * Returns the number of area boxes that make up the cluster.
+ */
+INLINE size_t AreaClusterPVS::
+get_num_boxes() const {
+  // The vector stores mins and maxs of each box contiguously in one array.
+  return _box_bounds.size() / 2;
+}
+
+/**
+ * Fills in the minimum and maximum coordinate of the indicated area box.
+ */
+INLINE void AreaClusterPVS::
+get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const {
+  nassertv(n < _box_bounds.size() / 2);
+  mins = _box_bounds[n * 2];
+  maxs = _box_bounds[n * 2 + 1];
+}
+
+/**
  *
  */
 INLINE void MapMeshGroup::

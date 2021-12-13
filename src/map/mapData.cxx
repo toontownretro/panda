@@ -15,6 +15,13 @@
 #include "bamReader.h"
 #include "bamWriter.h"
 #include "ioPtaDatagramChar.h"
+#include "renderState.h"
+#include "geomNode.h"
+#include "geom.h"
+#include "materialAttrib.h"
+#include "material.h"
+#include "light.h"
+#include "directionalLight.h"
 
 IMPLEMENT_CLASS(MapData);
 
@@ -51,12 +58,17 @@ write_datagram(BamWriter *manager, Datagram &me) {
       me.add_int32(pvs._pvs[j]);
     }
     pvs._mesh_groups.write_datagram(manager, me);
+    me.add_uint32(pvs._box_bounds.size());
+    for (size_t j = 0; j < pvs._box_bounds.size(); ++j) {
+      pvs._box_bounds[j].write_datagram(me);
+    }
   }
 
   me.add_uint32(_mesh_groups.size());
   for (size_t i = 0; i < _mesh_groups.size(); i++) {
     const MapMeshGroup &group = _mesh_groups[i];
     group._clusters.write_datagram(manager, me);
+    manager->write_pointer(me, group._geom_node);
   }
 
   me.add_uint16(_cube_maps.size());
@@ -110,12 +122,17 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       pvs._pvs[j] = scan.get_int32();
     }
     pvs._mesh_groups.read_datagram(scan, manager);
+    pvs._box_bounds.resize(scan.get_uint32());
+    for (size_t j = 0; j < pvs._box_bounds.size(); ++j) {
+      pvs._box_bounds[j].read_datagram(scan);
+    }
   }
 
   _mesh_groups.resize(scan.get_uint32());
   for (size_t i = 0; i < _mesh_groups.size(); i++) {
     MapMeshGroup &group = _mesh_groups[i];
     group._clusters.read_datagram(scan, manager);
+    manager->read_pointer(scan); // _geom_node
   }
 
   _cube_maps.resize(scan.get_uint16());
@@ -153,6 +170,10 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
     _entities[i] = DCAST(MapEntity, p_list[pi++]);
   }
 
+  for (size_t i = 0; i < _mesh_groups.size(); i++) {
+    _mesh_groups[i]._geom_node = DCAST(GeomNode, p_list[pi++]);
+  }
+
   for (size_t i = 0; i < _cube_maps.size(); i++) {
     _cube_maps[i]._texture = DCAST(Texture, p_list[pi++]);
   }
@@ -176,4 +197,66 @@ make_from_bam(const FactoryParams &params) {
 
   data->fillin(scan, manager);
   return data;
+}
+
+/**
+ *
+ */
+RayTraceScene *MapData::
+get_trace_scene() const {
+  if (_trace_scene == nullptr) {
+    ((MapData *)this)->build_trace_scene();
+  }
+  return _trace_scene;
+}
+
+/**
+ *
+ */
+void MapData::
+build_trace_scene() {
+  RayTrace::initialize();
+
+  _trace_scene = new RayTraceScene;
+  _trace_scene->set_build_quality(RayTraceScene::BUILD_QUALITY_HIGH);
+
+  for (size_t i = 0; i < _mesh_groups.size(); ++i) {
+    if (_mesh_groups[i]._geom_node == nullptr) {
+      continue;
+    }
+    for (size_t j = 0; j < _mesh_groups[i]._geom_node->get_num_geoms(); ++j) {
+      const Geom *geom = _mesh_groups[i]._geom_node->get_geom(j);
+      const RenderState *state = _mesh_groups[i]._geom_node->get_geom_state(j);
+      const MaterialAttrib *mattr;
+      state->get_attrib_def(mattr);
+      Material *mat = mattr->get_material();
+      unsigned int mask = 1;
+      if (mat != nullptr) {
+        if ((mat->_attrib_flags & Material::F_transparency) != 0 && mat->_transparency_mode != 0) {
+          continue;
+        }
+        if (mat->has_tag("compile_sky")) {
+          mask = 2;
+        }
+      }
+      PT(RayTraceTriangleMesh) mesh = new RayTraceTriangleMesh;
+      mesh->add_triangles_from_geom(geom);
+      mesh->set_mask(mask);
+      mesh->build();
+      _trace_scene->add_geometry(mesh);
+      _trace_meshes.push_back(mesh);
+    }
+  }
+
+  _trace_scene->update();
+
+  for (size_t i = 0; i < _lights.size(); ++i) {
+    if (_lights[i].node()->is_of_type(DirectionalLight::get_class_type())) {
+      _dir_light = _lights[i];
+      LQuaternion q;
+      q.set_hpr(_dir_light.get_hpr());
+      _dir_light_dir = q.get_forward();
+      break;
+    }
+  }
 }

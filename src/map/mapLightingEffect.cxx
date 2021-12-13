@@ -27,6 +27,7 @@
 #include "mapCullTraverser.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
+#include "directionalLight.h"
 
 IMPLEMENT_CLASS(MapLightingEffect);
 
@@ -40,7 +41,8 @@ MapLightingEffect::
 MapLightingEffect() :
   _probe(nullptr),
   _probe_color(PTA_LVecBase3::empty_array(9)),
-  _last_map_data(nullptr)
+  _last_map_data(nullptr),
+  _lighting_state(RenderState::make_empty())
 {
 }
 
@@ -177,6 +179,8 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       }
     }
 
+    RayTraceScene *rt_scene = mdata->get_trace_scene();
+
     // Located closest ambient probe.
     closest_dist = 1e24;
     const MapAmbientProbe *closest_probe = nullptr;
@@ -184,8 +188,14 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       const MapAmbientProbe *map = mdata->get_ambient_probe(i);
       PN_stdfloat dist = (pos - map->_pos).length_squared();
       if (dist < closest_dist) {
-        closest_probe = map;
-        closest_dist = dist;
+        // Check that we can actually trace to the probe.
+        RayTraceHitResult ret;
+        ret = rt_scene->trace_line(pos, map->_pos, 3);
+        if (!ret.hit) {
+          // Probe is visible from sample point, we can use it.
+          closest_probe = map;
+          closest_dist = dist;
+        }
       }
     }
 
@@ -198,7 +208,11 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       state = state->set_attrib(tattr);
 
     } else {
-      state = state->set_attrib(_lighting_state->get_attrib(TextureAttrib::get_class_slot()));
+      CPT(RenderAttrib) curr_tex = _lighting_state->get_attrib(TextureAttrib::get_class_slot());
+      if (curr_tex != nullptr) {
+        state = state->set_attrib(curr_tex);
+      }
+
     }
 
     if (closest_probe != _probe && closest_probe != nullptr) {
@@ -211,21 +225,40 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       state = state->set_attrib(sattr);
 
     } else {
-      state = state->set_attrib(_lighting_state->get_attrib(ShaderAttrib::get_class_slot()));
+      CPT(RenderAttrib) curr_shad = _lighting_state->get_attrib(ShaderAttrib::get_class_slot());
+      if (curr_shad != nullptr) {
+        state = state->set_attrib(curr_shad);
+      }
     }
 
     pvector<NodePath> sorted_lights;
-    sorted_lights.resize(mdata->get_num_lights());
+    sorted_lights.reserve(mdata->get_num_lights());
     for (int i = 0; i < mdata->get_num_lights(); i++) {
-      sorted_lights[i] = mdata->get_light(i);
+      if (mdata->get_light(i).node()->is_of_type(DirectionalLight::get_class_type())) {
+        continue;
+      }
+      sorted_lights.push_back(mdata->get_light(i));
     }
     std::sort(sorted_lights.begin(), sorted_lights.end(), [pos](const NodePath &a, const NodePath &b) -> bool {
       return (pos - a.get_pos()).length_squared() < (pos - b.get_pos()).length_squared();
     });
 
     CPT(RenderAttrib) lattr = LightAttrib::make();
-    for (size_t i = 0; i < 4 && i < sorted_lights.size(); i++) {
+    int num_added_lights = 0;
+    if (!mdata->_dir_light.is_empty()) {
+      RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
+      if (ret.hit) {
+        RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
+        if ((geom->get_mask() & 2) != 0) {
+          // Hit sky, sun is visible.
+          lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_dir_light);
+          num_added_lights++;
+        }
+      }
+    }
+    for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {
       lattr = DCAST(LightAttrib, lattr)->add_on_light(sorted_lights[i]);
+      num_added_lights++;
     }
     state = state->set_attrib(lattr);
 
