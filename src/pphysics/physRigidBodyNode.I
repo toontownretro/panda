@@ -332,3 +332,21 @@ INLINE bool PhysRigidBodyNode::
 is_kinematic() const {
   return get_rigid_body()->getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC);
 }
+
+/**
+ * Enables or disables gravity on this specific rigid body.  Can be used to
+ * implement custom gravity for a particular object, regardless of the scene
+ * gravity.
+ */
+INLINE void PhysRigidBodyNode::
+set_gravity_enabled(bool flag) {
+  get_rigid_body()->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !flag);
+}
+
+/**
+ * Returns true if scene gravity is enabled on this rigid body.
+ */
+INLINE bool PhysRigidBodyNode::
+is_gravity_enabled() const {
+  return !get_rigid_body()->getActorFlags().isSet(physx::PxActorFlag::eDISABLE_GRAVITY);
+}

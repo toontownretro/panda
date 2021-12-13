@@ -27,6 +27,8 @@ PUBLISHED:
   enum ForceType {
     FT_force,
     FT_impulse,
+    FT_velocity_change,
+    FT_acceleration,
   };
 
   INLINE void set_mass(PN_stdfloat mass);
@@ -84,6 +86,9 @@ PUBLISHED:
 
   INLINE void set_kinematic(bool flag);
   INLINE bool is_kinematic() const;
+
+  INLINE void set_gravity_enabled(bool flag);
+  INLINE bool is_gravity_enabled() const;
 
   void compute_mass_properties();
 
