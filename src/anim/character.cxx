@@ -689,7 +689,15 @@ bool Character::
 apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread) {
   PStatTimer timer(apply_pose_collector);
 
-  Character *merge_char = cdata->_joint_merge_character;
+  Character *merge_char;
+  if (cdata->_joint_merge_character.is_valid_pointer()) {
+    merge_char = cdata->_joint_merge_character.p();
+    if (merge_char->_active_owner == nullptr) {
+      merge_char = nullptr;
+    }
+  } else {
+    merge_char = nullptr;
+  }
   LMatrix4 parent_to_me;
   if (merge_char != nullptr) {
     // Make sure the parent character's animation is up-to-date.
@@ -730,7 +738,7 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         joint._net_transform = joint._value * root_xform;
       }
 
-    } else {
+    } else if (merge_char != nullptr) {
       // Use the transform of the parent merge joint.
 
       // Re-compute this joint's local transform such that it ends up
