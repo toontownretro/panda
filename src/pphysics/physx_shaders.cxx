@@ -111,6 +111,7 @@ filter(physx::PxFilterObjectAttributes attributes0,
   }
 
   pair_flags = physx::PxPairFlag::eCONTACT_DEFAULT |
+               physx::PxPairFlag::eDETECT_CCD_CONTACT |
                physx::PxPairFlag::eNOTIFY_TOUCH_FOUND |
                physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 

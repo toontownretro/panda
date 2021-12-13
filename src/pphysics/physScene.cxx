@@ -38,7 +38,7 @@ PhysScene() :
   desc.cpuDispatcher = sys->get_cpu_dispatcher();
   // Enable this flag so we know which actors changed each time we simulate, so
   // we can update the transform of the associated nodes.
-  desc.flags = desc.flags | physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
+  desc.flags = desc.flags | physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS | physx::PxSceneFlag::eENABLE_CCD;
   desc.filterShader = PandaSimulationFilterShader::filter;
   desc.filterCallback = PandaSimulationFilterCallback::ptr();
   desc.simulationEventCallback = new PhysXSimulationEventCallback(this);
