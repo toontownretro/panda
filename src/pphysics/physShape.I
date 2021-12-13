@@ -127,6 +127,16 @@ is_trigger_shape() const {
 }
 
 /**
+ * Replaces the shape's current material.
+ */
+INLINE void PhysShape::
+set_material(PhysMaterial *mat) {
+  _material = mat;
+  physx::PxMaterial *pxmat = mat->get_material();
+  _shape->setMaterials(&pxmat, 1);
+}
+
+/**
  * Returns the material applied to the shape.
  */
 INLINE PhysMaterial *PhysShape::

@@ -47,6 +47,7 @@ PUBLISHED:
   INLINE void set_trigger_shape(bool flag);
   INLINE bool is_trigger_shape() const;
 
+  INLINE void set_material(PhysMaterial *mat);
   INLINE PhysMaterial *get_material() const;
 
 public:
