@@ -34,6 +34,8 @@ PUBLISHED:
   INLINE void add_shape(PhysShape *shape);
   INLINE void remove_shape(PhysShape *shape);
 
+  PT(BoundingVolume) get_phys_bounds() const;
+
   INLINE size_t get_num_shapes() const;
   INLINE PhysShape *get_shape(size_t n) const;
 
@@ -90,11 +92,6 @@ public:
 
 protected:
   PhysRigidActorNode(const std::string &name);
-
-  virtual void compute_internal_bounds(CPT(BoundingVolume) &internal_bounds,
-                                       int &internal_vertices,
-                                       int pipeline_stage,
-                                       Thread *current_thread) const override;
 
   virtual void parents_changed() override;
   virtual void transform_changed() override;
