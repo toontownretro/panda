@@ -890,6 +890,14 @@ build_pvs() {
       mesh_group_index++;
     }
 
+    // Store the AABBs of the areas that make up the cluster for
+    // debug visualization in the show.
+    for (const AreaCluster::AreaBounds &ab : _area_clusters[i]->_cluster_boxes) {
+      PT(BoundingBox) bbox = _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
+      pvs._box_bounds.push_back(bbox->get_minq());
+      pvs._box_bounds.push_back(bbox->get_maxq());
+    }
+
     _builder->_out_data->add_cluster_pvs(std::move(pvs));
   }
 
@@ -1376,8 +1384,6 @@ clip_to_seperators(const PortalWinding &source, const PortalWinding &pass,
   return new_target;
 }
 
-#define SSE_VIS_RAYS 0
-
 /**
  * Attempts to expand the given area group with the neighbors of the given
  * area.
@@ -1393,23 +1399,7 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
   // The largest allowed size of a cluster on any AABB axis.
   // 256 hammer units, roughly 16 feet.  TODO: make this configurable.
   constexpr PN_stdfloat cluster_size_limit = 256.0f;
-#if SSE_VIS_RAYS
-  constexpr int rays_per_group = 4;
-  constexpr int ray_groups = num_rays / rays_per_group;
-  FourVectors start, end;
-  LPoint3 starts[rays_per_group];
-  LPoint3 ends[rays_per_group];
-  u32x4 num_occluded_rays;
-  fltx4 rays_per_group4 = ReplicateX4(rays_per_group);
-  fltx4 num_rays4 = ReplicateX4(num_rays);
-  fltx4 outgoing_portal_area4;
-  fltx4 occlusion_threshold4 = ReplicateX4(16.0f);
-  fltx4 occluded_ratio;
-  fltx4 occlusion_value;
-  RayTraceHitResult4 hit;
-#else
   RayTraceHitResult hit;
-#endif
 
   while (true) {
     // If the world-space size of the cluster has a reached the threshold
@@ -1494,24 +1484,8 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
       //  empty_areas.erase(nit);
       //  continue;
       //}
-#if SSE_VIS_RAYS
-      outgoing_portal_area4 = ReplicateX4(outgoing_portal_area);
-
-      num_occluded_rays = LoadZeroSIMD();
-#else
       int num_occluded_rays = 0;
-#endif
-
-#if SSE_VIS_RAYS
-      for (int i = 0; i < ray_groups; i++) {
-        // Try to cast a ray to a random point within the outgoing portal to the
-        // area we want to expand to.
-
-        for (int j = 0; j < rays_per_group; j++) {
-#else
         for (int i = 0; i < num_rays; i++) {
-#endif
-
           LVector3i portal_size, min_voxel;
           if (!my_portals.empty()) {
             Portal *from_portal = my_portals[random.random_int(my_portals.size())];
@@ -1550,11 +1524,6 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
           LPoint3 b(goal_x * _voxels._voxel_size[0] + _scene_mins[0],
                     goal_y * _voxels._voxel_size[1] + _scene_mins[1],
                     goal_z * _voxels._voxel_size[2] + _scene_mins[2]);
-
-#if SSE_VIS_RAYS
-          starts[j] = a;
-          ends[j] = b;
-#else
           hit = _occluder_scene->trace_line(a, b, BitMask32::all_on());
           if (hit.hit) {
             num_occluded_rays++;
@@ -1565,41 +1534,7 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
               break;
             }
           }
-#endif
         }
-
-#if SSE_VIS_RAYS
-        start.LoadAndSwizzle(starts[0], starts[1], starts[2], starts[3]);
-        end.LoadAndSwizzle(ends[0], ends[1], ends[2], ends[3]);
-
-        _occluder_scene->trace_four_lines(start, end, Four_Ones, &hit);
-        // If the ray hits, the value of CmpLtSIMD is -1, otherwise 0, so use SubSIMD to add a ray.
-        num_occluded_rays = SubSIMD(num_occluded_rays, CmpLtSIMD(hit.hit_fraction, Four_Ones));
-      }
-
-
-
-      occluded_ratio = DivSIMD(num_occluded_rays, num_rays4);
-      occlusion_value = MulSIMD(occluded_ratio, outgoing_portal_area4);
-
-      //PN_stdfloat occluded_ratio = (PN_stdfloat)num_occluded_rays / (PN_stdfloat)num_rays;
-      //PN_stdfloat occlusion_value = occluded_ratio * outgoing_portal_area;
-
-      if ((SubFloat(occlusion_value, 0) + SubFloat(occlusion_value, 1) + SubFloat(occlusion_value, 2) + SubFloat(occlusion_value, 3))
-          > 16.0f) {
-        // Reject this neighbor from the cluster.
-        rejected_neighbors.insert(neighbor);
-
-      } else {
-        // Expansion is valid!
-        group->add_area(neighbor);
-        neighbor->_group = cluster_index;
-        auto nit = std::find(empty_areas.begin(), empty_areas.end(), neighbor);
-        assert(nit != empty_areas.end());
-        empty_areas.erase(nit);
-      }
-    }
-#else
       PN_stdfloat occluded_ratio = (PN_stdfloat)num_occluded_rays / (PN_stdfloat)num_rays;
       PN_stdfloat occlusion_value = occluded_ratio * outgoing_portal_area;
       if (occlusion_value > 48.0f*48.0f) {
@@ -1615,7 +1550,6 @@ try_expand_area_group(AreaCluster *group, pvector<Area *> &empty_areas, int clus
         empty_areas.erase(nit);
       }
     }
-#endif
   }
 }
 

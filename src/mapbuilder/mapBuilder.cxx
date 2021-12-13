@@ -252,70 +252,6 @@ build() {
     if (!vis.build()) {
       return EC_unknown_error;
     }
-
-    if (_options.get_vis_show_solid_voxels()) {
-      LineSegs lines("debug-solid-voxels");
-      lines.set_color(LColor(0, 0, 1, 1));
-      pvector<LPoint3i> solid_voxels = vis._voxels.get_solid_voxels();
-      for (size_t i = 0; i < solid_voxels.size(); i++) {
-        PT(BoundingBox) bounds = vis._voxels.get_voxel_bounds(solid_voxels[i]);
-        const LPoint3 &mins = bounds->get_minq();
-        const LPoint3 &maxs = bounds->get_maxq();
-        lines.move_to(mins);
-        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(mins);
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-        lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-        lines.draw_to(maxs);
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-        lines.move_to(maxs);
-        lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-        lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-        lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-      }
-      _out_top->add_child(lines.create());
-    }
-
-    if (_options.get_vis_show_areas()) {
-      for (size_t i = 0; i < vis._area_clusters.size(); i++) {
-        AreaCluster *cluster = vis._area_clusters[i];
-
-        std::ostringstream ss;
-        ss << "area-cluster-" << cluster->_id;
-        LineSegs lines(ss.str());
-
-        lines.set_color(cluster_colors[cluster->_id % 6]);
-
-        for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
-          PT(BoundingBox) bbox = vis._voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
-          const LPoint3 &mins = bbox->get_minq();
-          const LPoint3 &maxs = bbox->get_maxq();
-          lines.move_to(mins);
-          lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-          lines.draw_to(mins);
-          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-          lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
-          lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
-          lines.draw_to(maxs);
-          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
-          lines.move_to(maxs);
-          lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-          lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
-          lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
-          lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
-        }
-
-        _out_top->add_child(lines.create());
-      }
-    }
   }
 
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
@@ -394,6 +330,7 @@ build() {
 
     MapMeshGroup out_group;
     out_group._clusters = group.clusters;
+    out_group._geom_node = geom_node;
     _out_data->add_mesh_group(out_group);
 
     // The node we parent the mesh group to will decide which mesh group(s) to
@@ -1333,6 +1270,12 @@ build_lighting() {
       if (ent->_properties.find("SunSpreadAngle") != ent->_properties.end()) {
         builder.set_sun_angular_extent(atof(ent->_properties["SunSpreadAngle"].c_str()));
       }
+
+      PT(DirectionalLight) dl = new DirectionalLight("dl");
+      dl->set_color(light.color);
+      NodePath dlnp(dl);
+      dlnp.set_hpr(light.hpr);
+      _out_data->add_light(dlnp);
     }
 
     builder._lights.push_back(light);
