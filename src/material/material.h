@@ -76,12 +76,14 @@ PUBLISHED:
   INLINE const Filename &get_fullpath() const;
   MAKE_PROPERTY(fullpath, get_fullpath, set_fullpath);
 
-  INLINE void add_tag(const std::string &tag);
+  INLINE void set_tag(const std::string &tag, std::string &value);
   INLINE void clear_tag(const std::string &tag);
   INLINE void clear_tag(int n);
   INLINE bool has_tag(const std::string &tag) const;
   INLINE int get_num_tags() const;
-  INLINE std::string get_tag(int n) const;
+  INLINE std::string get_tag_value(const std::string &key) const;
+  INLINE std::string get_tag_key(int n) const;
+  INLINE std::string get_tag_value(int n) const;
 
   void write_pmat(const Filename &filename);
   bool write_mto(const Filename &filename);
@@ -96,7 +98,8 @@ public:
   typedef SimpleHashMap<CPT_InternalName, PT(MaterialParamBase)> Params;
   Params _params;
 
-  vector_string _tags;
+  typedef SimpleHashMap<std::string, std::string, string_hash> Tags;
+  Tags _tags;
 
   unsigned int _attrib_flags;
 

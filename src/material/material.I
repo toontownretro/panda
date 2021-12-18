@@ -77,10 +77,8 @@ get_fullpath() const {
  * Adds a tag to the material.
  */
 INLINE void Material::
-add_tag(const std::string &tag) {
-  if (std::find(_tags.begin(), _tags.end(), tag) == _tags.end()) {
-    _tags.push_back(tag);
-  }
+set_tag(const std::string &tag, std::string &value) {
+  _tags[tag] = value;
 }
 
 /**
@@ -88,10 +86,7 @@ add_tag(const std::string &tag) {
  */
 INLINE void Material::
 clear_tag(const std::string &tag) {
-  auto it = std::find(_tags.begin(), _tags.end(), tag);
-  if (it != _tags.end()) {
-    _tags.erase(it);
-  }
+  _tags.remove(tag);
 }
 
 /**
@@ -99,8 +94,7 @@ clear_tag(const std::string &tag) {
  */
 INLINE void Material::
 clear_tag(int n) {
-  nassertv(n >= 0 && n < (int)_tags.size());
-  _tags.erase(_tags.begin() + n);
+  _tags.remove_element(n);
 }
 
 /**
@@ -108,8 +102,7 @@ clear_tag(int n) {
  */
 INLINE bool Material::
 has_tag(const std::string &tag) const {
-  auto it = std::find(_tags.begin(), _tags.end(), tag);
-  return it != _tags.end();
+  return _tags.find(tag) != -1;
 }
 
 /**
@@ -121,12 +114,31 @@ get_num_tags() const {
 }
 
 /**
- * Returns the material's nth tag.
+ * Returns the tag value associated with the indicated key.
  */
 INLINE std::string Material::
-get_tag(int n) const {
-  nassertr(n >= 0 && n < (int)_tags.size(), std::string());
-  return _tags[n];
+get_tag_value(const std::string &key) const {
+  int it = _tags.find(key);
+  if (it == -1) {
+    return std::string();
+  }
+  return _tags.get_data(it);
+}
+
+/**
+ * Returns the material's nth tag key.
+ */
+INLINE std::string Material::
+get_tag_key(int n) const {
+  return _tags.get_key(n);
+}
+
+/**
+ * Returns the material's nth tag key.
+ */
+INLINE std::string Material::
+get_tag_value(int n) const {
+  return _tags.get_data(n);
 }
 
 /**

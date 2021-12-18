@@ -57,10 +57,10 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
   // Reading parameters is up to derived materials.
 
   if (data->has_attribute("tags")) {
-    PDXList *tags = data->get_attribute_value("tags").get_list();
+    PDXElement *tags = data->get_attribute_value("tags").get_element();
     nassertv(tags != nullptr);
-    for (size_t i = 0; i < tags->size(); i++) {
-      _tags.push_back(tags->get(i).get_string());
+    for (size_t i = 0; i < tags->get_num_attributes(); i++) {
+      _tags[tags->get_attribute_name(i)] = tags->get_attribute_value(i).get_string();
     }
   }
 
@@ -313,9 +313,9 @@ write_pdx(PDXElement *data, const Filename &filename) {
   }
   data->set_attribute("parameters", PDXValue(params));
 
-  PT(PDXList) tags = new PDXList;
+  PT(PDXElement) tags = new PDXElement;
   for (size_t i = 0; i < _tags.size(); i++) {
-    tags->append(_tags[i]);
+    tags->set_attribute(_tags.get_key(i), _tags.get_data(i));
   }
   data->set_attribute("tags", PDXValue(tags));
 }
@@ -388,7 +388,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
 
     me.add_uint8(_tags.size());
     for (size_t i = 0; i < _tags.size(); i++) {
-      me.add_string(_tags[i]);
+      me.add_string(_tags.get_key(i));
+      me.add_string(_tags.get_data(i));
     }
 
     me.add_uint32(_attrib_flags);
@@ -508,9 +509,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _num_params = scan.get_uint8();
     manager->read_pointers(scan, _num_params);
 
-    _tags.resize(scan.get_uint8());
-    for (size_t i = 0; i < _tags.size(); i++) {
-      _tags[i] = scan.get_string();
+    size_t num_tags = scan.get_uint8();
+    for (size_t i = 0; i < num_tags; i++) {
+      std::string key = scan.get_string();
+      std::string value = scan.get_string();
+      _tags[key] = value;
     }
 
     _attrib_flags = scan.get_uint32();
