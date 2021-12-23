@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <stack>
+#include "randomizer.h"
 
 #define INVALID_NODE INT_MAX
 
@@ -131,7 +132,7 @@ make_subtree(const vector_int &objects) {
   bool all_same = true;
   int first_object_value = _inputs[objects[0]].value;
   for (size_t i = 1; i < objects.size(); i++) {
-    if (_inputs[i].value != first_object_value) {
+    if (_inputs[objects[i]].value != first_object_value) {
       // Object values (cluster indices) differ.  They must be partitioned.
       all_same = false;
       break;
@@ -348,15 +349,28 @@ pick_best_split(pvector<SplitCandidate> &splits, const vector_int &objects) {
 
   // Now eliminate candidates down to the best choice(s).
 
-  for (auto it = candidates.begin(); it != candidates.end();) {
+  bool all_one_sided = true;
+  for (auto it = candidates.begin(); it != candidates.end(); ++it) {
     int index = *it;
-    if (splits[index].left.empty() || splits[index].right.empty()) {
-      // Eliminate one-sided candidates.
-      it = candidates.erase(it);
-    } else {
-      ++it;
+    if (!splits[index].left.empty() && !splits[index].right.empty()) {
+      all_one_sided = false;
+      break;
     }
   }
+
+  if (!all_one_sided) {
+    // If we have a double-sided split, eliminate the one-sided splits.
+    for (auto it = candidates.begin(); it != candidates.end();) {
+      int index = *it;
+      if (splits[index].left.empty() || splits[index].right.empty()) {
+        // Eliminate one-sided candidates.
+        it = candidates.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
   assert(!candidates.empty());
 
   if (candidates.size() == 1) {
@@ -407,10 +421,13 @@ pick_best_split(pvector<SplitCandidate> &splits, const vector_int &objects) {
   }
   assert(!candidates.empty());
 
+  Randomizer random;
+  return candidates[random.random_int(candidates.size())];
+
   // We now have the best split(s) to choose from.  If there are still
   // multiple candidates, any one will work just as well, so just pick
   // the first one.
-  return candidates[0];
+  //return candidates[0];
 }
 
 /**
