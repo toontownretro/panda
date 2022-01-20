@@ -78,6 +78,7 @@ public:
   unsigned int _contents;
 
   bool _vis_occluder;
+  bool _renderable;
 
   // Where the Geom of the polygon lives in the output scene graph.
   // Needed to keep track of polys for the lightmapper.

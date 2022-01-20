@@ -175,12 +175,12 @@ build() {
 
   // This is the tree that will be used at runtime to query the cluster(s) of
   // the camera and renderables.
-  KDTree cluster_tree;
+  PT(KDTree) cluster_tree = new KDTree;
   for (size_t i = 0; i < _area_clusters.size(); i++) {
     const AreaCluster *cluster = _area_clusters[i];
     for (const AreaCluster::AreaBounds &ab : cluster->_cluster_boxes) {
       PT(BoundingBox) bbox = _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
-      cluster_tree.add_input(bbox->get_minq(), bbox->get_maxq(), (int)i);
+      cluster_tree->add_input(bbox->get_minq(), bbox->get_maxq(), (int)i);
     }
   }
   // Also add the unoccupied clusters so stuff outside the world is correctly
@@ -191,15 +191,15 @@ build() {
       PT(BoundingBox) bbox = _voxels.get_voxel_bounds(ab._min_voxel, ab._max_voxel);
       // Use -1 to denote a solid/invalid leaf.  The K-D tree should merge
       // siblings with the same value.
-      cluster_tree.add_input(bbox->get_minq(), bbox->get_maxq(), -1);
+      cluster_tree->add_input(bbox->get_minq(), bbox->get_maxq(), -1);
     }
   }
-  cluster_tree.build();
+  cluster_tree->build();
   visbuilder_cat.info()
-    << "Area cluster tree is " << (PN_stdfloat)cluster_tree.get_memory_size() / 1000000.0f << " MB\n";
+    << "Area cluster tree is " << (PN_stdfloat)cluster_tree->get_memory_size() / 1000000.0f << " MB\n";
   visbuilder_cat.info()
-    << cluster_tree.get_num_nodes() << " nodes, " << cluster_tree.get_num_leaves() << " leaves\n";
-  _builder->_out_data->set_area_cluster_tree(std::move(cluster_tree));
+    << cluster_tree->get_num_nodes() << " nodes, " << cluster_tree->get_num_leaves() << " leaves\n";
+  _builder->_out_data->set_area_cluster_tree(cluster_tree);
 
   // Assign each mesh group created by the MapBuilder to the area clusters that
   // it intersects with.
@@ -221,7 +221,7 @@ find_mesh_group_clusters(int i) {
 
   // Traverse K-D tree to get the set of clusters.
 
-  const KDTree *tree = _builder->_out_data->get_area_cluster_tree();
+  const KDTree *tree = (const KDTree *)(_builder->_out_data->get_area_cluster_tree());
 
   std::stack<int> stack;
   stack.push(0);
@@ -947,7 +947,7 @@ void VisBuilder::
 sort_portals() {
   _sorted_portals.insert(_sorted_portals.end(), _cluster_portals.begin(), _cluster_portals.end());
   std::sort(_sorted_portals.begin(), _sorted_portals.end(),
-    [this](const Portal *a, const Portal *b) -> bool {
+    [](const Portal *a, const Portal *b) -> bool {
       return a->_num_might_see < b->_num_might_see;
     });
 }

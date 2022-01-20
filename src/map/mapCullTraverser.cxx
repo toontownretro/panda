@@ -323,7 +323,7 @@ determine_view_cluster() {
     return;
   }
 
-  const KDTree *tree = _data->get_area_cluster_tree();
+  const SpatialPartition *tree = _data->get_area_cluster_tree();
   if (tree == nullptr) {
     return;
   }

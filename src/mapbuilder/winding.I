@@ -536,3 +536,24 @@ get_closest_point(const LPoint3 &point) {
     return index;
   }
 }
+
+/**
+ *
+ */
+template<int MaxPoints>
+INLINE bool BaseWinding<MaxPoints>::
+is_tiny() {
+  int edges = 0;
+  for (int i = 0; i < _num_points; ++i) {
+    int j = i == _num_points - 1 ? 0 : i + 1;
+    LVector3 delta = _points[j] - _points[i];
+    PN_stdfloat len = delta.length();
+    if (len > 0.2f) {
+      if (++edges == 3) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}

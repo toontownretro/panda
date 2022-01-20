@@ -2,11 +2,15 @@
 
 #define LOCAL_LIBS map pgraph pphysics grutil raytrace shader
 
-#define USE_PACKAGES oidn
+#define USE_PACKAGES oidn steam_audio
 
 #begin lib_target
   #define TARGET mapbuilder
   #define BUILDING_DLL BUILDING_PANDA_MAPBUILDER
+
+  #if $[HAVE_STEAM_AUDIO]
+    #define C++FLAGS $[C++FLAGS] -DHAVE_STEAM_AUDIO
+  #endif
 
   #define SOURCES \
     area.h area.I \
@@ -18,6 +22,8 @@
     portal.h portal.I \
     threadManager.h threadManager.I \
     visBuilder.h visBuilder.I \
+    visBuilderBSP.h visBuilderBSP.I \
+    visClusterSampler.h visClusterSampler.I \
     visTile.h visTile.I \
     voxelOctree.h voxelOctree.I \
     voxelSpace.h voxelSpace.I \
@@ -33,6 +39,8 @@
     portal.cxx \
     threadManager.cxx \
     visBuilder.cxx \
+    visBuilderBSP.cxx \
+    visClusterSampler.cxx \
     visTile.cxx \
     voxelOctree.cxx \
     voxelSpace.cxx \

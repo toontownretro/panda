@@ -17,7 +17,7 @@
 #include "clockObject.h"
 #include "mapCullTraverser.h"
 #include "mapData.h"
-#include "kdTree.h"
+#include "spatialPartition.h"
 #include "boundingSphere.h"
 #include "boundingBox.h"
 #include "omniBoundingVolume.h"
@@ -233,7 +233,7 @@ remove_from_tree(ChildInfo *info) {
  * set is already empty.
  */
 void DynamicVisNode::
-insert_into_tree(ChildInfo *info, const GeometricBoundingVolume *bounds, const KDTree *tree) {
+insert_into_tree(ChildInfo *info, const GeometricBoundingVolume *bounds, const SpatialPartition *tree) {
   nassertv(bounds != nullptr && !bounds->is_infinite());
   info->_visgroups.reserve(128);
 

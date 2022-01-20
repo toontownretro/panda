@@ -157,16 +157,16 @@ get_model_phys_data(int n) const {
  * Sets the area cluster tree associated with this map.
  */
 INLINE void MapData::
-set_area_cluster_tree(KDTree &&tree) {
-  _cluster_tree = std::move(tree);
+set_area_cluster_tree(SpatialPartition *tree) {
+  _cluster_tree = tree;
 }
 
 /**
  * Returns the area cluster tree associated with this map.
  */
-INLINE const KDTree *MapData::
+INLINE const SpatialPartition *MapData::
 get_area_cluster_tree() const {
-  return &_cluster_tree;
+  return _cluster_tree;
 }
 
 /**
@@ -250,18 +250,18 @@ get_cube_map(int n) const {
 /**
  *
  */
-INLINE void MapData::
-set_cube_map_tree(KDTree &&tree) {
-  _cube_map_tree = std::move(tree);
-}
+//INLINE void MapData::
+//set_cube_map_tree(KDTree &&tree) {
+//  _cube_map_tree = std::move(tree);
+//}
 
 /**
  *
  */
-INLINE const KDTree *MapData::
-get_cube_map_tree() const {
-  return &_cube_map_tree;
-}
+//INLINE const KDTree *MapData::
+//get_cube_map_tree() const {
+//  return &_cube_map_tree;
+//}
 
 /**
  *

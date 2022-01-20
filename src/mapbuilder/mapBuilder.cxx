@@ -59,6 +59,9 @@
 #include "pointLight.h"
 #include "directionalLight.h"
 #include "spotlight.h"
+#include "visClusterSampler.h"
+#include "visBuilderBSP.h"
+#include "depthTestAttrib.h"
 
 // DEBUG INCLUDES
 #include "geomVertexData.h"
@@ -67,6 +70,7 @@
 #include "geomNode.h"
 #include "nodePath.h"
 #include "geomVertexWriter.h"
+#include "geomVertexReader.h"
 
 static LColor cluster_colors[6] = {
   LColor(1.0, 0.5, 0.5, 1.0),
@@ -252,6 +256,192 @@ build() {
     if (!vis.build()) {
       return EC_unknown_error;
     }
+  }
+
+  {
+    VisBuilderBSP vis;
+    vis._builder = this;
+    vis._hint_split = false;
+
+    // Generate structural BSP solids.  This is the input to the solid-leaf
+    // BSP tree.
+    for (MapSolid *solid : _source_map->_world->_solids) {
+
+      bool structural = true;
+      for (MapSide *side : solid->_sides) {
+        if (side->_displacement != nullptr) {
+          structural = false;
+          break;
+        }
+      }
+
+      if (!structural) {
+        continue;
+      }
+
+      PT(BSPSolid) bsp_solid = new BSPSolid;
+      bool has_skip = false;
+      bool has_hint = false;
+      for (size_t i = 0; i < solid->_sides.size(); ++i) {
+        MapSide *side = solid->_sides[i];
+
+        bool hint = false;
+        bool skip = false;
+        std::string matname = side->_material_filename.get_basename_wo_extension();
+        matname = downcase(matname);
+        if (matname.find("toolshint") != std::string::npos) {
+          hint = true;
+          skip = true;
+
+        } else if (matname.find("toolsskip") != std::string::npos ||
+                   matname.find("toolsclip") != std::string::npos ||
+                   matname.find("toolsplayerclip") != std::string::npos ||
+                   matname.find("toolsareaportal") != std::string::npos ||
+                   matname.find("toolsblock_los") != std::string::npos ||
+                   matname.find("toolsblockbullets") != std::string::npos ||
+                   matname.find("toolsblocklight") != std::string::npos ||
+                   matname.find("toolsoccluder") != std::string::npos ||
+                   matname.find("toolstrigger") != std::string::npos) {
+          skip = true;
+        }
+
+        if (skip) {
+          has_skip = true;
+        }
+        if (hint) {
+          has_hint = true;
+        }
+
+        Winding w(solid->_sides[i]->_plane);
+        for (size_t j = 0; j < solid->_sides.size(); ++j) {
+          if (j == i) {
+            continue;
+          }
+          w = w.chop(-solid->_sides[j]->_plane);
+        }
+        PT(BSPFace) bsp_face = new BSPFace;
+        bsp_face->_winding = w;
+        bsp_face->_priority = 0;
+        bsp_face->_hint = hint;
+        bsp_face->_contents = 0;
+        bsp_solid->_faces.push_back(bsp_face);
+        if (!skip) {
+          vis._input_faces.push_back(bsp_face);
+        }
+      }
+      bsp_solid->_opaque = !has_skip && !has_hint;
+      if (bsp_solid->_opaque) {
+        vis._input_solids.push_back(bsp_solid);
+      }
+    }
+
+    if (!vis.bake()) {
+      return EC_unknown_error;
+    }
+
+    // Put leaf bounds in there
+    LineSegs segs("leaves");
+    segs.set_color(LColor(1, 0, 0, 1));
+
+    // Collect all leaves.
+    pvector<BSPNode *> leaves;
+    std::stack<BSPNode *> node_stack;
+    node_stack.push(vis._tree_root);
+    while (!node_stack.empty()) {
+      BSPNode *node = node_stack.top();
+      node_stack.pop();
+
+      if (!node->is_leaf()) {
+        node_stack.push(node->_children[FRONT_CHILD]);
+        node_stack.push(node->_children[BACK_CHILD]);
+
+      } else {
+        //if (!node->_opaque) {
+          leaves.push_back(node);
+        //}
+      }
+    }
+
+    for (BSPNode *leaf : leaves) {
+
+      // Collect all boundary planes of the leaf.
+      pvector<LPlane> leaf_planes;
+      BSPNode *node = leaf->_parent;
+      BSPNode *child = leaf;
+      while (node != nullptr) {
+        LPlane plane = node->_plane;
+        if (node->_children[FRONT_CHILD] == child) {
+          // Front side.
+          leaf_planes.push_back(plane);
+        } else {
+          // Back side.
+          leaf_planes.push_back(-plane);
+        }
+        child = node;
+        node = node->_parent;
+      }
+
+      // Now make windings for each plane and clip them to every other plane.
+      for (size_t i = 0; i < leaf_planes.size(); ++i) {
+        Winding w(leaf_planes[i]);
+        for (size_t j = 0; j < leaf_planes.size(); ++j) {
+          if (i == j) {
+            continue;
+          }
+          w = w.chop(leaf_planes[j]);
+          if (w.is_empty()) {
+            break;
+          }
+        }
+
+        if (w.is_empty()) {
+          continue;
+        }
+
+        // Draw line segment outline of winding.
+        segs.move_to(w.get_point(0));
+        for (int j = 1; j < w.get_num_points(); ++j) {
+          segs.draw_to(w.get_point(j));
+        }
+        // Close the loop.
+        segs.draw_to(w.get_point(0));
+      }
+    }
+
+    PT(GeomNode) leaf_lines = segs.create();
+    leaf_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+    leaf_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
+    leaf_lines->set_attrib(CullBinAttrib::make("fixed", 1));
+    //_out_top->add_child(leaf_lines);
+
+    // Now do portals.
+    LineSegs psegs("portals");
+    psegs.set_color(LColor(0, 0, 1, 1));
+    pset<BSPPortal *> drawn_portals;
+    for (BSPNode *leaf : leaves) {
+      for (BSPPortal *portal : leaf->_portals) {
+        if (drawn_portals.find(portal) != drawn_portals.end()) {
+          continue;
+        }
+        drawn_portals.insert(portal);
+
+        if (portal->_winding.is_empty()) {
+          continue;
+        }
+
+        psegs.move_to(portal->_winding.get_point(0));
+        for (int i = 1; i < portal->_winding.get_num_points(); ++i) {
+          psegs.draw_to(portal->_winding.get_point(i));
+        }
+        psegs.draw_to(portal->_winding.get_point(0));
+      }
+    }
+    PT(GeomNode) portal_lines = psegs.create();
+    portal_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+    portal_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
+    portal_lines->set_attrib(CullBinAttrib::make("fixed", 2));
+    //_out_top->add_child(portal_lines);
+
   }
 
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
@@ -1281,23 +1471,35 @@ build_lighting() {
     builder._lights.push_back(light);
   }
 
-  // Add ambient probes.  We will use a uniform grid of configurable density.
-  // If visibility is enabled, only probes within area clusters are computed.
-  // UNDONE: Make this configurable.
-  PN_stdfloat probe_density = 128.0f;
+  // Add ambient probes.
+
   // Start at the lowest corner of the level bounds and work our way to the top.
-  for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += probe_density) {
-    for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += probe_density) {
-      for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += probe_density) {
+  for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 128.0f) {
+    for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 128.0f) {
+      for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 128.0f) {
         LPoint3 pos(x, y, z);
         if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
           // Probe is not in valid cluster.  Skip it.
           continue;
         }
+
         builder._probes.push_back({ pos });
       }
     }
   }
+
+  //VisClusterSampler sampler(_out_data);
+  //LVecBase3 probe_density(128.0f, 128.0f, 128.0f);
+  //for (int i = 0; i < _out_data->get_num_clusters(); i++) {
+  //  pset<LPoint3> samples;
+  //  sampler.generate_samples(i, probe_density, 128, 1, samples);
+  //  for (const LPoint3 &sample : samples) {
+  //    builder._probes.push_back({ sample });
+  //  }
+  //}
+
+  mapbuilder_cat.info()
+    << builder._probes.size() << " ambient probes\n";
 
   if (!builder.solve()) {
     return EC_lightmap_failed;

@@ -14,10 +14,14 @@
 #include "kdTree.h"
 #include "vector_stdfloat.h"
 #include "indent.h"
+#include "bamReader.h"
+#include "bamWriter.h"
 
 #include <algorithm>
 #include <stack>
 #include "randomizer.h"
+
+IMPLEMENT_CLASS(KDTree);
 
 #define INVALID_NODE INT_MAX
 
@@ -555,4 +559,46 @@ r_output(int node_index, std::ostream &out, int indent_level) const {
     r_output(node->left_child, out, indent_level + 2);
     r_output(node->right_child, out, indent_level + 2);
   }
+}
+
+/**
+ *
+ */
+void KDTree::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+void KDTree::
+write_datagram(BamWriter *manager, Datagram &me) {
+  SpatialPartition::write_datagram(manager, me);
+  write_datagram(me);
+}
+
+/**
+ *
+ */
+void KDTree::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  SpatialPartition::fillin(scan, manager);
+  read_datagram(scan);
+}
+
+/**
+ *
+ */
+TypedWritable *KDTree::
+make_from_bam(const FactoryParams &params) {
+  KDTree *tree = new KDTree;
+
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  tree->fillin(scan, manager);
+
+  return tree;
 }

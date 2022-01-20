@@ -19,7 +19,7 @@
 #include "pvector.h"
 #include "mapEntity.h"
 #include "factoryParams.h"
-#include "kdTree.h"
+#include "spatialPartition.h"
 #include "bitArray.h"
 #include "texture.h"
 #include "luse.h"
@@ -106,8 +106,8 @@ PUBLISHED:
   INLINE int get_num_model_phys_datas() const;
   INLINE CPTA_uchar get_model_phys_data(int n) const;
 
-  INLINE void set_area_cluster_tree(KDTree &&tree);
-  INLINE const KDTree *get_area_cluster_tree() const;
+  INLINE void set_area_cluster_tree(SpatialPartition *tree);
+  INLINE const SpatialPartition *get_area_cluster_tree() const;
 
   INLINE void add_cluster_pvs(const AreaClusterPVS &pvs);
   INLINE int get_num_clusters() const;
@@ -121,8 +121,8 @@ PUBLISHED:
   INLINE int get_num_cube_maps() const;
   INLINE const MapCubeMap *get_cube_map(int n) const;
 
-  INLINE void set_cube_map_tree(KDTree &&tree);
-  INLINE const KDTree *get_cube_map_tree() const;
+  //INLINE void set_cube_map_tree(KDTree &&tree);
+  //INLINE const KDTree *get_cube_map_tree() const;
 
   INLINE void add_light(NodePath light);
   INLINE int get_num_lights() const;
@@ -151,14 +151,14 @@ private:
   pvector<PT(MapEntity)> _entities;
   pvector<CPTA_uchar> _model_phys_data;
 
-  KDTree _cluster_tree;
+  PT(SpatialPartition) _cluster_tree;
   pvector<AreaClusterPVS> _cluster_pvs;
 
   pvector<MapMeshGroup> _mesh_groups;
 
   pvector<MapCubeMap> _cube_maps;
   // For doing nearest neighbor cube map search.
-  KDTree _cube_map_tree;
+  //KDTree _cube_map_tree;
 
   pvector<MapAmbientProbe> _ambient_probes;
 
@@ -170,6 +170,7 @@ private:
   pvector<PT(RayTraceTriangleMesh)> _trace_meshes;
 
   friend class MapLightingEffect;
+  friend class MapBuilder;
 };
 
 #include "mapData.I"

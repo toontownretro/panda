@@ -87,6 +87,8 @@ PUBLISHED:
 
   INLINE int get_closest_point(const LPoint3 &point);
 
+  INLINE bool is_tiny();
+
 public:
   INLINE const LPoint3 *get_points() const;
 

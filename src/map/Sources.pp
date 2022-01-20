@@ -6,6 +6,7 @@
 
   #define SOURCES \
     aabbTree.h aabbTree.I \
+    bspTree.h bspTree.I \
     config_map.h \
     dynamicVisNode.h dynamicVisNode.I \
     kdTree.h kdTree.I \
@@ -16,10 +17,12 @@
     mapModel.h mapModel.I \
     mapNodeData.h mapNodeData.I \
     mapRender.h mapRender.I \
-    mapRoot.h mapRoot.I
+    mapRoot.h mapRoot.I \
+    spatialPartition.h spatialPartition.I
 
   #define COMPOSITE_SOURCES \
     aabbTree.cxx \
+    bspTree.cxx \
     config_map.cxx \
     dynamicVisNode.cxx \
     kdTree.cxx \
@@ -30,7 +33,8 @@
     mapModel.cxx \
     mapNodeData.cxx \
     mapRender.cxx \
-    mapRoot.cxx
+    mapRoot.cxx \
+    spatialPartition.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

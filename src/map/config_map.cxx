@@ -20,6 +20,9 @@
 #include "mapNodeData.h"
 #include "dynamicVisNode.h"
 #include "mapLightingEffect.h"
+#include "spatialPartition.h"
+#include "bspTree.h"
+#include "kdTree.h"
 
 NotifyCategoryDef(map, "");
 
@@ -45,8 +48,13 @@ init_libmap() {
   MapNodeData::init_type();
   DynamicVisNode::init_type();
   MapLightingEffect::init_type();
+  SpatialPartition::init_type();
+  BSPTree::init_type();
+  KDTree::init_type();
 
   MapData::register_with_read_factory();
   MapEntity::register_with_read_factory();
   MapRoot::register_with_read_factory();
+  BSPTree::register_with_read_factory();
+  KDTree::register_with_read_factory();
 }

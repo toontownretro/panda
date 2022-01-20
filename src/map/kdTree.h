@@ -24,6 +24,13 @@
 #include "datagramIterator.h"
 #include "bitArray.h"
 #include "ordered_vector.h"
+#include "spatialPartition.h"
+
+class FactoryParams;
+class BamReader;
+class BamWriter;
+class DatagramIterator;
+class Datagram;
 
 /**
  * A k-dimensional (k-d) tree is an axis-aligned binary space partitioning
@@ -34,7 +41,9 @@
  * regions of the universe.  For the visibility system, non-empty leaf nodes
  * correspond to area clusters.
  */
-class EXPCL_PANDA_MAP KDTree {
+class EXPCL_PANDA_MAP KDTree : public SpatialPartition {
+  DECLARE_CLASS(KDTree, SpatialPartition);
+
 PUBLISHED:
 #pragma pack(push, 1)
   class Node {
@@ -88,9 +97,9 @@ PUBLISHED:
 
   int make_subtree(const vector_int &objects);
 
-  int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const;
-  void get_leaf_values_containing_box(const LPoint3 &mins, const LPoint3 &maxs, ov_set<int> &values) const;
-  void get_leaf_values_containing_sphere(const LPoint3 &center, PN_stdfloat radius, ov_set<int> &values) const;
+  virtual int get_leaf_value_from_point(const LPoint3 &point, int head_node = 0) const override;
+  virtual void get_leaf_values_containing_box(const LPoint3 &mins, const LPoint3 &maxs, ov_set<int> &values) const override;
+  virtual void get_leaf_values_containing_sphere(const LPoint3 &center, PN_stdfloat radius, ov_set<int> &values) const override;
 
   size_t get_memory_size() const;
 
@@ -119,6 +128,15 @@ private:
                             vector_int &needs_splitting, bool use_min);
 
   int pick_best_split(pvector<SplitCandidate> &candidates, const vector_int &objects);
+
+public:
+  static void register_with_read_factory();
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+
+private:
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 protected:
   typedef pvector<Node> Nodes;

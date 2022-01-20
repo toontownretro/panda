@@ -48,7 +48,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
     WRITE_PTA(manager, me, IPD_uchar::write_datagram, _model_phys_data[i]);
   }
 
-  _cluster_tree.write_datagram(me);
+  manager->write_pointer(me, _cluster_tree);
 
   me.add_uint32(_cluster_pvs.size());
   for (size_t i = 0; i < _cluster_pvs.size(); i++) {
@@ -112,7 +112,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _model_phys_data[i] = data;
   }
 
-  _cluster_tree.read_datagram(scan);
+  manager->read_pointer(scan); // _cluster_tree
 
   _cluster_pvs.resize(scan.get_uint32());
   for (size_t i = 0; i < _cluster_pvs.size(); i++) {
@@ -169,6 +169,8 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
   for (size_t i = 0; i < _entities.size(); i++) {
     _entities[i] = DCAST(MapEntity, p_list[pi++]);
   }
+
+  _cluster_tree = DCAST(SpatialPartition, p_list[pi++]);
 
   for (size_t i = 0; i < _mesh_groups.size(); i++) {
     _mesh_groups[i]._geom_node = DCAST(GeomNode, p_list[pi++]);

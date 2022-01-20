@@ -26,7 +26,7 @@
 class CullTraverser;
 class CullTraverserData;
 class MapData;
-class KDTree;
+class SpatialPartition;
 
 /**
  * This is a special type of node that partitions its list of direct children
@@ -78,7 +78,7 @@ public:
   };
 
   void remove_from_tree(ChildInfo *child);
-  void insert_into_tree(ChildInfo *child, const GeometricBoundingVolume *bounds, const KDTree *tree);
+  void insert_into_tree(ChildInfo *child, const GeometricBoundingVolume *bounds, const SpatialPartition *tree);
 
 private:
   typedef pflat_hash_set<ChildInfo *, pointer_hash> ChildSet;
