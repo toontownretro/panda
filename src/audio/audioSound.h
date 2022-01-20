@@ -22,6 +22,7 @@
 
 class AudioManager;
 class DSP;
+class SteamAudioProperties;
 
 class EXPCL_PANDA_AUDIO AudioSound : public TypedReferenceCount {
 PUBLISHED:
@@ -92,7 +93,9 @@ PUBLISHED:
   // emitter's position.  vx, vy and vz are the emitter's velocity in UNITS
   // PER SECOND (default: meters).
   virtual void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
-                                 PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz);
+                                 PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                                 PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f,
+                                 PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
   virtual void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
                                  PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
 
@@ -108,6 +111,9 @@ PUBLISHED:
   // quieter.  You should rarely need to adjust this.  Default is 1000000000.0
   virtual void set_3d_max_distance(PN_stdfloat dist);
   virtual PN_stdfloat get_3d_max_distance() const;
+
+  virtual void set_3d_distance_factor(PN_stdfloat dist);
+  virtual PN_stdfloat get_3d_distance_factor() const;
 
   // speaker_mix is for use with FMOD.
   virtual PN_stdfloat get_speaker_mix(int speaker);
@@ -127,6 +133,8 @@ PUBLISHED:
   virtual bool remove_dsp(DSP *dsp);
   virtual void remove_all_dsps();
   virtual int get_num_dsps() const;
+
+  virtual void apply_steam_audio_properties(const SteamAudioProperties &props);
 
   enum SoundStatus { BAD, READY, PLAYING };
   virtual SoundStatus status() const = 0;

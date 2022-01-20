@@ -36,6 +36,13 @@
   #define LOCAL_LIBS audio event
   #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
 
+  #if $[HAVE_STEAM_AUDIO]
+    // Steam Audio integration compiled in.
+    // High quality sound propagation, occlusion, spatial audio, etc.
+    #define USE_PACKAGES $[USE_PACKAGES] steam_audio
+    #define C++FLAGS $[C++FLAGS] -DHAVE_STEAM_AUDIO
+  #endif
+
   #define SOURCES \
       config_fmodAudio.h \
       fmodAudioManager.h \

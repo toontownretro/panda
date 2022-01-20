@@ -191,6 +191,16 @@ PUBLISHED:
   static Filename get_dls_pathname();
   MAKE_PROPERTY(dls_pathname, get_dls_pathname);
 
+  virtual void load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
+                                      CPTA_uchar tri_materials, CPTA_uchar materials);
+  virtual void unload_steam_audio_scene();
+
+  virtual void load_steam_audio_reflection_probe_batch(CPTA_uchar data);
+  virtual void unload_steam_audio_reflection_probe_batch();
+
+  virtual void load_steam_audio_pathing_probe_batch(CPTA_uchar data);
+  virtual void unload_steam_audio_pathing_probe_batch();
+
   virtual void output(std::ostream &out) const;
   virtual void write(std::ostream &out) const;
 

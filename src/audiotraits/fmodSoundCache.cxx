@@ -60,7 +60,21 @@ get_sound(FMODAudioManager *mgr, VirtualFile *file, bool positional) {
 
   bool preload = (fmod_audio_preload_threshold < 0) || (file->get_file_size() < fmod_audio_preload_threshold);
   int flags = FMOD_DEFAULT;
-  flags |= positional ? FMOD_3D : FMOD_2D;
+#ifdef HAVE_STEAM_AUDIO
+  bool use_steam_audio_positional = fmod_use_steam_audio;
+#else
+  bool use_steam_audio_positional = false;
+#endif
+  if (positional && !use_steam_audio_positional) {
+    // We're using the built-in FMOD spatial audio system.
+    flags |= FMOD_3D;
+  } else {
+    // If the sound is positional but we're using Steam Audio
+    // for spatialization, indicate to FMOD that the sound is 2D.
+    // We will bypass the built-in FMOD spatialization and rely
+    // on Steam Audio to do it for us.
+    flags |= FMOD_2D;
+  }
 
   FMOD_CREATESOUNDEXINFO sound_info;
   memset(&sound_info, 0, sizeof(sound_info));

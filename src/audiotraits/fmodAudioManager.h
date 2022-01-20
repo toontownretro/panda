@@ -67,6 +67,8 @@
 #ifndef FMODAUDIOMANAGER_H
 #define FMODAUDIOMANAGER_H
 
+#define HAVE_STEAM_AUDIO 1
+
 // First the includes.
 #include "pandabase.h"
 #include "pset.h"
@@ -74,10 +76,15 @@
 
 #include "audioManager.h"
 #include "dsp.h"
+#include "updateSeq.h"
 
 // The includes needed for FMOD
 #include <fmod.hpp>
 #include <fmod_errors.h>
+
+#ifdef HAVE_STEAM_AUDIO
+#include <phonon.h>
+#endif // HAVE_STEAM_AUDIO
 
 class FMODAudioSound;
 
@@ -169,6 +176,16 @@ public:
   virtual void set_cache_limit(unsigned int count);
   virtual unsigned int get_cache_limit() const;
 
+  virtual void load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
+                                      CPTA_uchar tri_materials, CPTA_uchar materials) override;
+  virtual void unload_steam_audio_scene() override;
+
+  virtual void load_steam_audio_reflection_probe_batch(CPTA_uchar data) override;
+  virtual void unload_steam_audio_reflection_probe_batch() override;
+
+  virtual void load_steam_audio_pathing_probe_batch(CPTA_uchar data) override;
+  virtual void unload_steam_audio_pathing_probe_batch() override;
+
   FMOD_RESULT get_speaker_mode(FMOD_SPEAKERMODE &mode) const;
 
 private:
@@ -211,6 +228,45 @@ private:
   static DSPManagers _dsp_managers;
 
   static int _last_update_frame;
+
+#ifdef HAVE_STEAM_AUDIO
+  // All this Steam Audio related stuff is stored here in static variables to
+  // encapsulate all Steam Audio objects and API calls.  Since we're using the
+  // FMOD plugin, might as well have it all be part of the FMOD implementation.
+  static unsigned int _sa_spatialize_handle;
+  static unsigned int _sa_mixer_return_handle;
+  static unsigned int _sa_reverb_handle;
+  // This DSP renders global listener-centric reverb.
+  static FMOD::DSP *_reverb_dsp;
+  static IPLContext _sa_context;
+  static IPLHRTF _sa_hrtf;
+  static IPLSimulator _sa_simulator;
+  static IPLEmbreeDevice _sa_embree_device;
+  // It is assumed there is one scene in the world, and the scene contains
+  // one probe batch for reflections and one probe batch for pathing.
+  static IPLScene _sa_scene;
+  static IPLStaticMesh _sa_scene_mesh;
+  static IPLProbeBatch _sa_probe_batch;
+  static IPLProbeBatch _sa_pathing_probe_batch;
+  // IPLSource that represents the listener or camera.
+  // Needed for listener-centric reverb.
+  static IPLSource _sa_listener_source;
+  static IPLSimulationInputs _sa_listener_inputs;
+  static IPLSimulationSharedInputs _sa_sim_inputs;
+
+  static UpdateSeq _last_sim_update, _next_sim_update;
+
+  // We need to queue up calls to play() on AudioSounds so we can run the
+  // Steam Audio simulation for that frame before actually playing the sound.
+  static pset<PT(FMODAudioSound)> _queued_plays;
+
+  // These store the set of sounds that require different types of
+  // simulation, so we know whether or not we need to actually run those
+  // simulations.
+  //static pset<FMODAudioSound *> _direct_sim_sounds;
+  //static pset<FMODAudioSound *> _refl_sim_sounds;
+  //static pset<FMODAudioSound *> _path_sim_sounds;
+#endif
 
 private:
   FMOD::ChannelGroup *_channelgroup;

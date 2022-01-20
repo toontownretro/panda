@@ -24,6 +24,10 @@ NotifyCategoryDecl(fmodAudio, EXPCL_FMOD_AUDIO, EXPTP_FMOD_AUDIO);
 
 extern ConfigVariableInt fmod_audio_preload_threshold;
 
+#ifdef HAVE_STEAM_AUDIO
+extern ConfigVariableBool fmod_use_steam_audio;
+#endif
+
 extern "C" EXPCL_FMOD_AUDIO void init_libFmodAudio();
 extern "C" EXPCL_FMOD_AUDIO Create_AudioManager_proc *get_audio_manager_func_fmod_audio();
 

@@ -17,6 +17,8 @@
  * @date 2020-10-04
  */
 
+#define HAVE_STEAM_AUDIO
+
 #include "pandabase.h"
 #include "dcast.h"
 
@@ -32,10 +34,116 @@
 #include "throw_event.h"
 #include "vector_uchar.h"
 #include "clockObject.h"
+#include "mathutil_misc.h"
 
 TypeHandle FMODAudioSound::_type_handle;
 
+#ifndef HAMMER_UNITS_TO_METERS
+#define HAMMER_UNITS_TO_METERS 0.01905f
+#endif
+
 #define CHANNEL_INVALID(result) (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN)
+
+#ifdef HAVE_STEAM_AUDIO
+
+// calculate gain based on atmospheric attenuation.
+// as gain excedes threshold, round off (compress) towards 1.0 using spline
+#define SND_GAIN_COMP_EXP_MAX	2.5f	// Increasing SND_GAIN_COMP_EXP_MAX fits compression curve more closely
+                    // to original gain curve as it approaches 1.0.
+#define SND_GAIN_COMP_EXP_MIN	0.8f
+
+#define SND_GAIN_COMP_THRESH	0.5f		// gain value above which gain curve is rounded to approach 1.0
+
+#define SND_DB_MAX				140.0f	// max db of any sound source
+#define SND_DB_MED				90.0f	// db at which compression curve changes
+
+#define SND_GAIN_MAX 1
+#define SND_GAIN_MIN 0.01
+
+#define SND_REFDB 60.0
+#define SND_REFDIST 36.0
+
+#define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((pow( 10.0f, SND_REFDB / 20 ) / pow( 10.0f, (float)sndlvl / 20 )) / SND_REFDIST) : 0 )
+#define DIST_MULT_TO_SNDLVL( dist_mult ) (int)( dist_mult ? ( 20 * log10( pow( 10.0f, SND_REFDB / 20 ) / (dist_mult * SND_REFDIST) ) ) : 0 )
+
+/**
+ * Implements a custom distance attenuation for Steam Audio.
+ * Scales the distance by the sound's distance multiplier.
+ */
+float
+ipl_distance_atten(IPLfloat32 distance, void *user_data) {
+  FMODAudioSound *sound = (FMODAudioSound *)user_data;
+
+  // Meters to hammer units.
+  distance /= HAMMER_UNITS_TO_METERS;
+
+  PN_stdfloat gain = 1.0f;
+  PN_stdfloat dist_factor = sound->get_3d_distance_factor();
+  PN_stdfloat relative_dist = distance * dist_factor;
+  if (relative_dist > 0.1f) {
+    gain *= (1.0f / relative_dist);
+  } else {
+    gain *= 10.0f;
+  }
+
+  if (gain > SND_GAIN_COMP_THRESH) {
+    PN_stdfloat snd_gain_comp_power = SND_GAIN_COMP_EXP_MAX;
+    int sndlvl = DIST_MULT_TO_SNDLVL(dist_factor);
+    PN_stdfloat y;
+
+    if (sndlvl > SND_DB_MED) {
+      snd_gain_comp_power = remap_val_clamped((float)sndlvl, SND_DB_MED, SND_DB_MAX, SND_GAIN_COMP_EXP_MAX, SND_GAIN_COMP_EXP_MIN);
+    }
+
+    y = -1.0f / (pow(SND_GAIN_COMP_THRESH, snd_gain_comp_power) * (SND_GAIN_COMP_THRESH - 1.0f));
+    gain = 1.0f - 1.0f / (y * pow(gain, snd_gain_comp_power));
+    gain *= SND_GAIN_MAX;
+  }
+
+  if (gain < SND_GAIN_MIN) {
+    gain = SND_GAIN_MIN * (2.0f - relative_dist * SND_GAIN_MIN);
+
+    if (gain <= 0.0f) {
+      gain = 0.001f;
+    }
+  }
+
+  return gain;
+}
+
+IPLVector3
+fmod_vec_to_ipl(const FMOD_VECTOR &vec) {
+  return IPLVector3{ vec.x, vec.y, -vec.z };
+}
+
+IPLVector3
+ipl_cross(const IPLVector3& a, const IPLVector3& b) {
+  IPLVector3 c;
+  c.x = a.y * b.z - a.z * b.y;
+  c.y = a.z * b.x - a.x * b.z;
+  c.z = a.x * b.y - a.y * b.x;
+  return c;
+}
+
+IPLVector3
+ipl_unit_vector(IPLVector3 v) {
+  float length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+  if (length < 1e-2f)
+      length = 1e-2f;
+
+  return IPLVector3{v.x / length, v.y / length, v.z / length};
+}
+
+
+IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMOD_VECTOR &forward, const FMOD_VECTOR &up) {
+  IPLCoordinateSpace3 coords;
+  coords.ahead = fmod_vec_to_ipl(forward);
+  coords.up = fmod_vec_to_ipl(up);
+  coords.origin = fmod_vec_to_ipl(origin);
+  coords.right = ipl_unit_vector(ipl_cross(coords.ahead, coords.up));
+  return coords;
+}
+#endif
 
 /**
  * Constructor All sound will DEFAULT load as a 2D sound unless otherwise
@@ -66,8 +174,17 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   _velocity.y = 0;
   _velocity.z = 0;
 
+  _up.x = 0;
+  _up.y = 1;
+  _up.z = 0;
+
+  _forward.x = 0;
+  _forward.y = 0;
+  _forward.z = 1;
+
   _min_dist = 1.0;
   _max_dist = 1000000000.0;
+  _dist_factor = 1.0f;
 
   // These set the speaker levels to a default if you are using a multichannel
   // setup.
@@ -108,6 +225,11 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   // been sped up.
   result = _sound->getLength(&_length, FMOD_TIMEUNIT_MS);
   fmod_audio_errcheck("_sound->getLength()", result);
+
+#ifdef HAVE_STEAM_AUDIO
+  _sa_source = nullptr;
+  _sa_spatial_dsp = nullptr;
+#endif
 }
 
 /**
@@ -139,8 +261,17 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
   _velocity.y = 0;
   _velocity.z = 0;
 
+  _up.x = 0;
+  _up.y = 1;
+  _up.z = 0;
+
+  _forward.x = 0;
+  _forward.y = 0;
+  _forward.z = 1;
+
   _min_dist = copy->_min_dist;
   _max_dist = copy->_max_dist;
+  _dist_factor = copy->_dist_factor;
 
   _dsps = copy->_dsps;
 
@@ -172,6 +303,11 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
 
   _sample_frequency = copy->_sample_frequency;
   _priority = copy->_priority;
+
+#ifdef HAVE_STEAM_AUDIO
+  _sa_source = nullptr;
+  _sa_spatial_dsp = nullptr;
+#endif
 }
 
 /**
@@ -192,6 +328,20 @@ FMODAudioSound::
   }
   _dsps.clear();
 
+#ifdef HAVE_STEAM_AUDIO
+  if (_sa_spatial_dsp != nullptr) {
+    result = _sa_spatial_dsp->release();
+    fmod_audio_errcheck("release Steam Audio spatializer DSP", result);
+    _sa_spatial_dsp = nullptr;
+  }
+  if (_sa_source != nullptr) {
+    iplSourceRemove(_sa_source, _manager->_sa_simulator);
+    ++_manager->_next_sim_update;
+    iplSourceRelease(&_sa_source);
+    _sa_source = nullptr;
+  }
+#endif
+
   _manager->release_sound(this);
 }
 
@@ -200,7 +350,8 @@ FMODAudioSound::
  */
 void FMODAudioSound::
 play() {
-  start_playing();
+  //start_playing();
+  _manager->_queued_plays.insert(this);
 }
 
 /**
@@ -220,8 +371,17 @@ stop() {
     _channel = nullptr;
   }
 
+#ifdef HAVE_STEAM_AUDIO
+  //if (_sa_source != nullptr) {
+  //  iplSourceRemove(_sa_source, _manager->_sa_simulator);
+   // iplSimulatorCommit(_manager->_sa_simulator);
+  //}
+#endif
+
   _start_time = 0.0;
   _paused = false;
+
+  _manager->_queued_plays.erase(this);
 
   _manager->stopping_sound(this);
 }
@@ -304,7 +464,8 @@ set_time(PN_stdfloat start_time) {
 
   if (status() == PLAYING) {
     // Already playing; skip to the indicated time.
-    start_playing();
+    //start_playing();
+    _manager->_queued_plays.insert(this);
   }
 }
 
@@ -391,8 +552,15 @@ start_playing() {
     set_volume_on_channel();
     set_play_rate_on_channel();
     set_speaker_mix_or_balance_on_channel();
-    set_3d_attributes_on_channel();
     set_dsps_on_channel();
+    set_3d_attributes_on_channel();
+
+#ifdef HAVE_STEAM_AUDIO
+    if (_sa_source != nullptr) {
+      iplSourceAdd(_sa_source, _manager->_sa_simulator);
+      ++_manager->_next_sim_update;
+    }
+#endif
 
     result = _channel->setPaused(false);
     fmod_audio_errcheck("_channel->setPaused()", result);
@@ -539,15 +707,35 @@ length() const {
  * you, so you can't say I didn't.
  */
 void FMODAudioSound::
-set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz) {
+set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
   ReMutexHolder holder(FMODAudioManager::_lock);
-  _location.x = px;
-  _location.y = pz;
-  _location.z = py;
 
-  _velocity.x = vx;
-  _velocity.y = vz;
-  _velocity.z = vy;
+  // Inches to meters.
+  _location.x = px * HAMMER_UNITS_TO_METERS;
+  _location.y = pz * HAMMER_UNITS_TO_METERS;
+  _location.z = py * HAMMER_UNITS_TO_METERS;
+
+  _velocity.x = vx * HAMMER_UNITS_TO_METERS;
+  _velocity.y = vz * HAMMER_UNITS_TO_METERS;
+  _velocity.z = vy * HAMMER_UNITS_TO_METERS;
+
+  _up.x = ux;
+  _up.y = uz;
+  _up.z = uy;
+
+  _forward.x = fx;
+  _forward.y = fz;
+  _forward.z = fy;
+
+#ifdef HAVE_STEAM_AUDIO
+  if (_sa_source != nullptr) {
+    // If the source is simulated, apply the new transform to the Steam Audio
+    // source as well.
+    _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
+    iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+  }
+#endif
 
   set_3d_attributes_on_channel();
 }
@@ -564,7 +752,24 @@ set_3d_attributes_on_channel() {
   result = _sound->getMode(&soundMode);
   fmod_audio_errcheck("_sound->getMode()", result);
 
-  if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
+#ifdef HAVE_STEAM_AUDIO
+  bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
+#else
+  bool steam_audio_dsp = false;
+#endif
+
+  if (steam_audio_dsp) {
+    // With Steam Audio the 3D attributes are set on the Steam Audio
+    // spatializer DSP, which replaces the built-in FMOD positional audio.
+    FMOD_DSP_PARAMETER_3DATTRIBUTES attr;
+    attr.absolute.position = _location;
+    attr.absolute.velocity = _velocity;
+    attr.absolute.up = _up;
+    attr.absolute.forward = _forward;
+    // Steam Audio doesn't care about the relative 3D attributes.
+    _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr));
+
+  } else if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
     result = _channel->set3DAttributes(&_location, &_velocity);
     if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
@@ -592,10 +797,21 @@ set_3d_min_distance(PN_stdfloat dist) {
   ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
-  _min_dist = dist;
+  _min_dist = dist * HAMMER_UNITS_TO_METERS;
 
-  result = _sound->set3DMinMaxDistance(dist, _max_dist);
-  fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
+#ifdef HAVE_STEAM_AUDIO
+  bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
+#else
+  bool steam_audio_dsp = false;
+#endif
+
+  if (steam_audio_dsp) {
+    _sa_spatial_dsp->setParameterFloat(12, _min_dist);
+
+  } else {
+    result = _sound->set3DMinMaxDistance(_min_dist, _max_dist);
+    fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
+  }
 }
 
 /**
@@ -614,10 +830,21 @@ set_3d_max_distance(PN_stdfloat dist) {
   ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
-  _max_dist = dist;
+  _max_dist = dist * HAMMER_UNITS_TO_METERS;
 
-  result = _sound->set3DMinMaxDistance(_min_dist, dist);
-  fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
+#ifdef HAVE_STEAM_AUDIO
+  bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
+#else
+  bool steam_audio_dsp = false;
+#endif
+
+  if (steam_audio_dsp) {
+    _sa_spatial_dsp->setParameterFloat(13, _max_dist);
+
+  } else {
+    result = _sound->set3DMinMaxDistance(_min_dist, _max_dist);
+    fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
+  }
 }
 
 /**
@@ -626,6 +853,27 @@ set_3d_max_distance(PN_stdfloat dist) {
 PN_stdfloat FMODAudioSound::
 get_3d_max_distance() const {
   return _max_dist;
+}
+
+/**
+ *
+ */
+void FMODAudioSound::
+set_3d_distance_factor(PN_stdfloat factor) {
+  _dist_factor = factor;
+#ifdef HAVE_STEAM_AUDIO
+  if (fmod_use_steam_audio && _sa_spatial_dsp != nullptr) {
+    _sa_spatial_dsp->setParameterFloat(31, _dist_factor);
+  }
+#endif
+}
+
+/**
+ *
+ */
+PN_stdfloat FMODAudioSound::
+get_3d_distance_factor() const {
+  return _dist_factor;
 }
 
 /**
@@ -991,6 +1239,22 @@ set_dsps_on_channel() {
     ret = _channel->addDSP(i, dsp);
     fmod_audio_errcheck("_channel->addDSP()", ret);
   }
+
+#ifdef HAVE_STEAM_AUDIO
+  if (fmod_use_steam_audio) {
+    if (_sa_spatial_dsp != nullptr) {
+      // Index 1 to spatialize before the channel fader.
+      ret = _channel->addDSP(FMOD_CHANNELCONTROL_DSP_TAIL, _sa_spatial_dsp);
+      fmod_audio_errcheck("add SA spatial DSP", ret);
+    }
+
+    // Add the head (final processed DSP node) as an input to the Steam Audio reverb.
+    FMOD::DSP *head;
+    _channel->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &head);
+    _manager->_reverb_dsp->addInput(head, 0, FMOD_DSPCONNECTION_TYPE_STANDARD);
+  }
+
+#endif
 }
 
 /**
@@ -1057,4 +1321,118 @@ get_finished_event() const {
 FMODSoundHandle *FMODAudioSound::
 get_sound_handle() const {
   return _sound_handle;
+}
+
+/**
+ * Configures the sound to be a Steam Audio source.
+ * Can only be set up and configured once.  Currently you cannot change
+ * any Steam Audio properties on the fly (except simple stuff like sound
+ * position).
+ */
+void FMODAudioSound::
+apply_steam_audio_properties(const SteamAudioProperties &props) {
+#ifdef HAVE_STEAM_AUDIO
+  if (!fmod_use_steam_audio || _sa_source != nullptr || _sa_spatial_dsp != nullptr) {
+    // Already a Steam Audio source.
+    return;
+  }
+
+  unsigned int flags = 0u;
+  if (props._enable_occlusion || props._enable_transmission) {
+    flags |= IPL_SIMULATIONFLAGS_DIRECT;
+  }
+  if (props._enable_reflections) {
+    flags |= IPL_SIMULATIONFLAGS_REFLECTIONS;
+  }
+  if (props._enable_pathing) {
+    flags |= IPL_SIMULATIONFLAGS_PATHING;
+  }
+
+  if (flags != 0u) {
+    // Something on the sound actually needs simulation, so we need to create
+    // an IPLSource and add it to our simulator.
+    IPLSourceSettings src_settings;
+    src_settings.flags = (IPLSimulationFlags)flags;
+    IPLerror err = iplSourceCreate(_manager->_sa_simulator, &src_settings, &_sa_source);
+    nassertv(err == IPL_STATUS_SUCCESS && _sa_source != nullptr);
+    // Not going to add it until it starts playing.
+
+    memset(&_sa_inputs, 0, sizeof(IPLSimulationInputs));
+
+    _sa_inputs.flags = src_settings.flags;
+
+    // We need a custom distance attenuation model to support the soundlevel
+    // distance multiplier system.
+    _sa_inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_CALLBACK;
+    _sa_inputs.distanceAttenuationModel.callback = ipl_distance_atten;
+    _sa_inputs.distanceAttenuationModel.userData = this;
+
+    unsigned int direct_flags = 0u;
+    if (props._enable_occlusion) {
+      direct_flags |= IPL_DIRECTSIMULATIONFLAGS_OCCLUSION;
+      if (props._enable_transmission) {
+        direct_flags |= IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION;
+      }
+
+      if (props._volumetric_occlusion) {
+        _sa_inputs.occlusionType = IPL_OCCLUSIONTYPE_VOLUMETRIC;
+      } else {
+        _sa_inputs.occlusionType = IPL_OCCLUSIONTYPE_RAYCAST;
+      }
+      _sa_inputs.occlusionRadius = props._volumetric_occlusion_radius;
+      _sa_inputs.numOcclusionSamples = 32;
+    }
+    _sa_inputs.directFlags = (IPLDirectSimulationFlags)direct_flags;
+
+    if (props._enable_pathing) {
+      _sa_inputs.baked = IPL_TRUE;
+      _sa_inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
+      _sa_inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+      _sa_inputs.pathingOrder = 1;
+      _sa_inputs.pathingProbes = _manager->_sa_probe_batch;
+      _sa_inputs.findAlternatePaths = IPL_FALSE;
+    }
+
+    _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
+
+    iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+  }
+
+  // Create and configure the spatialization DSP filter.
+  FMOD_RESULT result = _manager->_system->createDSPByPlugin(_manager->_sa_spatialize_handle, &_sa_spatial_dsp);
+  if (result != FMOD_OK) {
+    fmod_audio_errcheck("create Steam Audio spatializer DSP", result);
+    return;
+  }
+
+  _sa_spatial_dsp->setUserData(this);
+
+  FMOD_DSP_PARAMETER_3DATTRIBUTES attr;
+  attr.absolute.position = _location;
+  attr.absolute.velocity = _velocity;
+  attr.absolute.up = _up;
+  attr.absolute.forward = _forward;
+  // Steam Audio doesn't care about the relative 3D attributes.
+  _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr)); // SOURCE_POSITION
+  _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 2 : 0);
+  _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
+  _sa_spatial_dsp->setParameterInt(4, props._enable_directivity ? 1 : 0);
+  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 1 : 0);
+  _sa_spatial_dsp->setParameterInt(6, props._enable_transmission ? 1 : 0);
+  _sa_spatial_dsp->setParameterBool(7, props._enable_reflections);
+  _sa_spatial_dsp->setParameterBool(8, props._enable_pathing);
+  _sa_spatial_dsp->setParameterInt(9, props._bilinear_hrtf ? 1 : 0);
+  _sa_spatial_dsp->setParameterFloat(12, _min_dist); // DISTANCEATTEN_MINDIST
+  _sa_spatial_dsp->setParameterFloat(13, _max_dist); // DISTANCEATTEN_MAXDIST
+  _sa_spatial_dsp->setParameterFloat(18, props._directivity_dipole_weight);
+  _sa_spatial_dsp->setParameterFloat(19, props._directivity_dipole_power);
+  _sa_spatial_dsp->setParameterFloat(25, 1.0f); // DIRECT_MIXLEVEL
+  _sa_spatial_dsp->setParameterBool(26, props._binaural_reflections);
+  _sa_spatial_dsp->setParameterFloat(27, 1.0f); // REFLECTIONS_MIXLEVEL
+  _sa_spatial_dsp->setParameterBool(28, props._binaural_pathing);
+  _sa_spatial_dsp->setParameterFloat(29, 1.0f); // PATHING_MIXLEVEL
+  // Link back to the IPLSource so the DSP can render simulation results.
+  _sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
+  _sa_spatial_dsp->setParameterFloat(31, _dist_factor); // DISTANCEATTEN_DISTANCEFACTOR
+#endif
 }

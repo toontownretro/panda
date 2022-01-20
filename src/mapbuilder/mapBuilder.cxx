@@ -63,6 +63,15 @@
 #include "visBuilderBSP.h"
 #include "depthTestAttrib.h"
 
+#define HAVE_STEAM_AUDIO
+#ifdef HAVE_STEAM_AUDIO
+#include <phonon.h>
+#endif
+
+// Assuming that a hammer unit is 3/4 of an inch, multiply hammer units
+// by this value to convert it to meters.
+#define HAMMER_UNITS_TO_METERS 0.01905f
+
 // DEBUG INCLUDES
 #include "geomVertexData.h"
 #include "geomTriangles.h"
@@ -570,6 +579,11 @@ build() {
     NodePath(_out_node->get_child(i)).flatten_strong();
   }
 
+  ec = bake_steam_audio();
+  if (ec != EC_ok) {
+    return ec;
+  }
+
   if (mapbuilder_cat.is_debug()) {
     mapbuilder_cat.debug()
       << "Post flatten graph:\n";
@@ -581,6 +595,392 @@ build() {
   NodePath(_out_top).write_bam_file(_options._output_filename);
 
   return EC_ok;
+}
+
+#ifdef HAVE_STEAM_AUDIO
+#ifndef CPPPARSER
+void
+ipl_log(IPLLogLevel lvl, const char *msg) {
+  std::cerr << "IPL: lvl " << lvl << ", msg " << std::string(msg) << "\n";
+}
+#endif
+#endif
+
+class IPLGeomEntry {
+public:
+  CPT(Geom) geom;
+  const Material *mat;
+  int mat_index;
+};
+
+#ifdef HAVE_STEAM_AUDIO
+#ifndef CPPPARSER
+void
+ipl_progress_callback(IPLfloat32 progress, void *user_data) {
+  std::cerr << "progress: " << progress << "\n";
+}
+#endif
+#endif
+
+/**
+ * Bakes Steam Audio information into the map.
+ */
+MapBuilder::ErrorCode MapBuilder::
+bake_steam_audio() {
+#ifndef HAVE_STEAM_AUDIO
+  return EC_ok;
+#else
+
+  return EC_ok;
+
+
+  IPLContext context = nullptr;
+  IPLContextSettings ctx_settings{};
+  ctx_settings.version = STEAMAUDIO_VERSION;
+  ctx_settings.simdLevel = IPL_SIMDLEVEL_AVX512;
+  ctx_settings.logCallback = ipl_log;
+  IPLerror err = iplContextCreate(&ctx_settings, &context);
+  assert(err == IPL_STATUS_SUCCESS);
+
+  IPLEmbreeDeviceSettings embree_set{};
+  IPLEmbreeDevice embree_dev = nullptr;
+  err = iplEmbreeDeviceCreate(context, &embree_set, &embree_dev);
+  assert(err == IPL_STATUS_SUCCESS);
+
+  IPLScene scene = nullptr;
+  IPLSceneSettings scene_settings{};
+  memset(&scene_settings, 0, sizeof(IPLSceneSettings));
+  scene_settings.type = IPL_SCENETYPE_EMBREE;
+  scene_settings.embreeDevice = embree_dev;
+  err = iplSceneCreate(context, &scene_settings, &scene);
+  assert(err == IPL_STATUS_SUCCESS);
+
+  pmap<std::string, IPLMaterial> surface_props;
+  surface_props["default"] = {0.10f,0.20f,0.30f,0.05f,0.100f,0.050f,0.030f};
+  surface_props["wood"] = {0.11f,0.07f,0.06f,0.05f,0.070f,0.014f,0.005f};
+  surface_props["metal"] = {0.20f,0.07f,0.06f,0.05f,0.200f,0.025f,0.010f};
+  surface_props["brick"] = {0.03f,0.04f,0.07f,0.05f,0.015f,0.015f,0.015f};
+  surface_props["concrete"] = {0.05f,0.07f,0.08f,0.05f,0.015f,0.002f,0.001f};
+  surface_props["gravel"] = {0.60f,0.70f,0.80f,0.05f,0.031f,0.012f,0.008f};
+  surface_props["rock"] = {0.13f,0.20f,0.24f,0.05f,0.015f,0.002f,0.001f};
+  surface_props["carpet"] = {0.24f,0.69f,0.73f,0.05f,0.020f,0.005f,0.003f};
+  surface_props["plaster"] = {0.12f,0.06f,0.04f,0.05f,0.056f,0.056f,0.004f};
+  surface_props["sky"] = {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f};
+
+  // Build up a huge vector of all Geoms in the entire scene.  World geometry
+  // and static props.
+  pvector<IPLGeomEntry> geoms;
+
+  pvector<IPLMaterial> materials;
+  pmap<std::string, int> material_indices;
+
+  // Start with static world geometry.
+  for (int i = 0; i < _out_node->get_num_children(); i++) {
+    GeomNode *child = (GeomNode *)_out_node->get_child(i);
+    for (int j = 0; j < child->get_num_geoms(); j++) {
+      const RenderState *state = child->get_geom_state(j);
+      const MaterialAttrib *mattr;
+      state->get_attrib_def(mattr);
+      IPLGeomEntry entry;
+      entry.geom = child->get_geom(j);
+      entry.mat = mattr->get_material();
+
+      // get this from the pmat file tags.
+      std::string surfaceprop = "default";
+      if (mattr->get_material() != nullptr) {
+        if (mattr->get_material()->has_tag("surface_prop")) {
+          surfaceprop = mattr->get_material()->get_tag_value("surface_prop");
+          if (surface_props.find(surfaceprop) == surface_props.end()) {
+            surfaceprop = "default";
+          }
+        }
+      }
+      int mat_index;
+      auto it = material_indices.find(surfaceprop);
+      if (it == material_indices.end()) {
+        mat_index = (int)materials.size();
+        materials.push_back(surface_props[surfaceprop]);
+        material_indices[surfaceprop] = mat_index;
+
+      } else {
+        mat_index = it->second;
+      }
+      entry.mat_index = mat_index;
+
+      geoms.push_back(entry);
+    }
+  }
+
+  // Now get static props.
+  for (int i = 0; i < _out_data->get_num_entities(); i++) {
+    MapEntity *ent = _out_data->get_entity(i);
+    if (ent->get_class_name() != "prop_static") {
+      continue;
+    }
+
+    PDXElement *props = ent->get_properties();
+
+    Filename model_filename = Filename::from_os_specific(props->get_attribute_value("model").get_string());
+    model_filename.set_extension("bam");
+    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(model_filename);
+    if (prop_model_node == nullptr) {
+      continue;
+    }
+    NodePath prop_model(prop_model_node);
+
+    if (props->has_attribute("origin")) {
+      LPoint3 pos;
+      props->get_attribute_value("origin").to_vec3(pos);
+      prop_model.set_pos(pos);
+    }
+
+    if (props->has_attribute("angles")) {
+      LVecBase3 phr;
+      props->get_attribute_value("angles").to_vec3(phr);
+      prop_model.set_hpr(phr[1] - 90, -phr[0], phr[2]);
+    }
+
+    std::string surfaceprop = "default";
+    ModelRoot *mroot = DCAST(ModelRoot, prop_model_node);
+    PDXElement *cdata = mroot->get_custom_data();
+    if (cdata != nullptr) {
+      // Check for a surface prop.
+      if (cdata->has_attribute("surfaceprop")) {
+        surfaceprop = cdata->get_attribute_value("surfaceprop").get_string();
+        if (surface_props.find(surfaceprop) == surface_props.end()) {
+          surfaceprop = "default";
+        }
+      }
+    }
+
+    int mat_index;
+    auto it = material_indices.find(surfaceprop);
+    if (it == material_indices.end()) {
+      mat_index = (int)materials.size();
+      materials.push_back(surface_props[surfaceprop]);
+      material_indices[surfaceprop] = mat_index;
+
+    } else {
+      mat_index = it->second;
+    }
+
+    // Move transforms and attribs down to vertices.
+    prop_model.flatten_light();
+
+    NodePathCollection geom_nodes;
+    // Get all the Geoms and associated materials.
+    // If there's an LOD, only get Geoms from the lowest LOD level.
+    NodePath lod = prop_model.find("**/+LODNode");
+    if (!lod.is_empty()) {
+      NodePath lowest_lod = lod.get_child(lod.get_num_children() - 1);
+      if (lowest_lod.node()->is_geom_node()) {
+        geom_nodes.add_path(lowest_lod);
+      }
+      geom_nodes.add_paths_from(lowest_lod.find_all_matches("**/+GeomNode"));
+
+    } else {
+      // Otherwise get all the Geoms.
+      geom_nodes = prop_model.find_all_matches("**/+GeomNode");
+    }
+
+    for (int j = 0; j < geom_nodes.get_num_paths(); j++) {
+      NodePath geom_np = geom_nodes.get_path(j);
+      GeomNode *geom_node = (GeomNode *)geom_np.node();
+      for (int k = 0; k < geom_node->get_num_geoms(); k++) {
+        const RenderState *state = geom_node->get_geom_state(k);
+        const MaterialAttrib *mattr;
+        state->get_attrib_def(mattr);
+        IPLGeomEntry entry;
+        entry.geom = geom_node->get_geom(k);
+        entry.mat = mattr->get_material();
+        entry.mat_index = mat_index;
+        geoms.push_back(entry);
+      }
+    }
+  }
+
+  mapbuilder_cat.info()
+    << "Building IPL static mesh\n";
+
+  // We've got the Geoms.  Now build up triangle lists.
+  pvector<IPLVector3> verts;
+  pvector<IPLTriangle> tris;
+  pvector<IPLint32> tri_materials;
+
+  pmap<LPoint3, size_t> vert_indices;
+
+  size_t geom_count = geoms.size();
+
+  mapbuilder_cat.info()
+    << materials.size() << " unique IPL materials\n";
+
+  for (size_t i = 0; i < geom_count; i++) {
+    PT(Geom) dgeom = geoms[i].geom->decompose();
+
+    GeomVertexReader reader(dgeom->get_vertex_data(), InternalName::get_vertex());
+
+    for (size_t j = 0; j < dgeom->get_num_primitives(); j++) {
+      const GeomPrimitive *prim = dgeom->get_primitive(j);
+      for (size_t k = 0; k < prim->get_num_primitives(); k++) {
+        size_t start = prim->get_primitive_start(k);
+
+        IPLTriangle tri;
+        for (size_t l = 0; l < 3; l++) {
+          size_t v = start + l;
+          int vtx = prim->get_vertex(v);
+          reader.set_row(vtx);
+          LPoint3 pos = reader.get_data3f();
+
+          size_t ipl_index;
+          auto it = vert_indices.find(pos);
+          if (it != vert_indices.end()) {
+            ipl_index = it->second;
+          } else {
+            ipl_index = verts.size();
+            // Go from inches to meters.
+            verts.push_back({ pos[0] * HAMMER_UNITS_TO_METERS, pos[2] * HAMMER_UNITS_TO_METERS, -pos[1] * HAMMER_UNITS_TO_METERS });
+            vert_indices[pos] = ipl_index;
+          }
+
+          tri.indices[l] = ipl_index;
+        }
+        tris.push_back(tri);
+        tri_materials.push_back(geoms[i].mat_index);
+      }
+    }
+  }
+
+  IPLStaticMesh static_mesh = nullptr;
+  IPLStaticMeshSettings mesh_settings{};
+  mesh_settings.materials = materials.data();
+  mesh_settings.numMaterials = materials.size();
+  mesh_settings.vertices = verts.data();
+  mesh_settings.numVertices = verts.size();
+  mesh_settings.triangles = tris.data();
+  mesh_settings.materialIndices = tri_materials.data();
+  mesh_settings.numTriangles = tris.size();
+  err = iplStaticMeshCreate(scene, &mesh_settings, &static_mesh);
+  assert(err == IPL_STATUS_SUCCESS);
+  iplStaticMeshAdd(static_mesh, scene);
+  iplSceneCommit(scene);
+
+  IPLProbeBatch batch = nullptr;
+  iplProbeBatchCreate(context, &batch);
+
+  int num_probes = 0;
+  // Start at the lowest corner of the level bounds and work our way to the top.
+  for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 256.0f) {
+    for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 256.0f) {
+      for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 256.0f) {
+        LPoint3 pos(x, y, z);
+        if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
+          // Probe is not in valid cluster.  Skip it.
+          continue;
+        }
+
+        IPLSphere sphere;
+        sphere.center.x = pos[0] * HAMMER_UNITS_TO_METERS;
+        sphere.center.y = pos[2] * HAMMER_UNITS_TO_METERS;
+        sphere.center.z = -pos[1] * HAMMER_UNITS_TO_METERS;
+        sphere.radius = 10.0f;
+        iplProbeBatchAddProbe(batch, sphere);
+        num_probes++;
+      }
+    }
+  }
+
+  mapbuilder_cat.info()
+    << num_probes << " audio probes\n";
+
+  iplProbeBatchCommit(batch);
+
+  mapbuilder_cat.info()
+    << "Baking listener-centric reverb\n";
+
+  IPLBakedDataIdentifier identifier{};
+  identifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+  identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+  IPLReflectionsBakeParams bake_params{};
+  bake_params.scene = scene;
+  bake_params.sceneType = IPL_SCENETYPE_EMBREE;
+  bake_params.identifier = identifier;
+  int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION|IPL_REFLECTIONSBAKEFLAGS_BAKEPARAMETRIC;
+  bake_params.bakeFlags = (IPLReflectionsBakeFlags)flags;
+  bake_params.probeBatch = batch;
+  bake_params.numRays = 32768;
+  bake_params.numDiffuseSamples = 1024;
+  bake_params.numBounces = 64;
+  bake_params.simulatedDuration = 1.0f;
+  bake_params.savedDuration = 1.0f;
+  bake_params.order = 2;
+  bake_params.numThreads = _options.get_num_threads();
+  bake_params.irradianceMinDistance = 1.0f;
+  bake_params.rayBatchSize = 1;
+  bake_params.bakeBatchSize = 1;
+  bake_params.openCLDevice = nullptr;
+  bake_params.radeonRaysDevice = nullptr;
+  iplReflectionsBakerBake(context, &bake_params, nullptr, nullptr);
+
+  mapbuilder_cat.info()
+    << "Baking audio pathing\n";
+  identifier.type = IPL_BAKEDDATATYPE_PATHING;
+  identifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+  IPLPathBakeParams path_params{};
+  path_params.scene = scene;
+  path_params.identifier = identifier;
+  path_params.numThreads = _options.get_num_threads();
+  path_params.pathRange = 100.0f;
+  path_params.visRange = 50.0f;
+  path_params.probeBatch = batch;
+  path_params.numSamples = 32;
+  path_params.radius = 2.0f;
+  path_params.threshold = 0.05f;
+  iplPathBakerBake(context, &path_params, nullptr, nullptr);
+
+  // Serialize the probe batch.
+  IPLSerializedObjectSettings probe_so_settings{};
+  IPLSerializedObject batch_obj = nullptr;
+  err = iplSerializedObjectCreate(context, &probe_so_settings, &batch_obj);
+  assert(err == IPL_STATUS_SUCCESS);
+  iplProbeBatchSave(batch, batch_obj);
+
+  // Chuck it into the MapData.
+  PTA_uchar batch_data;
+  batch_data.resize(iplSerializedObjectGetSize(batch_obj));
+  memcpy(batch_data.p(), iplSerializedObjectGetData(batch_obj), batch_data.size());
+  _out_data->_steam_audio_probe_data = batch_data;
+  mapbuilder_cat.info()
+    << "IPL refl probe data size: " << batch_data.size() << " bytes\n";
+
+  //iplSceneSaveOBJ(scene, "steam_audio_scene.obj");
+
+  // Chuck it into the MapData.
+  PTA_uchar pverts, ptris, ptri_materials, pmaterials;
+  pverts.resize(verts.size() * sizeof(IPLVector3));
+  ptris.resize(tris.size() * sizeof(IPLTriangle));
+  pmaterials.resize(materials.size() * sizeof(IPLMaterial));
+  ptri_materials.resize(tri_materials.size() * sizeof(IPLint32));
+  memcpy(pverts.p(), (unsigned char *)verts.data(), pverts.size());
+  memcpy(ptris.p(), (unsigned char *)tris.data(), ptris.size());
+  memcpy(ptri_materials.p(), (unsigned char *)tri_materials.data(), ptri_materials.size());
+  memcpy(pmaterials.p(), (unsigned char *)materials.data(), pmaterials.size());
+  _out_data->_steam_audio_scene_data.verts = pverts;
+  _out_data->_steam_audio_scene_data.tris = ptris;
+  _out_data->_steam_audio_scene_data.tri_materials = ptri_materials;
+  _out_data->_steam_audio_scene_data.materials = pmaterials;
+  mapbuilder_cat.info()
+    << "IPL scene data size: " << pverts.size() + ptris.size() + ptri_materials.size() + pmaterials.size() << " bytes\n";
+
+  // Clean up our work.
+  iplProbeBatchRelease(&batch);
+  iplSerializedObjectRelease(&batch_obj);
+  iplStaticMeshRelease(&static_mesh);
+  iplSceneRelease(&scene);
+  iplEmbreeDeviceRelease(&embree_dev);
+  iplContextRelease(&context);
+
+  return EC_ok;
+#endif
 }
 
 /**

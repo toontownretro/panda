@@ -120,6 +120,7 @@ PUBLISHED:
     EC_input_invalid,
     EC_invalid_solid_side,
     EC_lightmap_failed,
+    EC_steam_audio_failed,
   };
 
   MapBuilder(const MapBuildOptions &options);
@@ -131,6 +132,8 @@ PUBLISHED:
   ErrorCode build_lighting();
 
   ErrorCode render_cube_maps();
+
+  ErrorCode bake_steam_audio();
 
   //void build_mesh_groups();
   void divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs);

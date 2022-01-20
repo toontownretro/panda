@@ -38,6 +38,14 @@ ConfigVariableInt fmod_audio_preload_threshold
           "will be streamed from disk.  Set this to -1 to preload "
           "every file."));
 
+#ifdef HAVE_STEAM_AUDIO
+ConfigVariableBool fmod_use_steam_audio
+("fmod-use-steam-audio", false,
+ PRC_DESC("If true, indicates that Steam Audio should be used for simulation "
+          "and spatialization of positional sounds.  This is only available "
+          "if Steam Audio support has been compiled in."));
+#endif
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be

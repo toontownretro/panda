@@ -59,7 +59,8 @@ public:
 
   PN_stdfloat length() const;
 
-  void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz);
+  void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                         PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f, PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
   void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
   void set_3d_min_distance(PN_stdfloat dist);
   PN_stdfloat get_3d_min_distance() const;

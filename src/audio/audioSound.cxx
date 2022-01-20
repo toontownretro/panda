@@ -34,7 +34,8 @@ AudioSound() {
 }
 
 void AudioSound::
-set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz) {
+set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
   // Intentionally blank.
 }
 
@@ -61,6 +62,17 @@ set_3d_max_distance(PN_stdfloat dist) {
 
 PN_stdfloat AudioSound::
 get_3d_max_distance() const {
+  // Intentionally blank.
+  return 0.0f;
+}
+
+void AudioSound::
+set_3d_distance_factor(PN_stdfloat dist) {
+  // Intentionally blank.
+}
+
+PN_stdfloat AudioSound::
+get_3d_distance_factor() const {
   // Intentionally blank.
   return 0.0f;
 }
@@ -145,6 +157,14 @@ remove_all_dsps() {
 int AudioSound::
 get_num_dsps() const {
   return 0;
+}
+
+/**
+ * Applies the set of specified Steam Audio simulation and spatialization
+ * properties to the sound.
+ */
+void AudioSound::
+apply_steam_audio_properties(const SteamAudioProperties &props) {
 }
 
 /**

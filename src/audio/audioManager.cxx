@@ -345,3 +345,46 @@ void AudioManager::
 write(std::ostream &out) const {
   out << (*this) << "\n";
 }
+
+/**
+ *
+ */
+void AudioManager::
+load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
+                       CPTA_uchar tri_materials, CPTA_uchar materials) {
+}
+
+/**
+ *
+ */
+void AudioManager::
+unload_steam_audio_scene() {
+}
+
+/**
+ *
+ */
+void AudioManager::
+load_steam_audio_reflection_probe_batch(CPTA_uchar data) {
+}
+
+/**
+ *
+ */
+void AudioManager::
+unload_steam_audio_reflection_probe_batch() {
+}
+
+/**
+ *
+ */
+void AudioManager::
+load_steam_audio_pathing_probe_batch(CPTA_uchar data) {
+}
+
+/**
+ *
+ */
+void AudioManager::
+unload_steam_audio_pathing_probe_batch() {
+}

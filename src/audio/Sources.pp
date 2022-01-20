@@ -30,7 +30,8 @@
     oscillatorDSP.h oscillatorDSP.I \
     paramEQDSP.h paramEQDSP.I \
     pitchShiftDSP.h pitchShiftDSP.I \
-    sfxReverbDSP.h sfxReverbDSP.I
+    sfxReverbDSP.h sfxReverbDSP.I \
+    steamAudioProperties.h steamAudioProperties.I
 
   #define COMPOSITE_SOURCES \
     config_audio.cxx \
@@ -54,7 +55,8 @@
     oscillatorDSP.cxx \
     paramEQDSP.cxx \
     pitchShiftDSP.cxx \
-    sfxReverbDSP.cxx
+    sfxReverbDSP.cxx \
+    steamAudioProperties.cxx
 
   #define INSTALL_HEADERS \
     config_audio.h \
@@ -78,7 +80,8 @@
     oscillatorDSP.h oscillatorDSP.I \
     paramEQDSP.h paramEQDSP.I \
     pitchShiftDSP.h pitchShiftDSP.I \
-    sfxReverbDSP.h sfxReverbDSP.I
+    sfxReverbDSP.h sfxReverbDSP.I \
+    steamAudioProperties.h steamAudioProperties.I
 
   #define IGATESCAN all
 #end lib_target

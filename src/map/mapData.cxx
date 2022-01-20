@@ -93,6 +93,13 @@ write_datagram(BamWriter *manager, Datagram &me) {
       probe._color[j].write_datagram(me);
     }
   }
+
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.verts);
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.tris);
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.tri_materials);
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.materials);
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_probe_data);
+  WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_pathing_probe_data);
 }
 
 /**
@@ -157,6 +164,20 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       probe._color[j].read_datagram(scan);
     }
   }
+
+  PTA_uchar scene_verts, scene_tris, scene_tri_materials, scene_materials, probe_data, pathing_data;
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, scene_verts);
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, scene_tris);
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, scene_tri_materials);
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, scene_materials);
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, probe_data);
+  READ_PTA(manager, scan, IPD_uchar::read_datagram, pathing_data);
+  _steam_audio_scene_data.verts = scene_verts;
+  _steam_audio_scene_data.tris = scene_tris;
+  _steam_audio_scene_data.tri_materials = scene_tri_materials;
+  _steam_audio_scene_data.materials = scene_materials;
+  _steam_audio_probe_data = probe_data;
+  _steam_audio_pathing_probe_data = pathing_data;
 }
 
 /**

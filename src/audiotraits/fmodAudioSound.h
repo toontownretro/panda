@@ -63,6 +63,8 @@
 #ifndef FMODAUDIOSOUND_H
 #define FMODAUDIOSOUND_H
 
+#define HAVE_STEAM_AUDIO
+
 #include "pandabase.h"
 
 #include "audioSound.h"
@@ -70,9 +72,14 @@
 #include "fmodAudioManager.h"
 #include "fmodSoundCache.h"
 #include "dsp.h"
+#include "steamAudioProperties.h"
 
 #include <fmod.hpp>
 #include <fmod_errors.h>
+
+#ifdef HAVE_STEAM_AUDIO
+#include <phonon.h>
+#endif
 
 class VirtualFile;
 
@@ -121,7 +128,8 @@ public:
   // Controls the position of this sound's emitter.  pos is a pointer to an
   // xyz triplet of the emitter's position.  vel is a pointer to an xyz
   // triplet of the emitter's velocity.
-  void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz);
+  void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                         PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f, PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
   void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
 
   void set_3d_min_distance(PN_stdfloat dist);
@@ -129,6 +137,9 @@ public:
 
   void set_3d_max_distance(PN_stdfloat dist);
   PN_stdfloat get_3d_max_distance() const;
+
+  void set_3d_distance_factor(PN_stdfloat factor);
+  PN_stdfloat get_3d_distance_factor() const;
 
   AudioSound::SoundStatus status() const;
 
@@ -147,6 +158,8 @@ public:
   virtual bool remove_dsp(DSP *dsp);
   virtual void remove_all_dsps();
   virtual int get_num_dsps() const;
+
+  virtual void apply_steam_audio_properties(const SteamAudioProperties &props) override;
 
   void update();
 
@@ -183,8 +196,15 @@ private:
   FMOD_VECTOR _location;
   FMOD_VECTOR _velocity;
 
+  // We also store the orientation of the audio source.
+  // Steam Audio supports directional sounds (sounds with both a position
+  // and orientation in 3D space).
+  FMOD_VECTOR _up;
+  FMOD_VECTOR _forward;
+
   PN_stdfloat _min_dist;
   PN_stdfloat _max_dist;
+  PN_stdfloat _dist_factor;
 
   void start_playing();
   void set_volume_on_channel();
@@ -207,6 +227,21 @@ private:
 
   std::string _finished_event;
 
+#ifdef HAVE_STEAM_AUDIO
+  // The Steam Audio source corresponding to this audio sound, used for
+  // simulating the source based on its position and orientation.
+  // Only created if the AudioSound is positional.
+  IPLSource _sa_source;
+  // Custom FMOD DSPs for applying Steam Audio effects, provided by the Steam
+  // Audio FMOD plugin.
+  // Methods relating to spatialization properties of the sound will be
+  // redirected from FMOD calls to properties on these DSPs.
+  // They are only created if the AudioSound is positional and the user has
+  // configured these Steam Audio features on the sound.
+  FMOD::DSP *_sa_spatial_dsp;
+  IPLSimulationInputs _sa_inputs;
+#endif
+
  public:
   static TypeHandle get_class_type() {
     return _type_handle;
@@ -225,6 +260,8 @@ private:
 
  private:
   static TypeHandle _type_handle;
+
+  friend class FMODAudioManager;
 };
 
 #include "fmodAudioSound.I"

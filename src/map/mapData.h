@@ -29,6 +29,14 @@
 #include "rayTraceTriangleMesh.h"
 #include "rayTraceScene.h"
 
+class SteamAudioSceneData {
+PUBLISHED:
+  CPTA_uchar verts;
+  CPTA_uchar tris;
+  CPTA_uchar tri_materials;
+  CPTA_uchar materials;
+};
+
 /**
  * PVS for a single area cluster.
  */
@@ -132,6 +140,10 @@ PUBLISHED:
   INLINE int get_num_ambient_probes() const;
   INLINE const MapAmbientProbe *get_ambient_probe(int n) const;
 
+  INLINE const SteamAudioSceneData &get_steam_audio_scene_data() const;
+  INLINE CPTA_uchar get_steam_audio_probe_data() const;
+  INLINE CPTA_uchar get_steam_audio_pathing_probe_data() const;
+
   RayTraceScene *get_trace_scene() const;
 
 private:
@@ -168,6 +180,10 @@ private:
 
   PT(RayTraceScene) _trace_scene;
   pvector<PT(RayTraceTriangleMesh)> _trace_meshes;
+
+  SteamAudioSceneData _steam_audio_scene_data;
+  CPTA_uchar _steam_audio_probe_data;
+  CPTA_uchar _steam_audio_pathing_probe_data;
 
   friend class MapLightingEffect;
   friend class MapBuilder;

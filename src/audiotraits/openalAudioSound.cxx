@@ -694,7 +694,8 @@ length() const {
  * we move coordinates from Panda to OpenAL and back.
  */
 void OpenALAudioSound::
-set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz) {
+set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
   ReMutexHolder holder(OpenALAudioManager::_lock);
   _location[0] = px;
   _location[1] = pz;

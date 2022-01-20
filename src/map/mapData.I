@@ -312,3 +312,27 @@ get_ambient_probe(int n) const {
   nassertr(n >= 0 && n < (int)_ambient_probes.size(), nullptr);
   return &_ambient_probes[n];
 }
+
+/**
+ *
+ */
+INLINE const SteamAudioSceneData &MapData::
+get_steam_audio_scene_data() const {
+  return _steam_audio_scene_data;
+}
+
+/**
+ *
+ */
+INLINE CPTA_uchar MapData::
+get_steam_audio_probe_data() const {
+  return _steam_audio_probe_data;
+}
+
+/**
+ *
+ */
+INLINE CPTA_uchar MapData::
+get_steam_audio_pathing_probe_data() const {
+  return _steam_audio_pathing_probe_data;
+}
