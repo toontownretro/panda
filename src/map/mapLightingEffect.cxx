@@ -167,15 +167,21 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       pos = net_transform->get_pos();
     }
 
+    int cluster = mdata->get_area_cluster_tree()->get_leaf_value_from_point(pos);
+
+    mdata->check_lighting_pvs();
+
     // Locate closest cube map texture.
     Texture *closest = nullptr;
     PN_stdfloat closest_dist = 1e24;
-    for (size_t i = 0; i < mdata->get_num_cube_maps(); i++) {
-      const MapCubeMap *mcm = mdata->get_cube_map(i);
-      PN_stdfloat dist = (pos - mcm->_pos).length_squared();
-      if (dist < closest_dist) {
-        closest = mcm->_texture;
-        closest_dist = dist;
+    if (cluster >= 0) {
+      for (size_t i = 0; i < mdata->_cube_map_pvs[cluster].size(); i++) {
+        const MapCubeMap *mcm = mdata->get_cube_map(mdata->_cube_map_pvs[cluster][i]);
+        PN_stdfloat dist = (pos - mcm->_pos).length_squared();
+        if (dist < closest_dist) {
+          closest = mcm->_texture;
+          closest_dist = dist;
+        }
       }
     }
 
@@ -184,17 +190,19 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
     // Located closest ambient probe.
     closest_dist = 1e24;
     const MapAmbientProbe *closest_probe = nullptr;
-    for (size_t i = 0; i < mdata->get_num_ambient_probes(); i++) {
-      const MapAmbientProbe *map = mdata->get_ambient_probe(i);
-      PN_stdfloat dist = (pos - map->_pos).length_squared();
-      if (dist < closest_dist) {
-        // Check that we can actually trace to the probe.
-        RayTraceHitResult ret;
-        ret = rt_scene->trace_line(pos, map->_pos, 3);
-        if (!ret.hit) {
-          // Probe is visible from sample point, we can use it.
-          closest_probe = map;
-          closest_dist = dist;
+    if (cluster >= 0) {
+      for (size_t i = 0; i < mdata->_probe_pvs[cluster].size(); i++) {
+        const MapAmbientProbe *map = mdata->get_ambient_probe(mdata->_probe_pvs[cluster][i]);
+        PN_stdfloat dist = (pos - map->_pos).length_squared();
+        if (dist < closest_dist) {
+          // Check that we can actually trace to the probe.
+          RayTraceHitResult ret;
+          ret = rt_scene->trace_line(pos, map->_pos, 3);
+          if (!ret.hit) {
+            // Probe is visible from sample point, we can use it.
+            closest_probe = map;
+            closest_dist = dist;
+          }
         }
       }
     }
@@ -231,17 +239,13 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       }
     }
 
-    pvector<NodePath> sorted_lights;
-    sorted_lights.reserve(mdata->get_num_lights());
-    for (int i = 0; i < mdata->get_num_lights(); i++) {
-      if (mdata->get_light(i).node()->is_of_type(DirectionalLight::get_class_type())) {
-        continue;
-      }
-      sorted_lights.push_back(mdata->get_light(i));
+    vector_int sorted_lights;
+    if (cluster >= 0) {
+      sorted_lights = mdata->_light_pvs[cluster];
+      std::sort(sorted_lights.begin(), sorted_lights.end(), [pos, mdata](const int &a, const int &b) -> bool {
+        return (pos - mdata->_lights[a].get_pos()).length_squared() < (pos - mdata->_lights[b].get_pos()).length_squared();
+      });
     }
-    std::sort(sorted_lights.begin(), sorted_lights.end(), [pos](const NodePath &a, const NodePath &b) -> bool {
-      return (pos - a.get_pos()).length_squared() < (pos - b.get_pos()).length_squared();
-    });
 
     CPT(RenderAttrib) lattr = LightAttrib::make();
     int num_added_lights = 0;
@@ -257,7 +261,7 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
       }
     }
     for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {
-      lattr = DCAST(LightAttrib, lattr)->add_on_light(sorted_lights[i]);
+      lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_lights[sorted_lights[i]]);
       num_added_lights++;
     }
     state = state->set_attrib(lattr);

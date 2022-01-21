@@ -283,3 +283,60 @@ build_trace_scene() {
     }
   }
 }
+
+/**
+ *
+ */
+void MapData::
+check_lighting_pvs() {
+  if (_built_light_pvs) {
+    return;
+  }
+
+  _light_pvs.resize(_cluster_pvs.size());
+  _probe_pvs.resize(_cluster_pvs.size());
+  _cube_map_pvs.resize(_cluster_pvs.size());
+
+  for (size_t i = 0; i < _lights.size(); ++i) {
+    if (_lights[i].node()->is_of_type(DirectionalLight::get_class_type())) {
+      continue;
+    }
+
+    int cluster = _cluster_tree->get_leaf_value_from_point(_lights[i].get_net_transform()->get_pos());
+    if (cluster < 0) {
+      continue;
+    }
+    const AreaClusterPVS *pvs = &_cluster_pvs[cluster];
+    for (size_t j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+      _light_pvs[pvs->get_visible_cluster(j)].push_back((int)i);
+    }
+  }
+
+  for (size_t i = 0; i < _ambient_probes.size(); ++i) {
+    const MapAmbientProbe *probe = &_ambient_probes[i];
+
+    int cluster = _cluster_tree->get_leaf_value_from_point(probe->_pos);
+    if (cluster < 0) {
+      continue;
+    }
+    const AreaClusterPVS *pvs = &_cluster_pvs[cluster];
+    for (size_t j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+      _probe_pvs[pvs->get_visible_cluster(j)].push_back((int)i);
+    }
+  }
+
+  for (size_t i = 0; i < _cube_maps.size(); ++i) {
+    const MapCubeMap *cm = &_cube_maps[i];
+
+    int cluster = _cluster_tree->get_leaf_value_from_point(cm->_pos);
+    if (cluster < 0) {
+      continue;
+    }
+    const AreaClusterPVS *pvs = &_cluster_pvs[cluster];
+    for (size_t j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+      _cube_map_pvs[pvs->get_visible_cluster(j)].push_back((int)i);
+    }
+  }
+
+  _built_light_pvs = true;
+}

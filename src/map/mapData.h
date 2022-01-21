@@ -146,6 +146,8 @@ PUBLISHED:
 
   RayTraceScene *get_trace_scene() const;
 
+  void check_lighting_pvs();
+
 private:
   void build_trace_scene();
 
@@ -177,6 +179,13 @@ private:
   pvector<NodePath> _lights;
   NodePath _dir_light;
   LVector3 _dir_light_dir;
+
+  // For each vis cluster, vector of indices into _lights for lights that are
+  // in that cluster's PVS.  Same for ambient probes and cube maps.
+  bool _built_light_pvs = false;
+  pvector<vector_int> _light_pvs;
+  pvector<vector_int> _probe_pvs;
+  pvector<vector_int> _cube_map_pvs;
 
   PT(RayTraceScene) _trace_scene;
   pvector<PT(RayTraceTriangleMesh)> _trace_meshes;
