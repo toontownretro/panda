@@ -24,6 +24,9 @@ MapBuildOptions() {
   _vis_show_solid_voxels = false;
   _vis_show_areas = false;
   _vis_show_portals = false;
+  _do_steam_audio = true;
+  _do_steam_audio_pathing = true;
+  _do_steam_audio_reflections = true;
   _vis_voxel_size.set(16, 16, 16);
   _vis_max_cell_size.set(1e+9, 1e+9, 1e+9);
   _vis_tile_size.set(128, 128, 128);
@@ -262,4 +265,52 @@ set_mesh_group_size(PN_stdfloat size) {
 INLINE PN_stdfloat MapBuildOptions::
 get_mesh_group_size() const {
   return _mesh_group_size;
+}
+
+/**
+ * Specifies if Steam Audio data should be baked.
+ */
+INLINE void MapBuildOptions::
+set_steam_audio(bool flag) {
+  _do_steam_audio = flag;
+}
+
+/**
+ *
+ */
+INLINE bool MapBuildOptions::
+get_steam_audio() const {
+  return _do_steam_audio;
+}
+
+/**
+ * Specifies if Steam Audio reflections data should be baked.
+ */
+INLINE void MapBuildOptions::
+set_steam_audio_reflections(bool flag) {
+  _do_steam_audio_reflections = flag;
+}
+
+/**
+ *
+ */
+INLINE bool MapBuildOptions::
+get_steam_audio_reflections() const {
+  return _do_steam_audio_reflections;
+}
+
+/**
+ * Specifies if Steam Audio pathing data should be baked.
+ */
+INLINE void MapBuildOptions::
+set_steam_audio_pathing(bool flag) {
+  _do_steam_audio_pathing = flag;
+}
+
+/**
+ *
+ */
+INLINE bool MapBuildOptions::
+get_steam_audio_pathing() const {
+  return _do_steam_audio_pathing;
 }

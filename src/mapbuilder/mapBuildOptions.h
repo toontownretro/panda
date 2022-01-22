@@ -67,6 +67,15 @@ PUBLISHED:
   INLINE void set_mesh_group_size(PN_stdfloat size);
   INLINE PN_stdfloat get_mesh_group_size() const;
 
+  INLINE void set_steam_audio(bool flag);
+  INLINE bool get_steam_audio() const;
+
+  INLINE void set_steam_audio_reflections(bool flag);
+  INLINE bool get_steam_audio_reflections() const;
+
+  INLINE void set_steam_audio_pathing(bool flag);
+  INLINE bool get_steam_audio_pathing() const;
+
 public:
   Filename _input_filename;
   Filename _output_filename;
@@ -75,6 +84,10 @@ public:
   bool _do_vis; // Compute potentially visible set.
   bool _do_light; // Compute lighting information.
   int _num_threads;
+
+  bool _do_steam_audio;
+  bool _do_steam_audio_reflections;
+  bool _do_steam_audio_pathing;
 
   bool _vis_show_solid_voxels;
   bool _vis_show_areas;

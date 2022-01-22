@@ -578,10 +578,13 @@ build() {
     NodePath(_out_node->get_child(i)).flatten_strong();
   }
 
-  ec = bake_steam_audio();
-  if (ec != EC_ok) {
-    return ec;
+  if (_options._do_steam_audio) {
+    ec = bake_steam_audio();
+    if (ec != EC_ok) {
+      return ec;
+    }
   }
+
 
   if (mapbuilder_cat.is_debug()) {
     mapbuilder_cat.debug()
@@ -629,9 +632,6 @@ bake_steam_audio() {
 #ifndef HAVE_STEAM_AUDIO
   return EC_ok;
 #else
-
-  return EC_ok;
-
 
   IPLContext context = nullptr;
   IPLContextSettings ctx_settings{};
@@ -863,95 +863,104 @@ bake_steam_audio() {
   iplStaticMeshAdd(static_mesh, scene);
   iplSceneCommit(scene);
 
-  IPLProbeBatch batch = nullptr;
-  iplProbeBatchCreate(context, &batch);
+  if (_options._do_steam_audio_pathing || _options._do_steam_audio_reflections) {
+    IPLProbeBatch batch = nullptr;
+    iplProbeBatchCreate(context, &batch);
 
-  int num_probes = 0;
-  // Start at the lowest corner of the level bounds and work our way to the top.
-  for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 256.0f) {
-    for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 256.0f) {
-      for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 256.0f) {
-        LPoint3 pos(x, y, z);
-        if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
-          // Probe is not in valid cluster.  Skip it.
-          continue;
+    int num_probes = 0;
+    // Start at the lowest corner of the level bounds and work our way to the top.
+    for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 256.0f) {
+      for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 256.0f) {
+        for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 256.0f) {
+          LPoint3 pos(x, y, z);
+          if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
+            // Probe is not in valid cluster.  Skip it.
+            continue;
+          }
+
+          IPLSphere sphere;
+          sphere.center.x = pos[0] * HAMMER_UNITS_TO_METERS;
+          sphere.center.y = pos[2] * HAMMER_UNITS_TO_METERS;
+          sphere.center.z = -pos[1] * HAMMER_UNITS_TO_METERS;
+          sphere.radius = 10.0f;
+          iplProbeBatchAddProbe(batch, sphere);
+          num_probes++;
         }
-
-        IPLSphere sphere;
-        sphere.center.x = pos[0] * HAMMER_UNITS_TO_METERS;
-        sphere.center.y = pos[2] * HAMMER_UNITS_TO_METERS;
-        sphere.center.z = -pos[1] * HAMMER_UNITS_TO_METERS;
-        sphere.radius = 10.0f;
-        iplProbeBatchAddProbe(batch, sphere);
-        num_probes++;
       }
     }
+
+    mapbuilder_cat.info()
+      << num_probes << " audio probes\n";
+
+    iplProbeBatchCommit(batch);
+
+    if (_options._do_steam_audio_reflections) {
+      mapbuilder_cat.info()
+        << "Baking listener-centric reverb\n";
+
+      IPLBakedDataIdentifier identifier{};
+      identifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+      identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+      IPLReflectionsBakeParams bake_params{};
+      bake_params.scene = scene;
+      bake_params.sceneType = IPL_SCENETYPE_EMBREE;
+      bake_params.identifier = identifier;
+      int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION|IPL_REFLECTIONSBAKEFLAGS_BAKEPARAMETRIC;
+      bake_params.bakeFlags = (IPLReflectionsBakeFlags)flags;
+      bake_params.probeBatch = batch;
+      bake_params.numRays = 32768;
+      bake_params.numDiffuseSamples = 1024;
+      bake_params.numBounces = 64;
+      bake_params.simulatedDuration = 1.0f;
+      bake_params.savedDuration = 1.0f;
+      bake_params.order = 2;
+      bake_params.numThreads = _options.get_num_threads();
+      bake_params.irradianceMinDistance = 1.0f;
+      bake_params.rayBatchSize = 1;
+      bake_params.bakeBatchSize = 1;
+      bake_params.openCLDevice = nullptr;
+      bake_params.radeonRaysDevice = nullptr;
+      iplReflectionsBakerBake(context, &bake_params, nullptr, nullptr);
+    }
+
+    if (_options._do_steam_audio_pathing) {
+      mapbuilder_cat.info()
+        << "Baking audio pathing\n";
+
+      IPLBakedDataIdentifier identifier{};
+      identifier.type = IPL_BAKEDDATATYPE_PATHING;
+      identifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+      IPLPathBakeParams path_params{};
+      path_params.scene = scene;
+      path_params.identifier = identifier;
+      path_params.numThreads = _options.get_num_threads();
+      path_params.pathRange = 100.0f;
+      path_params.visRange = 50.0f;
+      path_params.probeBatch = batch;
+      path_params.numSamples = 32;
+      path_params.radius = 2.0f;
+      path_params.threshold = 0.05f;
+      iplPathBakerBake(context, &path_params, nullptr, nullptr);
+    }
+
+    // Serialize the probe batch.
+    IPLSerializedObjectSettings probe_so_settings{};
+    IPLSerializedObject batch_obj = nullptr;
+    err = iplSerializedObjectCreate(context, &probe_so_settings, &batch_obj);
+    assert(err == IPL_STATUS_SUCCESS);
+    iplProbeBatchSave(batch, batch_obj);
+
+    // Chuck it into the MapData.
+    PTA_uchar batch_data;
+    batch_data.resize(iplSerializedObjectGetSize(batch_obj));
+    memcpy(batch_data.p(), iplSerializedObjectGetData(batch_obj), batch_data.size());
+    _out_data->_steam_audio_probe_data = batch_data;
+    mapbuilder_cat.info()
+      << "IPL refl probe data size: " << batch_data.size() << " bytes\n";
+
+    iplProbeBatchRelease(&batch);
+    iplSerializedObjectRelease(&batch_obj);
   }
-
-  mapbuilder_cat.info()
-    << num_probes << " audio probes\n";
-
-  iplProbeBatchCommit(batch);
-
-  mapbuilder_cat.info()
-    << "Baking listener-centric reverb\n";
-
-  IPLBakedDataIdentifier identifier{};
-  identifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
-  identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
-  IPLReflectionsBakeParams bake_params{};
-  bake_params.scene = scene;
-  bake_params.sceneType = IPL_SCENETYPE_EMBREE;
-  bake_params.identifier = identifier;
-  int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION|IPL_REFLECTIONSBAKEFLAGS_BAKEPARAMETRIC;
-  bake_params.bakeFlags = (IPLReflectionsBakeFlags)flags;
-  bake_params.probeBatch = batch;
-  bake_params.numRays = 32768;
-  bake_params.numDiffuseSamples = 1024;
-  bake_params.numBounces = 64;
-  bake_params.simulatedDuration = 1.0f;
-  bake_params.savedDuration = 1.0f;
-  bake_params.order = 2;
-  bake_params.numThreads = _options.get_num_threads();
-  bake_params.irradianceMinDistance = 1.0f;
-  bake_params.rayBatchSize = 1;
-  bake_params.bakeBatchSize = 1;
-  bake_params.openCLDevice = nullptr;
-  bake_params.radeonRaysDevice = nullptr;
-  iplReflectionsBakerBake(context, &bake_params, nullptr, nullptr);
-
-  mapbuilder_cat.info()
-    << "Baking audio pathing\n";
-  identifier.type = IPL_BAKEDDATATYPE_PATHING;
-  identifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
-  IPLPathBakeParams path_params{};
-  path_params.scene = scene;
-  path_params.identifier = identifier;
-  path_params.numThreads = _options.get_num_threads();
-  path_params.pathRange = 100.0f;
-  path_params.visRange = 50.0f;
-  path_params.probeBatch = batch;
-  path_params.numSamples = 32;
-  path_params.radius = 2.0f;
-  path_params.threshold = 0.05f;
-  iplPathBakerBake(context, &path_params, nullptr, nullptr);
-
-  // Serialize the probe batch.
-  IPLSerializedObjectSettings probe_so_settings{};
-  IPLSerializedObject batch_obj = nullptr;
-  err = iplSerializedObjectCreate(context, &probe_so_settings, &batch_obj);
-  assert(err == IPL_STATUS_SUCCESS);
-  iplProbeBatchSave(batch, batch_obj);
-
-  // Chuck it into the MapData.
-  PTA_uchar batch_data;
-  batch_data.resize(iplSerializedObjectGetSize(batch_obj));
-  memcpy(batch_data.p(), iplSerializedObjectGetData(batch_obj), batch_data.size());
-  _out_data->_steam_audio_probe_data = batch_data;
-  mapbuilder_cat.info()
-    << "IPL refl probe data size: " << batch_data.size() << " bytes\n";
-
-  //iplSceneSaveOBJ(scene, "steam_audio_scene.obj");
 
   // Chuck it into the MapData.
   PTA_uchar pverts, ptris, ptri_materials, pmaterials;
@@ -971,8 +980,6 @@ bake_steam_audio() {
     << "IPL scene data size: " << pverts.size() + ptris.size() + ptri_materials.size() + pmaterials.size() << " bytes\n";
 
   // Clean up our work.
-  iplProbeBatchRelease(&batch);
-  iplSerializedObjectRelease(&batch_obj);
   iplStaticMeshRelease(&static_mesh);
   iplSceneRelease(&scene);
   iplEmbreeDeviceRelease(&embree_dev);
