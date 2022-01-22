@@ -55,6 +55,9 @@ PUBLISHED:
   void level_init(int num_clusters);
   void level_shutdown();
 
+  void set_culling_enabled(bool flag);
+  bool get_culling_enabled() const;
+
 public:
   virtual void child_added(PandaNode *node) override;
   virtual void child_removed(PandaNode *node) override;
@@ -95,6 +98,8 @@ private:
 
   int _last_visit_frame;
   int _trav_counter;
+
+  bool _enabled;
 };
 
 #include "dynamicVisNode.I"

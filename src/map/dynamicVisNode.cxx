@@ -31,7 +31,8 @@ DynamicVisNode::
 DynamicVisNode(const std::string &name) :
   PandaNode(name),
   _trav_counter(-1),
-  _last_visit_frame(-1)
+  _last_visit_frame(-1),
+  _enabled(true)
 {
   // Give it infinite bounds to optimize recomputing the node's bounding
   // volume when we have a bunch of children.
@@ -40,6 +41,22 @@ DynamicVisNode(const std::string &name) :
   // visited during the Cull traversal.  The cull callback will traverse
   // the children in buckets of visgroups in the PVS.
   set_cull_callback();
+}
+
+/**
+ *
+ */
+void DynamicVisNode::
+set_culling_enabled(bool flag) {
+  _enabled = flag;
+}
+
+/**
+ *
+ */
+bool DynamicVisNode::
+get_culling_enabled() const {
+  return _enabled;
 }
 
 /**
@@ -147,8 +164,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
 
-  if (mtrav->_data == nullptr || mtrav->_view_cluster < 0) {
-    // No map or invalid view cluster.
+  if (!_enabled || mtrav->_data == nullptr || mtrav->_view_cluster < 0) {
+    // No map, invalid view cluster, or culling disabled.
     return true;
   }
 
