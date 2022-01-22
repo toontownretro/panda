@@ -300,7 +300,6 @@ build() {
         matname = downcase(matname);
         if (matname.find("toolshint") != std::string::npos) {
           hint = true;
-          skip = true;
 
         } else if (matname.find("toolsskip") != std::string::npos ||
                    matname.find("toolsclip") != std::string::npos ||
