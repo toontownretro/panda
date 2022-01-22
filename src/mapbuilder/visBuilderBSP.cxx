@@ -76,7 +76,7 @@ clip(const LPlane &plane, PT(BSPSolid) &front, PT(BSPSolid) &back) const {
   }
 
   // Close off the clipped solids with the clipping plane.
-  if (!front_planes.empty()) {
+  if (front_planes.size() >= 2u) {
     front_planes.push_back(-plane);
 
     front = new BSPSolid;
@@ -100,7 +100,7 @@ clip(const LPlane &plane, PT(BSPSolid) &front, PT(BSPSolid) &back) const {
     }
   }
 
-  if (!back_planes.empty()) {
+  if (back_planes.size() >= 2u) {
     back_planes.push_back(plane);
 
     back = new BSPSolid;
