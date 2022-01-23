@@ -884,24 +884,90 @@ bake_steam_audio() {
     iplProbeBatchCreate(context, &batch);
 
     int num_probes = 0;
-    // Start at the lowest corner of the level bounds and work our way to the top.
-    for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 256.0f) {
-      for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 256.0f) {
-        for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 256.0f) {
-          LPoint3 pos(x, y, z);
-          if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
-            // Probe is not in valid cluster.  Skip it.
-            continue;
-          }
 
-          IPLSphere sphere;
-          sphere.center.x = pos[0] * HAMMER_UNITS_TO_METERS;
-          sphere.center.y = pos[2] * HAMMER_UNITS_TO_METERS;
-          sphere.center.z = -pos[1] * HAMMER_UNITS_TO_METERS;
-          sphere.radius = 10.0f;
-          iplProbeBatchAddProbe(batch, sphere);
-          num_probes++;
+    if (_options._do_vis != MapBuildOptions::VT_bsp) {
+      // Start at the lowest corner of the level bounds and work our way to the top.
+      for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 256.0f) {
+        for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 256.0f) {
+          for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 256.0f) {
+            LPoint3 pos(x, y, z);
+            if (_out_data->get_area_cluster_tree()->get_leaf_value_from_point(pos) == -1) {
+              // Probe is not in valid cluster.  Skip it.
+              continue;
+            }
+
+            IPLSphere sphere;
+            sphere.center.x = pos[0] * HAMMER_UNITS_TO_METERS;
+            sphere.center.y = pos[2] * HAMMER_UNITS_TO_METERS;
+            sphere.center.z = -pos[1] * HAMMER_UNITS_TO_METERS;
+            sphere.radius = 10.0f;
+            iplProbeBatchAddProbe(batch, sphere);
+            num_probes++;
+          }
         }
+      }
+    } else {
+      // If we computed BSP visibility, we can place a probe at the center of
+      // each leaf.
+
+      mapbuilder_cat.info()
+        << "Generating probes from BSP tree...\n";
+
+      const BSPTree *tree = (const BSPTree *)_out_data->get_area_cluster_tree();
+
+      for (size_t i = 0; i < tree->_leaves.size(); ++i) {
+        if (tree->_leaves[i].solid || tree->_leaves[i].value < 0) {
+          // Don't place a probe in solid leaves.
+          continue;
+        }
+
+        // Gather the planes of all parent nodes of the leaf.
+        pvector<LPlane> boundary_planes;
+        pvector<Winding> boundary_windings;
+        int node_idx = tree->_leaf_parents[i];
+        int child = ~((int)i);
+        while (node_idx >= 0) {
+          LPlane plane = tree->_nodes[node_idx].plane;
+          if (tree->_nodes[node_idx].children[BACK_CHILD] == child) {
+            // Back side.
+            plane.flip();
+          }
+          boundary_planes.push_back(plane);
+          boundary_windings.push_back(Winding(plane));
+          child = node_idx;
+          node_idx = tree->_node_parents[node_idx];
+        }
+
+        // Intersect all planes to get windings for the leaf.
+        for (size_t j = 0; j < boundary_windings.size(); ++j) {
+          for (size_t k = 0; k < boundary_planes.size(); ++k) {
+            if (k == j) {
+              continue;
+            }
+            // Flip the plane because we want to keep the back-side.
+            boundary_windings[j] = boundary_windings[j].chop(boundary_planes[k]);
+          }
+        }
+
+        // Average all winding vertex positions to get leaf center.
+        LPoint3 leaf_center(0.0f);
+        int total_points = 0;
+        for (size_t j = 0; j < boundary_windings.size(); ++j) {
+          for (int k = 0; k < boundary_windings[j].get_num_points(); ++k) {
+            leaf_center += boundary_windings[j].get_point(k);
+            total_points++;
+          }
+        }
+        leaf_center /= total_points;
+
+        // Place probe here.
+        IPLSphere sphere;
+        sphere.center.x = leaf_center[0] * HAMMER_UNITS_TO_METERS;
+        sphere.center.y = leaf_center[2] * HAMMER_UNITS_TO_METERS;
+        sphere.center.z = -leaf_center[1] * HAMMER_UNITS_TO_METERS;
+        sphere.radius = 10.0f;
+        iplProbeBatchAddProbe(batch, sphere);
+        num_probes++;
       }
     }
 
