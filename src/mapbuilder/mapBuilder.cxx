@@ -260,92 +260,107 @@ build() {
   //
   // VISIBILITY
   //
-  if (_options.get_vis()) {
-    VisBuilder vis(this);
-    if (!vis.build()) {
-      return EC_unknown_error;
+  switch (_options.get_vis()) {
+  case MapBuildOptions::VT_voxel:
+    {
+      VisBuilder vis(this);
+      if (!vis.build()) {
+        return EC_unknown_error;
+      }
     }
+    break;
+
+  case MapBuildOptions::VT_bsp:
+    {
+      VisBuilderBSP vis;
+      vis._builder = this;
+      vis._hint_split = false;
+
+      // Generate structural BSP solids.  This is the input to the solid-leaf
+      // BSP tree.
+      for (MapSolid *solid : _source_map->_world->_solids) {
+
+        bool structural = true;
+        for (MapSide *side : solid->_sides) {
+          if (side->_displacement != nullptr) {
+            structural = false;
+            break;
+          }
+        }
+
+        if (!structural) {
+          continue;
+        }
+
+        PT(BSPSolid) bsp_solid = new BSPSolid;
+        bool has_skip = false;
+        bool has_hint = false;
+        for (size_t i = 0; i < solid->_sides.size(); ++i) {
+          MapSide *side = solid->_sides[i];
+
+          bool hint = false;
+          bool skip = false;
+          std::string matname = side->_material_filename.get_basename_wo_extension();
+          matname = downcase(matname);
+          if (matname.find("toolshint") != std::string::npos) {
+            hint = true;
+
+          } else if (matname.find("toolsskip") != std::string::npos ||
+                    matname.find("toolsclip") != std::string::npos ||
+                    matname.find("toolsplayerclip") != std::string::npos ||
+                    matname.find("toolsareaportal") != std::string::npos ||
+                    matname.find("toolsblock_los") != std::string::npos ||
+                    matname.find("toolsblockbullets") != std::string::npos ||
+                    matname.find("toolsblocklight") != std::string::npos ||
+                    matname.find("toolsoccluder") != std::string::npos ||
+                    matname.find("toolstrigger") != std::string::npos) {
+            skip = true;
+          }
+
+          if (skip) {
+            has_skip = true;
+          }
+          if (hint) {
+            has_hint = true;
+          }
+
+          Winding w(solid->_sides[i]->_plane);
+          for (size_t j = 0; j < solid->_sides.size(); ++j) {
+            if (j == i) {
+              continue;
+            }
+            w = w.chop(-solid->_sides[j]->_plane);
+          }
+          PT(BSPFace) bsp_face = new BSPFace;
+          bsp_face->_winding = w;
+          bsp_face->_priority = 0;
+          bsp_face->_hint = hint;
+          bsp_face->_contents = 0;
+          bsp_solid->_faces.push_back(bsp_face);
+          if (!skip) {
+            vis._input_faces.push_back(bsp_face);
+          }
+        }
+        bsp_solid->_opaque = !has_skip && !has_hint;
+        if (bsp_solid->_opaque) {
+          vis._input_solids.push_back(bsp_solid);
+        }
+      }
+
+      if (!vis.bake()) {
+        return EC_unknown_error;
+      }
+    }
+    break;
+
+  case MapBuildOptions::VT_none:
+  default:
+    break;
   }
 
+#if 0
   {
-    VisBuilderBSP vis;
-    vis._builder = this;
-    vis._hint_split = false;
 
-    // Generate structural BSP solids.  This is the input to the solid-leaf
-    // BSP tree.
-    for (MapSolid *solid : _source_map->_world->_solids) {
-
-      bool structural = true;
-      for (MapSide *side : solid->_sides) {
-        if (side->_displacement != nullptr) {
-          structural = false;
-          break;
-        }
-      }
-
-      if (!structural) {
-        continue;
-      }
-
-      PT(BSPSolid) bsp_solid = new BSPSolid;
-      bool has_skip = false;
-      bool has_hint = false;
-      for (size_t i = 0; i < solid->_sides.size(); ++i) {
-        MapSide *side = solid->_sides[i];
-
-        bool hint = false;
-        bool skip = false;
-        std::string matname = side->_material_filename.get_basename_wo_extension();
-        matname = downcase(matname);
-        if (matname.find("toolshint") != std::string::npos) {
-          hint = true;
-
-        } else if (matname.find("toolsskip") != std::string::npos ||
-                   matname.find("toolsclip") != std::string::npos ||
-                   matname.find("toolsplayerclip") != std::string::npos ||
-                   matname.find("toolsareaportal") != std::string::npos ||
-                   matname.find("toolsblock_los") != std::string::npos ||
-                   matname.find("toolsblockbullets") != std::string::npos ||
-                   matname.find("toolsblocklight") != std::string::npos ||
-                   matname.find("toolsoccluder") != std::string::npos ||
-                   matname.find("toolstrigger") != std::string::npos) {
-          skip = true;
-        }
-
-        if (skip) {
-          has_skip = true;
-        }
-        if (hint) {
-          has_hint = true;
-        }
-
-        Winding w(solid->_sides[i]->_plane);
-        for (size_t j = 0; j < solid->_sides.size(); ++j) {
-          if (j == i) {
-            continue;
-          }
-          w = w.chop(-solid->_sides[j]->_plane);
-        }
-        PT(BSPFace) bsp_face = new BSPFace;
-        bsp_face->_winding = w;
-        bsp_face->_priority = 0;
-        bsp_face->_hint = hint;
-        bsp_face->_contents = 0;
-        bsp_solid->_faces.push_back(bsp_face);
-        if (!skip) {
-          vis._input_faces.push_back(bsp_face);
-        }
-      }
-      bsp_solid->_opaque = !has_skip && !has_hint;
-      if (bsp_solid->_opaque) {
-        vis._input_solids.push_back(bsp_solid);
-      }
-    }
-
-    if (!vis.bake()) {
-      return EC_unknown_error;
-    }
 
     // Put leaf bounds in there
     LineSegs segs("leaves");
@@ -451,6 +466,7 @@ build() {
     //_out_top->add_child(portal_lines);
 
   }
+#endif
 
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
   arr->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);

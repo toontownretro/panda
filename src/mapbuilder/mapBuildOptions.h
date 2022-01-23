@@ -23,6 +23,21 @@
  */
 class EXPCL_PANDA_MAPBUILDER MapBuildOptions {
 PUBLISHED:
+  enum VisType {
+    // Don't pre-compute any visibility information or spatial partition.
+    VT_none,
+    // Compute visibility information by voxelizing the level geometry and
+    // flood-filling neighboring empty voxels to create visibility cells.
+    // Slower, less accurate, and uses more memory than VT_bsp.
+    // Still experimental.
+    VT_voxel,
+    // Compute visibility information by constructing a solid-leaf BSP tree
+    // from brush/solid geometry in the level.  Empty leaf nodes are convex
+    // visibility cells.  This is the tried-and-true method going back to the
+    // Quake days.
+    VT_bsp,
+  };
+
   INLINE MapBuildOptions();
 
   INLINE void set_input_filename(const Filename &filename);
@@ -34,11 +49,8 @@ PUBLISHED:
   INLINE void set_csg(bool flag);
   INLINE bool get_csg() const;
 
-  INLINE void set_partition(bool flag);
-  INLINE bool get_partition() const;
-
-  INLINE void set_vis(bool flag);
-  INLINE bool get_vis() const;
+  INLINE void set_vis(VisType type);
+  INLINE VisType get_vis() const;
 
   INLINE void set_light(bool flag);
   INLINE bool get_light() const;
@@ -80,8 +92,7 @@ public:
   Filename _input_filename;
   Filename _output_filename;
   bool _do_csg; // Perform CSG on intersecting solids.
-  bool _do_partition; // Compute spatial partition structure.
-  bool _do_vis; // Compute potentially visible set.
+  VisType _do_vis; // Compute visibility information and spatial partition.
   bool _do_light; // Compute lighting information.
   int _num_threads;
 

@@ -17,8 +17,7 @@
 INLINE MapBuildOptions::
 MapBuildOptions() {
   _do_csg = true;
-  _do_partition = true;
-  _do_vis = true;
+  _do_vis = VT_bsp;
   _do_light = true;
   _num_threads = 0;
   _vis_show_solid_voxels = false;
@@ -82,34 +81,18 @@ get_csg() const {
 }
 
 /**
- * Sets whether or not to build the spatial partition structure.
+ * Sets which algorithm to use to pre-compute visibility information into the
+ * level.
  */
 INLINE void MapBuildOptions::
-set_partition(bool flag) {
-  _do_partition = flag;
+set_vis(VisType type) {
+  _do_vis = type;
 }
 
 /**
- * Returns true if the spatial partition structure should be built.
+ * Returns the algorithm to be used to pre-compute visiblity information.
  */
-INLINE bool MapBuildOptions::
-get_partition() const {
-  return _do_partition;
-}
-
-/**
- * Sets whether or not to build the potentially visible set (PVS).  Requires
- * the partition to be enabled.
- */
-INLINE void MapBuildOptions::
-set_vis(bool flag) {
-  _do_vis = flag;
-}
-
-/**
- * Returns true if the potentially visible set (PVS) should be built.
- */
-INLINE bool MapBuildOptions::
+INLINE MapBuildOptions::VisType MapBuildOptions::
 get_vis() const {
   return _do_vis;
 }
