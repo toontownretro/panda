@@ -225,8 +225,6 @@ make_palette() {
         lmgeom.palette_offset = offset;
         // Record the geom on the palette itself.
         _pages[j].geoms.push_back(i);
-        lightbuilder_cat.info()
-          << "Added geom " << i << " into lightmap palette " << j << "\n";
       }
     }
 
@@ -246,8 +244,6 @@ make_palette() {
         lmgeom.palette_offset = offset;
         // Record the geom on the palette itself.
         page.geoms.push_back(i);
-        lightbuilder_cat.info()
-          << "Added geom " << i << " into new lightmap palette " << page.index << "\n";
 
       } else {
         // The geom couldn't even fit into a new palette.  This is a problem.
@@ -259,6 +255,9 @@ make_palette() {
       _pages.push_back(page);
     }
   }
+
+  lightbuilder_cat.info()
+    << "Added " << _geoms.size() << " geoms into " << _pages.size() << " palettes\n";
 
   // Now that we've created a set of palettes, determine the width and height
   // to use for the array texture of palettes.  We have to find the maximum
@@ -1493,9 +1492,6 @@ write_geoms() {
       if (geom.source_geom_node == nullptr || geom.geom_index == -1) {
         continue;
       }
-
-      std::cout << "page " << i << " geom " << j << " vdata ptr " << geom.geom->get_vertex_data()
-                << " num rows " << geom.geom->get_vertex_data()->get_num_rows() << "\n";
 
       // Apply modified Geom back onto the GeomNode.
       geom.source_geom_node->set_geom(geom.geom_index, geom.geom);
