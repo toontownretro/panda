@@ -101,6 +101,9 @@ public:
   typedef pvector<Leaf> Leaves;
   Leaves _leaves;
 
+  vector_int _leaf_parents;
+  vector_int _node_parents;
+
 public:
   static void register_with_read_factory();
 

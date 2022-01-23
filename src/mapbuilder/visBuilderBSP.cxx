@@ -292,8 +292,9 @@ build_output_tree() {
     }
     _output_tree->_leaves.push_back(std::move(oleaf));
   }
+  _output_tree->_leaf_parents.resize(_output_tree->_leaves.size());
 
-  r_build_output_tree(_tree_root);
+  r_build_output_tree(_tree_root, -1);
 
   _builder->_out_data->set_area_cluster_tree(_output_tree);
 
@@ -304,20 +305,22 @@ build_output_tree() {
  *
  */
 int VisBuilderBSP::
-r_build_output_tree(const BSPNode *node) {
+r_build_output_tree(const BSPNode *node, int parent) {
   if (!node->is_leaf()) {
     int node_idx = (int)_output_tree->_nodes.size();
     _output_tree->_nodes.push_back(BSPTree::Node());
+    _output_tree->_node_parents.push_back(parent);
     _output_tree->_nodes[node_idx].plane = node->_plane;
     if (node->_children[0] != nullptr) {
-      _output_tree->_nodes[node_idx].children[0] = r_build_output_tree(node->_children[0]);
+      _output_tree->_nodes[node_idx].children[0] = r_build_output_tree(node->_children[0], node_idx);
     }
     if (node->_children[1] != nullptr) {
-      _output_tree->_nodes[node_idx].children[1] = r_build_output_tree(node->_children[1]);
+      _output_tree->_nodes[node_idx].children[1] = r_build_output_tree(node->_children[1], node_idx);
     }
     return node_idx;
 
   } else {
+    _output_tree->_leaf_parents[node->_leaf_index] = parent;
     return ~((int)node->_leaf_index);
   }
 }
@@ -600,9 +603,6 @@ calc_pvs() {
  */
 void VisBuilderBSP::
 make_subtree(BSPNode *node, const BSPFaces &faces) {
-
-  std::cout << faces.size() << " faces here\n";
-
   if (faces.empty()) {
     // If we have no more polygons, this is a leaf node.
     return;
@@ -611,7 +611,6 @@ make_subtree(BSPNode *node, const BSPFaces &faces) {
   // Otherwise we need to partition our polygons along an arbitrary
   // hyperplane.  Pick the best polygon plane to split along.
   int split_idx = pick_best_split(faces);
-  std::cout << "best split " << split_idx << "\n";
   if (split_idx < 0) {
     // I don't think this should be possible since we checked if we have
     // no polygons above.
@@ -619,7 +618,6 @@ make_subtree(BSPNode *node, const BSPFaces &faces) {
   }
 
   LPlane split_plane = faces[split_idx]->_winding.get_plane();
-  std::cout << "split plane " << split_plane << "\n";
 
   node->_plane = split_plane;
   node->_hint = _hint_split;

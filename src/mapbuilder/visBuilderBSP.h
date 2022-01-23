@@ -232,7 +232,7 @@ private:
   bool calc_pvs();
 
   bool build_output_tree();
-  int r_build_output_tree(const BSPNode *node);
+  int r_build_output_tree(const BSPNode *node, int parent);
 
   void make_subtree(BSPNode *node, const BSPFaces &faces);
   int pick_best_split(const BSPFaces &faces);
