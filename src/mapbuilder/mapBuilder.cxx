@@ -1616,7 +1616,7 @@ build_entity_polygons(int i) {
             LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
             LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
             LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
-            LVector3 tri_normal = ((p1 - p0).cross(p2 - p0)).normalized();
+            LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[0][ivert].first;
               size_t col = tri_verts[0][ivert].second;
@@ -1624,7 +1624,7 @@ build_entity_polygons(int i) {
               dvertindex += col;
               const LPoint3 &dpoint = disp_points[dvertindex];
               tri0->_winding.add_point(dpoint);
-              tri0->_normals.push_back(tri_normal);
+              tri0->_normals.push_back(-tri_normal);
               tri0->_uvs.push_back(disp_uvs[dvertindex]);
               tri0->_blends.push_back(disp_blends[dvertindex]);
             }
@@ -1663,7 +1663,7 @@ build_entity_polygons(int i) {
             p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
             p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
             p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
-            tri_normal = ((p1 - p0).cross(p2 - p0)).normalized();
+            tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[1][ivert].first;
               size_t col = tri_verts[1][ivert].second;
@@ -1671,7 +1671,7 @@ build_entity_polygons(int i) {
               dvertindex += col;
               const LPoint3 &dpoint = disp_points[dvertindex];
               tri0->_winding.add_point(dpoint);
-              tri0->_normals.push_back(tri_normal);
+              tri0->_normals.push_back(-tri_normal);
               tri0->_uvs.push_back(disp_uvs[dvertindex]);
               tri0->_blends.push_back(disp_blends[dvertindex]);
             }
