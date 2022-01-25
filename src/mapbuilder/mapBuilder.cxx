@@ -1281,6 +1281,19 @@ build_polygons() {
 }
 
 /**
+ * List of neighboring MapPolys within the angle threshold that share a vertex
+ * position.
+ */
+class PolyVertRef {
+public:
+  MapPoly *poly;
+  int vertex;
+  LVector3 normal;
+};
+typedef pvector<PolyVertRef> PolyVertGroup;
+typedef pmap<LPoint3, PolyVertGroup> PolyVertCollection;
+
+/**
  *
  */
 void MapBuilder::
@@ -1543,7 +1556,7 @@ build_entity_polygons(int i) {
           for (size_t icol = 0; icol < num_cols; icol++) {
             const MapDisplacementVertex &dvert = side->_displacement->_rows[irow]._vertices[icol];
 
-            disp_normals.push_back(dvert._normal.normalized());
+            disp_normals.push_back(winding_normal);
 
             disp_blends.push_back(dvert._alpha);
 
@@ -1756,6 +1769,69 @@ build_entity_polygons(int i) {
   }
 
   ent_mesh->_bounds = new BoundingBox(minp, maxp);
+
+  // Now compute smoothed vertex normals.
+
+  // First, collect all the common vertices and the polygons that reference
+  // them.
+
+  PolyVertCollection collection;
+  PN_stdfloat cos_angle = cos(deg_2_rad(45.0f));
+  for (size_t i = 0; i < ent_mesh->_polys.size(); ++i) {
+    MapPoly *poly = ent_mesh->_polys[i];
+    PolyVertRef ref;
+    ref.poly = poly;
+    ref.normal = poly->_normals[0];
+
+    // Now add each vertex from the polygon separately to our collection.
+    for (int j = 0; j < poly->_winding.get_num_points(); ++j) {
+      ref.vertex = j;
+      collection[poly->_winding.get_point(j)].push_back(ref);
+    }
+  }
+
+  for (auto ci = collection.begin(); ci != collection.end(); ++ci) {
+    PolyVertGroup &group = (*ci).second;
+
+    auto gi = group.begin();
+    while (gi != group.end()) {
+      const PolyVertRef &base_ref = (*gi);
+      PolyVertGroup new_group;
+      PolyVertGroup leftover_group;
+      new_group.push_back(base_ref);
+      ++gi;
+
+      while (gi != group.end()) {
+        const PolyVertRef &ref = (*gi);
+        PN_stdfloat dot = base_ref.normal.dot(ref.normal);
+        if (dot > cos_angle) {
+          // Close enough to same angle.
+          new_group.push_back(ref);
+        } else {
+          // These polygons are not.
+          leftover_group.push_back(ref);
+        }
+        ++gi;
+      }
+
+      LVector3 normal(0.0f);
+      for (auto ngi = new_group.begin(); ngi != new_group.end(); ++ngi) {
+        const PolyVertRef &ref = (*ngi);
+        normal += ref.normal;
+      }
+      normal /= (PN_stdfloat)new_group.size();
+      normal.normalize();
+
+      // Now we have the common normal; apply it to all the vertices.
+      for (auto ngi = new_group.begin(); ngi != new_group.end(); ++ngi) {
+        const PolyVertRef &ref = (*ngi);
+        ref.poly->_normals[ref.vertex] = normal;
+      }
+
+      group.swap(leftover_group);
+      gi = group.begin();
+    }
+  }
 
   ThreadManager::lock();
   if (i == 0) {
