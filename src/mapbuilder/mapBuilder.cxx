@@ -317,6 +317,29 @@ build() {
             skip = true;
           }
 
+          if (!hint && !skip) {
+            // Check if the side's material enables alpha of some sort.  If it
+            // does, the side cannot be opaque.
+
+            Filename material_filename = downcase(side->_material_filename.get_fullpath());
+            if (material_filename.get_extension().empty()) {
+              material_filename.set_extension("pmat");
+            }
+
+            PT(Material) poly_material = MaterialPool::load_material(material_filename);
+
+            if (poly_material != nullptr) {
+              if ((poly_material->_attrib_flags & Material::F_transparency) != 0u &&
+                  poly_material->_transparency_mode > 0) {
+                skip = true;
+
+              } else if ((poly_material->_attrib_flags & Material::F_alpha_test) != 0u &&
+                         poly_material->_alpha_test_mode > 0) {
+                skip = true;
+              }
+            }
+          }
+
           if (skip) {
             has_skip = true;
           }
