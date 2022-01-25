@@ -52,6 +52,9 @@
 #include "pitchShiftDSP.h"
 #include "sfxReverbDSP.h"
 #include "load_dso.h"
+#include "thread.h"
+#include "pmutex.h"
+#include "clockObject.h"
 
 #ifndef HAMMER_UNITS_TO_METERS
 #define HAMMER_UNITS_TO_METERS 0.01905f
@@ -102,6 +105,38 @@ unsigned int FMODAudioManager::_sa_spatialize_handle = 0;
 unsigned int FMODAudioManager::_sa_mixer_return_handle = 0;
 unsigned int FMODAudioManager::_sa_reverb_handle = 0;
 pset<PT(FMODAudioSound)> FMODAudioManager::_queued_plays;
+PT(Thread) FMODAudioManager::_sa_refl_thread = nullptr;
+ReMutex FMODAudioManager::_sa_refl_lock("sa-refl-lock");
+
+static PStatCollector sa_refl_coll("SteamAudio:Reflections");
+
+class SteamAudioReflectionsThread : public Thread {
+public:
+  SteamAudioReflectionsThread() :
+    Thread("steam-audio-reflections", "steam-audio-reflections-sync") { }
+
+  virtual void thread_main() override {
+    while (true) {
+      PStatTimer timer(sa_refl_coll);
+      ClockObject *clock = ClockObject::get_global_clock();
+
+      double start = clock->get_real_time();
+      {
+        ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
+        iplSimulatorRunReflections(FMODAudioManager::_sa_simulator);
+      }
+      double end = clock->get_real_time();
+
+      // Don't run faster than the sample rate.
+      double elapsed = end - start;
+      double min_time = 1.0f / (double)fmod_mixer_sample_rate;
+      double sleep = min_time - elapsed;
+      if (sleep > 0.0f) {
+        Thread::sleep(sleep);
+      }
+    }
+  }
+};
 
 /**
  *
@@ -485,6 +520,9 @@ FMODAudioManager() {
       fmod_audio_errcheck("get master channelgroup dsp tail", result);
       result = dsp_tail->addInput(_reverb_dsp);
       fmod_audio_errcheck("add steam audio reverb as input to master dsp tail", result);
+
+      //_sa_refl_thread = new SteamAudioReflectionsThread;
+      //_sa_refl_thread->start(TP_normal, false);
     }
 #endif
   }
@@ -887,13 +925,16 @@ update() {
 #ifdef HAVE_STEAM_AUDIO
     if (fmod_use_steam_audio) {
       if (_last_sim_update != _next_sim_update) {
-        iplSimulatorCommit(_sa_simulator);
+        {
+          ReMutexHolder sa_holder(_sa_refl_lock);
+          iplSimulatorCommit(_sa_simulator);
+        }
         _last_sim_update = _next_sim_update;
       }
       // Run our simulations.
       iplSimulatorRunDirect(_sa_simulator);
       iplSimulatorRunReflections(_sa_simulator);
-      iplSimulatorRunPathing(_sa_simulator);
+      //iplSimulatorRunPathing(_sa_simulator);
     }
 #endif
     update_dirty_dsps();
@@ -950,9 +991,12 @@ audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
   if (fmod_use_steam_audio && _sa_simulator != nullptr) {
     _sa_sim_inputs.listener = fmod_coordinates_to_ipl(_position, _forward, _up);
     _sa_listener_inputs.source = _sa_sim_inputs.listener;
-    iplSourceSetInputs(_sa_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_listener_inputs);
-    iplSimulatorSetSharedInputs(_sa_simulator,
-        (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_sim_inputs);
+    {
+      ReMutexHolder sa_holder(_sa_refl_lock);
+      iplSourceSetInputs(_sa_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_listener_inputs);
+      iplSimulatorSetSharedInputs(_sa_simulator,
+          (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_sim_inputs);
+    }
     ++_next_sim_update;
   }
 #endif
@@ -1509,6 +1553,8 @@ void FMODAudioManager::
 load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
                        CPTA_uchar tri_materials, CPTA_uchar materials) {
 #ifdef HAVE_STEAM_AUDIO
+  ReMutexHolder holder(_sa_refl_lock);
+
   if (_sa_scene_mesh != nullptr) {
     iplStaticMeshRemove(_sa_scene_mesh, _sa_scene);
     iplStaticMeshRelease(&_sa_scene_mesh);
@@ -1536,6 +1582,9 @@ load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
  */
 void FMODAudioManager::
 unload_steam_audio_scene() {
+#ifdef HAVE_STEAM_AUDIO
+  ReMutexHolder holder(_sa_refl_lock);
+
   if (_sa_scene_mesh != nullptr) {
     iplStaticMeshRemove(_sa_scene_mesh, _sa_scene);
     iplStaticMeshRelease(&_sa_scene_mesh);
@@ -1543,6 +1592,7 @@ unload_steam_audio_scene() {
   }
   iplSceneCommit(_sa_scene);
   ++_next_sim_update;
+#endif
 }
 
 /**
@@ -1551,6 +1601,8 @@ unload_steam_audio_scene() {
 void FMODAudioManager::
 load_steam_audio_reflection_probe_batch(CPTA_uchar data) {
 #ifdef HAVE_STEAM_AUDIO
+  ReMutexHolder holder(_sa_refl_lock);
+
   if (_sa_probe_batch != nullptr) {
     iplSimulatorRemoveProbeBatch(_sa_simulator, _sa_probe_batch);
     iplProbeBatchRelease(&_sa_probe_batch);
@@ -1583,6 +1635,8 @@ load_steam_audio_reflection_probe_batch(CPTA_uchar data) {
 void FMODAudioManager::
 unload_steam_audio_reflection_probe_batch() {
 #ifdef HAVE_STEAM_AUDIO
+  ReMutexHolder holder(_sa_refl_lock);
+
   if (_sa_probe_batch != nullptr) {
     iplSimulatorRemoveProbeBatch(_sa_simulator, _sa_probe_batch);
     iplProbeBatchRelease(&_sa_probe_batch);

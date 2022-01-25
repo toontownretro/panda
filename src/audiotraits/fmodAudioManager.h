@@ -77,6 +77,8 @@
 #include "audioManager.h"
 #include "dsp.h"
 #include "updateSeq.h"
+#include "thread.h"
+#include "pmutex.h"
 
 // The includes needed for FMOD
 #include <fmod.hpp>
@@ -99,6 +101,7 @@ extern void _fmod_audio_errcheck(const char *context, FMOD_RESULT n);
 class EXPCL_FMOD_AUDIO FMODAudioManager : public AudioManager {
   friend class FMODAudioSound;
   friend class FMODSoundCache;
+  friend class SteamAudioReflectionsThread;
 
 public:
   FMODAudioManager();
@@ -253,6 +256,8 @@ private:
   static IPLSource _sa_listener_source;
   static IPLSimulationInputs _sa_listener_inputs;
   static IPLSimulationSharedInputs _sa_sim_inputs;
+  static PT(Thread) _sa_refl_thread;
+  static ReMutex _sa_refl_lock;
 
   static UpdateSeq _last_sim_update, _next_sim_update;
 

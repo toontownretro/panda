@@ -733,7 +733,10 @@ set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx
     // If the source is simulated, apply the new transform to the Steam Audio
     // source as well.
     _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
-    iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+    {
+      ReMutexHolder sa_holder(FMODAudioManager::_sa_refl_lock);
+      iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+    }
   }
 #endif
 
@@ -1395,7 +1398,10 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
 
     _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
 
-    iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+    {
+      ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
+      iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
+    }
   }
 
   // Create and configure the spatialization DSP filter.
