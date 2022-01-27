@@ -871,7 +871,7 @@ build_graph() {
         << "Added ik chain " << chain->_name << "\n";
     }
 
-    // SEQUENCES
+    // ANIMATION CHANNELS
 
     for (size_t i = 0; i < _data->_sequences.size(); i++) {
       PMDLSequence *pmdl_seq = &_data->_sequences[i];
@@ -957,7 +957,27 @@ build_graph() {
         chan->set_weight_list((*it).second);
       }
 
-      // TODO: sequence ik locks and ik rules.
+      for (size_t j = 0; j < pmdl_seq->_ik_locks.size(); ++j) {
+        const PMDLIKLock *plock = &pmdl_seq->_ik_locks[j];
+
+        // Find the chain index by name.
+        int chain_index = -1;
+        for (int k = 0; k < part_bundle->get_num_ik_chains(); ++k) {
+          if (downcase(part_bundle->get_ik_chain(k)->get_name()) == downcase(plock->_chain_name)) {
+            chain_index = k;
+            break;
+          }
+        }
+        if (chain_index < 0) {
+          egg2pg_cat.error()
+            << "IK lock " << j << " refers to non-existent IK chain `" << plock->_chain_name << "`\n";
+          continue;
+        }
+
+        chan->add_ik_lock(chain_index, plock->_pos_weight, plock->_rot_weight);
+      }
+
+      // TODO: ik rules
 
       _chans_by_name[pmdl_seq->_name] = chan;
       part_bundle->add_channel(chan);

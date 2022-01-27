@@ -19,6 +19,7 @@
 #include "weightList.h"
 #include "animEvalContext.h"
 #include "namable.h"
+#include "nodePath.h"
 
 class Character;
 
@@ -90,6 +91,23 @@ PUBLISHED:
     friend class AnimChannel;
   };
 
+  /**
+   * Uses IK to move an IK chain end-effector back to where it was before a
+   * channel's pose was applied.
+   */
+  class EXPCL_PANDA_ANIM IKLock {
+  PUBLISHED:
+    IKLock() = default;
+
+    int _chain = -1;
+    PN_stdfloat _pos_weight = 1.0f;
+    PN_stdfloat _rot_weight = 1.0f;
+
+    NodePath _smiley0;
+    NodePath _smiley1;
+    NodePath _smiley2;
+  };
+
   AnimChannel(const std::string &name);
 
   /**
@@ -120,6 +138,10 @@ PUBLISHED:
   INLINE int get_num_events() const;
   INLINE const Event &get_event(int n) const;
 
+  void add_ik_lock(int chain, PN_stdfloat pos_weight, PN_stdfloat rot_weight);
+  INLINE int get_num_ik_locks() const;
+  INLINE const IKLock &get_ik_lock(int n) const;
+
   INLINE void add_activity(int activity, PN_stdfloat weight = 1.0f);
   INLINE int get_num_activities() const;
   INLINE int get_activity(int n) const;
@@ -143,6 +165,14 @@ PUBLISHED:
 
   void blend(const AnimEvalContext &context, AnimEvalData &a,
              AnimEvalData &b, PN_stdfloat weight) const;
+
+  void r_calc_joint_net_transform(const Character *character, unsigned char *joint_computed_mask, const AnimEvalContext &context, AnimEvalData &pose, int joint, LMatrix4 *net_transforms);
+  bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LPoint3 &target_knee_pos, LVector3 &target_knee_dir, LMatrix4 *net_transforms);
+  bool solve_ik(int chain, Character *character, LPoint3 &target_foot, LMatrix4 *net_transforms);
+  bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LMatrix4 *net_transforms);
+  void align_ik_matrix(LMatrix4 &mat, const LVecBase3 &align_to);
+
+  static void set_render(const NodePath &render);
 
 public:
   virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
@@ -175,6 +205,11 @@ protected:
 
   typedef pvector<Event> Events;
   Events _events;
+
+  typedef pvector<IKLock> IKLocks;
+  IKLocks _ik_locks;
+
+  static NodePath _render;
 };
 
 #include "animChannel.I"

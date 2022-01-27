@@ -60,7 +60,6 @@
     config_anim.cxx \
     eyeballNode.cxx \
     ikChain.cxx \
-    ikSolver.cxx \
     jointVertexTransform.cxx \
     poseParameter.cxx \
     pt_AnimChannelTable.cxx \

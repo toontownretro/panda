@@ -12,3 +12,9 @@
  */
 
 #include "ikContext.h"
+
+/**
+ *
+ */
+IKContext::
+IKContext() :

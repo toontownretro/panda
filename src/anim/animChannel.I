@@ -114,6 +114,23 @@ get_event(int n) const {
 }
 
 /**
+ * Returns the number of IK locks on the channel.
+ */
+INLINE int AnimChannel::
+get_num_ik_locks() const {
+  return (int)_ik_locks.size();
+}
+
+/**
+ * Returns the nth IK lock on the channel.
+ */
+INLINE const AnimChannel::IKLock &AnimChannel::
+get_ik_lock(int n) const {
+  assert(n >= 0 && n < (int)_ik_locks.size());
+  return _ik_locks[n];
+}
+
+/**
  * Associates the channel with the indicated activity with the given weight.
  */
 INLINE void AnimChannel::
