@@ -124,10 +124,27 @@ get_num_ik_locks() const {
 /**
  * Returns the nth IK lock on the channel.
  */
-INLINE const AnimChannel::IKLock &AnimChannel::
+INLINE const AnimChannel::IKLock *AnimChannel::
 get_ik_lock(int n) const {
-  assert(n >= 0 && n < (int)_ik_locks.size());
-  return _ik_locks[n];
+  nassertr(n >= 0 && n < (int)_ik_locks.size(), nullptr);
+  return &_ik_locks[n];
+}
+
+/**
+ * Returns the number of IK rules on the channel.
+ */
+INLINE int AnimChannel::
+get_num_ik_rules() const {
+  return (int)_ik_rules.size();
+}
+
+/**
+ * Returns the nth IK rule on the channel.
+ */
+INLINE const AnimChannel::IKRule *AnimChannel::
+get_ik_rule(int n) const {
+  nassertr(n >= 0 && n < (int)_ik_rules.size(), nullptr);
+  return &_ik_rules[n];
 }
 
 /**
