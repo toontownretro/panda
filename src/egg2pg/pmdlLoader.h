@@ -118,6 +118,13 @@ public:
 
 // TODO: IK rules
 
+class PMDLIKRule {
+public:
+  std::string _chain_name;
+  std::string _type;
+  std::string _touch_joint;
+};
+
 class PMDLSequenceLayer {
 public:
   PMDLSequenceLayer() { }
@@ -228,6 +235,7 @@ public:
   pvector<PMDLSequenceEvent> _events;
 
   pvector<PMDLIKLock> _ik_locks;
+  pvector<PMDLIKRule> _ik_rules;
 
   std::string _activity = "";
   int _activity_weight = 1;

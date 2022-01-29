@@ -424,6 +424,25 @@ load(const Filename &filename, const DSearchPath &search_path) {
           seq._ik_locks.push_back(lock);
         }
       }
+      if (seqe->has_attribute("ik_rules")) {
+        PDXList *rules = seqe->get_attribute_value("ik_rules").get_list();
+        nassertr(rules != nullptr, false);
+        for (size_t j = 0; j < rules->size(); ++j) {
+          PDXElement *rulee = rules->get(j).get_element();
+          nassertr(rulee != nullptr, false);
+          PMDLIKRule rule;
+          if (rulee->has_attribute("chain")) {
+            rule._chain_name = rulee->get_attribute_value("chain").get_string();
+          }
+          if (rulee->has_attribute("type")) {
+            rule._type = rulee->get_attribute_value("type").get_string();
+          }
+          if (rulee->has_attribute("touch_joint")) {
+            rule._touch_joint = rulee->get_attribute_value("touch_joint").get_string();
+          }
+          seq._ik_rules.push_back(rule);
+        }
+      }
       if (seqe->has_attribute("events")) {
         PDXList *events = seqe->get_attribute_value("events").get_list();
         nassertr(events != nullptr, false);
@@ -977,7 +996,29 @@ build_graph() {
         chan->add_ik_lock(chain_index, plock->_pos_weight, plock->_rot_weight);
       }
 
-      // TODO: ik rules
+      for (size_t j = 0; j < pmdl_seq->_ik_rules.size(); ++j) {
+        const PMDLIKRule *prule = &pmdl_seq->_ik_rules[j];
+
+        // Find the chain index by name.
+        int chain_index = -1;
+        for (int k = 0; k < part_bundle->get_num_ik_chains(); ++k) {
+          if (downcase(part_bundle->get_ik_chain(k)->get_name()) == downcase(prule->_chain_name)) {
+            chain_index = k;
+            break;
+          }
+        }
+        if (chain_index < 0) {
+          egg2pg_cat.error()
+            << "IK rule " << j << " refers to non-existent IK chain `" << prule->_chain_name << "`\n";
+          continue;
+        }
+
+        AnimChannel::IKRule rule;
+        rule._chain = chain_index;
+        rule._type = AnimChannel::IKRule::T_touch;
+        rule._touch_joint = part_bundle->find_joint(prule->_touch_joint);
+        chan->add_ik_rule(std::move(rule));
+      }
 
       _chans_by_name[pmdl_seq->_name] = chan;
       part_bundle->add_channel(chan);

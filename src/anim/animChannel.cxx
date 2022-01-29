@@ -21,6 +21,7 @@
 #include "ikSolver.h"
 #include "loader.h"
 #include "configVariableBool.h"
+#include "ikHelper.h"
 
 static ConfigVariableBool ik_enable("ik-enable", true);
 
@@ -293,6 +294,12 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     return;
   }
 
+  IKHelper ik_helper(&context, this);
+
+  if (ik_enable) {
+    ik_helper.pre_ik(data);
+  }
+
   AnimEvalData this_data(data, context._num_joints);
 
   if (has_flags(F_real_time)) {
@@ -320,263 +327,12 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     this_data._pose[0]._position[2] = 0.0f;
   }
 
-  // If we have IK locks, remember original end-effector positions.
-  LVecBase4 *chain_pos = nullptr;
-  LQuaternion *chain_rot = nullptr;
-  LVector3 *chain_knee_dir = nullptr;
-  LPoint3 *chain_knee_pos = nullptr;
-  LMatrix4 *joint_net_transforms = nullptr;
-  unsigned char *joint_computed_mask = nullptr;
-  if (!_ik_locks.empty() && ik_enable) {
-    chain_pos = (LVecBase4 *)alloca(sizeof(LVecBase4) * _ik_locks.size());
-    chain_rot = (LQuaternion *)alloca(sizeof(LQuaternion) * _ik_locks.size());
-    chain_knee_dir = (LVector3 *)alloca(sizeof(LVector3) * _ik_locks.size());
-    chain_knee_pos = (LPoint3 *)alloca(sizeof(LPoint3) * _ik_locks.size());
-
-    // We require the net transforms of the joints in each chain at the
-    // current intermediate pose.
-    joint_net_transforms = (LMatrix4 *)alloca(sizeof(LMatrix4) * context._num_joints);
-    joint_computed_mask = (unsigned char *)alloca(context._num_joints / 8);
-    memset(joint_computed_mask, 0, context._num_joints / 8);
-
-    for (size_t i = 0; i < _ik_locks.size(); ++i) {
-      const IKChain *chain = context._character->get_ik_chain(_ik_locks[i]._chain);
-      int joint = chain->get_end_joint();
-      if (!CheckBit(context._joint_mask, joint)) {
-        continue;
-      }
-
-      r_calc_joint_net_transform(context, data, joint, joint_computed_mask, joint_net_transforms);
-
-      // Extract net translation and rotation from current joint pose.
-      LVecBase3 scale, shear, hpr, pos;
-      decompose_matrix(joint_net_transforms[joint], scale, shear, hpr, pos);
-      chain_pos[i] = LVecBase4(pos, 1.0f);
-      chain_rot[i].set_hpr(hpr);
-
-      if (chain->get_middle_joint_direction().length_squared() > 0.0f) {
-        chain_knee_dir[i] = joint_net_transforms[joint].xform_vec(chain->get_middle_joint_direction());
-        chain_knee_pos[i] = joint_net_transforms[chain->get_middle_joint()].get_row3(3);
-
-      } else {
-        chain_knee_dir[i].set(0.0f, 0.0f, 0.0f);
-      }
-    }
-
-    memset(joint_computed_mask, 0, context._num_joints / 8);
-  }
-
   // Now blend the channel onto the output using the requested weight.
   blend(context, data, this_data, data._weight);
 
-  // Now solve the locks.
-
-  for (size_t i = 0; i < _ik_locks.size() && ik_enable; ++i) {
-    IKLock *lock = &_ik_locks[i];
-    const IKChain *chain = context._character->get_ik_chain(lock->_chain);
-    int joint = chain->get_end_joint();
-
-    if (!CheckBit(context._joint_mask, joint)) {
-      continue;
-    }
-
-    // Make sure we know the net transforms of the chain at the current pose.
-    r_calc_joint_net_transform(context, data, joint, joint_computed_mask, joint_net_transforms);
-
-    LPoint3 p1, p2, p3;
-    LQuaternion q2, q3;
-
-    // Extract translation.
-    p1 = joint_net_transforms[joint].get_row3(3);
-
-    // Blend in position.
-    p3 = p1 * (1.0 - lock->_pos_weight) + chain_pos[i].get_xyz() * lock->_pos_weight;
-
-    // Do exact IK solution.
-    if (chain_knee_dir[i].length_squared() > 0.0f) {
-      // solve ik
-      solve_ik(chain->get_top_joint(), chain->get_middle_joint(), chain->get_end_joint(), p3, chain_knee_pos[i], chain_knee_dir[i], joint_net_transforms);
-
-    } else {
-      // solve ik
-      solve_ik(lock->_chain, context._character, p3, joint_net_transforms);
-    }
-
-    // Apply IK'd position to end-effector, keep original rotation.
-    LVecBase3 hpr, pos, scale, shear;
-    decompose_matrix(joint_net_transforms[joint], scale, shear, hpr, pos);
-    joint_net_transforms[joint] = LMatrix4::scale_shear_mat(scale, shear) * chain_rot[i];
-    joint_net_transforms[joint].set_row(3, p3);
-
-    // Convert back to local space.
-    joint_net_to_local(chain->get_end_joint(), joint_net_transforms, data, context);
-    joint_net_to_local(chain->get_middle_joint(), joint_net_transforms, data, context);
-    joint_net_to_local(chain->get_top_joint(), joint_net_transforms, data, context);
+  if (ik_enable) {
+    ik_helper.apply_ik(data);
   }
-}
-
-/**
- * Transforms the indicated joint's net transform into parent-space and
- * applies it to the given pose data.
- */
-void AnimChannel::
-joint_net_to_local(int joint, LMatrix4 *net_transforms,
-                   AnimEvalData &pose, const AnimEvalContext &context) {
-  int parent = context._character->get_joint_parent(joint);
-  LMatrix4 parent_net_inverse;
-  if (parent == -1) {
-    parent_net_inverse.invert_from(context._character->get_root_xform());
-
-  } else {
-    parent_net_inverse.invert_from(net_transforms[parent]);
-  }
-
-  LMatrix4 local = net_transforms[joint] * parent_net_inverse;
-
-  LVecBase3 scale, shear, hpr, pos;
-  decompose_matrix(local, scale, shear, hpr, pos);
-
-  LQuaternion quat;
-  quat.set_hpr(hpr);
-
-  pose._pose[joint]._position = LVecBase4(pos, 1.0f);
-  pose._pose[joint]._rotation = quat;
-  pose._pose[joint]._scale = LVecBase4(scale, 1.0f);
-  pose._pose[joint]._shear = LVecBase4(shear, 1.0f);
-}
-
-#define KNEEMAX_EPSILON 0.9998
-
-/**
- * Solves a 2-joint IK with the given end-effector target position and current
- * middle joint position/orientation.
- */
-bool AnimChannel::
-solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LPoint3 &target_knee_pos, LVector3 &target_knee_dir, LMatrix4 *net_transforms) {
-  LPoint3 world_foot, world_knee, world_hip;
-
-  world_foot = net_transforms[foot].get_row3(3);
-  world_knee = net_transforms[knee].get_row3(3);
-  world_hip = net_transforms[hip].get_row3(3);
-
-  LVecBase3 ik_foot, ik_target_knee, ik_knee;
-
-  ik_foot = target_foot - world_hip;
-  ik_knee = target_knee_pos - world_hip;
-
-  PN_stdfloat l1 = (world_knee - world_hip).length();
-  PN_stdfloat l2 = (world_foot - world_knee).length();
-
-  PN_stdfloat d = (target_foot - world_hip).length() - std::min(l1, l2);
-  d = std::max(l1 + l2, d);
-  d *= 100;
-
-  ik_target_knee = ik_knee + target_knee_dir * d;
-
-  if (ik_foot.length() > (l1 + l2) * KNEEMAX_EPSILON) {
-    ik_foot.normalize();
-    ik_foot *= (l1 + l2) * KNEEMAX_EPSILON;
-  }
-
-  PN_stdfloat min_dist = std::max(std::abs(l1 - l2) * 1.15f, std::min(l1, l2) * 0.15f);
-  if (ik_foot.length() < min_dist) {
-    ik_foot = world_foot - world_hip;
-    ik_foot.normalize();
-    ik_foot *= min_dist;
-  }
-
-  IKSolver ik;
-  if (ik.solve(l1, l2, ik_foot.get_data(), ik_target_knee.get_data(), (float *)ik_knee.get_data())) {
-
-    align_ik_matrix(net_transforms[hip], ik_knee);
-    align_ik_matrix(net_transforms[knee], ik_foot - ik_knee);
-
-    net_transforms[knee].set_row(3, ik_knee + world_hip);
-    net_transforms[foot].set_row(3, ik_foot + world_hip);
-
-    return true;
-
-  } else {
-    return false;
-  }
-
-}
-
-/**
- * Solves a 2-joint IK for the indicated IK chain and given end-effector
- * target position.
- */
-bool AnimChannel::
-solve_ik(int chain, Character *character, LPoint3 &target_foot, LMatrix4 *net_transforms) {
-  const IKChain *ikchain = character->get_ik_chain(chain);
-
-  if (ikchain->get_middle_joint_direction().length_squared() > 0.0f) {
-    LVector3 target_knee_dir;
-    LPoint3 target_knee_pos;
-    LVector3 tmp = ikchain->get_middle_joint_direction();
-    target_knee_dir = net_transforms[ikchain->get_top_joint()].xform_vec(tmp);
-    target_knee_pos = net_transforms[ikchain->get_middle_joint()].get_row3(3);
-
-    return solve_ik(ikchain->get_top_joint(), ikchain->get_middle_joint(), ikchain->get_end_joint(),
-                    target_foot, target_knee_pos, target_knee_dir, net_transforms);
-
-  } else {
-    return solve_ik(ikchain->get_top_joint(), ikchain->get_middle_joint(), ikchain->get_end_joint(),
-                    target_foot, net_transforms);
-  }
-}
-
-/**
- * Solves a 2-joint IK with a target end-effector position but no preferred
- * middle joint direction/position.
- */
-bool AnimChannel::
-solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LMatrix4 *net_transforms) {
-  LPoint3 world_foot, world_knee, world_hip;
-
-  world_foot = net_transforms[foot].get_row3(3);
-  world_knee = net_transforms[knee].get_row3(3);
-  world_hip = net_transforms[hip].get_row3(3);
-
-  LVecBase3 ik_foot, ik_knee;
-
-  ik_foot = target_foot - world_hip;
-  ik_knee = world_knee - world_hip;
-
-  PN_stdfloat l1 = (world_knee - world_hip).length();
-  PN_stdfloat l2 = (world_foot - world_knee).length();
-  PN_stdfloat l3 = (world_foot - world_hip).length();
-
-  if (l3 > (l1 + l2) * KNEEMAX_EPSILON) {
-    return false;
-  }
-
-  LVecBase3 ik_half = (world_foot - world_hip) * (l1 / l3);
-
-  LVector3 ik_knee_dir = ik_knee - ik_half;
-  ik_knee_dir.normalize();
-
-  return solve_ik(hip, knee, foot, target_foot, world_knee, ik_knee_dir, net_transforms);
-}
-
-/**
- *
- */
-void AnimChannel::
-align_ik_matrix(LMatrix4 &mat, const LVecBase3 &align_to) {
-  LVecBase3 tmp1, tmp2, tmp3;
-
-  tmp1 = align_to;
-  tmp1.normalize();
-  mat.set_row(0, tmp1);
-
-  tmp3 = mat.get_row3(2);
-  tmp2 = tmp3.cross(tmp1);
-  tmp2.normalize();
-  mat.set_row(1, tmp2);
-
-  tmp3 = tmp1.cross(tmp2);
-  mat.set_row(2, tmp3);
 }
 
 /**
@@ -685,33 +441,4 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   }
 
   manager->read_pointer(scan); // _weights
-}
-
-/**
- * Calculates the net transform of the indicated joint in the given pose.
- * Stores the computed net transforms in the net_transforms matrix array.
- */
-void AnimChannel::
-r_calc_joint_net_transform(const AnimEvalContext &context, AnimEvalData &pose, int joint,
-                           unsigned char *joint_computed_mask, LMatrix4 *net_transforms) {
-  if (CheckBit(joint_computed_mask, joint)) {
-    return;
-  }
-
-  // Build local joint matrix.
-  const AnimEvalData::Joint &jpose = pose._pose[joint];
-  LMatrix4 matrix = LMatrix4::scale_shear_mat(jpose._scale.get_xyz(), jpose._shear.get_xyz()) * jpose._rotation;
-  matrix.set_row(3, jpose._position.get_xyz());
-
-  int parent = context._character->get_joint_parent(joint);
-  if (parent == -1) {
-    net_transforms[joint] = matrix * context._character->get_root_xform();
-
-  } else {
-    // Recurse up the hierarchy.
-    r_calc_joint_net_transform(context, pose, parent, joint_computed_mask, net_transforms);
-    net_transforms[joint] = matrix * net_transforms[parent];
-  }
-
-  SetBit(joint_computed_mask, joint);
 }

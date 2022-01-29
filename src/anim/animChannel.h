@@ -182,14 +182,6 @@ PUBLISHED:
   void blend(const AnimEvalContext &context, AnimEvalData &a,
              AnimEvalData &b, PN_stdfloat weight) const;
 
-  // IK methods
-  void r_calc_joint_net_transform(const AnimEvalContext &context, AnimEvalData &pose, int joint, unsigned char *joint_computed_mask, LMatrix4 *net_transforms);
-  bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LPoint3 &target_knee_pos, LVector3 &target_knee_dir, LMatrix4 *net_transforms);
-  bool solve_ik(int chain, Character *character, LPoint3 &target_foot, LMatrix4 *net_transforms);
-  bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LMatrix4 *net_transforms);
-  void align_ik_matrix(LMatrix4 &mat, const LVecBase3 &align_to);
-  void joint_net_to_local(int joint, LMatrix4 *net_transforms, AnimEvalData &pose, const AnimEvalContext &context);
-
 public:
   virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
   virtual void write_datagram(BamWriter *manager, Datagram &me) override;

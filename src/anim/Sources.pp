@@ -31,6 +31,7 @@
     config_anim.h \
     eyeballNode.h eyeballNode.I \
     ikChain.h ikChain.I \
+    ikHelper.h ikHelper.I \
     ikSolver.h \
     jointVertexTransform.h jointVertexTransform.I \
     poseParameter.h poseParameter.I \
@@ -60,6 +61,7 @@
     config_anim.cxx \
     eyeballNode.cxx \
     ikChain.cxx \
+    ikHelper.cxx \
     jointVertexTransform.cxx \
     poseParameter.cxx \
     pt_AnimChannelTable.cxx \
