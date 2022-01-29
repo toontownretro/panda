@@ -1373,7 +1373,7 @@ make_blend_channel(const PMDLSequenceBlend &blend, int fps) {
     PT(AnimChannelBlend1D) chan = new AnimChannelBlend1D("1dblend");
 
     for (size_t col = 0; col < num_cols; col++) {
-      AnimChannelTable *anim_bundle = find_or_load_anim(blend._animations[col]);
+      AnimChannel *anim_bundle = find_or_load_anim(blend._animations[col]);
       if (fps != -1) {
         anim_bundle->set_frame_rate(fps);
       }
@@ -1391,7 +1391,7 @@ make_blend_channel(const PMDLSequenceBlend &blend, int fps) {
     for (size_t row = 0; row < num_rows; row++) {
       for (size_t col = 0; col < num_cols; col++) {
         size_t anim_index = (row * num_cols) + col;
-        AnimChannelTable *anim_bundle = find_or_load_anim(blend._animations[anim_index]);
+        AnimChannel *anim_bundle = find_or_load_anim(blend._animations[anim_index]);
         if (fps != -1) {
           anim_bundle->set_frame_rate(fps);
         }
@@ -1484,14 +1484,17 @@ make_layered_channel(const PMDLSequence *seq) {
 /**
  *
  */
-AnimChannelTable *PMDLLoader::
+AnimChannel *PMDLLoader::
 find_or_load_anim(const std::string &anim_name) {
-  auto it = _anims_by_name.find(anim_name);
-  if (it != _anims_by_name.end()) {
+  // Maybe we've already loaded/created this channel.
+  auto it = _chans_by_name.find(anim_name);
+  if (it != _chans_by_name.end()) {
     return (*it).second;
-  }
 
-  return load_anim(anim_name, anim_name);
+  } else {
+    // Assume it's an animation egg filename.
+    return load_anim(anim_name, anim_name);
+  }
 }
 
 /**
@@ -1536,7 +1539,7 @@ load_anim(const std::string &anim_name, const Filename &filename) {
       << "Failed to bind anim " << fullpath << " to character " << _part_bundle->get_name() << "\n";
     return nullptr;
   }
-  _anims_by_name[anim_name] = anim_bundle;
+  _chans_by_name[anim_name] = anim_bundle;
   return anim_bundle;
 }
 

@@ -403,7 +403,7 @@ public:
   PT(AnimChannel) make_blend_channel(const PMDLSequenceBlend &blend, int fps);
   PT(AnimChannel) make_layered_channel(const PMDLSequence *seq);
 
-  AnimChannelTable *find_or_load_anim(const std::string &anim_name);
+  AnimChannel *find_or_load_anim(const std::string &anim_name);
   AnimChannelTable *load_anim(const std::string &name, const Filename &filename);
 
   pmap<std::string, AnimChannelTable *> _anims_by_name;
