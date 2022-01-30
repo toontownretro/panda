@@ -177,7 +177,9 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
 
         // Solve the IK.
         LPoint3 target_end_effector = state->_target.get_row3(3);
-        solve_ik(event->_chain, _context->_character, target_end_effector, _joint_net_transforms.data());
+        if (!solve_ik(event->_chain, _context->_character, target_end_effector, _joint_net_transforms.data())) {
+          //std::cout << "Solve lock failed for chain " << chain->get_name() << "\n";
+        }
 
         // Maintain original end-effector rotation.
         LVecBase3 scale, shear, pos, hpr;
@@ -203,7 +205,9 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
         LPoint3 end_effector_target = end_effector_target_matrix.get_row3(3);
 
         // Solve the IK.
-        solve_ik(event->_chain, _context->_character, end_effector_target, _joint_net_transforms.data());
+        if (!solve_ik(event->_chain, _context->_character, end_effector_target, _joint_net_transforms.data())) {
+          //std::cout << "Solve touch failed for chain " << chain->get_name() << "\n";
+        }
 
         // Slam the target matrix.
         _joint_net_transforms[joint] = end_effector_target_matrix;

@@ -41,7 +41,9 @@ IKChain(const IKChain &copy) :
   _end_joint(copy._end_joint),
   _height(copy._height),
   _floor(copy._floor),
-  _pad(copy._pad)
+  _pad(copy._pad),
+  _middle_direction(copy._middle_direction),
+  _center(copy._center)
 {
 }
 
@@ -56,7 +58,9 @@ IKChain(IKChain &&other) :
   _end_joint(std::move(other._end_joint)),
   _height(std::move(other._height)),
   _floor(std::move(other._floor)),
-  _pad(std::move(other._pad))
+  _pad(std::move(other._pad)),
+  _middle_direction(std::move(other._middle_direction)),
+  _center(std::move(other._center))
 {
 }
 
@@ -72,6 +76,8 @@ operator = (const IKChain &copy) {
   _height = copy._height;
   _floor = copy._floor;
   _pad = copy._pad;
+  _middle_direction = copy._middle_direction;
+  _center = copy._center;
 }
 
 /**
@@ -86,6 +92,8 @@ operator = (IKChain &&other) {
   _height = std::move(other._height);
   _floor = std::move(other._floor);
   _pad = std::move(other._pad);
+  _middle_direction = std::move(other._middle_direction);
+  _center = std::move(other._center);
 }
 
 /**
