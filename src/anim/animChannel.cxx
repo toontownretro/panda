@@ -166,25 +166,21 @@ add_event(int type, int event, PN_stdfloat frame, const std::string &options) {
 }
 
 /**
- * Adds a new IK lock to the channel for the indicated IK chain.
- * Uses IK to move the chain back to where it was before this AnimChannel's
- * pose was applied to the overall pose.
+ * Adds a new IK event to the channel for the indicated IK chain.
  */
 void AnimChannel::
-add_ik_lock(int chain, PN_stdfloat pos_weight, PN_stdfloat rot_weight) {
-  IKLock lock;
-  lock._chain = chain;
-  lock._pos_weight = pos_weight;
-  lock._rot_weight = rot_weight;
-  _ik_locks.push_back(std::move(lock));
-}
-
-/**
- * Adds a new IK rule to the channel.
- */
-void AnimChannel::
-add_ik_rule(IKRule &&rule) {
-  _ik_rules.push_back(std::move(rule));
+add_ik_event(const IKEvent &event) {
+  IKEvent cpy = event;
+  if (cpy._pose_parameter == -1) {
+    // If blend driven by animation cycle, convert frame numbers to cycle
+    // values.
+    PN_stdfloat num_frames = std::max(1.0f, _num_frames - 1.0f);
+    cpy._start /= num_frames;
+    cpy._peak /= num_frames;
+    cpy._tail /= num_frames;
+    cpy._end /= num_frames;
+  }
+  _ik_events.push_back(std::move(cpy));
 }
 
 /**
@@ -378,18 +374,18 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_string(_events[i]._options);
   }
 
-  me.add_uint8(_ik_locks.size());
-  for (size_t i = 0; i < _ik_locks.size(); ++i) {
-    me.add_int8(_ik_locks[i]._chain);
-    me.add_stdfloat(_ik_locks[i]._pos_weight);
-    me.add_stdfloat(_ik_locks[i]._rot_weight);
-  }
-
-  me.add_uint8(_ik_rules.size());
-  for (size_t i = 0; i < _ik_rules.size(); ++i) {
-    me.add_int8(_ik_rules[i]._type);
-    me.add_int8(_ik_rules[i]._chain);
-    me.add_int16(_ik_rules[i]._touch_joint);
+  me.add_uint8(_ik_events.size());
+  for (size_t i = 0; i < _ik_events.size(); ++i) {
+    const IKEvent &event = _ik_events[i];
+    me.add_int8(event._type);
+    me.add_int8(event._chain);
+    me.add_int16(event._touch_joint);
+    me.add_stdfloat(event._start);
+    me.add_stdfloat(event._peak);
+    me.add_stdfloat(event._tail);
+    me.add_stdfloat(event._end);
+    me.add_bool(event._spline);
+    me.add_int8(event._pose_parameter);
   }
 
   manager->write_pointer(me, _weights);
@@ -426,18 +422,18 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _events[i]._options = scan.get_string();
   }
 
-  _ik_locks.resize(scan.get_uint8());
-  for (size_t i = 0; i < _ik_locks.size(); ++i) {
-    _ik_locks[i]._chain = scan.get_int8();
-    _ik_locks[i]._pos_weight = scan.get_stdfloat();
-    _ik_locks[i]._rot_weight = scan.get_stdfloat();
-  }
-
-  _ik_rules.resize(scan.get_uint8());
-  for (size_t i = 0; i < _ik_rules.size(); ++i) {
-    _ik_rules[i]._type = (IKRule::Type)scan.get_int8();
-    _ik_rules[i]._chain = scan.get_int8();
-    _ik_rules[i]._touch_joint = scan.get_int16();
+  _ik_events.resize(scan.get_uint8());
+  for (size_t i = 0; i < _ik_events.size(); ++i) {
+    IKEvent &event = _ik_events[i];
+    event._type = (IKEvent::Type)scan.get_int8();
+    event._chain = scan.get_int8();
+    event._touch_joint = scan.get_int16();
+    event._start = scan.get_stdfloat();
+    event._peak = scan.get_stdfloat();
+    event._tail = scan.get_stdfloat();
+    event._end = scan.get_stdfloat();
+    event._spline = scan.get_bool();
+    event._pose_parameter = scan.get_int8();
   }
 
   manager->read_pointer(scan); // _weights

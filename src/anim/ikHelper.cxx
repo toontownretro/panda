@@ -16,6 +16,9 @@
 #include "character.h"
 #include "ikChain.h"
 #include "ikSolver.h"
+#include "mathutil_misc.h"
+
+#define IK_WEIGHT_EPSILON 0.001f
 
 /**
  *
@@ -24,28 +27,19 @@ IKHelper::
 IKHelper(const AnimEvalContext *context, const AnimChannel *channel) {
   _context = context;
 
-  if (channel->get_num_ik_rules() == 0 && channel->get_num_ik_locks() == 0) {
+  if (channel->get_num_ik_events() == 0) {
     return;
   }
 
   _joint_net_transforms.resize(context->_num_joints);
 
-  _ik_states.reserve(channel->get_num_ik_locks() + channel->get_num_ik_rules());
+  _ik_states.reserve(channel->get_num_ik_events());
 
-  for (int i = 0; i < channel->get_num_ik_locks(); ++i) {
-    const AnimChannel::IKLock *lock = channel->get_ik_lock(i);
+  for (int i = 0; i < channel->get_num_ik_events(); ++i) {
+    const AnimChannel::IKEvent *event = channel->get_ik_event(i);
     IKState state;
-    state._type = IKState::T_lock;
-    state._chain = lock->_chain;
-    _ik_states.push_back(std::move(state));
-  }
-
-  for (int i = 0; i < channel->get_num_ik_rules(); ++i) {
-    const AnimChannel::IKRule *rule = channel->get_ik_rule(i);
-    IKState state;
-    state._type = IKState::T_touch;
-    state._chain = rule->_chain;
-    state._touch = rule->_touch_joint;
+    state._chain = context->_character->get_ik_chain(event->_chain);
+    state._event = event;
     _ik_states.push_back(std::move(state));
   }
 }
@@ -57,7 +51,8 @@ void IKHelper::
 pre_ik(const AnimEvalData &pose) {
   for (size_t i = 0; i < _ik_states.size(); ++i) {
     IKState *state = &_ik_states[i];
-    const IKChain *chain = _context->_character->get_ik_chain(state->_chain);
+    const IKChain *chain = state->_chain;
+    const AnimChannel::IKEvent *event = state->_event;
     int joint = chain->get_end_joint();
 
     if (!CheckBit(_context->_joint_mask, joint)) {
@@ -65,9 +60,59 @@ pre_ik(const AnimEvalData &pose) {
       continue;
     }
 
+    // Compute blend weight.
+    PN_stdfloat start, peak, tail, end;
+    start = event->_start;
+    peak = event->_peak;
+    tail = event->_tail;
+    end = event->_end;
+
+    state->_blend_val = 1.0f;
+
+    if (start != end) {
+      PN_stdfloat index;
+
+      if (event->_pose_parameter == -1) {
+        index = pose._cycle;
+
+      } else {
+        // Drive blend by pose parameter value.
+        const PoseParameter &pp = _context->_character->get_pose_parameter(event->_pose_parameter);
+        index = pp.get_value();
+      }
+
+      if (index < start || index >= end) {
+        // Not in range.
+        state->_blend_val = 0.0f;
+
+      } else {
+        PN_stdfloat scale = 1.0f;
+        if (index < peak && start != peak) {
+          // On the way up.
+          scale = (index - start) / (peak - start);
+
+        } else if (index > tail && end != tail) {
+          // On the way down.
+          scale = (end - index) / (end - tail);
+        }
+
+        if (event->_spline) {
+          // Spline blend.
+          scale = simple_spline(scale);
+        }
+
+        state->_blend_val = scale;
+      }
+    }
+
+    if (state->_blend_val <= IK_WEIGHT_EPSILON) {
+      // Negligible weight.
+      continue;
+    }
+
     // Perform pre-computation based on IK type.
-    switch (state->_type) {
-    case IKState::T_lock:
+    switch (event->_type) {
+    case AnimChannel::IKEvent::T_lock:
       {
         // For IK locks, we need to store off the current net transform
         // of the end-effector and use that as the target transform during IK
@@ -79,15 +124,15 @@ pre_ik(const AnimEvalData &pose) {
         state->_target_rot.set_hpr(hpr);
       }
       break;
-    case IKState::T_touch:
+    case AnimChannel::IKEvent::T_touch:
       {
         // For touches, the target is the delta matrix from the touch joint
         // to the end-effector in the current pose.
         calc_joint_net_transform(joint, pose);
-        calc_joint_net_transform(state->_touch, pose);
+        calc_joint_net_transform(event->_touch_joint, pose);
 
         LMatrix4 touch_inverse;
-        touch_inverse.invert_from(_joint_net_transforms[state->_touch]);
+        touch_inverse.invert_from(_joint_net_transforms[event->_touch_joint]);
 
         state->_target = _joint_net_transforms[joint] * touch_inverse;
       }
@@ -109,23 +154,28 @@ apply_ik(AnimEvalData &data) {
 
   for (size_t i = 0; i < _ik_states.size(); ++i) {
     IKState *state = &_ik_states[i];
-    const IKChain *chain = _context->_character->get_ik_chain(state->_chain);
+    const IKChain *chain = state->_chain;
+    const AnimChannel::IKEvent *event = state->_event;
     int joint = chain->get_end_joint();
 
     if (!CheckBit(_context->_joint_mask, joint)) {
       // Joint not being animated so don't do IK.
       continue;
+
+    } else if (state->_blend_val <= IK_WEIGHT_EPSILON) {
+      // Negigible weight.
+      continue;
     }
 
-    switch (state->_type) {
-    case IKState::T_lock:
+    switch (event->_type) {
+    case AnimChannel::IKEvent::T_lock:
       {
         // Grab chain net transform in current pose.
         calc_joint_net_transform(joint, data);
 
         // Solve the IK.
         LPoint3 target_end_effector = state->_target.get_row3(3);
-        solve_ik(state->_chain, _context->_character, target_end_effector, _joint_net_transforms.data());
+        solve_ik(event->_chain, _context->_character, target_end_effector, _joint_net_transforms.data());
 
         // Maintain original end-effector rotation.
         LVecBase3 scale, shear, pos, hpr;
@@ -134,32 +184,32 @@ apply_ik(AnimEvalData &data) {
         _joint_net_transforms[joint].set_row(3, pos);
 
         // Convert back to local space, apply to output pose.
-        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context);
-        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context);
-        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context);
+        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
       }
       break;
-    case IKState::T_touch:
+    case AnimChannel::IKEvent::T_touch:
       {
         // Grab chain and touch joint net transforms in current pose.
         calc_joint_net_transform(joint, data);
-        calc_joint_net_transform(state->_touch, data);
+        calc_joint_net_transform(event->_touch_joint, data);
 
         // Apply target delta to current touch joint matrix to get end-effector
         // goal.
-        LMatrix4 end_effector_target_matrix = state->_target * _joint_net_transforms[state->_touch];
+        LMatrix4 end_effector_target_matrix = state->_target * _joint_net_transforms[event->_touch_joint];
         LPoint3 end_effector_target = end_effector_target_matrix.get_row3(3);
 
         // Solve the IK.
-        solve_ik(state->_chain, _context->_character, end_effector_target, _joint_net_transforms.data());
+        solve_ik(event->_chain, _context->_character, end_effector_target, _joint_net_transforms.data());
 
         // Slam the target matrix.
         _joint_net_transforms[joint] = end_effector_target_matrix;
 
         // Convert back to local space, apply to output pose.
-        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context);
-        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context);
-        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context);
+        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
       }
       break;
     default:
@@ -203,7 +253,8 @@ calc_joint_net_transform(int joint, const AnimEvalData &pose) {
  */
 void IKHelper::
 joint_net_to_local(int joint, LMatrix4 *net_transforms,
-                   AnimEvalData &pose, const AnimEvalContext &context) {
+                   AnimEvalData &data, const AnimEvalContext &context,
+                   PN_stdfloat weight) {
   int parent = context._character->get_joint_parent(joint);
   LMatrix4 parent_net_inverse;
   if (parent == -1) {
@@ -221,10 +272,16 @@ joint_net_to_local(int joint, LMatrix4 *net_transforms,
   LQuaternion quat;
   quat.set_hpr(hpr);
 
-  pose._pose[joint]._position = LVecBase4(pos, 1.0f);
-  pose._pose[joint]._rotation = quat;
-  pose._pose[joint]._scale = LVecBase4(scale, 1.0f);
-  pose._pose[joint]._shear = LVecBase4(shear, 1.0f);
+  PN_stdfloat e0 = 1.0f - weight;
+
+  // Blend between IK'd local pose and existing pose.
+  AnimEvalData::Joint &pose = data._pose[joint];
+  pose._position = pose._position * e0 + LVecBase4(pos, 1.0f) * weight;
+  LQuaternion q2;
+  LQuaternion::slerp(pose._rotation, quat, weight, q2);
+  pose._rotation = q2;
+  pose._scale = pose._scale * e0 + LVecBase4(scale, 1.0f) * weight;
+  pose._shear = pose._shear * e0 + LVecBase4(shear, 1.0f) * weight;
 }
 
 #define KNEEMAX_EPSILON 0.9998

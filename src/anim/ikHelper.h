@@ -17,36 +17,29 @@
 #include "pandabase.h"
 #include "bitArray.h"
 #include "luse.h"
+#include "animChannel.h"
 
 class AnimEvalContext;
 class AnimEvalData;
-class AnimChannel;
 class Character;
+class IKChain;
 
 /**
  * Contains the state of an IK operation for a particular IK chain.
  */
 class EXPCL_PANDA_ANIM IKState {
 public:
-  enum Type {
-    T_none = -1,
-    // Keep track of end-effector pose before channel pose is applied,
-    // move end-effector back to original pose after channel pose is applied.
-    T_lock,
-    // Keep track of offset from another joint to end-effector before channel
-    // pose is applied, maintain same offset after channel pose is applied.
-    T_touch,
-  };
+  IKState() = default;
+  IKState(const IKState &copy) = default;
 
-  Type _type;
-
-  int _chain;
-
-  int _touch;
+  const IKChain *_chain;
+  const AnimChannel::IKEvent *_event;
 
   // Target end-effector net transform.
   LMatrix4 _target;
   LQuaternion _target_rot;
+
+  PN_stdfloat _blend_val;
 };
 
 /**
@@ -64,7 +57,7 @@ public:
   bool solve_ik(int chain, Character *character, LPoint3 &target_foot, LMatrix4 *net_transforms);
   bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LMatrix4 *net_transforms);
   void align_ik_matrix(LMatrix4 &mat, const LVecBase3 &align_to);
-  void joint_net_to_local(int joint, LMatrix4 *net_transforms, AnimEvalData &pose, const AnimEvalContext &context);
+  void joint_net_to_local(int joint, LMatrix4 *net_transforms, AnimEvalData &pose, const AnimEvalContext &context, PN_stdfloat weight);
 
 public:
   const AnimEvalContext *_context;

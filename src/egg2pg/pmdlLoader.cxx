@@ -405,42 +405,50 @@ load(const Filename &filename, const DSearchPath &search_path) {
           seq._layers.push_back(layer);
         }
       }
-      if (seqe->has_attribute("ik_locks")) {
-        PDXList *locks = seqe->get_attribute_value("ik_locks").get_list();
-        nassertr(locks != nullptr, false);
-        for (size_t j = 0; j < locks->size(); j++) {
-          PDXElement *locke = locks->get(j).get_element();
-          nassertr(locke != nullptr, false);
-          PMDLIKLock lock;
-          if (locke->has_attribute("chain")) {
-            lock._chain_name = locke->get_attribute_value("chain").get_string();
+      if (seqe->has_attribute("ik_events")) {
+        PDXList *events = seqe->get_attribute_value("ik_events").get_list();
+        nassertr(events != nullptr, false);
+        for (size_t j = 0; j < events->size(); ++j) {
+          PDXElement *evente = events->get(j).get_element();
+          nassertr(evente != nullptr, false);
+          PMDLIKEvent event;
+          if (evente->has_attribute("chain")) {
+            event._chain_name = evente->get_attribute_value("chain").get_string();
           }
-          if (locke->has_attribute("pos")) {
-            lock._pos_weight = locke->get_attribute_value("pos").get_float();
+          if (evente->has_attribute("type")) {
+            std::string etype = evente->get_attribute_value("type").get_string();
+            if (etype == "lock") {
+              event._type = PMDLIKEvent::T_lock;
+            } else if (etype == "touch") {
+              event._type = PMDLIKEvent::T_touch;
+            } else {
+              egg2pg_cat.error()
+                << "Unknown IK event type: " << etype << "\n";
+              return false;
+            }
           }
-          if (locke->has_attribute("rot")) {
-            lock._rot_weight = locke->get_attribute_value("rot").get_float();
+          if (evente->has_attribute("joint")) {
+            event._touch_joint = evente->get_attribute_value("joint").get_string();
           }
-          seq._ik_locks.push_back(lock);
-        }
-      }
-      if (seqe->has_attribute("ik_rules")) {
-        PDXList *rules = seqe->get_attribute_value("ik_rules").get_list();
-        nassertr(rules != nullptr, false);
-        for (size_t j = 0; j < rules->size(); ++j) {
-          PDXElement *rulee = rules->get(j).get_element();
-          nassertr(rulee != nullptr, false);
-          PMDLIKRule rule;
-          if (rulee->has_attribute("chain")) {
-            rule._chain_name = rulee->get_attribute_value("chain").get_string();
+          if (evente->has_attribute("start")) {
+            event._start_frame = evente->get_attribute_value("start").get_float();
           }
-          if (rulee->has_attribute("type")) {
-            rule._type = rulee->get_attribute_value("type").get_string();
+          if (evente->has_attribute("peak")) {
+            event._peak_frame = evente->get_attribute_value("peak").get_float();
           }
-          if (rulee->has_attribute("touch_joint")) {
-            rule._touch_joint = rulee->get_attribute_value("touch_joint").get_string();
+          if (evente->has_attribute("tail")) {
+            event._tail_frame = evente->get_attribute_value("tail").get_float();
           }
-          seq._ik_rules.push_back(rule);
+          if (evente->has_attribute("end")) {
+            event._end_frame = evente->get_attribute_value("end").get_float();
+          }
+          if (evente->has_attribute("spline")) {
+            event._spline = evente->get_attribute_value("spline").get_bool();
+          }
+          if (evente->has_attribute("pose_parameter")) {
+            event._pose_param = evente->get_attribute_value("pose_parameter").get_string();
+          }
+          seq._ik_events.push_back(event);
         }
       }
       if (seqe->has_attribute("events")) {
@@ -976,48 +984,49 @@ build_graph() {
         chan->set_weight_list((*it).second);
       }
 
-      for (size_t j = 0; j < pmdl_seq->_ik_locks.size(); ++j) {
-        const PMDLIKLock *plock = &pmdl_seq->_ik_locks[j];
+      // IK events.
+      for (size_t j = 0; j < pmdl_seq->_ik_events.size(); ++j) {
+        const PMDLIKEvent *pevent = &pmdl_seq->_ik_events[j];
 
         // Find the chain index by name.
         int chain_index = -1;
         for (int k = 0; k < part_bundle->get_num_ik_chains(); ++k) {
-          if (downcase(part_bundle->get_ik_chain(k)->get_name()) == downcase(plock->_chain_name)) {
+          if (downcase(part_bundle->get_ik_chain(k)->get_name()) == downcase(pevent->_chain_name)) {
             chain_index = k;
             break;
           }
         }
         if (chain_index < 0) {
           egg2pg_cat.error()
-            << "IK lock " << j << " refers to non-existent IK chain `" << plock->_chain_name << "`\n";
+            << "IK event " << j << " refers to non-existent IK chain `" << pevent->_chain_name << "`\n";
           continue;
         }
 
-        chan->add_ik_lock(chain_index, plock->_pos_weight, plock->_rot_weight);
-      }
-
-      for (size_t j = 0; j < pmdl_seq->_ik_rules.size(); ++j) {
-        const PMDLIKRule *prule = &pmdl_seq->_ik_rules[j];
-
-        // Find the chain index by name.
-        int chain_index = -1;
-        for (int k = 0; k < part_bundle->get_num_ik_chains(); ++k) {
-          if (downcase(part_bundle->get_ik_chain(k)->get_name()) == downcase(prule->_chain_name)) {
-            chain_index = k;
-            break;
-          }
+        AnimChannel::IKEvent event;
+        event._chain = chain_index;
+        switch (pevent->_type) {
+        case PMDLIKEvent::T_lock:
+          event._type = AnimChannel::IKEvent::T_lock;
+          break;
+        case PMDLIKEvent::T_touch:
+          event._type = AnimChannel::IKEvent::T_touch;
+          break;
+        default:
+          assert(false);
+          break;
         }
-        if (chain_index < 0) {
-          egg2pg_cat.error()
-            << "IK rule " << j << " refers to non-existent IK chain `" << prule->_chain_name << "`\n";
-          continue;
+        event._touch_joint = part_bundle->find_joint(pevent->_touch_joint);
+        event._start = pevent->_start_frame;
+        event._peak = pevent->_peak_frame;
+        event._tail = pevent->_tail_frame;
+        event._end = pevent->_end_frame;
+        event._spline = pevent->_spline;
+        if (!pevent->_pose_param.empty()) {
+          event._pose_parameter = part_bundle->find_pose_parameter(pevent->_pose_param);
+        } else {
+          event._pose_parameter = -1;
         }
-
-        AnimChannel::IKRule rule;
-        rule._chain = chain_index;
-        rule._type = AnimChannel::IKRule::T_touch;
-        rule._touch_joint = part_bundle->find_joint(prule->_touch_joint);
-        chan->add_ik_rule(std::move(rule));
+        chan->add_ik_event(event);
       }
 
       _chans_by_name[pmdl_seq->_name] = chan;

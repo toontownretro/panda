@@ -101,28 +101,28 @@ public:
   int _fps = 30;
 };
 
-/**
- * Solves a particular IK chain to keep the end joint in the same position
- * and/or rotation after applying an animation layer.
- */
-class PMDLIKLock {
+class PMDLIKEvent {
 public:
-  // The name of the IK chain to solve.
-  std::string _chain_name;
-  // Weights of the lock.  0 is essentially not performing the lock at all,
-  // while 1 is ensuring the foot/hand is exactly where it was before the
-  // animation was applied.
-  float _pos_weight = 1.0f;
-  float _rot_weight = 1.0f;
-};
+  enum Type {
+    T_invalid = -1,
+    T_lock, // Lock IK chain to pose before animation channel was applied.
+    T_touch, // Lock IK chain to an offset from another joint before animation channel was applied.
+  };
 
-// TODO: IK rules
+  Type _type = T_invalid;
 
-class PMDLIKRule {
-public:
   std::string _chain_name;
-  std::string _type;
+
   std::string _touch_joint;
+
+  // How to blend in IK.
+  float _start_frame = 0;
+  float _peak_frame = 0;
+  float _tail_frame = 0;
+  float _end_frame = 0;
+  bool _spline = false;
+  // If non-empty, pose parameter controls blending and not cycle of channel.
+  std::string _pose_param = "";
 };
 
 class PMDLSequenceLayer {
@@ -169,7 +169,7 @@ class PMDLSequenceBlend {
 public:
   enum BlendType {
     BT_invalid = -1,
-    BT_1d, // Not actually implemented in libanim yet.  1-dimensional linear blend space.
+    BT_1d, // 1-dimensional linear blend space.
     BT_2d, // 2-dimensional blend space.  Each animation assigned to 2-d coordinate.
   };
 
@@ -234,8 +234,7 @@ public:
 
   pvector<PMDLSequenceEvent> _events;
 
-  pvector<PMDLIKLock> _ik_locks;
-  pvector<PMDLIKRule> _ik_rules;
+  pvector<PMDLIKEvent> _ik_events;
 
   std::string _activity = "";
   int _activity_weight = 1;

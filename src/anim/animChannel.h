@@ -92,32 +92,33 @@ PUBLISHED:
   };
 
   /**
-   * Uses IK to move an IK chain end-effector back to where it was before a
-   * channel's pose was applied.  Useful for keeping extremities locked in
-   * place when applying an additive animation layer to a base layer.
+   * Defines an IK operation for an AnimChannel for a particular IK chain of
+   * a character.
    */
-  class EXPCL_PANDA_ANIM IKLock {
-  PUBLISHED:
-    IKLock() = default;
-
-    int _chain = -1;
-    PN_stdfloat _pos_weight = 1.0f;
-    PN_stdfloat _rot_weight = 1.0f;
-  };
-
-  class EXPCL_PANDA_ANIM IKRule {
+  class EXPCL_PANDA_ANIM IKEvent {
   PUBLISHED:
     enum Type {
-      T_none = -1,
-      // Move end-effector to position of another joint on the character.
+      T_invalid = -1,
+      T_lock,
       T_touch,
     };
 
-    IKRule() = default;
+    IKEvent() = default;
 
-    Type _type = T_none;
-    int _touch_joint = -1;
+    Type _type = T_invalid;
     int _chain = -1;
+
+    int _touch_joint = -1;
+
+    // Blending parameters.
+    PN_stdfloat _start = 0.0f;
+    PN_stdfloat _peak = 0.0f;
+    PN_stdfloat _tail = 0.0f;
+    PN_stdfloat _end = 0.0f;
+    bool _spline = false;
+    // If >= 0, blending controlled by pose parameter value instead of
+    // anim cycle.
+    int _pose_parameter = -1;
   };
 
   AnimChannel(const std::string &name);
@@ -150,13 +151,9 @@ PUBLISHED:
   INLINE int get_num_events() const;
   INLINE const Event &get_event(int n) const;
 
-  void add_ik_lock(int chain, PN_stdfloat pos_weight, PN_stdfloat rot_weight);
-  INLINE int get_num_ik_locks() const;
-  INLINE const IKLock *get_ik_lock(int n) const;
-
-  void add_ik_rule(IKRule &&rule);
-  INLINE int get_num_ik_rules() const;
-  INLINE const IKRule *get_ik_rule(int n) const;
+  void add_ik_event(const IKEvent &event);
+  INLINE int get_num_ik_events() const;
+  INLINE const IKEvent *get_ik_event(int n) const;
 
   INLINE void add_activity(int activity, PN_stdfloat weight = 1.0f);
   INLINE int get_num_activities() const;
@@ -214,11 +211,8 @@ protected:
   typedef pvector<Event> Events;
   Events _events;
 
-  typedef pvector<IKLock> IKLocks;
-  IKLocks _ik_locks;
-
-  typedef pvector<IKRule> IKRules;
-  IKRules _ik_rules;
+  typedef pvector<IKEvent> IKEvents;
+  IKEvents _ik_events;
 };
 
 #include "animChannel.I"

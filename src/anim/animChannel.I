@@ -114,37 +114,20 @@ get_event(int n) const {
 }
 
 /**
- * Returns the number of IK locks on the channel.
+ * Returns the number of IK events on the channel.
  */
 INLINE int AnimChannel::
-get_num_ik_locks() const {
-  return (int)_ik_locks.size();
+get_num_ik_events() const {
+  return (int)_ik_events.size();
 }
 
 /**
- * Returns the nth IK lock on the channel.
+ * Returns the nth IK event on the channel.
  */
-INLINE const AnimChannel::IKLock *AnimChannel::
-get_ik_lock(int n) const {
-  nassertr(n >= 0 && n < (int)_ik_locks.size(), nullptr);
-  return &_ik_locks[n];
-}
-
-/**
- * Returns the number of IK rules on the channel.
- */
-INLINE int AnimChannel::
-get_num_ik_rules() const {
-  return (int)_ik_rules.size();
-}
-
-/**
- * Returns the nth IK rule on the channel.
- */
-INLINE const AnimChannel::IKRule *AnimChannel::
-get_ik_rule(int n) const {
-  nassertr(n >= 0 && n < (int)_ik_rules.size(), nullptr);
-  return &_ik_rules[n];
+INLINE const AnimChannel::IKEvent *AnimChannel::
+get_ik_event(int n) const {
+  nassertr(n >= 0 && n < (int)_ik_events.size(), nullptr);
+  return &_ik_events[n];
 }
 
 /**
