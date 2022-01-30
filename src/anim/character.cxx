@@ -649,6 +649,16 @@ add_ik_chain(IKChain &&chain) {
 /**
  *
  */
+int Character::
+add_ik_target() {
+  int index = (int)_ik_targets.size();
+  _ik_targets.push_back(IKTarget());
+  return index;
+}
+
+/**
+ *
+ */
 PT(Character) Character::
 make_copy() const {
   return new Character(*this);

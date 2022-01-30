@@ -137,6 +137,19 @@ pre_ik(const AnimEvalData &pose) {
         state->_target = _joint_net_transforms[joint] * touch_inverse;
       }
       break;
+    case AnimChannel::IKEvent::T_target:
+      {
+        // Given that the user-specified target matrix is in world-space,
+        // move it into character space.
+        NodePath character_np = NodePath::any_path((PandaNode *)_context->_character->_active_owner);
+        LMatrix4 character_net_inverse;
+        character_net_inverse.invert_from(character_np.get_mat(NodePath()));
+        state->_target = _context->_character->get_ik_target(event->_touch_joint)->_matrix * character_net_inverse;
+        LVecBase3 scale, shear, pos, hpr;
+        decompose_matrix(state->_target, scale, shear, hpr, pos);
+        state->_target_rot.set_hpr(hpr);
+      }
+      break;
     default:
       break;
     }
@@ -211,6 +224,29 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
 
         // Slam the target matrix.
         _joint_net_transforms[joint] = end_effector_target_matrix;
+
+        // Convert back to local space, apply to output pose.
+        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+      }
+      break;
+    case AnimChannel::IKEvent::T_target:
+      {
+        // Grab chain net transform in current pose.
+        calc_joint_net_transform(joint, data);
+
+        // Target is in character space.
+        LPoint3 target_position = state->_target.get_row3(3);
+
+        // Solve the IK.
+        solve_ik(event->_chain, _context->_character, target_position, _joint_net_transforms.data());
+
+        // Slam orientation.
+        LVecBase3 scale, shear, pos, hpr;
+        decompose_matrix(_joint_net_transforms[joint], scale, shear, hpr, pos);
+        _joint_net_transforms[joint] = LMatrix4::scale_shear_mat(scale, shear) * state->_target_rot;
+        _joint_net_transforms[joint].set_row(3, pos);
 
         // Convert back to local space, apply to output pose.
         joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state_weight);

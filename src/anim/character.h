@@ -32,6 +32,7 @@
 #include "animLayer.h"
 #include "animChannel.h"
 #include "animEvalContext.h"
+#include "ikTarget.h"
 
 class FactoryParams;
 class Loader;
@@ -154,6 +155,10 @@ PUBLISHED:
   INLINE int get_num_ik_chains() const;
   INLINE IKChain *get_ik_chain(int n);
 
+  int add_ik_target();
+  INLINE int get_num_ik_targets() const;
+  INLINE IKTarget *get_ik_target(int n);
+
   void advance();
 
   INLINE int get_num_anim_layers() const;
@@ -229,6 +234,7 @@ private:
   typedef pvector<IKChain> IKChains;
   typedef pvector<AnimLayer> AnimLayers;
   typedef pvector<PT(AnimChannel)> AnimChannels;
+  typedef pvector<IKTarget> IKTargets;
 
   class ChannelBinding {
   public:
@@ -248,6 +254,7 @@ private:
   AnimLayers _anim_layers;
 
   IKChains _ik_chains;
+  IKTargets _ik_targets;
 
   PoseParameters _pose_parameters;
 
@@ -339,6 +346,7 @@ private:
 
   friend class CharacterNode;
   friend class AnimChannelTable;
+  friend class IKHelper;
 };
 
 #include "character.I"

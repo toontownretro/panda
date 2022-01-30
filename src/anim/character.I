@@ -12,6 +12,23 @@
  */
 
 /**
+ *
+ */
+int Character::
+get_num_ik_targets() const {
+  return (int)_ik_targets.size();
+}
+
+/**
+ *
+ */
+IKTarget *Character::
+get_ik_target(int n) {
+  nassertr(n >= 0 && n < (int)_ik_targets.size(), nullptr);
+  return &_ik_targets[n];
+}
+
+/**
  * Adds a new pose parameter to the character.  This can be used by animation
  * blend nodes to control the blend result.  Returns the index of the new pose
  * parameter.

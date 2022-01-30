@@ -99,8 +99,12 @@ PUBLISHED:
   PUBLISHED:
     enum Type {
       T_invalid = -1,
+      // Maintain original chain position after AnimChannel is applied.
       T_lock,
+      // Move chain relative to another joint on the character.
       T_touch,
+      // Move chain to user-specified world-space target position.
+      T_target,
     };
 
     IKEvent() = default;

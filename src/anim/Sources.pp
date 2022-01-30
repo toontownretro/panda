@@ -33,6 +33,7 @@
     ikChain.h ikChain.I \
     ikHelper.h ikHelper.I \
     ikSolver.h \
+    ikTarget.h \
     jointVertexTransform.h jointVertexTransform.I \
     poseParameter.h poseParameter.I \
     pt_AnimChannelTable.h \
