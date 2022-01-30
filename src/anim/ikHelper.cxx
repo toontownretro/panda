@@ -148,7 +148,7 @@ pre_ik(const AnimEvalData &pose) {
  * to data.
  */
 void IKHelper::
-apply_ik(AnimEvalData &data) {
+apply_ik(AnimEvalData &data, PN_stdfloat weight) {
   // Net transforms need to be recomputed from the new pose.
   _joint_net_computed_mask.clear();
 
@@ -167,6 +167,8 @@ apply_ik(AnimEvalData &data) {
       continue;
     }
 
+    PN_stdfloat state_weight = weight * state->_blend_val;
+
     switch (event->_type) {
     case AnimChannel::IKEvent::T_lock:
       {
@@ -184,9 +186,9 @@ apply_ik(AnimEvalData &data) {
         _joint_net_transforms[joint].set_row(3, pos);
 
         // Convert back to local space, apply to output pose.
-        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
-        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
-        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
       }
       break;
     case AnimChannel::IKEvent::T_touch:
@@ -207,9 +209,9 @@ apply_ik(AnimEvalData &data) {
         _joint_net_transforms[joint] = end_effector_target_matrix;
 
         // Convert back to local space, apply to output pose.
-        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
-        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
-        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state->_blend_val);
+        joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
+        joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, state_weight);
       }
       break;
     default:

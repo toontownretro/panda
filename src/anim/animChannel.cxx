@@ -327,7 +327,7 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   blend(context, data, this_data, data._weight);
 
   if (ik_enable) {
-    ik_helper.apply_ik(data);
+    ik_helper.apply_ik(data, data._weight);
   }
 }
 

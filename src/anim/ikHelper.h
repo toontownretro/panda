@@ -50,7 +50,7 @@ public:
   IKHelper(const AnimEvalContext *context, const AnimChannel *channel);
 
   void pre_ik(const AnimEvalData &pose);
-  void apply_ik(AnimEvalData &pose);
+  void apply_ik(AnimEvalData &pose, PN_stdfloat weight);
 
   void calc_joint_net_transform(int joint, const AnimEvalData &pose);
   bool solve_ik(int hip, int knee, int foot, LPoint3 &target_foot, LPoint3 &target_knee_pos, LVector3 &target_knee_dir, LMatrix4 *net_transforms);
