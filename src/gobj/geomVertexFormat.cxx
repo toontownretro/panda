@@ -117,7 +117,7 @@ get_post_animated_format() const {
       new_format->remove_column(delta_name);
     }
 
-    new_format->_animation.set_none();
+    //new_format->_animation.set_none();
 
     CPT(GeomVertexFormat) registered =
       GeomVertexFormat::register_format(new_format);

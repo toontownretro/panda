@@ -964,9 +964,9 @@ animate_vertices(bool force, Thread *current_thread) const {
   // Egg loader is currently set up to create a TransformTable for GPU-skinning.
   /////////////////////////////////////////////////////////////////////////////
 
-  if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
-    return this;
-  }
+  //if (cdata->_format->get_animation().get_animation_type() != AT_panda) {
+  //  return this;
+  //}
 
   PStatTimer timer(((GeomVertexData *)this)->_char_pcollector, current_thread);
 
@@ -1488,6 +1488,9 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
     cdata->_animated_vertices =
       new GeomVertexData(get_name(), new_format,
                          std::min(get_usage_hint(), UH_dynamic));
+    // So we can continue to to joint animation in the GPU while doing CPU
+    // morphing.
+    cdata->_animated_vertices->set_transform_table(cdata->_transform_table);
   }
   PT(GeomVertexData) new_data = cdata->_animated_vertices;
 
