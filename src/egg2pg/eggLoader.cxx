@@ -2649,8 +2649,8 @@ make_vertex_data(const EggRenderState *render_state,
       double weight_total = 0.0f;
 
       if (vertex->gref_size() == 0) {
-        auto it = _vertex_transform_indices.find(primitive_home);
-        if (it != _vertex_transform_indices.end()) {
+        auto it = _vertex_transform_indices[xform_table].find(primitive_home);
+        if (it != _vertex_transform_indices[xform_table].end()) {
           indices[0] = (*it).second;
         }
 
@@ -2658,20 +2658,26 @@ make_vertex_data(const EggRenderState *render_state,
         weight_total = 1.0f;
 
       } else {
+        if (vertex->gref_size() > 4) {
+          // A vertex cannot be influenced by more than four joints for
+          // hardware skinning.
+          egg2pg_cat.warning()
+            << "Vertex references " << vertex->gref_size() << " joints, which is "
+            << vertex->gref_size() - 4 << " more than the max (4)\n";
+        }
         double quantize = egg_vertex_membership_quantize;
         EggVertex::GroupRef::const_iterator gri;
         int vtx_weight_index = 0;
-        for (gri = vertex->gref_begin(); gri != vertex->gref_end(); ++gri) {
+        for (gri = vertex->gref_begin(); gri != vertex->gref_end() && vtx_weight_index < 4; ++gri) {
           EggGroup *egg_group = (*gri);
 
-          if (vtx_weight_index < 4) {
+          //if (vtx_weight_index < 4) {
             // Find the index into the TransformTable of this EggGroup's VertexTransform.
-            auto it = _vertex_transform_indices.find(egg_group);
-            if (it != _vertex_transform_indices.end()) {
+            auto it = _vertex_transform_indices[xform_table].find(egg_group);
+            if (it != _vertex_transform_indices[xform_table].end()) {
               indices[vtx_weight_index] = (*it).second;
             }
-          }
-
+          //}
 
           double membership = egg_group->get_vertex_membership(vertex);
           if (quantize != 0.0) {
@@ -2680,16 +2686,22 @@ make_vertex_data(const EggRenderState *render_state,
 
           weight_total += membership;
 
-          if (vtx_weight_index < 4) {
+          //if (vtx_weight_index < 4) {
             weights[vtx_weight_index] = membership;
 
             vtx_weight_index++;
-          }
+          //}
         }
       }
 
-      if (weight_total != 0.0) {
+      if (weight_total > 0.0001f && (weight_total < 0.999f || weight_total > 1.0001f)) {
         weights /= weight_total;
+      }
+
+      if (weight_total > 1.0001f) {
+        egg2pg_cat.warning()
+          << "Had to normalize vertex joint weights, non-norm total " << weight_total << ", non-norm weights "
+          << weights * weight_total << ", norm weights " << weights << "\n";
       }
 
       // Write the indices of the VertexTransforms that the vertex is assigned
@@ -2699,7 +2711,7 @@ make_vertex_data(const EggRenderState *render_state,
 
       // And finally the weights of each VertexTransform.
       gvw.set_column(InternalName::get_transform_weight());
-      gvw.add_data4(weights);
+      gvw.add_data4f(weights);
     }
   }
 
@@ -2719,6 +2731,8 @@ make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
                  CharacterMaker *character_maker) {
   PT(TransformTable) table = new TransformTable;
 
+  _vertex_transform_indices[table] = VertexTransformIndices();
+
   pmap<PT(VertexTransform), size_t> transform_indices;
 
   EggVertexPool::const_iterator vi;
@@ -2736,12 +2750,12 @@ make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
       if (it == transform_indices.end()) {
         size_t index = table->add_transform(vt);
         transform_indices[vt] = index;
-        _vertex_transform_indices[primitive_home] = index;
+        _vertex_transform_indices[table][primitive_home] = index;
       }
     } else {
       // If the vertex does have an explicit membership, ignore its parentage
       // and assign it where it wants to be.
-      double quantize = egg_vertex_membership_quantize;
+      //double quantize = egg_vertex_membership_quantize;
       EggVertex::GroupRef::const_iterator gri;
       for (gri = vertex->gref_begin(); gri != vertex->gref_end(); ++gri) {
         EggGroup *egg_joint = (*gri);
@@ -2753,7 +2767,7 @@ make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
         if (it == transform_indices.end()) {
           size_t index = table->add_transform(vt);
           transform_indices[vt] = index;
-          _vertex_transform_indices[egg_joint] = index;
+          _vertex_transform_indices[table][egg_joint] = index;
         }
       }
     }

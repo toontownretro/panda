@@ -265,7 +265,8 @@ private:
   TransformStates _transform_states;
 
   typedef pmap<PT(EggNode), int> VertexTransformIndices;
-  VertexTransformIndices _vertex_transform_indices;
+  typedef pmap<PT(TransformTable), VertexTransformIndices> TransformTableIndices;
+  TransformTableIndices _vertex_transform_indices;
 
   DeferredNodes _deferred_nodes;
 
