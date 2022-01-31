@@ -41,6 +41,8 @@ public:
   static CPT(ShaderSource) from_filename(const Filename &filename);
   static CPT(ShaderSource) from_raw(const std::string &source);
 
+  static void clear_cache();
+
 private:
   INLINE ShaderSource();
 

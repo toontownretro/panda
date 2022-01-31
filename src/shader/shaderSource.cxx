@@ -41,6 +41,10 @@ from_filename(const Filename &filename) {
       << " on model path " << get_model_path() << "\n";
     _cache[filename] = nullptr;
     return nullptr;
+
+  } else {
+    shadermgr_cat.info()
+      << "Reading shader source file " << resolved.get_fullpath() << "\n";
   }
 
   src->_source = vfs->read_file(resolved, true);
@@ -57,7 +61,7 @@ from_filename(const Filename &filename) {
 /**
  * Returns a new ShaderSource object from the raw source code.
  */
-INLINE CPT(ShaderSource) ShaderSource::
+CPT(ShaderSource) ShaderSource::
 from_raw(const std::string &source) {
   RawSourceCache::const_iterator it = _raw_cache.find(source);
   if (it != _raw_cache.end()) {
@@ -71,4 +75,14 @@ from_raw(const std::string &source) {
   _raw_cache[source] = src;
 
   return src;
+}
+
+/**
+ * Clears the shader source cache, forcing reloads of all shader files from
+ * disk.
+ */
+void ShaderSource::
+clear_cache() {
+  _cache.clear();
+  _raw_cache.clear();
 }
