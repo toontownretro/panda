@@ -1060,6 +1060,21 @@ transform_vertices(const LMatrix4 &mat, int begin_row, int end_row) {
     GeomVertexRewriter data(this, format->get_vector(ci));
     do_transform_vector_column(format, data, mat, begin_row, end_row);
   }
+
+  for (ci = 0; ci < format->get_num_morphs(); ci++) {
+    const GeomVertexColumn *base_column = format->get_column(format->get_morph_base(ci));
+    Contents base_contents = base_column->get_contents();
+
+    // Point morph deltas are vectors.
+    if (base_contents != C_point &&
+        base_contents != C_vector &&
+        base_contents != C_normal) {
+      continue;
+    }
+
+    GeomVertexRewriter data(this, format->get_morph_delta(ci));
+    do_transform_vector_column(format, data, mat, begin_row, end_row);
+  }
 }
 
 /**
@@ -1089,6 +1104,26 @@ transform_vertices(const LMatrix4 &mat, const SparseArray &rows) {
 
   for (ci = 0; ci < format->get_num_vectors(); ci++) {
     GeomVertexRewriter data(this, format->get_vector(ci));
+
+    for (size_t i = 0; i < rows.get_num_subranges(); ++i) {
+      int begin_row = rows.get_subrange_begin(i);
+      int end_row = rows.get_subrange_end(i);
+      do_transform_vector_column(format, data, mat, begin_row, end_row);
+    }
+  }
+
+  for (ci = 0; ci < format->get_num_morphs(); ci++) {
+    const GeomVertexColumn *base_column = format->get_column(format->get_morph_base(ci));
+    Contents base_contents = base_column->get_contents();
+
+    // Point morph deltas are vectors.
+    if (base_contents != C_point &&
+        base_contents != C_vector &&
+        base_contents != C_normal) {
+      continue;
+    }
+
+    GeomVertexRewriter data(this, format->get_morph_delta(ci));
 
     for (size_t i = 0; i < rows.get_num_subranges(); ++i) {
       int begin_row = rows.get_subrange_begin(i);
