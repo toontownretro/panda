@@ -63,8 +63,6 @@
 #ifndef FMODAUDIOSOUND_H
 #define FMODAUDIOSOUND_H
 
-#define HAVE_STEAM_AUDIO
-
 #include "pandabase.h"
 
 #include "audioSound.h"

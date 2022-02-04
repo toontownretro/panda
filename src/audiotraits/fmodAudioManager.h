@@ -67,8 +67,6 @@
 #ifndef FMODAUDIOMANAGER_H
 #define FMODAUDIOMANAGER_H
 
-#define HAVE_STEAM_AUDIO 1
-
 // First the includes.
 #include "pandabase.h"
 #include "pset.h"

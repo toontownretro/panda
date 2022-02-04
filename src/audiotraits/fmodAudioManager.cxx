@@ -15,8 +15,6 @@
  * @date 2020-10-04
  */
 
-#define HAVE_STEAM_AUDIO
-
 #include "pandabase.h"
 #include "config_audio.h"
 #include "config_fmodAudio.h"

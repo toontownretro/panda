@@ -17,8 +17,6 @@
  * @date 2020-10-04
  */
 
-#define HAVE_STEAM_AUDIO
-
 #include "pandabase.h"
 #include "dcast.h"
 
