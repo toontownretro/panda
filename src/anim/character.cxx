@@ -1338,7 +1338,7 @@ reset_layer_channel(int layer, int channel, int activity, bool restart, PN_stdfl
   AnimChannel *chan = _channels[channel];
 
   int num_frames = chan->get_num_frames();
-  PN_stdfloat from_cycle = from / std::max(1, (num_frames - 1));
+  PN_stdfloat from_cycle = from / std::max(1, num_frames);
   PN_stdfloat play_frames = std::max(1.0, to - from + 1.0);
   PN_stdfloat play_cycles = play_frames / num_frames;
 

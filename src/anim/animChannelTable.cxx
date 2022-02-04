@@ -87,14 +87,14 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   //nassertv(context._num_joints == (int)joint_map.size());
 
   // Make sure cycle is within 0-1 range.
-  PN_stdfloat cycle = std::max(0.0f, std::min(1.0f, data._cycle));
+  PN_stdfloat cycle = std::max(0.0f, std::min(0.999999f, data._cycle));
 
   int num_frames = get_num_frames();
-  int start_frame = (int)floor(context._start_cycle * (num_frames - 1));
-  int play_frames = (int)floor(context._play_cycles * (num_frames - 1));
+  int start_frame = (int)floor(context._start_cycle * (num_frames));
+  int play_frames = (int)floor(context._play_cycles * (num_frames));
 
   // Calculate the floating-point frame.
-  PN_stdfloat fframe = cycle * (num_frames - 1);
+  PN_stdfloat fframe = cycle * (num_frames);
   // Snap to integer frame.
   int frame = (int)floor(fframe);
 
@@ -102,7 +102,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   int next_frame;
   switch (context._play_mode) {
   case AnimLayer::PM_pose:
-    next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+    next_frame = std::min(std::max(frame + 1, 0), num_frames);
     break;
   case AnimLayer::PM_play:
     next_frame = std::min(std::max(frame + 1, 0), play_frames) + start_frame;
@@ -110,7 +110,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   case AnimLayer::PM_loop:
     {
       if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+        next_frame = std::min(std::max(frame + 1, 0), num_frames);
       } else {
         next_frame = cmod(frame + 1, play_frames) + start_frame;
       }
@@ -119,7 +119,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   case AnimLayer::PM_pingpong:
     {
       if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
+        next_frame = std::min(std::max(frame + 1, 0), num_frames);
 
       } else {
         next_frame = cmod(frame + 1, play_frames) + start_frame;
