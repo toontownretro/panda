@@ -230,6 +230,9 @@ private:
   // simulating the source based on its position and orientation.
   // Only created if the AudioSound is positional.
   IPLSource _sa_source;
+  IPLSimulationInputs _sa_inputs;
+#endif
+
   // Custom FMOD DSPs for applying Steam Audio effects, provided by the Steam
   // Audio FMOD plugin.
   // Methods relating to spatialization properties of the sound will be
@@ -237,8 +240,6 @@ private:
   // They are only created if the AudioSound is positional and the user has
   // configured these Steam Audio features on the sound.
   FMOD::DSP *_sa_spatial_dsp;
-  IPLSimulationInputs _sa_inputs;
-#endif
 
  public:
   static TypeHandle get_class_type() {

@@ -226,8 +226,9 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
 
 #ifdef HAVE_STEAM_AUDIO
   _sa_source = nullptr;
-  _sa_spatial_dsp = nullptr;
 #endif
+
+  _sa_spatial_dsp = nullptr;
 }
 
 /**
@@ -304,8 +305,9 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
 
 #ifdef HAVE_STEAM_AUDIO
   _sa_source = nullptr;
-  _sa_spatial_dsp = nullptr;
 #endif
+
+  _sa_spatial_dsp = nullptr;
 }
 
 /**
@@ -326,12 +328,13 @@ FMODAudioSound::
   }
   _dsps.clear();
 
-#ifdef HAVE_STEAM_AUDIO
   if (_sa_spatial_dsp != nullptr) {
     result = _sa_spatial_dsp->release();
     fmod_audio_errcheck("release Steam Audio spatializer DSP", result);
     _sa_spatial_dsp = nullptr;
   }
+
+#ifdef HAVE_STEAM_AUDIO
   if (_sa_source != nullptr) {
     iplSourceRemove(_sa_source, _manager->_sa_simulator);
     ++_manager->_next_sim_update;
