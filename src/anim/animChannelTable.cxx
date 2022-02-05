@@ -86,15 +86,18 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   // to no anim joint.
   //nassertv(context._num_joints == (int)joint_map.size());
 
-  // Make sure cycle is within 0-1 range.
-  PN_stdfloat cycle = std::max(0.0f, std::min(0.999999f, data._cycle));
+  // Convert cycles to frame numbers for table lookup.
+
+  // Ensure the cycle is within range.  The cycle can never be 1.0,
+  // because the frame index is floor(cycle * num_frames).
+  PN_stdfloat cycle = std::clamp(data._cycle, 0.0f, 0.999999f);
 
   int num_frames = get_num_frames();
-  int start_frame = (int)floor(context._start_cycle * (num_frames));
-  int play_frames = (int)floor(context._play_cycles * (num_frames));
+  int start_frame = (int)floor(context._start_cycle * num_frames);
+  int play_frames = (int)floor(context._play_cycles * num_frames);
 
   // Calculate the floating-point frame.
-  PN_stdfloat fframe = cycle * (num_frames);
+  PN_stdfloat fframe = cycle * num_frames;
   // Snap to integer frame.
   int frame = (int)floor(fframe);
 
@@ -112,7 +115,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       if (play_frames == 0) {
         next_frame = std::min(std::max(frame + 1, 0), num_frames);
       } else {
-        next_frame = cmod(frame + 1, play_frames) + start_frame;
+        next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
       }
     }
     break;
@@ -122,7 +125,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
         next_frame = std::min(std::max(frame + 1, 0), num_frames);
 
       } else {
-        next_frame = cmod(frame + 1, play_frames) + start_frame;
+        next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
         if (next_frame > play_frames) {
           next_frame = (play_frames * 2.0f - next_frame) + start_frame;
         } else {

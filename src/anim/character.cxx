@@ -1338,9 +1338,9 @@ reset_layer_channel(int layer, int channel, int activity, bool restart, PN_stdfl
   AnimChannel *chan = _channels[channel];
 
   int num_frames = chan->get_num_frames();
-  PN_stdfloat from_cycle = std::min(0.99999f, from / std::max(1, num_frames));
+  PN_stdfloat from_cycle = std::clamp(from / std::max(1, num_frames), 0.0f, 0.999999f);
   PN_stdfloat play_frames = std::max(1.0, to - from + 1.0);
-  PN_stdfloat play_cycles = std::min(0.99999f, play_frames / num_frames);
+  PN_stdfloat play_cycles = std::clamp(play_frames / std::max(1, num_frames), 0.0f, 0.999999f);
 
   AnimLayer *alayer = get_anim_layer(layer);
   if (restart || channel != alayer->_sequence) {

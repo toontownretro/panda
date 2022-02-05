@@ -104,9 +104,9 @@ is_playing() const {
   case PM_play:
     if (_play_rate < 0.0f) {
       // If we're playing backwards, we must be in front of the beginning.
-      return _cycle >= _start_cycle;
+      return _cycle > _start_cycle;
     } else {
-      return _cycle <= (_start_cycle + _play_cycles);
+      return _cycle < (_start_cycle + _play_cycles);
     }
   }
 }
@@ -158,26 +158,29 @@ accumulate_cycle() {
  */
 PN_stdfloat AnimLayer::
 clamp_cycle(PN_stdfloat c) const {
+  PN_stdfloat clamped;
   if (_play_mode == PM_play || _play_mode == PM_pose) {
-    return std::min(std::max(c, 0.0f), _play_cycles) + _start_cycle;
+    clamped = std::min(std::max(c, 0.0f), _play_cycles) + _start_cycle;
 
   } else if (_play_mode == PM_loop) {
     nassertr(_play_cycles >= 0.0f, 0.0f);
-    return cmod(c, _play_cycles) + _start_cycle;
+    clamped = cmod(c, _play_cycles) + _start_cycle;
 
   } else if (_play_mode == PM_pingpong) {
     // Pingpong.
     nassertr(_play_cycles >= 0.0f, 0.0f);
     c = cmod(c, _play_cycles * 2.0f);
     if (c > _play_cycles) {
-      return (_play_cycles * 2.0f - c) + _start_cycle;
+      clamped = (_play_cycles * 2.0f - c) + _start_cycle;
     } else {
-      return c + _start_cycle;
+      clamped = c + _start_cycle;
     }
 
   } else {
-    return c;
+    clamped = c;
   }
+
+  return std::clamp(clamped, 0.0f, 0.999999f);
 }
 
 
