@@ -78,6 +78,8 @@ fmod_panda_log(FMOD_DEBUG_FLAGS flags, const char *file, int line, const char* f
   return FMOD_OK;
 }
 
+pset<PT(FMODAudioSound)> FMODAudioManager::_queued_plays;
+
 #ifdef HAVE_STEAM_AUDIO
 
 typedef void (*PFNIPLFMODINITIALIZE)(IPLContext);
@@ -102,7 +104,6 @@ UpdateSeq FMODAudioManager::_next_sim_update;
 unsigned int FMODAudioManager::_sa_spatialize_handle = 0;
 unsigned int FMODAudioManager::_sa_mixer_return_handle = 0;
 unsigned int FMODAudioManager::_sa_reverb_handle = 0;
-pset<PT(FMODAudioSound)> FMODAudioManager::_queued_plays;
 PT(Thread) FMODAudioManager::_sa_refl_thread = nullptr;
 ReMutex FMODAudioManager::_sa_refl_lock("sa-refl-lock");
 

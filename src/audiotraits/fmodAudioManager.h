@@ -259,10 +259,6 @@ private:
 
   static UpdateSeq _last_sim_update, _next_sim_update;
 
-  // We need to queue up calls to play() on AudioSounds so we can run the
-  // Steam Audio simulation for that frame before actually playing the sound.
-  static pset<PT(FMODAudioSound)> _queued_plays;
-
   // These store the set of sounds that require different types of
   // simulation, so we know whether or not we need to actually run those
   // simulations.
@@ -270,6 +266,10 @@ private:
   //static pset<FMODAudioSound *> _refl_sim_sounds;
   //static pset<FMODAudioSound *> _path_sim_sounds;
 #endif
+
+  // Queued up calls to play that are processed during the update()
+  // method.
+  static pset<PT(FMODAudioSound)> _queued_plays;
 
 private:
   FMOD::ChannelGroup *_channelgroup;
