@@ -203,6 +203,7 @@ init_libpgraphnodes() {
 
   AmbientLight::register_with_read_factory();
   CallbackNode::register_with_read_factory();
+  CascadeLight::register_with_read_factory();
   ComputeNode::register_with_read_factory();
   DirectionalLight::register_with_read_factory();
   FadeLODNode::register_with_read_factory();

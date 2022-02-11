@@ -67,6 +67,9 @@ public:
 
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data);
 
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
 private:
   // Used to access the near and far points in the array
   enum CoordinateOrigin {

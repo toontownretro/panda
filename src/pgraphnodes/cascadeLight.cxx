@@ -393,3 +393,25 @@ CycleData *CascadeLight::CData::
 make_copy() const {
   return new CData(*this);
 }
+
+/**
+ *
+ */
+void CascadeLight::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+TypedWritable *CascadeLight::
+make_from_bam(const FactoryParams &params) {
+  CascadeLight *cl = new CascadeLight("");
+  DatagramIterator scan;
+  BamReader *manager;
+  parse_params(params, scan, manager);
+
+  cl->fillin(scan, manager);
+  return cl;
+}
