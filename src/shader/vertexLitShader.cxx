@@ -23,6 +23,7 @@
 #include "shaderManager.h"
 #include "texturePool.h"
 #include "shaderAttrib.h"
+#include "materialParamBool.h"
 
 TypeHandle VertexLitShader::_type_handle;
 
@@ -170,7 +171,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     env_cubemap = material->get_env_cubemap();
 
     Texture *normal_tex = material->get_normal_texture();
-    if (normal_tex != nullptr) {
+    MaterialParamBase *ssbump_p = material->get_param("ssbump");
+    if (normal_tex != nullptr && (ssbump_p == nullptr || !DCAST(MaterialParamBool, ssbump_p)->get_value())) {
       set_pixel_shader_define("BUMPMAP");
       set_input(ShaderInput("bumpSampler", normal_tex));
     }
