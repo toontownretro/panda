@@ -44,6 +44,7 @@ public:
   unsigned int _contents = 0;
   bool _visible = false;
   bool _checked = false;
+  bool _sky = false;
 };
 typedef pvector<PT(BSPFace)> BSPFaces;
 
@@ -188,6 +189,9 @@ public:
   PT(BSPNode) _children[2] = { nullptr, nullptr };
 
   LPoint3 _mins, _maxs;
+
+  // True if the leaf contains a skybox face.
+  bool _has_sky = false;
 
   // The node is a leaf if it has no children at all.
   INLINE bool is_leaf() const { return _children[0] == nullptr && _children[1] == nullptr; }

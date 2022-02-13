@@ -57,7 +57,7 @@
 #include "shaderManager.h"
 #include "config_shader.h"
 #include "pointLight.h"
-#include "directionalLight.h"
+#include "cascadeLight.h"
 #include "spotlight.h"
 #include "visClusterSampler.h"
 #include "visBuilderBSP.h"
@@ -276,6 +276,8 @@ build() {
       vis._builder = this;
       vis._hint_split = false;
 
+      int sky_faces = 0;
+
       // Generate structural BSP solids.  This is the input to the solid-leaf
       // BSP tree.
       for (MapSolid *solid : _source_map->_world->_solids) {
@@ -300,6 +302,7 @@ build() {
 
           bool hint = false;
           bool skip = false;
+          bool sky = false;
           std::string matname = side->_material_filename.get_basename_wo_extension();
           matname = downcase(matname);
           if (matname.find("toolshint") != std::string::npos) {
@@ -315,6 +318,10 @@ build() {
                     matname.find("toolsoccluder") != std::string::npos ||
                     matname.find("toolstrigger") != std::string::npos) {
             skip = true;
+
+          } else if (matname.find("toolsskybox") != std::string::npos) {
+            sky_faces++;
+            sky = true;
           }
 
           if (!hint && !skip) {
@@ -359,6 +366,7 @@ build() {
           bsp_face->_priority = 0;
           bsp_face->_hint = hint;
           bsp_face->_contents = 0;
+          bsp_face->_sky = sky;
           bsp_solid->_faces.push_back(bsp_face);
           if (!skip) {
             vis._input_faces.push_back(bsp_face);
@@ -369,6 +377,9 @@ build() {
           vis._input_solids.push_back(bsp_solid);
         }
       }
+
+      mapbuilder_cat.info()
+        << sky_faces << " sky faces\n";
 
       if (!vis.bake()) {
         return EC_unknown_error;
@@ -1876,6 +1887,8 @@ build_lighting() {
     }
   }
 
+  NodePath dlnp;
+
   // Now add the lights.
   for (size_t i = 0; i < _source_map->_entities.size(); i++) {
     MapEntitySrc *ent = _source_map->_entities[i];
@@ -2030,6 +2043,10 @@ build_lighting() {
     } else {
       light.type = LightBuilder::LT_directional;
 
+      // We can do sunlight dynamically with cascaded shadow maps.
+      // We still want the sun to contribute to indirect light, though.
+      light.bake_direct = false;
+
       // Use the ambient color from the light_environment as the sky color
       // for the lightmapper.
 
@@ -2048,9 +2065,9 @@ build_lighting() {
         builder.set_sun_angular_extent(atof(ent->_properties["SunSpreadAngle"].c_str()));
       }
 
-      PT(DirectionalLight) dl = new DirectionalLight("dl");
+      PT(CascadeLight) dl = new CascadeLight("dl");
       dl->set_color(light.color);
-      NodePath dlnp(dl);
+      dlnp = NodePath(dl);
       dlnp.set_hpr(light.hpr);
       _out_data->add_light(dlnp);
     }
@@ -2102,6 +2119,15 @@ build_lighting() {
       mprobe._color[j] = probe.data[j];
     }
     _out_data->add_ambient_probe(mprobe);
+  }
+
+  // Assign the sun light to any mesh groups that can see the sky.
+  if (!dlnp.is_empty()) {
+    for (size_t i = 0; i < _mesh_groups.size(); ++i) {
+      if (_mesh_groups[i]._can_see_sky) {
+        NodePath(_out_node->get_child(i)).set_light(dlnp);
+      }
+    }
   }
 
   return EC_ok;

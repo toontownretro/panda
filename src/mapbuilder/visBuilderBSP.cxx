@@ -136,6 +136,8 @@ struct MGFilterStack {
 bool VisBuilderBSP::
 bake() {
   // Start by constructing the BSP tree from the occluder polygons.
+  mapbuilder_cat.info()
+    << "Building initial BSP tree...\n";
   if (!build_bsp_tree()) {
     return false;
   }
@@ -143,14 +145,24 @@ bake() {
   // Each leaf node of the BSP tree is a visibility cell/volume.
 
   // Find connections between leaves (portals).
+  mapbuilder_cat.info()
+    << "Building initial portals...\n";
   if (!build_portals()) {
     return false;
   }
 
+  mapbuilder_cat.info()
+    << "Filtering structural solids into tree...\n";
   filter_structural_solids_into_tree();
 
   if (flood_entities()) {
     r_fill_outside(_tree_root);
+    mapbuilder_cat.info()
+      << "Outside filled\n";
+
+    mapbuilder_cat.info()
+      << "Marking visible sides, removing invisible faces...\n";
+
     mark_visible_sides();
 
     // Now remove invisible faces.
@@ -163,10 +175,16 @@ bake() {
       }
     }
 
+    mapbuilder_cat.info()
+      << "Rebuilding BSP tree and portals from visible face list...\n";
+
     // Rebuild the BSP tree using only the visible face list.
     build_bsp_tree();
     build_portals();
     filter_structural_solids_into_tree();
+
+    // We need to do this so we can mark leaves with sky faces.
+    mark_visible_sides();
 
     // Remove portals that lead to/from solid leaves.
     r_remove_opaque_portals(_tree_root);
@@ -263,6 +281,47 @@ bake() {
 
       _builder->_out_data->add_cluster_pvs(std::move(pvs));
     }
+
+    // Now determine which mesh groups can see the sky.
+    // We do this by checking if visgroups the cluster is in OR
+    // any visgroups in the PVS of the cluster's visgroups contain a
+    // skybox face.
+    int num_sees_sky = 0;
+    for (size_t i = 0; i < _builder->_mesh_groups.size(); ++i) {
+      MapGeomGroup *group = &_builder->_mesh_groups[i];
+
+      BitArray clusters = group->clusters;
+      int index = clusters.get_lowest_on_bit();
+      while (index >= 0) {
+        if (_empty_leaf_list[index]->_has_sky) {
+          group->_can_see_sky = true;
+          num_sees_sky++;
+          break;
+
+        } else {
+          // Check PVS of the leaf.
+          bool got_it = false;
+          for (int leaf_id : _empty_leaf_list[index]->_pvs) {
+            if (_empty_leaf_list[leaf_id]->_has_sky) {
+              num_sees_sky++;
+              group->_can_see_sky = true;
+              got_it = true;
+              break;
+            }
+          }
+          if (got_it) {
+            break;
+          }
+        }
+
+        // Check next mesh group cluster.
+        clusters.clear_bit(index);
+        index = clusters.get_lowest_on_bit();
+      }
+    }
+
+    mapbuilder_cat.info()
+      << num_sees_sky << " / " << _builder->_mesh_groups.size() << " mesh groups can see the sky\n";
 
   } else {
     mapbuilder_cat.warning()
@@ -643,15 +702,13 @@ make_subtree(BSPNode *node, const BSPFaces &faces) {
       //assert(!back.is_empty());
 
       if (!front.is_empty()) {
-        PT(BSPFace) front_face = new BSPFace;
+        PT(BSPFace) front_face = new BSPFace(*faces[i]);
         front_face->_winding = front;
-        front_face->_hint = faces[i]->_hint;
         front_polys.push_back(front_face);
       }
       if (!back.is_empty()) {
-        PT(BSPFace) back_face = new BSPFace;
+        PT(BSPFace) back_face = new BSPFace(*faces[i]);
         back_face->_winding = back;
-        back_face->_hint = faces[i]->_hint;
         back_polys.push_back(back_face);
       }
 
@@ -1032,6 +1089,10 @@ r_mark_visible_sides(BSPFace *face, Winding winding, BSPNode *node) {
     if (!node->_opaque) {
       // Face reached an empty leaf.  It's visible from the interior.
       face->_visible = true;
+      if (face->_sky) {
+        // Note that there is a skybox face in this leaf.
+        node->_has_sky = true;
+      }
     }
     return;
   }

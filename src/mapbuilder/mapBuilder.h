@@ -52,6 +52,8 @@ public:
   PT(BoundingBox) bounds;
   pvector<MapGeomBase *> geoms;
   BitArray clusters;
+
+  bool _can_see_sky;
 };
 
 /**
