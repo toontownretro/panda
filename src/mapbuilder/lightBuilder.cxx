@@ -370,6 +370,15 @@ make_textures() {
   direct->clear_image();
   _lm_textures["direct"] = direct;
 
+  PT(Texture) direct_dynamic = new Texture("lm_direct_dynamic");
+  direct_dynamic->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
+                                         Texture::T_float, Texture::F_rgba32);
+  direct_dynamic->set_clear_color(LColor(0, 0, 0, 0));
+  direct_dynamic->set_default_sampler(sampler);
+  direct_dynamic->set_compression(Texture::CM_off);
+  direct_dynamic->clear_image();
+  _lm_textures["direct_dynamic"] = direct;
+
   // Color of indirect lighting reaching a luxel.
   PT(Texture) indirect = new Texture("lm_indirect");
   indirect->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
@@ -1200,6 +1209,7 @@ compute_direct() {
   np.set_shader_input("grid", _gpu_buffers["grid"]);
 
   np.set_shader_input("luxel_direct", _lm_textures["direct"]);
+  np.set_shader_input("luxel_direct_dynamic", _lm_textures["direct_dynamic"]);
   np.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
   np.set_shader_input("luxel_position", _lm_textures["position"]);
@@ -1532,6 +1542,8 @@ compute_probes() {
 
   // Use denoised+dialated indirect+direct lightmap.
   np.set_shader_input("luxel_light", _lm_textures["direct"]);
+  // Also include the direct light from non-baked sources.
+  np.set_shader_input("luxel_light_dynamic", _lm_textures["direct_dynamic"]);
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
 
   np.set_shader_input("u_bias_", LVecBase2(_bias, 0));
