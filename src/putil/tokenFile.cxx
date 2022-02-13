@@ -170,11 +170,11 @@ tokenize(std::istream &is) {
       }
     }
 
-    if (c == '\\' && token_type != TT_string) {
-      line_escape = true;
-    } else if (c != '\n' && c != '\r' && c != ' ' && c != '\t') {
-      line_escape = false;
-    }
+    //if (c == '\\' && token_type != TT_string) {
+    //  line_escape = true;
+    ///} else if (c != '\n' && c != '\r' && c != ' ' && c != '\t') {
+    //  line_escape = false;
+    //}
 
     if (c == '\r' || c == '\n') {
 
