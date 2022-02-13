@@ -125,6 +125,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   add_hdr(state);
 
+  add_csm(state);
+
   //add_aux_attachments(state);
 
   SourceMaterial *src_mat = DCAST(SourceMaterial, material);
@@ -144,7 +146,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   set_pixel_shader_define("NUM_LIGHTS", num_lights);
-  //set_vertex_shader_define("NUM_LIGHTS", num_lights);
+  set_vertex_shader_define("NUM_LIGHTS", num_lights);
 
   add_fog(state);
 
