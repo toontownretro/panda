@@ -22,6 +22,7 @@
 #include "shaderManager.h"
 #include "texturePool.h"
 #include "shaderAttrib.h"
+#include "textureAttrib.h"
 
 TypeHandle EyeRefractShader::_type_handle;
 
@@ -87,12 +88,28 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  param = eye_mat->get_param("env_map");
-  if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
-  } else {
-    set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+  //param = eye_mat->get_param("env_map");
+  //if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
+  //  set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
+  //} else {
+  //  set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+  //}
+
+  Texture *envmap_tex = nullptr;
+  const TextureAttrib *ta;
+  state->get_attrib_def(ta);
+  for (int i = 0; i < ta->get_num_on_stages(); ++i) {
+    TextureStage *stage = ta->get_on_stage(i);
+    if (stage->get_name() == "envmap") {
+      envmap_tex = ta->get_on_texture(stage);
+      break;
+    }
   }
+  if (envmap_tex == nullptr) {
+    envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
+  }
+
+  set_input(ShaderInput("eyeReflectionCubemapSampler", envmap_tex));
 
   set_input(ShaderInput("brdfLutSampler", TexturePool::load_texture("maps/brdf_lut.txo")));
 
