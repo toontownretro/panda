@@ -328,13 +328,15 @@ determine_view_cluster() {
     return;
   }
 
-  LPoint3 view_pos = get_camera_transform()->get_pos();
-  _view_cluster = tree->get_leaf_value_from_point(view_pos);
-  if (_view_cluster != -1) {
-    _pvs.set_bit(_view_cluster);
-    const AreaClusterPVS *pvs = _data->get_cluster_pvs(_view_cluster);
-    for (size_t i = 0; i < pvs->get_num_visible_clusters(); i++) {
-      _pvs.set_bit(pvs->get_visible_cluster(i));
+  if (_scene_setup->get_camera_node()->get_pvs_cull()) {
+    LPoint3 view_pos = get_camera_transform()->get_pos();
+    _view_cluster = tree->get_leaf_value_from_point(view_pos);
+    if (_view_cluster != -1) {
+      _pvs.set_bit(_view_cluster);
+      const AreaClusterPVS *pvs = _data->get_cluster_pvs(_view_cluster);
+      for (size_t i = 0; i < pvs->get_num_visible_clusters(); i++) {
+        _pvs.set_bit(pvs->get_visible_cluster(i));
+      }
     }
   }
 }

@@ -144,12 +144,16 @@ PUBLISHED:
   INLINE CPTA_uchar get_steam_audio_probe_data() const;
   INLINE CPTA_uchar get_steam_audio_pathing_probe_data() const;
 
+  INLINE void set_cam(NodePath cam);
+
+  INLINE NodePath get_dir_light() const { return _dir_light; }
+
   RayTraceScene *get_trace_scene() const;
 
   void check_lighting_pvs();
 
-private:
   void build_trace_scene();
+
 
 public:
   static void register_with_read_factory();
@@ -179,6 +183,8 @@ private:
   pvector<NodePath> _lights;
   NodePath _dir_light;
   LVector3 _dir_light_dir;
+
+  NodePath _cam;
 
   // For each vis cluster, vector of indices into _lights for lights that are
   // in that cluster's PVS.  Same for ambient probes and cube maps.

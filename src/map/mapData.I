@@ -336,3 +336,11 @@ INLINE CPTA_uchar MapData::
 get_steam_audio_pathing_probe_data() const {
   return _steam_audio_pathing_probe_data;
 }
+
+/**
+ *
+ */
+INLINE void MapData::
+set_cam(NodePath cam) {
+  _cam = cam;
+}

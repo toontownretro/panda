@@ -51,6 +51,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     for (int i = 0; i < _data->get_num_clusters(); ++i) {
       const AreaClusterPVS *pvs = _data->get_cluster_pvs(i);
       for (int j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+        //std::cout << "cluster " << pvs->get_visible_cluster(j) << " visible from cluster " << i << "\n";
         BitArray mesh_groups = _data->get_cluster_pvs(pvs->get_visible_cluster(j))->_mesh_groups;
         int index = mesh_groups.get_lowest_on_bit();
         while (index >= 0) {
@@ -75,7 +76,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   if (cluster < 0) {
     // Invalid cluster.  Don't render anything.
-    return false;
+    return true;
   }
 
   // Very quickly iterate through all the mesh groups in the PVS and traverse
