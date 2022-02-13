@@ -1,7 +1,7 @@
 // New animation system
 
 #define LOCAL_LIBS \
-  pgraph
+  pgraph audio
 
 #begin lib_target
   #define TARGET anim
@@ -27,6 +27,7 @@
     characterNode.h characterNode.I \
     characterPart.h characterPart.I \
     characterSlider.h characterSlider.I \
+    characterTalker.h characterTalker.I \
     characterVertexSlider.h characterVertexSlider.I \
     config_anim.h \
     eyeballNode.h eyeballNode.I \
@@ -35,10 +36,12 @@
     ikSolver.h \
     ikTarget.h ikTarget.I \
     jointVertexTransform.h jointVertexTransform.I \
+    phonemes.h phonemes.I \
     poseParameter.h poseParameter.I \
     pt_AnimChannelTable.h \
     pt_Character.h \
     sharedEnum.h sharedEnum.I \
+    spokenSentence.h spokenSentence.I \
     weightList.h weightList.I
 
   #define COMPOSITE_SOURCES \
@@ -58,16 +61,19 @@
     characterNode.cxx \
     characterPart.cxx \
     characterSlider.cxx \
+    characterTalker.cxx \
     characterVertexSlider.cxx \
     config_anim.cxx \
     eyeballNode.cxx \
     ikChain.cxx \
     ikHelper.cxx \
     jointVertexTransform.cxx \
+    phonemes.cxx \
     poseParameter.cxx \
     pt_AnimChannelTable.cxx \
     pt_Character.cxx \
     sharedEnum.cxx \
+    spokenSentence.cxx \
     weightList.cxx
 
   #define INSTALL_HEADERS \
