@@ -123,6 +123,9 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
 
     } else if (key == "lightwarp" || key == "lightwarp_texture") {
       param = new MaterialParamTexture("lightwarp");
+
+    } else if (key == "ssbump") {
+      param = new MaterialParamBool("ssbump");
     }
 
     if (param != nullptr) {
