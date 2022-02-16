@@ -319,10 +319,11 @@ check_lighting_pvs() {
     if (cluster < 0) {
       continue;
     }
-    const AreaClusterPVS *pvs = &_cluster_pvs[cluster];
-    for (size_t j = 0; j < pvs->get_num_visible_clusters(); ++j) {
-      _probe_pvs[pvs->get_visible_cluster(j)].push_back((int)i);
-    }
+    _probe_pvs[cluster].push_back((int)i);
+    //const AreaClusterPVS *pvs = &_cluster_pvs[cluster];
+    //for (size_t j = 0; j < pvs->get_num_visible_clusters(); ++j) {
+    //  _probe_pvs[pvs->get_visible_cluster(j)].push_back((int)i);
+    //}
   }
 
   for (size_t i = 0; i < _cube_maps.size(); ++i) {
