@@ -118,6 +118,7 @@ create_joints() {
     CPT(TransformState) joint_pose = joint_default_net_transform(joint->joint);
 
     joint->actor = new PhysRigidDynamicNode(_char->get_joint_name(joint->joint));
+    joint->actor->set_ccd_enabled(true);
     joint->actor->add_shape(joint->shape);
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
