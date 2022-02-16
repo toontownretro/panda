@@ -173,7 +173,7 @@ add_color_output() {
 	nassertv(!is_window_layer());
 	nassertv(_buffer != nullptr);
 	if (!_color_texture) {
-		_color_texture = make_texture(Texture::F_rgba16, "color");
+		_color_texture = make_texture(Texture::F_rgb16, "color");
 		_color_texture->set_clear_color(LColor(0, 0, 0, 0));
 		_color_texture->clear_image();
 		_buffer->add_render_texture(_color_texture, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_color);
@@ -277,6 +277,7 @@ setup_quad() {
 	_quad_np = NodePath(cm.generate());
 	_quad_np.set_depth_test(false);
 	_quad_np.set_depth_write(false);
+	_quad_np.set_antialias(false);
 	//_quad_np.set_transparency(TransparencyAttrib::M_alpha);
 }
 

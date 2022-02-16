@@ -126,7 +126,7 @@ HDRPass::HDRPass( PostProcess *pp ) :
 	// color format.
 	_fbprops.set_rgb_color(true);
 	_fbprops.set_float_color(true);
-	_fbprops.set_rgba_bits(16, 16, 16, 1);
+	_fbprops.set_rgba_bits(16, 16, 16, 0);
 }
 
 /**
@@ -254,6 +254,19 @@ void HDRPass::update()
 
 	if ( !hdr_auto_exposure ) {
 		return;
+	}
+
+	PN_stdfloat ev_range = hdr_max_ev - hdr_min_ev;
+
+	CPT(RenderAttrib) shattr;
+	shattr = _histogram_compute_state->get_attrib(ShaderAttrib::get_class_slot());
+	shattr = DCAST(ShaderAttrib, shattr)->set_shader_input("minLogLum_ooLogLumRange", LVecBase2(hdr_min_ev, 1.0f / ev_range));
+	_histogram_compute_state = _histogram_compute_state->set_attrib(shattr);
+
+	for (size_t i = 0; i < _luminance_buffers.size(); ++i) {
+		shattr = _luminance_buffers[i]._compute_state->get_attrib(ShaderAttrib::get_class_slot());
+		shattr = DCAST(ShaderAttrib, shattr)->set_shader_input("minLogLum_logLumRange", LVecBase2(hdr_min_ev, ev_range));
+		_luminance_buffers[i]._compute_state = _luminance_buffers[i]._compute_state->set_attrib(shattr);
 	}
 
 	ClockObject *global_clock = ClockObject::get_global_clock();

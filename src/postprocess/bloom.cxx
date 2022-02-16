@@ -16,32 +16,15 @@
 #include "postProcessPass.h"
 #include "blurPasses.h"
 #include "hdr.h"
+#include "colorWriteAttrib.h"
+#include "colorBlendAttrib.h"
 
 #include "configVariableDouble.h"
 #include "texture.h"
 
 static ConfigVariableDouble bloom_strength("bloom-strength", 1.0);
-static ConfigVariableDouble bloom_radius("bloom-radius", 1.0);
 static ConfigVariableInt bloom_blur_passes("bloom-blur-passes", 5);
 static ConfigVariableBool bloom_remove_fireflies("bloom-remove-fireflies", true);
-static ConfigVariableDouble bloom_luminance_threshold("bloom-luminance-threshold", 1.0);
-static ConfigVariableDouble bloom_soft_knee("bloom-soft-knee", 0.5);
-static ConfigVariableDouble bloom_streak_length("bloom-streak-length", 1.0);
-
-static ConfigVariableDouble bloom_strength_1("bloom-strength-1", 1.0);
-static ConfigVariableDouble bloom_radius_1("bloom-radius-1", 1.0);
-
-static ConfigVariableDouble bloom_strength_2("bloom-strength-2", 1.0);
-static ConfigVariableDouble bloom_radius_2("bloom-radius-2", 1.0);
-
-static ConfigVariableDouble bloom_strength_3("bloom-strength-3", 1.0);
-static ConfigVariableDouble bloom_radius_3("bloom-radius-3", 1.0);
-
-static ConfigVariableDouble bloom_strength_4("bloom-strength-4", 1.0);
-static ConfigVariableDouble bloom_radius_4("bloom-radius-4", 1.0);
-
-static ConfigVariableDouble bloom_strength_5("bloom-strength-5", 1.0);
-static ConfigVariableDouble bloom_radius_5("bloom-radius-5", 1.0);
 
 class RemoveFireflies : public PostProcessPass {
 public:
@@ -49,6 +32,7 @@ public:
 		PostProcessPass(pp, "bloom-remove_fireflies"),
 		_source_tex(source_tex)
 	{
+		_fbprops.set_rgba_bits(16, 16, 16, 0);
 		_fbprops.set_alpha_bits(0);
 	}
 
@@ -81,20 +65,18 @@ public:
 	virtual void setup() {
 		PostProcessPass::setup();
 
+		get_quad().set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off));
+		get_quad().set_attrib(ColorBlendAttrib::make_off());
+
 		get_quad().set_shader(
 			Shader::load(Shader::SL_GLSL,
 				"shaders/postprocess/base.vert.glsl",
 				"shaders/postprocess/extract_bright_spots.frag.glsl"));
 
-		float lthresh = bloom_luminance_threshold;
-		float soft_knee = bloom_soft_knee;
-		float knee = lthresh * soft_knee + 1e-5f;
-
 		get_quad().set_shader_input("sourceTexture", _source_tex);
 		get_quad().set_shader_input("destTexture", _dest_tex, false, true, -1, 0);
-		get_quad().set_shader_input("curve_threshold",
-			LVecBase4(lthresh - knee, knee * 2, 0.25f / knee,
-								lthresh));
+		get_quad().set_shader_input("bloomStrengthVec",
+			LVecBase2(bloom_strength.get_value()));
 	}
 
 private:
@@ -117,6 +99,9 @@ public:
 	virtual void setup() {
 		PostProcessPass::setup();
 
+		get_quad().set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off));
+		get_quad().set_attrib(ColorBlendAttrib::make_off());
+
 		get_quad().set_shader(
 			Shader::load(Shader::SL_GLSL,
 				"shaders/postprocess/base.vert.glsl",
@@ -125,7 +110,6 @@ public:
 		get_quad().set_shader_input("sourceTexture", _source_tex);
 		get_quad().set_shader_input("destTexture", _dest_tex, false, true, -1, _mip + 1);
 		get_quad().set_shader_input("mipVec", LVecBase2i(_mip));
-		get_quad().set_shader_input("streakLengthVec", LVecBase2(bloom_streak_length));
 	}
 
 private:
@@ -153,6 +137,9 @@ public:
 	virtual void setup() {
 		PostProcessPass::setup();
 
+		get_quad().set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off));
+		get_quad().set_attrib(ColorBlendAttrib::make_off());
+
 		get_quad().set_shader(
 			Shader::load(Shader::SL_GLSL,
 				"shaders/postprocess/base.vert.glsl",
@@ -161,7 +148,6 @@ public:
 		get_quad().set_shader_input("sourceTexture", _source_tex);
 		get_quad().set_shader_input("destTexture", _dest_tex, false, true, -1, _mip - 1);
 		get_quad().set_shader_input("mip_first", LVecBase2i(_mip, _first));
-		get_quad().set_shader_input("streakLength_strength_radius", LVecBase3(bloom_streak_length, _strength, _radius));
 	}
 
 private:
@@ -180,7 +166,7 @@ public:
 		_scene_tex(scene_tex),
 		_bloom_tex(bloom_tex)
 	{
-		_fbprops.set_rgba_bits(16, 16, 16, 16);
+		_fbprops.set_rgba_bits(16, 16, 16, 0);
 		_fbprops.set_float_color(true);
 	}
 
@@ -254,34 +240,9 @@ BloomEffect(PostProcess *pp) :
 		std::ostringstream ss;
 		ss << "bloom-upsample-" << i << "\n";
 		float strength = bloom_strength.get_value();
-		float radius = bloom_radius.get_value();
-		switch (bloom_blur_passes.get_value() - i) {
-		case 0:
-			strength *= bloom_strength_1.get_value();
-			radius *= bloom_radius_1.get_value();
-			break;
-		case 1:
-			strength *= bloom_strength_2.get_value();
-			radius *= bloom_radius_2.get_value();
-			break;
-		case 2:
-			strength *= bloom_strength_3.get_value();
-			radius *= bloom_radius_3.get_value();
-			break;
-		case 3:
-			strength *= bloom_strength_4.get_value();
-			radius *= bloom_radius_4.get_value();
-			break;
-		case 5:
-			strength *= bloom_strength_5.get_value();
-			radius *= bloom_radius_5.get_value();
-			break;
-		default:
-			break;
-		}
 		PT(BloomUpsample) us = new BloomUpsample(
 			ss.str(), _pp, _bloom_texture, _bloom_texture,
-			bloom_blur_passes.get_value() - i, i == 0, strength, radius);
+			bloom_blur_passes.get_value() - i, i == 0, strength, 1.0f);
 		us->set_div_size(true, scale_mult);
 		us->setup();
 		add_pass(us);

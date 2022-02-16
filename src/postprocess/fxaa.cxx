@@ -23,7 +23,7 @@ public:
 	FXAA_Pass( PostProcess *pp ) :
 		PostProcessPass( pp, "fxaa-pass" )
 	{
-		_fbprops.set_rgba_bits(16, 16, 16, 16);
+		_fbprops.set_rgba_bits(16, 16, 16, 0);
 	}
 
 	virtual void setup()
