@@ -37,6 +37,8 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
 PUBLISHED:
   static CPT(RenderEffect) make();
 
+  const RenderState *get_current_lighting_state() const;
+
 public:
   virtual bool has_cull_callback() const override;
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data,

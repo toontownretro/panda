@@ -56,6 +56,14 @@ make() {
 }
 
 /**
+ * Returns the last computed lighting state.
+ */
+const RenderState *MapLightingEffect::
+get_current_lighting_state() const {
+  return _lighting_state;
+}
+
+/**
  * Should be overridden by derived classes to return true if cull_callback()
  * has been defined.  Otherwise, returns false to indicate cull_callback()
  * does not need to be called for this effect during the cull traversal.
