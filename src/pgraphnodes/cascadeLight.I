@@ -169,6 +169,23 @@ get_cascade_near_far(int n) const {
 }
 
 /**
+ *
+ */
+INLINE void CascadeLight::
+get_cascade_atlas_mins_maxs(int n, LVecBase2 &mins, LVecBase2 &maxs) const {
+  mins = _cascades[n].atlas_mins;
+  maxs = _cascades[n].atlas_maxs;
+}
+
+/**
+ *
+ */
+INLINE void CascadeLight::
+get_cascade_atlas_scale(int n, LVecBase2 &scale) const {
+  scale = _cascades[n].atlas_scale;
+}
+
+/**
  * Returns a value between 0 and 1 that is the point at which a particular
  * split should begin.
  */

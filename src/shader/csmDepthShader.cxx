@@ -36,7 +36,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_language(Shader::SL_GLSL);
 
   set_vertex_shader("shaders/csmdepth.vert.glsl");
-  set_geometry_shader("shaders/csmdepth.geom.glsl");
+  //set_geometry_shader("shaders/csmdepth.geom.glsl");
   set_pixel_shader("shaders/csmdepth.frag.glsl");
 
   // Do we have transparency?
@@ -97,7 +97,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // shadows for, so just expect that.
   CascadeLight *clight = DCAST(CascadeLight, lattr->get_on_light(0).node());
   set_vertex_shader_define("NUM_SPLITS", clight->get_num_cascades());
-  set_geometry_shader_define("MAX_VERTICES", clight->get_num_cascades() * 3);
+  set_pixel_shader_define("NUM_SPLITS", clight->get_num_cascades());
+  //set_geometry_shader_define("MAX_VERTICES", clight->get_num_cascades() * 3);
 
   // Instance the geometry to each cascade.
   set_instance_count(clight->get_num_cascades());

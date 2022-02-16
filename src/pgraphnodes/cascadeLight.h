@@ -62,6 +62,9 @@ PUBLISHED:
   INLINE const LMatrix4 &get_cascade_mvp(int n) const;
   INLINE const LVecBase2 &get_cascade_near_far(int n) const;
 
+  INLINE void get_cascade_atlas_mins_maxs(int n, LVecBase2 &mins, LVecBase2 &maxs) const;
+  INLINE void get_cascade_atlas_scale(int n, LVecBase2 &scale) const;
+
 public:
   virtual void setup_shadow_map();
 
@@ -83,6 +86,8 @@ private:
   struct Cascade {
     PT(OrthographicLens) lens;
     NodePath node;
+
+    LVecBase2 atlas_mins, atlas_maxs, atlas_scale;
   };
 
   void setup_cascades();

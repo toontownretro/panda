@@ -1193,17 +1193,37 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       }
       return;
     }
-    if (noprefix == "CascadeNearFar") {
-      if (param_type != GL_FLOAT_VEC2) {
+    if (noprefix == "CascadeAtlasMinMax") {
+      if (param_type != GL_FLOAT_VEC4) {
         GLCAT.error()
-          << "p3d_CascadeNearFar should be uniform vec2[]\n";
+          << "p3d_CascadeAtlasMinMax should be uniform vec4[]\n";
         return;
       }
       Shader::ShaderMatSpec bind;
       bind._id = param;
       bind._piece = Shader::SMP_row0;
       bind._func = Shader::SMF_first;
-      bind._part[0] = Shader::SMO_cascade_light_near_far_i;
+      bind._part[0] = Shader::SMO_cascade_light_atlas_min_max_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = Shader::SMO_identity;
+      bind._arg[1] = nullptr;
+      for (bind._index = 0; bind._index < param_size; ++bind._index) {
+        bind._id._location = p + bind._index;
+        _shader->cp_add_mat_spec(bind);
+      }
+      return;
+    }
+    if (noprefix == "CascadeAtlasScale") {
+      if (param_type != GL_FLOAT_VEC2) {
+        GLCAT.error()
+          << "p3d_CascadeAtlasScale should be uniform vec2[]\n";
+        return;
+      }
+      Shader::ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = Shader::SMP_row0;
+      bind._func = Shader::SMF_first;
+      bind._part[0] = Shader::SMO_cascade_light_atlas_scale_i;
       bind._arg[0] = nullptr;
       bind._part[1] = Shader::SMO_identity;
       bind._arg[1] = nullptr;
@@ -1218,7 +1238,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       bind._id = param;
       bind._part = Shader::STO_cascade_light_shadow_map;
       bind._name = 0;
-      bind._desired_type = Texture::TT_2d_texture_array;
+      bind._desired_type = Texture::TT_2d_texture;
       bind._stage = 0;
       if (get_sampler_texture_type(bind._desired_type, param_type)) {
         _glgsg->_glUniform1i(p, _shader->_tex_spec.size());

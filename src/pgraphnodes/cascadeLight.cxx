@@ -81,8 +81,7 @@ setup_shadow_map() {
 
   if (_shadow_map != nullptr &&
       _shadow_map->get_x_size() == _sb_size[0] &&
-      _shadow_map->get_y_size() == _sb_size[1] &&
-      _shadow_map->get_z_size() == _num_cascades) {
+      _shadow_map->get_y_size() == _sb_size[1]) {
 
     // Nothing actually changed; we don't need to recreate the shadow map.
     return;
@@ -92,9 +91,33 @@ setup_shadow_map() {
     _shadow_map = new Texture(get_name());
   }
 
-  // The depth texture of each cascade is a slice of a single array texture.
-  _shadow_map->setup_2d_texture_array(_sb_size[0], _sb_size[1], _num_cascades,
-    Texture::T_unsigned_byte, Texture::F_depth_component);
+  // The specified shadow map size is the size of the shadow map for
+  // the closest cascade.  The shadow map for each cascade after that is
+  // half the size of the previous.  They are all packed horizontally onto
+  // a single shadow map atlas.
+  int vert_size = _sb_size[0];
+  int horiz_size = 0;
+  for (int i = 0; i < _num_cascades; ++i) {
+    horiz_size += _sb_size[0] >> i;
+  }
+
+  LVecBase2 mins(0);
+  for (int i = 0; i < _num_cascades; ++i) {
+    mins[1] = 0.0f;
+    _cascades[i].atlas_mins = mins;
+    mins[0] += (_sb_size[0] >> i) / (PN_stdfloat)horiz_size;
+    mins[1] = (_sb_size[0] >> i) / (PN_stdfloat)vert_size;
+    _cascades[i].atlas_maxs = mins;
+
+    _cascades[i].atlas_scale = LVecBase2((_sb_size[0] >> i) / (PN_stdfloat)horiz_size,
+                                         mins[1]);
+    //std::cout << "cascade " << i << "\n";
+    //std::cout << "mins: " << _cascades[i].atlas_mins << "\n";
+    //std::cout << "maxs: " << _cascades[i].atlas_maxs << "\n";
+    //std::cout << "scale: " << _cascades[i].atlas_scale << "\n";
+  }
+
+  _shadow_map->setup_2d_texture(horiz_size, vert_size, Texture::T_unsigned_byte, Texture::F_depth_component);
   _shadow_map->set_clear_color(LColor(1));
   _shadow_map->set_wrap_u(SamplerState::WM_border_color);
   _shadow_map->set_wrap_v(SamplerState::WM_border_color);

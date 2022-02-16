@@ -333,8 +333,7 @@ cp_dependency(ShaderMatInput inp) {
       (inp == SMO_light_source_i) ||
       (inp == SMO_light_source2_i) ||
       (inp == SMO_light_source_shadow_view_matrix_i) ||
-      (inp == SMO_cascade_light_mvps_i) ||
-      (inp == SMO_cascade_light_near_far_i)) {
+      (inp == SMO_cascade_light_mvps_i)) {
     dep |= SSD_light | SSD_frame;
   }
   if (inp == SMO_mat_constant_x_attrib ||
@@ -467,7 +466,8 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
           spec._part[i] == SMO_light_source2_i ||
           spec._part[i] == SMO_light_source_shadow_view_matrix_i ||
           spec._part[i] == SMO_cascade_light_mvps_i ||
-          spec._part[i] == SMO_cascade_light_near_far_i ||
+          spec._part[i] == SMO_cascade_light_atlas_min_max_i ||
+          spec._part[i] == SMO_cascade_light_atlas_scale_i ||
           spec._part[i] == SMO_apiview_clipplane_i ||
           spec._part[i] == SMO_clipplane_i ||
           spec._part[i] == SMO_tex_is_alpha_i ||
@@ -1743,31 +1743,57 @@ bind_parameter(const Parameter &param) {
       return true;
     }
 
-    if (pieces[1] == "CascadeNearFar") {
+    if (pieces[1] == "CascadeAtlasMinMax") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+
+      if (!expect_float_vector(name, element_type, 4, 4)) {
+        return false;
+      }
+
       ShaderMatSpec bind;
       bind._id = param;
+      bind._id._type = element_type;
       bind._func = SMF_first;
-      bind._piece = SMP_row0;
-      bind._part[0] = SMO_cascade_light_near_far_i;
+      bind._piece = SMP_row3;
+      bind._part[0] = SMO_cascade_light_atlas_min_max_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
 
-      const ::ShaderType::Array *array_type = type->as_array();
-      if (array_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of vec2");
-      }
-
-      const ::ShaderType::Vector *vec_type = type->as_vector();
-      if (vec_type == nullptr) {
-        return report_parameter_error(name, type, "expected array of vec2");
-      }
-
-      int location = param._location;
-
-      for (bind._index = 0; bind._index < (int)array_type->get_num_elements(); ++bind._index) {
-        bind._id._location = location++;
+      for (uint32_t i = 0; i < num_elements; ++i) {
+        bind._index = i;
         cp_add_mat_spec(bind);
+        ++bind._id._location;
+      }
+
+      return true;
+    }
+
+    if (pieces[1] == "CascadeAtlasScale") {
+      const ::ShaderType *element_type;
+      uint32_t num_elements;
+      type->unwrap_array(element_type, num_elements);
+
+      if (!expect_float_vector(name, element_type, 2, 2)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._id._type = element_type;
+      bind._func = SMF_first;
+      bind._piece = SMP_row3x2;
+      bind._part[0] = SMO_cascade_light_atlas_scale_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+
+      for (uint32_t i = 0; i < num_elements; ++i) {
+        bind._index = i;
+        cp_add_mat_spec(bind);
+        ++bind._id._location;
       }
 
       return true;
@@ -1781,7 +1807,7 @@ bind_parameter(const Parameter &param) {
       ShaderTexSpec bind;
       bind._id = param;
       bind._part = STO_cascade_light_shadow_map;
-      bind._desired_type = Texture::TT_2d_texture_array;
+      bind._desired_type = Texture::TT_2d_texture;
       bind._stage = 0;
       _tex_spec.push_back(bind);
       return true;
@@ -1800,6 +1826,25 @@ bind_parameter(const Parameter &param) {
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._piece = SMP_row3x1;
+
+      cp_add_mat_spec(bind);
+
+      return true;
+    }
+
+    if (pieces[1] == "WindowSize") {
+      if (!expect_float_vector(name, type, 2, 2)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = SMP_row3x2;
+      bind._func = SMF_first;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._part[0] = SMO_window_size;
+      bind._arg[0] = nullptr;
 
       cp_add_mat_spec(bind);
 

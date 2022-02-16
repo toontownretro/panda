@@ -29,6 +29,7 @@
 #include "shaderAttrib.h"
 #include "lightAttrib.h"
 #include "graphicsStateGuardianBase.h"
+#include "depthTestAttrib.h"
 
 TypeHandle LightLensNode::_type_handle;
 

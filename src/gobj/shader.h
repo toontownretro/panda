@@ -223,8 +223,8 @@ public:
 
     // Cascaded shadow map projection matrices
     SMO_cascade_light_mvps_i,
-    // Cascaded shadow map cascade near/far points
-    SMO_cascade_light_near_far_i,
+    SMO_cascade_light_atlas_min_max_i,
+    SMO_cascade_light_atlas_scale_i,
 
     // Texture scale component of texture matrix.
     SMO_texscale_i,
