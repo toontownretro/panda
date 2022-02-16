@@ -18,6 +18,7 @@
     materialRegistry.I materialRegistry.h \
     skyBoxMaterial.I skyBoxMaterial.h \
     sourceMaterial.I sourceMaterial.h \
+    sourceSkyMaterial.I sourceSkyMaterial.h \
     standardMaterial.I standardMaterial.h
 
   #define COMPOSITE_SOURCES \
@@ -34,6 +35,7 @@
     materialRegistry.cxx \
     skyBoxMaterial.cxx \
     sourceMaterial.cxx \
+    sourceSkyMaterial.cxx \
     standardMaterial.cxx
 
   #define INSTALL_HEADERS \

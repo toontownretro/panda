@@ -21,6 +21,7 @@
     shaderStage.h shaderStage.I shaderStage.T \
     skyBoxShader.h skyBoxShader.I \
     sourceShader.h sourceShader.I \
+    sourceSkyShader.h sourceSkyShader.I \
     vertexLitShader.h vertexLitShader.I
 
   #define INSTALL_HEADERS \
@@ -41,6 +42,7 @@
     shaderStage.cxx \
     skyBoxShader.cxx \
     sourceShader.cxx \
+    sourceSkyShader.cxx \
     vertexLitShader.cxx
 
   #define IGATESCAN all

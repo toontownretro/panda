@@ -22,6 +22,7 @@
 #include "eyeRefractMaterial.h"
 #include "skyBoxMaterial.h"
 #include "sourceMaterial.h"
+#include "sourceSkyMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -67,4 +68,7 @@ init_libmaterial() {
 
   SourceMaterial::init_type();
   SourceMaterial::register_with_read_factory();
+
+  SourceSkyMaterial::init_type();
+  SourceSkyMaterial::register_with_read_factory();
 }
