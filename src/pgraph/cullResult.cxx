@@ -30,6 +30,10 @@
 #include "colorBlendAttrib.h"
 #include "shaderAttrib.h"
 #include "materialAttrib.h"
+#include "colorWriteAttrib.h"
+#include "antialiasAttrib.h"
+#include "cullBinManager.h"
+#include "depthTestAttrib.h"
 
 TypeHandle CullResult::_type_handle;
 
@@ -52,6 +56,32 @@ TypeHandle CullResult::_type_handle;
  */
 static const PN_stdfloat dual_opaque_level = 252.0 / 256.0;
 static const double bin_color_flash_rate = 1.0;  // 1 state change per second
+
+static const RenderState *
+get_z_prepass_state() {
+  static CPT(RenderState) z_prepass_state = nullptr;
+  if (z_prepass_state == nullptr) {
+    CullBinManager *cbm = CullBinManager::get_global_ptr();
+    cbm->add_bin("z_prepass", CullBin::BT_front_to_back, 1);
+    const RenderAttrib *states[13] = {
+      ColorWriteAttrib::make(ColorWriteAttrib::C_off),
+      DepthWriteAttrib::make(DepthWriteAttrib::M_on),
+      DepthTestAttrib::make(DepthTestAttrib::M_less),
+      FogAttrib::make_off(),
+      LightAttrib::make_all_off(),
+      MaterialAttrib::make_off(),
+      TextureAttrib::make_all_off(),
+      AntialiasAttrib::make(AntialiasAttrib::M_none),
+      ColorAttrib::make_off(),
+      ColorScaleAttrib::make_off(),
+      ColorBlendAttrib::make_off(),
+      ShaderAttrib::make("Depth"),
+      CullBinAttrib::make("z_prepass", 0)
+    };
+    z_prepass_state = RenderState::make(states, 13, 10000);
+  }
+  return z_prepass_state;
+}
 
 /**
  *
@@ -219,7 +249,8 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
 
   // Check to see if there's a special transparency setting.
   const TransparencyAttrib *trans;
-  if (object._state->get_attrib(trans)) {
+  bool has_trans = object._state->get_attrib(trans);
+  if (has_trans) {
     switch (trans->get_mode()) {
     case TransparencyAttrib::M_alpha:
     case TransparencyAttrib::M_premultiplied_alpha:
@@ -295,6 +326,46 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
       // Other kinds of transparency need no special handling.
       break;
     }
+  }
+
+  bool in_z_prepass = true;
+  bool doing_z_prepass = false;
+  if (has_trans && trans->get_mode() != TransparencyAttrib::M_none) {
+    in_z_prepass = false;
+
+  } else if (object._state->has_attrib(AlphaTestAttrib::get_class_slot())) {
+    in_z_prepass = false;
+
+  } else {
+    const DepthWriteAttrib *dw;
+    if (object._state->get_attrib(dw)) {
+      if (dw->get_mode() == DepthWriteAttrib::M_off) {
+        in_z_prepass = false;
+      }
+    }
+  }
+  if (in_z_prepass) {
+    // We can render opaque objects into the depth pre-pass.
+    if (traverser->get_scene()->get_camera_node()->has_tag("z_pre")) {
+      CullableObject z_pre_obj(object);
+      z_pre_obj._state = get_z_prepass_state();
+      if (z_pre_obj.munge_geom(_gsg, nullptr, traverser, force)) {
+        int z_pre_bin_index = z_pre_obj._state->get_bin_index();
+        CullBin *bin = get_bin(z_pre_bin_index);
+        nassertv(bin != nullptr);
+        bin->add_object(z_pre_obj, current_thread);
+        doing_z_prepass = true;
+      }
+    }
+  }
+
+  if (in_z_prepass && doing_z_prepass) {
+    // If the object is being rendered into the Z-prepass, we don't need it to write
+    // to the Z buffer during the main pass.
+    static CPT(RenderState) no_depth_write_state = RenderState::make(
+      DepthWriteAttrib::make(DepthWriteAttrib::M_off),
+      DepthTestAttrib::make(DepthTestAttrib::M_less_equal));
+    object._state = object._state->compose(no_depth_write_state);
   }
 
   int bin_index = object._state->get_bin_index();
