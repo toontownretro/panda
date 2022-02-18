@@ -1420,6 +1420,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   attr.absolute.up = _up;
   attr.absolute.forward = _forward;
   // Steam Audio doesn't care about the relative 3D attributes.
+  _sa_spatial_dsp->setActive(true);
   _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr)); // SOURCE_POSITION
   _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 2 : 0);
   _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
