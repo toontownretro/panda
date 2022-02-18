@@ -101,6 +101,9 @@ simulate(double dt) {
       dt = 0.1;
     }
 
+    // Clear left-over global contact events from last simulation.
+    _global_contact_queue.clear();
+
     _local_time += dt;
     _scene->simulate(dt);
     _scene->fetchResults(true);

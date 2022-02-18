@@ -78,8 +78,12 @@ PUBLISHED:
              unsigned int collision_group = 0,
              PhysBaseQueryFilter *filter = nullptr) const;
 
+  INLINE bool has_contact_event() const;
+  INLINE PT(RefCallbackData) pop_contact_event();
+
 public:
   INLINE void enqueue_callback(CallbackObject *obj, RefCallbackData *data);
+  INLINE void enqueue_global_contact(RefCallbackData *data);
 
   INLINE physx::PxScene *get_scene() const;
   INLINE physx::PxControllerManager *get_controller_manager() const;
@@ -95,6 +99,12 @@ private:
   };
   typedef pdeque<Callback> CallbackQueue;
   CallbackQueue _callbacks;
+
+  // Maintain a scene-wide queue of contact events so we
+  // can play impact sounds from show code.  There might also
+  // be an entity-specific callback which is stored above.
+  typedef pdeque<PT(RefCallbackData)> ContactEventQueue;
+  ContactEventQueue _global_contact_queue;
 
   double _local_time;
   int _max_substeps;

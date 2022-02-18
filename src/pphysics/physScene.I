@@ -100,6 +100,35 @@ get_group_collision_flag(int a, int b) const {
 }
 
 /**
+ * Returns true if there is a global contact event from the last simulation
+ * run that is awaiting processing.
+ */
+INLINE bool PhysScene::
+has_contact_event() const {
+  return !_global_contact_queue.empty();
+}
+
+/**
+ * Pops and returns the next global contact event from the last simulation run.
+ */
+INLINE PT(RefCallbackData) PhysScene::
+pop_contact_event() {
+  nassertr(!_global_contact_queue.empty(), nullptr);
+  PT(RefCallbackData) data = _global_contact_queue.front();
+  _global_contact_queue.pop_front();
+  return data;
+}
+
+/**
+ * Enqueues a scene-wide contact event for processing in show code after
+ * the simulation finishes.
+ */
+INLINE void PhysScene::
+enqueue_global_contact(RefCallbackData *data) {
+  _global_contact_queue.push_back(data);
+}
+
+/**
  *
  */
 void PhysScene::

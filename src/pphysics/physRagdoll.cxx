@@ -45,7 +45,7 @@ PhysRagdoll(const NodePath &character_np) {
     _char_joints[i] = nullptr;
   }
 
-  _contact_callback = new LimbContactCallback(this);
+  //_contact_callback = new LimbContactCallback(this);
 }
 
 /**
@@ -123,7 +123,7 @@ create_joints() {
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
     joint->actor->set_transform(joint_pose);
-    joint->actor->set_contact_callback(_contact_callback);
+    //joint->actor->set_contact_callback(_contact_callback);
     joint->actor->set_max_depenetration_velocity(phys_ragdoll_max_depenetration_vel);
     joint->actor->set_num_position_iterations(phys_ragdoll_pos_iterations);
     joint->actor->set_num_velocity_iterations(phys_ragdoll_vel_iterations);

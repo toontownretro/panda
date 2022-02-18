@@ -94,9 +94,10 @@ onContact(const physx::PxContactPairHeader &pair_header,
     return;
   }
 
+  PT(PhysContactCallbackData) cbdata = new PhysContactCallbackData(pair_header);
+
   if (node_a->get_contact_callback() != nullptr ||
       node_b->get_contact_callback() != nullptr) {
-    PhysContactCallbackData *cbdata = new PhysContactCallbackData(pair_header);
 
     if (node_a->get_contact_callback() != nullptr) {
       _scene->enqueue_callback(node_a->get_contact_callback(), cbdata);
@@ -106,6 +107,8 @@ onContact(const physx::PxContactPairHeader &pair_header,
       _scene->enqueue_callback(node_b->get_contact_callback(), cbdata);
     }
   }
+
+  _scene->enqueue_global_contact(cbdata);
 }
 
 /**
