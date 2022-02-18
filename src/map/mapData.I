@@ -132,7 +132,7 @@ get_entity(int n) const {
  *
  */
 INLINE void MapData::
-add_model_phys_data(CPTA_uchar data) {
+add_model_phys_data(const MapModelPhysData &data) {
   _model_phys_data.push_back(data);
 }
 
@@ -147,10 +147,10 @@ get_num_model_phys_datas() const {
 /**
  *
  */
-INLINE CPTA_uchar MapData::
+INLINE const MapModelPhysData *MapData::
 get_model_phys_data(int n) const {
-  nassertr(n >= 0 && n < (int)_model_phys_data.size(), PTA_uchar::empty_array(0));
-  return _model_phys_data[n];
+  nassertr(n >= 0 && n < (int)_model_phys_data.size(), nullptr);
+  return &_model_phys_data[n];
 }
 
 /**

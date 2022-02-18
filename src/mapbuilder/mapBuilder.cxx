@@ -528,6 +528,7 @@ build() {
     //geom_node->set_attrib(ColorAttrib::make_flat(cluster_colors[i % 6]));
 
     PT(PhysTriangleMeshData) phys_mesh_data = new PhysTriangleMeshData;
+    vector_string surface_props;
     int phys_polygons = 0;
 
     pvector<MapPoly *> group_polys;
@@ -558,6 +559,26 @@ build() {
         (!mat->has_tag("compile_trigger") && !mat->has_tag("compile_nodraw")) : true;
 
       if (add_phys) {
+
+        std::string surface_prop = "default";
+        if (mat != nullptr && mat->has_tag("surface_prop")) {
+          // Grab physics surface property from material.
+          surface_prop = mat->get_tag_value("surface_prop");
+        }
+
+        // Find or add to surface prop list for this mesh.
+        int mat_index = -1;
+        for (int j = 0; j < (int)surface_props.size(); ++j) {
+          if (surface_props[j] == surface_prop) {
+            mat_index = j;
+            break;
+          }
+        }
+        if (mat_index == -1) {
+          mat_index = (int)surface_props.size();
+          surface_props.push_back(surface_prop);
+        }
+
         // Add the polygon to the physics triangle mesh.
         // Need to reverse them.
         pvector<LPoint3> phys_verts;
@@ -566,7 +587,7 @@ build() {
           phys_verts[k] = w->get_point(k);
         }
         std::reverse(phys_verts.begin(), phys_verts.end());
-        phys_mesh_data->add_polygon(phys_verts);
+        phys_mesh_data->add_polygon(phys_verts, mat_index);
         phys_polygons++;
       }
     }
@@ -590,12 +611,15 @@ build() {
       if (!phys_mesh_data->cook_mesh()) {
         mapbuilder_cat.error()
           << "Failed to cook physics mesh for mesh group " << i << "\n";
-        _out_data->add_model_phys_data(CPTA_uchar());
+        _out_data->add_model_phys_data(MapModelPhysData());
       } else {
-        _out_data->add_model_phys_data(phys_mesh_data->get_mesh_data());
+        MapModelPhysData mm_phys_data;
+        mm_phys_data._phys_mesh_data = phys_mesh_data->get_mesh_data();
+        mm_phys_data._phys_surface_props = surface_props;
+        _out_data->add_model_phys_data(mm_phys_data);
       }
     } else {
-      _out_data->add_model_phys_data(CPTA_uchar());
+      _out_data->add_model_phys_data(MapModelPhysData());
     }
   }
 
@@ -634,7 +658,6 @@ build() {
       return ec;
     }
   }
-
 
   if (mapbuilder_cat.is_debug()) {
     mapbuilder_cat.debug()

@@ -45,7 +45,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
 
   me.add_uint16(_model_phys_data.size());
   for (size_t i = 0; i < _model_phys_data.size(); i++) {
-    WRITE_PTA(manager, me, IPD_uchar::write_datagram, _model_phys_data[i]);
+    WRITE_PTA(manager, me, IPD_uchar::write_datagram, _model_phys_data[i]._phys_mesh_data);
+    me.add_uint16(_model_phys_data[i]._phys_surface_props.size());
+    for (size_t j = 0; j < _model_phys_data[i]._phys_surface_props.size(); ++j) {
+      me.add_string(_model_phys_data[i]._phys_surface_props[j]);
+    }
   }
 
   manager->write_pointer(me, _cluster_tree);
@@ -116,7 +120,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < num_phys_datas; i++) {
     PTA_uchar data;
     READ_PTA(manager, scan, IPD_uchar::read_datagram, data);
-    _model_phys_data[i] = data;
+    _model_phys_data[i]._phys_mesh_data = data;
+    _model_phys_data[i]._phys_surface_props.resize(scan.get_uint16());
+    for (size_t j = 0; j < _model_phys_data[i]._phys_surface_props.size(); ++j) {
+      _model_phys_data[i]._phys_surface_props[j] = scan.get_string();
+    }
   }
 
   manager->read_pointer(scan); // _cluster_tree

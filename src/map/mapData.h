@@ -98,6 +98,24 @@ public:
 };
 
 /**
+ *
+ */
+class EXPCL_PANDA_MAP MapModelPhysData {
+PUBLISHED:
+  CPTA_uchar _phys_mesh_data;
+
+  INLINE int get_num_surface_props() const { return (int)_phys_surface_props.size(); }
+  INLINE std::string get_surface_prop(int n) const { return _phys_surface_props[n]; }
+
+public:
+  // The mesh data indexes into this list.
+  // When the map is loaded, we create a PhysMaterial corresponding to
+  // the surfaceprop name in Python code and add them to the PhysShape
+  // created for this model phys data in the same order.
+  vector_string _phys_surface_props;
+};
+
+/**
  * The main data store for a map.
  */
 class EXPCL_PANDA_MAP MapData : public TypedWritableReferenceCount {
@@ -110,9 +128,9 @@ PUBLISHED:
   INLINE int get_num_entities() const;
   INLINE MapEntity *get_entity(int n) const;
 
-  INLINE void add_model_phys_data(CPTA_uchar data);
+  INLINE void add_model_phys_data(const MapModelPhysData &data);
   INLINE int get_num_model_phys_datas() const;
-  INLINE CPTA_uchar get_model_phys_data(int n) const;
+  INLINE const MapModelPhysData *get_model_phys_data(int n) const;
 
   INLINE void set_area_cluster_tree(SpatialPartition *tree);
   INLINE const SpatialPartition *get_area_cluster_tree() const;
@@ -167,7 +185,8 @@ private:
 
 private:
   pvector<PT(MapEntity)> _entities;
-  pvector<CPTA_uchar> _model_phys_data;
+
+  pvector<MapModelPhysData> _model_phys_data;
 
   PT(SpatialPartition) _cluster_tree;
   pvector<AreaClusterPVS> _cluster_pvs;
