@@ -12,3 +12,21 @@
  */
 
 #include "physRayCastResult.h"
+#include "physx_utils.h"
+
+/**
+ * Returns the PhysMaterial instance hit by the ray, or nullptr if there
+ * is no valid material.
+ */
+PhysMaterial *PhysRayCastHit::
+get_material() const {
+  physx::PxShape *pxshape = _hit->shape;
+  if (pxshape == nullptr) {
+    // Somehow we hit no shape.
+    return nullptr;
+  }
+
+  PhysShape *shape = (PhysShape *)pxshape->userData;
+
+  return phys_material_from_shape_and_face_index(shape, get_face_index());
+}

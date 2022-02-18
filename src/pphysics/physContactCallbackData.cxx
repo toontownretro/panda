@@ -13,8 +13,27 @@
 
 #include "physContactCallbackData.h"
 #include "physEnums.h"
+#include "physShape.h"
+#include "physMaterial.h"
+#include "physx_utils.h"
 
 TypeHandle PhysContactCallbackData::_type_handle;
+
+/**
+ *
+ */
+PhysMaterial *PhysContactPoint::
+get_material_a(PhysShape *shape) const {
+  return phys_material_from_shape_and_face_index(shape, _point.internalFaceIndex0);
+}
+
+/**
+ *
+ */
+PhysMaterial *PhysContactPoint::
+get_material_b(PhysShape *shape) const {
+  return phys_material_from_shape_and_face_index(shape, _point.internalFaceIndex1);
+}
 
 /**
  *

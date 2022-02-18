@@ -23,12 +23,17 @@ class EXPCL_PANDA_PPHYSICS PhysContactPoint {
 PUBLISHED:
   INLINE PhysContactPoint(const physx::PxContactPairPoint &point);
 
+  ~PhysContactPoint() = default;
+
   INLINE LPoint3 get_position() const;
   INLINE PN_stdfloat get_separation() const;
   INLINE LVector3 get_normal() const;
   INLINE LVector3 get_impulse() const;
   INLINE size_t get_face_index_a() const;
   INLINE size_t get_face_index_b() const;
+
+  PhysMaterial *get_material_a(PhysShape *shape_a) const;
+  PhysMaterial *get_material_b(PhysShape *shape_b) const;
 
 private:
   const physx::PxContactPairPoint &_point;
@@ -37,6 +42,7 @@ private:
 class EXPCL_PANDA_PPHYSICS PhysContactPair {
 PUBLISHED:
   PhysContactPair() = default;
+  ~PhysContactPair() = default;
 
   INLINE PhysShape *get_shape_a() const;
   INLINE PhysShape *get_shape_b() const;

@@ -47,6 +47,8 @@ PUBLISHED:
   INLINE bool has_face_index() const;
   INLINE size_t get_face_index() const;
 
+  PhysMaterial *get_material() const;
+
 private:
   const physx::PxRaycastHit *_hit;
 };

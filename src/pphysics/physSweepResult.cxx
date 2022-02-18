@@ -12,3 +12,12 @@
  */
 
 #include "physSweepResult.h"
+#include "physx_utils.h"
+
+/**
+ *
+ */
+PhysMaterial *PhysSweepHit::
+get_material() const {
+  return phys_material_from_shape_and_face_index(get_shape(), get_face_index());
+}
