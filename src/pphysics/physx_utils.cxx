@@ -1,5 +1,7 @@
 #include "physx_utils.h"
 #include "config_pphysics.h"
+#include "physShape.h"
+#include "physMaterial.h"
 
 /**
  * Converts a measurement from the configured Panda units to PhysX units
@@ -79,4 +81,51 @@ physx_mass_to_panda(float mass) {
   case PPMU_ounces:
     return kg_to_oz(mass);
   }
+}
+
+/**
+ *
+ */
+PhysMaterial *
+phys_material_from_shape_and_face_index(PhysShape *shape, size_t face_index) {
+  if (shape == nullptr) {
+    return nullptr;
+  }
+
+  physx::PxShape *pxshape = shape->get_shape();
+
+  int material_index = 0;
+
+  switch (pxshape->getGeometryType()) {
+  // For triangle meshes and height fields, materials can be assigned to each
+  // triangle that index into the shape's list of materials.
+  case physx::PxGeometryType::eTRIANGLEMESH: {
+      if (face_index != 0xFFFFffff) {
+        physx::PxTriangleMeshGeometry geom;
+        pxshape->getTriangleMeshGeometry(geom);
+        material_index = geom.triangleMesh->getTriangleMaterialIndex(face_index);
+        if (material_index == 0xffff) {
+          material_index = 0;
+        }
+      }
+    }
+    break;
+
+  case physx::PxGeometryType::eHEIGHTFIELD: {
+      if (face_index != 0xFFFFffff) {
+        physx::PxHeightFieldGeometry geom;
+        pxshape->getHeightFieldGeometry(geom);
+        material_index = geom.heightField->getTriangleMaterialIndex(face_index);
+        if (material_index == 0xffff) {
+          material_index = 0;
+        }
+      }
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return shape->get_material(material_index);
 }

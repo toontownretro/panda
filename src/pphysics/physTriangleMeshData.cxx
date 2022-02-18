@@ -26,7 +26,7 @@
  * Adds a triangle to the mesh data.
  */
 void PhysTriangleMeshData::
-add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3) {
+add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, int material_index) {
   size_t start = _vertices.size();
   _vertices.push_back(panda_vec_to_physx(v1));
   _vertices.push_back(panda_vec_to_physx(v2));
@@ -34,6 +34,7 @@ add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3) {
   _indices.push_back(start);
   _indices.push_back(start + 1);
   _indices.push_back(start + 2);
+  _mat_indices.push_back(material_index);
 
   invalidate_mesh();
 }
@@ -42,7 +43,7 @@ add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3) {
  * Adds a quad to the triangle mesh.  Internally adds two triangles.
  */
 void PhysTriangleMeshData::
-add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 &v4) {
+add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 &v4, int material_index) {
   size_t start = _vertices.size();
   _vertices.push_back(panda_vec_to_physx(v1));
   _vertices.push_back(panda_vec_to_physx(v2));
@@ -55,6 +56,9 @@ add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 
   _indices.push_back(start + 2);
   _indices.push_back(start + 3);
 
+  _mat_indices.push_back(material_index);
+  _mat_indices.push_back(material_index);
+
   invalidate_mesh();
 }
 
@@ -64,7 +68,7 @@ add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 
  * formation.
  */
 void PhysTriangleMeshData::
-add_polygon(const pvector<LPoint3> &v) {
+add_polygon(const pvector<LPoint3> &v, int material_index) {
   nassertv(v.size() >= 3u);
 
   size_t start = _vertices.size();
@@ -75,6 +79,7 @@ add_polygon(const pvector<LPoint3> &v) {
     _indices.push_back(start);
     _indices.push_back(start + i);
     _indices.push_back(start + i + 1);
+    _mat_indices.push_back(material_index);
   }
 
   invalidate_mesh();
@@ -84,7 +89,7 @@ add_polygon(const pvector<LPoint3> &v) {
  * Adds triangles into the mesh from the indicated Geom object.
  */
 void PhysTriangleMeshData::
-add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat) {
+add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat, int material_index) {
   PT(Geom) dgeom = geom->decompose();
   GeomVertexReader vreader(dgeom->get_vertex_data(), InternalName::get_vertex());
   for (size_t i = 0; i < dgeom->get_num_primitives(); i++) {
@@ -101,6 +106,7 @@ add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat) {
       _indices.push_back(first_index);
       _indices.push_back(first_index + 1);
       _indices.push_back(first_index + 2);
+      _mat_indices.push_back(material_index);
     }
   }
   invalidate_mesh();
@@ -110,14 +116,14 @@ add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat) {
  * Adds triangles into the mesh from the Geoms of the indicated GeomNode.
  */
 void PhysTriangleMeshData::
-add_triangles_from_geom_node(GeomNode *node, bool world_space) {
+add_triangles_from_geom_node(GeomNode *node, bool world_space, int material_index) {
   LMatrix4 mat = LMatrix4::ident_mat();
   if (world_space) {
     mat = NodePath(node).get_net_transform()->get_mat();
   }
 
   for (int i = 0; i < node->get_num_geoms(); i++) {
-    add_triangles_from_geom(node->get_geom(i), mat);
+    add_triangles_from_geom(node->get_geom(i), mat, material_index);
   }
   invalidate_mesh();
 }
@@ -154,6 +160,15 @@ generate_mesh() {
     desc.triangles.stride = sizeof(physx::PxU32) * 3;
     desc.triangles.data = _indices.data();
 
+    if (!_mat_indices.empty()) {
+      nassertr(_mat_indices.size() == desc.triangles.count, false);
+      desc.materialIndices.stride = sizeof(physx::PxMaterialTableIndex);
+      desc.materialIndices.data = _mat_indices.data();
+
+    } else {
+      desc.materialIndices.data = nullptr;
+    }
+
     physx::PxTriangleMeshCookingResult::Enum result;
     _mesh = cooking->createTriangleMesh(desc, physics->getPhysicsInsertionCallback(), &result);
     return (_mesh != nullptr) && (result == physx::PxTriangleMeshCookingResult::eSUCCESS);
@@ -175,6 +190,15 @@ cook_mesh() {
   desc.triangles.count = _indices.size() / 3;
   desc.triangles.stride = sizeof(physx::PxU32) * 3;
   desc.triangles.data = _indices.data();
+
+  if (!_mat_indices.empty()) {
+    nassertr(_mat_indices.size() == desc.triangles.count, false);
+    desc.materialIndices.stride = sizeof(physx::PxMaterialTableIndex);
+    desc.materialIndices.data = _mat_indices.data();
+
+  } else {
+    desc.materialIndices.data = nullptr;
+  }
 
   physx::PxTriangleMeshCookingResult::Enum result;
   // Create and serialize mesh data to binary stream.

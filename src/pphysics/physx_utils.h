@@ -19,6 +19,9 @@
 #include "transformState.h"
 #include "physx_includes.h"
 
+class PhysMaterial;
+class PhysShape;
+
 INLINE float feet_to_meters(float feet);
 INLINE float meters_to_feet(float meters);
 INLINE float inches_to_meters(float inches);
@@ -61,6 +64,8 @@ INLINE LVecBase3 physx_ang_to_panda(const physx::PxVec3 &ang);
 
 INLINE physx::PxTransform panda_trans_to_physx(const TransformState *trans);
 INLINE CPT(TransformState) physx_trans_to_panda(const physx::PxTransform &trans);
+
+extern EXPCL_PANDA_PPHYSICS PhysMaterial *phys_material_from_shape_and_face_index(PhysShape *shape, size_t face_index);
 
 #include "physx_utils.I"
 

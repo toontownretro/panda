@@ -32,12 +32,12 @@ PUBLISHED:
   INLINE PhysTriangleMeshData();
   INLINE PhysTriangleMeshData(CPTA_uchar mesh_data);
 
-  void add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3);
-  void add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 &v4);
-  void add_polygon(const pvector<LPoint3> &vertices);
+  void add_triangle(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, int material_index = 0);
+  void add_quad(const LPoint3 &v1, const LPoint3 &v2, const LPoint3 &v3, const LPoint3 &v4, int material_index = 0);
+  void add_polygon(const pvector<LPoint3> &vertices, int material_index = 0);
 
-  void add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat = LMatrix4::ident_mat());
-  void add_triangles_from_geom_node(GeomNode *node, bool world_space = false);
+  void add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat = LMatrix4::ident_mat(), int material_index = 0);
+  void add_triangles_from_geom_node(GeomNode *node, bool world_space = false, int material_index = 0);
 
   INLINE size_t get_num_vertices() const;
   INLINE LPoint3 get_vertex(size_t n) const;
@@ -63,6 +63,7 @@ public:
 private:
   pvector<physx::PxVec3> _vertices;
   pvector<physx::PxU32> _indices;
+  pvector<physx::PxMaterialTableIndex> _mat_indices;
 
   physx::PxTriangleMesh *_mesh;
   CPTA_uchar _mesh_data;
