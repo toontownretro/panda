@@ -38,7 +38,8 @@ PhysShape(PhysGeometry &geometry, PhysMaterial *material) {
         physx::PxPlane(plane[0], plane[1], plane[2], panda_length_to_physx(plane[3]))));
   }
 
-  _material = material;
+  _phys_materials.push_back(material);
+  _materials.push_back(material->get_material());
 }
 
 /**
@@ -61,7 +62,11 @@ PhysShape(physx::PxShape *shape) {
   _shape = shape;
   _shape->userData = this;
   _shape->acquireReference();
-  physx::PxMaterial *mat;
-  shape->getMaterials(&mat, 1);
-  _material = new PhysMaterial(mat);
+
+  _materials.resize(_shape->getNbMaterials());
+  shape->getMaterials(_materials.data(), _materials.size());
+
+  for (physx::PxMaterial *mat : _materials) {
+    _phys_materials.push_back((PhysMaterial *)mat->userData);
+  }
 }

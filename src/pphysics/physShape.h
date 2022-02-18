@@ -48,7 +48,8 @@ PUBLISHED:
   INLINE bool is_trigger_shape() const;
 
   INLINE void set_material(PhysMaterial *mat);
-  INLINE PhysMaterial *get_material() const;
+  INLINE void add_material(PhysMaterial *mat);
+  INLINE PhysMaterial *get_material(int n = 0) const;
 
 public:
   PhysShape(physx::PxShape *shape);
@@ -57,7 +58,9 @@ public:
 
 private:
   physx::PxShape *_shape;
-  PT(PhysMaterial) _material;
+
+  pvector<PT(PhysMaterial)> _phys_materials;
+  pvector<physx::PxMaterial *> _materials;
 
 public:
   static TypeHandle get_class_type() {

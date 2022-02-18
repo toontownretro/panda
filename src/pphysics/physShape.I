@@ -131,17 +131,30 @@ is_trigger_shape() const {
  */
 INLINE void PhysShape::
 set_material(PhysMaterial *mat) {
-  _material = mat;
-  physx::PxMaterial *pxmat = mat->get_material();
-  _shape->setMaterials(&pxmat, 1);
+  _materials.clear();
+  _phys_materials.clear();
+  _phys_materials.push_back(mat);
+  _materials.push_back(mat->get_material());
+  _shape->setMaterials(_materials.data(), 1);
 }
 
 /**
- * Returns the material applied to the shape.
+ * Appends a new material to the shape.
+ */
+INLINE void PhysShape::
+add_material(PhysMaterial *mat) {
+  _phys_materials.push_back(mat);
+  _materials.push_back(mat->get_material());
+  _shape->setMaterials(_materials.data(), _materials.size());
+}
+
+/**
+ * Returns the nth material applied to the shape.
  */
 INLINE PhysMaterial *PhysShape::
-get_material() const {
-  return _material;
+get_material(int n) const {
+  nassertr(n >= 0 && n < _phys_materials.size(), nullptr);
+  return _phys_materials[n];
 }
 
 /**
