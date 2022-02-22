@@ -10558,6 +10558,8 @@ make_this_from_bam(const FactoryParams &params) {
     me->do_fillin_body(cdata_me, scan, manager);
     me->do_fillin_rawdata(cdata_me, scan, manager);
 
+    cdata_me->_keep_ram_image = false;
+
     // To manage the reference count, explicitly ref it now, then unref it in
     // the finalize callback.
     me->ref();
