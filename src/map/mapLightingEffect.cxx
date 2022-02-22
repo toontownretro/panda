@@ -64,6 +64,16 @@ get_current_lighting_state() const {
 }
 
 /**
+ *
+ */
+void MapLightingEffect::
+compute_lighting(const TransformState *net_transform, MapData *map_data,
+                 const GeometricBoundingVolume *node_bounds,
+                 const TransformState *parent_net_transform) const {
+  ((MapLightingEffect *)this)->do_compute_lighting(net_transform, map_data, node_bounds, parent_net_transform);
+}
+
+/**
  * Should be overridden by derived classes to return true if cull_callback()
  * has been defined.  Otherwise, returns false to indicate cull_callback()
  * does not need to be called for this effect during the cull traversal.
@@ -111,13 +121,6 @@ void MapLightingEffect::
 do_cull_callback(CullTraverser *trav, CullTraverserData &data,
                  CPT(TransformState) &node_transform,
                  CPT(RenderState) &node_state) {
-
-  // FIXME: This is most definitely slow.
-
-  PStatTimer timer(map_lighting_coll);
-
-  static PT(TextureStage) cm_ts = new TextureStage("envmap");
-
   // Assume we have a MapCullTraverser.  This will crash if it's not,
   // but I don't want to spend time checking if it is.
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
@@ -155,128 +158,168 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
   if (net_transform != _last_transform || mdata != _last_map_data) {
     // Node moved or map changed.  We need to recompute its lighting
     // state.
-
     _last_transform = net_transform;
     _last_map_data = mdata;
 
-    // Determine the lighting origin.  This the world-space geometric center
-    // of the node's external bounding volume.
-    LPoint3 pos;
-    const GeometricBoundingVolume *bounds = (const GeometricBoundingVolume *)node_reader->get_bounds();
-    if (!bounds->is_infinite()) {
-      pos = bounds->get_approx_center();
-
-      // Move it into world-space if not already.
-      if (!parent_net_transform->is_identity()) {
-        parent_net_transform->get_mat().xform_point_in_place(pos);
-      }
-
-    } else {
-      pos = net_transform->get_pos();
-    }
-
-    int cluster = mdata->get_area_cluster_tree()->get_leaf_value_from_point(pos);
-
-    mdata->check_lighting_pvs();
-
-    // Locate closest cube map texture.
-    Texture *closest = nullptr;
-    PN_stdfloat closest_dist = 1e24;
-    if (cluster >= 0) {
-      for (size_t i = 0; i < mdata->_cube_map_pvs[cluster].size(); i++) {
-        const MapCubeMap *mcm = mdata->get_cube_map(mdata->_cube_map_pvs[cluster][i]);
-        PN_stdfloat dist = (pos - mcm->_pos).length_squared();
-        if (dist < closest_dist) {
-          closest = mcm->_texture;
-          closest_dist = dist;
-        }
-      }
-    }
-
-    RayTraceScene *rt_scene = mdata->get_trace_scene();
-
-    // Located closest ambient probe.
-    closest_dist = 1e24;
-    const MapAmbientProbe *closest_probe = nullptr;
-    if (cluster >= 0) {
-      for (size_t i = 0; i < mdata->_probe_pvs[cluster].size(); i++) {
-        const MapAmbientProbe *map = mdata->get_ambient_probe(mdata->_probe_pvs[cluster][i]);
-        PN_stdfloat dist = (pos - map->_pos).length_squared();
-        if (dist < closest_dist) {
-          // Check that we can actually trace to the probe.
-          RayTraceHitResult ret;
-          ret = rt_scene->trace_line(pos, map->_pos, 3);
-          if (!ret.hit) {
-            // Probe is visible from sample point, we can use it.
-            closest_probe = map;
-            closest_dist = dist;
-          }
-        }
-      }
-    }
-
-    CPT(RenderState) state = RenderState::make_empty();
-
-    if (closest != _cube_map && closest != nullptr) {
-      _cube_map = closest;
-      CPT(RenderAttrib) tattr = TextureAttrib::make();
-      tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_ts, closest);
-      state = state->set_attrib(tattr);
-
-    } else {
-      CPT(RenderAttrib) curr_tex = _lighting_state->get_attrib(TextureAttrib::get_class_slot());
-      if (curr_tex != nullptr) {
-        state = state->set_attrib(curr_tex);
-      }
-
-    }
-
-    if (closest_probe != _probe && closest_probe != nullptr) {
-      _probe = closest_probe;
-      for (int i = 0; i < 9; i++) {
-        _probe_color[i] = closest_probe->_color[i];
-      }
-      CPT(RenderAttrib) sattr = ShaderAttrib::make();
-      sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", _probe_color));
-      state = state->set_attrib(sattr);
-
-    } else {
-      CPT(RenderAttrib) curr_shad = _lighting_state->get_attrib(ShaderAttrib::get_class_slot());
-      if (curr_shad != nullptr) {
-        state = state->set_attrib(curr_shad);
-      }
-    }
-
-    vector_int sorted_lights;
-    if (cluster >= 0) {
-      sorted_lights = mdata->_light_pvs[cluster];
-      std::sort(sorted_lights.begin(), sorted_lights.end(), [pos, mdata](const int &a, const int &b) -> bool {
-        return (pos - mdata->_lights[a].get_pos()).length_squared() < (pos - mdata->_lights[b].get_pos()).length_squared();
-      });
-    }
-
-    CPT(RenderAttrib) lattr = LightAttrib::make();
-    int num_added_lights = 0;
-    if (!mdata->_dir_light.is_empty()) {
-      RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
-      if (ret.hit) {
-        RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
-        if ((geom->get_mask() & 2) != 0) {
-          // Hit sky, sun is visible.
-          lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_dir_light);
-          num_added_lights++;
-        }
-      }
-    }
-    for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {
-      lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_lights[sorted_lights[i]]);
-      num_added_lights++;
-    }
-    state = state->set_attrib(lattr);
-
-    _lighting_state = state;
+    do_compute_lighting(net_transform, mdata, (const GeometricBoundingVolume *)node_reader->get_bounds(),
+                        parent_net_transform);
   }
 
   // Put the computed map lighting state onto the running render state.
   data._state = data._state->compose(_lighting_state);
+}
+
+/**
+ *
+ */
+void MapLightingEffect::
+do_compute_lighting(const TransformState *net_transform, MapData *mdata,
+                    const GeometricBoundingVolume *bounds, const TransformState *parent_net_transform) {
+  // FIXME: This is most definitely slow.
+
+  PStatTimer timer(map_lighting_coll);
+
+  static PT(TextureStage) cm_ts = new TextureStage("envmap");
+
+  // Determine the lighting origin.  This the world-space geometric center
+  // of the node's external bounding volume.
+  LPoint3 pos;
+  if (!bounds->is_infinite()) {
+    pos = bounds->get_approx_center();
+
+    // Move it into world-space if not already.
+    if (!parent_net_transform->is_identity()) {
+      parent_net_transform->get_mat().xform_point_in_place(pos);
+    }
+
+  } else {
+    pos = net_transform->get_pos();
+  }
+
+  int cluster = mdata->get_area_cluster_tree()->get_leaf_value_from_point(pos);
+
+  mdata->check_lighting_pvs();
+
+  // Locate closest cube map texture.
+  Texture *closest = nullptr;
+  PN_stdfloat closest_dist = 1e24;
+  if (cluster >= 0 && !mdata->_cube_map_pvs[cluster].empty()) {
+    for (size_t i = 0; i < mdata->_cube_map_pvs[cluster].size(); i++) {
+      const MapCubeMap *mcm = mdata->get_cube_map(mdata->_cube_map_pvs[cluster][i]);
+      PN_stdfloat dist = (pos - mcm->_pos).length_squared();
+      if (dist < closest_dist) {
+        closest = mcm->_texture;
+        closest_dist = dist;
+      }
+    }
+
+  } else {
+    for (size_t i = 0; i < mdata->_cube_maps.size(); i++) {
+      const MapCubeMap *mcm = mdata->get_cube_map(i);
+      PN_stdfloat dist = (pos - mcm->_pos).length_squared();
+      if (dist < closest_dist) {
+        closest = mcm->_texture;
+        closest_dist = dist;
+      }
+    }
+  }
+
+  RayTraceScene *rt_scene = mdata->get_trace_scene();
+
+  // Located closest ambient probe.
+  closest_dist = 1e24;
+  const MapAmbientProbe *closest_probe = nullptr;
+  //bool closest_probe_visible = false;
+  if (cluster >= 0 && !mdata->_probe_pvs[cluster].empty()) {
+    for (size_t i = 0; i < mdata->_probe_pvs[cluster].size(); i++) {
+      const MapAmbientProbe *map = mdata->get_ambient_probe(mdata->_probe_pvs[cluster][i]);
+      PN_stdfloat dist = (pos - map->_pos).length_squared();
+      if (dist < closest_dist) {
+        // Check that we can actually trace to the probe.
+        //RayTraceHitResult ret;
+        //ret = rt_scene->trace_line(pos, map->_pos, 3);
+        //if (!ret.hit) {
+          // Probe is visible from sample point, we can use it.
+          closest_probe = map;
+          closest_dist = dist;
+        //}
+      }
+    }
+  } else {
+    for (size_t i = 0; i < mdata->_ambient_probes.size(); i++) {
+      const MapAmbientProbe *map = mdata->get_ambient_probe(i);
+      PN_stdfloat dist = (pos - map->_pos).length_squared();
+      if (dist < closest_dist) {
+        // Check that we can actually trace to the probe.
+        //RayTraceHitResult ret;
+        //ret = rt_scene->trace_line(pos, map->_pos, 3);
+        //if (!ret.hit) {
+          // Probe is visible from sample point, we can use it.
+          closest_probe = map;
+          closest_dist = dist;
+        //}
+      }
+    }
+  }
+
+  CPT(RenderState) state = RenderState::make_empty();
+
+  if (closest != _cube_map && closest != nullptr) {
+    _cube_map = closest;
+    CPT(RenderAttrib) tattr = TextureAttrib::make();
+    tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_ts, closest);
+    state = state->set_attrib(tattr);
+
+  } else {
+    CPT(RenderAttrib) curr_tex = _lighting_state->get_attrib(TextureAttrib::get_class_slot());
+    if (curr_tex != nullptr) {
+      state = state->set_attrib(curr_tex);
+    }
+
+  }
+
+  if (closest_probe != _probe && closest_probe != nullptr) {
+    _probe = closest_probe;
+    for (int i = 0; i < 9; i++) {
+      _probe_color[i] = closest_probe->_color[i];
+    }
+    CPT(RenderAttrib) sattr = ShaderAttrib::make();
+    sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", _probe_color));
+    state = state->set_attrib(sattr);
+
+  } else {
+    CPT(RenderAttrib) curr_shad = _lighting_state->get_attrib(ShaderAttrib::get_class_slot());
+    if (curr_shad != nullptr) {
+      state = state->set_attrib(curr_shad);
+    }
+  }
+
+  vector_int sorted_lights;
+  if (cluster >= 0) {
+    sorted_lights = mdata->_light_pvs[cluster];
+    std::sort(sorted_lights.begin(), sorted_lights.end(), [pos, mdata](const int &a, const int &b) -> bool {
+      return (pos - mdata->_lights[a].get_pos()).length_squared() < (pos - mdata->_lights[b].get_pos()).length_squared();
+    });
+  }
+
+  CPT(RenderAttrib) lattr = LightAttrib::make();
+  int num_added_lights = 0;
+  if (!mdata->_dir_light.is_empty()) {
+    RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
+    if (ret.hit) {
+      RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
+      if ((geom->get_mask() & 2) != 0) {
+        // Hit sky, sun is visible.
+        lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_dir_light);
+        num_added_lights++;
+      }
+    }
+  }
+  for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {
+    lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_lights[sorted_lights[i]]);
+    num_added_lights++;
+  }
+  state = state->set_attrib(lattr);
+
+  _lighting_state = state;
 }

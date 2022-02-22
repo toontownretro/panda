@@ -39,6 +39,14 @@ PUBLISHED:
 
   const RenderState *get_current_lighting_state() const;
 
+  void compute_lighting(const TransformState *net_transform, MapData *map_data,
+                        const GeometricBoundingVolume *node_bounds,
+                        const TransformState *parent_net_transform) const;
+
+  void do_compute_lighting(const TransformState *net_transform, MapData *map_data,
+                           const GeometricBoundingVolume *node_bounds,
+                           const TransformState *parent_net_transform);
+
 public:
   virtual bool has_cull_callback() const override;
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data,
