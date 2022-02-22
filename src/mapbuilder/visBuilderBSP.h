@@ -192,6 +192,8 @@ public:
 
   // True if the leaf contains a skybox face.
   bool _has_sky = false;
+  // True if the leaf is in the 3-D skybox.
+  bool _sky_3d = false;
 
   // The node is a leaf if it has no children at all.
   INLINE bool is_leaf() const { return _children[0] == nullptr && _children[1] == nullptr; }
@@ -275,6 +277,9 @@ private:
   void final_leaf_pvs(int i);
   Winding clip_to_seperators(const Winding &source, const Winding &pass,
                              const Winding &target, bool flip_clip, BSPPFStack *stack);
+
+  void flood_sky_camera_leaves();
+  void r_flood_sky_camera_leaf(BSPNode *node);
 
 
 public:

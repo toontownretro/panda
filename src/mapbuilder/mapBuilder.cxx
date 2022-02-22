@@ -384,6 +384,119 @@ build() {
       if (!vis.bake()) {
         return EC_unknown_error;
       }
+
+      // Save off portal centers for audio probe placement.
+      for (BSPVisPortal *p : vis._portal_list) {
+        auto it = std::find(_portal_centers.begin(), _portal_centers.end(), p->_origin);
+        if (it == _portal_centers.end()) {
+          _portal_centers.push_back(p->_origin);
+        }
+      }
+
+#if 0
+      // Put leaf bounds in there
+      LineSegs segs("leaves");
+      segs.set_color(LColor(1, 0, 0, 1));
+
+      // Collect all leaves.
+      pvector<BSPNode *> leaves;
+      std::stack<BSPNode *> node_stack;
+      node_stack.push(vis._tree_root);
+      while (!node_stack.empty()) {
+        BSPNode *node = node_stack.top();
+        node_stack.pop();
+
+        if (!node->is_leaf()) {
+          node_stack.push(node->_children[FRONT_CHILD]);
+          node_stack.push(node->_children[BACK_CHILD]);
+
+        } else {
+          if (!node->_opaque) {
+            leaves.push_back(node);
+          }
+        }
+      }
+
+      for (BSPNode *leaf : leaves) {
+
+        // Collect all boundary planes of the leaf.
+        pvector<LPlane> leaf_planes;
+        BSPNode *node = leaf->_parent;
+        BSPNode *child = leaf;
+        while (node != nullptr) {
+          LPlane plane = node->_plane;
+          if (node->_children[FRONT_CHILD] == child) {
+            // Front side.
+            leaf_planes.push_back(plane);
+          } else {
+            // Back side.
+            leaf_planes.push_back(-plane);
+          }
+          child = node;
+          node = node->_parent;
+        }
+
+        // Now make windings for each plane and clip them to every other plane.
+        for (size_t i = 0; i < leaf_planes.size(); ++i) {
+          Winding w(leaf_planes[i]);
+          for (size_t j = 0; j < leaf_planes.size(); ++j) {
+            if (i == j) {
+              continue;
+            }
+            w = w.chop(leaf_planes[j]);
+            if (w.is_empty()) {
+              break;
+            }
+          }
+
+          if (w.is_empty()) {
+            continue;
+          }
+
+          // Draw line segment outline of winding.
+          segs.move_to(w.get_point(0));
+          for (int j = 1; j < w.get_num_points(); ++j) {
+            segs.draw_to(w.get_point(j));
+          }
+          // Close the loop.
+          segs.draw_to(w.get_point(0));
+        }
+      }
+
+      PT(GeomNode) leaf_lines = segs.create();
+      leaf_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+      leaf_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
+      leaf_lines->set_attrib(CullBinAttrib::make("fixed", 1));
+      _out_top->add_child(leaf_lines);
+
+      // Now do portals.
+      LineSegs psegs("portals");
+      psegs.set_color(LColor(0, 0, 1, 1));
+      pset<BSPPortal *> drawn_portals;
+      for (BSPNode *leaf : leaves) {
+        for (BSPPortal *portal : leaf->_portals) {
+          if (drawn_portals.find(portal) != drawn_portals.end()) {
+            continue;
+          }
+          drawn_portals.insert(portal);
+
+          if (portal->_winding.is_empty()) {
+            continue;
+          }
+
+          psegs.move_to(portal->_winding.get_point(0));
+          for (int i = 1; i < portal->_winding.get_num_points(); ++i) {
+            psegs.draw_to(portal->_winding.get_point(i));
+          }
+          psegs.draw_to(portal->_winding.get_point(0));
+        }
+      }
+      PT(GeomNode) portal_lines = psegs.create();
+      portal_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+      portal_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
+      portal_lines->set_attrib(CullBinAttrib::make("fixed", 2));
+      //_out_top->add_child(portal_lines);
+#endif
     }
     break;
 
@@ -391,116 +504,6 @@ build() {
   default:
     break;
   }
-
-#if 0
-  {
-
-
-    // Put leaf bounds in there
-    LineSegs segs("leaves");
-    segs.set_color(LColor(1, 0, 0, 1));
-
-    // Collect all leaves.
-    pvector<BSPNode *> leaves;
-    std::stack<BSPNode *> node_stack;
-    node_stack.push(vis._tree_root);
-    while (!node_stack.empty()) {
-      BSPNode *node = node_stack.top();
-      node_stack.pop();
-
-      if (!node->is_leaf()) {
-        node_stack.push(node->_children[FRONT_CHILD]);
-        node_stack.push(node->_children[BACK_CHILD]);
-
-      } else {
-        //if (!node->_opaque) {
-          leaves.push_back(node);
-        //}
-      }
-    }
-
-    for (BSPNode *leaf : leaves) {
-
-      // Collect all boundary planes of the leaf.
-      pvector<LPlane> leaf_planes;
-      BSPNode *node = leaf->_parent;
-      BSPNode *child = leaf;
-      while (node != nullptr) {
-        LPlane plane = node->_plane;
-        if (node->_children[FRONT_CHILD] == child) {
-          // Front side.
-          leaf_planes.push_back(plane);
-        } else {
-          // Back side.
-          leaf_planes.push_back(-plane);
-        }
-        child = node;
-        node = node->_parent;
-      }
-
-      // Now make windings for each plane and clip them to every other plane.
-      for (size_t i = 0; i < leaf_planes.size(); ++i) {
-        Winding w(leaf_planes[i]);
-        for (size_t j = 0; j < leaf_planes.size(); ++j) {
-          if (i == j) {
-            continue;
-          }
-          w = w.chop(leaf_planes[j]);
-          if (w.is_empty()) {
-            break;
-          }
-        }
-
-        if (w.is_empty()) {
-          continue;
-        }
-
-        // Draw line segment outline of winding.
-        segs.move_to(w.get_point(0));
-        for (int j = 1; j < w.get_num_points(); ++j) {
-          segs.draw_to(w.get_point(j));
-        }
-        // Close the loop.
-        segs.draw_to(w.get_point(0));
-      }
-    }
-
-    PT(GeomNode) leaf_lines = segs.create();
-    leaf_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
-    leaf_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
-    leaf_lines->set_attrib(CullBinAttrib::make("fixed", 1));
-    //_out_top->add_child(leaf_lines);
-
-    // Now do portals.
-    LineSegs psegs("portals");
-    psegs.set_color(LColor(0, 0, 1, 1));
-    pset<BSPPortal *> drawn_portals;
-    for (BSPNode *leaf : leaves) {
-      for (BSPPortal *portal : leaf->_portals) {
-        if (drawn_portals.find(portal) != drawn_portals.end()) {
-          continue;
-        }
-        drawn_portals.insert(portal);
-
-        if (portal->_winding.is_empty()) {
-          continue;
-        }
-
-        psegs.move_to(portal->_winding.get_point(0));
-        for (int i = 1; i < portal->_winding.get_num_points(); ++i) {
-          psegs.draw_to(portal->_winding.get_point(i));
-        }
-        psegs.draw_to(portal->_winding.get_point(0));
-      }
-    }
-    PT(GeomNode) portal_lines = psegs.create();
-    portal_lines->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
-    portal_lines->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
-    portal_lines->set_attrib(CullBinAttrib::make("fixed", 2));
-    //_out_top->add_child(portal_lines);
-
-  }
-#endif
 
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
   arr->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);
@@ -598,6 +601,7 @@ build() {
     //}
 
     MapMeshGroup out_group;
+    out_group._in_3d_skybox = group._in_3d_skybox;
     out_group._clusters = group.clusters;
     out_group._geom_node = geom_node;
     _out_data->add_mesh_group(out_group);
@@ -972,6 +976,7 @@ bake_steam_audio() {
 
       const BSPTree *tree = (const BSPTree *)_out_data->get_area_cluster_tree();
 
+      pvector<LPoint3> probe_positions;
       for (size_t i = 0; i < tree->_leaves.size(); ++i) {
         if (tree->_leaves[i].solid || tree->_leaves[i].value < 0) {
           // Don't place a probe in solid leaves.
@@ -1017,11 +1022,20 @@ bake_steam_audio() {
         }
         leaf_center /= total_points;
 
+        probe_positions.push_back(leaf_center);
+      }
+
+      // Also place probes at center of each portal.
+      for (const LPoint3 &portal_center : _portal_centers) {
+        probe_positions.push_back(portal_center);
+      }
+
+      for (const LPoint3 &center : probe_positions) {
         // Place probe here.
         IPLSphere sphere;
-        sphere.center.x = leaf_center[0] * HAMMER_UNITS_TO_METERS;
-        sphere.center.y = leaf_center[2] * HAMMER_UNITS_TO_METERS;
-        sphere.center.z = -leaf_center[1] * HAMMER_UNITS_TO_METERS;
+        sphere.center.x = center[0] * HAMMER_UNITS_TO_METERS;
+        sphere.center.y = center[2] * HAMMER_UNITS_TO_METERS;
+        sphere.center.z = -center[1] * HAMMER_UNITS_TO_METERS;
         sphere.radius = 10.0f;
         iplProbeBatchAddProbe(batch, sphere);
         num_probes++;

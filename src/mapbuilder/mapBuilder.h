@@ -53,7 +53,8 @@ public:
   pvector<MapGeomBase *> geoms;
   BitArray clusters;
 
-  bool _can_see_sky;
+  bool _can_see_sky = false;
+  bool _in_3d_skybox = false;
 };
 
 /**
@@ -162,6 +163,9 @@ public:
   LPoint3 _scene_mins;
   LPoint3 _scene_maxs;
   PT(BoundingBox) _scene_bounds;
+
+  // Extracted from the VisBuilder to place audio probes.
+  pvector<LPoint3> _portal_centers;
 };
 
 #include "mapBuilder.I"

@@ -189,6 +189,9 @@ bake() {
     // Remove portals that lead to/from solid leaves.
     r_remove_opaque_portals(_tree_root);
 
+    // Find the 3-D skybox leaves.
+    flood_sky_camera_leaves();
+
     // Build portal representations for vis.
     r_build_portal_list(_tree_root);
 
@@ -260,6 +263,7 @@ bake() {
     // Store PVS data on the output map.
     for (size_t i = 0; i < _empty_leaf_list.size(); ++i) {
       AreaClusterPVS pvs;
+      pvs._3d_sky_cluster = _empty_leaf_list[i]->_sky_3d;
 
       for (int leaf_id : _empty_leaf_list[i]->_pvs) {
         pvs.add_visible_cluster(leaf_id);
@@ -318,6 +322,20 @@ bake() {
         clusters.clear_bit(index);
         index = clusters.get_lowest_on_bit();
       }
+
+      // Also determine if it's in the 3-D skybox by checking if
+      // any of the leaves the mesh group is in are 3-D skybox leaves.
+      clusters = group->clusters;
+      index = clusters.get_lowest_on_bit();
+      while (index >= 0) {
+        if (_empty_leaf_list[index]->_sky_3d) {
+          group->_in_3d_skybox = true;
+          break;
+        }
+
+        clusters.clear_bit(index);
+        index = clusters.get_lowest_on_bit();
+      }
     }
 
     mapbuilder_cat.info()
@@ -326,6 +344,15 @@ bake() {
   } else {
     mapbuilder_cat.warning()
       << "****** leaked ******\n";
+
+    mark_visible_sides();
+
+    // Remove portals that lead to/from solid leaves.
+    r_remove_opaque_portals(_tree_root);
+
+    // Build portal representations for vis.
+    r_build_portal_list(_tree_root);
+
   }
 
   if (!build_output_tree()) {
@@ -945,7 +972,7 @@ flood_entities() {
     origin[2] += 1;
 
     // Find the leaf of the entity.
-    if (place_occupant(_tree_root, origin)) {
+    if (place_occupant(_tree_root, origin/*, ent->_class_name*/)) {
       inside = true;
     }
   }
@@ -1629,4 +1656,61 @@ calc_radius() {
   }
 
   _radius = best;
+}
+
+/**
+ * Marks the leaf containing the 3-D skybox `sky_camera` entity and all
+ * neighboring leaves reachable through portals as 3-D skybox leaves.
+ *
+ * Geometry within 3-D skybox leaves are separated out into their own
+ * branch of the scene graph so the game can render them in a separate
+ * DisplayRegion behind the main world.
+ */
+void VisBuilderBSP::
+flood_sky_camera_leaves() {
+  MapEntitySrc *sky_camera_ent = nullptr;
+  for (MapEntitySrc *ent : _builder->_source_map->_entities) {
+    if (ent->_class_name == "sky_camera") {
+      sky_camera_ent = ent;
+      break;
+    }
+  }
+
+  if (sky_camera_ent == nullptr) {
+    // Map has no 3-D skybox.
+    return;
+  }
+
+  LPoint3 origin = KeyValues::to_3f(sky_camera_ent->_properties["origin"]);
+
+  BSPNode *node = _tree_root;
+  while (!node->is_leaf()) {
+    PN_stdfloat d = node->_plane.dist_to_plane(origin);
+    if (d >= 0.0f) {
+      node = node->_children[FRONT_CHILD];
+    } else {
+      node = node->_children[BACK_CHILD];
+    }
+  }
+
+  r_flood_sky_camera_leaf(node);
+}
+
+/**
+ * Marks this node and all nodes reachable from this node through
+ * portals as being 3-D skybox leaves.
+ */
+void VisBuilderBSP::
+r_flood_sky_camera_leaf(BSPNode *node) {
+  if (node->_opaque || node->_sky_3d) {
+    return;
+  }
+
+  node->_sky_3d = true;
+
+  // Recurse through portals.
+  for (BSPPortal *p : node->_portals) {
+    int side = p->_nodes[1] == node;
+    r_flood_sky_camera_leaf(p->_nodes[!side]);
+  }
 }
