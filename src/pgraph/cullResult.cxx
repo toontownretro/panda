@@ -328,6 +328,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
     }
   }
 
+#if 0
   bool in_z_prepass = true;
   bool doing_z_prepass = false;
   if (has_trans && trans->get_mode() != TransparencyAttrib::M_none) {
@@ -367,6 +368,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
       DepthTestAttrib::make(DepthTestAttrib::M_less_equal));
     object._state = object._state->compose(no_depth_write_state);
   }
+#endif
 
   int bin_index = object._state->get_bin_index();
   CullBin *bin = get_bin(bin_index);
