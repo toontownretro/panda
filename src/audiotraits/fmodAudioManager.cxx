@@ -109,6 +109,8 @@ ReMutex FMODAudioManager::_sa_refl_lock("sa-refl-lock");
 
 static PStatCollector sa_refl_coll("SteamAudio:Reflections");
 
+extern IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMOD_VECTOR &forward, const FMOD_VECTOR &up);
+
 class SteamAudioReflectionsThread : public Thread {
 public:
   SteamAudioReflectionsThread() :
@@ -116,12 +118,24 @@ public:
 
   virtual void thread_main() override {
     while (true) {
+      PStatClient::thread_tick("steam-audio-reflections-sync");
+
       PStatTimer timer(sa_refl_coll);
       ClockObject *clock = ClockObject::get_global_clock();
 
       double start = clock->get_real_time();
+
       {
         ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
+        _mgr->_sa_sim_inputs.listener = fmod_coordinates_to_ipl(_mgr->_position, _mgr->_forward, _mgr->_up);
+        _mgr->_sa_listener_inputs.source = _mgr->_sa_sim_inputs.listener;
+        iplSourceSetInputs(_mgr->_sa_listener_source, IPL_SIMULATIONFLAGS_REFLECTIONS, &_mgr->_sa_listener_inputs);
+        iplSimulatorSetSharedInputs(_mgr->_sa_simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &_mgr->_sa_sim_inputs);
+        iplSimulatorCommit(_mgr->_sa_simulator);
+      }
+
+      {
+        //ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
         iplSimulatorRunReflections(FMODAudioManager::_sa_simulator);
       }
       double end = clock->get_real_time();
@@ -135,6 +149,8 @@ public:
       }
     }
   }
+
+  FMODAudioManager *_mgr;
 };
 
 /**
@@ -212,8 +228,6 @@ steam_audio_log(IPLLogLevel level, const char *message) {
     break;
   }
 }
-
-extern IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMOD_VECTOR &forward, const FMOD_VECTOR &up);
 
 #endif // HAVE_STEAM_AUDIO
 
@@ -520,8 +534,9 @@ FMODAudioManager() {
       result = dsp_tail->addInput(_reverb_dsp);
       fmod_audio_errcheck("add steam audio reverb as input to master dsp tail", result);
 
-      //_sa_refl_thread = new SteamAudioReflectionsThread;
-      //_sa_refl_thread->start(TP_normal, false);
+      _sa_refl_thread = new SteamAudioReflectionsThread;
+      ((SteamAudioReflectionsThread *)_sa_refl_thread.p())->_mgr = this;
+      _sa_refl_thread->start(TP_normal, false);
     }
 #endif
   }
@@ -931,8 +946,8 @@ update() {
         _last_sim_update = _next_sim_update;
       }
       // Run our simulations.
-      iplSimulatorRunDirect(_sa_simulator);
-      iplSimulatorRunReflections(_sa_simulator);
+      //iplSimulatorRunDirect(_sa_simulator);
+      //iplSimulatorRunReflections(_sa_simulator);
       //iplSimulatorRunPathing(_sa_simulator);
     }
 #endif
@@ -969,6 +984,12 @@ audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
 
   FMOD_RESULT result;
 
+#ifdef HAVE_STEAM_AUDIO
+  if (fmod_use_steam_audio && _sa_simulator != nullptr) {
+    _sa_refl_lock.acquire();
+  }
+#endif
+
   // inches to meters
   _position.x = px * HAMMER_UNITS_TO_METERS;
   _position.y = pz * HAMMER_UNITS_TO_METERS;
@@ -986,17 +1007,10 @@ audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
   _up.y = uz;
   _up.z = uy;
 
+
 #ifdef HAVE_STEAM_AUDIO
   if (fmod_use_steam_audio && _sa_simulator != nullptr) {
-    _sa_sim_inputs.listener = fmod_coordinates_to_ipl(_position, _forward, _up);
-    _sa_listener_inputs.source = _sa_sim_inputs.listener;
-    {
-      ReMutexHolder sa_holder(_sa_refl_lock);
-      iplSourceSetInputs(_sa_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_listener_inputs);
-      iplSimulatorSetSharedInputs(_sa_simulator,
-          (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sa_sim_inputs);
-    }
-    ++_next_sim_update;
+    _sa_refl_lock.release();
   }
 #endif
 
