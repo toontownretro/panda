@@ -53,6 +53,8 @@ PUBLISHED:
   INLINE size_t get_num_boxes() const;
   INLINE void get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const;
 
+  INLINE bool is_3d_sky_cluster() const { return _3d_sky_cluster; }
+
 public:
   vector_int _pvs;
 
@@ -62,6 +64,8 @@ public:
 
   // Cluster bounds for visualization purposes.
   pvector<LPoint3> _box_bounds;
+
+  bool _3d_sky_cluster;
 };
 
 class EXPCL_PANDA_MAP MapMeshGroup {
@@ -70,9 +74,12 @@ PUBLISHED:
   INLINE void clear_cluster(int cluster);
   INLINE const BitArray &get_clusters() const;
 
+  INLINE bool is_in_3d_skybox() const { return _in_3d_skybox; }
+
 public:
   BitArray _clusters;
   PT(GeomNode) _geom_node;
+  bool _in_3d_skybox;
 };
 
 /**
@@ -81,6 +88,8 @@ public:
  */
 class EXPCL_PANDA_MAP MapCubeMap {
 PUBLISHED:
+  INLINE Texture *get_texture() const { return _texture; }
+
   PT(Texture) _texture;
   LPoint3 _pos;
 };

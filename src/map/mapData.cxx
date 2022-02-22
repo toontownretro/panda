@@ -62,6 +62,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
       me.add_int32(pvs._pvs[j]);
     }
     pvs._mesh_groups.write_datagram(manager, me);
+    me.add_bool(pvs._3d_sky_cluster);
     me.add_uint32(pvs._box_bounds.size());
     for (size_t j = 0; j < pvs._box_bounds.size(); ++j) {
       pvs._box_bounds[j].write_datagram(me);
@@ -72,6 +73,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _mesh_groups.size(); i++) {
     const MapMeshGroup &group = _mesh_groups[i];
     group._clusters.write_datagram(manager, me);
+    me.add_bool(group._in_3d_skybox);
     manager->write_pointer(me, group._geom_node);
   }
 
@@ -137,6 +139,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       pvs._pvs[j] = scan.get_int32();
     }
     pvs._mesh_groups.read_datagram(scan, manager);
+    pvs._3d_sky_cluster = scan.get_bool();
     pvs._box_bounds.resize(scan.get_uint32());
     for (size_t j = 0; j < pvs._box_bounds.size(); ++j) {
       pvs._box_bounds[j].read_datagram(scan);
@@ -147,6 +150,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < _mesh_groups.size(); i++) {
     MapMeshGroup &group = _mesh_groups[i];
     group._clusters.read_datagram(scan, manager);
+    group._in_3d_skybox = scan.get_bool();
     manager->read_pointer(scan); // _geom_node
   }
 
