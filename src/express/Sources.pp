@@ -236,7 +236,9 @@
     textEncoder_ext.h \
     textEncoder_ext.I \
     typeHandle_ext.cxx \
-    typeHandle_ext.h
+    typeHandle_ext.h \
+    configVariable_ext.cxx \
+    configVariable_ext.h
 
   #define WIN_SYS_LIBS \
     advapi32.lib ws2_32.lib shell32.lib user32.lib crypt32.lib $[WIN_SYS_LIBS]

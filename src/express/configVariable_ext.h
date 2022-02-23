@@ -6,35 +6,32 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file typeHandle_ext.h
+ * @file configVariable_ext.h
  * @author rdb
- * @date 2014-09-17
+ * @date 2021-12-10
  */
 
-#ifndef TYPEHANDLE_EXT_H
-#define TYPEHANDLE_EXT_H
+#ifndef CONFIGVARIABLE_EXT_H
+#define CONFIGVARIABLE_EXT_H
 
 #include "dtoolbase.h"
 
 #ifdef HAVE_PYTHON
 
 #include "extension.h"
-#include "typeHandle.h"
+#include "configVariable.h"
 #include "py_panda.h"
 
 /**
- * This class defines the extension methods for TypeHandle, which are called
+ * This class defines the extension methods for ConfigVariable, which are called
  * instead of any C++ methods with the same prototype.
  */
 template<>
-class Extension<TypeHandle> : public ExtensionBase<TypeHandle> {
+class Extension<ConfigVariable> : public ExtensionBase<ConfigVariable> {
 public:
-  static TypeHandle make(PyTypeObject *tp);
-
-  PyObject *__reduce__() const;
-  void __setstate__(PyObject *);
+  PyObject *__reduce__(PyObject *self) const;
 };
 
 #endif  // HAVE_PYTHON
 
-#endif  // TYPEHANDLE_EXT_H
+#endif  // CONFIGVARIABLE_EXT_H
