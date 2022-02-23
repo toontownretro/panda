@@ -28,6 +28,7 @@
 #include "pStatCollector.h"
 #include "pStatTimer.h"
 #include "directionalLight.h"
+#include "bitMask.h"
 
 IMPLEMENT_CLASS(MapLightingEffect);
 
@@ -47,11 +48,13 @@ MapLightingEffect() :
 }
 
 /**
- * Creates a new MapLightingEffect for applying to a unqiue node.
+ * Creates a new MapLightingEffect for applying to a unique node.
  */
 CPT(RenderEffect) MapLightingEffect::
-make() {
+make(BitMask32 camera_mask) {
   MapLightingEffect *effect = new MapLightingEffect;
+  effect->_camera_mask = camera_mask;
+
   return return_new(effect);
 }
 
@@ -99,6 +102,10 @@ bool MapLightingEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &node_state) const {
+  if (!_camera_mask.has_bits_in_common(trav->get_camera_mask())) {
+    // Don't need to compute lighting for this camera.
+  }
+
   ((MapLightingEffect *)this)->do_cull_callback(trav, data, node_transform, node_state);
   return true;
 }

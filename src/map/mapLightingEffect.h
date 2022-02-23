@@ -35,7 +35,7 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
   DECLARE_CLASS(MapLightingEffect, RenderEffect);
 
 PUBLISHED:
-  static CPT(RenderEffect) make();
+  static CPT(RenderEffect) make(BitMask32 camera_mask);
 
   const RenderState *get_current_lighting_state() const;
 
@@ -75,6 +75,8 @@ private:
   const MapAmbientProbe *_probe;
   CPT(RenderAttrib) _light_attrib;
   CPT(RenderAttrib) _modified_light_attrib;
+
+  BitMask32 _camera_mask;
 };
 
 #include "mapLightingEffect.I"
