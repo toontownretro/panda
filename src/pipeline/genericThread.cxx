@@ -14,6 +14,8 @@
 #include "genericThread.h"
 #include "pnotify.h"
 
+#ifndef CPPPARSER
+
 TypeHandle GenericThread::_type_handle;
 
 /**
@@ -23,18 +25,25 @@ GenericThread::
 GenericThread(const std::string &name, const std::string &sync_name) :
   Thread(name, sync_name)
 {
-  _function = nullptr;
-  _user_data = nullptr;
 }
 
 /**
  *
  */
 GenericThread::
-GenericThread(const std::string &name, const std::string &sync_name, GenericThread::ThreadFunc *func, void *ud) :
+GenericThread(const std::string &name, const std::string &sync_name, GenericThread::ThreadFunc *function, void *user_data) :
   Thread(name, sync_name),
-  _function(func),
-  _user_data(ud)
+  _function(std::bind(function, user_data))
+{
+}
+
+/**
+ *
+ */
+GenericThread::
+GenericThread(const std::string &name, const std::string &sync_name, std::function<void()> function) :
+  Thread(name, sync_name),
+  _function(std::move(function))
 {
 }
 
@@ -43,6 +52,8 @@ GenericThread(const std::string &name, const std::string &sync_name, GenericThre
  */
 void GenericThread::
 thread_main() {
-  nassertv(_function != nullptr);
-  (*_function)(_user_data);
+  nassertv(_function);
+  _function();
 }
+
+#endif

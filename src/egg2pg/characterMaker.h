@@ -19,7 +19,6 @@
 #include "vertexTransform.h"
 #include "vertexSlider.h"
 #include "characterNode.h"
-#include "typedef.h"
 #include "pmap.h"
 #include "modelNode.h"
 

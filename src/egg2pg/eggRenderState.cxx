@@ -205,16 +205,15 @@ fill_state(EggPrimitive *egg_prim) {
           tex_mat_attrib = apply_tex_mat(tex_mat_attrib, def._stage, egg_tex);
 
         } else {
-  /*
-  * Otherwise, we need to record that there is at least one texture on this
-  * particular UV name and with this particular texture matrix.  If there are
-  * no other textures, or if all of the other textures use the same texture
-  * matrix, then tex_mats[uv_name].size() will remain 1 (which tells us we can
-  * bake in the texture matrix to the UV's).  On the other hand, if there is
-  * another texture on the same uv name but with a different transform, it will
-  * increase tex_mats[uv_name].size() to at least 2, indicating we can't bake
-  * in the texture matrix.
-  */
+          // Otherwise, we need to record that there is at least one texture on
+          // this particular UV name and with this particular texture matrix.
+          // If there are no other textures, or if all of the other textures use
+          // the same texture matrix, then tex_mats[uv_name].size() will remain
+          // 1 (which tells us we can bake in the texture matrix to the UV's).
+          // On the other hand, if there is another texture on the same uv name
+          // but with a different transform, it will increase
+          // tex_mats[uv_name].size() to at least 2, indicating we can't bake in
+          // the texture matrix.
           tex_mats[uv_name][egg_tex->get_transform3d()].push_back(&def);
         }
       }

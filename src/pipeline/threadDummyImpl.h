@@ -58,6 +58,8 @@ public:
   INLINE static void yield();
   INLINE static void consider_yield();
   INLINE static uint32_t get_current_thread_id();
+
+  INLINE static bool get_context_switches(size_t &, size_t &);
 };
 
 #include "threadDummyImpl.I"

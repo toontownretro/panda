@@ -15,9 +15,9 @@
 #define ANIMBUNDLEMAKER_H
 
 #include "pandabase.h"
-#include "typedef.h"
 #include "animChannelTable.h"
 #include "vector_stdfloat.h"
+#include "numeric_types.h"
 
 class EggNode;
 class EggGroupNode;

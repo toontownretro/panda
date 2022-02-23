@@ -132,3 +132,11 @@ INLINE uint32_t ThreadDummyImpl::
 get_current_thread_id() {
   return 0;
 }
+
+/**
+ *
+ */
+INLINE bool ThreadDummyImpl::
+get_context_switches(size_t &, size_t &) {
+  return false;
+}
