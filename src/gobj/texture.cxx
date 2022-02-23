@@ -10304,7 +10304,7 @@ swap_to_bgr(CData *cdata, CPTA_uchar image, int imgsize, const string &supplied_
     }
 
     for (int p = 0; p < imgsize; ++p) {
-      for (uchar s = 0; s < format.size(); ++s) {
+      for (unsigned char s = 0; s < format.size(); ++s) {
         signed char component = -1;
         if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
           component = 0;
@@ -10336,7 +10336,7 @@ swap_to_bgr(CData *cdata, CPTA_uchar image, int imgsize, const string &supplied_
   }
 
   for (int p = 0; p < imgsize; ++p) {
-    for (uchar s = 0; s < format.size(); ++s) {
+    for (unsigned char s = 0; s < format.size(); ++s) {
       signed char component = -1;
       if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
         component = 0;
