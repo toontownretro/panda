@@ -34,6 +34,7 @@
 #include "antialiasAttrib.h"
 #include "cullBinManager.h"
 #include "depthTestAttrib.h"
+#include "depthPrepassAttrib.h"
 
 TypeHandle CullResult::_type_handle;
 
@@ -328,26 +329,35 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
     }
   }
 
-#if 0
-  bool in_z_prepass = true;
-  bool doing_z_prepass = false;
-  if (has_trans && trans->get_mode() != TransparencyAttrib::M_none) {
-    in_z_prepass = false;
+  // Check if we want to z-prepass this geometry.
+  const DepthPrepassAttrib *dpa;
+  if (object._state->get_attrib(dpa) && dpa->get_camera_mask().has_bits_in_common(traverser->get_camera_mask())) {
+    // The geometry should be z-prepassed for this camera.
 
-  } else if (object._state->has_attrib(AlphaTestAttrib::get_class_slot())) {
-    in_z_prepass = false;
+    bool in_z_prepass = true;
 
-  } else {
-    const DepthWriteAttrib *dw;
-    if (object._state->get_attrib(dw)) {
-      if (dw->get_mode() == DepthWriteAttrib::M_off) {
+    // Ignore the request if the geometry has transparency or depth write
+    // disabled.
+    if (has_trans && trans->get_mode() != TransparencyAttrib::M_none) {
+      in_z_prepass = false;
+
+    } else if (object._state->has_attrib(AlphaTestAttrib::get_class_slot())) {
+      const AlphaTestAttrib *ata;
+      object._state->get_attrib(ata);
+      if (ata->get_mode() != AlphaTestAttrib::M_none && ata->get_mode() != AlphaTestAttrib::M_always) {
         in_z_prepass = false;
       }
+
+    } else {
+      const DepthWriteAttrib *dw;
+      if (object._state->get_attrib(dw)) {
+        if (dw->get_mode() == DepthWriteAttrib::M_off) {
+          in_z_prepass = false;
+        }
+      }
     }
-  }
-  if (in_z_prepass) {
-    // We can render opaque objects into the depth pre-pass.
-    if (traverser->get_scene()->get_camera_node()->has_tag("z_pre")) {
+
+    if (in_z_prepass) {
       CullableObject z_pre_obj(object);
       z_pre_obj._state = get_z_prepass_state();
       if (z_pre_obj.munge_geom(_gsg, nullptr, traverser, force)) {
@@ -355,20 +365,16 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
         CullBin *bin = get_bin(z_pre_bin_index);
         nassertv(bin != nullptr);
         bin->add_object(z_pre_obj, current_thread);
-        doing_z_prepass = true;
+
+        // If the object is being rendered into the Z-prepass, we don't need it to write
+        // to the Z buffer during the main pass.
+        static CPT(RenderState) no_depth_write_state = RenderState::make(
+          DepthWriteAttrib::make(DepthWriteAttrib::M_off),
+          DepthTestAttrib::make(DepthTestAttrib::M_less_equal), 10000);
+        object._state = object._state->compose(no_depth_write_state);
       }
     }
   }
-
-  if (in_z_prepass && doing_z_prepass) {
-    // If the object is being rendered into the Z-prepass, we don't need it to write
-    // to the Z buffer during the main pass.
-    static CPT(RenderState) no_depth_write_state = RenderState::make(
-      DepthWriteAttrib::make(DepthWriteAttrib::M_off),
-      DepthTestAttrib::make(DepthTestAttrib::M_less_equal));
-    object._state = object._state->compose(no_depth_write_state);
-  }
-#endif
 
   int bin_index = object._state->get_bin_index();
   CullBin *bin = get_bin(bin_index);

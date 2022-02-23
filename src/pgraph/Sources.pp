@@ -46,6 +46,7 @@
     decalEffect.I decalEffect.h \
     depthBiasAttrib.I depthBiasAttrib.h \
     depthOffsetAttrib.I depthOffsetAttrib.h \
+    depthPrepassAttrib.I depthPrepassAttrib.h \
     depthTestAttrib.I depthTestAttrib.h \
     depthWriteAttrib.I depthWriteAttrib.h \
     eventStorePandaNode.I eventStorePandaNode.h \
@@ -149,6 +150,7 @@
     decalEffect.cxx \
     depthBiasAttrib.cxx \
     depthOffsetAttrib.cxx \
+    depthPrepassAttrib.cxx \
     depthTestAttrib.cxx \
     depthWriteAttrib.cxx \
     eventStorePandaNode.cxx \
@@ -252,6 +254,7 @@
     decalEffect.I decalEffect.h \
     depthBiasAttrib.I depthBiasAttrib.h \
     depthOffsetAttrib.I depthOffsetAttrib.h \
+    depthPrepassAttrib.I depthPrepassAttrib.h \
     depthTestAttrib.I depthTestAttrib.h \
     depthWriteAttrib.I depthWriteAttrib.h \
     eventStorePandaNode.I eventStorePandaNode.h \

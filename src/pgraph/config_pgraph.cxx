@@ -93,6 +93,7 @@
 #include "transformState.h"
 #include "transparencyAttrib.h"
 #include "materialAttrib.h"
+#include "depthPrepassAttrib.h"
 
 #include "dconfig.h"
 
@@ -456,6 +457,7 @@ init_libpgraph() {
   DecalEffect::init_type();
   DepthBiasAttrib::init_type();
   DepthOffsetAttrib::init_type();
+  DepthPrepassAttrib::init_type();
   DepthTestAttrib::init_type();
   DepthWriteAttrib::init_type();
   EventStorePandaNode::init_type();
