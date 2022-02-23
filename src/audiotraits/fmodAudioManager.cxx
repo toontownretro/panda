@@ -108,6 +108,9 @@ PT(Thread) FMODAudioManager::_sa_refl_thread = nullptr;
 ReMutex FMODAudioManager::_sa_refl_lock("sa-refl-lock");
 
 static PStatCollector sa_refl_coll("SteamAudio:Reflections");
+static PStatCollector sa_refl_update_coll("SteamAudio:Reflections:Update");
+static PStatCollector sa_refl_sim_coll("SteamAudio:Reflections:Simulate");
+static PStatCollector sa_refl_sleep_coll("SteamAudio:Reflections:Sleep");
 
 extern IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMOD_VECTOR &forward, const FMOD_VECTOR &up);
 
@@ -126,6 +129,8 @@ public:
       double start = clock->get_real_time();
 
       {
+        PStatTimer timer2(sa_refl_update_coll);
+
         ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
         _mgr->_sa_sim_inputs.listener = fmod_coordinates_to_ipl(_mgr->_position, _mgr->_forward, _mgr->_up);
         _mgr->_sa_listener_inputs.source = _mgr->_sa_sim_inputs.listener;
@@ -136,6 +141,7 @@ public:
 
       {
         //ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
+        PStatTimer timer2(sa_refl_sim_coll);
         iplSimulatorRunReflections(FMODAudioManager::_sa_simulator);
       }
       double end = clock->get_real_time();
@@ -145,6 +151,7 @@ public:
       double min_time = 1.0f / (double)fmod_mixer_sample_rate;
       double sleep = min_time - elapsed;
       if (sleep > 0.0f) {
+        PStatTimer timer2(sa_refl_sleep_coll);
         Thread::sleep(sleep);
       }
     }
