@@ -39,6 +39,7 @@
 
 PStatCollector CullTraverser::_nodes_pcollector("Nodes");
 PStatCollector CullTraverser::_geom_nodes_pcollector("Nodes:GeomNodes");
+PStatCollector CullTraverser::_pgui_nodes_pcollector("Nodes:GUI");
 PStatCollector CullTraverser::_geoms_pcollector("Geoms");
 PStatCollector CullTraverser::_geoms_occluded_pcollector("Geoms:Occluded");
 

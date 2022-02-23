@@ -274,7 +274,9 @@ start_thread() {
 
     // Create and start the thread object.
     _thread_status = TS_wait;
-    _thread = new GenericThread(_filename.get_basename(), _sync_name, st_thread_main, this);
+    _thread = new GenericThread(_filename.get_basename(), _sync_name, [this]{
+      thread_main();
+    });
     if (!_thread->start(_thread_priority, true)) {
       // Couldn't start the thread.
       _thread = nullptr;
@@ -669,14 +671,6 @@ cleanup() {
 }
 
 /**
- * The thread main function, static version (for passing to GenericThread).
- */
-void FfmpegVideoCursor::
-st_thread_main(void *self) {
-  ((FfmpegVideoCursor *)self)->thread_main();
-}
-
-/**
  * The thread main function.
  */
 void FfmpegVideoCursor::
@@ -704,7 +698,7 @@ thread_main() {
     while (do_poll()) {
       // Keep doing stuff as long as there's something to do.
       _lock.release();
-      PStatClient::thread_tick(_sync_name);
+      PStatClient::thread_tick();
       Thread::consider_yield();
       _lock.acquire();
     }

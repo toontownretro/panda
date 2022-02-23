@@ -127,6 +127,10 @@
     pythonGraphicsWindowProc.cxx \
     pythonGraphicsWindowProc.h \
     windowProperties_ext.cxx \
-    windowProperties_ext.h
+    windowProperties_ext.h \
+    frameBufferProperties_ext.cxx \
+    frameBufferProperties_ext.h \
+    graphicsPipeSelection_ext.cxx \
+    graphicsPipeSelection_ext.h
 
 #end lib_target

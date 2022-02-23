@@ -6,39 +6,33 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file ramfile_ext.h
+ * @file frameBufferProperties_ext.h
  * @author rdb
- * @date 2013-12-10
+ * @date 2021-12-13
  */
 
-#ifndef RAMFILE_EXT_H
-#define RAMFILE_EXT_H
+#ifndef FRAMEBUFFERPROPERTIES_EXT_H
+#define FRAMEBUFFERPROPERTIES_EXT_H
 
 #include "dtoolbase.h"
 
 #ifdef HAVE_PYTHON
 
 #include "extension.h"
-#include "ramfile.h"
+#include "frameBufferProperties.h"
 #include "py_panda.h"
 
 /**
- * This class defines the extension methods for Ramfile, which are called
- * instead of any C++ methods with the same prototype.
+ * This class defines the extension methods for FrameBufferProperties, which are
+ * called instead of any C++ methods with the same prototype.
  */
 template<>
-class Extension<Ramfile> : public ExtensionBase<Ramfile> {
+class Extension<FrameBufferProperties> : public ExtensionBase<FrameBufferProperties> {
 public:
-  PyObject *read(size_t length);
-  PyObject *readline();
-  PyObject *readlines();
-
-  PyObject *get_data() const;
-
   PyObject *__getstate__() const;
-  void __setstate__(PyObject *);
+  void __setstate__(PyObject *self, PyObject *state);
 };
 
 #endif  // HAVE_PYTHON
 
-#endif  // RAMFILE_EXT_H
+#endif  // FRAMEBUFFERPROPERTIES_EXT_H

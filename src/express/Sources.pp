@@ -57,7 +57,7 @@
     subfileInfo.h subfileInfo.I \
     temporaryFile.h temporaryFile.I \
     trueClock.I trueClock.h \
-    typedReferenceCount.I typedReferenceCount.h typedef.h \
+    typedReferenceCount.I typedReferenceCount.h \
     virtualFile.I virtualFileList.I virtualFileList.h virtualFileMount.h \
     virtualFileComposite.h virtualFileComposite.I virtualFile.h \
     virtualFileMount.I virtualFileMountMultifile.h \
@@ -183,7 +183,7 @@
     subfileInfo.h subfileInfo.I \
     temporaryFile.h temporaryFile.I \
     trueClock.I trueClock.h \
-    typedReferenceCount.I typedReferenceCount.h typedef.h \
+    typedReferenceCount.I typedReferenceCount.h \
     virtualFile.I virtualFileList.I virtualFileList.h virtualFileMount.h \
     virtualFileComposite.h virtualFileComposite.I virtualFile.h \
     virtualFileMount.I virtualFileMountMultifile.h \
