@@ -199,7 +199,7 @@ increment_write(CycleData *pointer) const {
   nassertv(pipeline_stage >= 0 && pipeline_stage < _num_stages);
   nassertv(_data[pipeline_stage]._cdata == pointer);
 #endif
-  ++(_data[pipeline_stage]._writes_outstanding);
+  ++(((PipelineCyclerTrueImpl *)this)->_data[pipeline_stage]._writes_outstanding);
   _lock.elevate_lock();
 }
 

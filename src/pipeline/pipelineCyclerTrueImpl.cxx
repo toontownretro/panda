@@ -25,14 +25,15 @@ PipelineCyclerTrueImpl::
 PipelineCyclerTrueImpl(CycleData *initial_data, Pipeline *pipeline) :
   _pipeline(pipeline),
   _dirty(0),
-  _lock(this)
+  _lock(this),
+  _data{ CycleDataNode() }
 {
   if (_pipeline == nullptr) {
     _pipeline = Pipeline::get_render_pipeline();
   }
 
   _num_stages = _pipeline->get_num_stages();
-  _data = new CycleDataNode[_num_stages];
+  nassertv(_num_stages <= 3);
   for (int i = 0; i < _num_stages; ++i) {
     _data[i]._cdata = initial_data;
   }
@@ -47,14 +48,14 @@ PipelineCyclerTrueImpl::
 PipelineCyclerTrueImpl(const PipelineCyclerTrueImpl &copy) :
   _pipeline(copy._pipeline),
   _dirty(0),
-  _lock(this)
+  _lock(this),
+  _data{ CycleDataNode() }
 {
   ReMutexHolder holder(_lock);
   ReMutexHolder holder2(copy._lock);
 
   _num_stages = _pipeline->get_num_stages();
-  nassertv(_num_stages == copy._num_stages);
-  _data = new CycleDataNode[_num_stages];
+  nassertv(_num_stages == copy._num_stages && _num_stages <= 3);
 
   // It's no longer critically important that we preserve pointerwise
   // equivalence between different stages in the copy, but it doesn't cost
@@ -110,8 +111,6 @@ PipelineCyclerTrueImpl::
 
   _pipeline->remove_cycler(this);
 
-  delete[] _data;
-  _data = nullptr;
   _num_stages = 0;
 }
 
@@ -289,6 +288,7 @@ cycle() {
 void PipelineCyclerTrueImpl::
 set_num_stages(int num_stages) {
   nassertv(_lock.debug_is_locked());
+  nassertv(num_stages >= 0 && num_stages <= 3);
 
   if (num_stages <= _num_stages) {
     // Don't bother to reallocate the array smaller; we just won't use the
@@ -300,22 +300,15 @@ set_num_stages(int num_stages) {
 
     _num_stages = num_stages;
 
-
   } else {
-    // To increase the array, we must reallocate it larger.
-    CycleDataNode *new_data = new CycleDataNode[num_stages];
-    int i;
-    for (i = 0; i < _num_stages; ++i) {
-      nassertv(_data[i]._writes_outstanding == 0);
-      new_data[i]._cdata = _data[i]._cdata;
+    // Fill in the new stages with the data from the most downstream
+    // existing stage.
+    for (int i = _num_stages; i < num_stages; ++i) {
+      _data[i]._writes_outstanding = 0;
+      _data[i]._cdata = _data[_num_stages - 1]._cdata;
     }
-    for (i = _num_stages; i < num_stages; ++i) {
-      new_data[i]._cdata = _data[_num_stages - 1]._cdata;
-    }
-    delete[] _data;
 
     _num_stages = num_stages;
-    _data = new_data;
   }
 }
 

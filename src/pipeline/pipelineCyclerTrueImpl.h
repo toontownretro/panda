@@ -120,7 +120,10 @@ private:
     NPT(CycleData) _cdata;
     int _writes_outstanding;
   };
-  CycleDataNode *_data;
+  // We used to heap allocate this array to the number of pipeline stages,
+  // but we're never going to have more than 3 pipeline stages and I want
+  // to avoid the extra indirection.
+  CycleDataNode _data[3];
   int _num_stages;
 
   // This is 0 if it's clean, or set to Pipeline::_next_cycle_seq if it's
