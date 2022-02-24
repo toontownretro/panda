@@ -164,23 +164,23 @@ add_csm(const RenderState *state) {
       continue;
     }
 
-    PN_stdfloat texel_size = 1.0 / clight->get_shadow_buffer_size()[0];
+    //PN_stdfloat texel_size = 1.0 / clight->get_shadow_buffer_size()[0];
 
     set_vertex_shader_define("HAS_SHADOW_SUNLIGHT");
     set_vertex_shader_define("PSSM_SPLITS", clight->get_num_cascades());
-    set_vertex_shader_define("SHADOW_TEXEL_SIZE", texel_size);
-    set_vertex_shader_define("NORMAL_OFFSET_SCALE", clight->get_normal_offset_scale());
-    if (clight->get_normal_offset_uv_space()) {
-      set_vertex_shader_define("NORMAL_OFFSET_UV_SPACE");
-    }
+    //set_vertex_shader_define("SHADOW_TEXEL_SIZE", texel_size);
+    //set_vertex_shader_define("NORMAL_OFFSET_SCALE", clight->get_normal_offset_scale());
+    //if (clight->get_normal_offset_uv_space()) {
+    //  set_vertex_shader_define("NORMAL_OFFSET_UV_SPACE");
+    //}
     // The vertex shader needs to know the index of the cascaded light.
     set_vertex_shader_define("PSSM_LIGHT_ID", i);
 
     set_pixel_shader_define("HAS_SHADOW_SUNLIGHT");
     set_pixel_shader_define("PSSM_SPLITS", clight->get_num_cascades());
-    set_pixel_shader_define("DEPTH_BIAS", clight->get_depth_bias());
-    set_pixel_shader_define("SHADOW_TEXEL_SIZE", texel_size);
-    set_pixel_shader_define("SHADOW_BLUR", texel_size * clight->get_softness_factor());
+    //set_pixel_shader_define("DEPTH_BIAS", clight->get_depth_bias());
+    //set_pixel_shader_define("SHADOW_TEXEL_SIZE", texel_size);
+    set_pixel_shader_define("SHADOW_BLUR", clight->get_softness_factor());
 
     return true;
   }
