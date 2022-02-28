@@ -448,7 +448,7 @@ FMODAudioManager() {
       sim_settings.maxNumRays = 16384;
       sim_settings.numDiffuseSamples = 1024;
       sim_settings.maxOrder = fmod_steam_audio_ambisonics_order;
-      sim_settings.numThreads = 14;
+      sim_settings.numThreads = 1;
       sim_settings.frameSize = fmod_dsp_buffer_size;
       sim_settings.samplingRate = sample_rate;
       sim_settings.maxNumSources = 8;
