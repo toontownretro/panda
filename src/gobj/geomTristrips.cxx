@@ -477,8 +477,8 @@ append_unused_vertices(GeomVertexArrayData *vertices, int vertex) {
   size_t offset = vertices->get_num_rows();
   vertices->set_num_rows(offset + 2);
 
-  GeomVertexArrayDataHandle handle = vertices->modify_handle();
-  unsigned char *ptr = handle.get_write_pointer();
+  PT(GeomVertexArrayDataHandle) handle = vertices->modify_handle();
+  unsigned char *ptr = handle->get_write_pointer();
   switch (vertices->get_array_format()->get_stride()) {
   case 1:
     ((uint8_t *)ptr)[offset] = ((uint8_t *)ptr)[offset - 1];

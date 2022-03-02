@@ -47,7 +47,8 @@ PStatCollector GeomPrimitive::_rotate_pcollector("*:Munge:Rotate");
  * Constructs an invalid object.  Only used when reading from bam.
  */
 GeomPrimitive::
-GeomPrimitive() {
+GeomPrimitive() :
+  _context(nullptr) {
 }
 
 /**
@@ -65,6 +66,7 @@ GeomPrimitive::
 GeomPrimitive(GeomPrimitive::UsageHint usage_hint) {
   CDWriter cdata(_cycler, true);
   cdata->_usage_hint = usage_hint;
+  _context = nullptr;
 }
 
 /**
@@ -74,7 +76,8 @@ GeomPrimitive::
 GeomPrimitive(const GeomPrimitive &copy) :
   CopyOnWriteObject(copy),
   _cycler(copy._cycler),
-  _geom_primitive_type(copy._geom_primitive_type)
+  _geom_primitive_type(copy._geom_primitive_type),
+  _context(nullptr)
 {
 }
 
@@ -1476,18 +1479,37 @@ is_prepared(PreparedGraphicsObjects *prepared_objects) const {
 IndexBufferContext *GeomPrimitive::
 prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  nassertr(is_indexed(), nullptr);
+  //nassertr(is_indexed(), nullptr);
 
-  Contexts::const_iterator ci;
-  ci = _contexts.find(prepared_objects);
-  if (ci != _contexts.end()) {
-    return (*ci).second;
+  //if (prepared_objects->_gsg_id < _id_contexts.size() &&
+  //    _id_contexts[prepared_objects->_gsg_id] != nullptr) {
+  //  return _id_contexts[prepared_objects->_gsg_id];
+  //}
+
+  //if (!_id_contexts.empty() && _id_contexts[0] != nullptr) {
+  //  return _id_contexts[0];
+  //}
+
+  if (_context != nullptr) {
+    return _context;
   }
 
   IndexBufferContext *ibc = prepared_objects->prepare_index_buffer_now(this, gsg);
   if (ibc != nullptr) {
     _contexts[prepared_objects] = ibc;
+
+    //if (prepared_objects->_gsg_id >= _id_contexts.size()) {
+    //  size_t orig_size = _id_contexts.size();
+    //  _id_contexts.resize(prepared_objects->_gsg_id + 1);
+    //  for (size_t i = orig_size; i < _id_contexts.size(); ++i) {
+    //    _id_contexts[i] = nullptr;
+    //  }
+    //}
+    //_id_contexts[prepared_objects->_gsg_id] = ibc;
+
+    _context = ibc;
   }
+
   return ibc;
 }
 
@@ -1589,6 +1611,13 @@ clear_prepared(PreparedGraphicsObjects *prepared_objects) {
   ci = _contexts.find(prepared_objects);
   if (ci != _contexts.end()) {
     _contexts.erase(ci);
+
+    _context = nullptr;
+
+    //if (prepared_objects->_gsg_id < _id_contexts.size()) {
+    //  _id_contexts[prepared_objects->_gsg_id] = nullptr;
+    //}
+
   } else {
     // If this assertion fails, clear_prepared() was given a prepared_objects
     // which the data array didn't know about.
@@ -2263,21 +2292,22 @@ check_minmax() const {
     // We'll need to get a fresh pointer, since another thread might already
     // have modified the pointer on the object since we queried it.
     {
-#ifdef DO_PIPELINING
-      unref_delete((CycleData *)_cdata);
-#endif
-      GeomPrimitive::CDWriter fresh_cdata(((GeomPrimitive *)_object)->_cycler,
-                                          false, _current_thread);
-      ((GeomPrimitivePipelineReader *)this)->_cdata = fresh_cdata;
-#ifdef DO_PIPELINING
-      _cdata->ref();
-#endif
+//#ifdef DO_PIPELINING
+//      unref_delete((CycleData *)_cdata);
+//#endif
+      //_object->_cycler.release_read(_cdata);
+      //GeomPrimitive::CDWriter fresh_cdata(((GeomPrimitive *)_object.p())->_cycler,
+                                          //false, _current_thread);
+      //((GeomPrimitivePipelineReader *)this)->_cdata = fresh_cdata;
+//#ifdef DO_PIPELINING
+//      _cdata->ref();
+//#endif
 
-      if (!fresh_cdata->_got_minmax) {
+      //if (!fresh_cdata->_got_minmax) {
         // The cache is still stale.  We have to do the work of freshening it.
-        ((GeomPrimitive *)_object)->recompute_minmax(fresh_cdata);
-        nassertv(fresh_cdata->_got_minmax);
-      }
+        ((GeomPrimitive *)_object)->recompute_minmax((GeomPrimitive::CData *)_cdata);
+        nassertv(_cdata->_got_minmax);
+      //}
 
       // When fresh_cdata goes out of scope, its write lock is released, and
       // _cdata reverts to our usual convention of an unlocked copy of the

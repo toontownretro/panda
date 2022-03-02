@@ -1377,7 +1377,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
 
   gtc->update_data_size_bytes(gltex->xsize * gltex->ysize * 4);
   gtc->mark_loaded();
-  gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   return true;
 }
@@ -1649,7 +1649,7 @@ update_texture(TextureContext *tc, bool force) {
       return false;
     }
   }
-  gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   return true;
 }

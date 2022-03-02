@@ -22,6 +22,8 @@
 #include "boundingVolume.h"
 #include "pointerTo.h"
 #include "memoryBase.h"
+#include "lightMutex.h"
+#include "cycleData.h"
 
 class CullTraverser;
 class CullTraverserData;
@@ -90,6 +92,10 @@ private:
   // children in a visgroup.
   typedef pvector<ChildSet> VisGroupChildren;
   VisGroupChildren _visgroups;
+
+  //class CData : public CycleData {
+
+  //};
 
   typedef pflat_hash_map<PandaNode *, PT(ChildInfo), pointer_hash> ChildInfos;
   ChildInfos _children;

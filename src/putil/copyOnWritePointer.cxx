@@ -24,10 +24,13 @@
  */
 CPT(CopyOnWriteObject) CopyOnWritePointer::
 get_read_pointer(Thread *current_thread) const {
-  if (_cow_object == nullptr) {
-    return nullptr;
-  }
+  //if (_cow_object == nullptr) {
+  //  return nullptr;
+  //}
 
+  return _cow_object;
+
+/**
   MutexHolder holder(_cow_object->_lock_mutex);
   while (_cow_object->_lock_status == CopyOnWriteObject::LS_locked_write) {
     if (_cow_object->_locking_thread == current_thread) {
@@ -45,6 +48,7 @@ get_read_pointer(Thread *current_thread) const {
   _cow_object->_lock_status = CopyOnWriteObject::LS_locked_read;
   _cow_object->_locking_thread = current_thread;
   return _cow_object;
+  **/
 }
 #endif  // COW_THREADED
 
@@ -64,6 +68,16 @@ get_write_pointer() {
     return nullptr;
   }
 
+  if (_cow_object->get_cache_ref_count() > 1) {
+    PT(CopyOnWriteObject) new_object = _cow_object->make_cow_copy();
+    cache_unref_delete(_cow_object);
+    _cow_object = new_object;
+    _cow_object->cache_ref();
+  }
+
+  return _cow_object;
+
+#if 0
   Thread *current_thread = Thread::get_current_thread();
 
   _cow_object->_lock_mutex.lock();
@@ -136,5 +150,6 @@ get_write_pointer() {
   }
 
   return _cow_object;
+#endif
 }
 #endif  // COW_THREADED

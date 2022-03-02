@@ -550,14 +550,14 @@ INLINE GeomPipelineReader::
 GeomPipelineReader(const Geom *object, Thread *current_thread) :
   _object(object),
   _current_thread(current_thread),
-  _cdata(object->_cycler.read_unlocked(current_thread))
+  _cdata(object->_cycler.read(current_thread))
 {
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif // _DEBUG
-#ifdef DO_PIPELINING
-  _cdata->ref();
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//  _cdata->ref();
+//#endif  // DO_PIPELINING
 }
 
 /**
@@ -570,13 +570,16 @@ INLINE GeomPipelineReader::
     nassertv(_object->test_ref_count_nonzero());
   }
 #endif // _DEBUG
-  // _object->_cycler.release_read(_cdata);
-
-#ifdef DO_PIPELINING
-  if (_cdata != nullptr) {
-    unref_delete((CycleData *)_cdata);
+  if (_object != nullptr) {
+    _object->_cycler.release_read(_cdata);
   }
-#endif  // DO_PIPELINING
+
+
+//#ifdef DO_PIPELINING
+//  if (_cdata != nullptr) {
+//    unref_delete((CycleData *)_cdata);
+//  }
+//#endif  // DO_PIPELINING
 
 #ifdef _DEBUG
   _object = nullptr;
@@ -590,19 +593,22 @@ INLINE GeomPipelineReader::
 INLINE void GeomPipelineReader::
 set_object(const Geom *object) {
   if (object != _object) {
-    // _object->_cycler.release_read(_cdata);
-
-#ifdef DO_PIPELINING
-    if (_cdata != nullptr) {
-      unref_delete((CycleData *)_cdata);
+    if (_object != nullptr && _cdata != nullptr) {
+      _object->_cycler.release_read(_cdata);
     }
-#endif  // DO_PIPELINING
 
-    _cdata = object->_cycler.read_unlocked(_current_thread);
 
-#ifdef DO_PIPELINING
-    _cdata->ref();
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//    if (_cdata != nullptr) {
+//      unref_delete((CycleData *)_cdata);
+//    }
+//#endif  // DO_PIPELINING
+
+    _cdata = object->_cycler.read(_current_thread);
+
+//#ifdef DO_PIPELINING
+//    _cdata->ref();
+//#endif  // DO_PIPELINING
 
     _object = object;
   }

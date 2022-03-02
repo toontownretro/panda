@@ -35,7 +35,7 @@ int PreparedGraphicsObjects::_name_index = 0;
  *
  */
 PreparedGraphicsObjects::
-PreparedGraphicsObjects() :
+PreparedGraphicsObjects(GraphicsStateGuardianBase *gsg) :
   _lock("PreparedGraphicsObjects::_lock"),
   _name(init_name()),
   _vertex_buffer_cache_size(0),
@@ -45,7 +45,9 @@ PreparedGraphicsObjects() :
   _ibuffer_residency(_name, "ibuffer"),
   _sbuffer_residency(_name, "sbuffer"),
   _graphics_memory_lru("graphics_memory_lru", graphics_memory_limit),
-  _sampler_object_lru("sampler_object_lru", sampler_object_limit)
+  _sampler_object_lru("sampler_object_lru", sampler_object_limit),
+  _gsg(gsg),
+  _gsg_id(gsg->_id)
 {
   // GLGSG will turn this flag on.  This is a temporary hack to disable this
   // feature for DX8DX9 for now, until we work out the fine points of updating
@@ -106,6 +108,8 @@ PreparedGraphicsObjects::
     delete bc;
   }
   _released_shader_buffers.clear();
+
+  _gsg = nullptr;
 }
 
 /**

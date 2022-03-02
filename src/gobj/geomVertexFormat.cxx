@@ -637,8 +637,8 @@ write_with_data(std::ostream &out, int indent_level,
   indent(out, indent_level)
     << data->get_num_rows() << " rows.\n";
   for (size_t i = 0; i < _arrays.size(); i++) {
-    const GeomVertexArrayDataHandle handle = data->get_array(i)->get_handle();
-    const unsigned char *array_data = handle.get_read_pointer(true);
+    CPT(GeomVertexArrayDataHandle) handle = data->get_array(i)->get_handle();
+    const unsigned char *array_data = handle->get_read_pointer(true);
     indent(out, indent_level)
       << "Array " << i << " (" << (void *)array_data << ", "
       << *_arrays[i] << "):\n";

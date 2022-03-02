@@ -54,7 +54,8 @@ Shader(ShaderLanguage lang) :
   _error_flag(false),
   _language(lang),
   _mat_deps(0),
-  _cache_compiled_shader(false)
+  _cache_compiled_shader(false),
+  _context(nullptr)
 {
 }
 
@@ -3099,11 +3100,31 @@ release(PreparedGraphicsObjects *prepared_objects) {
 ShaderContext *Shader::
 prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  Contexts::const_iterator ci;
-  ci = _contexts.find(prepared_objects);
-  if (ci != _contexts.end()) {
-    return (*ci).second;
+
+  //if (prepared_objects->_gsg_id < _id_contexts.size() &&
+  //    _id_contexts[prepared_objects->_gsg_id] != nullptr) {
+  //  return _id_contexts[prepared_objects->_gsg_id];
+//
+  //} else {
+  //  Contexts::const_iterator ci;
+  //  ci = _contexts.find(prepared_objects);
+   // if (ci != _contexts.end()) {
+   //   return (*ci).second;
+   // }
+  //}
+
+  if (_context != nullptr) {
+    return _context;
+
+  } else {
+    Contexts::const_iterator ci;
+    ci = _contexts.find(prepared_objects);
+    if (ci != _contexts.end()) {
+      return (*ci).second;
+    }
   }
+
+  //
 
   int supported_caps = gsg->get_supported_shader_capabilities();
   int unsupported_caps = _used_caps & ~supported_caps;
@@ -3122,11 +3143,29 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
     // Insert nullptr so that we don't spam this error next time.
     _contexts[prepared_objects] = nullptr;
 
+    //if (prepared_objects->_gsg_id >= _id_contexts.size()) {
+    //  size_t orig_size = _id_contexts.size();
+    //  _id_contexts.resize(prepared_objects->_gsg_id + 1);
+    //  for (size_t i = orig_size; i < _id_contexts.size(); ++i) {
+    //    _id_contexts[i] = nullptr;
+    //  }
+    //}
+    //_id_contexts[prepared_objects->_gsg_id] = nullptr;
+
     return nullptr;
   }
 
   ShaderContext *tc = prepared_objects->prepare_shader_now(this, gsg);
   _contexts[prepared_objects] = tc;
+  //if (prepared_objects->_gsg_id >= _id_contexts.size()) {
+  //  size_t orig_size = _id_contexts.size();
+  //  _id_contexts.resize(prepared_objects->_gsg_id + 1);
+  //  for (size_t i = orig_size; i < _id_contexts.size(); ++i) {
+  //    _id_contexts[i] = nullptr;
+  //  }
+  //}
+  //_id_contexts[prepared_objects->_gsg_id] = tc;
+  _context = tc;
 
   return tc;
 }
@@ -3143,6 +3182,10 @@ clear_prepared(PreparedGraphicsObjects *prepared_objects) {
   ci = _contexts.find(prepared_objects);
   if (ci != _contexts.end()) {
     _contexts.erase(ci);
+    //if (prepared_objects->_gsg_id < _id_contexts.size()) {
+    //  _id_contexts[prepared_objects->_gsg_id] = nullptr;
+    //}
+    _context = nullptr;
   } else {
     // If this assertion fails, clear_prepared() was given a prepared_objects
     // which the texture didn't know about.

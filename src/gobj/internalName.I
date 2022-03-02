@@ -38,7 +38,7 @@ make(const std::string &name) {
 template<int N>
 INLINE PT(InternalName) InternalName::
 make(const char (&literal)[N]) {
-  //LightMutexHolder holder(_literal_table_lock);
+  LightMutexHolder holder(_literal_table_lock);
   LiteralTable::const_iterator it = _literal_table.find(literal);
 
   if (it == _literal_table.end()) {

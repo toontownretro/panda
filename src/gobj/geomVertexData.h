@@ -107,10 +107,10 @@ PUBLISHED:
 
   INLINE size_t get_num_arrays() const;
   INLINE CPT(GeomVertexArrayData) get_array(size_t i) const;
-  INLINE const GeomVertexArrayDataHandle get_array_handle(size_t i) const;
+  INLINE CPT(GeomVertexArrayDataHandle) get_array_handle(size_t i) const;
   MAKE_SEQ(get_arrays, get_num_arrays, get_array);
   INLINE PT(GeomVertexArrayData) modify_array(size_t i);
-  INLINE GeomVertexArrayDataHandle modify_array_handle(size_t i);
+  INLINE PT(GeomVertexArrayDataHandle) modify_array_handle(size_t i);
   INLINE void set_array(size_t i, const GeomVertexArrayData *array);
   INLINE void remove_array(size_t i);
   INLINE void insert_array(size_t i, const GeomVertexArrayData *array);
@@ -433,9 +433,11 @@ protected:
   GeomVertexData::CData *_cdata;
   GeomVertexData *_object;
   Thread *_current_thread;
+
+  friend class GraphicsStateGuardian;
 };
 
-static constexpr int max_array_handles = 10;
+static constexpr int max_array_handles = 5;
 
 /**
  * Encapsulates the data from a GeomVertexData, pre-fetched for one stage of
@@ -447,6 +449,8 @@ class EXPCL_PANDA_GOBJ GeomVertexDataPipelineReader : public GeomVertexDataPipel
 public:
   INLINE GeomVertexDataPipelineReader(Thread *current_thread);
   INLINE GeomVertexDataPipelineReader(const GeomVertexData *object, Thread *current_thread);
+
+  INLINE ~GeomVertexDataPipelineReader();
 
   //ALLOC_DELETED_CHAIN(GeomVertexDataPipelineReader);
 
@@ -484,12 +488,16 @@ public:
                       int &num_values, NumericType &numeric_type,
                       int &start, int &stride) const;
 
+  INLINE void set_array_readers(GeomVertexArrayDataHandle *readers);
+
 private:
   void make_array_readers();
 
   bool _got_array_readers;
   size_t _num_array_readers;
-  GeomVertexArrayDataHandle _array_readers[max_array_handles];
+  GeomVertexArrayDataHandle *_fast_readers;
+
+  CPT(GeomVertexArrayDataHandle) _array_readers[max_array_handles];
 
 public:
   static TypeHandle get_class_type() {
@@ -501,6 +509,8 @@ public:
 
 private:
   static TypeHandle _type_handle;
+
+  friend class GraphicsStateGuardian;
 };
 
 /**
@@ -540,7 +550,7 @@ private:
   void delete_array_writers();
 
   bool _got_array_writers;
-  typedef pvector<GeomVertexArrayDataHandle> ArrayWriters;
+  typedef pvector<PT(GeomVertexArrayDataHandle)> ArrayWriters;
   ArrayWriters _array_writers;
 
 public:

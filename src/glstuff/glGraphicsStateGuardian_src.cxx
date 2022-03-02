@@ -447,7 +447,7 @@ int CLP(GraphicsStateGuardian)::get_driver_shader_version_minor() { return _glsl
 CLP(GraphicsStateGuardian)::
 CLP(GraphicsStateGuardian)(GraphicsEngine *engine, GraphicsPipe *pipe) :
   GraphicsStateGuardian(gl_coordinate_system, engine, pipe),
-  _renderbuffer_residency(get_prepared_objects()->get_name(), "renderbuffer")
+  _renderbuffer_residency(_prepared_objects->get_name(), "renderbuffer")
 {
   _error_count = 0;
   _last_error_check = -1.0;
@@ -4737,7 +4737,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
     // are unbound, or the nVidia drivers may crash.
     unbind_buffers();
 
-    GeomContext *gc = geom_reader->prepare_now(get_prepared_objects(), this);
+    GeomContext *gc = geom_reader->prepare_now(_prepared_objects, this);
     nassertr(gc != nullptr, false);
     CLP(GeomContext) *ggc = DCAST(CLP(GeomContext), gc);
     //const CLP(GeomMunger) *gmunger = DCAST(CLP(GeomMunger), _munger);
@@ -6377,7 +6377,7 @@ update_texture(TextureContext *tc, bool force) {
     }
   }
 
-  gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   report_my_gl_errors(this);
   return true;
@@ -6466,7 +6466,7 @@ extract_texture_data(Texture *tex) {
 
   int num_views = tex->get_num_views();
   for (int view = 0; view < num_views; ++view) {
-    TextureContext *tc = tex->prepare_now(view, get_prepared_objects(), this);
+    TextureContext *tc = tex->prepare_now(view, _prepared_objects, this);
     nassertr(tc != nullptr, false);
     CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tc);
 
@@ -6563,7 +6563,7 @@ prepare_sampler(const SamplerState &sampler) {
   }
 #endif
 
-  gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
+  //gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
 
   report_my_gl_errors(this);
   return gsc;
@@ -6695,8 +6695,8 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
 #endif
 
     report_my_gl_errors(this);
-    const GeomVertexArrayDataHandle handle = data->get_handle();
-    update_vertex_buffer(gvbc, &handle, false);
+    CPT(GeomVertexArrayDataHandle) handle = data->get_handle();
+    update_vertex_buffer(gvbc, handle, false);
     return gvbc;
   }
 
@@ -6716,7 +6716,7 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
     return true;
   }
 
-  gvbc->set_active(true);
+  //gvbc->set_active(true);
 
   if (gvbc->was_modified(reader)) {
     int num_bytes = reader->get_data_size_bytes();
@@ -6757,7 +6757,7 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
     gvbc->mark_loaded(reader);
   }
-  gvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   maybe_gl_finish();
   report_my_gl_errors(this);
@@ -6900,7 +6900,7 @@ setup_array_data(const unsigned char *&client_pointer,
 
   // Prepare the buffer object and bind it.
   CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext),
-    array_reader->prepare_now(get_prepared_objects(), this));
+    array_reader->prepare_now(_prepared_objects, this));
 
   nassertr(gvbc != (CLP(VertexBufferContext) *)nullptr, false);
   if (!update_vertex_buffer(gvbc, array_reader, force)) {
@@ -6983,7 +6983,7 @@ apply_index_buffer(IndexBufferContext *ibc,
 #endif
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gibc->_index);
     _current_ibuffer_index = gibc->_index;
-    gibc->set_active(true);
+    //gibc->set_active(true);
   }
 
   if (gibc->was_modified(reader)) {
@@ -7014,7 +7014,7 @@ apply_index_buffer(IndexBufferContext *ibc,
     }
     gibc->mark_loaded(reader);
   }
-  gibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   maybe_gl_finish();
   report_my_gl_errors(this);
@@ -7156,7 +7156,7 @@ setup_primitive(const unsigned char *&client_pointer,
   }
 
   // Prepare the buffer object and bind it.
-  IndexBufferContext *ibc = reader->prepare_now(get_prepared_objects(), this);
+  IndexBufferContext *ibc = reader->prepare_now(_prepared_objects, this);
   nassertr(ibc != nullptr, false);
   if (!apply_index_buffer(ibc, reader, force)) {
     return false;
@@ -7207,7 +7207,7 @@ prepare_shader_buffer(ShaderBuffer *data) {
       _glBufferData(GL_SHADER_STORAGE_BUFFER, num_bytes, data->get_initial_data(), get_usage(data->get_usage_hint()));
     }
 
-    gbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+    //gbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
     report_my_gl_errors(this);
     return gbc;
@@ -7223,11 +7223,11 @@ void CLP(GraphicsStateGuardian)::
 apply_shader_buffer(GLuint base, ShaderBuffer *buffer) {
   GLuint index = 0;
   if (buffer != nullptr) {
-    BufferContext *bc = buffer->prepare_now(get_prepared_objects(), this);
+    BufferContext *bc = buffer->prepare_now(_prepared_objects, this);
     if (bc != nullptr) {
       CLP(BufferContext) *gbc = DCAST(CLP(BufferContext), bc);
       index = gbc->_index;
-      gbc->set_active(true);
+      //gbc->set_active(true);
     }
   }
 
@@ -7632,7 +7632,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
     }
   }
 
-  TextureContext *tc = tex->prepare_now(view, get_prepared_objects(), this);
+  TextureContext *tc = tex->prepare_now(view, _prepared_objects, this);
   nassertr(tc != nullptr, false);
   CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tc);
 
@@ -7741,7 +7741,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
   gtc->_depth = depth;
 
   gtc->mark_loaded();
-  gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //gtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   report_my_gl_errors(this);
 
@@ -8185,7 +8185,7 @@ do_issue_shader() {
 
   if (shader) {
     if (_current_shader != shader) {
-      context = shader->prepare_now(get_prepared_objects(), this);
+      context = shader->prepare_now(_prepared_objects, this);
     } else {
       context = _current_shader_context;
     }
@@ -8197,7 +8197,7 @@ do_issue_shader() {
     shader = _default_shader;
     nassertv(shader != nullptr);
     if (_current_shader != shader) {
-      context = shader->prepare_now(get_prepared_objects(), this);
+      context = shader->prepare_now(_prepared_objects, this);
     } else {
       context = _current_shader_context;
     }
@@ -11994,7 +11994,7 @@ set_state_and_transform(const RenderState *target,
 #endif
 
   _state_pcollector.add_level(1);
-  PStatTimer timer1(_draw_set_state_pcollector);
+  //PStatTimer timer1(_draw_set_state_pcollector);
 
   bool transform_changed = transform != _internal_transform;
   if (transform_changed) {
@@ -12630,7 +12630,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
       // Something wrong with this texture; skip it.
       break;
     }
-    tc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+    //tc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
   }
 
 #ifdef SUPPORT_FIXED_FUNCTION
@@ -13261,7 +13261,7 @@ specify_texture(CLP(TextureContext) *gtc, const SamplerState &sampler) {
  */
 bool CLP(GraphicsStateGuardian)::
 apply_texture(CLP(TextureContext) *gtc) {
-  gtc->set_active(true);
+  //gtc->set_active(true);
   GLenum target = get_texture_target(gtc->get_texture()->get_texture_type());
   if (target == GL_NONE) {
     return false;
@@ -13298,11 +13298,11 @@ apply_sampler(GLuint unit, const SamplerState &sampler, CLP(TextureContext) *gtc
   if (_supports_sampler_objects) {
     // We support sampler objects.  Prepare the sampler object and bind it to
     // the indicated texture unit.
-    SamplerContext *sc = sampler.prepare_now(get_prepared_objects(), this);
+    SamplerContext *sc = sampler.prepare_now(_prepared_objects, this);
     nassertr(sc != nullptr, false);
     CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
 
-    gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
+    //gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
 
     _glBindSampler(unit, gsc->_index);
 

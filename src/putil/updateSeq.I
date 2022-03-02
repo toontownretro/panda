@@ -29,7 +29,7 @@ UpdateSeq() : _seq((unsigned int)SC_initial) {
  *
  */
 INLINE UpdateSeq::
-UpdateSeq(const UpdateSeq &copy) : _seq(copy._seq) {//AtomicAdjust::get(copy._seq)) {
+UpdateSeq(const UpdateSeq &copy) : _seq(AtomicAdjust::get(copy._seq)) {
 }
 
 /**
@@ -44,7 +44,7 @@ UpdateSeq(const UpdateSeq &&from) noexcept : _seq(from._seq) {
  */
 INLINE UpdateSeq &UpdateSeq::
 operator = (const UpdateSeq &copy) {
-  _seq = copy._seq;//AtomicAdjust::set(_seq, AtomicAdjust::get(copy._seq));
+  AtomicAdjust::set(_seq, AtomicAdjust::get(copy._seq));
   return *this;
 }
 
@@ -53,8 +53,7 @@ operator = (const UpdateSeq &copy) {
  */
 INLINE void UpdateSeq::
 clear() {
-  //AtomicAdjust::set(_seq, (AtomicAdjust::Integer)SC_initial);
-  _seq = (AtomicAdjust::Integer)SC_initial;
+  AtomicAdjust::set(_seq, (AtomicAdjust::Integer)SC_initial);
 }
 
 /**
@@ -62,8 +61,7 @@ clear() {
  */
 INLINE bool UpdateSeq::
 is_initial() const {
-  return _seq == (AtomicAdjust::Integer)SC_initial;
-  //return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_initial;
+  return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_initial;
 }
 
 /**
@@ -71,8 +69,7 @@ is_initial() const {
  */
 INLINE bool UpdateSeq::
 is_old() const {
-  //return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_old;
-  return _seq == (AtomicAdjust::Integer)SC_old;
+  return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_old;
 }
 
 /**
@@ -80,8 +77,7 @@ is_old() const {
  */
 INLINE bool UpdateSeq::
 is_fresh() const {
-  //return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_fresh;
-  return _seq == (AtomicAdjust::Integer)SC_fresh;
+  return AtomicAdjust::get(_seq) == (AtomicAdjust::Integer)SC_fresh;
 }
 
 /**
@@ -91,8 +87,7 @@ is_fresh() const {
 INLINE bool UpdateSeq::
 is_special() const {
   // This relies on the assumption that (~0 + 1) == 0.
-  //return (((unsigned int)AtomicAdjust::get(_seq) + 1u) <= 2u);
-  return (((unsigned int)_seq + 1u) <= 2u);
+  return (((unsigned int)AtomicAdjust::get(_seq) + 1u) <= 2u);
 }
 
 /**
@@ -100,8 +95,7 @@ is_special() const {
  */
 INLINE bool UpdateSeq::
 operator == (const UpdateSeq &other) const {
-  //return AtomicAdjust::get(_seq) == AtomicAdjust::get(other._seq);
-  return _seq == other._seq;
+  return AtomicAdjust::get(_seq) == AtomicAdjust::get(other._seq);
 }
 
 /**
@@ -109,8 +103,7 @@ operator == (const UpdateSeq &other) const {
  */
 INLINE bool UpdateSeq::
 operator != (const UpdateSeq &other) const {
-  //return AtomicAdjust::get(_seq) != AtomicAdjust::get(other._seq);
-  return _seq != other._seq;
+  return AtomicAdjust::get(_seq) != AtomicAdjust::get(other._seq);
 }
 
 /**
@@ -118,8 +111,7 @@ operator != (const UpdateSeq &other) const {
  */
 INLINE bool UpdateSeq::
 operator < (const UpdateSeq &other) const {
-  //return priv_lt(AtomicAdjust::get(_seq), AtomicAdjust::get(other._seq));
-  return priv_lt(_seq, other._seq);
+  return priv_lt(AtomicAdjust::get(_seq), AtomicAdjust::get(other._seq));
 }
 
 /**
@@ -127,7 +119,7 @@ operator < (const UpdateSeq &other) const {
  */
 INLINE bool UpdateSeq::
 operator <= (const UpdateSeq &other) const {
-  return priv_le(_seq, other._seq);//priv_le(AtomicAdjust::get(_seq), AtomicAdjust::get(other._seq));
+  return priv_le(AtomicAdjust::get(_seq), AtomicAdjust::get(other._seq));
 }
 
 /**
@@ -151,7 +143,7 @@ operator >= (const UpdateSeq &other) const {
  */
 INLINE UpdateSeq UpdateSeq::
 operator ++ () {
-  AtomicAdjust::Integer old_seq = _seq;//AtomicAdjust::get(_seq);
+  AtomicAdjust::Integer old_seq = AtomicAdjust::get(_seq);
   AtomicAdjust::Integer new_seq = old_seq + 1;
   if (priv_is_special(new_seq)) {
     // Oops, wraparound.  We don't want to confuse the new value with our
@@ -159,7 +151,7 @@ operator ++ () {
     new_seq = (AtomicAdjust::Integer)SC_old + 1;
   }
 
-#if 0//def HAVE_THREADS
+#ifdef HAVE_THREADS
   AtomicAdjust::Integer result = AtomicAdjust::compare_and_exchange(_seq, old_seq, new_seq);
   while (result != old_seq) {
     // Some other thread beat us to it; try again.
@@ -184,7 +176,7 @@ operator ++ () {
  */
 INLINE UpdateSeq UpdateSeq::
 operator ++ (int) {
-  AtomicAdjust::Integer old_seq = _seq;//AtomicAdjust::get(_seq);
+  AtomicAdjust::Integer old_seq = AtomicAdjust::get(_seq);
   AtomicAdjust::Integer new_seq = old_seq + 1;
   if (priv_is_special(new_seq)) {
     // Oops, wraparound.  We don't want to confuse the new value with our
@@ -192,7 +184,7 @@ operator ++ (int) {
     new_seq = (AtomicAdjust::Integer)SC_old + 1;
   }
 
-#if 0//def HAVE_THREADS
+#ifdef HAVE_THREADS
   AtomicAdjust::Integer result = AtomicAdjust::compare_and_exchange(_seq, old_seq, new_seq);
   while (result != old_seq) {
     // Some other thread beat us to it; try again.
@@ -228,7 +220,7 @@ get_seq() const {
  */
 INLINE void UpdateSeq::
 output(std::ostream &out) const {
-  AtomicAdjust::Integer seq = _seq;//AtomicAdjust::get(_seq);
+  AtomicAdjust::Integer seq = AtomicAdjust::get(_seq);
   switch (seq) {
   case (AtomicAdjust::Integer)SC_initial:
     out << "initial";

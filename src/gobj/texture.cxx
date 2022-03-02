@@ -383,6 +383,7 @@ Texture(const string &name) :
   _cvar(_lock)
 {
   _reloading = false;
+  _view_context = nullptr;
 
   CDWriter cdata(_cycler, true);
   do_set_format(cdata, F_rgb);
@@ -399,6 +400,7 @@ Texture(const Texture &copy) :
   _lock(copy.get_name()),
   _cvar(_lock)
 {
+  _view_context = nullptr;
   _reloading = false;
 }
 
@@ -2026,21 +2028,28 @@ prepare_now(int view,
             PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
   //MutexHolder holder(_lock);
-  CDReader cdata(_cycler);
+  //CDReader cdata(_cycler);
 
   // Don't exceed the actual number of views.
-  view = max(min(view, cdata->_num_views - 1), 0);
+  //view = max(min(view, cdata->_num_views - 1), 0);
+
+  nassertr(view == 0, nullptr);
+
+  if (_view_context != nullptr) {
+    return _view_context;
+  }
 
   // Get the list of PreparedGraphicsObjects for this view.
   Contexts &contexts = _prepared_views[prepared_objects];
-  Contexts::const_iterator pvi;
-  pvi = contexts.find(view);
-  if (pvi != contexts.end()) {
-    return (*pvi).second;
-  }
+  //Contexts::const_iterator pvi;
+  //pvi = contexts.find(view);
+  //if (pvi != contexts.end()) {
+  //  return (*pvi).second;
+  //}
 
   TextureContext *tc = prepared_objects->prepare_texture_now(this, view, gsg);
   contexts[view] = tc;
+  _view_context = tc;
 
   return tc;
 }
@@ -9427,6 +9436,8 @@ read_dds_level_bc5(Texture *tex, CData *cdata, const DDSHeader &header, int n, i
  */
 void Texture::
 clear_prepared(int view, PreparedGraphicsObjects *prepared_objects) {
+  nassertv(view == 0);
+
   PreparedViews::iterator pvi;
   pvi = _prepared_views.find(prepared_objects);
   if (pvi != _prepared_views.end()) {
@@ -9434,6 +9445,7 @@ clear_prepared(int view, PreparedGraphicsObjects *prepared_objects) {
     Contexts::iterator ci;
     ci = contexts.find(view);
     if (ci != contexts.end()) {
+      _view_context = nullptr;
       contexts.erase(ci);
     }
 

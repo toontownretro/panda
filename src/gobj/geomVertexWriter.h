@@ -205,7 +205,7 @@ private:
   GeomVertexColumn::Packer *_packer;
   int _stride;
 
-  GeomVertexArrayDataHandle _handle;
+  PT(GeomVertexArrayDataHandle) _handle;
   unsigned char *_pointer_begin;
   unsigned char *_pointer_end;
   unsigned char *_pointer;

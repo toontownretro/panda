@@ -41,7 +41,7 @@ record_object(CullableObject &object, const CullTraverser *traverser) {
 
     if (object.munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
       // Now we can immediately draw the object.
-      _gsg->draw_object(&object, force);
+      _gsg->draw_object(&object, force, current_thread);
     }
   }
 }
@@ -61,5 +61,5 @@ end_traverse() {
 INLINE void CullHandler::
 draw(CullableObject &object, GraphicsStateGuardianBase *gsg,
      bool force, Thread *current_thread) {
-  gsg->draw_object(&object, force);
+  gsg->draw_object(&object, force, current_thread);
 }

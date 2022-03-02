@@ -36,7 +36,6 @@ PStatCollector GeomVertexData::_scale_color_pcollector("*:Munge:Scale color");
 PStatCollector GeomVertexData::_set_color_pcollector("*:Munge:Set color");
 PStatCollector GeomVertexData::_animation_pcollector("*:Animation");
 
-
 /**
  * Constructs an invalid object.  This is only used when reading from the bam
  * file.
@@ -504,8 +503,8 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
         if (keep_data_objects) {
           // Copy the data, but keep the same GeomVertexArrayData object.
 
-          const GeomVertexArrayDataHandle source_handle = source->get_array_handle(source_i);
-          modify_array_handle(dest_i).copy_data_from(&source_handle);
+          CPT(GeomVertexArrayDataHandle) source_handle = source->get_array_handle(source_i);
+          modify_array_handle(dest_i)->copy_data_from(source_handle);
         } else {
           // Copy the GeomVertexArrayData object.
           if (get_array(dest_i) != source->get_array(source_i)) {
@@ -529,8 +528,8 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
 
   // Now go back through and copy any data that's left over.
   for (source_i = 0; source_i < num_arrays; ++source_i) {
-    const GeomVertexArrayDataHandle array_handle = source->get_array_handle(source_i);
-    const unsigned char *array_data = array_handle.get_read_pointer(true);
+    CPT(GeomVertexArrayDataHandle) array_handle = source->get_array_handle(source_i);
+    const unsigned char *array_data = array_handle->get_read_pointer(true);
     const GeomVertexArrayFormat *source_array_format = source_format->get_array(source_i);
     int num_columns = source_array_format->get_num_columns();
     for (int di = 0; di < num_columns; ++di) {
@@ -547,8 +546,8 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
 
         if (dest_column->is_bytewise_equivalent(*source_column)) {
           // We can do a quick bytewise copy.
-          GeomVertexArrayDataHandle dest_handle = modify_array_handle(dest_i);
-          unsigned char *dest_array_data = dest_handle.get_write_pointer();
+          PT(GeomVertexArrayDataHandle) dest_handle = modify_array_handle(dest_i);
+          unsigned char *dest_array_data = dest_handle->get_write_pointer();
 
           bytewise_copy(dest_array_data + dest_column->get_start(),
                         dest_array_format->get_stride(),
@@ -558,8 +557,8 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
         } else if (dest_column->is_packed_argb() &&
                    source_column->is_uint8_rgba()) {
           // A common special case: OpenGL color to DirectX color.
-          GeomVertexArrayDataHandle dest_handle = modify_array_handle(dest_i);
-          unsigned char *dest_array_data = dest_handle.get_write_pointer();
+          PT(GeomVertexArrayDataHandle) dest_handle = modify_array_handle(dest_i);
+          unsigned char *dest_array_data = dest_handle->get_write_pointer();
 
           uint8_rgba_to_packed_argb
             (dest_array_data + dest_column->get_start(),
@@ -570,8 +569,8 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
         } else if (dest_column->is_uint8_rgba() &&
                    source_column->is_packed_argb()) {
           // Another common special case: DirectX color to OpenGL color.
-          GeomVertexArrayDataHandle dest_handle = modify_array_handle(dest_i);
-          unsigned char *dest_array_data = dest_handle.get_write_pointer();
+          PT(GeomVertexArrayDataHandle) dest_handle = modify_array_handle(dest_i);
+          unsigned char *dest_array_data = dest_handle->get_write_pointer();
 
           packed_argb_to_uint8_rgba
             (dest_array_data + dest_column->get_start(),
@@ -1166,9 +1165,9 @@ do_set_color(GeomVertexData *vdata, const LColor &color) {
   packer->set_data4f(buffer, color);
 #endif
 
-  GeomVertexArrayDataHandle handle = vdata->modify_array_handle(array_index);
-  unsigned char *write_ptr = handle.get_write_pointer();
-  unsigned char *end_ptr = write_ptr + handle.get_data_size_bytes();
+  PT(GeomVertexArrayDataHandle) handle = vdata->modify_array_handle(array_index);
+  unsigned char *write_ptr = handle->get_write_pointer();
+  unsigned char *end_ptr = write_ptr + handle->get_data_size_bytes();
   write_ptr += column->get_start();
 
   if (bufsize == 4) {
@@ -1398,9 +1397,9 @@ describe_vertex(ostream &out, int row) const {
     const GeomVertexArrayFormat *aformat = format->get_array(ai);
     nassertv(array != nullptr && aformat != nullptr);
     out << "  " << *aformat << "\n";
-    const GeomVertexArrayDataHandle handle = array->get_handle();
-    //nassertv(handle != nullptr);
-    const unsigned char *data = handle.get_read_pointer(true);
+    CPT(GeomVertexArrayDataHandle) handle = array->get_handle();
+    nassertv(handle != nullptr);
+    const unsigned char *data = handle->get_read_pointer(true);
     nassertv(data != nullptr);
     int stride = aformat->get_stride();
     int start = stride * row;
@@ -1650,8 +1649,9 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
     if (blend_array_format->get_stride() == 2 &&
         blend_array_format->get_column(0)->get_component_bytes() == 2) {
       // The blend indices are a table of ushorts.  Optimize this common case.
-      const GeomVertexArrayDataHandle blend_array_handle(cdata->_arrays[blend_array_index].get_read_pointer(current_thread), current_thread);
-      const unsigned short *blendt = (const unsigned short *)blend_array_handle.get_read_pointer(true);
+      CPT(GeomVertexArrayDataHandle) blend_array_handle =
+        new GeomVertexArrayDataHandle(cdata->_arrays[blend_array_index].get_read_pointer(current_thread), current_thread);
+      const unsigned short *blendt = (const unsigned short *)blend_array_handle->get_read_pointer(true);
 
       size_t ci;
       for (ci = 0; ci < new_format->get_num_points(); ci++) {
@@ -2286,7 +2286,11 @@ get_num_rows() const {
 
   // Look up the answer on the first array (since any array will do).
   int stride = _cdata->_format->get_array(0)->get_stride();
-  return _array_readers[0].get_data_size_bytes() / stride;
+  if (_fast_readers != nullptr) {
+    return _fast_readers[0].get_data_size_bytes() / stride;
+  } else {
+    return _array_readers[0]->get_data_size_bytes() / stride;
+  }
 }
 
 /**
@@ -2302,7 +2306,11 @@ get_array_info(const InternalName *name,
   int array_index;
   const GeomVertexColumn *column;
   if (_cdata->_format->get_array_info(name, array_index, column)) {
-    array_reader = &_array_readers[array_index];
+    if (_fast_readers != nullptr) {
+      array_reader = &_fast_readers[array_index];
+    } else {
+      array_reader = _array_readers[array_index];
+    }
     num_values = column->get_num_values();
     numeric_type = column->get_numeric_type();
     start = column->get_start();
@@ -2326,7 +2334,11 @@ get_array_info(const InternalName *name,
   int array_index;
   const GeomVertexColumn *column;
   if (_cdata->_format->get_array_info(name, array_index, column)) {
-    array_reader = &_array_readers[array_index];
+    if (_fast_readers != nullptr) {
+      array_reader = &_fast_readers[array_index];
+    } else {
+      array_reader = _array_readers[array_index];
+    }
     num_values = column->get_num_values();
     numeric_type = column->get_numeric_type();
     normalized = (column->get_contents() == GeomEnums::C_color);
@@ -2353,7 +2365,11 @@ get_vertex_info(const GeomVertexArrayDataHandle *&array_reader,
   if (array_index >= 0) {
     const GeomVertexColumn *column = _cdata->_format->get_vertex_column();
 
-    array_reader = &_array_readers[array_index];
+    if (_fast_readers != nullptr) {
+      array_reader = &_fast_readers[array_index];
+    } else {
+      array_reader = _array_readers[array_index];
+    }
     num_values = column->get_num_values();
     numeric_type = column->get_numeric_type();
     start = column->get_start();
@@ -2375,7 +2391,11 @@ get_normal_info(const GeomVertexArrayDataHandle *&array_reader,
   if (array_index >= 0) {
     const GeomVertexColumn *column = _cdata->_format->get_normal_column();
 
-    array_reader = &_array_readers[array_index];
+    if (_fast_readers != nullptr) {
+      array_reader = &_fast_readers[array_index];
+    } else {
+      array_reader = _array_readers[array_index];
+    }
     numeric_type = column->get_numeric_type();
     start = column->get_start();
     stride = _cdata->_format->get_array(array_index)->get_stride();
@@ -2397,7 +2417,11 @@ get_color_info(const GeomVertexArrayDataHandle *&array_reader,
   if (array_index >= 0) {
     const GeomVertexColumn *column = _cdata->_format->get_color_column();
 
-    array_reader = &_array_readers[array_index];
+    if (_fast_readers != nullptr) {
+      array_reader = &_fast_readers[array_index];
+    } else {
+      array_reader = _array_readers[array_index];
+    }
     num_values = column->get_num_values();
     numeric_type = column->get_numeric_type();
     start = column->get_start();
@@ -2413,6 +2437,8 @@ get_color_info(const GeomVertexArrayDataHandle *&array_reader,
 void GeomVertexDataPipelineReader::
 make_array_readers() {
   nassertv(!_got_array_readers);
+  nassertv(_fast_readers == nullptr);
+
   _got_array_readers = true;
 
   const GeomVertexData::Arrays &arrays = _cdata->_arrays;
@@ -2421,8 +2447,7 @@ make_array_readers() {
   nassertv(_num_array_readers <= max_array_handles);
 
   for (size_t i = 0; i < _num_array_readers; i++) {
-    const GeomVertexArrayData *array_data = arrays[i].get_read_pointer(_current_thread);
-    _array_readers[i] = GeomVertexArrayDataHandle(array_data, _current_thread);
+    _array_readers[i] = new GeomVertexArrayDataHandle(arrays[i].get_read_pointer(_current_thread), _current_thread);
   }
 }
 
@@ -2441,7 +2466,7 @@ get_num_rows() const {
 
   // Look up the answer on the first array (since any array will do).
   int stride = _cdata->_format->get_array(0)->get_stride();
-  return _array_writers[0].get_data_size_bytes() / stride;
+  return _array_writers[0]->get_data_size_bytes() / stride;
 }
 
 /**
@@ -2458,12 +2483,12 @@ set_num_rows(int n) {
   int orig_color_rows = -1;
 
   for (size_t i = 0; i < _cdata->_arrays.size(); i++) {
-    if (_array_writers[i].get_num_rows() != n) {
-      if (_array_writers[i].get_object()->has_column(InternalName::get_color())) {
+    if (_array_writers[i]->get_num_rows() != n) {
+      if (_array_writers[i]->get_object()->has_column(InternalName::get_color())) {
         color_array = i;
-        orig_color_rows = _array_writers[i].get_num_rows();
+        orig_color_rows = _array_writers[i]->get_num_rows();
       }
-      _array_writers[i].set_num_rows(n);
+      _array_writers[i]->set_num_rows(n);
       any_changed = true;
     }
   }
@@ -2471,7 +2496,7 @@ set_num_rows(int n) {
   if (color_array >= 0 && orig_color_rows < n) {
     // We have just added some rows; fill the "color" column with (1, 1, 1,
     // 1), for the programmer's convenience.
-    GeomVertexArrayDataHandle *array_writer = &_array_writers[color_array];
+    GeomVertexArrayDataHandle *array_writer = _array_writers[color_array];
     const GeomVertexArrayFormat *array_format = array_writer->get_array_format();
     const GeomVertexColumn *column =
       array_format->get_column(InternalName::get_color());
@@ -2551,8 +2576,8 @@ unclean_set_num_rows(int n) {
   bool any_changed = false;
 
   for (size_t i = 0; i < _cdata->_arrays.size(); i++) {
-    if (_array_writers[i].get_num_rows() != n) {
-      if (_array_writers[i].unclean_set_num_rows(n)) {
+    if (_array_writers[i]->get_num_rows() != n) {
+      if (_array_writers[i]->unclean_set_num_rows(n)) {
         any_changed = true;
       }
     }
@@ -2578,7 +2603,7 @@ reserve_num_rows(int n) {
   bool any_changed = false;
 
   for (size_t i = 0; i < _cdata->_arrays.size(); i++) {
-    if (_array_writers[i].reserve_num_rows(n)) {
+    if (_array_writers[i]->reserve_num_rows(n)) {
       any_changed = true;
     }
   }
@@ -2595,7 +2620,7 @@ modify_array(size_t i) {
 
   PT(GeomVertexArrayData) new_data;
   if (_got_array_writers) {
-    new_data = _array_writers[i].get_object();
+    new_data = _array_writers[i]->get_object();
   } else {
     new_data = _cdata->_arrays[i].get_write_pointer();
   }
@@ -2619,7 +2644,7 @@ set_array(size_t i, const GeomVertexArrayData *array) {
   _cdata->_animated_vertices_modified = UpdateSeq();
 
   if (_got_array_writers) {
-    _array_writers[i] = GeomVertexArrayDataHandle(_cdata->_arrays[i].get_write_pointer(), _current_thread);
+    _array_writers[i] = new GeomVertexArrayDataHandle(_cdata->_arrays[i].get_write_pointer(), _current_thread);
   }
 }
 
@@ -2665,7 +2690,7 @@ insert_array(size_t i, const GeomVertexArrayData *array) {
   _cdata->_animated_vertices.clear();
 
   if (_got_array_writers) {
-    _array_writers.insert(_array_writers.begin() + i, GeomVertexArrayDataHandle(_cdata->_arrays[i].get_write_pointer(), _current_thread));
+    _array_writers.insert(_array_writers.begin() + i, new GeomVertexArrayDataHandle(_cdata->_arrays[i].get_write_pointer(), _current_thread));
   }
 }
 
@@ -2718,7 +2743,7 @@ make_array_writers() {
   _array_writers.reserve(_cdata->_arrays.size());
   GeomVertexData::Arrays::iterator ai;
   for (ai = _cdata->_arrays.begin(); ai != _cdata->_arrays.end(); ++ai) {
-    _array_writers.emplace_back(GeomVertexArrayDataHandle((*ai).get_write_pointer(), _current_thread));
+    _array_writers.emplace_back(new GeomVertexArrayDataHandle((*ai).get_write_pointer(), _current_thread));
   }
 
   _object->clear_cache_stage();

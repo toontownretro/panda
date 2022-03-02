@@ -166,9 +166,9 @@ PUBLISHED:
  */
 
   INLINE CPT(GeomVertexArrayData) get_vertices() const;
-  INLINE const GeomVertexArrayDataHandle get_vertices_handle(Thread *current_thread) const;
+  INLINE CPT(GeomVertexArrayDataHandle) get_vertices_handle(Thread *current_thread) const;
   PT(GeomVertexArrayData) modify_vertices(int num_vertices = -1);
-  INLINE GeomVertexArrayDataHandle modify_vertices_handle(Thread *current_thread);
+  INLINE PT(GeomVertexArrayDataHandle) modify_vertices_handle(Thread *current_thread);
   void set_vertices(const GeomVertexArrayData *vertices, int num_vertices = -1);
   void set_nonindexed_vertices(int first_vertex, int num_vertices);
 
@@ -257,6 +257,13 @@ private:
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
   // conversely keeps a list (a set) of all the Geoms that have been prepared
   // there.  When either destructs, it removes itself from the other's list.
+
+  // Contexts by GSG ID.
+  //typedef pvector<IndexBufferContext *> IDContexts;
+  //IDContexts _id_contexts;
+
+  IndexBufferContext *_context;
+
   typedef pflat_hash_map<PreparedGraphicsObjects *, IndexBufferContext *, pointer_hash> Contexts;
   Contexts _contexts;
 
@@ -406,6 +413,7 @@ public:
 private:
   const GeomPrimitive::CData *_cdata;
   const GeomPrimitive *_object;
+
   const GeomVertexArrayData *_vertices;
   const GeomVertexArrayData::CData *_vertices_cdata;
 

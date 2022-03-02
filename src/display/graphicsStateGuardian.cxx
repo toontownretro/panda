@@ -170,7 +170,7 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
   _current_properties = nullptr;
   _closing_gsg = false;
   _active = true;
-  _prepared_objects = new PreparedGraphicsObjects;
+  _prepared_objects = new PreparedGraphicsObjects(this);
   _stereo_buffer_mask = ~0;
   _incomplete_render = allow_incomplete_render;
   _effective_incomplete_render = false;
@@ -2554,7 +2554,7 @@ finish_decal() {
  * Draws the given set of CullableObjects one-by-one.
  */
 bool GraphicsStateGuardian::
-draw_objects(const pvector<CullableObject> &objects, bool force) {
+draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) {
   bool all_ok = true;
   for (size_t i = 0; i < objects.size(); i++) {
     const CullableObject &object = objects[i];
@@ -2567,7 +2567,7 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
       nassertr(object._geom != nullptr, false);
       set_state_and_transform(object._state, object._internal_transform);
       if (!draw_geom(object._geom, object._munged_data, object._num_instances,
-                     force, Thread::get_current_thread())) {
+                     force, current_thread)) {
         all_ok = false;
       }
 
@@ -2599,7 +2599,7 @@ draw_objects(const pvector<CullableObject> &objects, bool force) {
  * Draws the given CullableObject.
  */
 bool GraphicsStateGuardian::
-draw_object(CullableObject *object, bool force) {
+draw_object(CullableObject *object, bool force, Thread *current_thread) {
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = object->_geom_node;
 #endif
@@ -2607,7 +2607,7 @@ draw_object(CullableObject *object, bool force) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
     return draw_geom(object->_geom, object->_munged_data, object->_num_instances,
-                     force, Thread::get_current_thread());
+                     force, current_thread);
 
   } else if (object->_draw_callback != nullptr) {
     // It has a callback associated.
@@ -2639,7 +2639,13 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
           bool force, Thread *current_thread) {
   GeomPipelineReader geom_reader(geom, current_thread);
   GeomVertexDataPipelineReader data_reader(vdata, current_thread);
-  data_reader.check_array_readers();
+
+  GeomVertexArrayDataHandle handles[max_array_handles];
+  for (int i = 0; i < data_reader._cdata->_arrays.size(); ++i) {
+    handles[i]._current_thread = current_thread;
+    handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread));
+  }
+  data_reader.set_array_readers(handles);
 
   bool all_ok;
   //{

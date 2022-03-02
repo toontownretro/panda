@@ -49,7 +49,7 @@ add_object(CullableObject &object, Thread *current_thread) {
 void CullBinUnsorted::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-  _gsg->draw_objects(_objects, force);
+  _gsg->draw_objects(_objects, force, current_thread);
 }
 
 /**

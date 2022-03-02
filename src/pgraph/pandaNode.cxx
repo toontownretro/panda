@@ -103,7 +103,7 @@ PandaNode::
   if (_dirty_prev_transform) {
     // Need to have this held before we grab any other locks.
     //LightMutexHolder holder(_dirty_prev_transforms._lock);
-    do_clear_dirty_prev_transform();
+    //do_clear_dirty_prev_transform();
   }
 
   // We shouldn't have any parents left by the time we destruct, or there's a
@@ -155,10 +155,10 @@ PandaNode(const PandaNode &copy) :
     CDWriter cdata(_cycler, true);
     cdata->_state = copy_cdata->_state;
     cdata->_transform = copy_cdata->_transform;
-    cdata->_prev_transform = copy_cdata->_prev_transform;
-    if (cdata->_transform != cdata->_prev_transform) {
-      do_set_dirty_prev_transform();
-    }
+    //cdata->_prev_transform = copy_cdata->_prev_transform;
+    //if (cdata->_transform != cdata->_prev_transform) {
+    //  do_set_dirty_prev_transform();
+    //}
 
     cdata->_effects = copy_cdata->_effects;
     cdata->_tag_data = copy_cdata->_tag_data;
@@ -1098,11 +1098,11 @@ set_transform(const TransformState *transform, Thread *current_thread) {
       cdata->set_fancy_bit(FB_transform, !transform->is_identity());
       any_changed = true;
 
-      if (pipeline_stage == 0) {
-        if (cdata->_transform != cdata->_prev_transform) {
-          do_set_dirty_prev_transform();
-        }
-      }
+      //if (pipeline_stage == 0) {
+      //  if (cdata->_transform != cdata->_prev_transform) {
+      //    do_set_dirty_prev_transform();
+      //  }
+      //}
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
@@ -1132,11 +1132,11 @@ set_prev_transform(const TransformState *transform, Thread *current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
     cdata->_prev_transform = transform;
     if (pipeline_stage == 0) {
-      if (cdata->_transform != cdata->_prev_transform) {
-        do_set_dirty_prev_transform();
-      } else {
-        do_clear_dirty_prev_transform();
-      }
+      //if (cdata->_transform != cdata->_prev_transform) {
+      //  do_set_dirty_prev_transform();
+      //} else {
+      //  do_clear_dirty_prev_transform();
+      //}
     }
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
@@ -1152,7 +1152,7 @@ void PandaNode::
 reset_prev_transform(Thread *current_thread) {
   // Need to have this held before we grab any other locks.
   //LightMutexHolder holder(_dirty_prev_transforms._lock);
-  do_clear_dirty_prev_transform();
+  //do_clear_dirty_prev_transform();
 
   // Apply this operation to the current stage as well as to all upstream
   // stages.
@@ -1173,6 +1173,8 @@ reset_prev_transform(Thread *current_thread) {
  */
 void PandaNode::
 reset_all_prev_transform(Thread *current_thread) {
+  return;
+
   nassertv(current_thread->get_pipeline_stage() == 0);
 
   PStatTimer timer(_reset_prev_pcollector, current_thread);
@@ -1414,11 +1416,11 @@ copy_all_properties(PandaNode *other) {
       (cdataw->_fancy_bits & ~change_bits) |
       (cdatar->_fancy_bits & change_bits);
 
-    if (pipeline_stage == 0) {
-      if (cdataw->_transform != cdataw->_prev_transform) {
-        do_set_dirty_prev_transform();
-      }
-    }
+    //if (pipeline_stage == 0) {
+    //  if (cdataw->_transform != cdataw->_prev_transform) {
+    //    do_set_dirty_prev_transform();
+    //  }
+    //}
   }
   CLOSE_ITERATE_CURRENT_AND_UPSTREAM(_cycler);
 

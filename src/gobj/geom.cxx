@@ -1652,13 +1652,13 @@ combine_primitives(GeomPrimitive *a_prim, CPT(GeomPrimitive) b_prim,
     a_prim->append_unused_vertices(a_vertices, b_vertex);
   }
 
-  GeomVertexArrayDataHandle a_handle(std::move(a_vertices), current_thread);
-  const GeomVertexArrayDataHandle b_handle(std::move(b_vertices), current_thread);
+  PT(GeomVertexArrayDataHandle) a_handle = new GeomVertexArrayDataHandle(std::move(a_vertices), current_thread);
+  CPT(GeomVertexArrayDataHandle) b_handle = new GeomVertexArrayDataHandle(std::move(b_vertices), current_thread);
 
-  size_t orig_a_vertices = a_handle.get_num_rows();
+  size_t orig_a_vertices = a_handle->get_num_rows();
 
-  a_handle.copy_subdata_from(a_handle.get_data_size_bytes(), 0,
-                             &b_handle, 0, b_handle.get_data_size_bytes());
+  a_handle->copy_subdata_from(a_handle->get_data_size_bytes(), 0,
+                              b_handle, 0, b_handle->get_data_size_bytes());
   a_prim->clear_minmax();
   if (a_prim->is_composite()) {
     // Also copy the ends array.

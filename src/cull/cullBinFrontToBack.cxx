@@ -79,11 +79,11 @@ void CullBinFrontToBack::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
 
-#ifdef HAVE_TBB
-  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_f2b);
-#else
+//#ifdef HAVE_TBB
+  //oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_f2b);
+//#else
   std::sort(_objects.begin(), _objects.end(), compare_objects_f2b);
-#endif
+//#endif
 }
 
 /**
@@ -92,7 +92,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinFrontToBack::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-  _gsg->draw_objects(_objects, force);
+  _gsg->draw_objects(_objects, force, current_thread);
 }
 
 /**

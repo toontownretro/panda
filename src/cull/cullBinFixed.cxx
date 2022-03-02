@@ -68,7 +68,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinFixed::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-  _gsg->draw_objects(_objects, force);
+  _gsg->draw_objects(_objects, force, current_thread);
 }
 
 /**

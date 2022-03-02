@@ -120,7 +120,7 @@ operator = (CullableObject &&other) {
  */
 INLINE void CullableObject::
 draw(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread) {
-  gsg->draw_object(this, force);
+  gsg->draw_object(this, force, current_thread);
 
 /*
   if (UNLIKELY(_draw_callback != nullptr)) {

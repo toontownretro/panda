@@ -310,7 +310,7 @@ update_texture(TextureContext *tc, bool force) {
       return false;
     }
   }
-  dtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //dtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   return true;
 }
@@ -549,7 +549,7 @@ apply_vertex_buffer(VertexBufferContext *vbc,
 
     dvbc->mark_loaded(reader);
   }
-  dvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //dvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   return true;
 }
@@ -672,7 +672,7 @@ apply_index_buffer(IndexBufferContext *ibc,
       dibc->set_active(true);
     }
   }
-  dibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+  //dibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   return true;
 }
@@ -2013,7 +2013,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
 
   if (okflag) {
     dtc->mark_loaded();
-    dtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
+    //dtc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
   } else {
     // The copy failed.  Fall back to copying it to RAM and back.  Terribly

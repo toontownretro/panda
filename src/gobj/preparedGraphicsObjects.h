@@ -57,7 +57,7 @@ class SavedContext;
  */
 class EXPCL_PANDA_GOBJ PreparedGraphicsObjects : public ReferenceCount {
 public:
-  PreparedGraphicsObjects();
+  PreparedGraphicsObjects(GraphicsStateGuardianBase *gsg);
   ~PreparedGraphicsObjects();
 
 PUBLISHED:
@@ -298,6 +298,9 @@ public:
 
   AdaptiveLru _graphics_memory_lru;
   SimpleLru _sampler_object_lru;
+
+  GraphicsStateGuardianBase *_gsg;
+  size_t _gsg_id;
 
 public:
   // This is only public as a temporary hack.  Don't mess with it unless you

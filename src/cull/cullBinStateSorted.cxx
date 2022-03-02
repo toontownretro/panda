@@ -196,11 +196,11 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
 void CullBinStateSorted::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-#ifdef HAVE_TBB
-  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_state);
-#else
+//#ifdef HAVE_TBB
+//  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_state);
+//#else
   std::sort(_objects.begin(), _objects.end(), compare_objects_state);
-#endif
+//#endif
 }
 
 
@@ -210,7 +210,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinStateSorted::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-  _gsg->draw_objects(_objects, force);
+  _gsg->draw_objects(_objects, force, current_thread);
 }
 
 /**

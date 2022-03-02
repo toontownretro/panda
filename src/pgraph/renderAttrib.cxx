@@ -116,7 +116,7 @@ unref() const {
   // holding it if we happen to drop the reference count to 0. Having to grab
   // the lock at every call to unref() is a big limiting factor on
   // parallelization.
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
 
   if (ReferenceCount::unref()) {
     // The reference count is still nonzero.
@@ -153,7 +153,7 @@ write(ostream &out, int indent_level) const {
  */
 int RenderAttrib::
 get_num_attribs() {
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
   return _attribs.get_num_entries();
 }
 
@@ -164,7 +164,7 @@ get_num_attribs() {
  */
 void RenderAttrib::
 list_attribs(ostream &out) {
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
 
   size_t size = _attribs.get_num_entries();
   out << size << " attribs:\n";
@@ -183,7 +183,7 @@ garbage_collect() {
   if (!garbage_collect_states) {
     return 0;
   }
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
 
   PStatTimer timer(_garbage_collect_pcollector);
   size_t orig_size = _attribs.get_num_entries();
@@ -253,7 +253,7 @@ garbage_collect() {
  */
 bool RenderAttrib::
 validate_attribs() {
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
   if (_attribs.is_empty()) {
     return true;
   }
@@ -348,7 +348,7 @@ return_unique(RenderAttrib *attrib) {
   }
 #endif
 
-  //LightReMutexHolder holder(*_attribs_lock);
+  LightReMutexHolder holder(*_attribs_lock);
 
   if (attrib->_saved_entry != -1) {
     // This attrib is already in the cache.  nassertr(_attribs.find(attrib)
@@ -486,7 +486,7 @@ output_comparefunc(ostream &out, PandaCompareFunc fn) const {
  */
 void RenderAttrib::
 release_new() {
-  //nassertv(_attribs_lock->debug_is_locked());
+  nassertv(_attribs_lock->debug_is_locked());
 
   if (_saved_entry != -1) {
     _saved_entry = -1;

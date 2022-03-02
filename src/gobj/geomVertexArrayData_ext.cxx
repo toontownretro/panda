@@ -16,11 +16,7 @@
 #ifdef HAVE_PYTHON
 
 struct InternalBufferData {
-  InternalBufferData(const GeomVertexArrayDataHandle &handle) :
-    _handle(handle) { }
-  InternalBufferData(GeomVertexArrayDataHandle &&handle) :
-    _handle(std::move(handle)) { }
-  const GeomVertexArrayDataHandle _handle;
+  CPT(GeomVertexArrayDataHandle) _handle;
   Py_ssize_t _num_rows;
   Py_ssize_t _stride;
   std::string _format;
@@ -32,10 +28,8 @@ struct InternalBufferData {
  */
 int Extension<GeomVertexArrayData>::
 __getbuffer__(PyObject *self, Py_buffer *view, int flags) {
-  GeomVertexArrayDataHandle handle = _this->modify_handle();
-  InternalBufferData *data = new InternalBufferData(handle);
-
-  CPT(GeomVertexArrayFormat) format = data->_handle.get_array_format();
+  PT(GeomVertexArrayDataHandle) handle = _this->modify_handle();
+  CPT(GeomVertexArrayFormat) format = handle->get_array_format();
 
   int row_size;
   bool pad_fmt;
@@ -51,7 +45,9 @@ __getbuffer__(PyObject *self, Py_buffer *view, int flags) {
     pad_fmt = true;
   }
 
-  data->_num_rows = data->_handle.get_num_rows();
+  InternalBufferData *data = new InternalBufferData;
+  data->_handle = handle;
+  data->_num_rows = handle->get_num_rows();
   data->_stride = format->get_stride();
   data->_format = format->get_format_string(pad_fmt);
 
@@ -61,8 +57,8 @@ __getbuffer__(PyObject *self, Py_buffer *view, int flags) {
     Py_INCREF(self);
   }
   view->obj = self;
-  view->buf = (void*) handle.get_write_pointer();
-  view->len = row_size * data->_handle.get_num_rows();
+  view->buf = (void*) handle->get_write_pointer();
+  view->len = row_size * handle->get_num_rows();
   view->readonly = 0;
   view->itemsize = row_size;
   view->format = nullptr;
@@ -94,9 +90,8 @@ __getbuffer__(PyObject *self, Py_buffer *view, int flags) const {
       return -1;
   }
 
-  InternalBufferData *data = new InternalBufferData(_this->get_handle());
-
-  CPT(GeomVertexArrayFormat) format = data->_handle.get_array_format();
+  CPT(GeomVertexArrayDataHandle) handle = _this->get_handle();
+  CPT(GeomVertexArrayFormat) format = handle->get_array_format();
 
   int row_size;
   bool pad_fmt;
@@ -112,8 +107,9 @@ __getbuffer__(PyObject *self, Py_buffer *view, int flags) const {
     pad_fmt = true;
   }
 
-
-  data->_num_rows = data->_handle.get_num_rows();
+  InternalBufferData *data = new InternalBufferData;
+  data->_handle = handle;
+  data->_num_rows = handle->get_num_rows();
   data->_stride = format->get_stride();
   data->_format = format->get_format_string(pad_fmt);
 
@@ -123,8 +119,8 @@ __getbuffer__(PyObject *self, Py_buffer *view, int flags) const {
     Py_INCREF(self);
   }
   view->obj = self;
-  view->buf = (void*) data->_handle.get_read_pointer(true);
-  view->len = row_size * data->_handle.get_num_rows();
+  view->buf = (void*) handle->get_read_pointer(true);
+  view->len = row_size * handle->get_num_rows();
   view->readonly = 1;
   view->itemsize = row_size;
   view->format = nullptr;

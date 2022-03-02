@@ -1079,6 +1079,8 @@ protected:
   // conversely keeps a list (a set) of all the Textures that have been
   // prepared there.  When either destructs, it removes itself from the
   // other's list.
+  TextureContext *_view_context;
+
   typedef pflat_hash_map<int, TextureContext *, int_hash> Contexts;
   typedef pflat_hash_map<PreparedGraphicsObjects *, Contexts, pointer_hash> PreparedViews;
   PreparedViews _prepared_views;

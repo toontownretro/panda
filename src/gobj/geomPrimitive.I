@@ -267,19 +267,19 @@ get_vertices() const {
 /**
  * Equivalent to get_vertices().get_handle().
  */
-INLINE const GeomVertexArrayDataHandle GeomPrimitive::
+INLINE CPT(GeomVertexArrayDataHandle) GeomPrimitive::
 get_vertices_handle(Thread *current_thread) const {
   CDReader cdata(_cycler, current_thread);
-  return GeomVertexArrayDataHandle(cdata->_vertices.get_read_pointer(current_thread), current_thread);
+  return new GeomVertexArrayDataHandle(cdata->_vertices.get_read_pointer(current_thread), current_thread);
 }
 
 /**
  * Equivalent to modify_vertices().get_handle().
  */
-INLINE GeomVertexArrayDataHandle GeomPrimitive::
+INLINE PT(GeomVertexArrayDataHandle) GeomPrimitive::
 modify_vertices_handle(Thread *current_thread) {
   CDWriter cdata(_cycler, true, current_thread);
-  return GeomVertexArrayDataHandle(do_modify_vertices(cdata), current_thread);
+  return new GeomVertexArrayDataHandle(do_modify_vertices(cdata), current_thread);
 }
 
 /**
@@ -502,6 +502,7 @@ CData(const GeomPrimitive::CData &copy) :
   _max_vertex(copy._max_vertex)
 {
 }
+
 /**
  *
  */
@@ -509,7 +510,7 @@ INLINE GeomPrimitivePipelineReader::
 GeomPrimitivePipelineReader(const GeomPrimitive *object,
                             Thread *current_thread) :
 #ifndef CPPPARSER
-  _cdata(object->_cycler.read_unlocked(current_thread)),
+  _cdata(object->_cycler.read(current_thread)),
 #endif
   _object(std::move(object)),
   _vertices_cdata(nullptr),
@@ -519,19 +520,19 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif
-#ifdef DO_PIPELINING
-  _cdata->ref();
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//  _cdata->ref();
+//#endif  // DO_PIPELINING
 
   if (!_cdata->_vertices.is_null()) {
     _vertices = _cdata->_vertices.get_read_pointer(current_thread);
-    _vertices_cdata = _vertices->_cycler.read_unlocked(current_thread);
-#ifdef DO_PIPELINING
-    _vertices_cdata->ref();
-#endif  // DO_PIPELINING
+    _vertices_cdata = _vertices->_cycler.read(current_thread);
+//#ifdef DO_PIPELINING
+//    _vertices_cdata->ref();
+//#endif  // DO_PIPELINING
     // We must grab the lock *after* we have incremented the reference count,
     // above.
-    //_vertices_cdata->_rw_lock.acquire();
+    _vertices_cdata->_rw_lock.acquire();
   }
 }
 
@@ -543,20 +544,22 @@ INLINE GeomPrimitivePipelineReader::
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif // _DEBUG
-  // _object->_cycler.release_read(_cdata);
+  _object->_cycler.release_read(_cdata);
 
-#ifdef DO_PIPELINING
-  unref_delete((CycleData *)_cdata);
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//  unref_delete((CycleData *)_cdata);
+//#endif  // DO_PIPELINING
 
   if (_vertices_cdata != nullptr) {
     // We must release the lock *before* we decrement the reference count,
     // below.
-    //_vertices_cdata->_rw_lock.release();
+    _vertices_cdata->_rw_lock.release();
 
-#ifdef DO_PIPELINING
-    unref_delete((CycleData *)_vertices_cdata);
-#endif  // DO_PIPELINING
+    _vertices->_cycler.release_read(_vertices_cdata);
+
+//#ifdef DO_PIPELINING
+//    unref_delete((CycleData *)_vertices_cdata);
+//#endif  // DO_PIPELINING
   }
 
 #ifdef _DEBUG

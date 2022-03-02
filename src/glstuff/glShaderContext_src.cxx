@@ -45,6 +45,7 @@ TypeHandle CLP(ShaderContext)::_type_handle;
 CLP(ShaderContext)::
 CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext(s) {
   _glgsg = glgsg;
+  _prepared_objects = _glgsg->get_prepared_objects();
   _glsl_program = 0;
   _uses_standard_vertex_arrays = false;
   _enabled_attribs.clear();
@@ -2215,7 +2216,7 @@ set_state_and_transform(const RenderState *target_rs,
  */
 void CLP(ShaderContext)::
 issue_parameters(int altered) {
-  PStatTimer timer(_glgsg->_draw_set_state_shader_parameters_pcollector);
+  //PStatTimer timer(_glgsg->_draw_set_state_shader_parameters_pcollector);
 
 #ifndef NDEBUG
   if (GLCAT.is_spam()) {
@@ -2819,7 +2820,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
 
       // Make sure the vertex buffer is up-to-date.
       CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext),
-        array_reader->prepare_now(_glgsg->get_prepared_objects(), _glgsg));
+        array_reader->prepare_now(_prepared_objects, _glgsg));
       nassertr(gvbc != (CLP(VertexBufferContext) *)nullptr, false);
 
       if (!_glgsg->update_vertex_buffer(gvbc, array_reader, force)) {
@@ -3199,7 +3200,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
       GLuint64 handle = gtc->get_handle();
       if (handle != 0) {
         gtc->make_handle_resident();
-        gtc->set_active(true);
+        //gtc->set_active(true);
 
         // Check if we have already specified this texture handle.  If so, no
         // need to call glUniformHandle again.
@@ -3227,16 +3228,16 @@ update_shader_texture_bindings(ShaderContext *prev) {
       if (!_glgsg->update_texture(gtc, force)) {
         textures[i] = 0;
       } else {
-        gtc->set_active(true);
+        //gtc->set_active(true);
         textures[i] = gtc->_index;
       }
 
-      SamplerContext *sc = sampler.prepare_now(_glgsg->get_prepared_objects(), _glgsg);
+      SamplerContext *sc = sampler.prepare_now(_prepared_objects, _glgsg);
       if (sc == nullptr) {
         samplers[i] = 0;
       } else {
         CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
-        gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
+        //gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
         samplers[i] = gsc->_index;
       }
     } else

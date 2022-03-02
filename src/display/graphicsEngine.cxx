@@ -914,7 +914,7 @@ render_frame() {
 
 #endif  // DO_PSTATS
 
-    GeomVertexArrayData::lru_epoch();
+    //GeomVertexArrayData::lru_epoch();
 
     // Now signal all of our threads to begin their next frame.
     Threads::const_iterator ti;

@@ -507,18 +507,23 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   Thread *current_thread = trav->get_current_thread();
 
   // Get all the Geoms, with no decalling.
-  Geoms geoms = get_geoms(current_thread);
-  int num_geoms = geoms.get_num_geoms();
+  const GeomList *geoms;
+  {
+    CDReader cdata(_cycler, current_thread);
+    geoms = cdata->get_geoms();
+  }
+  //Geoms geoms = get_geoms(current_thread);
+  int num_geoms = (int)geoms->size();
   trav->_geoms_pcollector.add_level(num_geoms);
-  CPT(TransformState) internal_transform = data.get_internal_transform(trav);
+  const TransformState *internal_transform = data.get_internal_transform(trav);
 
   if (num_geoms == 1) {
     // If there's only one Geom, we don't need to bother culling each individual
     // Geom bounding volume against the view frustum, since we've already
     // checked the one on the GeomNode itself.
-    const Geom *geom = geoms.get_geom(0);
+    const Geom *geom = (*geoms)[0]._geom.get_read_pointer(current_thread);//.get_geom(0);
     if (!geom->is_empty()) {
-      CPT(RenderState) state = data._state->compose(geoms.get_geom_state(0));
+      CPT(RenderState) state = data._state->compose((*geoms)[0]._state);
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
         CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
 #ifdef RENDER_TRACK_GEOM_NODES
@@ -532,12 +537,12 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   else {
     // More than one Geom.
     for (int i = 0; i < num_geoms; i++) {
-      const Geom *geom = geoms.get_geom(i);
+      const Geom *geom = (*geoms)[i]._geom.get_read_pointer(current_thread);
       if (geom->is_empty()) {
         continue;
       }
 
-      CPT(RenderState) state = data._state->compose(geoms.get_geom_state(i));
+      CPT(RenderState) state = data._state->compose((*geoms)[i]._state);
       if (state->has_cull_callback() && !state->cull_callback(trav, data)) {
         // Cull.
         continue;

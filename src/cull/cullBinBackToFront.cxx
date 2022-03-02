@@ -78,11 +78,11 @@ auto compare_objects_b2f = [](const CullableObject &a, const CullableObject &b) 
 void CullBinBackToFront::
 finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
-#ifdef HAVE_TBB
-  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_b2f);
-#else
+//#ifdef HAVE_TBB
+//  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_b2f);
+//#else
   std::sort(_objects.begin(), _objects.end(), compare_objects_b2f);
-#endif
+//#endif
 }
 
 /**
@@ -91,7 +91,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 void CullBinBackToFront::
 draw(bool force, Thread *current_thread) {
   PStatTimer timer(_draw_this_pcollector, current_thread);
-  _gsg->draw_objects(_objects, force);
+  _gsg->draw_objects(_objects, force, current_thread);
 }
 
 /**

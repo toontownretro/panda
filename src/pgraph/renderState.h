@@ -222,7 +222,6 @@ private:
   INLINE void consider_update_pstats(int old_referenced_bits) const;
   static void update_pstats(int old_referenced_bits, int new_referenced_bits);
 
-  bool do_write_rso(std::ostream &out, const Filename &filename) const;
 public:
   static void init_states();
 
@@ -376,6 +375,7 @@ private:
   friend class GraphicsStateGuardian;
   friend class RenderAttribRegistry;
   friend class Extension<RenderState>;
+  friend class ShaderGenerator;
   friend class StateMunger;
 };
 

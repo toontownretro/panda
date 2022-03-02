@@ -70,7 +70,7 @@ InternalName::
 #ifndef NDEBUG
   if (_parent != nullptr) {
     // unref() should have removed us from our parent's table already.
-    //LightMutexHolder holder(_parent->_name_table_lock);
+    LightMutexHolder holder(_parent->_name_table_lock);
     NameTable::iterator ni = _parent->_name_table.find(_basename);
     nassertv(ni == _parent->_name_table.end());
   }
@@ -90,7 +90,7 @@ unref() const {
     return TypedWritableReferenceCount::unref();
   }
 
-  //LightMutexHolder holder(_parent->_name_table_lock);
+  LightMutexHolder holder(_parent->_name_table_lock);
 
   if (ReferenceCount::unref()) {
     return true;
@@ -122,7 +122,7 @@ append(const string &name) {
     return append(name.substr(0, under))->append(name.substr(under + 1));
   }
 
-  //LightMutexHolder holder(_name_table_lock);
+  LightMutexHolder holder(_name_table_lock);
 
   NameTable::iterator ni = _name_table.find(name);
   if (ni != _name_table.end()) {

@@ -161,12 +161,12 @@ get_array(size_t i) const {
 /**
  * Equivalent to get_array(i).get_handle().
  */
-INLINE const GeomVertexArrayDataHandle GeomVertexData::
+INLINE CPT(GeomVertexArrayDataHandle) GeomVertexData::
 get_array_handle(size_t i) const {
   Thread *current_thread = Thread::get_current_thread();
   CDReader cdata(_cycler, current_thread);
-  nassertr(i < cdata->_arrays.size(), GeomVertexArrayDataHandle());
-  return GeomVertexArrayDataHandle(cdata->_arrays[i].get_read_pointer(), current_thread);
+  nassertr(i < cdata->_arrays.size(), nullptr);
+  return new GeomVertexArrayDataHandle(cdata->_arrays[i].get_read_pointer(), current_thread);
 }
 
 /**
@@ -187,11 +187,11 @@ modify_array(size_t i) {
 /**
  * Equivalent to modify_array(i).modify_handle().
  */
-INLINE GeomVertexArrayDataHandle GeomVertexData::
+INLINE PT(GeomVertexArrayDataHandle) GeomVertexData::
 modify_array_handle(size_t i) {
   Thread *current_thread = Thread::get_current_thread();
   GeomVertexDataPipelineWriter writer(this, true, current_thread);
-  return GeomVertexArrayDataHandle(writer.modify_array(i), current_thread);
+  return new GeomVertexArrayDataHandle(writer.modify_array(i), current_thread);
 }
 
 /**
@@ -649,9 +649,9 @@ GeomVertexDataPipelineBase(GeomVertexData *object,
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif // _DEBUG
-#ifdef DO_PIPELINING
-  _cdata->ref();
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//  _cdata->ref();
+//#endif  // DO_PIPELINING
 }
 
 /**
@@ -665,10 +665,14 @@ INLINE GeomVertexDataPipelineBase::
   }
 #endif // _DEBUG
 
+  //if (_object != nullptr && _cdata != nullptr) {
+  //  _object->_cycler.release_read(_cdata);
+  //}
+
 #ifdef DO_PIPELINING
-  if (_cdata != nullptr) {
-    unref_delete((CycleData *)_cdata);
-  }
+  //if (_cdata != nullptr) {
+  //  unref_delete((CycleData *)_cdata);
+  //}
 #endif  // DO_PIPELINING
 
 #ifdef _DEBUG
@@ -723,7 +727,7 @@ get_num_arrays() const {
 INLINE CPT(GeomVertexArrayData) GeomVertexDataPipelineBase::
 get_array(size_t i) const {
   nassertr(i < _cdata->_arrays.size(), nullptr);
-  return _cdata->_arrays[i].get_read_pointer();
+  return _cdata->_arrays[i].get_read_pointer(_current_thread);
 }
 
 /**
@@ -739,7 +743,7 @@ get_transform_table() const {
  */
 INLINE CPT(TransformBlendTable) GeomVertexDataPipelineBase::
 get_transform_blend_table() const {
-  return _cdata->_transform_blend_table.get_read_pointer();
+  return _cdata->_transform_blend_table.get_read_pointer(_current_thread);
 }
 
 /**
@@ -765,7 +769,8 @@ INLINE GeomVertexDataPipelineReader::
 GeomVertexDataPipelineReader(Thread *current_thread) :
   GeomVertexDataPipelineBase(current_thread),
   _got_array_readers(false),
-  _num_array_readers(0)
+  _num_array_readers(0),
+  _fast_readers(nullptr)
 {
 }
 
@@ -776,10 +781,26 @@ INLINE GeomVertexDataPipelineReader::
 GeomVertexDataPipelineReader(const GeomVertexData *object,
                              Thread *current_thread) :
   GeomVertexDataPipelineBase((GeomVertexData *)object, current_thread,
-                             (GeomVertexData::CData *)object->_cycler.read_unlocked(current_thread)),
+                             (GeomVertexData::CData *)object->_cycler.read(current_thread)),
   _got_array_readers(false),
-  _num_array_readers(0)
+  _num_array_readers(0),
+  _fast_readers(nullptr)
 {
+}
+
+/**
+ *
+ */
+INLINE GeomVertexDataPipelineReader::
+~GeomVertexDataPipelineReader() {
+  if (_object != nullptr && _cdata != nullptr) {
+    _object->_cycler.release_read(_cdata);
+  }
+  //if (_drawing && _got_array_readers) {
+  //  for (int i = 0; i < _num_array_readers; ++i) {
+  //    _fast_array_readers[i].release();
+  //  }
+  //}
 }
 
 /**
@@ -788,20 +809,29 @@ GeomVertexDataPipelineReader(const GeomVertexData *object,
 INLINE void GeomVertexDataPipelineReader::
 set_object(const GeomVertexData *object) {
 #ifdef DO_PIPELINING
-  if (_cdata != nullptr) {
-    unref_delete((CycleData *)_cdata);
+  if (_cdata != nullptr && _object != nullptr) {
+    _object->_cycler.release_read(_cdata);
+    //unref_delete((CycleData *)_cdata);
   }
 #endif  // DO_PIPELINING
+
+  if (_got_array_readers) {
+    if (_fast_readers == nullptr) {
+      for (int i = 0; i < _num_array_readers; ++i) {
+        _array_readers[i] = nullptr;
+      }
+    }
+  }
   _num_array_readers = 0;
   //_array_readers.clear();
 
   _object = (GeomVertexData *)object;
-  _cdata = (GeomVertexData::CData *)_object->_cycler.read_unlocked(_current_thread);
+  _cdata = (GeomVertexData::CData *)_object->_cycler.read(_current_thread);
   _got_array_readers = false;
 
-#ifdef DO_PIPELINING
-  _cdata->ref();
-#endif  // DO_PIPELINING
+//#ifdef DO_PIPELINING
+//  _cdata->ref();
+//#endif  // DO_PIPELINING
 }
 
 /**
@@ -829,7 +859,11 @@ INLINE const GeomVertexArrayDataHandle *GeomVertexDataPipelineReader::
 get_array_reader(int i) const {
   nassertr(_got_array_readers, nullptr);
   nassertr(i >= 0 && i < _num_array_readers, nullptr);
-  return &_array_readers[i];
+  if (_fast_readers != nullptr) {
+    return &_fast_readers[i];
+  } else {
+    return _array_readers[i];
+  }
 }
 
 /**
@@ -867,6 +901,16 @@ has_normal() const {
 INLINE bool GeomVertexDataPipelineReader::
 has_color() const {
   return (_cdata->_format->get_color_column() != nullptr);
+}
+
+/**
+ *
+ */
+INLINE void GeomVertexDataPipelineReader::
+set_array_readers(GeomVertexArrayDataHandle *readers) {
+  _fast_readers = readers;
+  _got_array_readers = true;
+  _num_array_readers = _cdata->_arrays.size();
 }
 
 /**
@@ -923,7 +967,7 @@ INLINE GeomVertexArrayDataHandle *GeomVertexDataPipelineWriter::
 get_array_writer(size_t i) {
   nassertr(_got_array_writers, nullptr);
   nassertr(i < _array_writers.size(), nullptr);
-  return &_array_writers[i];
+  return _array_writers[i];
 }
 
 INLINE std::ostream &

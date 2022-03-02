@@ -212,17 +212,17 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
     // This visgroup is in the PVS, so traverse the children in the
     // bucket corresponding to this visgroup.
-    auto children = _visgroups[i];
+    const DynamicVisNode::ChildSet &children = _visgroups[i];
 
     for (auto it = children.begin(); it != children.end(); ++it) {
       ChildInfo *child = *it;
       if (child->_last_trav_counter != _trav_counter) {
+        child->_last_trav_counter = _trav_counter;
         // We haven't traversed this child yet.
         // TODO: Figure out if there's a way we can store DownConnections
         // instead of node pointers to take advantage of bounds being stored
         // on DownConnection.
         trav->traverse_down(data, child->_node);
-        child->_last_trav_counter = _trav_counter;
       }
     }
   }

@@ -97,8 +97,8 @@ PUBLISHED:
 
   INLINE bool request_resident(Thread *current_thread = Thread::get_current_thread()) const;
 
-  INLINE const GeomVertexArrayDataHandle get_handle(Thread *current_thread = Thread::get_current_thread()) const;
-  INLINE GeomVertexArrayDataHandle modify_handle(Thread *current_thread = Thread::get_current_thread());
+  INLINE CPT(GeomVertexArrayDataHandle) get_handle(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE PT(GeomVertexArrayDataHandle) modify_handle(Thread *current_thread = Thread::get_current_thread());
 
   void prepare(PreparedGraphicsObjects *prepared_objects);
   bool is_prepared(PreparedGraphicsObjects *prepared_objects) const;
@@ -134,6 +134,11 @@ private:
   // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
   // conversely keeps a list (a set) of all the Geoms that have been prepared
   // there.  When either destructs, it removes itself from the other's list.
+  //typedef pvector<VertexBufferContext *> IDContexts;
+  //IDContexts _id_contexts;
+
+  VertexBufferContext *_context;
+
   typedef pflat_hash_map<PreparedGraphicsObjects *, VertexBufferContext *, pointer_hash> Contexts;
   Contexts _contexts;
 
@@ -169,7 +174,7 @@ private:
 
     // This implements read-write locking.  Anyone who gets the data for
     // reading or writing will hold this mutex during the lock.
-    //ReMutex _rw_lock;
+    ReMutex _rw_lock;
     UsageHint _usage_hint;
 
   public:
@@ -247,8 +252,11 @@ private:
  * This class serves in lieu of a pair of GeomVertexArrayDataPipelineReader
  * and GeomVertexArrayDataPipelineWriter classes
  */
-class EXPCL_PANDA_GOBJ GeomVertexArrayDataHandle : public GeomEnums {
+class EXPCL_PANDA_GOBJ GeomVertexArrayDataHandle : public ReferenceCount, public GeomEnums {
 private:
+  INLINE GeomVertexArrayDataHandle();
+  INLINE GeomVertexArrayDataHandle(Thread *current_thread);
+
   //INLINE GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
   //                                 Thread *current_thread);
   INLINE GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
@@ -258,16 +266,21 @@ private:
   INLINE GeomVertexArrayDataHandle(GeomVertexArrayData *object,
                                    Thread *current_thread);
 
+  //INLINE void assign(CPT(GeomVertexArrayData) object);
+  INLINE void assign(const GeomVertexArrayData *object);
+  //INLINE void assign(PT(GeomVertexArrayData) object);
+  INLINE void assign(GeomVertexArrayData *object);
+  INLINE void release();
+
 PUBLISHED:
   INLINE ~GeomVertexArrayDataHandle();
 
 public:
-  GeomVertexArrayDataHandle();
-  GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &);
-  GeomVertexArrayDataHandle(GeomVertexArrayDataHandle &&);
+  GeomVertexArrayDataHandle(const GeomVertexArrayDataHandle &) = delete;
 
-  void operator = (const GeomVertexArrayDataHandle &);
-  void operator = (GeomVertexArrayDataHandle &&);
+  ALLOC_DELETED_CHAIN_DECL(GeomVertexArrayDataHandle);
+
+  GeomVertexArrayDataHandle &operator = (const GeomVertexArrayDataHandle &) = delete;
 
   INLINE Thread *get_current_thread() const;
 
@@ -325,9 +338,9 @@ PUBLISHED:
   INLINE void mark_used() const;
 
 private:
-  GeomVertexArrayData::CData *_cdata;
   GeomVertexArrayData *_object;
-  Thread * _current_thread;
+  GeomVertexArrayData::CData *_cdata;
+  Thread *_current_thread;
   bool _writable;
 
 public:
@@ -335,6 +348,7 @@ public:
     return _type_handle;
   }
   static void init_type() {
+    ReferenceCount::init_type();
     register_type(_type_handle, "GeomVertexArrayDataHandle",
                   ReferenceCount::get_class_type());
   }
@@ -348,6 +362,7 @@ private:
   friend class GeomVertexDataPipelineReader;
   friend class GeomVertexDataPipelineWriter;
   friend class GeomVertexArrayData;
+  friend class GraphicsStateGuardian;
 };
 
 INLINE std::ostream &operator << (std::ostream &out, const GeomVertexArrayData &obj);

@@ -106,8 +106,8 @@ set_vertex_column(int array, const GeomVertexColumn *column,
 #endif
 
   _array = array;
-  _handle = *data_reader->get_array_reader(_array);
-  _stride = _handle.get_array_format()->get_stride();
+  _handle = data_reader->get_array_reader(_array);
+  _stride = _handle->get_array_format()->get_stride();
 
   _packer = column->_packer;
   return set_pointer(_start_row);
@@ -126,7 +126,7 @@ set_array_column(const GeomVertexColumn *column) {
   nassertr(_array_data != nullptr, false);
 
   _handle = _array_data->get_handle();
-  _stride = _handle.get_array_format()->get_stride();
+  _stride = _handle->get_array_format()->get_stride();
 
   _packer = column->_packer;
   return set_pointer(_start_row);
