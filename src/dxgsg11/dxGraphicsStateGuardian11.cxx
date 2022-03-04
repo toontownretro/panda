@@ -841,13 +841,13 @@ get_pipeline_states_for_render_state(const RenderState *state, ID3D11RasterizerS
   //
   // Fill out blend state.
   //
-  D3D11_BLEND_DESC bdesc;
-  ZeroMemory(&bdesc, sizeof(bdesc));
+  CD3D11_BLEND_DESC bdesc(CD3D11_DEFAULT{});
 
   const ColorBlendAttrib *cba;
   state->get_attrib_def(cba);
   if (cba->get_mode() != ColorBlendAttrib::M_none) {
     // Doing a custom blend for RGB.
+    // Overrides transparency.
     bdesc.RenderTarget[0].BlendEnable = 1;
     bdesc.RenderTarget[0].SrcBlend = color_blend_operand_to_d3d_blend(cba->get_operand_a());
     bdesc.RenderTarget[0].DestBlend = color_blend_operand_to_d3d_blend(cba->get_operand_b());
@@ -855,6 +855,44 @@ get_pipeline_states_for_render_state(const RenderState *state, ID3D11RasterizerS
     bdesc.RenderTarget[0].SrcBlendAlpha = color_blend_operand_to_d3d_blend(cba->get_alpha_operand_a());
     bdesc.RenderTarget[0].DestBlendAlpha = color_blend_operand_to_d3d_blend(cba->get_alpha_operand_b());
     bdesc.RenderTarget[0].BlendOpAlpha = color_blend_mode_to_d3d_blend_op(cba->get_alpha_mode());
+
+  } else {
+    // No color blend, check for transparency.
+    const TransparencyAttrib *ta;
+    state->get_attrib_def(ta);
+    switch (ta->get_mode()) {
+    case TransparencyAttrib::M_none:
+    case TransparencyAttrib::M_binary:
+      // No transparency or alpha tested transparency.
+      // Alpha testing happens in the shader, no longer fixed-function.
+      break;
+
+    case TransparencyAttrib::M_alpha:
+    case TransparencyAttrib::M_multisample:
+    case TransparencyAttrib::M_multisample_mask:
+    case TransparencyAttrib::M_dual:
+      // Alpha blending.
+      bdesc.RenderTarget[0].BlendEnable = 1;
+      bdesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+      bdesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+      bdesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+      bdesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+      bdesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+      bdesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+      break;
+
+    case TransparencyAttrib::M_premultiplied_alpha:
+      bdesc.RenderTarget[0].BlendEnable = 1;
+      bdesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+      bdesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+      bdesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+      break;
+
+    default:
+      dxgsg11_cat.error()
+        << "Invalid transparency mode: " << ta->get_mode() << "\n";
+      break;
+    }
   }
 
   const ColorWriteAttrib *cwa;
