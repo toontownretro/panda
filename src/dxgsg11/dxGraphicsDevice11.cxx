@@ -92,6 +92,8 @@ initialize() {
   UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
   if (dxgsg11_cat.is_debug()) {
     flags |= D3D11_CREATE_DEVICE_DEBUG;
+    dxgsg11_cat.debug()
+      << "Enabling debug device\n";
   }
   D3D_FEATURE_LEVEL device_feature_level = D3D_FEATURE_LEVEL_9_1;
   D3D_FEATURE_LEVEL possible_feature_levels[9] = {
@@ -177,7 +179,7 @@ get_gsg() {
   nassertr(_device_initialized && _device != nullptr && _context != nullptr, nullptr);
 
   if (_dxgsg == nullptr) {
-    _dxgsg = new DXGraphicsStateGuardian11(_engine, _pipe, _device, _context);
+    _dxgsg = new DXGraphicsStateGuardian11(_engine, _pipe, this);
   }
 
   return _dxgsg;

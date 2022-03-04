@@ -2991,6 +2991,8 @@ add_module(PT(ShaderModule) module) {
   _modules.push_back(std::move(cow_module));
   _module_mask |= (1u << (uint32_t)stage);
   _used_caps |= used_caps;
+
+  std::cout << "Used caps " << _used_caps << "\n";
   return true;
 }
 

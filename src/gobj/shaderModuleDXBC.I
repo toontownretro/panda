@@ -6,7 +6,15 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file dxVertexBufferContext11.I
+ * @file shaderModuleDXBC.I
  * @author brian
- * @date 2022-03-01
+ * @date 2022-03-02
  */
+
+/**
+ * Returns the ID3DBlob containing the shader byte code.
+ */
+INLINE ID3DBlob *ShaderModuleDXBC::
+get_byte_code() const {
+  return _byte_code;
+}

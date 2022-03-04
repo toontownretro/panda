@@ -17,10 +17,31 @@
 #include "pandabase.h"
 #include "textureContext.h"
 
+#include <d3d11.h>
+
+class DXGraphicsStateGuardian11;
+class Texture;
+class PreparedGraphicsObjects;
+
 /**
  *
  */
 class EXPCL_PANDA_DXGSG11 DXTextureContext11 : public TextureContext {
+public:
+  DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex, int view);
+  DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, ID3D11Texture2D *d3d_tex);
+
+  void create_srv();
+
+  void create_rtv();
+  void create_dsv();
+
+private:
+  ID3D11Resource *_d3d_tex;
+  ID3D11ShaderResourceView *_d3d_srv;
+  ID3D11RenderTargetView *_d3d_rtv;
+  ID3D11DepthStencilView *_d3d_dsv;
+
 public:
   static TypeHandle get_class_type() {
     return _type_handle;

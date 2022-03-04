@@ -3,6 +3,10 @@
 //#define OSX_SYS_LIBS mx
 #define USE_PACKAGES zlib squish glslang spirv_tools
 
+#if $[WINDOWS_PLATFORM]
+  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] d3dcompiler.lib d3d11.lib dxguid.lib
+#endif
+
 #begin lib_target
   #define TARGET gobj
   #define LOCAL_LIBS \
@@ -100,6 +104,12 @@
     vertexTransform.I vertexTransform.h \
     videoTexture.I videoTexture.h
 
+  #if $[WINDOWS_PLATFORM]
+    #define SOURCES $[SOURCES] \
+      shaderCompilerHLSL.I shaderCompilerHLSL.h \
+      shaderModuleDXBC.I shaderModuleDXBC.h
+  #endif
+
   #define COMPOSITE_SOURCES \
     adaptiveLru.cxx \
     animateVerticesRequest.cxx \
@@ -185,6 +195,12 @@
     vertexSlider.cxx \
     vertexTransform.cxx \
     videoTexture.cxx
+
+  #if $[WINDOWS_PLATFORM]
+    #define COMPOSITE_SOURCES $[COMPOSITE_SOURCES] \
+      shaderCompilerHLSL.cxx \
+      shaderModuleDXBC.cxx
+  #endif
 
   #define INSTALL_HEADERS \
     adaptiveLru.I adaptiveLru.h \
@@ -274,6 +290,12 @@
     vertexSlider.I vertexSlider.h \
     vertexTransform.I vertexTransform.h \
     videoTexture.I videoTexture.h
+
+  #if $[WINDOWS_PLATFORM]
+    #define INSTALL_HEADERS $[INSTALL_HEADERS] \
+      shaderCompilerHLSL.I shaderCompilerHLSL.h \
+      shaderModuleDXBC.I shaderModuleDXBC.h
+  #endif
 
   #define IGATESCAN all
 

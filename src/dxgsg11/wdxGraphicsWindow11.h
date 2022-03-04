@@ -19,6 +19,9 @@
 
 class IDXGISwapChain;
 class DXGraphicsDevice11;
+class ID3D11Texture2D;
+class ID3D11RenderTargetView;
+class ID3D11DepthStencilView;
 
 /**
  *
@@ -34,6 +37,7 @@ public:
                       GraphicsOutput *host);
 
   virtual bool begin_frame(FrameMode mode, Thread *current_thread) override;
+  virtual void end_frame(FrameMode mode, Thread *current_thread) override;
 
   virtual bool open_window() override;
 
@@ -44,6 +48,12 @@ public:
 private:
   IDXGISwapChain *_swap_chain;
   DXGraphicsDevice11 *_dx_device;
+
+  ID3D11Texture2D *_back_buffer;
+  ID3D11RenderTargetView *_back_buffer_view;
+
+  ID3D11Texture2D *_depth_buffer;
+  ID3D11DepthStencilView *_depth_stencil_view;
 
 public:
   static TypeHandle get_class_type() {

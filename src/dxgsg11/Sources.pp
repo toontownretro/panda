@@ -15,6 +15,7 @@
 
   #define SOURCES \
     config_dxgsg11.h \
+    dxBufferBase11.I dxBufferBase11.h \
     dxGeomMunger11.I dxGeomMunger11.h \
     dxGraphicsDevice11.I dxGraphicsDevice11.h \
     dxGraphicsStateGuardian11.I dxGraphicsStateGuardian11.h \
@@ -28,6 +29,7 @@
 
   #define COMPOSITE_SOURCES \
     config_dxgsg11.cxx \
+    dxBufferBase11.cxx \
     dxGeomMunger11.cxx \
     dxGraphicsDevice11.cxx \
     dxGraphicsStateGuardian11.cxx \

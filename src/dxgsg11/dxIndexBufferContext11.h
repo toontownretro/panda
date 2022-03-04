@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "indexBufferContext.h"
+#include "dxBufferBase11.h"
 
 class GeomPrimitive;
 class PreparedGraphicsObjects;
@@ -28,30 +29,13 @@ class DXGraphicsStateGuardian11;
 /**
  *
  */
-class EXPCL_PANDA_DXGSG11 DXIndexBufferContext11 : public IndexBufferContext {
+class EXPCL_PANDA_DXGSG11 DXIndexBufferContext11 : public IndexBufferContext, public DXBufferBase11 {
 public:
   DXIndexBufferContext11(DXGraphicsStateGuardian11 *gsg, PreparedGraphicsObjects *pgo, GeomPrimitive *data);
   virtual ~DXIndexBufferContext11();
 
-  void create_buffer(ID3D11Device *device, const GeomPrimitivePipelineReader *reader);
-
-  void update_buffer(ID3D11Device *device, ID3D11DeviceContext *context,
+  void update_buffer(ID3D11DeviceContext *context,
                      const GeomPrimitivePipelineReader *reader);
-
-  INLINE ID3D11Buffer *get_buffer() const;
-  INLINE bool is_immutable() const;
-
-private:
-  ID3D11Buffer *_ibuffer;
-
-  // If true, the initial data supplied to the index buffer on creation is
-  // final.  The CPU cannot write to the index buffer.  If the index data
-  // is modified, the index buffer must be torn down and recreated.
-  bool _immutable;
-
-  // If true, the buffer was created with UH_dynamic/UH_stream usage and is
-  // assumed that the data will change at least once per frame.
-  bool _dynamic;
 
 public:
   static TypeHandle get_class_type() {

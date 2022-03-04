@@ -16,11 +16,42 @@
 
 #include "pandabase.h"
 #include "shaderContext.h"
+#include "shader.h"
+#include "dxGraphicsStateGuardian11.h"
+
+#include <d3d11.h>
+
+class GeomVertexFormat;
+class ShaderModule;
 
 /**
  *
  */
 class EXPCL_PANDA_DXGSG11 DXShaderContext11 : public ShaderContext {
+public:
+  DXShaderContext11(Shader *shader, DXGraphicsStateGuardian11 *gsg);
+  virtual ~DXShaderContext11();
+
+  ID3D11InputLayout *get_input_layout(const GeomVertexFormat *format, BitMask32 &enabled_arrays);
+
+public:
+  ID3D11Device *_device;
+
+  ID3D11VertexShader *_vshader;
+  ID3D11GeometryShader *_gshader;
+  ID3D11PixelShader *_pshader;
+
+  class InputLayout {
+  public:
+    BitMask32 _enabled_arrays;
+    ID3D11InputLayout *_layout;
+  };
+
+  // Cache of D3D input layout objects for each vertex format that uses the
+  // shader.
+  typedef pflat_hash_map<const GeomVertexFormat *, InputLayout, pointer_hash> InputLayoutCache;
+  InputLayoutCache _input_layouts;
+
 public:
   static TypeHandle get_class_type() {
     return _type_handle;

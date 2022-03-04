@@ -73,9 +73,15 @@
 #include "shaderCompilerRegistry.h"
 #include "shaderCompilerGlslang.h"
 #include "shaderCompilerGlslPreProc.h"
+#ifdef _WIN32
+#include "shaderCompilerHLSL.h"
+#endif
 
 #include "shaderModuleGlsl.h"
 #include "shaderModuleSpirV.h"
+#ifdef _WIN32
+#include "shaderModuleDXBC.h"
+#endif
 
 #include "dconfig.h"
 #include "string_utils.h"
@@ -666,9 +672,17 @@ init_libgobj() {
   ShaderModuleSpirV::init_type();
   ShaderModuleGlsl::init_type();
 
+#ifdef _WIN32
+  ShaderCompilerHLSL::init_type();
+  ShaderModuleDXBC::init_type();
+#endif
+
   ShaderCompilerRegistry *reg = ShaderCompilerRegistry::get_global_ptr();
   reg->register_compiler(new ShaderCompilerGlslang());
   reg->register_compiler(new ShaderCompilerGlslPreProc());
+#ifdef _WIN32
+  reg->register_compiler(new ShaderCompilerHLSL());
+#endif
 
   // Registration of writeable object's creation functions with BamReader's
   // factory

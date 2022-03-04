@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "vertexBufferContext.h"
+#include "dxBufferBase11.h"
 
 class ID3D11Buffer;
 class ID3D11Device;
@@ -28,30 +29,13 @@ class GeomVertexArrayDataHandle;
 /**
  *
  */
-class EXPCL_PANDA_DXGSG11 DXVertexBufferContext11 : public VertexBufferContext {
+class EXPCL_PANDA_DXGSG11 DXVertexBufferContext11 : public VertexBufferContext, public DXBufferBase11 {
 public:
   DXVertexBufferContext11(DXGraphicsStateGuardian11 *gsg, PreparedGraphicsObjects *pgo, GeomVertexArrayData *data);
   virtual ~DXVertexBufferContext11();
 
-  void create_buffer(ID3D11Device *device, const GeomVertexArrayDataHandle *reader);
-
-  void update_buffer(ID3D11Device *device, ID3D11DeviceContext *context,
+  void update_buffer(ID3D11DeviceContext *context,
                      const GeomVertexArrayDataHandle *reader);
-
-  INLINE ID3D11Buffer *get_buffer() const;
-  INLINE bool is_immutable() const;
-
-private:
-  ID3D11Buffer *_vbuffer;
-
-  // If true, the initial data supplied to the vertex buffer on creation is
-  // final.  The CPU cannot write to the vertex buffer.  If the vertex data
-  // is modified, the vertex buffer must be torn down and recreated.
-  bool _immutable;
-
-  // If true, the buffer was created with UH_dynamic/UH_stream usage and is
-  // assumed that the data will change at least once per frame.
-  bool _dynamic;
 
 public:
   static TypeHandle get_class_type() {

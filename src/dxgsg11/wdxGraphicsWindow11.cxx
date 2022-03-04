@@ -35,7 +35,11 @@ wdxGraphicsWindow11(GraphicsEngine *engine, GraphicsPipe *pipe,
                     GraphicsOutput *host) :
   WinGraphicsWindow(engine, pipe, name, fb_prop, win_prop, flags, gsg, host),
   _swap_chain(nullptr),
-  _dx_device(nullptr)
+  _dx_device(nullptr),
+  _back_buffer(nullptr),
+  _back_buffer_view(nullptr),
+  _depth_buffer(nullptr),
+  _depth_stencil_view(nullptr)
 {
 }
 
@@ -88,7 +92,10 @@ open_window() {
 }
 
 /**
- *
+ * This function will be called within the draw thread before beginning
+ * rendering for a given frame.  It should do whatever setup is required, and
+ * return true if the frame should be rendered, or false if it should be
+ * skipped.
  */
 bool wdxGraphicsWindow11::
 begin_frame(FrameMode mode, Thread *current_thread) {
@@ -101,7 +108,30 @@ begin_frame(FrameMode mode, Thread *current_thread) {
   _gsg->reset_if_new();
   _gsg->set_current_properties(&get_fb_properties());
   bool ret = _gsg->begin_frame(current_thread);
+  DXGraphicsStateGuardian11 *dxgsg;
+  DCAST_INTO_R(dxgsg, _gsg, false);
+  dxgsg->set_render_targets(&_back_buffer_view, 1, _depth_stencil_view);
   return ret;
+}
+
+/**
+ * This function will be called within the draw thread after rendering is
+ * completed for a given frame.  It should do whatever finalization is
+ * required.
+ */
+void wdxGraphicsWindow11::
+end_frame(FrameMode mode, Thread *current_thread) {
+  end_frame_spam(mode);
+
+  if (_gsg == nullptr) {
+    return;
+  }
+
+  _gsg->end_frame(current_thread);
+
+  if (mode == FM_render) {
+    trigger_flip();
+  }
 }
 
 /**
@@ -187,6 +217,62 @@ create_swap_chain() {
   }
 
   nassertr(_swap_chain != nullptr, false);
+
+  // Grab the back buffer texture and initialize the render target.
+  ID3D11Texture2D *back_buffer = nullptr;
+  result = _swap_chain->GetBuffer(0, IID_ID3D11Texture2D, (void **)&back_buffer);
+  nassertr(SUCCEEDED(result), false);
+
+  _back_buffer = back_buffer;
+
+  CD3D11_RENDER_TARGET_VIEW_DESC rtv_desc(back_buffer, D3D11_RTV_DIMENSION_TEXTURE2D);
+  result = d3d_device->CreateRenderTargetView(back_buffer, &rtv_desc, &_back_buffer_view);
+  nassertr(SUCCEEDED(result) && _back_buffer_view != nullptr, false);
+
+  if (fb_props.get_depth_bits() > 0) {
+    // Also create the depth buffer.
+    DXGI_FORMAT depth_buffer_format;
+    if (fb_props.get_stencil_bits() == 0) {
+      // Depth only, no stencil.
+      switch (fb_props.get_depth_bits()) {
+      case 1:
+      case 8:
+      case 16:
+      default:
+        depth_buffer_format = DXGI_FORMAT_D16_UNORM;
+        break;
+      case 24:
+        depth_buffer_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        break;
+      case 32:
+        depth_buffer_format = DXGI_FORMAT_D32_FLOAT;
+        break;
+      }
+    } else {
+      // Depth-stencil.
+      switch (fb_props.get_depth_bits()) {
+      case 1:
+      case 8:
+      case 16:
+      case 24:
+      default:
+        depth_buffer_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        break;
+      case 32:
+        depth_buffer_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+        break;
+      }
+    }
+    CD3D11_TEXTURE2D_DESC dsdesc(depth_buffer_format, win_props.get_x_size(), win_props.get_y_size(), 1, 0, D3D11_BIND_DEPTH_STENCIL);
+    result = d3d_device->CreateTexture2D(&dsdesc, nullptr, &_depth_buffer);
+    nassertr(SUCCEEDED(result) && _depth_buffer != nullptr, false);
+
+    CD3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc(D3D11_DSV_DIMENSION_TEXTURE2D, depth_buffer_format);
+    result = d3d_device->CreateDepthStencilView(_depth_buffer, &dsv_desc, &_depth_stencil_view);
+    nassertr(SUCCEEDED(result) && _depth_stencil_view != nullptr, false);
+  }
+
+
 
   return true;
 }

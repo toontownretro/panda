@@ -14,3 +14,32 @@
 #include "dxTextureContext11.h"
 
 TypeHandle DXTextureContext11::_type_handle;
+
+/**
+ * Creates a shader resource view for this texture so it can be used
+ * as inputs to shaders.
+ */
+void DXTextureContext11::
+create_srv() {
+  if (_d3d_srv != nullptr) {
+    return;
+  }
+
+  DXGI_FORMAT format;
+}
+
+/**
+ * Creates a render target view for this texture so it can be used as a
+ * render target output.
+ */
+void DXTextureContext11::
+create_rtv() {
+}
+
+/**
+ * Creates a depth-stencil view for this texture so it can be used as a
+ * depth-stencil output.
+ */
+void DXTextureContext11::
+create_dsv() {
+}
