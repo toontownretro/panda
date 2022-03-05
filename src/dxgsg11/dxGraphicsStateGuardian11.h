@@ -88,6 +88,14 @@ public:
   virtual ShaderContext *prepare_shader(Shader *shader) override;
   virtual void release_shader(ShaderContext *sc) override;
 
+  virtual TextureContext *prepare_texture(Texture *tex, int view) override;
+  virtual bool update_texture(TextureContext *tc, bool force) override;
+  virtual void release_texture(TextureContext *tc) override;
+  virtual bool extract_texture_data(Texture *tex) override;
+
+  virtual SamplerContext *prepare_sampler(const SamplerState &sampler);
+  virtual void release_sampler(SamplerContext *sc);
+
   void get_pipeline_states_for_render_state(const RenderState *state, ID3D11RasterizerState *&rasterizer,
                                             ID3D11BlendState *&blend, ID3D11DepthStencilState *&depth_stencil,
                                             LVecBase4f &blend_factor);
@@ -143,6 +151,9 @@ private:
 
   ID3D11RenderTargetView *_curr_render_target_view;
   ID3D11DepthStencilView *_curr_depth_stencil_view;
+
+  ID3D11ShaderResourceView *_curr_tex;
+  ID3D11SamplerState *_curr_sampler;
 
   ID3D11Buffer *_temp_cbuffer;
   LMatrix4 *_temp_cbuffer_data;

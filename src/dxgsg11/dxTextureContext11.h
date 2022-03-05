@@ -30,17 +30,40 @@ class EXPCL_PANDA_DXGSG11 DXTextureContext11 : public TextureContext {
 public:
   DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex, int view);
   DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, ID3D11Texture2D *d3d_tex);
+  virtual ~DXTextureContext11();
+
+  bool create_texture();
+  bool create_1d_texture();
+  bool create_2d_texture();
+  bool create_3d_texture();
+
+  bool upload_texture(ID3D11DeviceContext *context);
 
   void create_srv();
 
   void create_rtv();
   void create_dsv();
 
+  void compute_d3d_format_and_ram_swizzle();
+
 private:
+  Texture *_texture;
+
+  ID3D11Device *_device;
+
   ID3D11Resource *_d3d_tex;
   ID3D11ShaderResourceView *_d3d_srv;
   ID3D11RenderTargetView *_d3d_rtv;
   ID3D11DepthStencilView *_d3d_dsv;
+
+  // The actual D3D format being used for this texture, regardless of what the
+  // Texture says.
+  DXGI_FORMAT _actual_d3d_format;
+  std::string _ram_image_swizzle;
+  int _actual_num_components;
+  bool _needs_swizzle;
+
+  friend class DXGraphicsStateGuardian11;
 
 public:
   static TypeHandle get_class_type() {

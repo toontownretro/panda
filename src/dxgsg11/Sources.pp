@@ -20,6 +20,7 @@
     dxGraphicsDevice11.I dxGraphicsDevice11.h \
     dxGraphicsStateGuardian11.I dxGraphicsStateGuardian11.h \
     dxIndexBufferContext11.I dxIndexBufferContext11.h \
+    dxSamplerContext11.I dxSamplerContext11.h \
     dxShaderContext11.I dxShaderContext11.h \
     dxTextureContext11.I dxTextureContext11.h \
     dxVertexBufferContext11.I dxVertexBufferContext11.h \
@@ -34,6 +35,7 @@
     dxGraphicsDevice11.cxx \
     dxGraphicsStateGuardian11.cxx \
     dxIndexBufferContext11.cxx \
+    dxSamplerContext11.cxx \
     dxShaderContext11.cxx \
     dxTextureContext11.cxx \
     dxVertexBufferContext11.cxx \

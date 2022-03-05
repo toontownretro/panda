@@ -20,6 +20,7 @@
 #include "dxGraphicsDevice11.h"
 #include "dxGraphicsStateGuardian11.h"
 #include "dxIndexBufferContext11.h"
+#include "dxSamplerContext11.h"
 #include "dxShaderContext11.h"
 #include "dxTextureContext11.h"
 #include "dxVertexBufferContext11.h"
@@ -57,6 +58,7 @@ init_libdxgsg11() {
   DXGraphicsDevice11::init_type();
   DXGraphicsStateGuardian11::init_type();
   DXIndexBufferContext11::init_type();
+  DXSamplerContext11::init_type();
   DXShaderContext11::init_type();
   DXTextureContext11::init_type();
   DXVertexBufferContext11::init_type();

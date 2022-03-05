@@ -18,6 +18,8 @@
 #include "dxIndexBufferContext11.h"
 #include "dxGraphicsDevice11.h"
 #include "dxShaderContext11.h"
+#include "dxTextureContext11.h"
+#include "dxSamplerContext11.h"
 #include "clockObject.h"
 
 // Rasterizer state attribs.
@@ -67,7 +69,9 @@ DXGraphicsStateGuardian11(GraphicsEngine *engine, GraphicsPipe *pipe,
   _curr_depth_stencil_view(nullptr),
   _temp_cbuffer(nullptr),
   _temp_cbuffer_data(nullptr),
-  _temp_cbuffer_stale(false)
+  _temp_cbuffer_stale(false),
+  _curr_tex(nullptr),
+  _curr_sampler(nullptr)
 {
   _curr_pipeline_states._rasterizer = nullptr;
   _curr_pipeline_states._blend = nullptr;
@@ -103,16 +107,19 @@ reset() {
   _curr_render_target_view = nullptr;
   _curr_depth_stencil_view = nullptr;
 
+  _curr_tex = nullptr;
+  _curr_sampler = nullptr;
+
   if (_temp_cbuffer != nullptr) {
     _temp_cbuffer->Release();
   }
   if (_temp_cbuffer_data != nullptr) {
-    _aligned_free(_temp_cbuffer_data);
+    delete[] _temp_cbuffer_data;
   }
 
   determine_capabilities();
 
-  _temp_cbuffer_data = (LMatrix4 *)_aligned_malloc(sizeof(LMatrix4) * 2, 16);
+  _temp_cbuffer_data = new LMatrix4[2];
   for (int i = 0; i < 2; ++i) {
     _temp_cbuffer_data[i] = LMatrix4::ident_mat();
   }
@@ -254,7 +261,10 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
   const GeomVertexFormat *format = data_reader->get_format();
   BitMask32 enabled_arrays;
   ID3D11InputLayout *layout = _current_shader_context->get_input_layout(format, enabled_arrays);
-  nassertr(layout != nullptr, false);
+  //nassertr(layout != nullptr, false);
+  if (layout == nullptr) {
+    return false;
+  }
   if (layout != _curr_input_layout) {
     _context->IASetInputLayout(layout);
   }
@@ -524,6 +534,34 @@ set_state_and_transform(const RenderState *target,
 
     _state_shader = _target_shader;
   }
+
+  determine_target_texture();
+  //if (_target_texture != _state_texture) {
+    Texture *tex = _target_texture->get_texture();
+    if (tex != nullptr) {
+      DXTextureContext11 *dtc = (DXTextureContext11 *)tex->prepare_now(0, _prepared_objects, this);
+      if (dtc != nullptr) {
+        ID3D11ShaderResourceView *srv = dtc->_d3d_srv;
+        if (srv != _curr_tex) {
+          _context->PSSetShaderResources(0, 1, &srv);
+          _curr_tex = srv;
+        }
+      }
+
+      DXSamplerContext11 *dsc = (DXSamplerContext11 *)tex->get_default_sampler().prepare_now(_prepared_objects, this);
+      if (dsc != nullptr) {
+        ID3D11SamplerState *ss = dsc->get_sampler_state();
+        if (ss != _curr_sampler) {
+          _context->PSSetSamplers(0, 1, &ss);
+          _curr_sampler = ss;
+        }
+      }
+    }
+
+    _state_texture = _target_texture;
+  //}
+
+  _state_rs = target;
 }
 
 /**
@@ -654,6 +692,86 @@ prepare_shader(Shader *shader) {
 void DXGraphicsStateGuardian11::
 release_shader(ShaderContext *sc) {
   DXShaderContext11 *dsc = (DXShaderContext11 *)sc;
+  delete dsc;
+}
+
+/**
+ * Creates whatever structures the GSG requires to represent the texture
+ * internally, and returns a newly-allocated TextureContext object with this
+ * data.  It is the responsibility of the calling function to later call
+ * release_texture() with this same pointer (which will also delete the
+ * pointer).
+ *
+ * This function should not be called directly to prepare a texture.  Instead,
+ * call Texture::prepare().
+ */
+TextureContext *DXGraphicsStateGuardian11::
+prepare_texture(Texture *tex, int view) {
+  DXTextureContext11 *dtc = new DXTextureContext11(_prepared_objects, this, tex, view);
+  dtc->upload_texture(_context);
+  return dtc;
+}
+
+/**
+ * Ensures that the current Texture data is refreshed onto the GSG.  This
+ * means updating the texture properties and/or re-uploading the texture
+ * image, if necessary.  This should only be called within the draw thread.
+ *
+ * If force is true, this function will not return until the texture has been
+ * fully uploaded.  If force is false, the function may choose to upload a
+ * simple version of the texture instead, if the texture is not fully resident
+ * (and if get_incomplete_render() is true).
+ */
+bool DXGraphicsStateGuardian11::
+update_texture(TextureContext *tc, bool force) {
+  return true;
+}
+
+/**
+ * Frees the resources previously allocated via a call to prepare_texture(),
+ * including deleting the TextureContext itself, if it is non-NULL.
+ */
+void DXGraphicsStateGuardian11::
+release_texture(TextureContext *tc) {
+  DXTextureContext11 *dtc = (DXTextureContext11 *)tc;
+  delete dtc;
+}
+
+/**
+ * This method should only be called by the GraphicsEngine.  Do not call it
+ * directly; call GraphicsEngine::extract_texture_data() instead.
+ *
+ * This method will be called in the draw thread to download the texture
+ * memory's image into its ram_image value.  It returns true on success, false
+ * otherwise.
+ */
+bool DXGraphicsStateGuardian11::
+extract_texture_data(Texture *tex) {
+  return false;
+}
+
+/**
+ * Creates whatever structures the GSG requires to represent the sampler
+ * internally, and returns a newly-allocated SamplerContext object with this
+ * data.  It is the responsibility of the calling function to later call
+ * release_sampler() with this same pointer (which will also delete the
+ * pointer).
+ *
+ * This function should not be called directly to prepare a sampler.  Instead,
+ * call Texture::prepare().
+ */
+SamplerContext *DXGraphicsStateGuardian11::
+prepare_sampler(const SamplerState &sampler) {
+  return new DXSamplerContext11(sampler, this);
+}
+
+/**
+ * Frees the resources previously allocated via a call to prepare_sampler(),
+ * including deleting the SamplerContext itself, if it is non-NULL.
+ */
+void DXGraphicsStateGuardian11::
+release_sampler(SamplerContext *sc) {
+  DXSamplerContext11 *dsc = (DXSamplerContext11 *)sc;
   delete dsc;
 }
 
@@ -1133,7 +1251,6 @@ clear(DrawableRegion *clearable) {
   }
 
 }
-
 
 /**
  * Given a lens, calculates the appropriate projection matrix for use with
