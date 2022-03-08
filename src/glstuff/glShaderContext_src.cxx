@@ -48,6 +48,7 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
   _prepared_objects = _glgsg->get_prepared_objects();
   _glsl_program = 0;
   _uses_standard_vertex_arrays = false;
+  _current_vao = nullptr;
   _enabled_attribs.clear();
   _color_attrib_index = -1;
   _transform_table_index = -1;
@@ -2053,8 +2054,14 @@ release_resources() {
   for (Module &module : _modules) {
     _glgsg->_glDeleteShader(module._handle);
   }
-
   _modules.clear();
+
+  for (auto it = _format_vaos.begin(); it != _format_vaos.end(); ++it) {
+    GLuint vao_id = (*it).second._vao_id;
+    _glgsg->_glDeleteVertexArrays(1, &vao_id);
+  }
+  _format_vaos.clear();
+  _current_vao = nullptr;
 
   report_my_gl_errors(_glgsg);
 }
@@ -2815,8 +2822,17 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
     // Use experimental new separated formatbinding state.
     const GeomVertexDataPipelineReader *data_reader = _glgsg->_data_reader;
 
-    for (size_t ai = 0; ai < data_reader->get_num_arrays(); ++ai) {
-      array_reader = data_reader->get_array_reader(ai);
+    VAOData *vao = (VAOData *)_current_vao;
+
+    //bool multi_bind = _glgsg->_supports_multi_bind;
+
+    //bool changed = false;
+    BitMask32 arrays = vao->_used_arrays;
+    int index = arrays.get_lowest_on_bit();
+    //int max_slot = arrays.get_highest_on_bit();
+    //int min_changed_slot = 32;
+    while (index >= 0) {
+      array_reader = data_reader->get_array_reader(index);
 
       // Make sure the vertex buffer is up-to-date.
       CLP(VertexBufferContext) *gvbc = DCAST(CLP(VertexBufferContext),
@@ -2827,46 +2843,65 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
         return false;
       }
 
-      GLintptr stride = array_reader->get_array_format()->get_stride();
+      const GeomVertexArrayFormat *array_format = array_reader->get_array_format();
+      GLsizei stride = array_format->get_stride();
+      GLuint divisor = array_format->get_divisor();
+
+      if (vao->_divisors[index] != divisor) {
+        _glgsg->_glVertexBindingDivisor(index, divisor);
+        vao->_divisors[index] = divisor;
+      }
 
       // Bind the vertex buffer to the binding index.
-      if (ai >= _glgsg->_current_vertex_buffers.size()) {
-        GLuint zero = 0;
-        _glgsg->_current_vertex_buffers.resize(ai + 1, zero);
+      if (vao->_bound_arrays[index] != gvbc->_index || vao->_array_strides[index] != stride) {
+        //if (multi_bind) {
+        //  changed = true;
+        //  min_changed_slot = std::min(min_changed_slot, index);
+
+        //} else {
+          _glgsg->_glBindVertexBuffer(index, gvbc->_index, 0, stride);
+        //}
+
+        vao->_bound_arrays[index] = gvbc->_index;
+        vao->_array_strides[index] = stride;
       }
-      if (_glgsg->_current_vertex_buffers[ai] != gvbc->_index) {
-        _glgsg->_glBindVertexBuffer(ai, gvbc->_index, 0, stride);
-        _glgsg->_current_vertex_buffers[ai] = gvbc->_index;
-      }
+
+      arrays.clear_bit(index);
+      index = arrays.get_lowest_on_bit();
     }
 
-    // Figure out which attributes to enable or disable.
-    BitMask32 enabled_attribs = _enabled_attribs;
-    if (_color_attrib_index != -1 &&
-        (color_attrib->get_color_type() != ColorAttrib::T_vertex ||
-         !enabled_attribs.get_bit(_color_attrib_index))) {
-      // Vertex colours are disabled or not present.  Apply a flat color.
-      enabled_attribs.clear_bit(_color_attrib_index);
+    //if (multi_bind && changed) {
+    //  GLsizei num_changed = (max_slot - min_changed_slot) + 1;
+    //  GLintptr *offsets = (GLintptr *)alloca(sizeof(GLintptr) * num_changed);
+    //  memset(offsets, 0, sizeof(GLintptr) * num_changed);
+    //  _glgsg->_glBindVertexBuffers(min_changed_slot, num_changed, vao->_bound_arrays + min_changed_slot,
+    //                               offsets, vao->_array_strides + min_changed_slot);
+    //}
+
+    // If flat colors are enabled, disable the attribute array and supply the
+    // flat color to the color attribute location.
+    if (_color_attrib_index != -1) {
+      if (color_attrib->get_color_type() != ColorAttrib::T_vertex ||
+          !vao->_has_vertex_colors) {
+        if (vao->_vertex_array_colors) {
+          vao->_vertex_array_colors = false;
+          _glgsg->_glDisableVertexAttribArray(_color_attrib_index);
+        }
 
 #ifdef STDFLOAT_DOUBLE
-      _glgsg->_glVertexAttrib4dv(_color_attrib_index, scene_graph_color.get_data());
+          _glgsg->_glVertexAttrib4dv(_color_attrib_index, scene_graph_color.get_data());
 #else
-      _glgsg->_glVertexAttrib4fv(_color_attrib_index, scene_graph_color.get_data());
+          _glgsg->_glVertexAttrib4fv(_color_attrib_index, scene_graph_color.get_data());
 #endif
-    }
-
-    BitMask32 changed_attribs = enabled_attribs ^ _glgsg->_enabled_vertex_attrib_arrays;
-
-    for (int i = 0; i < 32; ++i) {
-      if (changed_attribs.get_bit(i)) {
-        if (enabled_attribs.get_bit(i)) {
-          _glgsg->_glEnableVertexAttribArray(i);
-        } else {
-          _glgsg->_glDisableVertexAttribArray(i);
+          _glgsg->_color_vertex_attribs[_color_attrib_index] = scene_graph_color;
+        }
+      } else {
+        if (!vao->_vertex_array_colors) {
+          vao->_vertex_array_colors = true;
+          _glgsg->_glEnableVertexAttribArray(_color_attrib_index);
         }
       }
     }
-    _glgsg->_enabled_vertex_attrib_arrays = enabled_attribs;
   }
 
   if (_transform_table_index >= 0) {

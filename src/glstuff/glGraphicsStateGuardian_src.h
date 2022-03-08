@@ -667,10 +667,8 @@ protected:
   GLuint _current_fbo;
 
 #ifndef OPENGLES_1
-  pvector<GLuint> _current_vertex_buffers;
   bool _use_vertex_attrib_binding;
   CPT(GeomVertexFormat) _current_vertex_format;
-  const GeomVertexColumn *_vertex_attrib_columns[32];
 
   GLuint _current_sbuffer_index;
   pvector<GLuint> _current_sbuffer_base;

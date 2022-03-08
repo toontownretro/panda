@@ -3388,9 +3388,7 @@ reset() {
   _point_perspective = false;
 
 #ifndef OPENGLES
-  _current_vertex_buffers.clear();
   _current_vertex_format.clear();
-  memset(_vertex_attrib_columns, 0, sizeof(const GeomVertexColumn *) * 32);
 
   _current_sbuffer_index = 0;
   _current_sbuffer_base.clear();
@@ -4448,6 +4446,7 @@ unbind_buffers() {
     _current_ibuffer_index = 0;
   }
 
+#if 0
 #ifndef OPENGLES
   if (_current_vertex_buffers.size() > 1 && _supports_multi_bind) {
     _glBindVertexBuffers(0, _current_vertex_buffers.size(), nullptr, nullptr, nullptr);
@@ -4459,6 +4458,7 @@ unbind_buffers() {
     }
   }
   _current_vertex_buffers.clear();
+#endif
 #endif
 }
 
@@ -4474,82 +4474,101 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
   }
 
   CLP(ShaderContext) *context = (CLP(ShaderContext) *)_current_shader_context;
-  context->_enabled_attribs.clear();
 
-  size_t num_columns = format->get_num_columns();
-  for (size_t ci = 0; ci < num_columns; ++ci) {
-    GLuint binding = format->get_array_with(ci);
-    const GeomVertexColumn *column = format->get_column(ci);
+  CLP(ShaderContext)::VAOData &vao_data = context->_format_vaos[format];
+  if (vao_data._vao_id != (GLuint)0) {
+    // The shader is already aware of this vertex format, so bind
+    // the corresponding VAO.
+    _glBindVertexArray(vao_data._vao_id);
 
-    const InternalName *name = column->get_name();
-    GLuint loc;
-    bool got_loc = false;
-    // Find the ShaderVarSpec corresponding to this column.
-    for (size_t vi = 0; vi < _current_shader->_var_spec.size(); ++vi) {
-      const Shader::ShaderVarSpec &var = _current_shader->_var_spec[vi];
-      if (var._name == name && var._id._location >= 0) {
-        loc = (GLuint)var._id._location;
-        got_loc = true;
-        break;
-      }
-    }
+  } else {
+    // This is the first time this shader has seen this vertex format.
+    // Create a new VAO.
 
-    if (!got_loc) {
-      continue;
-    }
+    _glGenVertexArrays(1, &vao_data._vao_id);
+    _glBindVertexArray(vao_data._vao_id);
 
-    context->_enabled_attribs.set_bit(loc);
+    size_t num_columns = format->get_num_columns();
+    for (size_t ci = 0; ci < num_columns; ++ci) {
+      GLuint binding = format->get_array_with(ci);
+      const GeomVertexColumn *column = format->get_column(ci);
 
-    if (_vertex_attrib_columns[loc] != nullptr &&
-        _vertex_attrib_columns[loc]->compare_to(*column) == 0) {
-      continue;
-    }
-    _vertex_attrib_columns[loc] = column;
-
-    GeomEnums::NumericType nt = column->get_numeric_type();
-    GLuint offset = column->get_start();
-    GLenum type = get_numeric_type(nt);
-    GLboolean normalized = (column->get_contents() == GeomEnums::C_color);
-    GLint size = column->get_num_values();
-
-    if (nt == GeomEnums::NT_packed_dabc) {
-      // GL_BGRA is a special accepted value available since OpenGL 3.2. It
-      // requires us to pass GL_TRUE for normalized.
-      size = GL_BGRA;
-      normalized = GL_TRUE;
-    }
-
-    for (int i = 0; i < column->get_num_elements(); ++i) {
-      if (normalized) {
-        _glVertexAttribFormat(loc, size, type, normalized, offset);
-
-      } else {
-        switch (nt) {
-        case GeomEnums::NT_uint8:
-        case GeomEnums::NT_uint16:
-        case GeomEnums::NT_uint32:
-        case GeomEnums::NT_int8:
-        case GeomEnums::NT_int16:
-        case GeomEnums::NT_int32:
-          _glVertexAttribIFormat(loc, size, type, offset);
-          break;
-
-        default:
-          _glVertexAttribFormat(loc, size, type, GL_FALSE, offset);
+      const InternalName *name = column->get_name();
+      GLuint loc;
+      bool got_loc = false;
+      // Find the ShaderVarSpec corresponding to this column.
+      for (size_t vi = 0; vi < _current_shader->_var_spec.size(); ++vi) {
+        const Shader::ShaderVarSpec &var = _current_shader->_var_spec[vi];
+        if (var._name == name && var._id._location >= 0) {
+          loc = (GLuint)var._id._location;
+          got_loc = true;
           break;
         }
       }
-      _glVertexAttribBinding(loc, binding);
 
-      offset += column->get_element_stride();
-      ++loc;
+      if (!got_loc) {
+        continue;
+      }
+
+      vao_data._used_arrays.set_bit(binding);
+
+      GeomEnums::NumericType nt = column->get_numeric_type();
+      GLuint offset = column->get_start();
+      GLenum type = get_numeric_type(nt);
+      GLboolean normalized = (column->get_contents() == GeomEnums::C_color);
+      GLint size = column->get_num_values();
+
+      if (nt == GeomEnums::NT_packed_dabc) {
+        // GL_BGRA is a special accepted value available since OpenGL 3.2. It
+        // requires us to pass GL_TRUE for normalized.
+        size = GL_BGRA;
+        normalized = GL_TRUE;
+      }
+
+      if (name == InternalName::get_color()) {
+        vao_data._has_vertex_colors = true;
+        vao_data._vertex_array_colors = true;
+      }
+
+      for (int i = 0; i < column->get_num_elements(); ++i) {
+        if (normalized) {
+          _glVertexAttribFormat(loc, size, type, normalized, offset);
+
+        } else {
+          switch (nt) {
+          case GeomEnums::NT_uint8:
+          case GeomEnums::NT_uint16:
+          case GeomEnums::NT_uint32:
+          case GeomEnums::NT_int8:
+          case GeomEnums::NT_int16:
+          case GeomEnums::NT_int32:
+            _glVertexAttribIFormat(loc, size, type, offset);
+            break;
+
+          default:
+            _glVertexAttribFormat(loc, size, type, GL_FALSE, offset);
+            break;
+          }
+        }
+        _glVertexAttribBinding(loc, binding);
+
+        // Enable the attribute through the vertex array.
+        // The color attribute may be disabled later in glShaderContext
+        // if flat colors are enabled.
+        _glEnableVertexAttribArray(loc);
+
+        offset += column->get_element_stride();
+        ++loc;
+      }
     }
   }
 
-  size_t num_arrays = format->get_num_arrays();
-  for (size_t ai = 0; ai < num_arrays; ++ai) {
-    _glVertexBindingDivisor(ai, format->get_array(ai)->get_divisor());
-  }
+  context->_current_vao = &vao_data;
+
+  //size_t num_arrays = format->get_num_arrays();
+  //for (size_t ai = 0; ai < num_arrays; ++ai) {
+  //  _glVertexBindingDivisor(ai, format->get_array(ai)->get_divisor());
+  //}
 
   _current_vertex_format = format;
 }
@@ -10417,7 +10436,6 @@ reissue_transforms() {
 #ifndef OPENGLES_1
   // Might also want to reissue the vertex format, for good measure.
   _current_vertex_format.clear();
-  memset(_vertex_attrib_columns, 0, sizeof(const GeomVertexColumn *) * 32);
 #endif
 
   // Some libraries (Kivy) leave their buffers bound.  How clumsy of them.
