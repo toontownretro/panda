@@ -3333,6 +3333,9 @@ reset() {
   memset(_vertex_attrib_divisors, 0, sizeof(GLuint) * 32);
 #endif
 
+  memset(_bound_textures, 0, sizeof(_bound_textures));
+  memset(_bound_samplers, 0, sizeof(_bound_samplers));
+
   // Dither is on by default in GL; let's turn it off
   glDisable(GL_DITHER);
   _dithering_enabled = false;
@@ -3892,6 +3895,7 @@ clear_before_callback() {
 #ifndef OPENGLES_1
   if (_supports_sampler_objects) {
     _glBindSampler(0, 0);
+    _bound_samplers[0] = 0;
 
     if (GLCAT.is_spam()) {
       GLCAT.spam()
@@ -6931,6 +6935,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
   if (new_image && gtc->_immutable) {
     gtc->reset_data();
     glBindTexture(target, gtc->_index);
+    _bound_textures[_active_texture_stage] = gtc->_index;
 
     if (GLCAT.is_spam()) {
       GLCAT.spam()
@@ -10748,12 +10753,14 @@ void CLP(GraphicsStateGuardian)::
 apply_white_texture(GLuint unit) {
   set_active_texture_stage(unit);
   glBindTexture(GL_TEXTURE_2D, get_white_texture());
+  _bound_textures[unit] = get_white_texture();
 
   // Also apply the default sampler, if there's a chance we'd applied anything
   // else.
 #ifndef OPENGLES_1
   if (_supports_sampler_objects) {
     _glBindSampler(unit, 0);
+    _bound_samplers[unit] = 0;
   }
 #endif
 }
@@ -10767,6 +10774,7 @@ get_white_texture() {
   if (_white_texture == 0) {
     glGenTextures(1, &_white_texture);
     glBindTexture(GL_TEXTURE_2D, _white_texture);
+    _bound_textures[_active_texture_stage] = _white_texture;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -10840,6 +10848,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
       // Need to create a new texture for this size.
       glGenTextures(1, &index);
       glBindTexture(GL_TEXTURE_2D, index);
+      _bound_textures[i] = index;
       // TODO: this could be a lot simpler with glTexStorage2D followed by a
       // call to glClearTexImage.
       upload_usage_texture(texture->get_x_size(), texture->get_y_size());
@@ -10849,6 +10858,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
       // Just bind the previously-created texture.
       index = (*ui).second;
       glBindTexture(GL_TEXTURE_2D, index);
+      _bound_textures[i] = index;
     }
 
     if (GLCAT.is_spam()) {
@@ -11088,11 +11098,15 @@ apply_texture(CLP(TextureContext) *gtc) {
     gtc->_target = target;
   }
 
-  glBindTexture(target, gtc->_index);
-  if (GLCAT.is_spam()) {
-    GLCAT.spam()
-      << "glBindTexture(0x" << hex << target << dec << ", " << gtc->_index << "): " << *gtc->get_texture() << "\n";
+  if (_bound_textures[_active_texture_stage] != gtc->_index) {
+    _bound_textures[_active_texture_stage] = gtc->_index;
+    glBindTexture(target, gtc->_index);
+    if (GLCAT.is_spam()) {
+      GLCAT.spam()
+        << "glBindTexture(0x" << hex << target << dec << ", " << gtc->_index << "): " << *gtc->get_texture() << "\n";
+    }
   }
+
 
   report_my_gl_errors(this);
   return true;
@@ -11118,11 +11132,13 @@ apply_sampler(GLuint unit, const SamplerState &sampler, CLP(TextureContext) *gtc
 
     //gsc->enqueue_lru(&_prepared_objects->_sampler_object_lru);
 
-    _glBindSampler(unit, gsc->_index);
-
-    if (GLCAT.is_spam()) {
-      GLCAT.spam() << "glBindSampler(" << unit << ", "
-                   << gsc->_index << "): " << sampler << "\n";
+    if (_bound_samplers[unit] != gsc->_index) {
+      _bound_samplers[unit] = gsc->_index;
+      _glBindSampler(unit, gsc->_index);
+      if (GLCAT.is_spam()) {
+        GLCAT.spam() << "glBindSampler(" << unit << ", "
+                    << gsc->_index << "): " << sampler << "\n";
+      }
     }
 
   } else
@@ -11383,6 +11399,7 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
     GLCAT.info() << "Attempt to modify texture with immutable storage, recreating texture.\n";
     gtc->reset_data();
     glBindTexture(target, gtc->_index);
+    _bound_textures[_active_texture_stage] = gtc->_index;
 
     if (GLCAT.is_spam()) {
       GLCAT.spam()
@@ -12178,6 +12195,7 @@ generate_mipmaps(CLP(TextureContext) *gtc) {
     apply_texture(gtc);
     _glGenerateMipmap(gtc->_target);
     glBindTexture(gtc->_target, 0);
+    _bound_textures[_active_texture_stage] = 0;
   }
 }
 
@@ -12396,6 +12414,7 @@ do_extract_texture_data(CLP(TextureContext) *gtc) {
     GLCAT.spam()
       << "glBindTexture(0x" << hex << target << dec << ", " << gtc->_index << "): " << *tex << "\n";
   }
+  _bound_textures[_active_texture_stage] = gtc->_index;
 
 #ifndef OPENGLES
   if (target == GL_TEXTURE_BUFFER) {

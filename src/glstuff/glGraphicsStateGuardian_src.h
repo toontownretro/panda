@@ -684,6 +684,9 @@ protected:
   bool _supports_get_program_binary;
   pset<GLenum> _program_binary_formats;
 
+  GLuint _bound_textures[32];
+  GLuint _bound_samplers[32];
+
 #ifdef OPENGLES
   bool _supports_depth24;
   bool _supports_depth32;

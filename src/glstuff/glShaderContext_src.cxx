@@ -2947,11 +2947,14 @@ disable_shader_texture_bindings() {
       // go and unbind everything after this point using one multi-bind call,
       // and then break out of the loop.
       _glgsg->_glBindTextures(i, _shader->_tex_spec.size() - i, nullptr);
+      memset(_glgsg->_bound_textures + i, 0, sizeof(GLuint) * (_shader->_tex_spec.size() - i));
       break;
     }
 #endif
 
     _glgsg->set_active_texture_stage(i);
+
+    _glgsg->_bound_textures[i] = 0;
 
     switch (_shader->_tex_spec[i]._desired_type) {
     case Texture::TT_1d_texture:
@@ -3139,18 +3142,18 @@ update_shader_texture_bindings(ShaderContext *prev) {
   }
 
   size_t num_textures = _shader->_tex_spec.size();
-  GLuint *textures = nullptr;
-  GLuint *samplers = nullptr;
 #ifdef OPENGLES
   static const bool multi_bind = false;
 #else
   bool multi_bind = false;
+  bool tex_changed = false;
+  size_t min_tex_changed_slot = 10000;
+  bool samp_changed = false;
+  size_t min_samp_changed_slot = 10000;
   if (num_textures > 1 &&
       _glgsg->_supports_multi_bind && _glgsg->_supports_sampler_objects) {
     // Prepare to multi-bind the textures and samplers.
     multi_bind = true;
-    textures = (GLuint *)alloca(sizeof(GLuint) * num_textures);
-    samplers = (GLuint *)alloca(sizeof(GLuint) * num_textures);
   }
 #endif
 
@@ -3166,8 +3169,17 @@ update_shader_texture_bindings(ShaderContext *prev) {
       // Apply a white texture in order to make it easier to use a shader that
       // takes a texture on a model that doesn't have a texture applied.
       if (multi_bind) {
-        textures[i] = _glgsg->get_white_texture();
-        samplers[i] = 0;
+        GLuint white_tex = _glgsg->get_white_texture();
+        if (white_tex != _glgsg->_bound_textures[i]) {
+          tex_changed = true;
+          min_tex_changed_slot = std::min(min_tex_changed_slot, i);
+          _glgsg->_bound_textures[i] = white_tex;
+        }
+        if (_glgsg->_bound_samplers[i] != 0) {
+          samp_changed = true;
+          min_samp_changed_slot = std::min(min_samp_changed_slot, i);
+          _glgsg->_bound_samplers[i] = 0;
+        }
       } else {
         _glgsg->apply_white_texture(i);
       }
@@ -3206,8 +3218,16 @@ update_shader_texture_bindings(ShaderContext *prev) {
     CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tex->prepare_now(view, _glgsg->_prepared_objects, _glgsg));
     if (gtc == nullptr) {
       if (multi_bind) {
-        textures[i] = 0;
-        samplers[i] = 0;
+        if (_glgsg->_bound_textures[i] != 0) {
+          _glgsg->_bound_textures[i] = 0;
+          min_tex_changed_slot = std::min(min_tex_changed_slot, i);
+          tex_changed = true;
+        }
+        if (_glgsg->_bound_samplers[i] != 0) {
+          _glgsg->_bound_samplers[i] = 0;
+          min_samp_changed_slot = std::min(min_samp_changed_slot, i);
+          samp_changed = true;
+        }
       }
       continue;
     }
@@ -3226,8 +3246,16 @@ update_shader_texture_bindings(ShaderContext *prev) {
       // We demand the real texture, since we won't be able to change the
       // texture properties after this point.
       if (multi_bind) {
-        textures[i] = 0;
-        samplers[i] = 0;
+        if (_glgsg->_bound_textures[i] != 0) {
+          _glgsg->_bound_textures[i] = 0;
+          min_tex_changed_slot = std::min(min_tex_changed_slot, i);
+          tex_changed = true;
+        }
+        if (_glgsg->_bound_samplers[i] != 0) {
+          _glgsg->_bound_samplers[i] = 0;
+          min_samp_changed_slot = std::min(min_samp_changed_slot, i);
+          samp_changed = true;
+        }
       }
       if (!_glgsg->update_texture(gtc, true)) {
         continue;
@@ -3261,20 +3289,34 @@ update_shader_texture_bindings(ShaderContext *prev) {
 #ifndef OPENGLES
     if (multi_bind) {
       // Multi-bind case.
+      GLuint tindex;
       if (!_glgsg->update_texture(gtc, force)) {
-        textures[i] = 0;
+        tindex = 0;
       } else {
         //gtc->set_active(true);
-        textures[i] = gtc->_index;
+        tindex = gtc->_index;
+      }
+
+      if (_glgsg->_bound_textures[i] != tindex) {
+        _glgsg->_bound_textures[i] = tindex;
+        min_tex_changed_slot = std::min(min_tex_changed_slot, i);
+        tex_changed = true;
       }
 
       SamplerContext *sc = sampler.prepare_now(_prepared_objects, _glgsg);
+      GLuint sindex;
       if (sc == nullptr) {
-        samplers[i] = 0;
+        sindex = 0;
       } else {
         CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
         //gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
-        samplers[i] = gsc->_index;
+        sindex = gsc->_index;
+      }
+
+      if (_glgsg->_bound_samplers[i] != sindex) {
+        _glgsg->_bound_samplers[i] = sindex;
+        min_samp_changed_slot = std::min(min_samp_changed_slot, i);
+        samp_changed = true;
       }
     } else
 #endif  // !OPENGLES
@@ -3291,8 +3333,14 @@ update_shader_texture_bindings(ShaderContext *prev) {
 
 #ifndef OPENGLES
   if (multi_bind && num_textures > 0) {
-    _glgsg->_glBindTextures(0, num_textures, textures);
-    _glgsg->_glBindSamplers(0, num_textures, samplers);
+    if (tex_changed) {
+      int num_changed = (num_textures - min_tex_changed_slot);
+      _glgsg->_glBindTextures(min_tex_changed_slot, num_changed, _glgsg->_bound_textures + min_tex_changed_slot);
+    }
+    if (samp_changed) {
+      int num_changed = (num_textures - min_samp_changed_slot);
+      _glgsg->_glBindSamplers(min_samp_changed_slot, num_changed, _glgsg->_bound_samplers + min_samp_changed_slot);
+    }
   }
 
   if (barriers != 0) {
