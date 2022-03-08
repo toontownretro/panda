@@ -2888,6 +2888,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
           _glgsg->_glDisableVertexAttribArray(_color_attrib_index);
         }
 
+        if (scene_graph_color != _glgsg->_color_vertex_attribs[_color_attrib_index]) {
 #ifdef STDFLOAT_DOUBLE
           _glgsg->_glVertexAttrib4dv(_color_attrib_index, scene_graph_color.get_data());
 #else

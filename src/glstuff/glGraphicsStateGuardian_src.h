@@ -669,6 +669,7 @@ protected:
 #ifndef OPENGLES_1
   bool _use_vertex_attrib_binding;
   CPT(GeomVertexFormat) _current_vertex_format;
+  LColor _color_vertex_attribs[32];
 
   GLuint _current_sbuffer_index;
   pvector<GLuint> _current_sbuffer_base;
