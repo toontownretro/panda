@@ -428,25 +428,9 @@ public:
   virtual bool framebuffer_copy_to_ram
     (Texture *tex, int view, int z, const DisplayRegion *dr, const RenderBuffer &rb);
 
-#ifdef SUPPORT_FIXED_FUNCTION
-  void apply_fog(Fog *fog);
-
-  virtual void bind_light(PointLight *light_obj, const NodePath &light,
-                          int light_id);
-  virtual void bind_light(DirectionalLight *light_obj, const NodePath &light,
-                          int light_id);
-  virtual void bind_light(Spotlight *light_obj, const NodePath &light,
-                          int light_id);
-#endif
-
   virtual GraphicsOutput *make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host);
 
   LVecBase4 get_light_color(Light *light) const;
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  void draw_immediate_simple_primitives(const GeomPrimitivePipelineReader *reader, GLenum mode);
-  void draw_immediate_composite_primitives(const GeomPrimitivePipelineReader *reader, GLenum mode);
-#endif  // SUPPORT_IMMEDIATE_MODE
 
   INLINE bool report_errors(int line, const char *source_file);
   INLINE void report_my_errors(int line, const char *source_file);
@@ -458,7 +442,6 @@ public:
   INLINE const std::string &get_gl_version() const;
   INLINE int get_gl_version_major() const;
   INLINE int get_gl_version_minor() const;
-  INLINE bool has_fixed_function_pipeline() const;
 
   virtual void set_state_and_transform(const RenderState *state,
                                        const TransformState *transform);
@@ -474,14 +457,8 @@ protected:
   void do_issue_rescale_normal();
   void do_issue_color_write();
   void do_issue_depth_test();
-#ifdef SUPPORT_FIXED_FUNCTION
-  void do_issue_alpha_test();
-#endif
   void do_issue_depth_write();
   void do_issue_cull_face();
-#ifdef SUPPORT_FIXED_FUNCTION
-  void do_issue_fog();
-#endif
   void do_issue_depth_bias();
   void do_issue_shade_model();
 #ifndef OPENGLES_1
@@ -492,10 +469,6 @@ protected:
   void do_issue_logic_op();
 #endif
   void do_issue_blending();
-#ifdef SUPPORT_FIXED_FUNCTION
-  void do_issue_tex_gen();
-  void do_issue_tex_matrix();
-#endif
   void do_issue_stencil();
   void do_issue_scissor();
 
@@ -520,19 +493,6 @@ protected:
 
   virtual void reissue_transforms();
 
-#ifdef SUPPORT_FIXED_FUNCTION
-  virtual void enable_lighting(bool enable);
-  virtual void set_ambient_light(const LColor &color);
-  virtual void enable_light(int light_id, bool enable);
-  virtual void begin_bind_lights();
-  virtual void end_bind_lights();
-
-  virtual void enable_clip_plane(int plane_id, bool enable);
-  virtual void begin_bind_clip_planes();
-  virtual void bind_clip_plane(const NodePath &plane, int plane_id);
-  virtual void end_bind_clip_planes();
-#endif
-
 #ifndef OPENGLES_1
   INLINE void enable_vertex_attrib_array(GLuint index);
   INLINE void disable_vertex_attrib_array(GLuint index);
@@ -554,31 +514,12 @@ protected:
   INLINE void enable_stencil_test(bool val);
   INLINE void enable_blend(bool val);
   INLINE void enable_depth_test(bool val);
-#ifdef SUPPORT_FIXED_FUNCTION
-  INLINE void enable_fog(bool val);
-  INLINE void enable_alpha_test(bool val);
-#endif
   INLINE void enable_polygon_offset(bool val);
 
   INLINE void set_color_write_mask(int mask);
   INLINE void clear_color_write_mask();
 
-#ifdef SUPPORT_FIXED_FUNCTION
-  INLINE void call_glLoadMatrix(const LMatrix4 &mat);
-  INLINE void call_glFogfv(GLenum pname, const LColor &color);
-  INLINE void call_glMaterialfv(GLenum face, GLenum pname, const LColor &color);
-  INLINE void call_glLightfv(GLenum light, GLenum pname, const LVecBase4 &value);
-  INLINE void call_glLightfv(GLenum light, GLenum pname, const LVecBase3 &value);
-  INLINE void call_glLightModelfv(GLenum pname, const LVecBase4 &value);
-  INLINE void call_glTexEnvfv(GLenum target, GLenum pname, const LVecBase4 &value);
-#endif
-
   INLINE void call_glTexParameterfv(GLenum target, GLenum pname, const LVecBase4 &value);
-
-#ifdef SUPPORT_FIXED_FUNCTION
-  INLINE GLenum get_light_id(int index) const;
-  INLINE GLenum get_clip_plane_id(int index) const;
-#endif
 
   void set_draw_buffer(int rbtype);
   void set_read_buffer(int rbtype);
@@ -611,12 +552,6 @@ protected:
 #endif
 
   void unbind_buffers();
-#ifdef SUPPORT_FIXED_FUNCTION
-  void disable_standard_vertex_arrays();
-  bool update_standard_vertex_arrays(bool force);
-  void disable_standard_texture_bindings();
-  void update_standard_texture_bindings();
-#endif
 #ifndef OPENGLES_1
   void update_shader_vertex_format(const GeomVertexFormat *format);
 #endif
@@ -649,10 +584,6 @@ protected:
            Texture *tex, GLenum target, GLenum page_target,
            Texture::ComponentType type,
            Texture::CompressionMode compression, int n);
-
-#ifdef SUPPORT_FIXED_FUNCTION
-  void do_point_size();
-#endif
 
   enum AutoAntialiasMode {
     AA_poly,
@@ -717,11 +648,6 @@ protected:
 #endif
 
   GLfloat _max_line_width;
-
-#ifdef SUPPORT_IMMEDIATE_MODE
-  CLP(ImmediateModeSender) _sender;
-  bool _use_sender;
-#endif  // SUPPORT_IMMEDIATE_MODE
 
   bool _supports_vertex_attrib_divisor;
 
@@ -798,10 +724,6 @@ public:
   bool _explicit_primitive_restart;
 #endif
 
-#if defined(SUPPORT_FIXED_FUNCTION) && !defined(OPENGLES)
-  PFNGLSECONDARYCOLORPOINTERPROC _glSecondaryColorPointer;
-#endif
-
 #ifndef OPENGLES_1
   PFNGLDRAWRANGEELEMENTSPROC _glDrawRangeElements;
 #endif
@@ -847,29 +769,8 @@ public:
   bool _supports_packed_dabc;
   bool _supports_packed_ufloat;
 
-#ifdef SUPPORT_FIXED_FUNCTION
-  bool _supports_rescale_normal;
-
-#ifndef OPENGLES
-  bool _use_separate_specular_color;
-#endif
-#endif
-
 #ifndef OPENGLES_2
   PFNGLACTIVETEXTUREPROC _glActiveTexture;
-#endif
-#ifdef SUPPORT_FIXED_FUNCTION
-  PFNGLCLIENTACTIVETEXTUREPROC _glClientActiveTexture;
-#endif
-#ifdef SUPPORT_IMMEDIATE_MODE
-  PFNGLMULTITEXCOORD1FPROC _glMultiTexCoord1f;
-  PFNGLMULTITEXCOORD2FPROC _glMultiTexCoord2f;
-  PFNGLMULTITEXCOORD3FPROC _glMultiTexCoord3f;
-  PFNGLMULTITEXCOORD4FPROC _glMultiTexCoord4f;
-  PFNGLMULTITEXCOORD1DPROC _glMultiTexCoord1d;
-  PFNGLMULTITEXCOORD2DPROC _glMultiTexCoord2d;
-  PFNGLMULTITEXCOORD3DPROC _glMultiTexCoord3d;
-  PFNGLMULTITEXCOORD4DPROC _glMultiTexCoord4d;
 #endif
 
   bool _supports_buffers;

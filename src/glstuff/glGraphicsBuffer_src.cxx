@@ -1281,13 +1281,6 @@ attach_tex(int layer, int view, Texture *attach, GLenum attachpoint) {
   // framebuffer attachment.
   glgsg->apply_texture(gtc);
 
-#if !defined(OPENGLES) && defined(SUPPORT_FIXED_FUNCTION)
-  if (glgsg->has_fixed_function_pipeline()) {
-    GLclampf priority = 1.0f;
-    glPrioritizeTextures(1, &gtc->_index, &priority);
-  }
-#endif
-
 #ifndef OPENGLES
   if (_rb_size_z != 1) {
     // Bind all of the layers of the texture.
