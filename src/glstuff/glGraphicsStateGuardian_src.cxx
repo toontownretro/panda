@@ -97,21 +97,6 @@ static void APIENTRY
 null_glPointParameterfv(GLenum, const GLfloat *) {
 }
 
-#ifdef OPENGLES_1
-// OpenGL ES 1 doesn't support this, period.  Might as well macro it.
-#define _glDrawRangeElements(mode, start, end, count, type, indices) \
-  glDrawElements(mode, count, type, indices)
-
-#else
-static void APIENTRY
-null_glDrawRangeElements(GLenum mode, GLuint start, GLuint end,
-                         GLsizei count, GLenum type, const GLvoid *indices) {
-  // If we don't support glDrawRangeElements(), just use the original
-  // glDrawElements() instead.
-  glDrawElements(mode, count, type, indices);
-}
-#endif
-
 #if defined(OPENGLES) && !defined(OPENGLES_1)
 static void APIENTRY
 null_glVertexAttrib4dv(GLuint index, const GLdouble *v) {
@@ -861,31 +846,6 @@ reset() {
     }
   }
 #endif
-
-#ifndef OPENGLES_1
-  _glDrawRangeElements = null_glDrawRangeElements;
-
-#ifdef OPENGLES
-  if (is_at_least_gles_version(3, 0)) {
-    _glDrawRangeElements = (PFNGLDRAWRANGEELEMENTSPROC)
-      get_extension_func("glDrawRangeElements");
-  }
-#else
-  if (is_at_least_gl_version(1, 2)) {
-    _glDrawRangeElements = (PFNGLDRAWRANGEELEMENTSPROC)
-      get_extension_func("glDrawRangeElements");
-
-  } else if (has_extension("GL_EXT_draw_range_elements")) {
-    _glDrawRangeElements = (PFNGLDRAWRANGEELEMENTSPROC)
-      get_extension_func("glDrawRangeElementsEXT");
-  }
-#endif
-  if (_glDrawRangeElements == nullptr) {
-    GLCAT.warning()
-      << "glDrawRangeElements advertised as supported by OpenGL runtime, but could not get pointers to extension functions.\n";
-    _glDrawRangeElements = null_glDrawRangeElements;
-  }
-#endif  // !OPENGLES_1
 
   _supports_3d_texture = false;
 
@@ -4628,12 +4588,10 @@ draw_triangles(const GeomPrimitivePipelineReader *reader, bool force) {
       } else
 #endif
       {
-        _glDrawRangeElements(GL_TRIANGLES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_TRIANGLES,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
 #ifndef OPENGLES_1
@@ -4686,12 +4644,10 @@ draw_triangles_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                  get_numeric_type(reader->get_index_type()),
                                  client_pointer, _instance_count);
       } else {
-        _glDrawRangeElements(GL_TRIANGLES_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_TRIANGLES_ADJACENCY,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
       if (_instance_count != 1) {
@@ -4747,12 +4703,10 @@ draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force) {
         } else
 #endif
         {
-          _glDrawRangeElements(GL_TRIANGLE_STRIP,
-                               reader->get_min_vertex(),
-                               reader->get_max_vertex(),
-                               num_vertices,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer);
+          glDrawElements(GL_TRIANGLE_STRIP,
+                         num_vertices,
+                         get_numeric_type(reader->get_index_type()),
+                         client_pointer);
         }
       } else {
 #ifndef OPENGLES_1
@@ -4798,11 +4752,10 @@ draw_tristrips(const GeomPrimitivePipelineReader *reader, bool force) {
           } else
 #endif
           {
-            _glDrawRangeElements(GL_TRIANGLE_STRIP,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
+            glDrawElements(GL_TRIANGLE_STRIP,
+                           ends[i] - start,
+                           get_numeric_type(reader->get_index_type()),
+                           client_pointer + start * index_stride);
           }
           start = ends[i] + 2;
         }
@@ -4869,12 +4822,10 @@ draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                    get_numeric_type(reader->get_index_type()),
                                    client_pointer, _instance_count);
         } else {
-          _glDrawRangeElements(GL_TRIANGLE_STRIP_ADJACENCY,
-                               reader->get_min_vertex(),
-                               reader->get_max_vertex(),
-                               num_vertices,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer);
+          glDrawElements(GL_TRIANGLE_STRIP_ADJACENCY,
+                         num_vertices,
+                         get_numeric_type(reader->get_index_type()),
+                         client_pointer);
         }
       } else {
         if (_instance_count != 1) {
@@ -4916,11 +4867,10 @@ draw_tristrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                      client_pointer + start * index_stride,
                                      _instance_count);
           } else {
-            _glDrawRangeElements(GL_TRIANGLE_STRIP_ADJACENCY,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
+            glDrawElements(GL_TRIANGLE_STRIP_ADJACENCY,
+                           ends[i] - start,
+                           get_numeric_type(reader->get_index_type()),
+                           client_pointer + start * index_stride);
           }
           start = ends[i] + 1;
         }
@@ -4990,10 +4940,10 @@ draw_trifans(const GeomPrimitivePipelineReader *reader, bool force) {
         } else
 #endif
         {
-          _glDrawRangeElements(GL_TRIANGLE_FAN,
-                               mins.get_data1i(), maxs.get_data1i(), ends[i] - start,
-                               get_numeric_type(reader->get_index_type()),
-                               client_pointer + start * index_stride);
+          glDrawElements(GL_TRIANGLE_FAN,
+                         ends[i] - start,
+                         get_numeric_type(reader->get_index_type()),
+                         client_pointer + start * index_stride);
         }
         start = ends[i];
       }
@@ -5062,12 +5012,10 @@ draw_patches(const GeomPrimitivePipelineReader *reader, bool force) {
       } else
 #endif
       {
-        _glDrawRangeElements(GL_PATCHES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_PATCHES,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
 #ifndef OPENGLES_1
@@ -5123,12 +5071,10 @@ draw_lines(const GeomPrimitivePipelineReader *reader, bool force) {
       } else
 #endif
       {
-        _glDrawRangeElements(GL_LINES,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_LINES,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
 #ifndef OPENGLES_1
@@ -5180,12 +5126,10 @@ draw_lines_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                  get_numeric_type(reader->get_index_type()),
                                  client_pointer, _instance_count);
       } else {
-        _glDrawRangeElements(GL_LINES_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_LINES_ADJACENCY,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
       if (_instance_count != 1) {
@@ -5248,12 +5192,10 @@ draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force) {
       } else
 #endif  // !OPENGLES
       {
-        _glDrawRangeElements(GL_LINE_STRIP,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_LINE_STRIP,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
 
 #ifndef OPENGLES
@@ -5289,11 +5231,10 @@ draw_linestrips(const GeomPrimitivePipelineReader *reader, bool force) {
           } else
 #endif
           {
-            _glDrawRangeElements(GL_LINE_STRIP,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
+            glDrawElements(GL_LINE_STRIP,
+                           ends[i] - start,
+                           get_numeric_type(reader->get_index_type()),
+                           client_pointer + start * index_stride);
           }
           start = ends[i] + 1;
         }
@@ -5360,12 +5301,10 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                  get_numeric_type(reader->get_index_type()),
                                  client_pointer, _instance_count);
       } else {
-        _glDrawRangeElements(GL_LINE_STRIP_ADJACENCY,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_LINE_STRIP_ADJACENCY,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
 
       if (_explicit_primitive_restart) {
@@ -5396,11 +5335,10 @@ draw_linestrips_adj(const GeomPrimitivePipelineReader *reader, bool force) {
                                      client_pointer + start * index_stride,
                                      _instance_count);
           } else {
-            _glDrawRangeElements(GL_LINE_STRIP_ADJACENCY,
-                                 mins.get_data1i(), maxs.get_data1i(),
-                                 ends[i] - start,
-                                 get_numeric_type(reader->get_index_type()),
-                                 client_pointer + start * index_stride);
+            glDrawElements(GL_LINE_STRIP_ADJACENCY,
+                           ends[i] - start,
+                           get_numeric_type(reader->get_index_type()),
+                           client_pointer + start * index_stride);
           }
           start = ends[i] + 1;
         }
@@ -5458,12 +5396,10 @@ draw_points(const GeomPrimitivePipelineReader *reader, bool force) {
       } else
 #endif
       {
-        _glDrawRangeElements(GL_POINTS,
-                             reader->get_min_vertex(),
-                             reader->get_max_vertex(),
-                             num_vertices,
-                             get_numeric_type(reader->get_index_type()),
-                             client_pointer);
+        glDrawElements(GL_POINTS,
+                       num_vertices,
+                       get_numeric_type(reader->get_index_type()),
+                       client_pointer);
       }
     } else {
 #ifndef OPENGLES_1
