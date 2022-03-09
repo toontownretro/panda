@@ -585,6 +585,8 @@ protected:
            Texture::ComponentType type,
            Texture::CompressionMode compression, int n);
 
+  const ShaderVertexInputSignature *get_input_signature(const pvector<Shader::ShaderVarSpec> &inputs);
+
   enum AutoAntialiasMode {
     AA_poly,
     AA_line,
@@ -663,7 +665,6 @@ protected:
 
   GLuint _geom_display_list;
   GLuint _current_vbuffer_index;
-  GLuint _current_ibuffer_index;
   GLuint _current_fbo;
 
 #ifndef OPENGLES_1
@@ -814,10 +815,18 @@ public:
 #endif
 
   bool _supports_vao;
-  GLuint _current_vao_index;
   PFNGLBINDVERTEXARRAYPROC _glBindVertexArray;
   PFNGLDELETEVERTEXARRAYSPROC _glDeleteVertexArrays;
   PFNGLGENVERTEXARRAYSPROC _glGenVertexArrays;
+
+  VAOState _default_vao;
+  VAOState *_current_vao;
+
+  typedef pflat_set<const ShaderVertexInputSignature *, indirect_compare_to<const ShaderVertexInputSignature *>> SignatureMap;
+  SignatureMap _vertex_input_signatures;
+
+  typedef pflat_map<VAOKey, VAOState, compare_to<VAOKey>> VAOMap;
+  VAOMap _vao_map;
 
 #ifndef OPENGLES_1
   PFNGLDRAWARRAYSINDIRECTPROC _glDrawArraysIndirect;
@@ -853,6 +862,9 @@ public:
 #ifndef OPENGLES
   bool _supports_dsa;
   PFNGLGENERATETEXTUREMIPMAPPROC _glGenerateTextureMipmap;
+  PFNGLNAMEDBUFFERSUBDATAPROC _glNamedBufferSubData;
+  PFNGLNAMEDBUFFERDATAPROC _glNamedBufferData;
+  PFNGLNAMEDBUFFERSTORAGEPROC _glNamedBufferStorage;
 #endif
 
 #ifndef OPENGLES_1

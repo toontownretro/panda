@@ -28,13 +28,13 @@ evict_lru() {
   dequeue_lru();
 
   // Make sure the buffer is unbound before we delete it.
-  if (_glgsg->_current_ibuffer_index == _index) {
+  if (_glgsg->_current_vao->_index_buffer == _index) {
     if (GLCAT.is_debug() && gl_debug_buffers) {
       GLCAT.debug()
         << "unbinding index buffer\n";
     }
     _glgsg->_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    _glgsg->_current_ibuffer_index = 0;
+    _glgsg->_current_vao->_index_buffer = 0;
   }
 
   // Free the buffer.

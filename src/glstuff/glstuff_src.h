@@ -37,6 +37,7 @@
 #include "glOcclusionQueryContext_src.h"
 #include "glGeomContext_src.h"
 #include "glGeomMunger_src.h"
+#include "glVAOs_src.h"
 #include "glShaderContext_src.h"
 #include "glImmediateModeSender_src.h"
 #include "glGraphicsBuffer_src.h"

@@ -27,6 +27,7 @@ void CLP(BufferContext)::
 evict_lru() {
   dequeue_lru();
 
+#if 0
   // Make sure the buffer is unbound before we delete it.
   if (_glgsg->_current_ibuffer_index == _index) {
     if (GLCAT.is_debug() && gl_debug_buffers) {
@@ -36,6 +37,7 @@ evict_lru() {
     _glgsg->_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     _glgsg->_current_ibuffer_index = 0;
   }
+#endif
 
   // Free the buffer.
   _glgsg->_glDeleteBuffers(1, &_index);

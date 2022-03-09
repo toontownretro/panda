@@ -2464,6 +2464,13 @@ reset() {
     _glGenerateTextureMipmap = (PFNGLGENERATETEXTUREMIPMAPPROC)
       get_extension_func("glGenerateTextureMipmap");
 
+    _glNamedBufferData = (PFNGLNAMEDBUFFERDATAPROC)
+      get_extension_func("glNamedBufferData");
+    _glNamedBufferSubData = (PFNGLNAMEDBUFFERSUBDATAPROC)
+      get_extension_func("glNamedBufferSubData");
+    _glNamedBufferStorage = (PFNGLNAMEDBUFFERSTORAGEPROC)
+      get_extension_func("glNamedBufferStorage");
+
     _supports_dsa = true;
   } else {
     _supports_dsa = false;
@@ -3382,8 +3389,7 @@ reset() {
 #endif
 
   _current_vbuffer_index = 0;
-  _current_ibuffer_index = 0;
-  _current_vao_index = 0;
+  _current_vao = &_default_vao;
   _current_fbo = 0;
   _auto_antialias_mode = false;
   _render_mode = RenderModeAttrib::M_filled;
@@ -3520,8 +3526,8 @@ reset() {
   // because we can just bind a VAO and then forget about it.
   if (core_profile) {
     if (_supports_vao) {
-      _glGenVertexArrays(1, &_current_vao_index);
-      _glBindVertexArray(_current_vao_index);
+      _glGenVertexArrays(1, &_default_vao._vao_id);
+      _glBindVertexArray(_default_vao._vao_id);
     } else {
       GLCAT.error()
         << "Core profile enabled, but vertex array objects not supported!\n";
@@ -4439,31 +4445,6 @@ unbind_buffers() {
     _glBindBuffer(GL_ARRAY_BUFFER, 0);
     _current_vbuffer_index = 0;
   }
-  if (_current_ibuffer_index != 0) {
-#ifndef NDEBUG
-    if (_debug_buffers && GLCAT.is_spam()) {
-      GLCAT.spam()
-        << "unbinding index buffer\n";
-    }
-#endif
-    _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    _current_ibuffer_index = 0;
-  }
-
-#if 0
-#ifndef OPENGLES
-  if (_current_vertex_buffers.size() > 1 && _supports_multi_bind) {
-    _glBindVertexBuffers(0, _current_vertex_buffers.size(), nullptr, nullptr, nullptr);
-  } else {
-    for (size_t i = 0; i < _current_vertex_buffers.size(); ++i) {
-      if (_current_vertex_buffers[i] != 0) {
-        _glBindVertexBuffer((GLuint)i, 0, 0, 0);
-      }
-    }
-  }
-  _current_vertex_buffers.clear();
-#endif
-#endif
 }
 
 #ifndef OPENGLES_1
@@ -4477,104 +4458,104 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
     return;
   }
 
+  _current_vertex_format = format;
+
   CLP(ShaderContext) *context = (CLP(ShaderContext) *)_current_shader_context;
+  nassertv(context->_input_signature != nullptr);
 
-  CLP(ShaderContext)::VAOData &vao_data = context->_format_vaos[format];
-  if (vao_data._vao_id != (GLuint)0) {
-    // The shader is already aware of this vertex format, so bind
-    // the corresponding VAO.
-    _glBindVertexArray(vao_data._vao_id);
+  VAOKey key;
+  key._format = format;
+  key._input_signature = context->_input_signature;
 
-  } else {
-    // This is the first time this shader has seen this vertex format.
-    // Create a new VAO.
+  VAOState &vao = _vao_map[key];
 
-    _glGenVertexArrays(1, &vao_data._vao_id);
-    _glBindVertexArray(vao_data._vao_id);
+  if (vao._vao_id != (GLuint)0) {
+    _glBindVertexArray(vao._vao_id);
+    _current_vao = &vao;
+    return;
+  }
 
-    size_t num_columns = format->get_num_columns();
-    for (size_t ci = 0; ci < num_columns; ++ci) {
-      GLuint binding = format->get_array_with(ci);
-      const GeomVertexColumn *column = format->get_column(ci);
+  // This is the first time this input signature has seen this vertex format.
+  // Create a new VAO.
 
-      const InternalName *name = column->get_name();
-      GLuint loc;
-      bool got_loc = false;
-      // Find the ShaderVarSpec corresponding to this column.
-      for (size_t vi = 0; vi < _current_shader->_var_spec.size(); ++vi) {
-        const Shader::ShaderVarSpec &var = _current_shader->_var_spec[vi];
-        if (var._name == name && var._id._location >= 0) {
-          loc = (GLuint)var._id._location;
-          got_loc = true;
+  _glGenVertexArrays(1, &vao._vao_id);
+  _glBindVertexArray(vao._vao_id);
+
+  _current_vao = &vao;
+
+  size_t num_columns = format->get_num_columns();
+  for (size_t ci = 0; ci < num_columns; ++ci) {
+    GLuint binding = format->get_array_with(ci);
+    const GeomVertexColumn *column = format->get_column(ci);
+
+    const InternalName *name = column->get_name();
+    GLuint loc;
+    bool got_loc = false;
+    // Find the ShaderVarSpec corresponding to this column.
+    for (size_t vi = 0; vi < _current_shader->_var_spec.size(); ++vi) {
+      const Shader::ShaderVarSpec &var = _current_shader->_var_spec[vi];
+      if (var._name == name && var._id._location >= 0) {
+        loc = (GLuint)var._id._location;
+        got_loc = true;
+        break;
+      }
+    }
+
+    if (!got_loc) {
+      continue;
+    }
+
+    vao._used_arrays.set_bit(binding);
+
+    GeomEnums::NumericType nt = column->get_numeric_type();
+    GLuint offset = column->get_start();
+    GLenum type = get_numeric_type(nt);
+    GLboolean normalized = (column->get_contents() == GeomEnums::C_color);
+    GLint size = column->get_num_values();
+
+    if (nt == GeomEnums::NT_packed_dabc) {
+      // GL_BGRA is a special accepted value available since OpenGL 3.2. It
+      // requires us to pass GL_TRUE for normalized.
+      size = GL_BGRA;
+      normalized = GL_TRUE;
+    }
+
+    if (name == InternalName::get_color()) {
+      vao._has_vertex_colors = true;
+      vao._vertex_array_colors = true;
+    }
+
+    for (int i = 0; i < column->get_num_elements(); ++i) {
+      if (normalized) {
+        _glVertexAttribFormat(loc, size, type, normalized, offset);
+
+      } else {
+        switch (nt) {
+        case GeomEnums::NT_uint8:
+        case GeomEnums::NT_uint16:
+        case GeomEnums::NT_uint32:
+        case GeomEnums::NT_int8:
+        case GeomEnums::NT_int16:
+        case GeomEnums::NT_int32:
+          _glVertexAttribIFormat(loc, size, type, offset);
+          break;
+
+        default:
+          _glVertexAttribFormat(loc, size, type, GL_FALSE, offset);
           break;
         }
       }
+      _glVertexAttribBinding(loc, binding);
 
-      if (!got_loc) {
-        continue;
-      }
+      // Enable the attribute through the vertex array.
+      // The color attribute may be disabled later in glShaderContext
+      // if flat colors are enabled.
+      _glEnableVertexAttribArray(loc);
 
-      vao_data._used_arrays.set_bit(binding);
-
-      GeomEnums::NumericType nt = column->get_numeric_type();
-      GLuint offset = column->get_start();
-      GLenum type = get_numeric_type(nt);
-      GLboolean normalized = (column->get_contents() == GeomEnums::C_color);
-      GLint size = column->get_num_values();
-
-      if (nt == GeomEnums::NT_packed_dabc) {
-        // GL_BGRA is a special accepted value available since OpenGL 3.2. It
-        // requires us to pass GL_TRUE for normalized.
-        size = GL_BGRA;
-        normalized = GL_TRUE;
-      }
-
-      if (name == InternalName::get_color()) {
-        vao_data._has_vertex_colors = true;
-        vao_data._vertex_array_colors = true;
-      }
-
-      for (int i = 0; i < column->get_num_elements(); ++i) {
-        if (normalized) {
-          _glVertexAttribFormat(loc, size, type, normalized, offset);
-
-        } else {
-          switch (nt) {
-          case GeomEnums::NT_uint8:
-          case GeomEnums::NT_uint16:
-          case GeomEnums::NT_uint32:
-          case GeomEnums::NT_int8:
-          case GeomEnums::NT_int16:
-          case GeomEnums::NT_int32:
-            _glVertexAttribIFormat(loc, size, type, offset);
-            break;
-
-          default:
-            _glVertexAttribFormat(loc, size, type, GL_FALSE, offset);
-            break;
-          }
-        }
-        _glVertexAttribBinding(loc, binding);
-
-        // Enable the attribute through the vertex array.
-        // The color attribute may be disabled later in glShaderContext
-        // if flat colors are enabled.
-        _glEnableVertexAttribArray(loc);
-
-        offset += column->get_element_stride();
-        ++loc;
-      }
+      offset += column->get_element_stride();
+      ++loc;
     }
   }
-
-  context->_current_vao = &vao_data;
-
-  //size_t num_arrays = format->get_num_arrays();
-  //for (size_t ai = 0; ai < num_arrays; ++ai) {
-  //  _glVertexBindingDivisor(ai, format->get_array(ai)->get_divisor());
-  //}
-
-  _current_vertex_format = format;
 }
 #endif
 
@@ -5979,24 +5960,38 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
       }
 
       PStatGPUTimer timer(this, _load_vertex_buffer_pcollector, reader->get_current_thread());
-      if (_current_vbuffer_index != gvbc->_index) {
-#ifndef NDEBUG
-        if (_debug_buffers && GLCAT.is_spam()) {
-          GLCAT.spam()
-            << "binding vertex buffer " << (int)gvbc->_index << "\n";
-        }
-#endif
-        _glBindBuffer(GL_ARRAY_BUFFER, gvbc->_index);
-        _current_vbuffer_index = gvbc->_index;
-      }
 
-      if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
-        _glBufferData(GL_ARRAY_BUFFER, num_bytes, client_pointer,
-                      get_usage(reader->get_usage_hint()));
+      if (true) {//!_supports_dsa) {
+        if (_current_vbuffer_index != gvbc->_index) {
+#ifndef NDEBUG
+          if (_debug_buffers && GLCAT.is_spam()) {
+            GLCAT.spam()
+              << "binding vertex buffer " << (int)gvbc->_index << "\n";
+          }
+#endif
+          _glBindBuffer(GL_ARRAY_BUFFER, gvbc->_index);
+          _current_vbuffer_index = gvbc->_index;
+        }
+
+        if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
+          _glBufferData(GL_ARRAY_BUFFER, num_bytes, client_pointer,
+                        get_usage(reader->get_usage_hint()));
+
+        } else {
+          _glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, client_pointer);
+        }
 
       } else {
-        _glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, client_pointer);
+        // We can do this without binding the buffer.
+        if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
+          _glNamedBufferData(gvbc->_index, num_bytes, client_pointer,
+                             get_usage(reader->get_usage_hint()));
+
+        } else {
+          _glNamedBufferSubData(gvbc->_index, 0, num_bytes, client_pointer);
+        }
       }
+
       _data_transferred_pcollector.add_level(num_bytes);
     }
 
@@ -6212,22 +6207,24 @@ apply_index_buffer(IndexBufferContext *ibc,
                    const GeomPrimitivePipelineReader *reader,
                    bool force) {
   nassertr(_supports_buffers, false);
-  if (reader->get_modified() == UpdateSeq::initial()) {
-    // No need to re-apply.
-    return true;
-  }
+  nassertr(_current_vao != nullptr, false);
+  //if (reader->get_modified() == UpdateSeq::initial()) {
+  //  // No need to re-apply.
+   // return true;
+  //}
 
   CLP(IndexBufferContext) *gibc = DCAST(CLP(IndexBufferContext), ibc);
 
-  if (_current_ibuffer_index != gibc->_index) {
-#ifndef NDEBUG
-    if (_debug_buffers && GLCAT.is_spam()) {
-      GLCAT.spam()
-        << "binding index buffer " << (int)gibc->_index << "\n";
-    }
-#endif
+  if (_current_vao->_index_buffer != gibc->_index) {
+    _current_vao->_index_buffer = gibc->_index;
+//#ifndef NDEBUG
+//    if (_debug_buffers && GLCAT.is_spam()) {
+//      GLCAT.spam()
+//        << "binding index buffer " << (int)gibc->_index << "\n";
+//    }
+//#endif
+    // The index buffer binding persists on the VAO.
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gibc->_index);
-    _current_ibuffer_index = gibc->_index;
     //gibc->set_active(true);
   }
 
@@ -6287,7 +6284,7 @@ release_index_buffer(IndexBufferContext *ibc) {
   // Make sure the buffer is unbound before we delete it.  Not strictly
   // necessary according to the OpenGL spec, but it might help out a flaky
   // driver, and we need to keep our internal state consistent anyway.
-  if (_current_ibuffer_index == gibc->_index) {
+  if (_current_vao->_index_buffer == gibc->_index) {
 #ifndef NDEBUG
     if (_debug_buffers && GLCAT.is_spam()) {
       GLCAT.spam()
@@ -6295,7 +6292,7 @@ release_index_buffer(IndexBufferContext *ibc) {
     }
 #endif
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    _current_ibuffer_index = 0;
+    _current_vao->_index_buffer = 0;
   }
 
   _glDeleteBuffers(1, &gibc->_index);
@@ -6331,7 +6328,7 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
     // Make sure the buffer is unbound before we delete it.  Not strictly
     // necessary according to the OpenGL spec, but it might help out a flaky
     // driver, and we need to keep our internal state consistent anyway.
-    if (_current_ibuffer_index == gibc->_index) {
+    if (_current_vao->_index_buffer == gibc->_index) {
 #ifndef NDEBUG
       if (debug && GLCAT.is_spam()) {
         GLCAT.spam()
@@ -6339,7 +6336,7 @@ release_index_buffers(const pvector<BufferContext *> &contexts) {
       }
 #endif
       _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-      _current_ibuffer_index = 0;
+      _current_vao->_index_buffer = 0;
     }
 
 #ifndef NDEBUG
@@ -7406,9 +7403,15 @@ do_issue_shader() {
       context->bind();
       _current_shader = shader;
 
-      // Invalidate the current vertex format.  The new shader might have
-      // different vertex attributes and locations.
-      _current_vertex_format.clear();
+      CLP(ShaderContext) *glc = DCAST(CLP(ShaderContext), context);
+      CLP(ShaderContext) *curr_glc = DCAST(CLP(ShaderContext), _current_shader_context);
+
+      // If the new shader has a different input signature, invalidate the
+      // current vertex format to bind a new VAO.
+      if (curr_glc == nullptr ||
+          glc->_input_signature != curr_glc->_input_signature) {
+        _current_vertex_format.clear();
+      }
     }
 
     // Bind the shader storage buffers.
@@ -10448,7 +10451,7 @@ reissue_transforms() {
     _glBindBuffer(GL_ARRAY_BUFFER, 0);
     _glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     _current_vbuffer_index = 0;
-    _current_ibuffer_index = 0;
+    _current_vao->_index_buffer = 0;
   }
 #ifndef OPENGLES
   if (_supports_glsl) {
@@ -13366,5 +13369,33 @@ do_issue_scissor() {
       glDisable(GL_SCISSOR_TEST);
       _scissor_enabled = false;
     }
+  }
+}
+
+/**
+ * Returns a ShaderVertexInputSignature for the given set of ShaderVarSpecs.
+ * Idential input signatures are guaranteed to share the same pointer.
+ */
+const ShaderVertexInputSignature *CLP(GraphicsStateGuardian)::
+get_input_signature(const pvector<Shader::ShaderVarSpec> &inputs) {
+  ShaderVertexInputSignature key;
+  key._inputs = inputs;
+  // Sort the inputs by location so out-of-order explicit input
+  // locations can still share the same input signature.
+  std::sort(key._inputs.begin(), key._inputs.end(),
+    [](const Shader::ShaderVarSpec &a, const Shader::ShaderVarSpec &b) {
+      return a._id._location < b._id._location;
+    }
+  );
+
+  auto it = _vertex_input_signatures.find(&key);
+  if (it != _vertex_input_signatures.end()) {
+    return *it;
+
+  } else {
+    // New signature.
+    ShaderVertexInputSignature *new_key = new ShaderVertexInputSignature(std::move(key));
+    _vertex_input_signatures.insert(new_key);
+    return new_key;
   }
 }

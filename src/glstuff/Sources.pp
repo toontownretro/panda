@@ -37,6 +37,7 @@
     glShaderContext_src.h \
     glTextureContext_src.I \
     glTextureContext_src.h \
+    glVAOs_src.h \
     glVertexBufferContext_src.I \
     glVertexBufferContext_src.h \
     glmisc_src.h \

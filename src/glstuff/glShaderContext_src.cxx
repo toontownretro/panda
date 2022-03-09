@@ -48,8 +48,7 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
   _prepared_objects = _glgsg->get_prepared_objects();
   _glsl_program = 0;
   _uses_standard_vertex_arrays = false;
-  _current_vao = nullptr;
-  _enabled_attribs.clear();
+  _input_signature = nullptr;
   _color_attrib_index = -1;
   _transform_table_index = -1;
   _slider_table_index = -1;
@@ -227,6 +226,8 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
     _remap_uniform_locations = false;
     reflect_program();
   }
+
+  _input_signature = _glgsg->get_input_signature(_shader->_var_spec);
 
   report_my_gl_errors(_glgsg);
 
@@ -2056,13 +2057,6 @@ release_resources() {
   }
   _modules.clear();
 
-  for (auto it = _format_vaos.begin(); it != _format_vaos.end(); ++it) {
-    GLuint vao_id = (*it).second._vao_id;
-    _glgsg->_glDeleteVertexArrays(1, &vao_id);
-  }
-  _format_vaos.clear();
-  _current_vao = nullptr;
-
   report_my_gl_errors(_glgsg);
 }
 
@@ -2822,7 +2816,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
     // Use experimental new separated formatbinding state.
     const GeomVertexDataPipelineReader *data_reader = _glgsg->_data_reader;
 
-    VAOData *vao = (VAOData *)_current_vao;
+    VAOState *vao = _glgsg->_current_vao;
 
     //bool multi_bind = _glgsg->_supports_multi_bind;
 
@@ -2847,13 +2841,17 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
       GLsizei stride = array_format->get_stride();
       GLuint divisor = array_format->get_divisor();
 
-      if (vao->_divisors[index] != divisor) {
+      VAOState::ArrayBindState *bind = vao->_arrays + index;
+
+      if (bind->_divisor != divisor) {
+        bind->_divisor = divisor;
         _glgsg->_glVertexBindingDivisor(index, divisor);
-        vao->_divisors[index] = divisor;
       }
 
       // Bind the vertex buffer to the binding index.
-      if (vao->_bound_arrays[index] != gvbc->_index || vao->_array_strides[index] != stride) {
+      if (bind->_array != gvbc->_index || bind->_stride != stride) {
+        bind->_array = gvbc->_index;
+        bind->_stride = stride;
         //if (multi_bind) {
         //  changed = true;
         //  min_changed_slot = std::min(min_changed_slot, index);
@@ -2861,9 +2859,6 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
         //} else {
           _glgsg->_glBindVertexBuffer(index, gvbc->_index, 0, stride);
         //}
-
-        vao->_bound_arrays[index] = gvbc->_index;
-        vao->_array_strides[index] = stride;
       }
 
       arrays.clear_bit(index);

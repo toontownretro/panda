@@ -102,7 +102,6 @@ private:
  */
 
   pvector<GLint> _uniform_location_map;
-  BitMask32 _enabled_attribs;
   GLint _color_attrib_index;
   GLint _transform_table_index;
   GLint _slider_table_index;
@@ -145,34 +144,7 @@ private:
   bool compile_and_link();
   void release_resources();
 
-  // We maintain a VAO for each unique GeomVertexFormat
-  // that renders with this shader.  Functions similarly to
-  // D3D10+ input layouts.
-  class VAOData {
-  public:
-    INLINE VAOData() {
-      _vao_id = 0;
-      memset(_divisors, 0, sizeof(_divisors));
-      memset(_bound_arrays, 0, sizeof(_bound_arrays));
-      memset(_array_strides, 0, sizeof(_array_strides));
-      _vertex_array_colors = false;
-      _has_vertex_colors = false;
-    }
-    GLuint _vao_id;
-    GLuint _divisors[32];
-    GLuint _bound_arrays[32];
-    GLsizei _array_strides[32];
-    // True if vertex colors are being used from a vertex array.
-    bool _vertex_array_colors;
-    // True if the vertex format has a color column.
-    bool _has_vertex_colors;
-    // BitMask of vertex array indices into the vertex format that are
-    // actually needed by the shader.
-    BitMask32 _used_arrays;
-  };
-  typedef pflat_hash_map<const GeomVertexFormat *, VAOData, pointer_hash> FormatVAOs;
-  FormatVAOs _format_vaos;
-  VAOData *_current_vao;
+  const ShaderVertexInputSignature *_input_signature;
 
 public:
   static TypeHandle get_class_type() {
