@@ -26,6 +26,7 @@
 #include "colorAttrib.h"
 #include "textureAttrib.h"
 #include "materialAttrib.h"
+#include "lightAttrib.h"
 
 #include <algorithm>
 
@@ -135,6 +136,13 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
     const RenderAttrib *ra = sa->get_attrib(ColorAttrib::get_class_slot());
     const RenderAttrib *rb = sb->get_attrib(ColorAttrib::get_class_slot());
     // Color attribs are a vertex attribute change.
+    if (ra != rb) {
+      return ra < rb;
+    }
+
+    ra = sa->get_attrib(LightAttrib::get_class_slot());
+    rb = sb->get_attrib(LightAttrib::get_class_slot());
+    // Lights require lots of glUniform calls.
     if (ra != rb) {
       return ra < rb;
     }
