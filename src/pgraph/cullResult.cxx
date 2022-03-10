@@ -281,7 +281,9 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
 #ifndef NDEBUG
       check_flash_transparency(object._state, flash_dual_color);
 #endif
-      if (!m_dual) {
+      // This terrible camera mask hack disables M_dual on shadow cameras, whose
+      // camera masks are BitMask32.bit(2).
+      if (!m_dual || (traverser->get_camera_mask().get_word() & 4u) != 0u) {
         // If m_dual is configured off, it becomes M_alpha.
         break;
       }
