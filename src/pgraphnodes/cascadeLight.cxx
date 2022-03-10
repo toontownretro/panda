@@ -46,7 +46,7 @@ CascadeLight(const std::string &name) :
   // Make sure we render the shadow scene using the specialized CSMDepth
   // shader.
   CPT(RenderState) state = get_initial_state();
-  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none), 100);
+  //state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none), 100);
   state = state->set_attrib(ShaderAttrib::make("CSMDepth"), 100);
   set_initial_state(state);
 
@@ -91,39 +91,49 @@ setup_shadow_map() {
     _shadow_map = new Texture(get_name());
   }
 
-  // The specified shadow map size is the size of the shadow map for
-  // the closest cascade.  The shadow map for each cascade after that is
-  // half the size of the previous.  They are all packed horizontally onto
-  // a single shadow map atlas.
-  int vert_size = _sb_size[0];
-  int horiz_size = 0;
+  // The specified shadow map size is the total size of the atlas
+  // for all cascades.  Each cascade takes up the same space in the
+  // atlas, which is size / (num_cascades / 2).
+
+  int width_per_cascade = _sb_size[0] / (_num_cascades / 2);
+  int height_per_cascade = _sb_size[1] / (_num_cascades / 2);
+  PN_stdfloat wscale = width_per_cascade / (PN_stdfloat)_sb_size[0];
+  PN_stdfloat hscale = height_per_cascade / (PN_stdfloat)_sb_size[1];
+
+  std::cout << "size per cascade: " << width_per_cascade << "x" << height_per_cascade << "\n";
+
+  // Pack cascades onto grid.
+  int curr_x = 0;
+  int curr_y = 0;
   for (int i = 0; i < _num_cascades; ++i) {
-    horiz_size += _sb_size[0] >> i;
+    if (curr_x >= _sb_size[0]) {
+      // Go to next row.
+      curr_y += height_per_cascade;
+      curr_x = 0;
+      nassertv(curr_y < _sb_size[1]);
+    }
+
+    _cascades[i].atlas_mins.set(curr_x / (PN_stdfloat)_sb_size[0],
+                                curr_y / (PN_stdfloat)_sb_size[1]);
+    _cascades[i].atlas_scale.set(wscale, hscale);
+    _cascades[i].atlas_maxs = _cascades[i].atlas_mins + _cascades[i].atlas_scale;
+
+    std::cout << "cascade " << i << "\n";
+    std::cout << "mins: " << _cascades[i].atlas_mins << "\n";
+    std::cout << "maxs: " << _cascades[i].atlas_maxs << "\n";
+    std::cout << "scale: " << _cascades[i].atlas_scale << "\n";
+
+    // Go to next column.
+    curr_x += width_per_cascade;
   }
 
-  LVecBase2 mins(0);
-  for (int i = 0; i < _num_cascades; ++i) {
-    mins[1] = 0.0f;
-    _cascades[i].atlas_mins = mins;
-    mins[0] += (_sb_size[0] >> i) / (PN_stdfloat)horiz_size;
-    mins[1] = (_sb_size[0] >> i) / (PN_stdfloat)vert_size;
-    _cascades[i].atlas_maxs = mins;
-
-    _cascades[i].atlas_scale = LVecBase2((_sb_size[0] >> i) / (PN_stdfloat)horiz_size,
-                                         mins[1]);
-    //std::cout << "cascade " << i << "\n";
-    //std::cout << "mins: " << _cascades[i].atlas_mins << "\n";
-    //std::cout << "maxs: " << _cascades[i].atlas_maxs << "\n";
-    //std::cout << "scale: " << _cascades[i].atlas_scale << "\n";
-  }
-
-  _shadow_map->setup_2d_texture(horiz_size, vert_size, Texture::T_unsigned_byte, Texture::F_depth_component);
+  _shadow_map->setup_2d_texture(_sb_size[0], _sb_size[1], Texture::T_unsigned_byte, Texture::F_depth_component);
   _shadow_map->set_clear_color(LColor(1));
   _shadow_map->set_wrap_u(SamplerState::WM_border_color);
   _shadow_map->set_wrap_v(SamplerState::WM_border_color);
   _shadow_map->set_border_color(LColor(1));
-  _shadow_map->set_minfilter(SamplerState::FT_linear);
-  _shadow_map->set_magfilter(SamplerState::FT_linear);
+  _shadow_map->set_minfilter(SamplerState::FT_shadow);
+  _shadow_map->set_magfilter(SamplerState::FT_shadow);
 }
 
 /**
@@ -232,6 +242,30 @@ setup_cascades() {
 }
 
 /**
+ *
+ */
+static LVecBase3
+get_snap_offset(const LMatrix4& mat, size_t resolution) {
+  // Transform origin to camera space
+  LPoint4 base_point = mat.get_row(3) * 0.5 + 0.5;
+
+  // Compute the snap offset
+  float texel_size = 1.0 / (float)(resolution);
+  float offset_x = fmod(base_point.get_x(), texel_size);
+  float offset_y = fmod(base_point.get_y(), texel_size);
+
+  // Reproject the offset back, for that we need the inverse MVP
+  LMatrix4 inv_mat(mat);
+  inv_mat.invert_in_place();
+  LVecBase3 new_base_point = inv_mat.xform_point(LVecBase3(
+      (base_point.get_x() - offset_x) * 2.0 - 1.0,
+      (base_point.get_y() - offset_y) * 2.0 - 1.0,
+      base_point.get_z() * 2.0 - 1.0
+    ));
+  return -new_base_point;
+}
+
+/**
  * Computes the PSSM splits.
  */
 void CascadeLight::
@@ -337,10 +371,16 @@ compute_pssm_splits(const LMatrix4 &transform, float max_distance,
     }
 
     // Compute the cascade MVP
-    //std::cout << c.transform->get_pos() << " | " << c.transform->get_hpr() << "\n";
     LMatrix4 mvp;
     compute_mvp(i, mvp, to_local);
-    //std::cout << "Cascade MVP " << i << " : " << mvp << "\n";
+
+    // Prevent flickering.
+    LPoint3 snap_offset = get_snap_offset(mvp, _sb_size[0]);
+    c.node.set_pos(c.node.get_pos() + snap_offset);
+    to_local = root.get_transform(c.node);
+    compute_mvp(i, mvp, to_local);
+
+    // Store MVP in CData.
     {
       CDWriter cdata(_cycler);
       cdata->_cascade_mvps[i] = mvp;
