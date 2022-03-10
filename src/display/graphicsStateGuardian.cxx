@@ -952,7 +952,8 @@ fetch_specified_value(Shader::ShaderMatSpec &spec, const LMatrix4 *cache, int al
     spec._value.set_row(3, v);
     return &spec._value;
   case Shader::SMF_first:
-    return cache0;
+    spec._value = *cache0;
+    return &spec._value;
   default:
     // should never get here
     spec._value = LMatrix4::ident_mat();

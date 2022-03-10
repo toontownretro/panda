@@ -133,6 +133,12 @@ private:
 
   LMatrix4 *_mat_part_cache = nullptr;
 
+  struct PtrCache {
+    unsigned char *_data;
+    size_t _size;
+  };
+  PtrCache *_ptr_cache = nullptr;
+
   CLP(GraphicsStateGuardian) *_glgsg;
   PreparedGraphicsObjects *_prepared_objects;
 

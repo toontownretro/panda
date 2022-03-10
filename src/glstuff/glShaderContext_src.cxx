@@ -239,6 +239,16 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
   }
 
   _mat_part_cache = new LMatrix4[_shader->cp_get_mat_cache_size()];
+
+  // Initialize ptr memory cache.
+  _ptr_cache = new PtrCache[_shader->_ptr_spec.size()];
+  for (size_t i = 0; i < _shader->_ptr_spec.size(); ++i) {
+    const Shader::ShaderPtrSpec &spec = _shader->_ptr_spec[i];
+    ShaderType::Scalar scalar(spec._type);
+    _ptr_cache[i]._size = scalar.get_size_bytes() * spec._dim[0] * spec._dim[1] * spec._dim[2];
+    _ptr_cache[i]._data = new unsigned char[_ptr_cache[i]._size];
+    memset(_ptr_cache[i]._data, 0, _ptr_cache[i]._size);
+  }
 }
 
 /**
@@ -2236,6 +2246,7 @@ issue_parameters(int altered) {
       _glgsg->_glUniform1i(_frame_number_loc, _frame_number);
     }
 
+    int redundant_ptr_caught = 0;
     // Iterate through _ptr parameters
     for (int i = 0; i < (int)_shader->_ptr_spec.size(); ++i) {
       Shader::ShaderPtrSpec &spec = _shader->_ptr_spec[i];
@@ -2249,12 +2260,41 @@ issue_parameters(int altered) {
       nassertd(spec._dim[1] > 0) continue;
 
       uint32_t dim = spec._dim[1] * spec._dim[2];
+      int array_size = min(spec._dim[0], (uint32_t)(ptr_data._size / dim));
+
+      size_t mem_size;
+      switch (ptr_data._type) {
+      case ShaderType::ST_bool:
+        mem_size = std::min(_ptr_cache[i]._size, (size_t)(array_size * dim));
+        break;
+      case ShaderType::ST_float:
+      case ShaderType::ST_int:
+      case ShaderType::ST_uint:
+        mem_size = std::min(_ptr_cache[i]._size, (size_t)(4 * array_size * dim));
+        break;
+      case ShaderType::ST_double:
+        mem_size = std::min(_ptr_cache[i]._size, (size_t)(8 * array_size * dim));
+        break;
+      default:
+        mem_size = _ptr_cache[i]._size;
+        break;
+      }
+
+      if (!memcmp(_ptr_cache[i]._data, (unsigned char *)ptr_data._ptr, mem_size)) {
+        if (GLCAT.is_debug()) {
+          GLCAT.debug()
+            << "ptr data equal, not issuing glUniform\n";
+        }
+        redundant_ptr_caught++;
+        continue;
+      }
+      memcpy(_ptr_cache[i]._data, (unsigned char *)ptr_data._ptr, mem_size);
+
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
         continue;
       }
 
-      int array_size = min(spec._dim[0], (uint32_t)(ptr_data._size / dim));
       switch (spec._type) {
       case ShaderType::ST_bool:
       case ShaderType::ST_float:
@@ -2410,18 +2450,135 @@ issue_parameters(int altered) {
         continue;
       }
     }
+
+    if (GLCAT.is_debug()) {
+      GLCAT.debug()
+        << redundant_ptr_caught << " / " << _shader->_ptr_spec.size() << " ptr data was the same\n";
+    }
   }
+
+  int redundant_caught = 0;
+  int mat_altered = 0;
 
   if (altered & _shader->_mat_deps) {
     _glgsg->update_shader_matrix_cache(_shader, _mat_part_cache, altered);
 
-    for (Shader::ShaderMatSpec &spec : _shader->_mat_spec) {
+    for (size_t i = 0; i < _shader->_mat_spec.size(); ++i) {
+      Shader::ShaderMatSpec &spec = _shader->_mat_spec[i];
       if ((altered & spec._dep) == 0) {
         continue;
       }
+      mat_altered++;
+
+      LMatrix4 curr_val = spec._value;
 
       const LMatrix4 *val = _glgsg->fetch_specified_value(spec, _mat_part_cache, altered);
       if (!val) continue;
+
+      if (GLCAT.is_debug()) {
+        GLCAT.debug()
+          << spec._id._name->get_name() << "\n";
+        GLCAT.debug(false)
+          << "curr mat val " << curr_val << "\nnew mat val " << *val << "\n";
+      }
+
+      switch (spec._piece) {
+      case Shader::SMP_whole:
+      case Shader::SMP_transpose:
+      case Shader::SMP_upper4x3:
+      case Shader::SMP_upper3x3:
+      case Shader::SMP_transpose4x3:
+      case Shader::SMP_transpose3x4:
+        if ((*val).almost_equal(curr_val)) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row0:
+        if (val->get_row(0).almost_equal(curr_val.get_row(0))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row1:
+        if (val->get_row(1).almost_equal(curr_val.get_row(1))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row2:
+        if (val->get_row(2).almost_equal(curr_val.get_row(2))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row3:
+        if (val->get_row(3).almost_equal(curr_val.get_row(3))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_col0:
+        if (val->get_col(0).almost_equal(curr_val.get_col(0))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_col1:
+        if (val->get_col(1).almost_equal(curr_val.get_col(1))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_col2:
+        if (val->get_col(2).almost_equal(curr_val.get_col(2))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_col3:
+        if (val->get_col(3).almost_equal(curr_val.get_col(3))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row3x1:
+        if (val->get_cell(3, 0) == curr_val.get_cell(3, 0)) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row3x2:
+        if (val->get_row(3).get_xy().almost_equal(curr_val.get_row(3).get_xy())) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_row3x3:
+        if (val->get_row3(3).almost_equal(curr_val.get_row3(3))) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_cell15:
+        if (val->get_cell(3, 3) == curr_val.get_cell(3, 3)) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_cell14:
+        if (val->get_cell(3, 2) == curr_val.get_cell(3, 2)) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      case Shader::SMP_cell13:
+        if (val->get_cell(3, 1) == curr_val.get_cell(3, 1)) {
+          redundant_caught++;
+          continue;
+        }
+        break;
+      }
 
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
@@ -2576,6 +2733,11 @@ issue_parameters(int altered) {
         }
       }
 #endif  // OPENGLES
+    }
+
+    if (GLCAT.is_debug()) {
+      GLCAT.debug()
+        << redundant_caught << " / " << mat_altered << " mat data was the same\n";
     }
   }
 
