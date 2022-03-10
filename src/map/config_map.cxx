@@ -23,6 +23,7 @@
 #include "spatialPartition.h"
 #include "bspTree.h"
 #include "kdTree.h"
+#include "staticPartitionedObjectNode.h"
 
 NotifyCategoryDef(map, "");
 
@@ -51,6 +52,7 @@ init_libmap() {
   SpatialPartition::init_type();
   BSPTree::init_type();
   KDTree::init_type();
+  StaticPartitionedObjectNode::init_type();
 
   MapData::register_with_read_factory();
   MapEntity::register_with_read_factory();

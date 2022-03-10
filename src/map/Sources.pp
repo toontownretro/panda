@@ -18,7 +18,8 @@
     mapNodeData.h mapNodeData.I \
     mapRender.h mapRender.I \
     mapRoot.h mapRoot.I \
-    spatialPartition.h spatialPartition.I
+    spatialPartition.h spatialPartition.I \
+    staticPartitionedObjectNode.h staticPartitionedObjectNode.I
 
   #define COMPOSITE_SOURCES \
     aabbTree.cxx \
@@ -34,7 +35,8 @@
     mapNodeData.cxx \
     mapRender.cxx \
     mapRoot.cxx \
-    spatialPartition.cxx
+    spatialPartition.cxx \
+    staticPartitionedObjectNode.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]
