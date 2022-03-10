@@ -860,8 +860,10 @@ public:
   PFNGLBINDPROGRAMARBPROC _glBindProgram;
 
 #ifndef OPENGLES
+  // DSA extension functions.
   bool _supports_dsa;
   PFNGLGENERATETEXTUREMIPMAPPROC _glGenerateTextureMipmap;
+  PFNGLCREATEBUFFERSPROC _glCreateBuffers;
   PFNGLNAMEDBUFFERSUBDATAPROC _glNamedBufferSubData;
   PFNGLNAMEDBUFFERDATAPROC _glNamedBufferData;
   PFNGLNAMEDBUFFERSTORAGEPROC _glNamedBufferStorage;

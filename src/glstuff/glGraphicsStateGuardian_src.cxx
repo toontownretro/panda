@@ -2463,7 +2463,8 @@ reset() {
   if (is_at_least_gl_version(4, 5) || has_extension("GL_ARB_direct_state_access")) {
     _glGenerateTextureMipmap = (PFNGLGENERATETEXTUREMIPMAPPROC)
       get_extension_func("glGenerateTextureMipmap");
-
+    _glCreateBuffers = (PFNGLCREATEBUFFERSPROC)
+      get_extension_func("glCreateBuffers");
     _glNamedBufferData = (PFNGLNAMEDBUFFERDATAPROC)
       get_extension_func("glNamedBufferData");
     _glNamedBufferSubData = (PFNGLNAMEDBUFFERSUBDATAPROC)
@@ -5909,7 +5910,11 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
     PStatGPUTimer timer(this, _prepare_vertex_buffer_pcollector);
 
     CLP(VertexBufferContext) *gvbc = new CLP(VertexBufferContext)(this, _prepared_objects, data);
-    _glGenBuffers(1, &gvbc->_index);
+    if (_supports_dsa) {
+      _glCreateBuffers(1, &gvbc->_index);
+    } else {
+      _glGenBuffers(1, &gvbc->_index);
+    }
 
 #ifndef NDEBUG
     if (_debug_buffers && GLCAT.is_debug()) {
@@ -5961,7 +5966,17 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
       PStatGPUTimer timer(this, _load_vertex_buffer_pcollector, reader->get_current_thread());
 
-      if (true) {//!_supports_dsa) {
+      if (_supports_dsa) {
+        // We can do this without binding the buffer.
+        if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
+          _glNamedBufferData(gvbc->_index, num_bytes, client_pointer,
+                             get_usage(reader->get_usage_hint()));
+
+        } else {
+          _glNamedBufferSubData(gvbc->_index, 0, num_bytes, client_pointer);
+        }
+
+      } else {
         if (_current_vbuffer_index != gvbc->_index) {
 #ifndef NDEBUG
           if (_debug_buffers && GLCAT.is_spam()) {
@@ -5979,16 +5994,6 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
         } else {
           _glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes, client_pointer);
-        }
-
-      } else {
-        // We can do this without binding the buffer.
-        if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
-          _glNamedBufferData(gvbc->_index, num_bytes, client_pointer,
-                             get_usage(reader->get_usage_hint()));
-
-        } else {
-          _glNamedBufferSubData(gvbc->_index, 0, num_bytes, client_pointer);
         }
       }
 
