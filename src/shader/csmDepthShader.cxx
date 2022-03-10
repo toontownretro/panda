@@ -40,8 +40,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_pixel_shader("shaders/csmdepth.frag.glsl");
 
   // Do we have transparency?
-  add_transparency(state);
-  add_alpha_test(state);
+  bool has_transparency = add_transparency(state);
+  bool has_alpha_test = add_alpha_test(state);
 
   // Hardware skinning?
   add_hardware_skinning(anim_spec);
@@ -49,7 +49,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // How about clip planes?
   if (add_clip_planes(state)) {
     set_vertex_shader_define("NEED_WORLD_POSITION");
-    set_geometry_shader_define("NEED_WORLD_POSITION");
+    //set_geometry_shader_define("NEED_WORLD_POSITION");
     set_pixel_shader_define("NEED_WORLD_POSITION");
   }
 
@@ -60,7 +60,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     state->get_attrib_def(ta);
 
     Texture *tex = ta->get_on_texture(TextureStage::get_default());
-    if (tex != nullptr) {
+    if (tex != nullptr && (has_transparency || has_alpha_test)) {
       set_pixel_shader_define("BASETEXTURE");
       set_vertex_shader_define("BASETEXTURE");
       set_input(ShaderInput("baseTextureSampler", tex));
@@ -70,7 +70,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   } else {
     MaterialParamBase *param = material->get_param("base_color");
-    if (param != nullptr) {
+    if (param != nullptr && (has_transparency || has_alpha_test)) {
       if (param->is_of_type(MaterialParamTexture::get_class_type())) {
         set_pixel_shader_define("BASETEXTURE");
         set_vertex_shader_define("BASETEXTURE");
