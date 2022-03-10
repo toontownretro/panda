@@ -101,6 +101,14 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
         return shader_a < shader_b;
       }
     }
+  }
+
+  // Prevent unnecessary vertex buffer rebinds.
+  if (a._munged_data != b._munged_data) {
+    return a._munged_data < b._munged_data;
+  }
+
+  if (sa != sb) {
 
     // TextureAttribs result in different generated ShaderAttribs with the
     // textures from the TextureAttrib.  They come second to programs in terms
@@ -125,11 +133,6 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
   // Vertex format changes are also fairly slow.
   if (a._sort_data._format != b._sort_data._format) {
     return a._sort_data._format < b._sort_data._format;
-  }
-
-  // Prevent unnecessary vertex buffer rebinds.
-  if (a._munged_data != b._munged_data) {
-    return a._munged_data < b._munged_data;
   }
 
   if (sa != sb) {
