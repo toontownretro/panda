@@ -281,6 +281,8 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
   _state_texture = nullptr;
   _state_shader = nullptr;
 
+  _current_thread = nullptr;
+
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = nullptr;
 #endif
@@ -1103,7 +1105,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       bool is_directional = node->is_of_type(DirectionalLight::get_class_type());
 
       // First the color, light type code in w
-      const LColor &c = light->get_color();
+      const LColor &c = light->get_color(_current_thread);
       PN_stdfloat w = (is_directional) ? 1.0f : 0.0f;
       into[i].set_row(0, LVecBase4(c.get_xyz(), w));
 
@@ -1115,12 +1117,12 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       LVecBase3 dir;
       if (is_spot) {
         Spotlight *slight = DCAST(Spotlight, node);
-        dir = transform.xform_vec(slight->get_lens()->get_view_vector());
+        dir = transform.xform_vec(slight->get_lens()->get_view_vector(_current_thread));
         into[i].set_row(1, LVecBase4(dir, w));
 
       } else if (is_directional) {
         DirectionalLight *dlight = DCAST(DirectionalLight, node);
-        dir = transform.xform_vec(-dlight->get_direction());
+        dir = transform.xform_vec(-dlight->get_direction(_current_thread));
 
       } else {
         dir.set(0, 1, 0);
@@ -1133,10 +1135,10 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       // Finally the spotlight parameters (exponent, stopdot, stopdot2, oodot)
       if (is_spot) {
         Spotlight *slight = DCAST(Spotlight, node);
-        PN_stdfloat stopdot = std::cos(deg_2_rad(slight->get_inner_cone()));
-        PN_stdfloat stopdot2 = std::cos(deg_2_rad(slight->get_outer_cone()));
+        PN_stdfloat stopdot = std::cos(deg_2_rad(slight->get_inner_cone(_current_thread)));
+        PN_stdfloat stopdot2 = std::cos(deg_2_rad(slight->get_outer_cone(_current_thread)));
         PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
-        into[i].set_row(3, LVecBase4(slight->get_exponent(), stopdot, stopdot2, oodot));
+        into[i].set_row(3, LVecBase4(slight->get_exponent(_current_thread), stopdot, stopdot2, oodot));
       } else {
         into[i].set_row(3, LVecBase4(0, 1, 1, 1));
       }
@@ -1167,7 +1169,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       LightLensNode *light_lens;
       DCAST_INTO_V(light_lens, node);
 
-      const LVecBase3 &atten = light->get_attenuation();
+      const LVecBase3 &atten = light->get_attenuation(_current_thread);
       bool shadows = light_lens->is_shadow_caster();
       if (light->get_light_type() == Light::LT_directional) {
         shadows = false;
@@ -1252,7 +1254,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
       int k = 0;
       for (; k < clight->get_num_cascades(); k++) {
-        into[k] = clight->get_cascade_mvp(k);
+        into[k] = clight->get_cascade_mvp(k, _current_thread);
       }
 
       for (; k < count; k++) {
@@ -2369,6 +2371,8 @@ calc_projection_mat(const Lens *lens) {
  */
 bool GraphicsStateGuardian::
 begin_frame(Thread *current_thread) {
+  _current_thread = current_thread;
+
   {
     PStatTimer timer(_prepare_pcollector);
     _prepared_objects->begin_frame(this, current_thread);

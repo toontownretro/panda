@@ -134,7 +134,7 @@ set_color_temperature(PN_stdfloat temperature) {
  * returns 0.
  */
 PN_stdfloat Light::
-get_exponent() const {
+get_exponent(Thread *current_thread) const {
   return 0;
 }
 
@@ -144,7 +144,7 @@ get_exponent() const {
  * the point to the vertex.
  */
 const LVecBase3 &Light::
-get_attenuation() const {
+get_attenuation(Thread *current_thread) const {
   static const LVecBase3 no_atten(1, 0, 0);
   return no_atten;
 }

@@ -39,8 +39,8 @@ CData(const PointLight::CData &copy) :
  * the point to the vertex.
  */
 INLINE const LVecBase3 &PointLight::
-get_attenuation() const {
-  CDReader cdata(_cycler);
+get_attenuation(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_attenuation;
 }
 
@@ -83,8 +83,8 @@ set_max_distance(PN_stdfloat max_distance) {
  * the coordinate space in which the light is assigned, and is usually 0.
  */
 INLINE const LPoint3 &PointLight::
-get_point() const {
-  CDReader cdata(_cycler);
+get_point(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_point;
 }
 

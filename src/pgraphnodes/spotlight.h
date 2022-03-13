@@ -47,11 +47,11 @@ public:
 
 PUBLISHED:
 
-  INLINE PN_stdfloat get_exponent() const final;
+  INLINE PN_stdfloat get_exponent(Thread *current_thread = Thread::get_current_thread()) const final;
   INLINE void set_exponent(PN_stdfloat exponent);
   MAKE_PROPERTY(exponent, get_exponent, set_exponent);
 
-  INLINE const LVecBase3 &get_attenuation() const final;
+  INLINE const LVecBase3 &get_attenuation(Thread *current_thread = Thread::get_current_thread()) const final;
   INLINE void set_attenuation(const LVecBase3 &attenuation);
   MAKE_PROPERTY(attenuation, get_attenuation, set_attenuation);
 
@@ -59,11 +59,11 @@ PUBLISHED:
   INLINE void set_max_distance(PN_stdfloat max_distance);
   MAKE_PROPERTY(max_distance, get_max_distance, set_max_distance);
 
-  INLINE PN_stdfloat get_outer_cone() const;
+  INLINE PN_stdfloat get_outer_cone(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_outer_cone(PN_stdfloat angle);
   MAKE_PROPERTY(outer_cone, get_outer_cone, set_outer_cone);
 
-  INLINE PN_stdfloat get_inner_cone() const;
+  INLINE PN_stdfloat get_inner_cone(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_inner_cone(PN_stdfloat angle);
   MAKE_PROPERTY(inner_cone, get_inner_cone, set_inner_cone);
 

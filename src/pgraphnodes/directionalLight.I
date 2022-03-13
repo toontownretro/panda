@@ -40,8 +40,8 @@ CData(const DirectionalLight::CData &copy) :
  * create a visible representation of the light.
  */
 INLINE const LPoint3 &DirectionalLight::
-get_point() const {
-  CDReader cdata(_cycler);
+get_point(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_point;
 }
 
@@ -60,8 +60,8 @@ set_point(const LPoint3 &point) {
  * coordinate space in which the light is assigned.
  */
 INLINE const LVector3 &DirectionalLight::
-get_direction() const {
-  CDReader cdata(_cycler);
+get_direction(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_direction;
 }
 

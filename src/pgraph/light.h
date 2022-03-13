@@ -60,7 +60,7 @@ PUBLISHED:
   INLINE bool is_stationary() const;
   MAKE_PROPERTY(stationary, is_stationary, set_stationary);
 
-  INLINE const LColor &get_color() const;
+  INLINE const LColor &get_color(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_color(const LColor &color);
   MAKE_PROPERTY(color, get_color, set_color);
 
@@ -70,8 +70,8 @@ PUBLISHED:
   MAKE_PROPERTY(color_temperature, get_color_temperature,
                                    set_color_temperature);
 
-  virtual PN_stdfloat get_exponent() const;
-  virtual const LVecBase3 &get_attenuation() const;
+  virtual PN_stdfloat get_exponent(Thread *current_thread = Thread::get_current_thread()) const;
+  virtual const LVecBase3 &get_attenuation(Thread *current_thread = Thread::get_current_thread()) const;
 
   INLINE void set_priority(int priority);
   INLINE int get_priority() const;

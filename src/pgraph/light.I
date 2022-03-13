@@ -81,8 +81,8 @@ is_stationary() const {
  * Returns the basic color of the light.
  */
 INLINE const LColor &Light::
-get_color() const {
-  CDReader cdata(_cycler);
+get_color(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_color;
 }
 

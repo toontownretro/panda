@@ -39,7 +39,7 @@ public:
                                    const LMatrix4 &to_object_space);
 
 PUBLISHED:
-  INLINE const LVecBase3 &get_attenuation() const final;
+  INLINE const LVecBase3 &get_attenuation(Thread *current_thread = Thread::get_current_thread()) const final;
   INLINE void set_attenuation(const LVecBase3 &attenuation);
   MAKE_PROPERTY(attenuation, get_attenuation, set_attenuation);
 
@@ -47,7 +47,7 @@ PUBLISHED:
   INLINE void set_max_distance(PN_stdfloat max_distance);
   MAKE_PROPERTY(max_distance, get_max_distance, set_max_distance);
 
-  INLINE const LPoint3 &get_point() const;
+  INLINE const LPoint3 &get_point(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_point(const LPoint3 &point);
   MAKE_PROPERTY(point, get_point, set_point);
 

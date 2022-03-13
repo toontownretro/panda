@@ -1440,8 +1440,8 @@ peek() {
  * since the given UpdateSeq value.
  */
 SparseArray Texture::
-get_image_modified_pages(UpdateSeq since, int n) const {
-  CDReader cdata(_cycler);
+get_image_modified_pages(UpdateSeq since, int n, Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
 
   SparseArray result;
   if (since == cdata->_image_modified) {

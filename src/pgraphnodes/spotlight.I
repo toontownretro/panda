@@ -40,8 +40,8 @@ CData(const Spotlight::CData &copy) :
  * center of the spotlight.  See set_exponent().
  */
 INLINE PN_stdfloat Spotlight::
-get_exponent() const {
-  CDReader cdata(_cycler);
+get_exponent(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_exponent;
 }
 
@@ -65,8 +65,8 @@ set_exponent(PN_stdfloat exponent) {
  * the point to the vertex.
  */
 INLINE const LVecBase3 &Spotlight::
-get_attenuation() const {
-  CDReader cdata(_cycler);
+get_attenuation(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_attenuation;
 }
 
@@ -107,10 +107,10 @@ set_max_distance(PN_stdfloat max_distance) {
  * angular falloff.
  */
 INLINE PN_stdfloat Spotlight::
-get_outer_cone() const {
+get_outer_cone(Thread *current_thread) const {
   // The outer angle is stored as the field of view of the lens associated
   // with the light.
-  return get_lens()->get_fov()[0];
+  return get_lens()->get_fov(current_thread)[0];
 }
 
 /**
@@ -129,8 +129,8 @@ set_outer_cone(PN_stdfloat angle) {
  * not have angular falloff.
  */
 INLINE PN_stdfloat Spotlight::
-get_inner_cone() const {
-  CDReader cdata(_cycler);
+get_inner_cone(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_inner_cone;
 }
 

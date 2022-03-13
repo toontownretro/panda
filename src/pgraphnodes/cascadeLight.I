@@ -154,8 +154,8 @@ set_border_bias(float bias) {
  * Returns the MVP matrix for the indicated cascade.
  */
 INLINE const LMatrix4 &CascadeLight::
-get_cascade_mvp(int n) const {
-  CDReader cdata(_cycler);
+get_cascade_mvp(int n, Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_cascade_mvps[n];
 }
 

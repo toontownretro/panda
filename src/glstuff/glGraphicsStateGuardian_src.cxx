@@ -5567,15 +5567,15 @@ update_texture(TextureContext *tc, bool force) {
   CLP(TextureContext) *gtc;
   DCAST_INTO_R(gtc, tc, false);
 
-  if (gtc->was_image_modified() || !gtc->_has_storage) {
+  if (gtc->was_image_modified(_current_thread) || !gtc->_has_storage) {
     PStatGPUTimer timer(this, _texture_update_pcollector);
 
     // If the texture image was modified, reload the texture.
     apply_texture(gtc);
 
     Texture *tex = tc->get_texture();
-    if (gtc->was_properties_modified()) {
-      specify_texture(gtc, tex->get_default_sampler());
+    if (gtc->was_properties_modified(_current_thread)) {
+      specify_texture(gtc, tex->get_default_sampler(_current_thread));
     }
 
     bool okflag = upload_texture(gtc, force, tex->uses_mipmaps());
@@ -5585,7 +5585,7 @@ update_texture(TextureContext *tc, bool force) {
       return false;
     }
 
-  } else if (gtc->was_properties_modified()) {
+  } else if (gtc->was_properties_modified(_current_thread)) {
     PStatGPUTimer timer(this, _texture_update_pcollector);
 
     // If only the properties have been modified, we don't necessarily need to
@@ -5593,7 +5593,7 @@ update_texture(TextureContext *tc, bool force) {
     apply_texture(gtc);
 
     Texture *tex = tc->get_texture();
-    if (specify_texture(gtc, tex->get_default_sampler())) {
+    if (specify_texture(gtc, tex->get_default_sampler(_current_thread))) {
       // Actually, looks like the texture *does* need to be reloaded.
       gtc->mark_needs_reload();
       bool okflag = upload_texture(gtc, force, tex->uses_mipmaps());

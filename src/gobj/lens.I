@@ -332,8 +332,8 @@ set_fov(const LVecBase2 &fov) {
  * set_fov().
  */
 INLINE const LVecBase2 &Lens::
-get_fov() const {
-  CDReader cdata(_cycler);
+get_fov(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return do_get_fov(cdata);
 }
 

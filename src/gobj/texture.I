@@ -743,8 +743,8 @@ get_texture_type() const {
  * meaning of the texels and, to some extent, their storage information.
  */
 INLINE Texture::Format Texture::
-get_format() const {
-  CDReader cdata(_cycler);
+get_format(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_format;
 }
 
@@ -910,8 +910,8 @@ set_render_to_texture(bool render_to_texture) {
  * overridden by a sampler state specified at a higher level.
  */
 INLINE const SamplerState &Texture::
-get_default_sampler() const {
-  CDReader cdata(_cycler);
+get_default_sampler(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_default_sampler;
 }
 
@@ -1810,8 +1810,8 @@ clear_simple_ram_image() {
  * the texture properties (unrelated to the image) are modified.
  */
 INLINE UpdateSeq Texture::
-get_properties_modified() const {
-  CDReader cdata(_cycler);
+get_properties_modified(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_properties_modified;
 }
 
@@ -1820,8 +1820,8 @@ get_properties_modified() const {
  * the texture image data (including mipmap levels) are modified.
  */
 INLINE UpdateSeq Texture::
-get_image_modified() const {
-  CDReader cdata(_cycler);
+get_image_modified(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_image_modified;
 }
 

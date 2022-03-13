@@ -59,7 +59,7 @@ PUBLISHED:
   INLINE void set_border_bias(float bias);
   MAKE_PROPERTY(border_bias, get_border_bias, set_border_bias);
 
-  INLINE const LMatrix4 &get_cascade_mvp(int n) const;
+  INLINE const LMatrix4 &get_cascade_mvp(int n, Thread *current_thread = Thread::get_current_thread()) const;
   INLINE const LVecBase2 &get_cascade_near_far(int n) const;
 
   INLINE void get_cascade_atlas_mins_maxs(int n, LVecBase2 &mins, LVecBase2 &maxs) const;

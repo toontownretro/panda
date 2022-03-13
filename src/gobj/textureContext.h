@@ -40,10 +40,10 @@ PUBLISHED:
   virtual uint64_t get_native_id() const;
   virtual uint64_t get_native_buffer_id() const;
 
-  INLINE bool was_modified() const;
-  INLINE bool was_properties_modified() const;
-  INLINE bool was_image_modified() const;
-  INLINE bool was_image_page_modified(int z, int n) const;
+  INLINE bool was_modified(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE bool was_properties_modified(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE bool was_image_modified(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE bool was_image_page_modified(int z, int n, Thread *current_thread = Thread::get_current_thread()) const;
 
   INLINE UpdateSeq get_properties_modified() const;
   INLINE UpdateSeq get_image_modified() const;

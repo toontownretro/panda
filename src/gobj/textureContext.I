@@ -45,8 +45,8 @@ get_view() const {
  * the last time mark_loaded() was called.
  */
 INLINE bool TextureContext::
-was_modified() const {
-  return was_properties_modified() || was_image_modified();
+was_modified(Thread *current_thread) const {
+  return was_properties_modified(current_thread) || was_image_modified(current_thread);
 }
 
 /**
@@ -54,8 +54,8 @@ was_modified() const {
  * modified since the last time mark_loaded() was called.
  */
 INLINE bool TextureContext::
-was_properties_modified() const {
-  return _properties_modified != get_texture()->get_properties_modified();
+was_properties_modified(Thread *current_thread) const {
+  return _properties_modified != get_texture()->get_properties_modified(current_thread);
 }
 
 /**
@@ -63,8 +63,8 @@ was_properties_modified() const {
  * mark_loaded() was called.
  */
 INLINE bool TextureContext::
-was_image_modified() const {
-  return _image_modified != get_texture()->get_image_modified();
+was_image_modified(Thread *current_thread) const {
+  return _image_modified != get_texture()->get_image_modified(current_thread);
 }
 
 /**
@@ -72,8 +72,8 @@ was_image_modified() const {
  * the last time mark_loaded() was called.
  */
 INLINE bool TextureContext::
-was_image_page_modified(int z, int n) const {
-  return get_texture()->get_image_modified_pages(_image_modified, n).get_bit(z);
+was_image_page_modified(int z, int n, Thread *current_thread) const {
+  return get_texture()->get_image_modified_pages(_image_modified, n, current_thread).get_bit(z);
 }
 
 /**

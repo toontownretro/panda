@@ -39,11 +39,11 @@ public:
                                    const LMatrix4 &to_object_space);
 
 PUBLISHED:
-  INLINE const LPoint3 &get_point() const;
+  INLINE const LPoint3 &get_point(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_point(const LPoint3 &point);
   MAKE_PROPERTY(point, get_point, set_point);
 
-  INLINE const LVector3 &get_direction() const;
+  INLINE const LVector3 &get_direction(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_direction(const LVector3 &direction);
   MAKE_PROPERTY(direction, get_direction, set_direction);
 

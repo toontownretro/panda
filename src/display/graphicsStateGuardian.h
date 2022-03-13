@@ -648,6 +648,8 @@ protected:
   ShaderModel _shader_model;
   int _supported_shader_caps;
 
+  Thread *_current_thread;
+
   static PT(TextureStage) _alpha_scale_texture_stage;
 
   PN_stdfloat _gamma;

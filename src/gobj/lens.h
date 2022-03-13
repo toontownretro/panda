@@ -94,7 +94,7 @@ PUBLISHED:
   INLINE void set_fov(PN_stdfloat fov);
   INLINE void set_fov(PN_stdfloat hfov, PN_stdfloat vfov);
   INLINE void set_fov(const LVecBase2 &fov);
-  INLINE const LVecBase2 &get_fov() const;
+  INLINE const LVecBase2 &get_fov(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE PN_stdfloat get_hfov() const;
   INLINE PN_stdfloat get_vfov() const;
   PN_stdfloat get_min_fov() const;
@@ -123,7 +123,7 @@ PUBLISHED:
 
   INLINE void set_view_vector(PN_stdfloat x, PN_stdfloat y, PN_stdfloat z, PN_stdfloat i, PN_stdfloat j, PN_stdfloat k);
   void set_view_vector(const LVector3 &view_vector, const LVector3 &up_vector);
-  const LVector3 &get_view_vector() const;
+  const LVector3 &get_view_vector(Thread *current_thread = Thread::get_current_thread()) const;
   const LVector3 &get_up_vector() const;
   LPoint3 get_nodal_point() const;
   MAKE_PROPERTY(nodal_point, get_nodal_point);

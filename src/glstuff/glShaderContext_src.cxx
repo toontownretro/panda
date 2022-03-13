@@ -2212,7 +2212,7 @@ set_state_and_transform(const RenderState *target_rs,
   }
 
   // Is this the first time this shader is used this frame?
-  int frame_number = ClockObject::get_global_clock()->get_frame_count();
+  int frame_number = ClockObject::get_global_clock()->get_frame_count(_glgsg->_current_thread);
   if (frame_number != _frame_number) {
      altered |= Shader::SSD_frame;
     _frame_number = frame_number;
@@ -3347,7 +3347,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
       }
       continue;
     }
-    else if (Texture::is_integer(tex->get_format())) {
+    else if (Texture::is_integer(tex->get_format(_glgsg->_current_thread))) {
       // Required to satisfy Intel drivers, which will otherwise sample zero.
       sampler.set_minfilter(sampler.uses_mipmaps() ? SamplerState::FT_nearest_mipmap_nearest : SamplerState::FT_nearest);
       sampler.set_magfilter(SamplerState::FT_nearest);

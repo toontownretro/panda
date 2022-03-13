@@ -367,7 +367,7 @@ PUBLISHED:
   MAKE_PROPERTY(texture_type, get_texture_type);
   MAKE_PROPERTY(usage_hint, get_usage_hint);
 
-  INLINE Format get_format() const;
+  INLINE Format get_format(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_format(Format format);
   MAKE_PROPERTY(format, get_format, set_format);
 
@@ -418,7 +418,7 @@ PUBLISHED:
   INLINE void set_render_to_texture(bool render_to_texture);
   MAKE_PROPERTY(render_to_texture, get_render_to_texture, set_render_to_texture);
 
-  INLINE const SamplerState &get_default_sampler() const;
+  INLINE const SamplerState &get_default_sampler(Thread *current_thread = Thread::get_current_thread()) const;
   INLINE void set_default_sampler(const SamplerState &sampler);
   MAKE_PROPERTY(default_sampler, get_default_sampler, set_default_sampler);
   INLINE bool uses_mipmaps() const;
@@ -522,12 +522,12 @@ PUBLISHED:
 
   PT(TexturePeeker) peek();
 
-  INLINE UpdateSeq get_properties_modified() const;
-  INLINE UpdateSeq get_image_modified() const;
+  INLINE UpdateSeq get_properties_modified(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE UpdateSeq get_image_modified(Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_PROPERTY(properties_modified, get_properties_modified);
   MAKE_PROPERTY(image_modified, get_image_modified);
 
-  SparseArray get_image_modified_pages(UpdateSeq since, int n = 0) const;
+  SparseArray get_image_modified_pages(UpdateSeq since, int n = 0, Thread *current_thread = Thread::get_current_thread()) const;
 
   INLINE bool has_auto_texture_scale() const;
   INLINE AutoTextureScale get_auto_texture_scale() const;

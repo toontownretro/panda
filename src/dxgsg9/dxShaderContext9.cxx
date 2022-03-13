@@ -1057,7 +1057,7 @@ update_shader_texture_bindings(DXShaderContext9 *prev, GSG *gsg) {
     int view = gsg->get_current_tex_view_offset();
     SamplerState sampler;
 
-    PT(Texture) tex = gsg->fetch_specified_texture(spec, sampler, view);
+    Texture *tex = gsg->fetch_specified_texture(spec, sampler, view);
     if (tex.is_null()) {
       continue;
     }

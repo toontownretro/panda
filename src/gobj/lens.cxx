@@ -211,8 +211,8 @@ set_view_vector(const LVector3 &view_vector, const LVector3 &up_vector) {
  * Returns the axis along which the lens is facing.
  */
 const LVector3 &Lens::
-get_view_vector() const {
-  CDReader cdata(_cycler);
+get_view_vector(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   if ((cdata->_comp_flags & CF_view_vector) == 0) {
     ((Lens *)this)->do_compute_view_vector((CData *)cdata.p());
   }
