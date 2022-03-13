@@ -4363,6 +4363,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
 
   _geom_display_list = 0;
 
+#if 0
   if (_auto_antialias_mode) {
     switch (geom_reader->get_primitive_type()) {
     case GeomPrimitive::PT_polygons:
@@ -4391,6 +4392,7 @@ begin_draw_primitives(const GeomPipelineReader *geom_reader,
       _state_mask.set_bit(color_blend_slot);
     }
   }
+#endif
 
 #ifndef OPENGLES_1
   if (_use_vertex_attrib_binding) {

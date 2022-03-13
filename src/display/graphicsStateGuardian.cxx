@@ -2575,15 +2575,20 @@ draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current
     _geom_node = object._geom_node;
 #endif
 
-    if (/*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
+    if (true) {//*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
       nassertr(object._geom != nullptr, false);
-      set_state_and_transform(object._state, object._internal_transform);
+      if (object._state != _state_rs || object._internal_transform != _internal_transform) {
+        set_state_and_transform(object._state, object._internal_transform);
+      }
       if (!draw_geom(object._geom, object._munged_data, object._num_instances,
+                     object._primitive,
                      force, current_thread)) {
         all_ok = false;
       }
 
-    } else if (object._draw_callback != nullptr) {
+    }
+    #if 0
+    else if (object._draw_callback != nullptr) {
       // It has a callback associated.
       clear_before_callback();
       set_state_and_transform(object._state, object._internal_transform);
@@ -2598,6 +2603,7 @@ draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current
     } else {
       // TODO: instance list.
     }
+    #endif
 
 #ifdef RENDER_TRACK_GEOM_NODES
     _geom_node = nullptr;
@@ -2615,13 +2621,16 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = object->_geom_node;
 #endif
-  if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
+  if (true) {///*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
     return draw_geom(object->_geom, object->_munged_data, object->_num_instances,
+                     object->_primitive,
                      force, current_thread);
 
-  } else if (object->_draw_callback != nullptr) {
+  }
+  #if 0
+  else if (object->_draw_callback != nullptr) {
     // It has a callback associated.
     clear_before_callback();
     set_state_and_transform(object->_state, object->_internal_transform);
@@ -2638,6 +2647,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
     // TODO: instances.
     return true;
   }
+  #endif
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = nullptr;
 #endif
@@ -2647,11 +2657,9 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
  * Draws all primitives of the indicated Geom.
  */
 bool GraphicsStateGuardian::
-draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
+draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, const GeomPrimitive *prim,
           bool force, Thread *current_thread) {
-  GeomPipelineReader geom_reader(geom, current_thread);
   GeomVertexDataPipelineReader data_reader(vdata, current_thread);
-
   GeomVertexArrayDataHandle handles[max_array_handles];
   for (int i = 0; i < data_reader._cdata->_arrays.size(); ++i) {
     handles[i]._current_thread = current_thread;
@@ -2659,20 +2667,22 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
   }
   data_reader.set_array_readers(handles);
 
+  //GeomPipelineReader geom_reader(geom, current_thread);
+
   bool all_ok;
   //{
     //PStatTimer timer(Geom::_draw_primitive_setup_pcollector);
-    all_ok = begin_draw_primitives(&geom_reader, &data_reader, num_instances, force);
+    all_ok = begin_draw_primitives(/*&geom_reader*/nullptr, &data_reader, num_instances, force);
   //}
 
   if (!all_ok) {
     return false;
   }
 
-  // Draw all the primitives of the Geom.
-  for (size_t i = 0; i < geom_reader._cdata->_primitives.size(); i++) {
-    const GeomPrimitive *prim = geom_reader._cdata->_primitives[i].get_read_pointer(current_thread);
-
+  // We can optimize for the common case of a Geom having one GeomPrimitive.
+  // The GeomPrimitive pointer is stored directly on the CullableObject and
+  // eliminates the need to read from memory stored on the Geom.
+  if (prim != nullptr) {
     GeomPrimitivePipelineReader prim_reader(prim, current_thread);
     if (prim_reader.get_num_vertices() != 0) {
       prim_reader.check_minmax();
@@ -2749,6 +2759,96 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances,
       default:
         all_ok = false;
         break;
+      }
+    }
+
+  } else {
+    // The Geom has multiple GeomPrimitives.  We have to take the slower path
+    // of reading memory from the Geom.
+
+    GeomPipelineReader geom_reader(geom, current_thread);
+    // Draw all the primitives of the Geom.
+    size_t num_prims = geom_reader._cdata->_primitives.size();
+    for (size_t i = 0; i < num_prims; ++i) {
+      prim = geom_reader._cdata->_primitives[i].get_read_pointer(current_thread);
+
+      GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+      if (prim_reader.get_num_vertices() != 0) {
+        prim_reader.check_minmax();
+
+        //nassertr(prim_reader.check_valid(&data_reader), false);
+
+        switch (prim->get_geom_primitive_type()) {
+        case GeomPrimitive::GPT_triangles:
+          if (!draw_triangles(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_triangle_strips:
+          if (!draw_tristrips(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_triangle_fans:
+          if (!draw_trifans(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_lines:
+          if (!draw_lines(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_line_strips:
+          if (!draw_linestrips(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_points:
+          if (!draw_points(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_triangles_adj:
+          if (!draw_triangles_adj(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_triangle_strips_adj:
+          if (!draw_tristrips_adj(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_lines_adj:
+          if (!draw_lines_adj(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_line_strips_adj:
+          if (!draw_linestrips_adj(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        case GeomPrimitive::GPT_patches:
+          if (!draw_patches(&prim_reader, force)) {
+            all_ok = false;
+          }
+          break;
+
+        default:
+          all_ok = false;
+          break;
+        }
       }
     }
   }

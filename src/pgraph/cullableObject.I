@@ -38,8 +38,12 @@ CullableObject(CPT(Geom) geom, CPT(RenderState) state,
 #endif
   _num_instances(1)
 {
+  _primitive = nullptr;
   if (_geom != nullptr) {
     _munged_data = _geom->get_vertex_data();
+    if (_geom->get_num_primitives() == 1) {
+      _primitive = _geom->get_primitive(0);
+    }
   } else {
     _munged_data = nullptr;
   }
@@ -55,6 +59,7 @@ CullableObject(const CullableObject &copy) :
   _internal_transform(copy._internal_transform),
   _geom(copy._geom),
   _munged_data(copy._munged_data),
+  _primitive(copy._primitive),
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node(copy._geom_node),
 #endif
@@ -72,6 +77,7 @@ CullableObject(CullableObject &&other) :
   _internal_transform(std::move(other._internal_transform)),
   _geom(std::move(other._geom)),
   _munged_data(std::move(other._munged_data)),
+  _primitive(std::move(other._primitive)),
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node(std::move(other._geom_node)),
 #endif
@@ -85,11 +91,12 @@ CullableObject(CullableObject &&other) :
  */
 INLINE void CullableObject::
 operator = (const CullableObject &copy) {
-  _draw_callback = copy._draw_callback;
+  //_draw_callback = copy._draw_callback;
   _state = copy._state;
   _internal_transform = copy._internal_transform;
   _geom = copy._geom;
   _munged_data = copy._munged_data;
+  _primitive = copy._primitive;
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = copy._geom_node;
 #endif
@@ -102,11 +109,12 @@ operator = (const CullableObject &copy) {
  */
 INLINE void CullableObject::
 operator = (CullableObject &&other) {
-  _draw_callback = std::move(other._draw_callback);
+  //_draw_callback = std::move(other._draw_callback);
   _state = std::move(other._state);
   _internal_transform = std::move(other._internal_transform);
   _geom = std::move(other._geom);
   _munged_data = std::move(other._munged_data);
+  _primitive = std::move(other._primitive);
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = std::move(other._geom_node);
 #endif
@@ -181,7 +189,7 @@ request_resident() const {
  */
 INLINE void CullableObject::
 set_draw_callback(CallbackObject *draw_callback) {
-  _draw_callback = draw_callback;
+  //_draw_callback = draw_callback;
 }
 
 /**
@@ -212,7 +220,7 @@ draw_callback(GraphicsStateGuardianBase *gsg, bool force, Thread *current_thread
   gsg->clear_before_callback();
   gsg->set_state_and_transform(_state, _internal_transform);
   GeomDrawCallbackData cbdata(this, gsg, force);
-  _draw_callback->do_callback(&cbdata);
+  //_draw_callback->do_callback(&cbdata);
   if (cbdata.get_lost_state()) {
     // Tell the GSG to forget its state.
     gsg->clear_state_and_transform();

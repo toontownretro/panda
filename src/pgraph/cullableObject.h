@@ -39,7 +39,7 @@ class GeomMunger;
  * The smallest atom of cull.  This is normally just a Geom and its associated
  * state, but it also contain a draw callback.
  */
-class EXPCL_PANDA_PGRAPH CullableObject {
+class ALIGN_64BYTE EXPCL_PANDA_PGRAPH CullableObject {
 public:
   INLINE CullableObject();
   INLINE CullableObject(CPT(Geom) geom, CPT(RenderState) state,
@@ -72,7 +72,7 @@ public:
 
 public:
   //CPT(InstanceList) _instances;
-  PT(CallbackObject) _draw_callback;
+  //PT(CallbackObject) _draw_callback;
 
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;
@@ -80,11 +80,11 @@ public:
   CPT(Geom) _geom;
   const GeomVertexData *_munged_data;
 
+  const GeomPrimitive *_primitive;
+
 #ifdef RENDER_TRACK_GEOM_NODES
   GeomNode *_geom_node;
 #endif
-
-  int _num_instances = 1;
 
   // This union contains the data used by various CullBins to sort their list
   // of CullableObjects.  Each bin type will only use one of the three
@@ -95,6 +95,8 @@ public:
     PN_stdfloat _dist;
     int _draw_order;
   } _sort_data;
+
+  int _num_instances = 1;
 
 private:
   //void munge_instances(Thread *current_thread);
