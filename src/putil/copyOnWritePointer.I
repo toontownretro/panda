@@ -208,7 +208,7 @@ get_unsafe_pointer() {
  * Returns true if the CopyOnWritePointer contains a NULL pointer, false
  * otherwise.
  */
-bool CopyOnWritePointer::
+INLINE bool CopyOnWritePointer::
 is_null() const {
   return (_cow_object == nullptr);
 }
@@ -216,7 +216,7 @@ is_null() const {
 /**
  * Sets the pointer to NULL.
  */
-void CopyOnWritePointer::
+INLINE void CopyOnWritePointer::
 clear() {
   if (_cow_object != nullptr) {
     cache_unref_delete(_cow_object);
