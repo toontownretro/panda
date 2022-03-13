@@ -22,7 +22,7 @@ get_value_type() const {
 /**
  * Retrieves the NodePath stored in the parameter.
  */
-INLINE NodePath ParamNodePath::
+INLINE const NodePath &ParamNodePath::
 get_value() const {
   return _node_path;
 }

@@ -48,6 +48,21 @@ get_on_light(size_t n) const {
 }
 
 /**
+ * Returns the nth light turned on by the attribute, sorted in render order.
+ *
+ * This version returns a reference to the light NodePath without having to
+ * touch the reference count.
+ */
+INLINE const NodePath &LightAttrib::
+get_on_light_quick(size_t n) const {
+  static NodePath fail_light = NodePath::fail();
+
+  check_sorted();
+  nassertr(n < _sorted_on_lights.size(), fail_light);
+  return _sorted_on_lights[n];
+}
+
+/**
  * Returns true if the indicated light is turned on by the attrib, false
  * otherwise.
  */

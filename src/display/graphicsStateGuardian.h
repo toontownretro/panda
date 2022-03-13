@@ -340,8 +340,8 @@ public:
                             LMatrix4 *into, int count = 1);
   void fetch_specified_member(const NodePath &np, CPT_InternalName member,
                               LMatrix4 &t);
-  PT(Texture) fetch_specified_texture(Shader::ShaderTexSpec &spec,
-                                      SamplerState &sampler, int &view);
+  Texture *fetch_specified_texture(Shader::ShaderTexSpec &spec,
+                                   SamplerState &sampler, int &view);
   const Shader::ShaderPtrData *fetch_ptr_parameter(const Shader::ShaderPtrSpec& spec);
   bool fetch_ptr_parameter(const Shader::ShaderPtrSpec &spec, Shader::ShaderPtrData &data);
 
@@ -442,8 +442,8 @@ public:
 
   static void create_gamma_table (PN_stdfloat gamma, unsigned short *red_table, unsigned short *green_table, unsigned short *blue_table);
 
-  PT(Texture) get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host=nullptr);
-  PT(Texture) get_dummy_shadow_map(Texture::TextureType texture_type) const;
+  Texture *get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host=nullptr);
+  Texture *get_dummy_shadow_map(Texture::TextureType texture_type) const;
   virtual GraphicsOutput *make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host);
 
   virtual void ensure_generated_shader(const RenderState *state);
@@ -497,7 +497,7 @@ protected:
 
   // The desired state of the graphics context, during processing of
   // set_state_and_transform().
-  CPT(RenderState) _target_rs;
+  const RenderState *_target_rs;
 
   // This bitmask contains a 1 bit everywhere that _state_rs has a known
   // value.  If a bit is 0, the corresponding state must be re-sent.  Derived
@@ -513,15 +513,15 @@ protected:
   // (according to graphics cards limits) or extend it (according to
   // ColorScaleAttribs in effect) beyond what is specifically requested in the
   // scene graph.
-  CPT(TextureAttrib) _target_texture;
-  CPT(TextureAttrib) _state_texture;
-  CPT(TexGenAttrib) _target_tex_gen;
+  const TextureAttrib *_target_texture;
+  const TextureAttrib *_state_texture;
+  const TexGenAttrib *_target_tex_gen;
   CPT(TexGenAttrib) _state_tex_gen;
 
   // Also, the shader might be the explicitly-requested shader, or it might be
   // an auto-generated one.
-  CPT(ShaderAttrib) _state_shader;
-  CPT(ShaderAttrib) _target_shader;
+  const ShaderAttrib *_state_shader;
+  const ShaderAttrib *_target_shader;
 
   // This is set by begin_draw_primitives(), and are only valid between
   // begin_draw_primitives() and end_draw_primitives().

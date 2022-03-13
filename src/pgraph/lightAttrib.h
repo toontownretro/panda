@@ -73,6 +73,8 @@ PUBLISHED:
   INLINE size_t get_num_on_lights() const;
   INLINE size_t get_num_non_ambient_lights() const;
   INLINE NodePath get_on_light(size_t n) const;
+  INLINE const NodePath &get_on_light_quick(size_t n) const;
+  //INLINE PandaNode *get_on_light_node(size_t n) const;
   MAKE_SEQ(get_on_lights, get_num_on_lights, get_on_light);
   INLINE bool has_on_light(const NodePath &light) const;
   INLINE bool has_any_on_light() const;

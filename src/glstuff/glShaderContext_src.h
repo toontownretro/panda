@@ -88,12 +88,12 @@ private:
   bool _needs_query_uniform_locations = false;
   bool _remap_uniform_locations = false;
 
-  WCPT(RenderState) _state_rs;
+  CPT(RenderState) _state_rs;
   CPT(TransformState) _modelview_transform;
   CPT(TransformState) _camera_transform;
   CPT(TransformState) _projection_transform;
-  CPT(ColorAttrib) _color_attrib;
-  WCPT(ShaderAttrib) _shader_attrib;
+  const ColorAttrib *_color_attrib;
+  const ShaderAttrib *_shader_attrib;
 
 /*
  * struct ParamContext { CPT(InternalName) _name; GLint _location; GLsizei

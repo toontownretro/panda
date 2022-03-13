@@ -274,6 +274,13 @@ GraphicsStateGuardian(CoordinateSystem internal_coordinate_system,
   _gamma = 1.0f;
   _texture_quality_override = Texture::QL_default;
 
+  _target_rs = nullptr;
+  _target_shader = nullptr;
+  _target_texture = nullptr;
+  _target_tex_gen = nullptr;
+  _state_texture = nullptr;
+  _state_shader = nullptr;
+
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = nullptr;
 #endif
@@ -1086,7 +1093,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath np = target_light->get_on_light(i);
+      const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
       Light *light = node->as_light();
@@ -1151,7 +1158,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath np = target_light->get_on_light(i);
+      const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
       Light *light = node->as_light();
@@ -1190,7 +1197,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath np = target_light->get_on_light(i);
+      const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
       Light *light = node->as_light();
@@ -1232,7 +1239,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath light = target_light->get_on_light(i);
+      const NodePath &light = target_light->get_on_light_quick(i);
       if (light.is_empty()) {
         continue;
       }
@@ -1264,7 +1271,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath light = target_light->get_on_light(i);
+      const NodePath &light = target_light->get_on_light_quick(i);
       if (light.is_empty()) {
         continue;
       }
@@ -1298,7 +1305,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
     size_t i = 0;
     for (; i < num_lights; ++i) {
-      NodePath light = target_light->get_on_light(i);
+      const NodePath &light = target_light->get_on_light_quick(i);
       if (light.is_empty()) {
         continue;
       }
@@ -1872,7 +1879,7 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LMatrix4 &t)
 /**
  * Like fetch_specified_value, but for texture inputs.
  */
-PT(Texture) GraphicsStateGuardian::
+Texture *GraphicsStateGuardian::
 fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
                         int &view) {
 
@@ -1893,7 +1900,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         NodePath np = _target_shader->get_shader_input_nodepath(parent);
 
         if (basename == "shadowMap") {
-          PT(Texture) tex = get_shadow_map(np);
+          Texture *tex = get_shadow_map(np);
           if (tex != nullptr) {
             sampler = tex->get_default_sampler();
           }
@@ -1948,12 +1955,12 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
       // via this mechanism.
       size_t num_lights = target_light->get_num_non_ambient_lights();
       if (spec._stage >= 0 && (size_t)spec._stage < num_lights) {
-        NodePath light = target_light->get_on_light((size_t)spec._stage);
+        const NodePath &light = target_light->get_on_light_quick((size_t)spec._stage);
         nassertr(!light.is_empty(), nullptr);
         Light *light_obj = light.node()->as_light();
         nassertr(light_obj != nullptr, nullptr);
 
-        PT(Texture) tex;
+        Texture *tex;
         LightLensNode *lln = DCAST(LightLensNode, light.node());
         if (lln != nullptr && lln->_shadow_caster && lln->get_light_type() != Light::LT_directional) {
           tex = get_shadow_map(light);
@@ -1972,7 +1979,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         return tex;
       } else {
         // There is no such light assigned.  Bind a dummy shadow map.
-        PT(Texture) tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
+        Texture * tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
         if (tex != nullptr) {
           sampler = tex->get_default_sampler();
         }
@@ -1989,7 +1996,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
       // We expect there to only be one cascaded directional light.
       size_t num_lights = target_light->get_num_non_ambient_lights();
       for (size_t i = 0; i < num_lights; i++) {
-        NodePath light = target_light->get_on_light(i);
+        const NodePath &light = target_light->get_on_light_quick(i);
         if (light.is_empty()) {
           continue;
         }
@@ -1998,7 +2005,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
           continue;
         }
 
-        PT(Texture) tex;
+        Texture * tex;
         LightLensNode *lln = DCAST(LightLensNode, light.node());
         if (lln != nullptr && lln->_shadow_caster) {
           tex = get_shadow_map(light);
@@ -3164,7 +3171,7 @@ do_issue_light() {
     any_on_lights = target_light->has_any_on_light();
     size_t filtered_lights = std::min((size_t)_max_lights, target_light->get_num_non_ambient_lights());
     for (size_t li = 0; li < filtered_lights; ++li) {
-      NodePath light = target_light->get_on_light(li);
+      const NodePath &light = target_light->get_on_light_quick(li);
       nassertv(!light.is_empty());
       Light *light_obj = light.node()->as_light();
       nassertv(light_obj != nullptr);
@@ -3475,18 +3482,21 @@ determine_target_texture() {
   _target_texture = target_texture;
   _target_tex_gen = target_tex_gen;
 
-  if (_has_texture_alpha_scale) {
-    PT(TextureStage) stage = get_alpha_scale_texture_stage();
-    PT(Texture) texture = TexturePool::get_alpha_scale_map();
+  //if (_has_texture_alpha_scale) {
+  //  PT(TextureStage) stage = get_alpha_scale_texture_stage();
+  //  PT(Texture) texture = TexturePool::get_alpha_scale_map();
 
-    _target_texture = DCAST(TextureAttrib, _target_texture->add_on_stage(stage, texture));
-    _target_tex_gen = DCAST(TexGenAttrib, _target_tex_gen->add_stage
-                               (stage, TexGenAttrib::M_constant, LTexCoord3(_current_color_scale[3], 0.0f, 0.0f)));
-  }
+  //  _target_texture = DCAST(TextureAttrib, _target_texture->add_on_stage(stage, texture));
+  //  _target_tex_gen = DCAST(TexGenAttrib, _target_tex_gen->add_stage
+  //                             (stage, TexGenAttrib::M_constant, LTexCoord3(_current_color_scale[3], 0.0f, 0.0f)));
+  //}
 
-  int max_texture_stages = get_max_texture_stages();
-  _target_texture = _target_texture->filter_to_max(max_texture_stages);
-  nassertv(_target_texture->get_num_on_stages() <= max_texture_stages);
+  //int max_texture_stages = get_max_texture_stages();
+  //if (_target_texture->get_num_on_stages() > max_texture_stages) {
+  //  _target_texture = _target_texture->filter_to_max(max_texture_stages);
+  //}
+  //_target_texture = _target_texture->filter_to_max(max_texture_stages);
+  //nassertv(_target_texture->get_num_on_stages() <= max_texture_stages);
 }
 
 /**
@@ -3663,7 +3673,7 @@ async_reload_texture(TextureContext *tc) {
  * created, using the given host window to create the buffer, or the current
  * window if that is set to NULL.
  */
-PT(Texture) GraphicsStateGuardian::
+Texture *GraphicsStateGuardian::
 get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   PandaNode *node = light_np.node();
   bool is_point = node->is_of_type(PointLight::get_class_type());
@@ -3691,7 +3701,7 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   nassertr(light->_shadow_map != nullptr, nullptr);
 
   // See if we already have a buffer.  If not, create one.
-  if (light->_sbuffers.count(this) != 0) {
+  if (light->_sbuffers.find(this) != light->_sbuffers.end()) {
     // There's already a buffer - use that.
     return light->_shadow_map;
   }
@@ -3738,7 +3748,7 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
  * Returns a dummy shadow map that can be used for a light of the given type
  * that does not cast shadows.
  */
-PT(Texture) GraphicsStateGuardian::
+Texture *GraphicsStateGuardian::
 get_dummy_shadow_map(Texture::TextureType texture_type) const {
   if (texture_type == Texture::TT_2d_texture) {
     static PT(Texture) dummy_2d;

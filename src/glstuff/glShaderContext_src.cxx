@@ -49,6 +49,12 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
   _glsl_program = 0;
   _uses_standard_vertex_arrays = false;
   _input_signature = nullptr;
+  _shader_attrib = nullptr;
+  _color_attrib = nullptr;
+  _state_rs = nullptr;
+  _modelview_transform = nullptr;
+  _camera_transform = nullptr;
+  _projection_transform = nullptr;
   _color_attrib_index = -1;
   _transform_table_index = -1;
   _slider_table_index = -1;
@@ -2152,15 +2158,13 @@ set_state_and_transform(const RenderState *target_rs,
     altered |= Shader::SSD_projection;
   }
 
-  const RenderState *state_rs = nullptr;
-  if (!_state_rs.was_deleted()) {
-    state_rs = _state_rs.p();
-  }
+  const RenderState *state_rs = _state_rs.p();
   if (state_rs == nullptr) {
     // Reset all of the state.
-    altered |= Shader::SSD_general;
-    _state_rs = target_rs;
+    altered |= Shader::SSD_general | Shader::SSD_shaderinputs;
+    _shader_attrib = _glgsg->_target_shader;
     target_rs->get_attrib_def(_color_attrib);
+    _state_rs = target_rs;
 
   } else if (state_rs != target_rs) {
     // The state has changed since last time.
@@ -2200,12 +2204,11 @@ set_state_and_transform(const RenderState *target_rs,
         target_rs->get_attrib(texture_slot)) {
       altered |= Shader::SSD_texture;
     }
+    if (_shader_attrib != _glgsg->_target_shader) {
+      altered |= Shader::SSD_shaderinputs;
+      _shader_attrib = _glgsg->_target_shader;
+    }
     _state_rs = target_rs;
-  }
-
-  if (_shader_attrib.get_orig() != _glgsg->_target_shader || _shader_attrib.was_deleted()) {
-    altered |= Shader::SSD_shaderinputs;
-    _shader_attrib = _glgsg->_target_shader;
   }
 
   // Is this the first time this shader is used this frame?
@@ -2246,13 +2249,14 @@ issue_parameters(int altered) {
       _glgsg->_glUniform1i(_frame_number_loc, _frame_number);
     }
 
-    int redundant_ptr_caught = 0;
+    //int redundant_ptr_caught = 0;
     // Iterate through _ptr parameters
     for (int i = 0; i < (int)_shader->_ptr_spec.size(); ++i) {
       Shader::ShaderPtrSpec &spec = _shader->_ptr_spec[i];
 
-      Shader::ShaderPtrData ptr_data;
-      if (!_glgsg->fetch_ptr_parameter(spec, ptr_data)) { //the input is not contained in ShaderPtrData
+      const Shader::ShaderPtrData *ptr_data = _glgsg->fetch_ptr_parameter(spec);
+      if (ptr_data == nullptr) {
+        // The input is not contained in ShaderPtrData.
         release_resources();
         return;
       }
@@ -2260,10 +2264,10 @@ issue_parameters(int altered) {
       nassertd(spec._dim[1] > 0) continue;
 
       uint32_t dim = spec._dim[1] * spec._dim[2];
-      int array_size = min(spec._dim[0], (uint32_t)(ptr_data._size / dim));
+      int array_size = min(spec._dim[0], (uint32_t)(ptr_data->_size / dim));
 
       size_t mem_size;
-      switch (ptr_data._type) {
+      switch (ptr_data->_type) {
       case ShaderType::ST_bool:
         mem_size = std::min(_ptr_cache[i]._size, (size_t)(array_size * dim));
         break;
@@ -2280,15 +2284,15 @@ issue_parameters(int altered) {
         break;
       }
 
-      if (!memcmp(_ptr_cache[i]._data, (unsigned char *)ptr_data._ptr, mem_size)) {
-        if (GLCAT.is_debug()) {
-          GLCAT.debug()
-            << "ptr data equal, not issuing glUniform\n";
-        }
-        redundant_ptr_caught++;
+      if (!memcmp(_ptr_cache[i]._data, (unsigned char *)ptr_data->_ptr, mem_size)) {
+        //if (GLCAT.is_debug()) {
+        //  GLCAT.debug()
+        //    << "ptr data equal, not issuing glUniform\n";
+        //}
+        //redundant_ptr_caught++;
         continue;
       }
-      memcpy(_ptr_cache[i]._data, (unsigned char *)ptr_data._ptr, mem_size);
+      memcpy(_ptr_cache[i]._data, (unsigned char *)ptr_data->_ptr, mem_size);
 
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
@@ -2301,12 +2305,12 @@ issue_parameters(int altered) {
         {
           float *data = nullptr;
 
-          switch (ptr_data._type) {
+          switch (ptr_data->_type) {
           case ShaderType::ST_int:
             // Convert int data to float data.
             data = (float*) alloca(sizeof(float) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (float)(((int*)ptr_data._ptr)[i]);
+              data[i] = (float)(((int*)ptr_data->_ptr)[i]);
             }
             break;
 
@@ -2314,7 +2318,7 @@ issue_parameters(int altered) {
             // Convert unsigned int data to float data.
             data = (float*) alloca(sizeof(float) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (float)(((unsigned int*)ptr_data._ptr)[i]);
+              data[i] = (float)(((unsigned int*)ptr_data->_ptr)[i]);
             }
             break;
 
@@ -2322,12 +2326,12 @@ issue_parameters(int altered) {
             // Downgrade double data to float data.
             data = (float*) alloca(sizeof(float) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (float)(((double*)ptr_data._ptr)[i]);
+              data[i] = (float)(((double*)ptr_data->_ptr)[i]);
             }
             break;
 
           case ShaderType::ST_float:
-            data = (float*)ptr_data._ptr;
+            data = (float*)ptr_data->_ptr;
             break;
 
           default:
@@ -2347,8 +2351,8 @@ issue_parameters(int altered) {
         break;
 
       case ShaderType::ST_int:
-        if (ptr_data._type != ShaderType::ST_int &&
-            ptr_data._type != ShaderType::ST_uint) {
+        if (ptr_data->_type != ShaderType::ST_int &&
+            ptr_data->_type != ShaderType::ST_uint) {
           GLCAT.error()
             << "Cannot pass floating-point data to integer shader input '" << spec._id._name << "'\n";
 
@@ -2358,18 +2362,18 @@ issue_parameters(int altered) {
 
         } else {
           switch (spec._dim[1] * spec._dim[2]) {
-          case 1: _glgsg->_glUniform1iv(p, array_size, (int*)ptr_data._ptr); continue;
-          case 2: _glgsg->_glUniform2iv(p, array_size, (int*)ptr_data._ptr); continue;
-          case 3: _glgsg->_glUniform3iv(p, array_size, (int*)ptr_data._ptr); continue;
-          case 4: _glgsg->_glUniform4iv(p, array_size, (int*)ptr_data._ptr); continue;
+          case 1: _glgsg->_glUniform1iv(p, array_size, (int*)ptr_data->_ptr); continue;
+          case 2: _glgsg->_glUniform2iv(p, array_size, (int*)ptr_data->_ptr); continue;
+          case 3: _glgsg->_glUniform3iv(p, array_size, (int*)ptr_data->_ptr); continue;
+          case 4: _glgsg->_glUniform4iv(p, array_size, (int*)ptr_data->_ptr); continue;
           }
           nassertd(false) continue;
         }
         break;
 
       case ShaderType::ST_uint:
-        if (ptr_data._type != ShaderType::ST_uint &&
-            ptr_data._type != ShaderType::ST_int) {
+        if (ptr_data->_type != ShaderType::ST_uint &&
+            ptr_data->_type != ShaderType::ST_int) {
           GLCAT.error()
             << "Cannot pass floating-point data to integer shader input '" << spec._id._name << "'\n";
 
@@ -2379,10 +2383,10 @@ issue_parameters(int altered) {
 
         } else {
           switch (spec._dim[1] * spec._dim[2]) {
-          case 1: _glgsg->_glUniform1uiv(p, array_size, (GLuint *)ptr_data._ptr); continue;
-          case 2: _glgsg->_glUniform2uiv(p, array_size, (GLuint *)ptr_data._ptr); continue;
-          case 3: _glgsg->_glUniform3uiv(p, array_size, (GLuint *)ptr_data._ptr); continue;
-          case 4: _glgsg->_glUniform4uiv(p, array_size, (GLuint *)ptr_data._ptr); continue;
+          case 1: _glgsg->_glUniform1uiv(p, array_size, (GLuint *)ptr_data->_ptr); continue;
+          case 2: _glgsg->_glUniform2uiv(p, array_size, (GLuint *)ptr_data->_ptr); continue;
+          case 3: _glgsg->_glUniform3uiv(p, array_size, (GLuint *)ptr_data->_ptr); continue;
+          case 4: _glgsg->_glUniform4uiv(p, array_size, (GLuint *)ptr_data->_ptr); continue;
           }
           nassertd(false) continue;
         }
@@ -2400,12 +2404,12 @@ issue_parameters(int altered) {
         {
           double *data = nullptr;
 
-          switch (ptr_data._type) {
+          switch (ptr_data->_type) {
           case ShaderType::ST_int:
             // Convert int data to double data.
             data = (double*) alloca(sizeof(double) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (double)(((int*)ptr_data._ptr)[i]);
+              data[i] = (double)(((int*)ptr_data->_ptr)[i]);
             }
             break;
 
@@ -2413,19 +2417,19 @@ issue_parameters(int altered) {
             // Convert unsigned int data to double data.
             data = (double*) alloca(sizeof(double) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (double)(((unsigned int*)ptr_data._ptr)[i]);
+              data[i] = (double)(((unsigned int*)ptr_data->_ptr)[i]);
             }
             break;
 
           case ShaderType::ST_double:
-            data = (double*)ptr_data._ptr;
+            data = (double*)ptr_data->_ptr;
             break;
 
           case ShaderType::ST_float:
             // Upgrade float data to double data.
             data = (double*) alloca(sizeof(double) * array_size * dim);
             for (int i = 0; i < (array_size * dim); ++i) {
-              data[i] = (double)(((float*)ptr_data._ptr)[i]);
+              data[i] = (double)(((float*)ptr_data->_ptr)[i]);
             }
             break;
 
@@ -2451,37 +2455,37 @@ issue_parameters(int altered) {
       }
     }
 
-    if (GLCAT.is_debug()) {
-      GLCAT.debug()
-        << redundant_ptr_caught << " / " << _shader->_ptr_spec.size() << " ptr data was the same\n";
-    }
+    //if (GLCAT.is_debug()) {
+    //  GLCAT.debug()
+    //    << redundant_ptr_caught << " / " << _shader->_ptr_spec.size() << " ptr data was the same\n";
+    //}
   }
 
-  int redundant_caught = 0;
-  int mat_altered = 0;
+  //int redundant_caught = 0;
+  //int mat_altered = 0;
 
   if (altered & _shader->_mat_deps) {
     _glgsg->update_shader_matrix_cache(_shader, _mat_part_cache, altered);
 
-    for (size_t i = 0; i < _shader->_mat_spec.size(); ++i) {
-      Shader::ShaderMatSpec &spec = _shader->_mat_spec[i];
+    for (Shader::ShaderMatSpec &spec : _shader->_mat_spec) {
       if ((altered & spec._dep) == 0) {
         continue;
       }
-      mat_altered++;
+      //mat_altered++;
 
-      LMatrix4 curr_val = spec._value;
+      //LMatrix4 curr_val = spec._value;
 
       const LMatrix4 *val = _glgsg->fetch_specified_value(spec, _mat_part_cache, altered);
       if (!val) continue;
 
-      if (GLCAT.is_debug()) {
-        GLCAT.debug()
-          << spec._id._name->get_name() << "\n";
-        GLCAT.debug(false)
-          << "curr mat val " << curr_val << "\nnew mat val " << *val << "\n";
-      }
+      //if (GLCAT.is_debug()) {
+      //  GLCAT.debug()
+      //    << spec._id._name->get_name() << "\n";
+      //  GLCAT.debug(false)
+      //    << "curr mat val " << curr_val << "\nnew mat val " << *val << "\n";
+      //}
 
+#if 0
       switch (spec._piece) {
       case Shader::SMP_whole:
       case Shader::SMP_transpose:
@@ -2490,95 +2494,96 @@ issue_parameters(int altered) {
       case Shader::SMP_transpose4x3:
       case Shader::SMP_transpose3x4:
         if ((*val).almost_equal(curr_val)) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row0:
         if (val->get_row(0).almost_equal(curr_val.get_row(0))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row1:
         if (val->get_row(1).almost_equal(curr_val.get_row(1))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row2:
         if (val->get_row(2).almost_equal(curr_val.get_row(2))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row3:
         if (val->get_row(3).almost_equal(curr_val.get_row(3))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_col0:
         if (val->get_col(0).almost_equal(curr_val.get_col(0))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_col1:
         if (val->get_col(1).almost_equal(curr_val.get_col(1))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_col2:
         if (val->get_col(2).almost_equal(curr_val.get_col(2))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_col3:
         if (val->get_col(3).almost_equal(curr_val.get_col(3))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row3x1:
         if (val->get_cell(3, 0) == curr_val.get_cell(3, 0)) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row3x2:
         if (val->get_row(3).get_xy().almost_equal(curr_val.get_row(3).get_xy())) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_row3x3:
         if (val->get_row3(3).almost_equal(curr_val.get_row3(3))) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_cell15:
         if (val->get_cell(3, 3) == curr_val.get_cell(3, 3)) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_cell14:
         if (val->get_cell(3, 2) == curr_val.get_cell(3, 2)) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       case Shader::SMP_cell13:
         if (val->get_cell(3, 1) == curr_val.get_cell(3, 1)) {
-          redundant_caught++;
+          //redundant_caught++;
           continue;
         }
         break;
       }
+#endif
 
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
@@ -2735,10 +2740,10 @@ issue_parameters(int altered) {
 #endif  // OPENGLES
     }
 
-    if (GLCAT.is_debug()) {
-      GLCAT.debug()
-        << redundant_caught << " / " << mat_altered << " mat data was the same\n";
-    }
+    //if (GLCAT.is_debug()) {
+    //  GLCAT.debug()
+    //    << redundant_caught << " / " << mat_altered << " mat data was the same\n";
+    //}
   }
 
   report_my_gl_errors(_glgsg);
@@ -2859,7 +2864,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
 
   // Get the active ColorAttrib.  We'll need it to determine how to apply
   // vertex colors.
-  const ColorAttrib *color_attrib = _color_attrib.p();
+  const ColorAttrib *color_attrib = _color_attrib;
   LColor scene_graph_color = _glgsg->_scene_graph_color;
 
   const GeomVertexArrayDataHandle *array_reader;
@@ -3321,8 +3326,8 @@ update_shader_texture_bindings(ShaderContext *prev) {
     int view = _glgsg->get_current_tex_view_offset();
     SamplerState sampler;
 
-    PT(Texture) tex = _glgsg->fetch_specified_texture(spec, sampler, view);
-    if (tex.is_null()) {
+    Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
+    if (tex == nullptr) {
       // Apply a white texture in order to make it easier to use a shader that
       // takes a texture on a model that doesn't have a texture applied.
       if (multi_bind) {

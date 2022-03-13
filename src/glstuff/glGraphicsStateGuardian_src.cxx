@@ -3361,7 +3361,7 @@ reset() {
   _max_lights = 0;
   // Count the max number of clipping planes
   _max_clip_planes = 0;
-  _max_texture_stages = 1;
+  _max_texture_stages = 32;
 
   _max_vertex_shader_parameter_vectors = 0;
 #ifndef OPENGLES
