@@ -220,7 +220,7 @@ add_object(CullableObject &object, const CullTraverser *traverser) {
   const MaterialAttrib *ma;
   if (object._state->get_attrib(ma)) {
     const RenderState *modifier_state = ma->get_modifier_state();
-    if (modifier_state != nullptr) {
+    if (modifier_state != nullptr && !modifier_state->is_empty()) {
       object._state = object._state->compose(modifier_state);
     }
   }
