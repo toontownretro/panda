@@ -2680,8 +2680,9 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   }
 
   // We can optimize for the common case of a Geom having one GeomPrimitive.
-  // The GeomPrimitive pointer is stored directly on the CullableObject and
-  // eliminates the need to read from memory stored on the Geom.
+  // In this case, the GeomPrimitive pointer is stored directly on the
+  // CullableObject and eliminates the need to read from memory stored on
+  // the Geom.
   if (prim != nullptr) {
     GeomPrimitivePipelineReader prim_reader(prim, current_thread);
     if (prim_reader.get_num_vertices() != 0) {
