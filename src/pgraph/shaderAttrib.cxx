@@ -185,6 +185,7 @@ set_shader_input(const ShaderInput &input) const {
   } else {
     i->second = input;
   }
+  result->build_texture_inputs();
   return return_new(result);
 }
 
@@ -200,6 +201,7 @@ set_shader_input(ShaderInput &&input) const {
   } else {
     i->second = std::move(input);
   }
+  result->build_texture_inputs();
   return return_new(result);
 }
 
@@ -215,6 +217,8 @@ copy_shader_inputs_from(const ShaderAttrib *other) const {
   for (; i != other->_inputs.end(); i++) {
     result->_inputs[i->first] = i->second;
   }
+
+  result->build_texture_inputs();
 
   return return_new(result);
 }
@@ -238,6 +242,8 @@ set_shader_inputs(const pvector<ShaderInput> &inputs) const {
       itr->second = input;
     }
   }
+
+  result->build_texture_inputs();
 
   return return_new(result);
 }
@@ -263,6 +269,7 @@ CPT(RenderAttrib) ShaderAttrib::
 clear_shader_input(const InternalName *id) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
   result->_inputs.erase(id);
+  result->build_texture_inputs();
   return return_new(result);
 }
 
@@ -281,6 +288,8 @@ CPT(RenderAttrib) ShaderAttrib::
 clear_all_shader_inputs() const {
   ShaderAttrib *result = new ShaderAttrib(*this);
   result->_inputs.clear();
+  result->_texture_inputs.clear();
+  result->_has_texture_inputs = true;
   return return_new(result);
 }
 
@@ -311,7 +320,7 @@ get_shader_input(const std::string &id) const {
  * Returns the ShaderInput as a nodepath.  Assertion fails if there is none,
  * or if it is not a nodepath.
  */
-NodePath ShaderAttrib::
+const NodePath &ShaderAttrib::
 get_shader_input_nodepath(const InternalName *id) const {
   static NodePath resfail;
   Inputs::const_iterator i = _inputs.find(id);
@@ -754,6 +763,7 @@ compose_impl(const RenderAttrib *other) const {
       }
     }
   }
+  attr->build_texture_inputs();
 
   // In case no instance count is set, just copy it.
   if (attr->_instance_count == 0) {
@@ -843,4 +853,21 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _flags = scan.get_int32();
   _has_flags = scan.get_int32();
   _instance_count = scan.get_int32();
+}
+
+/**
+ *
+ */
+void ShaderAttrib::
+build_texture_inputs() {
+  _texture_inputs.clear();
+
+  for (auto it = _inputs.begin(); it != _inputs.end(); ++it) {
+    Texture *tex = (*it).second.get_texture();
+    if (tex != nullptr) {
+      _texture_inputs.insert({ (*it).first, tex });
+    }
+  }
+
+  _has_texture_inputs = true;
 }

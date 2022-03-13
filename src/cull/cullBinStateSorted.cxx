@@ -30,9 +30,9 @@
 
 #include <algorithm>
 
-#ifdef HAVE_TBB
-#include <oneapi/tbb.h>
-#endif
+//#ifdef HAVE_TBB
+//#include <oneapi/tbb.h>
+//#endif
 
 TypeHandle CullBinStateSorted::_type_handle;
 
@@ -100,39 +100,74 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
       if (shader_a != shader_b) {
         return shader_a < shader_b;
       }
+
+      if (sha != nullptr && shb != nullptr) {
+        //if (!sha->_has_texture_inputs) {
+        //  ((ShaderAttrib *)sha)->build_texture_inputs();
+        //}
+        //if (!shb->_has_texture_inputs) {
+        //  ((ShaderAttrib *)shb)->build_texture_inputs();
+        //}
+
+        //std::cout << "num inputs: " << sha->_texture_inputs.size() << " vs " << shb->_texture_inputs.size() << "\n";
+
+        // Compare texture inputs.
+        if (sha->_texture_inputs.size() != shb->_texture_inputs.size()) {
+          return sha->_texture_inputs.size() < shb->_texture_inputs.size();
+        }
+
+        ShaderAttrib::TextureInputs::const_iterator it = sha->_texture_inputs.begin();
+        ShaderAttrib::TextureInputs::const_iterator it2 = shb->_texture_inputs.begin();
+        for (; it != sha->_texture_inputs.end() && it2 != shb->_texture_inputs.end();) {
+          //std::cout << (*it).first->get_name() << " vs " << (*it2).first->get_name() << "\n";
+          //if ((*it).first != (*it2).first) {
+          //  return (*it).first < (*it2).first;
+          //}
+          //std::cout << "tex " << (*it).second << " vs " << (*it2).second << "\n";
+          if ((*it).second != (*it2).second) {
+            return (*it).second < (*it2).second;
+          }
+          ++it;
+          ++it2;
+        }
+      }
     }
   }
 
-  // Prevent unnecessary vertex buffer rebinds.
-  if (a._munged_data != b._munged_data) {
-    return a._munged_data < b._munged_data;
-  }
-
-  if (sa != sb) {
+  //if (sa != sb) {
 
     // TextureAttribs result in different generated ShaderAttribs with the
     // textures from the TextureAttrib.  They come second to programs in terms
     // of state change cost.
 
-    const RenderAttrib *ra, *rb;
+    //const RenderAttrib *ra, *rb;
 
-    ra = sa->get_attrib(TextureAttrib::get_class_slot());
-    rb = sb->get_attrib(TextureAttrib::get_class_slot());
-    if (ra != rb) {
-      return ra < rb;
-    }
+    //ra = sa->get_attrib(TextureAttrib::get_class_slot());
+    //rb = sb->get_attrib(TextureAttrib::get_class_slot());
+    //if (ra != rb) {
+    //  return ra < rb;
+    //}
 
     // Same goes for MaterialAttrib.
-    ra = sa->get_attrib(MaterialAttrib::get_class_slot());
-    rb = sb->get_attrib(MaterialAttrib::get_class_slot());
-    if (ra != rb) {
-      return ra < rb;
-    }
-  }
+    //ra = sa->get_attrib(MaterialAttrib::get_class_slot());
+    //rb = sb->get_attrib(MaterialAttrib::get_class_slot());
+    //if (ra != rb) {
+    //  return ra < rb;
+    //}
+  //}
+
+  //std::cout << "format " << a._sort_data._format << " vs " << b._sort_data._format << "\n";
 
   // Vertex format changes are also fairly slow.
   if (a._sort_data._format != b._sort_data._format) {
     return a._sort_data._format < b._sort_data._format;
+  }
+
+  //std::cout << "vdata " << a._munged_data << " vs " << b._munged_data << "\n";
+
+  // Prevent unnecessary vertex buffer rebinds.
+  if (a._munged_data != b._munged_data) {
+    return a._munged_data < b._munged_data;
   }
 
   if (sa != sb) {

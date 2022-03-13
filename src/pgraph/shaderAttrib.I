@@ -28,7 +28,8 @@ ShaderAttrib() :
   _shader_name(nullptr),
   _flags(0),
   _has_flags(0),
-  _instance_count(0)
+  _instance_count(0),
+  _has_texture_inputs(false)
 {
 }
 
@@ -45,7 +46,9 @@ ShaderAttrib(const ShaderAttrib &copy) :
   _has_flags(copy._has_flags),
   _instance_count(copy._instance_count),
   _inputs(copy._inputs),
-  _shader_name(copy._shader_name)
+  _shader_name(copy._shader_name),
+  _texture_inputs(copy._texture_inputs),
+  _has_texture_inputs(copy._has_texture_inputs)
 {
 }
 
@@ -95,9 +98,17 @@ get_flag(int flag) const {
 /**
  * Returns true if there is a ShaderInput of the given name.
  */
-bool ShaderAttrib::
-has_shader_input(CPT_InternalName id) const {
+INLINE bool ShaderAttrib::
+has_shader_input(const InternalName *id) const {
   return (_inputs.find(id) != _inputs.end());
+}
+
+/**
+ * Returns true if there is a ShaderInput of the given name.
+ */
+INLINE bool ShaderAttrib::
+has_shader_input(const std::string &id) const {
+  return has_shader_input(InternalName::make(id));
 }
 
 /**

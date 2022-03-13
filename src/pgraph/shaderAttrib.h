@@ -106,7 +106,8 @@ PUBLISHED:
   CPT(RenderAttrib) clear_all_shader_inputs() const;
 
   INLINE bool get_flag(int flag) const;
-  INLINE bool has_shader_input(CPT_InternalName id) const;
+  INLINE bool has_shader_input(const InternalName *id) const;
+  INLINE bool has_shader_input(const std::string &id) const;
 
   const Shader *get_shader() const;
   const ShaderInput &get_shader_input(const InternalName *id) const;
@@ -115,7 +116,7 @@ PUBLISHED:
 
   INLINE const InternalName *get_shader_name() const;
 
-  NodePath get_shader_input_nodepath(const InternalName *id) const;
+  const NodePath &get_shader_input_nodepath(const InternalName *id) const;
   LVecBase4 get_shader_input_vector(const InternalName *id) const;
   Texture *get_shader_input_texture(const InternalName *id, SamplerState *sampler=nullptr) const;
   const Shader::ShaderPtrData *get_shader_input_ptr(const InternalName *id) const;
@@ -135,6 +136,9 @@ protected:
   virtual size_t get_hash_impl() const;
   virtual CPT(RenderAttrib) compose_impl(const RenderAttrib *other) const;
 
+public:
+  void build_texture_inputs();
+
 private:
 
   CPT(Shader) _shader;
@@ -151,8 +155,15 @@ private:
   typedef pflat_hash_map<const InternalName *, ShaderInput, pointer_hash> Inputs;
   Inputs _inputs;
 
+public:
+  bool _has_texture_inputs;
+  typedef pflat_map<const InternalName *, Texture *> TextureInputs;
+  TextureInputs _texture_inputs;
+
   friend class Extension<NodePath>;
   friend class Extension<ShaderAttrib>;
+
+  friend class CullBinStateSorted;
 
 PUBLISHED:
   static int get_class_slot() {

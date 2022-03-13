@@ -20,9 +20,9 @@
 
 #include <algorithm>
 
-#ifdef HAVE_TBB
-#include <oneapi/tbb.h>
-#endif
+//#ifdef HAVE_TBB
+//#include <oneapi/tbb.h>
+//#endif
 
 
 TypeHandle CullBinFrontToBack::_type_handle;
@@ -80,7 +80,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
   PStatTimer timer(_cull_this_pcollector, current_thread);
 
 //#ifdef HAVE_TBB
-  //oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_f2b);
+//  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_f2b);
 //#else
   std::sort(_objects.begin(), _objects.end(), compare_objects_f2b);
 //#endif
