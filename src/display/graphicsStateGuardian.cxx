@@ -2686,7 +2686,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   if (prim != nullptr) {
     GeomPrimitivePipelineReader prim_reader(prim, current_thread);
     if (prim_reader.get_num_vertices() != 0) {
-      prim_reader.check_minmax();
+      //prim_reader.check_minmax();
 
       //nassertr(prim_reader.check_valid(&data_reader), false);
 
@@ -2775,7 +2775,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
 
       GeomPrimitivePipelineReader prim_reader(prim, current_thread);
       if (prim_reader.get_num_vertices() != 0) {
-        prim_reader.check_minmax();
+        //prim_reader.check_minmax();
 
         //nassertr(prim_reader.check_valid(&data_reader), false);
 
