@@ -130,11 +130,24 @@ add_object_for_draw(CullTraverser *trav, CullTraverserData &data, const Object *
     }
   }
 
+  Thread *current_thread = trav->get_current_thread();
+
   const TransformState *trans = trav->get_scene()->get_cs_world_transform();
 
   for (const GeomEntry &geom : obj->_geoms) {
-    CPT(RenderState) state = data._state->compose(geom._state);
-    CullableObject cobj(geom._geom, std::move(state), trans);
-    trav->get_cull_handler()->record_object(cobj, trav);
+    if (data._state->is_empty()) {
+      CullableObject cobj(geom._geom, geom._state, trans, current_thread);
+      trav->get_cull_handler()->record_object(cobj, trav);
+
+    } else if (geom._state->is_empty()) {
+      CullableObject cobj(geom._geom, data._state, trans, current_thread);
+      trav->get_cull_handler()->record_object(cobj, trav);
+
+    } else {
+      CPT(RenderState) state = data._state->compose(geom._state);
+      CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
+      trav->get_cull_handler()->record_object(cobj, trav);
+    }
+
   }
 }

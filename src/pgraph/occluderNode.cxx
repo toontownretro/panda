@@ -139,16 +139,18 @@ xform(const LMatrix4 &mat) {
  */
 bool OccluderNode::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
+  Thread *current_thread = trav->get_current_thread();
+
   // Normally, an OccluderNode is invisible.  But if someone shows it, we will
   // draw a visualization, a checkerboard-textured polygon.
   CullableObject occluder_viz(get_occluder_viz(trav, data), get_occluder_viz_state(trav, data),
-                       data.get_internal_transform(trav));
+                       data.get_internal_transform(trav), current_thread);
   trav->get_cull_handler()->record_object(occluder_viz, trav);
 
   // Also get the frame.
   nassertr(_frame_viz != nullptr, false);
   CullableObject frame_viz(_frame_viz, get_frame_viz_state(trav, data),
-                       data.get_internal_transform(trav));
+                       data.get_internal_transform(trav), current_thread);
   trav->get_cull_handler()->record_object(frame_viz, trav);
 
   // Now carry on to render our child nodes.

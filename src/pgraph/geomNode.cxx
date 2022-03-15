@@ -510,12 +510,12 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   const GeomList *geoms;
   {
     CDReader cdata(_cycler, current_thread);
-    geoms = cdata->get_geoms();
+    geoms = cdata->get_geoms_quick();
   }
   //Geoms geoms = get_geoms(current_thread);
   int num_geoms = (int)geoms->size();
   trav->_geoms_pcollector.add_level(num_geoms);
-  const TransformState *internal_transform = data.get_internal_transform(trav);
+  CPT(TransformState) internal_transform = data.get_internal_transform(trav);
 
   if (num_geoms == 1) {
     // If there's only one Geom, we don't need to bother culling each individual
@@ -523,6 +523,26 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     // checked the one on the GeomNode itself.
     const Geom *geom = (*geoms)[0]._geom.get_read_pointer(current_thread);//.get_geom(0);
     if (!geom->is_empty()) {
+
+      const RenderState *gstate = (*geoms)[0]._state;
+      if (gstate->is_empty()) {
+        CullableObject object(std::move(geom), data._state, std::move(internal_transform),
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
+
+      } else if (data._state->is_empty()) {
+        CullableObject object(std::move(geom), std::move(gstate), std::move(internal_transform),
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
+
+      } else {
+        CPT(RenderState) state = data._state->compose(gstate);
+        CullableObject object(std::move(geom), std::move(state), std::move(internal_transform),
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
+      }
+
+#if 0
       CPT(RenderState) state = data._state->compose((*geoms)[0]._state);
       if (!state->has_cull_callback() || state->cull_callback(trav, data)) {
         CullableObject object(std::move(geom), std::move(state), std::move(internal_transform));
@@ -532,6 +552,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         //object._instances = data._instances;
         trav->get_cull_handler()->record_object(object, trav);
       }
+#endif
+
     }
   }
   else {
@@ -542,20 +564,20 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         continue;
       }
 
-      CPT(RenderState) state = data._state->compose((*geoms)[i]._state);
-      if (state->has_cull_callback() && !state->cull_callback(trav, data)) {
+      //CPT(RenderState) state = data._state->compose((*geoms)[i]._state);
+      //if (state->has_cull_callback() && !state->cull_callback(trav, data)) {
         // Cull.
-        continue;
-      }
+      //  continue;
+      //}
 
-      if (data._instances != nullptr) {
+      //if (data._instances != nullptr) {
         // Draw each individual instance.  We don't bother culling each
         // individual Geom for each instance; that is probably way too slow.
-        CullableObject object(std::move(geom), std::move(state), internal_transform);
+      //  CullableObject object(std::move(geom), std::move(state), internal_transform);
         //object._instances = data._instances;
-        trav->get_cull_handler()->record_object(object, trav);
-        continue;
-      }
+      //  trav->get_cull_handler()->record_object(object, trav);
+      //  continue;
+      //}
 
       // Cull the individual Geom against the view frustum.
       if (data._view_frustum != nullptr &&
@@ -564,22 +586,22 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         continue;
       }
 
-      bool has_cull_planes = data._cull_planes != nullptr;
+      //bool has_cull_planes = data._cull_planes != nullptr;
       //bool has_cull_lights = !data._cull_lights->is_empty();
 
-      if (has_cull_planes /*|| has_cull_lights*/) {
-        CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
-        const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();
+      //if (has_cull_planes /*|| has_cull_lights*/) {
+      //  CPT(BoundingVolume) geom_volume = geom->get_bounds(current_thread);
+      //  const GeometricBoundingVolume *geom_gbv = geom_volume->as_geometric_bounding_volume();
 
-        if (has_cull_planes) {
+      //  if (has_cull_planes) {
           // Also cull the Geom against the cull planes.
-          int result;
-          data._cull_planes->do_cull(result, state, geom_gbv);
-          if (result == BoundingVolume::IF_no_intersection) {
+      //    int result;
+      //    data._cull_planes->do_cull(result, state, geom_gbv);
+      //    if (result == BoundingVolume::IF_no_intersection) {
             // Cull.
-            continue;
-          }
-        }
+      //      continue;
+      //    }
+      //  }
 
         //if (has_cull_lights) {
         //  // Cull down the lights to only include those that intersect the
@@ -587,13 +609,33 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         //  int result;
         //  data._cull_lights->do_cull(result, state, geom_gbv);
         //}
+      //}
+
+      const RenderState *gstate = (*geoms)[i]._state;
+      if (gstate->is_empty()) {
+        CullableObject object(std::move(geom), data._state, internal_transform,
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
+
+      } else if (data._state->is_empty()) {
+        CullableObject object(std::move(geom), std::move(gstate), internal_transform,
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
+
+      } else {
+        CPT(RenderState) state = data._state->compose(gstate);
+        CullableObject object(std::move(geom), std::move(state), internal_transform,
+                              current_thread);
+        trav->get_cull_handler()->record_object(object, trav);
       }
 
+#if 0
       CullableObject object(std::move(geom), std::move(state), internal_transform);
 #ifdef RENDER_TRACK_GEOM_NODES
       object._geom_node = this;
 #endif
       trav->get_cull_handler()->record_object(object, trav);
+#endif
     }
   }
 }

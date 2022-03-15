@@ -29,7 +29,8 @@ CullableObject() {
  */
 INLINE CullableObject::
 CullableObject(CPT(Geom) geom, CPT(RenderState) state,
-               CPT(TransformState) internal_transform) :
+               CPT(TransformState) internal_transform,
+               Thread *current_thread) :
   _state(std::move(state)),
   _internal_transform(std::move(internal_transform)),
   _geom(std::move(geom)),
@@ -40,9 +41,9 @@ CullableObject(CPT(Geom) geom, CPT(RenderState) state,
 {
   _primitive = nullptr;
   if (_geom != nullptr) {
-    _munged_data = _geom->get_vertex_data();
-    if (_geom->get_num_primitives() == 1) {
-      _primitive = _geom->get_primitive(0);
+    _munged_data = _geom->get_vertex_data(current_thread);
+    if (_geom->get_num_primitives(current_thread) == 1) {
+      _primitive = _geom->get_fast_primitive(0, current_thread);
     }
   } else {
     _munged_data = nullptr;

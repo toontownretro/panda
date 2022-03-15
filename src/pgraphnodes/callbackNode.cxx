@@ -122,7 +122,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   CallbackObject *cbobj = get_draw_callback();
   if (cbobj != nullptr) {
     CullableObject object(nullptr, data._state,
-                          data.get_internal_transform(trav));
+                          data.get_internal_transform(trav),
+                          trav->get_current_thread());
     object.set_draw_callback(cbobj);
     trav->get_cull_handler()->record_object(object, trav);
   }

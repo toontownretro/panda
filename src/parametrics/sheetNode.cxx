@@ -320,7 +320,8 @@ render_sheet(CullTraverser *trav, CullTraverserData &data,
   }
 
   CullableObject object(geom, state,
-                        data.get_internal_transform(trav));
+                        data.get_internal_transform(trav),
+                        trav->get_current_thread());
   trav->get_cull_handler()->record_object(object, trav);
 }
 

@@ -43,7 +43,8 @@ class ALIGN_64BYTE EXPCL_PANDA_PGRAPH CullableObject {
 public:
   INLINE CullableObject();
   INLINE CullableObject(CPT(Geom) geom, CPT(RenderState) state,
-                        CPT(TransformState) internal_transform);
+                        CPT(TransformState) internal_transform,
+                        Thread *current_thread);
 
   INLINE CullableObject(const CullableObject &copy);
   INLINE CullableObject(CullableObject &&other);

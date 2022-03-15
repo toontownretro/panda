@@ -83,7 +83,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   // CullableObject for the Dispatcher.  We don't need to pass any Geoms,
   // however.
   CullableObject object(nullptr, data._state,
-                        data.get_internal_transform(trav));
+                        data.get_internal_transform(trav),
+                        trav->get_current_thread());
   object.set_draw_callback(_dispatcher);
   trav->get_cull_handler()->record_object(object, trav);
 }

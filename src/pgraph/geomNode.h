@@ -141,6 +141,7 @@ private:
     }
 
     INLINE CPT(GeomList) get_geoms() const;
+    INLINE const GeomList *get_geoms_quick() const;
     INLINE PT(GeomList) modify_geoms();
     INLINE void set_geoms(GeomList *geoms);
 

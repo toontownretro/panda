@@ -141,7 +141,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   // draw a visualization, a nice yellow wireframe.
 
   CullableObject plane_viz(get_viz(trav, data), data._state,
-                           data.get_internal_transform(trav));
+                           data.get_internal_transform(trav),
+                           trav->get_current_thread());
   trav->get_cull_handler()->record_object(plane_viz, trav);
 
   // Now carry on to render our child nodes.

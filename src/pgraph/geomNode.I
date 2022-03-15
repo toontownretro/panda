@@ -207,6 +207,14 @@ get_geoms() const {
 }
 
 /**
+ * Returns a read-only pointer to the _geoms list.
+ */
+INLINE const GeomNode::GeomList *GeomNode::CData::
+get_geoms_quick() const {
+  return _geoms.get_read_pointer();
+}
+
+/**
  * Returns a modifiable, unique pointer to the _geoms list.
  */
 INLINE PT(GeomNode::GeomList) GeomNode::CData::
