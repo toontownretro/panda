@@ -2464,6 +2464,8 @@ issue_parameters(int altered) {
   //int redundant_caught = 0;
   //int mat_altered = 0;
 
+  LMatrix4 curr_val;
+
   if (altered & _shader->_mat_deps) {
     _glgsg->update_shader_matrix_cache(_shader, _mat_part_cache, altered);
 
@@ -2473,10 +2475,14 @@ issue_parameters(int altered) {
       }
       //mat_altered++;
 
-      //LMatrix4 curr_val = spec._value;
+      curr_val = spec._value;
 
       const LMatrix4 *val = _glgsg->fetch_specified_value(spec, _mat_part_cache, altered);
       if (!val) continue;
+
+      if ((*val).almost_equal(curr_val, 0.0001f)) {
+        continue;
+      }
 
       //if (GLCAT.is_debug()) {
       //  GLCAT.debug()
