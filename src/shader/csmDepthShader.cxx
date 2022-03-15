@@ -35,6 +35,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
+  // If the ARB_shader_viewport_layer_array extension is available,
+  // we can write to the appropriate cascade layer directly from the
+  // vertex shader, eliminating the need for the slow geometry shader.
+  //
+  // If we don't have it, we have to use the geometry shader.
+  bool can_write_gl_layer_from_vertex_shader =
+    (gsg->get_supported_shader_capabilities() & ShaderModule::C_viewport_layer_array) != 0;
+  nassertv(can_write_gl_layer_from_vertex_shader);
+  // TODO: Fallback to geometry shader or texture atlas if not supported.
+
   set_vertex_shader("shaders/csmdepth.vert.glsl");
   //set_geometry_shader("shaders/csmdepth.geom.glsl");
   set_pixel_shader("shaders/csmdepth.frag.glsl");
