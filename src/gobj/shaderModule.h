@@ -161,6 +161,11 @@ public:
     // GLSL 4.50
     C_derivative_control = 1 << 27,
     C_texture_query_samples = 1 << 28,
+
+    // ARB_shader_viewport_layer_array, allows writing
+    // gl_ViewportIndex/gl_Layer from vertex and tessellation
+    // evaluation stages.
+    C_viewport_layer_array = 1 << 29,
   };
 
   static std::string format_stage(Stage stage);

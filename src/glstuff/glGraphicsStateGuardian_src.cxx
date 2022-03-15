@@ -1705,6 +1705,11 @@ reset() {
     else if (has_extension("GL_ARB_derivative_control")) {
       _supported_shader_caps |= ShaderModule::C_derivative_control;
     }
+
+    if (is_at_least_gl_version(4, 5) && _glsl_version >= 450 &&
+        has_extension("GL_ARB_shader_viewport_layer_array")) {
+      _supported_shader_caps |= ShaderModule::C_viewport_layer_array;
+    }
   }
 
   if (is_at_least_gl_version(3, 2)) {
