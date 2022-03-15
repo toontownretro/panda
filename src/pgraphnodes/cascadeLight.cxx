@@ -81,16 +81,18 @@ setup_shadow_map() {
 
   if (_shadow_map != nullptr &&
       _shadow_map->get_x_size() == _sb_size[0] &&
-      _shadow_map->get_y_size() == _sb_size[1]) {
+      _shadow_map->get_y_size() == _sb_size[1] &&
+      _shadow_map->get_z_size() == _num_cascades) {
 
     // Nothing actually changed; we don't need to recreate the shadow map.
     return;
   }
 
-  if (!_shadow_map) {
+  if (_shadow_map == nullptr) {
     _shadow_map = new Texture(get_name());
   }
 
+#if 0
   // The specified shadow map size is the total size of the atlas
   // for all cascades.  Each cascade takes up the same space in the
   // atlas, which is size / (num_cascades / 2).
@@ -126,11 +128,13 @@ setup_shadow_map() {
     // Go to next column.
     curr_x += width_per_cascade;
   }
+#endif
 
-  _shadow_map->setup_2d_texture(_sb_size[0], _sb_size[1], Texture::T_unsigned_byte, Texture::F_depth_component);
+  _shadow_map->setup_2d_texture_array(_sb_size[0], _sb_size[1], _num_cascades,
+                                      Texture::T_unsigned_byte, Texture::F_depth_component);
   _shadow_map->set_clear_color(LColor(1));
-  _shadow_map->set_wrap_u(SamplerState::WM_border_color);
-  _shadow_map->set_wrap_v(SamplerState::WM_border_color);
+  _shadow_map->set_wrap_u(SamplerState::WM_clamp);
+  _shadow_map->set_wrap_v(SamplerState::WM_clamp);
   _shadow_map->set_border_color(LColor(1));
   _shadow_map->set_minfilter(SamplerState::FT_shadow);
   _shadow_map->set_magfilter(SamplerState::FT_shadow);

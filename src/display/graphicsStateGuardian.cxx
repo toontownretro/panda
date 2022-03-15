@@ -3808,20 +3808,17 @@ async_reload_texture(TextureContext *tc) {
 Texture *GraphicsStateGuardian::
 get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   PandaNode *node = light_np.node();
-  bool is_point = node->is_of_type(PointLight::get_class_type());
-  //bool is_cascade = node->is_of_type(CascadeLight::get_class_type());
-  nassertr(node->is_of_type(DirectionalLight::get_class_type()) ||
-           node->is_of_type(Spotlight::get_class_type()) ||
-           is_point, nullptr);
 
   LightLensNode *light = (LightLensNode *)node;
   if (light == nullptr || !light->_shadow_caster) {
     // This light does not have a shadow caster.  Return a dummy shadow map
     // that is filled with a depth value of 1.
-    //if (is_cascade) {
-    //  return get_dummy_shadow_map(Texture::TT_2d_texture_array);
+    bool is_cascade = node->is_exact_type(CascadeLight::get_class_type());
+    bool is_point = node->is_exact_type(PointLight::get_class_type());
+    if (is_cascade) {
+      return get_dummy_shadow_map(Texture::TT_2d_texture_array);
 
-    /*} else*/ if (is_point) {
+    } else if (is_point) {
       return get_dummy_shadow_map(Texture::TT_cube_map);
 
     } else {
@@ -3854,6 +3851,8 @@ get_shadow_map(const NodePath &light_np, GraphicsOutputBase *host) {
   // Nope, the light doesn't have a buffer for our GSG. Make one.
   GraphicsOutput *sbuffer = make_shadow_buffer(light, light->_shadow_map,
                                                DCAST(GraphicsOutput, host));
+
+  bool is_point = node->is_exact_type(PointLight::get_class_type());
 
   // Assign display region(s) to the buffer and camera
   if (is_point) {
@@ -3933,8 +3932,8 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
  */
 GraphicsOutput *GraphicsStateGuardian::
 make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
-  bool is_point = light->is_of_type(PointLight::get_class_type());
-  //bool is_cascade = light->is_of_type(CascadeLight::get_class_type());
+  bool is_point = light->is_exact_type(PointLight::get_class_type());
+  bool is_cascade = light->is_exact_type(CascadeLight::get_class_type());
 
   // Determine the properties for creating the depth buffer.
   FrameBufferProperties fbp;
@@ -3959,9 +3958,9 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
   int flags = GraphicsPipe::BF_refuse_window;
   if (is_point) {
     flags |= GraphicsPipe::BF_size_square;
-  } //else if (is_cascade) {
-    //flags |= GraphicsPipe::BF_can_bind_layered;
-  //}
+  } else if (is_cascade) {
+    flags |= GraphicsPipe::BF_can_bind_layered;
+  }
 
   // Create the buffer.  This is a bit tricky because make_output() can only
   // be called from the app thread, but it won't cause issues as long as the
@@ -3972,11 +3971,11 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
 
   if (sbuffer != nullptr) {
     GraphicsOutput::RenderTextureMode rtm;
-    //if (is_cascade) {
-    //  rtm = GraphicsOutput::RTM_bind_layered;
-    //} else {
+    if (is_cascade) {
+      rtm = GraphicsOutput::RTM_bind_layered;
+    } else {
       rtm = GraphicsOutput::RTM_bind_or_copy;
-    //}
+    }
     sbuffer->add_render_texture(tex, rtm, GraphicsOutput::RTP_depth);
   }
   return sbuffer;

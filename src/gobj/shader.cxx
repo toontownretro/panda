@@ -1808,7 +1808,7 @@ bind_parameter(const Parameter &param) {
       ShaderTexSpec bind;
       bind._id = param;
       bind._part = STO_cascade_light_shadow_map;
-      bind._desired_type = Texture::TT_2d_texture;
+      bind._desired_type = Texture::TT_2d_texture_array;
       bind._stage = 0;
       _tex_spec.push_back(bind);
       return true;

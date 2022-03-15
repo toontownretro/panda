@@ -1257,7 +1257,7 @@ reflect_uniform(int i, char *name_buffer, GLsizei name_buflen) {
       bind._id = param;
       bind._part = Shader::STO_cascade_light_shadow_map;
       bind._name = 0;
-      bind._desired_type = Texture::TT_2d_texture;
+      bind._desired_type = Texture::TT_2d_texture_array;
       bind._stage = 0;
       if (get_sampler_texture_type(bind._desired_type, param_type)) {
         _glgsg->_glUniform1i(p, _shader->_tex_spec.size());
