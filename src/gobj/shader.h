@@ -405,13 +405,13 @@ public:
    * Describes a shader input that is sourced from the render state.
    */
   struct ShaderMatSpec {
-    size_t _cache_offset[2];
-    Parameter         _id;
+    int               _dep = SSD_NONE;
+    LMatrix4          _value;
+    size_t            _cache_offset[2];
     ShaderMatFunc     _func;
+    Parameter         _id;
     ShaderMatInput    _part[2];
     CPT(InternalName) _arg[2];
-    LMatrix4          _value;
-    int               _dep = SSD_NONE;
     int               _index = 0;
     ShaderMatPiece    _piece;
     ScalarType        _scalar_type = ScalarType::ST_float;
