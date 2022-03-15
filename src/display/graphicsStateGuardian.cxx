@@ -2586,18 +2586,16 @@ finish_decal() {
 bool GraphicsStateGuardian::
 draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) {
   bool all_ok = true;
-  for (size_t i = 0; i < objects.size(); i++) {
-    const CullableObject &object = objects[i];
-
+  for (const CullableObject &object : objects) {
 #ifdef RENDER_TRACK_GEOM_NODES
     _geom_node = object._geom_node;
 #endif
 
     if (true) {//*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
-      nassertr(object._geom != nullptr, false);
       if (object._state != _state_rs || object._internal_transform != _internal_transform) {
         set_state_and_transform(object._state, object._internal_transform);
       }
+      //nassertr(object._geom != nullptr, false);
       if (!draw_geom(object._geom, object._munged_data, object._num_instances,
                      object._primitive,
                      force, current_thread)) {
@@ -2671,19 +2669,23 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
 #endif
 }
 
+
+
 /**
  * Draws all primitives of the indicated Geom.
  */
 bool GraphicsStateGuardian::
 draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, const GeomPrimitive *prim,
           bool force, Thread *current_thread) {
+  static GeomVertexArrayDataHandle s_handles[max_array_handles];
+
   GeomVertexDataPipelineReader data_reader(vdata, current_thread);
-  GeomVertexArrayDataHandle handles[max_array_handles];
-  for (int i = 0; i < data_reader._cdata->_arrays.size(); ++i) {
-    handles[i]._current_thread = current_thread;
-    handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread));
+  int num_handles = (int)data_reader._cdata->_arrays.size();
+  for (int i = 0; i < num_handles; ++i) {
+    s_handles[i]._current_thread = current_thread;
+    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread));
   }
-  data_reader.set_array_readers(handles);
+  data_reader.set_array_readers(s_handles);
 
   //GeomPipelineReader geom_reader(geom, current_thread);
 
@@ -2694,6 +2696,9 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   //}
 
   if (!all_ok) {
+    for (int i = 0; i < num_handles; ++i) {
+      s_handles[i].release();
+    }
     return false;
   }
 
@@ -2873,6 +2878,10 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   }
 
   end_draw_primitives();
+
+  for (int i = 0; i < num_handles; ++i) {
+    s_handles[i].release();
+  }
 
   return all_ok;
 }
