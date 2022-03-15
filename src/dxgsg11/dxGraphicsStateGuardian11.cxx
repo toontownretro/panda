@@ -536,7 +536,7 @@ set_state_and_transform(const RenderState *target,
   }
 
   determine_target_texture();
-  //if (_target_texture != _state_texture) {
+  if (_target_texture != _state_texture) {
     Texture *tex = _target_texture->get_texture();
     if (tex != nullptr) {
       DXTextureContext11 *dtc = (DXTextureContext11 *)tex->prepare_now(0, _prepared_objects, this);
@@ -546,6 +546,9 @@ set_state_and_transform(const RenderState *target,
           _context->PSSetShaderResources(0, 1, &srv);
           _curr_tex = srv;
         }
+      } else {
+        ID3D11ShaderResourceView *null_srv[1] = { nullptr };
+        _context->PSSetShaderResources(0, 1, null_srv);
       }
 
       DXSamplerContext11 *dsc = (DXSamplerContext11 *)tex->get_default_sampler().prepare_now(_prepared_objects, this);
@@ -555,11 +558,18 @@ set_state_and_transform(const RenderState *target,
           _context->PSSetSamplers(0, 1, &ss);
           _curr_sampler = ss;
         }
+      } else {
+        ID3D11SamplerState *null_samp[1] = { nullptr };
+        _context->PSSetSamplers(0, 1, null_samp);
       }
+
+    } else {
+      ID3D11ShaderResourceView *null_srv[1] = { nullptr };
+      _context->PSSetShaderResources(0, 1, null_srv);
     }
 
     _state_texture = _target_texture;
-  //}
+  }
 
   _state_rs = target;
 }

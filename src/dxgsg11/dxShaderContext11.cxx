@@ -316,7 +316,9 @@ get_input_layout(const GeomVertexFormat *format, BitMask32 &enabled_arrays) {
       // Don't have it, but the shader needs something for it.
       idesc.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
       idesc.InputSlot = 15;
-      idesc.Format = DXGI_FORMAT_UNKNOWN;
+      idesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+      idesc.InstanceDataStepRate = UINT_MAX;
+      idesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
     }
 
     inputs.push_back(idesc);
