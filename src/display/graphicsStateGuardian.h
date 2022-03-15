@@ -661,6 +661,9 @@ protected:
   PT(Texture) _flash_texture_unused;
 #endif
 
+  //typedef pflat_hash_map<PandaNode *, LMatrix4, pointer_hash> LightNetTransformCache;
+  //LightNetTransformCache _light_net_transforms;
+
 public:
   // Statistics
   //static PStatCollector _vertex_buffer_switch_pcollector;

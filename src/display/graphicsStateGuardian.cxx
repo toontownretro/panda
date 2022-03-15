@@ -1093,24 +1093,34 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     // via this mechanism.
     size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
 
+    //LMatrix4 transform;
+
     size_t i = 0;
     for (; i < num_lights; ++i) {
       const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
-      Light *light = node->as_light();
+      LightLensNode *light = DCAST(LightLensNode, node);
       nassertv(light != nullptr);
 
-      bool is_spot = node->is_of_type(Spotlight::get_class_type());
-      bool is_directional = node->is_of_type(DirectionalLight::get_class_type());
+      Light::LightType ltype = light->get_light_type();
+      bool is_spot = (ltype == Light::LT_spot);
+      bool is_directional = (ltype == Light::LT_directional);
 
       // First the color, light type code in w
       const LColor &c = light->get_color(_current_thread);
       PN_stdfloat w = (is_directional) ? 1.0f : 0.0f;
       into[i].set_row(0, LVecBase4(c.get_xyz(), w));
 
-      CPT(TransformState) ts = np.get_net_transform();
-      const LMatrix4 &transform = ts->get_mat();
+      //auto it = _light_net_transforms.find(node);
+      //if (it != _light_net_transforms.end()) {
+      //  transform = &(*it).second;
+      //} else {
+      //  CPT(TransformState) ts = np.get_net_transform();
+      //  transform = &(_light_net_transforms.insert({ node, ts->get_mat() }).first->second);
+      //}
+
+      const LMatrix4 &transform = np.get_mat();
 
       // Next the direction, light type code in w
       w = (is_spot) ? 1.0f : 0.0f;
@@ -1130,7 +1140,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       into[i].set_row(1, LVecBase4(dir, w));
 
       // Next the position
-      into[i].set_row(2, LVecBase4(ts->get_pos(), 1.0f));
+      into[i].set_row(2, LVecBase4(transform.get_row3(3), 1.0f));
 
       // Finally the spotlight parameters (exponent, stopdot, stopdot2, oodot)
       if (is_spot) {
@@ -1163,15 +1173,13 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
-      Light *light = node->as_light();
-      nassertv(light != nullptr);
 
       LightLensNode *light_lens;
       DCAST_INTO_V(light_lens, node);
 
-      const LVecBase3 &atten = light->get_attenuation(_current_thread);
+      const LVecBase3 &atten = light_lens->get_attenuation(_current_thread);
       bool shadows = light_lens->is_shadow_caster();
-      if (light->get_light_type() == Light::LT_directional) {
+      if (light_lens->get_light_type() == Light::LT_directional) {
         shadows = false;
       }
 
@@ -1246,7 +1254,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
         continue;
       }
 
-      if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+      if (light.node()->get_type() != CascadeLight::get_class_type()) {
         continue;
       }
 
@@ -1260,6 +1268,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       for (; k < count; k++) {
         into[k] = LMatrix4::ident_mat();
       }
+
+      break;
     }
     return;
   }
@@ -1278,7 +1288,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
         continue;
       }
 
-      if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+      if (!light.node()->is_exact_type(CascadeLight::get_class_type())) {
         continue;
       }
 
@@ -1294,6 +1304,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       for (; k < count; k++) {
         into[k] = LMatrix4::ident_mat();
       }
+
+      break;
     }
     return;
   }
@@ -1312,7 +1324,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
         continue;
       }
 
-      if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+      if (!light.node()->is_exact_type(CascadeLight::get_class_type())) {
         continue;
       }
 
@@ -1328,6 +1340,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       for (; k < count; k++) {
         into[k] = LMatrix4::ident_mat();
       }
+
+      break;
     }
     return;
   }
@@ -2003,7 +2017,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
           continue;
         }
 
-        if (!light.node()->is_of_type(CascadeLight::get_class_type())) {
+        if (light.node()->get_type() != CascadeLight::get_class_type()) {
           continue;
         }
 
@@ -2385,6 +2399,10 @@ begin_frame(Thread *current_thread) {
   // or fog--will still be accurately updated.
   _state_rs = RenderState::make_empty();
   _state_mask.clear();
+
+  // Clear our cache of light net transforms since they might've changed
+  // since last frame.
+  //_light_net_transforms.clear();
 
   return !_needs_reset;
 }
