@@ -48,7 +48,9 @@ FreezeFrameLayer(PostProcess *pp, FreezeFrameEffect *effect) :
  */
 void FreezeFrameLayer::
 on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) {
-  if (_effect->_take_freeze_frame) {
+  FreezeFrameEffect::CDReader cdata(_effect->_cycler);
+
+  if (cdata->_take_freeze_frame) {
     // Capture a freeze frame.  We'll start rendering it next frame.
     gsg->framebuffer_copy_to_texture(_effect->_freeze_frame_texture, 0, -1,
       gsg->get_current_display_region(), RenderBuffer(gsg, RenderBuffer::T_color));
@@ -84,19 +86,29 @@ void FreezeFrameLayer::
 update() {
   PostProcessPass::update();
 
-  if (_effect->_freeze_frame_until <= ClockObject::get_global_clock()->get_frame_time()) {
-    // Not freeze framing.
-    _region->set_active(false);
+  bool turn_off_capture = false;
 
-  } else if (_region->is_active()) {
-    // If the display region is active, we've already taken a freeze frame.
-    _effect->_take_freeze_frame = false;
+  {
+    FreezeFrameEffect::CDReader cdata(_effect->_cycler);
+    if (cdata->_freeze_frame_until <= ClockObject::get_global_clock()->get_frame_time()) {
+      // Not freeze framing.
+      _region->set_active(false);
 
-  } else if (_effect->_take_freeze_frame) {
-    // Enable the display region to capture the freeze frame and start
-    // rendering it.
-    _region->set_active(true);
+    } else if (_region->is_active()) {
+      // If the display region is active at this point, we took a freeze frame
+      // last frame, and we can hold the current frame.
+      turn_off_capture = cdata->_take_freeze_frame;
 
+    } else if (cdata->_take_freeze_frame) {
+      // Enable the display region to capture the freeze frame and start
+      // rendering it.
+      _region->set_active(true);
+    }
+  }
+
+  if (turn_off_capture) {
+    FreezeFrameEffect::CDWriter cdata(_effect->_cycler);
+    cdata->_take_freeze_frame = false;
   }
 }
 
@@ -109,8 +121,6 @@ FreezeFrameEffect::
 FreezeFrameEffect(PostProcess *pp) :
   PostProcessEffect(pp, "freeze-frame-render")
 {
-  _freeze_frame_until = 0.0;
-  _take_freeze_frame = false;
   _freeze_frame_texture = new Texture("freeze-frame");
   _freeze_frame_texture->set_match_framebuffer_format(true);
   _freeze_frame_texture->set_minfilter(SamplerState::FT_linear);
@@ -129,18 +139,48 @@ FreezeFrameEffect(PostProcess *pp) :
  */
 void FreezeFrameEffect::
 freeze_frame(double duration) {
+  CDWriter cdata(_cycler);
+
 	if (duration == 0.0) {
-		_freeze_frame_until = 0.0;
-		_take_freeze_frame = false;
+		cdata->_freeze_frame_until = 0.0;
+		cdata->_take_freeze_frame = false;
 
 	} else {
 		double now = ClockObject::get_global_clock()->get_frame_time();
-		if (_freeze_frame_until > now) {
-			_freeze_frame_until += duration;
+		if (cdata->_freeze_frame_until > now) {
+			cdata->_freeze_frame_until += duration;
 
 		} else {
-			_freeze_frame_until = now + duration;
-			_take_freeze_frame = true;
+			cdata->_freeze_frame_until = now + duration;
+			cdata->_take_freeze_frame = true;
 		}
 	}
+}
+
+/**
+ *
+ */
+FreezeFrameEffect::CData::
+CData() :
+  _take_freeze_frame(false),
+  _freeze_frame_until(0.0)
+{
+}
+
+/**
+ *
+ */
+FreezeFrameEffect::CData::
+CData(const CData &copy) :
+  _take_freeze_frame(copy._take_freeze_frame),
+  _freeze_frame_until(copy._freeze_frame_until)
+{
+}
+
+/**
+ *
+ */
+CycleData *FreezeFrameEffect::CData::
+make_copy() const {
+  return new CData(*this);
 }

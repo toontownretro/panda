@@ -16,6 +16,10 @@
 
 #include "pandabase.h"
 #include "postProcessEffect.h"
+#include "cycleData.h"
+#include "pipelineCycler.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
 
 class FreezeFrameLayer;
 
@@ -33,10 +37,23 @@ PUBLISHED:
 private:
   // Contains the frame that we are frozen on.
 	PT(Texture) _freeze_frame_texture;
-	// True if we need to capture a freeze frame.
-	bool _take_freeze_frame;
-	// When freeze framing, the time at which we will unfreeze.
-	double _freeze_frame_until;
+
+  // This is the data that must be cycled between pipeline stages.
+  class CData : public CycleData {
+  public:
+    CData();
+    CData(const CData &copy);
+
+    virtual CycleData *make_copy() const override;
+
+    // True if we need to capture a freeze frame.
+    bool _take_freeze_frame;
+    // When freeze framing, the time at which we will unfreeze.
+    double _freeze_frame_until;
+  };
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
 
   friend class FreezeFrameLayer;
 };
