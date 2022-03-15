@@ -1046,7 +1046,8 @@ set_fluid_z(PN_stdfloat z) {
 LPoint3 NodePath::
 get_pos() const {
   nassertr_always(!is_empty(), LPoint3(0.0f, 0.0f, 0.0f));
-  return get_transform()->get_pos();
+  PandaNode::CDReader cdata(node()->_cycler);
+  return cdata->_transform->get_pos();
 }
 
 /**
@@ -1112,7 +1113,9 @@ set_r(PN_stdfloat r) {
 LVecBase3 NodePath::
 get_hpr() const {
   nassertr_always(!is_empty(), LVecBase3(0.0f, 0.0f, 0.0f));
-  CPT(TransformState) transform = get_transform();
+
+  PandaNode::CDReader cdata(node()->_cycler);
+  const TransformState *transform = cdata->_transform;
   nassertr(transform->has_hpr(), LVecBase3(0.0f, 0.0f, 0.0f));
   return transform->get_hpr();
 }
@@ -1134,8 +1137,8 @@ set_quat(const LQuaternion &quat) {
 LQuaternion NodePath::
 get_quat() const {
   nassertr_always(!is_empty(), LQuaternion::ident_quat());
-  CPT(TransformState) transform = get_transform();
-  return transform->get_quat();
+  PandaNode::CDReader cdata(node()->_cycler);
+  return cdata->_transform->get_quat();
 }
 
 /**
@@ -1197,8 +1200,8 @@ set_sz(PN_stdfloat sz) {
 LVecBase3 NodePath::
 get_scale() const {
   nassertr_always(!is_empty(), LVecBase3(0.0f, 0.0f, 0.0f));
-  CPT(TransformState) transform = get_transform();
-  return transform->get_scale();
+  PandaNode::CDReader cdata(node()->_cycler);
+  return cdata->_transform->get_scale();
 }
 
 /**

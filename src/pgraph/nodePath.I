@@ -776,7 +776,8 @@ INLINE const LMatrix4 &NodePath::
 get_mat() const {
   nassertr_always(!is_empty(), LMatrix4::ident_mat());
 
-  return node()->get_transform()->get_mat();
+  PandaNode::CDReader cdata(node()->_cycler);
+  return cdata->_transform->get_mat();
 }
 
 
