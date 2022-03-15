@@ -89,8 +89,9 @@ PUBLISHED:
 
   INLINE bool is_empty() const;
 
-  INLINE size_t get_num_primitives() const;
-  INLINE CPT(GeomPrimitive) get_primitive(size_t i) const;
+  INLINE size_t get_num_primitives(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE CPT(GeomPrimitive) get_primitive(size_t i, Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE const GeomPrimitive *get_fast_primitive(size_t i = 0, Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_SEQ(get_primitives, get_num_primitives, get_primitive);
   INLINE PT(GeomPrimitive) modify_primitive(size_t i);
   void set_primitive(size_t i, const GeomPrimitive *primitive);
@@ -181,6 +182,8 @@ public:
 
 private:
   class CData;
+
+  void check_fast_primitive(CData *data);
 
   INLINE void mark_internal_bounds_stale(CData *cdata);
   void compute_internal_bounds(CData *cdata, Thread *current_thread) const;
@@ -318,6 +321,8 @@ private:
     }
 
     Primitives _primitives;
+    size_t _num_primitives;
+    const GeomPrimitive *_fast_primitives[3];
     PrimitiveType _primitive_type;
 
     COWPT(GeomVertexData) _data;

@@ -216,6 +216,8 @@ offset_vertices(const GeomVertexData *data, int offset) {
 #endif
   }
 
+  check_fast_primitive(cdata);
+
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
   nassertv(all_is_valid);
@@ -280,6 +282,7 @@ make_nonindexed(bool composite_only) {
     cdata->_data = new_data;
     cdata->_primitives.swap(new_prims);
     cdata->_modified = Geom::get_next_modified();
+    check_fast_primitive(cdata);
     clear_cache_stage(current_thread);
   }
 
@@ -342,6 +345,8 @@ set_primitive(size_t i, const GeomPrimitive *primitive) {
     cdata->_shade_model = new_shade_model;
   }
 
+  check_fast_primitive(cdata);
+
   reset_geom_rendering(cdata);
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
@@ -387,6 +392,8 @@ insert_primitive(size_t i, const GeomPrimitive *primitive) {
     cdata->_shade_model = new_shade_model;
   }
 
+  check_fast_primitive(cdata);
+
   reset_geom_rendering(cdata);
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
@@ -409,6 +416,7 @@ remove_primitive(size_t i) {
     cdata->_primitive_type = PT_none;
     cdata->_shade_model = SM_uniform;
   }
+  check_fast_primitive(cdata);
   reset_geom_rendering(cdata);
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
@@ -430,6 +438,7 @@ clear_primitives() {
   cdata->_primitives.clear();
   cdata->_primitive_type = PT_none;
   cdata->_shade_model = SM_uniform;
+  check_fast_primitive(cdata);
   reset_geom_rendering(cdata);
   clear_cache_stage(current_thread);
   mark_internal_bounds_stale(cdata);
@@ -464,6 +473,8 @@ decompose_in_place() {
     }
 #endif
   }
+
+  check_fast_primitive(cdata);
 
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
@@ -502,6 +513,8 @@ doubleside_in_place() {
 #endif
   }
 
+  check_fast_primitive(cdata);
+
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
   clear_cache_stage(current_thread);
@@ -538,6 +551,8 @@ reverse_in_place() {
     }
 #endif
   }
+
+  check_fast_primitive(cdata);
 
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
@@ -588,6 +603,8 @@ rotate_in_place() {
   default:
     break;
   }
+
+  check_fast_primitive(cdata);
 
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
@@ -769,6 +786,8 @@ unify_in_place(int max_indices, bool preserve_order) {
     }
   }
 
+  check_fast_primitive(cdata);
+
   cdata->_modified = Geom::get_next_modified();
   clear_cache_stage(current_thread);
   reset_geom_rendering(cdata);
@@ -809,6 +828,8 @@ make_lines_in_place() {
       cdata->_primitive_type == PT_patches) {
     cdata->_primitive_type = PT_lines;
   }
+
+  check_fast_primitive(cdata);
 
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
@@ -851,6 +872,8 @@ make_points_in_place() {
     cdata->_primitive_type = PT_points;
   }
 
+  check_fast_primitive(cdata);
+
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
   clear_cache_stage(current_thread);
@@ -892,6 +915,8 @@ make_patches_in_place() {
     cdata->_primitive_type = PT_patches;
   }
 
+  check_fast_primitive(cdata);
+
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
   clear_cache_stage(current_thread);
@@ -932,6 +957,8 @@ make_adjacency_in_place() {
 #endif
     }
   }
+
+  check_fast_primitive(cdata);
 
   cdata->_modified = Geom::get_next_modified();
   reset_geom_rendering(cdata);
@@ -1724,6 +1751,8 @@ finalize(BamReader *manager) {
     cdata->_data.get_unsafe_pointer()->finalize(manager);
   }
 
+  check_fast_primitive(cdata);
+
   reset_geom_rendering(cdata);
 }
 
@@ -1901,4 +1930,16 @@ draw(GraphicsStateGuardianBase *gsg,
   }
 
   return all_ok;
+}
+
+/**
+ *
+ */
+void Geom::
+check_fast_primitive(CData *cdata) {
+  memset(cdata->_fast_primitives, 0, sizeof(cdata->_fast_primitives));
+  for (size_t i = 0; i < 3 && i < cdata->_primitives.size(); ++i) {
+    cdata->_fast_primitives[i] = cdata->_primitives[i].get_read_pointer();
+  }
+  cdata->_num_primitives = cdata->_primitives.size();
 }

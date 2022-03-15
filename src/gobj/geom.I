@@ -69,8 +69,8 @@ is_empty() const {
  * which represents a number of primitives of a particular type.
  */
 INLINE size_t Geom::
-get_num_primitives() const {
-  CDReader cdata(_cycler);
+get_num_primitives(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_primitives.size();
 }
 
@@ -80,10 +80,26 @@ get_num_primitives() const {
  * or set_primitive() if you want to modify it.
  */
 INLINE CPT(GeomPrimitive) Geom::
-get_primitive(size_t i) const {
-  CDReader cdata(_cycler);
+get_primitive(size_t i, Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   nassertr(i < cdata->_primitives.size(), nullptr);
   return cdata->_primitives[i].get_read_pointer();
+}
+
+/**
+ * Returns a const pointer to the ith GeomPrimitive object stored within the
+ * Geom.  Use this call only to inspect the ith object; use modify_primitive()
+ * or set_primitive() if you want to modify it.
+ *
+ * This flavor returns a GeomPrimitive from the flat C-array of the first 3
+ * primitives the Geom contains.  Use this in hot code to avoid an extra layer
+ * of indirection.
+ */
+INLINE const GeomPrimitive *Geom::
+get_fast_primitive(size_t i, Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
+  nassertr(i < 3, nullptr);
+  return cdata->_fast_primitives[i];
 }
 
 /**
@@ -513,7 +529,9 @@ CData() :
   _geom_rendering(0),
   _nested_vertices(0),
   _internal_bounds_stale(true),
-  _bounds_type(BoundingVolume::BT_default)
+  _bounds_type(BoundingVolume::BT_default),
+  _fast_primitives{ nullptr, nullptr, nullptr },
+  _num_primitives(0)
 {
 }
 
@@ -528,7 +546,9 @@ CData(GeomVertexData *data) :
   _geom_rendering(0),
   _nested_vertices(0),
   _internal_bounds_stale(true),
-  _bounds_type(BoundingVolume::BT_default)
+  _bounds_type(BoundingVolume::BT_default),
+  _fast_primitives{ nullptr, nullptr, nullptr },
+  _num_primitives(0)
 {
 }
 
