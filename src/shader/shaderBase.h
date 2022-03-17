@@ -62,12 +62,15 @@ public:
     BitMask32 _stage_flags;
     ShaderStage _stages[S_COUNT];
     Shader::ShaderLanguage _language;
+    pmap<const InternalName *, unsigned int> _spec_constants;
 
     INLINE ShaderObjectSetup();
     INLINE ShaderObjectSetup(const ShaderObjectSetup &other);
 
     INLINE void clear();
     INLINE size_t get_hash() const;
+
+    INLINE void calc_variation_indices();
 
     INLINE bool operator < (const ShaderObjectSetup &other) const;
     INLINE bool operator == (const ShaderObjectSetup &other) const;
@@ -129,51 +132,35 @@ protected:
   static void register_shader(ShaderBase *shader);
   static void register_shader(ShaderBase *shader, TypeHandle material_type);
 
-  bool add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec);
-  bool add_fog(const RenderState *state);
-  bool add_clip_planes(const RenderState *state);
-  bool add_alpha_test(const RenderState *state);
-  bool add_csm(const RenderState *state);
-  bool add_transparency(const RenderState *state);
-  bool add_hdr(const RenderState *state);
-  int add_aux_attachments(const RenderState *state);
-  void add_shader_quality(StageFlags stages = SF_all);
+  //bool add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec);
+  //bool add_fog(const RenderState *state);
+  //bool add_clip_planes(const RenderState *state);
+  //bool add_alpha_test(const RenderState *state);
+  //bool add_csm(const RenderState *state);
+  //bool add_transparency(const RenderState *state);
+  //bool add_hdr(const RenderState *state);
+  //int add_aux_attachments(const RenderState *state);
+  //void add_shader_quality(StageFlags stages = SF_all);
 
   INLINE void set_vertex_shader(const Filename &filename);
-  INLINE void set_vertex_shader_source(const std::string &source);
-  template <class T>
-  INLINE void set_vertex_shader_define(const std::string &name, const T &value);
-  INLINE void set_vertex_shader_define(const std::string &name,
-                                       const std::string &value = "1");
+  INLINE void set_vertex_shader_combo(size_t n, int value);
+  INLINE void set_vertex_shader_combo(const InternalName *name, int value);
 
   INLINE void set_pixel_shader(const Filename &filename);
-  INLINE void set_pixel_shader_source(const std::string &source);
-  template <class T>
-  INLINE void set_pixel_shader_define(const std::string &name, const T &value);
-  INLINE void set_pixel_shader_define(const std::string &name,
-                                      const std::string &value = "1");
-
+  INLINE void set_pixel_shader_combo(size_t n, int value);
+  INLINE void set_pixel_shader_combo(const InternalName *name, int value);
 
   INLINE void set_geometry_shader(const Filename &filename);
-  INLINE void set_geometry_shader_source(const std::string &source);
-  template <class T>
-  INLINE void set_geometry_shader_define(const std::string &name, const T &value);
-  INLINE void set_geometry_shader_define(const std::string &name,
-                                         const std::string &value = "1");
+  INLINE void set_geometry_shader_combo(size_t n, int value);
+  INLINE void set_geometry_shader_combo(const InternalName *name, int value);
 
   INLINE void set_tess_shader(const Filename &filename);
-  INLINE void set_tess_shader_source(const std::string &source);
-  template <class T>
-  INLINE void set_tess_shader_define(const std::string &name, const T &value);
-  INLINE void set_tess_shader_define(const std::string &name,
-                                     const std::string &value = "1");
+  INLINE void set_tess_shader_combo(size_t n, int value);
+  INLINE void set_tess_shader_combo(const InternalName *name, int value);
 
   INLINE void set_tess_eval_shader(const Filename &filename);
-  INLINE void set_tess_eval_shader_source(const std::string &source);
-  template <class T>
-  INLINE void set_tess_eval_shader_define(const std::string &name, const T &value);
-  INLINE void set_tess_eval_shader_define(const std::string &name,
-                                          const std::string &value = "1");
+  INLINE void set_tess_eval_shader_combo(size_t n, int value);
+  INLINE void set_tess_eval_shader_combo(const InternalName *name, int value);
 
   INLINE void set_input(const ShaderInput &input);
   INLINE void set_input(ShaderInput &&input);
@@ -183,6 +170,11 @@ protected:
   INLINE void set_instance_count(int count);
 
   INLINE void set_language(Shader::ShaderLanguage language);
+
+  INLINE void set_spec_constant(const InternalName *name, bool value);
+  INLINE void set_spec_constant(const InternalName *name, float value);
+  INLINE void set_spec_constant(const InternalName *name, int value);
+  INLINE void set_spec_constant(const InternalName *name, unsigned int value);
 
 protected:
   ShaderSetup _setup;
@@ -221,6 +213,5 @@ private:
 };
 
 #include "shaderBase.I"
-#include "shaderBase.T"
 
 #endif // SHADERBASE_H

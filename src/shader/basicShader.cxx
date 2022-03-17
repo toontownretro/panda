@@ -6,36 +6,34 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file spriteParticleShader.cxx
+ * @file basicShader.cxx
  * @author brian
- * @date 2021-09-01
+ * @date 2022-03-16
  */
 
-#include "spriteParticleShader.h"
-#include "materialParamFloat.h"
-#include "renderModeAttrib.h"
-#include "renderState.h"
-#include "materialParamTexture.h"
+#include "basicShader.h"
+#include "internalName.h"
 #include "textureAttrib.h"
-#include "textureStage.h"
 #include "texture.h"
-#include "clipPlaneAttrib.h"
 #include "fogAttrib.h"
 #include "fog.h"
 #include "alphaTestAttrib.h"
+#include "clipPlaneAttrib.h"
+#include "geomVertexAnimationSpec.h"
 
-TypeHandle SpriteParticleShader::_type_handle;
+TypeHandle BasicShader::_type_handle;
 
 /**
- * Synthesizes a shader for a given render state.
+ *
  */
-void SpriteParticleShader::
+void BasicShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
                 const GeomVertexAnimationSpec &anim_spec) {
 
   // Internal names for combos and specialization constants.
+  static const CPT_InternalName IN_SKINNING("SKINNING");
   static const CPT_InternalName IN_BASETEXTURE("BASETEXTURE");
   static const CPT_InternalName IN_FOG("FOG");
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -47,58 +45,23 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/spriteParticle.vert.sho");
-  set_geometry_shader("shadersnew/spriteParticle.geom.sho");
-  set_pixel_shader("shadersnew/spriteParticle.frag.sho");
+  set_vertex_shader("shadersnew/basic.vert.sho");
+  set_pixel_shader("shadersnew/basic.frag.sho");
 
-  const RenderModeAttrib *rma;
-  state->get_attrib_def(rma);
-
-  PN_stdfloat x_size, y_size;
-
-  // First use the thickness that the RenderModeAttrib specifies,
-  // then modulate it with the sizes specified in the material.
-  x_size = y_size = rma->get_thickness();
-
-  if (material != nullptr) {
-    MaterialParamFloat *x_size_p = (MaterialParamFloat *)material->get_param("x_size");
-    if (x_size_p != nullptr) {
-      x_size *= x_size_p->get_value();
-    }
-
-    MaterialParamFloat *y_size_p = (MaterialParamFloat *)material->get_param("y_size");
-    if (y_size_p != nullptr) {
-      y_size *= y_size_p->get_value();
-    }
+  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
+      anim_spec.get_num_transforms() > 0) {
+    // Doing skinning in the vertex shader.
+    set_vertex_shader_combo(IN_SKINNING, 1);
   }
 
-  set_input(ShaderInput("sprite_size", LVecBase2(x_size, y_size)));
-
-  // Now get the texture.
-  MaterialParamTexture *tex_p = nullptr;
-  if (material != nullptr) {
-    tex_p = (MaterialParamTexture *)material->get_param("base_texture");
-  }
-
-  if (tex_p != nullptr) {
-    // Use the texture specified in the material.
-    set_pixel_shader_combo(IN_BASETEXTURE, 1);
-    set_input(ShaderInput("baseTextureSampler", tex_p->get_value()));
-
-  } else {
-    // No texture in material, so use the first one from the TextureAttrib.
-    const TextureAttrib *ta;
-    state->get_attrib_def(ta);
-    if (ta->get_num_on_stages() > 0) {
-      for (int i = 0; i < ta->get_num_on_stages(); i++) {
-        TextureStage *stage = ta->get_on_stage(i);
-        if (stage == TextureStage::get_default()) {
-          set_pixel_shader_combo(IN_BASETEXTURE, 1);
-          Texture *tex = ta->get_on_texture(stage);
-          set_input(ShaderInput("baseTextureSampler", tex));
-          break;
-        }
-      }
+  const TextureAttrib *ta;
+  if (state->get_attrib(ta)) {
+    Texture *tex = ta->get_texture();
+    if (tex != nullptr) {
+      // We have a color texture.
+      set_vertex_shader_combo(IN_BASETEXTURE, 1);
+      set_pixel_shader_combo(IN_BASETEXTURE, 1);
+      set_input(ShaderInput("base_texture_sampler", tex));
     }
   }
 

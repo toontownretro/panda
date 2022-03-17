@@ -24,12 +24,13 @@ TypeHandle ShaderObject::_type_handle;
 void ShaderObject::
 calc_total_combos() {
   _total_combos = 1;
-  for (size_t i = 0; i < _combos.size(); i++) {
+  for (int i = (int)_combos.size() - 1; i >= 0; --i) {
     Combo &combo = _combos[i];
     // The scale is used to calculate a permutation index from all the combo
     // values.
     combo.scale = _total_combos;
     _total_combos *= combo.max_val - combo.min_val + 1;
+    _combos_by_name[combo.name.p()] = (int)i;
   }
 }
 
@@ -61,7 +62,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   // Write the permutations.
   dg.add_uint32(_permutations.size());
   for (size_t i = 0; i < _permutations.size(); i++) {
-    manager->write_pointer(dg, _permutations[i].get_read_pointer());
+    manager->write_pointer(dg, _permutations[i].p());
   }
 }
 
@@ -77,7 +78,7 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   for (size_t i = 0; i < _permutations.size(); i++) {
     if (p_list[index] != nullptr) {
-      ShaderModuleSpirV *mod;
+      ShaderModule *mod;
       DCAST_INTO_R(mod, p_list[index], index);
       _permutations[i] = mod;
     }

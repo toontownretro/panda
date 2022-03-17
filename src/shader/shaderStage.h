@@ -16,7 +16,7 @@
 
 #include "config_shader.h"
 #include "filename.h"
-#include "shaderSource.h"
+#include "shaderObject.h"
 
 #include <string>
 
@@ -28,20 +28,11 @@
 class EXPCL_PANDA_SHADER ShaderStage {
 public:
   INLINE ShaderStage();
-  INLINE void operator =(const ShaderStage &other);
+  INLINE void operator = (const ShaderStage &other);
 
   INLINE void reset();
 
   INLINE void set_source_filename(const Filename &filename);
-  INLINE void set_source_raw(const std::string &source);
-
-  INLINE std::string get_final_source();
-
-  template <class T>
-  INLINE void set_define(const std::string &name, const T &value);
-  INLINE void set_define(const std::string &name, const std::string &value = "1");
-
-  INLINE const std::string &get_defines_str() const;
 
   INLINE size_t add_hash(size_t hash) const;
   INLINE bool operator < (const ShaderStage &other) const;
@@ -50,15 +41,36 @@ public:
     return !operator ==(other);
   }
 
-private:
-  CPT(ShaderSource) _source;
+  INLINE void set_combo_value(size_t i, int value);
+  INLINE void set_combo_value(const InternalName *name, int value);
 
-  std::ostringstream _defines;
-  std::string _defines_str;
-  bool _has_defines_str;
+  INLINE void calc_variation_index();
+  INLINE size_t get_variation_index() const;
+
+  void spew_variation();
+
+  INLINE const ShaderObject *get_object() const;
+  INLINE ShaderModule *get_module() const;
+
+  static const ShaderObject *load_shader_object(const Filename &filename);
+  static void clear_sho_cache();
+
+private:
+  // The shader object containing precompiled shader modules for each
+  // combination of preprocessor values.
+  const ShaderObject *_object;
+
+  // Values for each combo that the shader object contains.
+  // By default, all combo values are initialized to 0.
+  // At the end of shader generation, the variation index will be
+  // computed from the values of all combos.
+  vector_int _combo_values;
+  size_t _variation_index;
+
+  typedef pflat_hash_map<Filename, CPT(ShaderObject), string_hash> ObjectCache;
+  static ObjectCache _object_cache;
 };
 
 #include "shaderStage.I"
-#include "shaderStage.T"
 
 #endif // SHADERSTAGE_H

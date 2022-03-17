@@ -25,7 +25,8 @@ ShaderObjectSetup() {
 INLINE ShaderBase::ShaderObjectSetup::
 ShaderObjectSetup(const ShaderObjectSetup &copy) :
   _language(copy._language),
-  _stage_flags(copy._stage_flags)
+  _stage_flags(copy._stage_flags),
+  _spec_constants(copy._spec_constants)
 {
   BitMask32 mask = _stage_flags;
   int index = mask.get_lowest_on_bit();
@@ -53,6 +54,8 @@ clear() {
   }
 
   _stage_flags = SF_none;
+
+  _spec_constants.clear();
 }
 
 /**
@@ -71,6 +74,11 @@ get_hash() const {
 
     mask.clear_bit(index);
     index = mask.get_lowest_on_bit();
+  }
+  hash = size_t_hash::add_hash(hash, _spec_constants.size());
+  for (auto it = _spec_constants.begin(); it != _spec_constants.end(); ++it) {
+    hash = pointer_hash::add_hash(hash, (*it).first);
+    hash = integer_hash<unsigned int>::add_hash(hash, (*it).second);
   }
 
   return hash;
@@ -100,6 +108,23 @@ operator < (const ShaderObjectSetup &other) const {
     index = mask.get_lowest_on_bit();
   }
 
+  if (_spec_constants.size() != other._spec_constants.size()) {
+    return (_spec_constants.size() < other._spec_constants.size());
+  }
+
+  auto it = _spec_constants.begin();
+  auto it2 = other._spec_constants.begin();
+  while (it != _spec_constants.end() && it2 != other._spec_constants.end()) {
+    if ((*it).first != (*it2).first) {
+      return (*it).first < (*it2).first;
+    }
+    if ((*it).second != (*it2).second) {
+      return (*it).second < (*it2).second;
+    }
+    ++it;
+    ++it2;
+  }
+
   return false;
 }
 
@@ -127,7 +152,40 @@ operator == (const ShaderObjectSetup &other) const {
     index = mask.get_lowest_on_bit();
   }
 
+  if (_spec_constants.size() != other._spec_constants.size()) {
+    return false;
+  }
+
+  auto it = _spec_constants.begin();
+  auto it2 = other._spec_constants.begin();
+  while (it != _spec_constants.end() && it2 != other._spec_constants.end()) {
+    if ((*it).first != (*it2).first) {
+      return false;
+    }
+    if ((*it).second != (*it2).second) {
+      return false;
+    }
+    ++it;
+    ++it2;
+  }
+
   return true;
+}
+
+/**
+ * Calculates variation indices for all stages turned on by this setup
+ * from the combo values of each turned on stage.
+ */
+INLINE void ShaderBase::ShaderObjectSetup::
+calc_variation_indices() {
+  BitMask32 mask = _stage_flags;
+  int index = mask.get_lowest_on_bit();
+  while (index >= 0) {
+    _stages[index].calc_variation_index();
+
+    mask.clear_bit(index);
+    index = mask.get_lowest_on_bit();
+  }
 }
 
 /**
@@ -248,20 +306,19 @@ set_vertex_shader(const Filename &filename) {
 }
 
 /**
- * Sets the source code of the vertex shader.
+ * Sets the value of a vertex shader combo by index.
  */
 INLINE void ShaderBase::
-set_vertex_shader_source(const std::string &source) {
-  _obj_setup._stages[S_vertex].set_source_raw(source);
-  _obj_setup._stage_flags |= SF_vertex;
+set_vertex_shader_combo(size_t n, int value) {
+  _obj_setup._stages[S_vertex].set_combo_value(n, value);
 }
 
 /**
- * Adds a #define for the vertex shader.
+ * Sets the value of a vertex shader combo by name.
  */
 INLINE void ShaderBase::
-set_vertex_shader_define(const std::string &name, const std::string &value) {
-  _obj_setup._stages[S_vertex].set_define(name, value);
+set_vertex_shader_combo(const InternalName *name, int value) {
+  _obj_setup._stages[S_vertex].set_combo_value(name, value);
 }
 
 /**
@@ -274,20 +331,19 @@ set_pixel_shader(const Filename &filename) {
 }
 
 /**
- * Sets the source code of the pixel shader.
+ * Sets the value of a pixel shader combo by index.
  */
 INLINE void ShaderBase::
-set_pixel_shader_source(const std::string &source) {
-  _obj_setup._stages[S_pixel].set_source_raw(source);
-  _obj_setup._stage_flags |= SF_pixel;
+set_pixel_shader_combo(size_t n, int value) {
+  _obj_setup._stages[S_pixel].set_combo_value(n, value);
 }
 
 /**
- * Sets a #define for the pixel shader.
+ * Sets the value of a pixel shader combo by name.
  */
 INLINE void ShaderBase::
-set_pixel_shader_define(const std::string &name, const std::string &value) {
-  _obj_setup._stages[S_pixel].set_define(name, value);
+set_pixel_shader_combo(const InternalName *name, int value) {
+  _obj_setup._stages[S_pixel].set_combo_value(name, value);
 }
 
 /**
@@ -300,20 +356,19 @@ set_geometry_shader(const Filename &filename) {
 }
 
 /**
- * Sets the source code of the geometry shader.
+ * Sets the value of a geometry shader combo by index.
  */
 INLINE void ShaderBase::
-set_geometry_shader_source(const std::string &source) {
-  _obj_setup._stages[S_geometry].set_source_raw(source);
-  _obj_setup._stage_flags |= SF_geometry;
+set_geometry_shader_combo(size_t n, int value) {
+  _obj_setup._stages[S_geometry].set_combo_value(n, value);
 }
 
 /**
- * Sets a #define for the geometry shader.
+ * Sets the value of a geometry shader combo by name.
  */
 INLINE void ShaderBase::
-set_geometry_shader_define(const std::string &name, const std::string &value) {
-  _obj_setup._stages[S_geometry].set_define(name, value);
+set_geometry_shader_combo(const InternalName *name, int value) {
+  _obj_setup._stages[S_geometry].set_combo_value(name, value);
 }
 
 /**
@@ -326,20 +381,19 @@ set_tess_shader(const Filename &filename) {
 }
 
 /**
- * Sets the source code of the tessellation shader.
+ * Sets the value of a tessellation shader combo by index.
  */
 INLINE void ShaderBase::
-set_tess_shader_source(const std::string &source) {
-  _obj_setup._stages[S_tess].set_source_raw(source);
-  _obj_setup._stage_flags |= SF_tess;
+set_tess_shader_combo(size_t n, int value) {
+  _obj_setup._stages[S_tess].set_combo_value(n, value);
 }
 
 /**
- * Sets a #define for the tessellation shader.
+ * Sets the value of a tessellation shader combo by name.
  */
 INLINE void ShaderBase::
-set_tess_shader_define(const std::string &name, const std::string &value) {
-  _obj_setup._stages[S_tess].set_define(name, value);
+set_tess_shader_combo(const InternalName *name, int value) {
+  _obj_setup._stages[S_tess].set_combo_value(name, value);
 }
 
 /**
@@ -352,20 +406,19 @@ set_tess_eval_shader(const Filename &filename) {
 }
 
 /**
- * Sets the source code of the tessellation evaluation shader.
+ * Sets the value of a tessellation evaluation shader combo by index.
  */
 INLINE void ShaderBase::
-set_tess_eval_shader_source(const std::string &source) {
-  _obj_setup._stages[S_tess_eval].set_source_raw(source);
-  _obj_setup._stage_flags |= SF_tess_eval;
+set_tess_eval_shader_combo(size_t n, int value) {
+  _obj_setup._stages[S_tess_eval].set_combo_value(n, value);
 }
 
 /**
- * Sets a #define for the tessellation evaluation shader.
+ * Sets the value of a tessellation evaluation shader combo by name.
  */
 INLINE void ShaderBase::
-set_tess_eval_shader_define(const std::string &name, const std::string &value) {
-  _obj_setup._stages[S_tess_eval].set_define(name, value);
+set_tess_eval_shader_combo(const InternalName *name, int value) {
+  _obj_setup._stages[S_tess_eval].set_combo_value(name, value);
 }
 
 /**
@@ -495,4 +548,40 @@ get_num_aliases() const {
 INLINE const std::string &ShaderBase::
 get_alias(size_t n) const {
   return _aliases[n];
+}
+
+/**
+ *
+ */
+INLINE void ShaderBase::
+set_spec_constant(const InternalName *name, bool value) {
+  _obj_setup._spec_constants[name] = (unsigned int)value;
+}
+
+/**
+ *
+ */
+INLINE void ShaderBase::
+set_spec_constant(const InternalName *name, float value) {
+  unsigned int val;
+  *((float *)&val) = value;
+  _obj_setup._spec_constants[name] = val;
+}
+
+/**
+ *
+ */
+INLINE void ShaderBase::
+set_spec_constant(const InternalName *name, int value) {
+  unsigned int val;
+  *((int *)&val) = value;
+  _obj_setup._spec_constants[name] = val;
+}
+
+/**
+ *
+ */
+INLINE void ShaderBase::
+set_spec_constant(const InternalName *name, unsigned int value) {
+  _obj_setup._spec_constants[name] = value;
 }

@@ -28,8 +28,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/unlitNoMat.vert.glsl");
-  set_pixel_shader("shaders/unlitNoMat.frag.glsl");
+  set_vertex_shader("shaders/unlitNoMat.vert.sho");
+  set_pixel_shader("shaders/unlitNoMat.frag.sho");
 
   add_alpha_test(state);
   add_aux_attachments(state);

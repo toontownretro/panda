@@ -16,17 +16,18 @@
  */
 INLINE ShaderStage::
 ShaderStage() {
-  _has_defines_str = false;
+  _object = nullptr;
+  _variation_index = 0;
 }
 
 /**
  *
  */
 INLINE void ShaderStage::
-operator =(const ShaderStage &copy) {
-  _source = copy._source;
-  _defines_str = copy._defines_str;
-  _has_defines_str = copy._has_defines_str;
+operator = (const ShaderStage &copy) {
+  _object = copy._object;
+  _combo_values = copy._combo_values;
+  _variation_index = copy._variation_index;
 }
 
 /**
@@ -35,9 +36,9 @@ operator =(const ShaderStage &copy) {
  */
 INLINE void ShaderStage::
 reset() {
-  _source = nullptr;
-  _defines = std::ostringstream();
-  _has_defines_str = false;
+  _object = nullptr;
+  _combo_values.clear();
+  _variation_index = 0;
 }
 
 /**
@@ -45,69 +46,12 @@ reset() {
  */
 INLINE void ShaderStage::
 set_source_filename(const Filename &filename) {
-  _source = ShaderSource::from_filename(filename);
-  _defines = std::ostringstream();
-  _has_defines_str = false;
-}
+  _object = load_shader_object(filename);
+  nassertv(_object != nullptr);
 
-/**
- * Sets the raw source code for this shader stage.
- */
-INLINE void ShaderStage::
-set_source_raw(const std::string &source) {
-  _source = ShaderSource::from_raw(source);
-}
-
-/**
- * Returns the final source code for this stage that will be compiled into the
- * shader program.  If the source was loaded from disk, returns the source with
- * the #defines inserted.
- */
-INLINE std::string ShaderStage::
-get_final_source() {
-  if (!_source) {
-    return "";
-  }
-
-  switch(_source->get_format()) {
-  case ShaderSource::SF_raw:
-    return _source->get_source();
-
-  case ShaderSource::SF_file:
-  {
-    std::ostringstream ss;
-    ss << _source->get_before_defines() << "\n";
-    ss << get_defines_str();
-    ss << _source->get_after_defines();
-    return ss.str();
-  }
-
-  default:
-    return "";
-  }
-}
-
-/**
- * Sets a #define for the shader stage.
- */
-INLINE void ShaderStage::
-set_define(const std::string &name, const std::string &value) {
-  set_define<std::string>(name, value);
-}
-
-/**
- * Returns a string representing the #defines that should be inserted into the
- * shader code.
- */
-INLINE const std::string &ShaderStage::
-get_defines_str() const {
-  ShaderStage *nc_this = (ShaderStage *)this;
-  if (!_has_defines_str) {
-    nc_this->_defines_str = _defines.str();
-    nc_this->_has_defines_str = true;
-  }
-
-  return _defines_str;
+  // Set all combo values to 0.
+  _combo_values.resize(_object->get_num_combos());
+  memset(_combo_values.data(), 0, sizeof(int) * _combo_values.size());
 }
 
 /**
@@ -115,8 +59,8 @@ get_defines_str() const {
  */
 INLINE size_t ShaderStage::
 add_hash(size_t hash) const {
-  hash = pointer_hash::add_hash(hash, _source.p());
-  hash = string_hash::add_hash(hash, get_defines_str());
+  hash = pointer_hash::add_hash(hash, _object);
+  hash = size_t_hash::add_hash(hash, _variation_index);
   return hash;
 }
 
@@ -125,12 +69,12 @@ add_hash(size_t hash) const {
  */
 INLINE bool ShaderStage::
 operator < (const ShaderStage &other) const {
-  if (_source != other._source) {
-    return (_source < other._source);
+  if (_object != other._object) {
+    return (_object < other._object);
   }
 
-  if (get_defines_str() != other.get_defines_str()) {
-    return (get_defines_str() < other.get_defines_str());
+  if (_variation_index != other._variation_index) {
+    return (_variation_index < other._variation_index);
   }
 
   return false;
@@ -141,13 +85,81 @@ operator < (const ShaderStage &other) const {
  */
 INLINE bool ShaderStage::
 operator == (const ShaderStage &other) const {
-  if (_source != other._source) {
+  if (_object != other._object) {
     return false;
   }
 
-  if (get_defines_str() != other.get_defines_str()) {
+  if (_variation_index != other._variation_index) {
     return false;
   }
 
   return true;
+}
+
+/**
+ *
+ */
+INLINE void ShaderStage::
+set_combo_value(size_t i, int value) {
+  nassertv(i < _combo_values.size());
+#ifndef NDEBUG
+  const ShaderObject::Combo &combo = _object->get_combo(i);
+  nassertv(value >= combo.min_val && value <= combo.max_val);
+#endif
+  _combo_values[i] = value;
+}
+
+/**
+ *
+ */
+INLINE void ShaderStage::
+set_combo_value(const InternalName *name, int value) {
+  int index = _object->get_combo_index(name);
+  nassertv(index >= 0 && index < (int)_combo_values.size());
+#ifndef NDEBUG
+  const ShaderObject::Combo &combo = _object->get_combo(index);
+  nassertv(value >= combo.min_val && value <= combo.max_val);
+#endif
+  _combo_values[index] = value;
+}
+
+/**
+ * Calculates the ShaderObject variation index from the values of all combos.
+ * This determines the actual precompiled ShaderModule to use for the stage.
+ */
+INLINE void ShaderStage::
+calc_variation_index() {
+  _variation_index = 0;
+  for (size_t i = 0; i < _combo_values.size(); ++i) {
+    const ShaderObject::Combo &combo = _object->get_combo(i);
+    _variation_index += combo.scale * _combo_values[i];
+  }
+}
+
+/**
+ *
+ */
+INLINE size_t ShaderStage::
+get_variation_index() const {
+  return _variation_index;
+}
+
+/**
+ *
+ */
+INLINE const ShaderObject *ShaderStage::
+get_object() const {
+  return _object;
+}
+
+/**
+ *
+ */
+INLINE ShaderModule *ShaderStage::
+get_module() const {
+  if (_object == nullptr) {
+    return nullptr;
+  }
+
+  return _object->get_permutation(_variation_index);
 }

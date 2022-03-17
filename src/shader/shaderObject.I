@@ -92,10 +92,23 @@ get_num_combos() const {
 }
 
 /**
+ * Returns the index of the Combo with the indicated name, or -1 if no combo
+ * exists with such name.
+ */
+INLINE int ShaderObject::
+get_combo_index(const InternalName *name) const {
+  auto it = _combos_by_name.find(name);
+  if (it != _combos_by_name.end()) {
+    return (*it).second;
+  }
+  return -1;
+}
+
+/**
  * Appends a new permutation to the shader object.
  */
 INLINE void ShaderObject::
-add_permutation(ShaderModuleSpirV *module) {
+add_permutation(ShaderModule *module) {
   _permutations.push_back(module);
 }
 
@@ -103,7 +116,7 @@ add_permutation(ShaderModuleSpirV *module) {
  * Sets the permutation at the indicated index.
  */
 INLINE void ShaderObject::
-set_permutation(size_t n, ShaderModuleSpirV *module) {
+set_permutation(size_t n, ShaderModule *module) {
   _permutations[n] = module;
 }
 
@@ -118,10 +131,10 @@ resize_permutations(size_t count) {
 /**
  * Returns the permutation at the indicated index.
  */
-INLINE const ShaderModuleSpirV *ShaderObject::
+INLINE ShaderModule *ShaderObject::
 get_permutation(size_t n) const {
   nassertr(n >= 0 && n < _permutations.size(), nullptr);
-  return _permutations[n].get_read_pointer();
+  return _permutations[n];
 }
 
 /**

@@ -17,7 +17,10 @@
 #include "pandabase.h"
 #include "typedWritableReferenceCount.h"
 #include "internalName.h"
-#include "shaderModuleSpirV.h"
+#include "shaderModule.h"
+#include "pointerTo.h"
+#include "pmap.h"
+#include "pvector.h"
 
 class FactoryParams;
 
@@ -53,10 +56,12 @@ PUBLISHED:
   INLINE const Combo &get_combo(CPT_InternalName name) const;
   INLINE size_t get_num_combos() const;
 
-  INLINE void add_permutation(ShaderModuleSpirV *module);
-  INLINE void set_permutation(size_t n, ShaderModuleSpirV *module);
+  INLINE int get_combo_index(const InternalName *name) const;
+
+  INLINE void add_permutation(ShaderModule *module);
+  INLINE void set_permutation(size_t n, ShaderModule *module);
   INLINE void resize_permutations(size_t count);
-  INLINE const ShaderModuleSpirV *get_permutation(size_t n) const;
+  INLINE ShaderModule *get_permutation(size_t n) const;
   INLINE size_t get_num_permutations() const;
 
   INLINE size_t get_total_combos() const;
@@ -68,7 +73,10 @@ private:
   typedef pvector<Combo> Combos;
   Combos _combos;
 
-  typedef pvector<COWPT(ShaderModuleSpirV)> Permutations;
+  typedef pflat_hash_map<const InternalName *, int, pointer_hash> CombosByName;
+  CombosByName _combos_by_name;
+
+  typedef pvector<PT(ShaderModule)> Permutations;
   Permutations _permutations;
 
   size_t _total_combos;

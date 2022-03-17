@@ -26,7 +26,8 @@
 #include "materialAttrib.h"
 #include "texturePool.h"
 #include "graphicsStateGuardianBase.h"
-#include "shaderSource.h"
+//#include "shaderSource.h"
+#include "shaderStage.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -61,7 +62,7 @@ reload_shaders() {
   for (auto it = _shaders.begin(); it != _shaders.end(); ++it) {
     (*it).second->clear_cache();
   }
-  ShaderSource::clear_cache();
+  ShaderStage::clear_sho_cache();
 }
 
 /**
@@ -199,6 +200,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   synthesize_source_collector.start();
   shader->generate_shader(gsg, state, material, anim_spec);
+  shader->_obj_setup.calc_variation_indices();
   synthesize_source_collector.stop();
 
   PT(Shader) shader_obj;
@@ -209,17 +211,44 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   ShaderBase::ObjectSetupCache::const_iterator oit = shader->_obj_cache.find(shader->_obj_setup);
   cache_collector.stop();
   if (oit != shader->_obj_cache.end()) {
+    if (shadermgr_cat.is_debug()) {
+      shadermgr_cat.debug()
+        << "Object cache hit\n";
+    }
     shader_obj = (*oit).second;
 
   } else {
     make_shader_collector.start();
+
+    if (shadermgr_cat.is_debug()) {
+      std::cout << "vsh:\n";
+      shader->get_stage(ShaderBase::S_vertex).spew_variation();
+      std::cout << "psh:\n";
+      shader->get_stage(ShaderBase::S_pixel).spew_variation();
+    }
+
+    COWPT(ShaderModule) v_mod = shader->get_stage(ShaderBase::S_vertex).get_module();
+    COWPT(ShaderModule) p_mod = shader->get_stage(ShaderBase::S_pixel).get_module();
+    COWPT(ShaderModule) g_mod = shader->get_stage(ShaderBase::S_geometry).get_module();
+    COWPT(ShaderModule) t_mod = shader->get_stage(ShaderBase::S_tess).get_module();
+    COWPT(ShaderModule) te_mod = shader->get_stage(ShaderBase::S_tess_eval).get_module();
     shader_obj = Shader::make(
       shader->get_language(),
-      shader->get_stage(ShaderBase::S_vertex).get_final_source(),
-      shader->get_stage(ShaderBase::S_pixel).get_final_source(),
-      shader->get_stage(ShaderBase::S_geometry).get_final_source(),
-      shader->get_stage(ShaderBase::S_tess).get_final_source(),
-      shader->get_stage(ShaderBase::S_tess_eval).get_final_source());
+      (ShaderModule *)v_mod.get_read_pointer(),
+      (ShaderModule *)p_mod.get_read_pointer(),
+      (ShaderModule *)g_mod.get_read_pointer(),
+      (ShaderModule *)t_mod.get_read_pointer(),
+      (ShaderModule *)te_mod.get_read_pointer());
+    nassertr(shader_obj != nullptr, nullptr);
+    if (shader_obj != nullptr) {
+      // Supply the specialization constants.
+      for (auto cit = shader->_obj_setup._spec_constants.begin(); cit != shader->_obj_setup._spec_constants.end(); ++cit) {
+        shader_obj->set_constant((*cit).first, (*cit).second);
+        if (shadermgr_cat.is_debug()) {
+          std::cout << "spec constant: " << (*cit).first->get_name() << " -> " << (*cit).second << "\n";
+        }
+      }
+    }
     make_shader_collector.stop();
 
     // Throw it in the cache.
@@ -233,6 +262,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   cache_collector.stop();
 
   if (it != shader->_cache.end()) {
+    if (shadermgr_cat.is_debug()) {
+      shadermgr_cat.debug()
+        << "ShaderAttrib cache hit\n";
+    }
+
     // We have!  Just use that.
     generated_attr = (*it).second;
 

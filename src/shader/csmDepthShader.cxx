@@ -21,6 +21,10 @@
 #include "material.h"
 #include "materialParamTexture.h"
 #include "materialParamColor.h"
+#include "clipPlaneAttrib.h"
+#include "geomVertexAnimationSpec.h"
+#include "transparencyAttrib.h"
+#include "alphaTestAttrib.h"
 
 TypeHandle CSMDepthShader::_type_handle;
 
@@ -32,6 +36,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
                 const GeomVertexAnimationSpec &anim_spec) {
+
+  static CPT_InternalName IN_BASETEXTURE("BASETEXTURE");
+  static CPT_InternalName IN_HAS_ALPHA("HAS_ALPHA");
+  static CPT_InternalName IN_CLIPPING("CLIPPING");
+  static CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
+  static CPT_InternalName IN_SKINNING("SKINNING");
+  static CPT_InternalName IN_ALPHA_TEST_MODE("ALPHA_TEST_MODE");
+  static CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
 
   set_language(Shader::SL_GLSL);
 
@@ -45,45 +57,62 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   nassertv(can_write_gl_layer_from_vertex_shader);
   // TODO: Fallback to geometry shader or texture atlas if not supported.
 
-  set_vertex_shader("shaders/csmdepth.vert.glsl");
+  set_vertex_shader("shadersnew/csmdepth.vert.sho");
   //set_geometry_shader("shaders/csmdepth.geom.glsl");
-  set_pixel_shader("shaders/csmdepth.frag.glsl");
+  set_pixel_shader("shadersnew/csmdepth.frag.sho");
 
-  // Do we have transparency?
-  bool has_transparency = add_transparency(state);
-  bool has_alpha_test = add_alpha_test(state);
+  // Check if alpha is enabled (indicating we should do alpha cutouts for
+  // shadows).
+  // If alpha testing is enabled on the state, the shader will perform the
+  // specified alpha test.  If transparency is enabled, the shader will discard
+  // pixels with alpha values < 0.5.
+  bool has_alpha = false;
+  PN_stdfloat alpha_ref = 0.5f;
+  AlphaTestAttrib::PandaCompareFunc alpha_mode = AlphaTestAttrib::M_greater_equal;
+  const TransparencyAttrib *ta;
+  const AlphaTestAttrib *ata;
+  if (state->get_attrib(ata) && ata->get_mode() != AlphaTestAttrib::M_always &&
+      ata->get_mode() != AlphaTestAttrib::M_none) {
+    has_alpha = true;
+    alpha_ref = ata->get_reference_alpha();
+    alpha_mode = ata->get_mode();
 
-  // Hardware skinning?
-  add_hardware_skinning(anim_spec);
+  } else if (state->get_attrib(ta) && ta->get_mode() != TransparencyAttrib::M_none) {
+    has_alpha = true;
+  }
 
-  // How about clip planes?
-  if (add_clip_planes(state)) {
-    set_vertex_shader_define("NEED_WORLD_POSITION");
-    //set_geometry_shader_define("NEED_WORLD_POSITION");
-    set_pixel_shader_define("NEED_WORLD_POSITION");
+  if (has_alpha) {
+    set_pixel_shader_combo(IN_HAS_ALPHA, 1);
+    set_spec_constant(IN_ALPHA_TEST_MODE, (int)alpha_mode);
+    set_spec_constant(IN_ALPHA_TEST_REF, alpha_ref);
   }
 
   // Need textures for alpha-tested shadows.
 
   if (material == nullptr) {
-    const TextureAttrib *ta;
-    state->get_attrib_def(ta);
-
-    Texture *tex = ta->get_on_texture(TextureStage::get_default());
-    if (tex != nullptr && (has_transparency || has_alpha_test)) {
-      set_pixel_shader_define("BASETEXTURE");
-      set_vertex_shader_define("BASETEXTURE");
+    Texture *tex = nullptr;
+    if (has_alpha) {
+      const TextureAttrib *texattr;
+      state->get_attrib_def(texattr);
+      tex = texattr->get_on_texture(TextureStage::get_default());
+    }
+    if (tex != nullptr) {
+      set_vertex_shader_combo(IN_BASETEXTURE, 1);
+      set_pixel_shader_combo(IN_BASETEXTURE, 1);
       set_input(ShaderInput("baseTextureSampler", tex));
     } else {
       set_input(ShaderInput("baseColor", LColor(1, 1, 1, 1)));
     }
 
   } else {
-    MaterialParamBase *param = material->get_param("base_color");
-    if (param != nullptr && (has_transparency || has_alpha_test)) {
+    MaterialParamBase *param = nullptr;
+    if (has_alpha) {
+      param = material->get_param("base_color");
+    }
+    if (param != nullptr) {
       if (param->is_of_type(MaterialParamTexture::get_class_type())) {
-        set_pixel_shader_define("BASETEXTURE");
-        set_vertex_shader_define("BASETEXTURE");
+        set_vertex_shader_combo(IN_BASETEXTURE, 1);
+        set_pixel_shader_combo(IN_BASETEXTURE, 1);
         set_input(ShaderInput("baseTextureSampler", DCAST(MaterialParamTexture, param)->get_value()));
 
       } else if (param->is_of_type(MaterialParamColor::get_class_type())) {
@@ -92,6 +121,19 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     } else {
       set_input(ShaderInput("baseColor", LColor(1, 1, 1, 1)));
+    }
+  }
+
+  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
+      anim_spec.get_num_transforms() > 0) {
+    set_vertex_shader_combo(IN_SKINNING, 1);
+  }
+
+  const ClipPlaneAttrib *cpa;
+  if (state->get_attrib(cpa)) {
+    if (cpa->get_num_on_planes() > 0) {
+      set_pixel_shader_combo(IN_CLIPPING, 1);
+      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
     }
   }
 
@@ -106,9 +148,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // It is set up so that the only light we have is the light we are rendering
   // shadows for, so just expect that.
   CascadeLight *clight = DCAST(CascadeLight, lattr->get_on_light(0).node());
-  set_vertex_shader_define("NUM_SPLITS", clight->get_num_cascades());
-  set_pixel_shader_define("NUM_SPLITS", clight->get_num_cascades());
-  //set_geometry_shader_define("MAX_VERTICES", clight->get_num_cascades() * 3);
 
   // Instance the geometry to each cascade.
   set_instance_count(clight->get_num_cascades());

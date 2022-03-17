@@ -56,6 +56,7 @@ clear_cache() {
   _obj_cache.clear();
 }
 
+#if 0
 /**
  * Sets up #defines for hardware skinning.
  */
@@ -276,3 +277,5 @@ add_shader_quality(ShaderBase::StageFlags stages) {
     index = stage_mask.get_lowest_on_bit();
   }
 }
+
+#endif

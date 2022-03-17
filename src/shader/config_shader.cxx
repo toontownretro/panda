@@ -15,15 +15,17 @@
 #include "shaderBase.h"
 #include "shaderManager.h"
 #include "shaderObject.h"
-#include "depthShader.h"
+//#include "depthShader.h"
 #include "csmDepthShader.h"
-#include "vertexLitShader.h"
-#include "noMatShader.h"
-#include "eyeRefractShader.h"
-#include "skyBoxShader.h"
-#include "sourceShader.h"
-#include "sourceSkyShader.h"
+//#include "vertexLitShader.h"
+//#include "noMatShader.h"
+//#include "eyeRefractShader.h"
+//#include "skyBoxShader.h"
+//#include "sourceShader.h"
+//#include "sourceSkyShader.h"
 //#include "lightmappedShader.h"
+
+#include "basicShader.h"
 
 ConfigureDef(config_shader);
 ConfigureFn(config_shader) {
@@ -99,15 +101,17 @@ init_libshader() {
   ShaderBase::init_type();
   ShaderManager::get_global_ptr()->load_shader_libraries();
 
-  DepthShader::init_type();
+  //DepthShader::init_type();
   CSMDepthShader::init_type();
-  NoMatShader::init_type();
-  VertexLitShader::init_type();
-  EyeRefractShader::init_type();
+  //NoMatShader::init_type();
+  //VertexLitShader::init_type();
+  //EyeRefractShader::init_type();
   //LightmappedShader::init_type();
-  SkyBoxShader::init_type();
-  SourceShader::init_type();
-  SourceSkyShader::init_type();
+  //SkyBoxShader::init_type();
+  //SourceShader::init_type();
+  //SourceSkyShader::init_type();
+
+  BasicShader::init_type();
 
   ShaderObject::init_type();
   ShaderObject::register_with_read_factory();
