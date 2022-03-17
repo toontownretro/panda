@@ -72,6 +72,7 @@
     pta_ushort.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
+    threadManager.I threadManager.h \
     timedCycle.I timedCycle.h \
     tokenFile.I tokenFile.h \
     typedWritable.I typedWritable.h \
@@ -133,6 +134,7 @@
     pta_ushort.cxx \
     simpleHashMap.cxx \
     sparseArray.cxx \
+    threadManager.cxx \
     timedCycle.cxx \
     tokenFile.cxx typedWritable.cxx \
     typedWritableReferenceCount.cxx updateSeq.cxx \
@@ -204,6 +206,7 @@
     pta_ushort.h \
     simpleHashMap.I simpleHashMap.h \
     sparseArray.I sparseArray.h \
+    threadManager.I threadManager.h \
     timedCycle.I timedCycle.h \
     tokenFile.I tokenFile.h typedWritable.I \
     typedWritable.h typedWritableReferenceCount.I \
@@ -215,7 +218,7 @@
     writableConfigurable.h writableParam.I \
     writableParam.h
 
-  #define IGATESCAN all
+  #define IGATESCAN $[filter-out threadManager.h threadManager.I threadManager.cxx, $[SOURCES] $[COMPOSITE_SOURCES]]
 
   #define IGATEEXT \
     bamReader_ext.cxx \

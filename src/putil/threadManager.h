@@ -36,7 +36,7 @@
 /**
  *
  */
-class ThreadManager {
+class EXPCL_PANDA_PUTIL ThreadManager {
 public:
   typedef std::function<void(int)> ThreadFunction;
 

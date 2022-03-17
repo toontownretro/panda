@@ -12,7 +12,7 @@
  */
 
 #include "threadManager.h"
-#include "config_mapbuilder.h"
+#include "config_putil.h"
 #include "lightMutexHolder.h"
 #include "clockObject.h"
 #include "thread.h"
@@ -27,7 +27,7 @@ bool ThreadManager::_threaded = false;
 double ThreadManager::_thread_start = 0.0;
 double ThreadManager::_thread_times[THREAD_TIMES_SIZE];
 int ThreadManager::_num_threads = 1;
-LightMutex ThreadManager::_lock("mapbuilder-mutex");
+LightMutex ThreadManager::_lock("threadmanager-mutex");
 ThreadManager::Threads ThreadManager::_thread_handles;
 ThreadPriority ThreadManager::_thread_priority = TP_urgent;
 ThreadManager::ThreadFunction ThreadManager::_work_function = nullptr;
@@ -80,19 +80,19 @@ get_thread_work() {
   }
 
   if (dispatch > _work_count) {
-    mapbuilder_cat.error()
+    util_cat.error()
       << "dispatch > workcount\n";
     return -1;
 
   } else if (dispatch == _work_count) {
-    if (mapbuilder_cat.is_debug()) {
-      mapbuilder_cat.debug()
+    if (util_cat.is_debug()) {
+      util_cat.debug()
         << "dispatch == workcount\n";
     }
     return -1;
 
   } else if (dispatch < 0) {
-    mapbuilder_cat.error()
+    util_cat.error()
       << "dispatch < 0\n";
     return -1;
   }
@@ -102,11 +102,11 @@ get_thread_work() {
   if (f != _oldf) {
     for (int i = _oldf + 1; i <= f; i++) {
       if (!(i % 4)) {
-        nout << i / 4;
+        std::cerr << i / 4;
 
       } else {
         if (i != 40) {
-          nout << ".";
+          std::cerr << ".";
         }
       }
     }
@@ -166,7 +166,7 @@ run_threads_on_individual(int work_count, bool show_pacifier,
 void ThreadManager::
 run_threads_on_individual(const std::string &name, int work_count, bool pacifier,
                           ThreadFunction func) {
-  nout << name << ": ";
+  std::cerr << name << ": ";
   run_threads_on_individual(work_count, pacifier, func);
 }
 
@@ -189,7 +189,7 @@ run_threads_on(int work_count, bool show_pacifier,
   _threaded = true;
 
   if (_work_count < _dispatch) {
-    mapbuilder_cat.error()
+    util_cat.error()
       << "run_threads_on: work count ("
       << _work_count << ") < dispatch ("
       << _dispatch << ")\n";
@@ -204,12 +204,12 @@ run_threads_on(int work_count, bool show_pacifier,
     _thread_handles.push_back(thread);
   }
 
-  nout << "[";
+  std::cerr << "[";
 
   // Start all the threads
   for (int i = 0; i < _num_threads; i++) {
     if (!_thread_handles[i]->start(_thread_priority, true)) {
-      mapbuilder_cat.error()
+      util_cat.error()
         << "Failed to start thread " << i << "\n";
     }
   }
@@ -221,7 +221,7 @@ run_threads_on(int work_count, bool show_pacifier,
 
   _threaded = false;
   double end = ClockObject::get_global_clock()->get_real_time();
-  nout << "] Done (" << (int)(end - _thread_start) << " seconds)\n";
+  std::cerr << "] Done (" << (int)(end - _thread_start) << " seconds)\n";
 }
 
 /**
@@ -230,7 +230,7 @@ run_threads_on(int work_count, bool show_pacifier,
 void ThreadManager::
 run_threads_on(const std::string &name, int work_count, bool pacifier,
                ThreadFunction func) {
-  nout << name << " ";
+  std::cerr << name << " ";
   run_threads_on(work_count, pacifier, func);
 }
 

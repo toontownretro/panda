@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[and $[HAVE_MAPBUILDER], $[HAVE_OIDN]]
 
-#define LOCAL_LIBS map pgraph pphysics grutil raytrace shader
+#define LOCAL_LIBS map pgraph pphysics grutil raytrace shader putil
 
 #define USE_PACKAGES oidn steam_audio
 
@@ -20,7 +20,6 @@
     mapBuildOptions.h mapBuildOptions.I \
     mapObjects.h mapObjects.I \
     portal.h portal.I \
-    threadManager.h threadManager.I \
     visBuilder.h visBuilder.I \
     visBuilderBSP.h visBuilderBSP.I \
     visClusterSampler.h visClusterSampler.I \
@@ -37,7 +36,6 @@
     mapBuildOptions.cxx \
     mapObjects.cxx \
     portal.cxx \
-    threadManager.cxx \
     visBuilder.cxx \
     visBuilderBSP.cxx \
     visClusterSampler.cxx \
