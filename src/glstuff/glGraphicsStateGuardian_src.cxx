@@ -10596,77 +10596,77 @@ set_state_and_transform(const RenderState *target,
   }
 #endif
 
-  int antialias_slot = AntialiasAttrib::get_class_slot();
-  if (_target_rs->get_attrib(antialias_slot) != _state_rs->get_attrib(antialias_slot) ||
-      !_state_mask.get_bit(antialias_slot)) {
+  int slot = AntialiasAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_antialias_pcollector);
     do_issue_antialias();
-    _state_mask.set_bit(antialias_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int cull_face_slot = CullFaceAttrib::get_class_slot();
-  if (_target_rs->get_attrib(cull_face_slot) != _state_rs->get_attrib(cull_face_slot) ||
-      !_state_mask.get_bit(cull_face_slot)) {
+  slot = CullFaceAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_cull_face_pcollector);
     do_issue_cull_face();
-    _state_mask.set_bit(cull_face_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int depth_bias_slot = DepthBiasAttrib::get_class_slot();
-  int depth_offset_slot = DepthOffsetAttrib::get_class_slot();
-  if (_target_rs->get_attrib(depth_bias_slot) != _state_rs->get_attrib(depth_bias_slot) ||
-      _target_rs->get_attrib(depth_offset_slot) != _state_rs->get_attrib(depth_offset_slot) ||
-      !_state_mask.get_bit(depth_bias_slot) ||
-      !_state_mask.get_bit(depth_offset_slot)) {
+  slot = DepthBiasAttrib::get_class_slot();
+  int slot2 = DepthOffsetAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      _target_rs->get_attrib(slot2) != _state_rs->get_attrib(slot2) ||
+      !_state_mask.get_bit(slot) ||
+      !_state_mask.get_bit(slot2)) {
     // PStatGPUTimer timer(this, _draw_set_state_depth_offset_pcollector);
     do_issue_depth_bias();
-    _state_mask.set_bit(depth_bias_slot);
-    _state_mask.set_bit(depth_offset_slot);
+    _state_mask.set_bit(slot);
+    _state_mask.set_bit(slot2);
   }
 
-  int depth_test_slot = DepthTestAttrib::get_class_slot();
-  if (_target_rs->get_attrib(depth_test_slot) != _state_rs->get_attrib(depth_test_slot) ||
-      !_state_mask.get_bit(depth_test_slot)) {
+  slot = DepthTestAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_depth_test_pcollector);
     do_issue_depth_test();
-    _state_mask.set_bit(depth_test_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int depth_write_slot = DepthWriteAttrib::get_class_slot();
-  if (_target_rs->get_attrib(depth_write_slot) != _state_rs->get_attrib(depth_write_slot) ||
-      !_state_mask.get_bit(depth_write_slot)) {
+  slot = DepthWriteAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_depth_write_pcollector);
     do_issue_depth_write();
-    _state_mask.set_bit(depth_write_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int render_mode_slot = RenderModeAttrib::get_class_slot();
-  if (_target_rs->get_attrib(render_mode_slot) != _state_rs->get_attrib(render_mode_slot) ||
-      !_state_mask.get_bit(render_mode_slot)) {
+  slot = RenderModeAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_render_mode_pcollector);
     do_issue_render_mode();
-    _state_mask.set_bit(render_mode_slot);
+    _state_mask.set_bit(slot);
   }
 
 #if !defined(OPENGLES) || defined(OPENGLES_1)
-  int logic_op_slot = LogicOpAttrib::get_class_slot();
-  if (_target_rs->get_attrib(logic_op_slot) != _state_rs->get_attrib(logic_op_slot) ||
-      !_state_mask.get_bit(logic_op_slot)) {
+  slot = LogicOpAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_logic_op_pcollector);
     do_issue_logic_op();
-    _state_mask.set_bit(logic_op_slot);
+    _state_mask.set_bit(slot);
   }
 #endif
 
-  int transparency_slot = TransparencyAttrib::get_class_slot();
-  int color_write_slot = ColorWriteAttrib::get_class_slot();
-  int color_blend_slot = ColorBlendAttrib::get_class_slot();
-  if (_target_rs->get_attrib(transparency_slot) != _state_rs->get_attrib(transparency_slot) ||
-      _target_rs->get_attrib(color_write_slot) != _state_rs->get_attrib(color_write_slot) ||
-      _target_rs->get_attrib(color_blend_slot) != _state_rs->get_attrib(color_blend_slot) ||
-      !_state_mask.get_bit(transparency_slot) ||
-      !_state_mask.get_bit(color_write_slot) ||
-      !_state_mask.get_bit(color_blend_slot)
+  slot = TransparencyAttrib::get_class_slot();
+  slot2 = ColorWriteAttrib::get_class_slot();
+  int slot3 = ColorBlendAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      _target_rs->get_attrib(slot2) != _state_rs->get_attrib(slot2) ||
+      _target_rs->get_attrib(slot3) != _state_rs->get_attrib(slot3) ||
+      !_state_mask.get_bit(slot) ||
+      !_state_mask.get_bit(slot2) ||
+      !_state_mask.get_bit(slot3)
 #ifndef OPENGLES_1
       || (_target_shader->get_flag(ShaderAttrib::F_disable_alpha_write) !=
           _state_shader->get_flag(ShaderAttrib::F_disable_alpha_write))
@@ -10674,14 +10674,14 @@ set_state_and_transform(const RenderState *target,
       ) {
     // PStatGPUTimer timer(this, _draw_set_state_blending_pcollector);
     do_issue_blending();
-    _state_mask.set_bit(transparency_slot);
-    _state_mask.set_bit(color_write_slot);
-    _state_mask.set_bit(color_blend_slot);
+    _state_mask.set_bit(slot);
+    _state_mask.set_bit(slot2);
+    _state_mask.set_bit(slot3);
   }
 
-  int texture_slot = TextureAttrib::get_class_slot();
-  if (_target_rs->get_attrib(texture_slot) != _state_rs->get_attrib(texture_slot) ||
-      !_state_mask.get_bit(texture_slot)) {
+  slot = TextureAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     //PStatGPUTimer timer(this, _draw_set_state_texture_pcollector);
     determine_target_texture();
     do_issue_texture();
@@ -10693,36 +10693,36 @@ set_state_and_transform(const RenderState *target,
     _state_mask.clear_bit(TexMatrixAttrib::get_class_slot());
 
     _state_texture = _target_texture;
-    _state_mask.set_bit(texture_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int stencil_slot = StencilAttrib::get_class_slot();
-  if (_target_rs->get_attrib(stencil_slot) != _state_rs->get_attrib(stencil_slot) ||
-      !_state_mask.get_bit(stencil_slot)) {
+  slot = StencilAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_stencil_pcollector);
     do_issue_stencil();
-    _state_mask.set_bit(stencil_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int scissor_slot = ScissorAttrib::get_class_slot();
-  if (_target_rs->get_attrib(scissor_slot) != _state_rs->get_attrib(scissor_slot) ||
-      !_state_mask.get_bit(scissor_slot)) {
+  slot = ScissorAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      !_state_mask.get_bit(slot)) {
     // PStatGPUTimer timer(this, _draw_set_state_scissor_pcollector);
     do_issue_scissor();
-    _state_mask.set_bit(scissor_slot);
+    _state_mask.set_bit(slot);
   }
 
-  int color_slot = ColorAttrib::get_class_slot();
-  int color_scale_slot = ColorScaleAttrib::get_class_slot();
-  if (_target_rs->get_attrib(color_slot) != _state_rs->get_attrib(color_slot) ||
-      _target_rs->get_attrib(color_scale_slot) != _state_rs->get_attrib(color_scale_slot) ||
-      !_state_mask.get_bit(color_slot) ||
-      !_state_mask.get_bit(color_scale_slot)) {
+  slot = ColorAttrib::get_class_slot();
+  slot2 = ColorScaleAttrib::get_class_slot();
+  if (_target_rs->get_attrib(slot) != _state_rs->get_attrib(slot) ||
+      _target_rs->get_attrib(slot2) != _state_rs->get_attrib(slot2) ||
+      !_state_mask.get_bit(slot) ||
+      !_state_mask.get_bit(slot2)) {
     // PStatGPUTimer timer(this, _draw_set_state_color_pcollector);
     do_issue_color();
     do_issue_color_scale();
-    _state_mask.set_bit(color_slot);
-    _state_mask.set_bit(color_scale_slot);
+    _state_mask.set_bit(slot);
+    _state_mask.set_bit(slot2);
   }
 
   _state_rs = _target_rs;

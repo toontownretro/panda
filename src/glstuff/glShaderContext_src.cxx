@@ -2168,40 +2168,40 @@ set_state_and_transform(const RenderState *target_rs,
 
   } else if (state_rs != target_rs) {
     // The state has changed since last time.
-    int color_slot = ColorAttrib::get_class_slot();
-    if (state_rs->get_attrib(color_slot) !=
-        target_rs->get_attrib(color_slot)) {
+    int slot = ColorAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_color;
       target_rs->get_attrib_def(_color_attrib);
     }
-    int color_scale_slot = ColorScaleAttrib::get_class_slot();
-    if (state_rs->get_attrib(color_scale_slot) !=
-        target_rs->get_attrib(color_scale_slot)) {
+    slot = ColorScaleAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_colorscale;
     }
-    int fog_slot = FogAttrib::get_class_slot();
-    if (state_rs->get_attrib(fog_slot) !=
-        target_rs->get_attrib(fog_slot)) {
+    slot = FogAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_fog;
     }
-    int light_slot = LightAttrib::get_class_slot();
-    if (state_rs->get_attrib(light_slot) !=
-        target_rs->get_attrib(light_slot)) {
+    slot = LightAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_light;
     }
-    int clip_plane_slot = ClipPlaneAttrib::get_class_slot();
-    if (state_rs->get_attrib(clip_plane_slot) !=
-        target_rs->get_attrib(clip_plane_slot)) {
+    slot = ClipPlaneAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_clip_planes;
     }
-    int tex_matrix_slot = TexMatrixAttrib::get_class_slot();
-    if (state_rs->get_attrib(tex_matrix_slot) !=
-        target_rs->get_attrib(tex_matrix_slot)) {
+    slot = TexMatrixAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_tex_matrix;
     }
-    int texture_slot = TextureAttrib::get_class_slot();
-    if (state_rs->get_attrib(texture_slot) !=
-        target_rs->get_attrib(texture_slot)) {
+    slot = TextureAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
       altered |= Shader::SSD_texture;
     }
     if (_shader_attrib != _glgsg->_target_shader) {
@@ -2480,9 +2480,9 @@ issue_parameters(int altered) {
       const LMatrix4 *val = _glgsg->fetch_specified_value(spec, _mat_part_cache, altered);
       if (!val) continue;
 
-      if ((*val).almost_equal(curr_val, 0.0001f)) {
-        continue;
-      }
+      //if ((*val).almost_equal(curr_val, 0.0001f)) {
+      //  continue;
+      //}
 
       //if (GLCAT.is_debug()) {
       //  GLCAT.debug()
@@ -2491,7 +2491,7 @@ issue_parameters(int altered) {
       //    << "curr mat val " << curr_val << "\nnew mat val " << *val << "\n";
       //}
 
-#if 0
+#if 1
       switch (spec._piece) {
       case Shader::SMP_whole:
       case Shader::SMP_transpose:
@@ -2499,7 +2499,7 @@ issue_parameters(int altered) {
       case Shader::SMP_upper3x3:
       case Shader::SMP_transpose4x3:
       case Shader::SMP_transpose3x4:
-        if ((*val).almost_equal(curr_val)) {
+        if ((*val).almost_equal(curr_val, 0.0001f)) {
           //redundant_caught++;
           continue;
         }
