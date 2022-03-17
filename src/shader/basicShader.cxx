@@ -20,6 +20,8 @@
 #include "alphaTestAttrib.h"
 #include "clipPlaneAttrib.h"
 #include "geomVertexAnimationSpec.h"
+#include "material.h"
+#include "materialParamTexture.h"
 
 TypeHandle BasicShader::_type_handle;
 
@@ -54,16 +56,26 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_vertex_shader_combo(IN_SKINNING, 1);
   }
 
-  const TextureAttrib *ta;
-  if (state->get_attrib(ta)) {
-    Texture *tex = ta->get_texture();
-    if (tex != nullptr) {
-      // We have a color texture.
+  if (material == nullptr) {
+    const TextureAttrib *ta;
+    if (state->get_attrib(ta)) {
+      Texture *tex = ta->get_texture();
+      if (tex != nullptr) {
+        // We have a color texture.
+        set_vertex_shader_combo(IN_BASETEXTURE, 1);
+        set_pixel_shader_combo(IN_BASETEXTURE, 1);
+        set_input(ShaderInput("base_texture_sampler", tex));
+      }
+    }
+  } else {
+    MaterialParamBase *p = material->get_param("base_color");
+    if (p != nullptr && p->is_of_type(MaterialParamTexture::get_class_type())) {
       set_vertex_shader_combo(IN_BASETEXTURE, 1);
       set_pixel_shader_combo(IN_BASETEXTURE, 1);
-      set_input(ShaderInput("base_texture_sampler", tex));
+       set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
     }
   }
+
 
   const AlphaTestAttrib *at;
   if (state->get_attrib(at)) {

@@ -21,7 +21,7 @@
 //#include "noMatShader.h"
 //#include "eyeRefractShader.h"
 //#include "skyBoxShader.h"
-//#include "sourceShader.h"
+#include "sourceShader.h"
 #include "sourceSkyShader.h"
 //#include "lightmappedShader.h"
 
@@ -108,7 +108,7 @@ init_libshader() {
   //EyeRefractShader::init_type();
   //LightmappedShader::init_type();
   //SkyBoxShader::init_type();
-  //SourceShader::init_type();
+  SourceShader::init_type();
   SourceSkyShader::init_type();
 
   BasicShader::init_type();

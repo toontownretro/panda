@@ -168,6 +168,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   if (shader == nullptr) {
+#if 0
     shadermgr_cat.error()
       << "Could not determine shader to use for state: ";
     state->output(shadermgr_cat.error(false));
@@ -185,7 +186,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       shadermgr_cat.error(false)
         << "\t" << (*it).first << " : " << (*it).second->get_name() << "\n";
     }
-
+#endif
     // Use the fallback shader.
     MaterialShaders::const_iterator msi = _material_shaders.find(TypeHandle::none());
     nassertr(msi != _material_shaders.end(), ShaderAttrib::make());
