@@ -40,7 +40,9 @@
 #include "config_mathutil.h"
 #include "preparedGraphicsObjects.h"
 #include "instanceList.h"
-
+#include "materialAttrib.h"
+#include "material.h"
+#include "materialParamTexture.h"
 
 bool allow_flatten_color = ConfigVariableBool
     ("allow-flatten-color", false,
@@ -394,6 +396,24 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       prepared_objects->enqueue_index_buffer((GeomPrimitive *)prim.p());
     }
 
+    // And the material's textures.
+    const MaterialAttrib *mattr;
+    if (geom_state->get_attrib(mattr)) {
+      Material *mat = mattr->get_material();
+      if (mat != nullptr) {
+        for (size_t i = 0; i < mat->get_num_params(); ++i) {
+          MaterialParamBase *param = mat->get_param(i);
+          if (param->is_of_type(MaterialParamTexture::get_class_type())) {
+            Texture *tex = DCAST(MaterialParamTexture, param)->get_value();
+            if (tex != nullptr) {
+              prepared_objects->enqueue_texture(tex);
+              prepared_objects->enqueue_sampler(tex->get_default_sampler());
+            }
+          }
+        }
+      }
+    }
+
     // As well as the shaders.
     const ShaderAttrib *sa;
     if (geom_state->get_attrib(sa)) {
@@ -404,14 +424,16 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       else if (sa->auto_shader()) {
         gsg->ensure_generated_shader(geom_state);
       }
-      else if (munger->is_of_type(StateMunger::get_class_type())) {
-        // Premunge the state for the fixed-function pipeline.
-        StateMunger *state_munger = (StateMunger *)munger.p();
-        if (state_munger->should_munge_state()) {
-          geom_state = state_munger->munge_state(geom_state);
+
+      // Prepare the texture shader inputs.
+      for (auto it = sa->_texture_inputs.begin(); it != sa->_texture_inputs.end(); ++it) {
+        SamplerState samp;
+        Texture *tex = sa->get_shader_input_texture((*it).first, &samp);
+        if (tex != nullptr) {
+          prepared_objects->enqueue_texture(tex);
         }
+        prepared_objects->enqueue_sampler(samp);
       }
-      // TODO: prepare the shader inputs.
     }
 
     // And now prepare each of the textures.
@@ -420,9 +442,9 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       int num_stages = ta->get_num_on_stages();
       for (int i = 0; i < num_stages; ++i) {
         Texture *texture = ta->get_on_texture(ta->get_on_stage(i));
-        // TODO: prepare the sampler states, if specified.
         if (texture != nullptr) {
           prepared_objects->enqueue_texture(texture);
+          prepared_objects->enqueue_sampler(texture->get_default_sampler());
         }
       }
     }

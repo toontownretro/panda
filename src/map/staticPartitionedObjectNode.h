@@ -44,6 +44,10 @@ PUBLISHED:
 
 public:
   virtual void add_for_draw(CullTraverser *trav, CullTraverserData &data) override;
+  virtual void r_prepare_scene(GraphicsStateGuardianBase *gsg,
+                               const RenderState *node_state,
+                               GeomTransformer &transformer,
+                               Thread *current_thread) override;
 
 private:
   class GeomEntry {

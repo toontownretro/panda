@@ -21,6 +21,13 @@
 #include "cullHandler.h"
 #include "mapCullTraverser.h"
 #include "omniBoundingVolume.h"
+#include "preparedGraphicsObjects.h"
+#include "geomTransformer.h"
+#include "shaderAttrib.h"
+#include "textureAttrib.h"
+#include "materialAttrib.h"
+#include "material.h"
+#include "materialParamTexture.h"
 
 IMPLEMENT_CLASS(StaticPartitionedObjectNode);
 
@@ -150,4 +157,97 @@ add_object_for_draw(CullTraverser *trav, CullTraverserData &data, const Object *
     }
 
   }
+}
+
+/**
+ * The recursive implementation of prepare_scene(). Don't call this directly;
+ * call PandaNode::prepare_scene() or NodePath::prepare_scene() instead.
+ */
+void StaticPartitionedObjectNode::
+r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
+                GeomTransformer &transformer, Thread *current_thread) {
+  PreparedGraphicsObjects *prepared_objects = gsg->get_prepared_objects();
+
+  // Prepare the Geoms of each object.
+  for (const Object &obj : _objects) {
+    for (size_t gi = 0; gi < obj._geoms.size(); ++gi) {
+      CPT(RenderState) geom_state = node_state->compose(obj._geoms[gi]._state);
+      CPT(Geom) geom = obj._geoms[gi]._geom;
+
+      // Munge the geom as required by the GSG.
+      PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
+      geom = transformer.premunge_geom(geom, munger);
+
+      // Prepare each of the vertex arrays in the munged Geom.
+      CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(false, current_thread);
+      GeomVertexDataPipelineReader vdata_reader(vdata, current_thread);
+      int num_arrays = vdata_reader.get_num_arrays();
+      for (int i = 0; i < num_arrays; ++i) {
+        CPT(GeomVertexArrayData) array = vdata_reader.get_array(i);
+        prepared_objects->enqueue_vertex_buffer((GeomVertexArrayData *)array.p());
+      }
+
+      // And also each of the index arrays.
+      int num_primitives = geom->get_num_primitives();
+      for (int i = 0; i < num_primitives; ++i) {
+        CPT(GeomPrimitive) prim = geom->get_primitive(i);
+        prepared_objects->enqueue_index_buffer((GeomPrimitive *)prim.p());
+      }
+
+      // And the material's textures.
+      const MaterialAttrib *mattr;
+      if (geom_state->get_attrib(mattr)) {
+        Material *mat = mattr->get_material();
+        if (mat != nullptr) {
+          for (size_t i = 0; i < mat->get_num_params(); ++i) {
+            MaterialParamBase *param = mat->get_param(i);
+            if (param->is_of_type(MaterialParamTexture::get_class_type())) {
+              Texture *tex = DCAST(MaterialParamTexture, param)->get_value();
+              if (tex != nullptr) {
+                prepared_objects->enqueue_texture(tex);
+                prepared_objects->enqueue_sampler(tex->get_default_sampler());
+              }
+            }
+          }
+        }
+      }
+
+      // As well as the shaders.
+      const ShaderAttrib *sa;
+      if (geom_state->get_attrib(sa)) {
+        Shader *shader = (Shader *)sa->get_shader();
+        if (shader != nullptr) {
+          prepared_objects->enqueue_shader(shader);
+        }
+        else if (sa->auto_shader()) {
+          gsg->ensure_generated_shader(geom_state);
+        }
+
+        // Prepare the texture shader inputs.
+        for (auto it = sa->_texture_inputs.begin(); it != sa->_texture_inputs.end(); ++it) {
+          SamplerState samp;
+          Texture *tex = sa->get_shader_input_texture((*it).first, &samp);
+          if (tex != nullptr) {
+            prepared_objects->enqueue_texture(tex);
+          }
+          prepared_objects->enqueue_sampler(samp);
+        }
+      }
+
+      // And now prepare each of the textures.
+      const TextureAttrib *ta;
+      if (geom_state->get_attrib(ta)) {
+        int num_stages = ta->get_num_on_stages();
+        for (int i = 0; i < num_stages; ++i) {
+          Texture *texture = ta->get_on_texture(ta->get_on_stage(i));
+          if (texture != nullptr) {
+            prepared_objects->enqueue_texture(texture);
+            prepared_objects->enqueue_sampler(texture->get_default_sampler());
+          }
+        }
+      }
+    }
+  }
+
+  PandaNode::r_prepare_scene(gsg, node_state, transformer, current_thread);
 }
