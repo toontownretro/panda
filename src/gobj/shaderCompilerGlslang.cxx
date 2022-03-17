@@ -498,6 +498,7 @@ compile_now(ShaderModule::Stage stage, std::istream &in,
 
   // We skip validation because of the `uniform bool` bug, see SPIRV-Tools#3387
   std::vector<uint32_t> optimized;
+  optimized.reserve(4096);
   spvtools::ValidatorOptions validator_options;
   if (!opt.Run(stream.get_data(), stream.get_data_size(), &optimized,
                validator_options, true)) {

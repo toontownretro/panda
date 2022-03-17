@@ -216,7 +216,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   bool has_rimlight = false;
-  if (has_direct_light && (param = src_mat->get_param("phong")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+  if ((param = src_mat->get_param("phong")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Phong enabled on material.
     set_pixel_shader_combo(IN_PHONG, 1);
 
@@ -270,7 +270,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("phongTint", phong_tint));
 
     // How about a phong warp texture?
-    if ((param = src_mat->get_param("phongwarptexture")) != nullptr) {
+    if (has_direct_light && (param = src_mat->get_param("phongwarptexture")) != nullptr) {
       set_pixel_shader_combo(IN_PHONGWARP, 1);
       set_input(ShaderInput("phongWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
     }
