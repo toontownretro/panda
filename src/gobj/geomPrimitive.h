@@ -113,6 +113,7 @@ PUBLISHED:
   void make_nonindexed(GeomVertexData *dest, const GeomVertexData *source);
   void pack_vertices(GeomVertexData *dest, const GeomVertexData *source);
   void make_indexed();
+  //void calc_num_vertices();
 
   INLINE int get_num_primitives() const;
   int get_primitive_start(int n) const;

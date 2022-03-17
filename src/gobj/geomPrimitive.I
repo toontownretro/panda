@@ -621,11 +621,21 @@ is_indexed() const {
  */
 INLINE int GeomPrimitivePipelineReader::
 get_num_vertices() const {
-  if (_cdata->_num_vertices == -1) {
+  //if (_cdata->_num_vertices == -1) {
+  //  size_t stride = (_cdata->_index_type == NT_uint32) ? 4 : 2;
+  //  ((GeomPrimitive::CData *)_cdata)->_num_vertices = get_data_size_bytes() / stride;
+  //}
+  //return _cdata->_num_vertices;
+
+  if (_cdata->_num_vertices != -1) {
+    return _cdata->_num_vertices;
+
+  } else {
+    //nassertr(_vertices != nullptr, 0);
     size_t stride = (_cdata->_index_type == NT_uint32) ? 4 : 2;
-    ((GeomPrimitive::CData *)_cdata)->_num_vertices = get_data_size_bytes() / stride;
+    //nassertr(stride != 0, 0);
+    return get_data_size_bytes() / stride;
   }
-  return _cdata->_num_vertices;
 }
 
 /**

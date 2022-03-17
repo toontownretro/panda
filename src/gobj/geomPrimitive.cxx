@@ -699,6 +699,17 @@ make_indexed() {
 }
 
 /**
+ *
+ */
+//void GeomPrimitive::
+//calc_num_vertices() {
+//  CDWriter cdata(_cycler, true);
+//  if (cdata->_vertices.is_null()) {
+//    cdata->_num_vertices = cdata->_first_vertex + cdata->_num
+//  }
+//}
+
+/**
  * Returns the element within the _vertices list at which the nth primitive
  * starts.
  *
