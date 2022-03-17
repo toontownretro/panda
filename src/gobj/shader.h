@@ -104,6 +104,14 @@ PUBLISHED:
                          std::string tess_evaluation = "");
   static PT(Shader) make_compute(ShaderLanguage lang, std::string body);
 
+  static PT(Shader) make(ShaderLanguage lang,
+                         ShaderModule *vertex,
+                         ShaderModule *fragment,
+                         ShaderModule *geometry = nullptr,
+                         ShaderModule *tess_control = nullptr,
+                         ShaderModule *tess_evaluation = nullptr);
+  static PT(Shader) make_compute(ShaderLanguage lang, ShaderModule *mod);
+
   INLINE Filename get_filename(DeprecatedShaderType type = ST_none) const;
   INLINE void set_filename(DeprecatedShaderType type, const Filename &filename);
   INLINE const std::string &get_text(DeprecatedShaderType type = ST_none) const;
@@ -409,11 +417,11 @@ public:
     LMatrix4          _value;
     size_t            _cache_offset[2];
     ShaderMatFunc     _func;
+    ShaderMatPiece    _piece;
     Parameter         _id;
     ShaderMatInput    _part[2];
     CPT(InternalName) _arg[2];
     int               _index = 0;
-    ShaderMatPiece    _piece;
     ScalarType        _scalar_type = ScalarType::ST_float;
   };
 

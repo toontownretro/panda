@@ -2887,6 +2887,54 @@ make(ShaderLanguage lang, string vertex, string fragment, string geometry,
 }
 
 /**
+ * Creates a Shader from the given precompiled ShaderModules.
+ */
+PT(Shader) Shader::
+make(ShaderLanguage lang, ShaderModule *vertex, ShaderModule *fragment,
+     ShaderModule *geometry, ShaderModule *tess_control, ShaderModule *tess_eval) {
+  PT(Shader) shader = new Shader(lang);
+  shader->_filename = ShaderFile("precompiled-modules");
+  shader->_debug_name = "precompiled-modules";
+
+  // Add in the modules.
+  if (vertex != nullptr) {
+    if (!shader->add_module(vertex)) {
+      return nullptr;
+    }
+  }
+  if (tess_control != nullptr) {
+    if (!shader->add_module(tess_control)) {
+      return nullptr;
+    }
+  }
+  if (tess_eval != nullptr) {
+    if (!shader->add_module(tess_eval)) {
+      return nullptr;
+    }
+  }
+  if (geometry != nullptr) {
+    if (!shader->add_module(geometry)) {
+      return nullptr;
+    }
+  }
+  if (fragment != nullptr) {
+    if (!shader->add_module(fragment)) {
+      return nullptr;
+    }
+  }
+
+  // Link up modules.
+  if (!shader->link()) {
+    return nullptr;
+  }
+
+  shader->_prepare_shader_pcollector =
+    PStatCollector(std::string("Draw:Prepare:Shader:") + shader->_debug_name);
+
+  return shader;
+}
+
+/**
  * Loads the compute shader from the given string.
  */
 PT(Shader) Shader::
@@ -2927,6 +2975,26 @@ make_compute(ShaderLanguage lang, string body) {
     _make_table[std::move(sbody)] = shader;
   }*/
 
+  return shader;
+}
+
+/**
+ * Creates a compute Shader from the given precompiled ShaderModule.
+ */
+PT(Shader) Shader::
+make_compute(ShaderLanguage lang, ShaderModule *mod) {
+  PT(Shader) shader = new Shader(lang);
+  shader->_filename = ShaderFile("precompiled-compute-module");
+  shader->_debug_name = "precompiled-compute-module";
+  nassertr(mod != nullptr, nullptr);
+  if (!shader->add_module(mod)) {
+    return nullptr;
+  }
+  if (!shader->link()) {
+    return nullptr;
+  }
+  shader->_prepare_shader_pcollector =
+    PStatCollector(std::string("Draw:Prepare:Shader:") + shader->_debug_name);
   return shader;
 }
 
