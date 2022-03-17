@@ -185,7 +185,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       shadermgr_cat.error(false)
         << "\t" << (*it).first << " : " << (*it).second->get_name() << "\n";
     }
-    return ShaderAttrib::make();
+
+    // Use the fallback shader.
+    MaterialShaders::const_iterator msi = _material_shaders.find(TypeHandle::none());
+    nassertr(msi != _material_shaders.end(), ShaderAttrib::make());
+    shader = (*msi).second;
   }
 
   if (shadermgr_cat.is_debug()) {
