@@ -9,7 +9,7 @@
   #define SOURCES \
     config_shader.h \
     csmDepthShader.h csmDepthShader.I \
-    //depthShader.h depthShader.I \
+    depthShader.h depthShader.I \
     //eyeRefractShader.h eyeRefractShader.I \
     //lightmappedShader.h lightmappedShader.I \
     //noMatShader.h noMatShader.I \
@@ -30,7 +30,7 @@
   #define COMPOSITE_SOURCES \
     config_shader.cxx \
     csmDepthShader.cxx \
-    //depthShader.cxx \
+    depthShader.cxx \
     //eyeRefractShader.cxx \
     //lightmappedShader.cxx \
     //noMatShader.cxx \

@@ -15,7 +15,7 @@
 #include "shaderBase.h"
 #include "shaderManager.h"
 #include "shaderObject.h"
-//#include "depthShader.h"
+#include "depthShader.h"
 #include "csmDepthShader.h"
 //#include "vertexLitShader.h"
 //#include "noMatShader.h"
@@ -101,7 +101,7 @@ init_libshader() {
   ShaderBase::init_type();
   ShaderManager::get_global_ptr()->load_shader_libraries();
 
-  //DepthShader::init_type();
+  DepthShader::init_type();
   CSMDepthShader::init_type();
   //NoMatShader::init_type();
   //VertexLitShader::init_type();
