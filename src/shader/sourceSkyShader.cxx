@@ -52,9 +52,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 Material *material,
                 const GeomVertexAnimationSpec &anim_spec) {
 
+  static CPT_InternalName IN_COMPRESSED_HDR("COMPRESSED_HDR");
+
   set_language(Shader::SL_GLSL);
-  set_vertex_shader("shaders/source_sky.vert.glsl");
-  set_pixel_shader("shaders/source_sky.frag.glsl");
+  set_vertex_shader("shadersnew/source_sky.vert.sho");
+  set_pixel_shader("shadersnew/source_sky.frag.sho");
 
   MaterialParamBase *param;
 
@@ -90,8 +92,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   LVecBase3 scale(1);
 
   if (compressed_hdr) {
-    set_vertex_shader_define("COMPRESSED_HDR");
-    set_pixel_shader_define("COMPRESSED_HDR");
+    set_vertex_shader_combo(IN_COMPRESSED_HDR, 1);
+    set_pixel_shader_combo(IN_COMPRESSED_HDR, 1);
 
     // Stuff for manual bilinear interp of RGBScale texture.
     PN_stdfloat w = sky_tex->get_x_size();

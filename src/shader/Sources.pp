@@ -18,10 +18,10 @@
     shaderManager.h shaderManager.I \
     shaderObject.h shaderObject.I \
     shaderStage.h shaderStage.I \
-    basicShader.h basicShader.I
+    basicShader.h basicShader.I \
     //skyBoxShader.h skyBoxShader.I \
     //sourceShader.h sourceShader.I \
-    //sourceSkyShader.h sourceSkyShader.I \
+    sourceSkyShader.h sourceSkyShader.I
     //vertexLitShader.h vertexLitShader.I
 
   #define INSTALL_HEADERS \
@@ -39,10 +39,10 @@
     shaderManager.cxx \
     shaderObject.cxx \
     shaderStage.cxx \
-    basicShader.cxx
+    basicShader.cxx \
     //skyBoxShader.cxx \
     //sourceShader.cxx \
-    //sourceSkyShader.cxx \
+    sourceSkyShader.cxx
     //vertexLitShader.cxx
 
   #define IGATESCAN all
