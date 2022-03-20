@@ -19,7 +19,7 @@
 #include "csmDepthShader.h"
 //#include "vertexLitShader.h"
 //#include "noMatShader.h"
-//#include "eyeRefractShader.h"
+#include "eyeRefractShader.h"
 //#include "skyBoxShader.h"
 #include "sourceShader.h"
 #include "sourceSkyShader.h"
@@ -105,7 +105,7 @@ init_libshader() {
   CSMDepthShader::init_type();
   //NoMatShader::init_type();
   //VertexLitShader::init_type();
-  //EyeRefractShader::init_type();
+  EyeRefractShader::init_type();
   //LightmappedShader::init_type();
   //SkyBoxShader::init_type();
   SourceShader::init_type();

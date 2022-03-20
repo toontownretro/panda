@@ -23,6 +23,9 @@
 #include "texturePool.h"
 #include "shaderAttrib.h"
 #include "textureAttrib.h"
+#include "geomVertexAnimationSpec.h"
+#include "fogAttrib.h"
+#include "fog.h"
 
 TypeHandle EyeRefractShader::_type_handle;
 
@@ -35,17 +38,36 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 Material *material,
                 const GeomVertexAnimationSpec &anim_spec) {
 
+  static const CPT_InternalName IN_SKINNING("SKINNING");
+  static const CPT_InternalName IN_DIRECT_LIGHT("DIRECT_LIGHT");
+  static const CPT_InternalName IN_AMBIENT_LIGHT("AMBIENT_LIGHT");
+  static const CPT_InternalName IN_RAYTRACESPHERE("RAYTRACESPHERE");
+  static const CPT_InternalName IN_RAYTRACEDISCARD("RAYTRACEDISCARD");
+  static const CPT_InternalName IN_FOG("FOG");
+
+  static const CPT_InternalName IN_NUM_LIGHTS("NUM_LIGHTS");
+  static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
+
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/eyes.vert.glsl");
-  set_pixel_shader("shaders/eyes.frag.glsl");
+  set_vertex_shader("shadersnew/eyes.vert.sho.pz");
+  set_pixel_shader("shadersnew/eyes.frag.sho.pz");
 
-  // Hardware skinning?
-  add_hardware_skinning(anim_spec);
+  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
+      anim_spec.get_num_transforms() > 0) {
+    // Doing skinning in the vertex shader.
+    set_vertex_shader_combo(IN_SKINNING, 1);
+  }
 
-  add_hdr(state);
-
-  add_aux_attachments(state);
+  // Check for fog.
+  const FogAttrib *fa;
+  if (state->get_attrib(fa)) {
+    Fog *fog = fa->get_fog();
+    if (fog != nullptr) {
+      set_pixel_shader_combo(IN_FOG, 1);
+      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+    }
+  }
 
   EyeRefractMaterial *eye_mat = DCAST(EyeRefractMaterial, material);
 
@@ -58,20 +80,19 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   const ShaderAttrib *sa;
   state->get_attrib_def(sa);
   if (sa->has_shader_input("ambientProbe")) {
-    set_pixel_shader_define("AMBIENT_PROBE");
+    // SH ambient probe.
+    set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
 
   } else if (num_ambient_lights != 0) {
-    set_pixel_shader_define("AMBIENT_LIGHT");
+    // Flat ambient.
+    set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
   }
 
   if (num_lights > 0) {
-    set_pixel_shader_define("LIGHTING");
-    set_pixel_shader_define("NUM_LIGHTS", num_lights);
-    set_vertex_shader_define("NUM_LIGHTS", num_lights);
+    // We have one or more direct local light sources.
+    set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
+    set_spec_constant(IN_NUM_LIGHTS, (int)num_lights);
   }
-
-  add_csm(state);
-  add_fog(state);
 
   MaterialParamBase *param = eye_mat->get_param("iris_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
@@ -88,30 +109,28 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
-  //param = eye_mat->get_param("env_map");
-  //if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-  //  set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
-  //} else {
-  //  set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+  param = eye_mat->get_param("env_map");
+  if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
+    set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
+  } else {
+    set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+  }
+
+  //Texture *envmap_tex = nullptr;
+  //const TextureAttrib *ta;
+  //state->get_attrib_def(ta);
+  //for (int i = 0; i < ta->get_num_on_stages(); ++i) {
+  //  TextureStage *stage = ta->get_on_stage(i);
+  //  if (stage->get_name() == "envmap") {
+  //    envmap_tex = ta->get_on_texture(stage);
+  //    break;
+  //  }
+  //}
+  //if (envmap_tex == nullptr) {
+  //  envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
   //}
 
-  Texture *envmap_tex = nullptr;
-  const TextureAttrib *ta;
-  state->get_attrib_def(ta);
-  for (int i = 0; i < ta->get_num_on_stages(); ++i) {
-    TextureStage *stage = ta->get_on_stage(i);
-    if (stage->get_name() == "envmap") {
-      envmap_tex = ta->get_on_texture(stage);
-      break;
-    }
-  }
-  if (envmap_tex == nullptr) {
-    envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
-  }
-
-  set_input(ShaderInput("eyeReflectionCubemapSampler", envmap_tex));
-
-  set_input(ShaderInput("brdfLutSampler", TexturePool::load_texture("maps/brdf_lut.txo")));
+  //set_input(ShaderInput("eyeReflectionCubemapSampler", envmap_tex));
 
   param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
