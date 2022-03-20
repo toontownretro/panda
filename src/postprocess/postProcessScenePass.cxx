@@ -35,7 +35,7 @@ PostProcessScenePass::PostProcessScenePass( PostProcess *pp ) :
 	// We can't use backbuffers, we're not presenting anything.
 	_fbprops.set_back_buffers(0);
 	//_fbprops.set_float_depth(false);
-	_fbprops.set_depth_bits(32);
+	//_fbprops.set_depth_bits(32);
 	// We don't need more than 8 bits for RGB, and we don't need alpha.
 	_fbprops.set_rgba_bits(16, 16, 16, 0);
 	_fbprops.set_rgb_color(true);
