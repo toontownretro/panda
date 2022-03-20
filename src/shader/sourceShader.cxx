@@ -30,6 +30,7 @@
 #include "fogAttrib.h"
 #include "fog.h"
 #include "alphaTestAttrib.h"
+#include "cascadeLight.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -125,6 +126,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_SELFILLUMMASK("SELFILLUMMASK");
   static const CPT_InternalName IN_BUMPMAP("BUMPMAP");
   static const CPT_InternalName IN_ENVMAP("ENVMAP");
+  static const CPT_InternalName IN_HAS_SHADOW_SUNLIGHT("HAS_SHADOW_SUNLIGHT");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -136,6 +138,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NORMALMAPALPHAENVMAPMASK("NORMALMAPALPHAENVMAPMASK");
   static const CPT_InternalName IN_PHONGEXPONENTFACTOR("PHONGEXPONENTFACTOR");
   static const CPT_InternalName IN_BASEMAPALPHAPHONGMASK("BASEMAPALPHAPHONGMASK");
+  static const CPT_InternalName IN_NUM_CASCADES("NUM_CASCADES");
+  static const CPT_InternalName IN_CSM_LIGHT_ID("CSM_LIGHT_ID");
 
   set_language(Shader::SL_GLSL);
 
@@ -200,6 +204,22 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (has_direct_light) {
     set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
     set_spec_constant(IN_NUM_LIGHTS, (unsigned int)std::min(num_lights, (size_t)4u));
+
+    // See if we have a shadow casting CascadeLight.
+    for (size_t i = 0; i < num_lights; ++i) {
+      const NodePath &np = la->get_on_light_quick(i);
+      if (np.node()->get_type() == CascadeLight::get_class_type()) {
+        CascadeLight *clight = DCAST(CascadeLight, np.node());
+        if (clight->is_shadow_caster()) {
+          // Sunlight shadows are enabled!
+          set_vertex_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
+          set_pixel_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
+          set_spec_constant(IN_CSM_LIGHT_ID, (int)i);
+          set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
+        }
+        break;
+      }
+    }
   }
 
   MaterialParamBase *param;
