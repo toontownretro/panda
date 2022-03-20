@@ -1117,7 +1117,18 @@ build_graph() {
           geom_node->remove_geom(eye_geoms[k]);
           eye_geom_node->add_geom((Geom *)geom.p(), (RenderState *)state.p());
         }
-        geom_np.get_parent().node()->add_child(eye_geom_node);
+        // If the parent of the GeomNode with the eye material is an LOD node,
+        // we need to create a group node to preserve correct LOD'ing.
+        NodePath geom_np_parent = geom_np.get_parent();
+        if (geom_np_parent.node()->is_of_type(LODNode::get_class_type())) {
+          NodePath new_group(geom_np.get_name() + "-lod_grouping");
+          // Make sure new group node takes same child slot as original GeomNode.
+          geom_np_parent.node()->replace_child(geom_np.node(), new_group.node());
+          // Parent original GeomNode under new group node.
+          geom_np.reparent_to(new_group);
+          geom_np_parent = new_group;
+        }
+        geom_np_parent.node()->add_child(eye_geom_node);
         eye_geom_nodes.add_path(NodePath(eye_geom_node));
       }
     }
