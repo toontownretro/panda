@@ -57,9 +57,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   nassertv(can_write_gl_layer_from_vertex_shader);
   // TODO: Fallback to geometry shader or texture atlas if not supported.
 
-  set_vertex_shader("shadersnew/csmdepth.vert.sho");
+  set_vertex_shader("shadersnew/csmdepth.vert.sho.pz");
   //set_geometry_shader("shaders/csmdepth.geom.glsl");
-  set_pixel_shader("shadersnew/csmdepth.frag.sho");
+  set_pixel_shader("shadersnew/csmdepth.frag.sho.pz");
 
   // Check if alpha is enabled (indicating we should do alpha cutouts for
   // shadows).

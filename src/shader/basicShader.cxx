@@ -47,8 +47,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/basic.vert.sho");
-  set_pixel_shader("shadersnew/basic.frag.sho");
+  set_vertex_shader("shadersnew/basic.vert.sho.pz");
+  set_pixel_shader("shadersnew/basic.frag.sho.pz");
 
   if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
       anim_spec.get_num_transforms() > 0) {

@@ -55,8 +55,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static CPT_InternalName IN_COMPRESSED_HDR("COMPRESSED_HDR");
 
   set_language(Shader::SL_GLSL);
-  set_vertex_shader("shadersnew/source_sky.vert.sho");
-  set_pixel_shader("shadersnew/source_sky.frag.sho");
+  set_vertex_shader("shadersnew/source_sky.vert.sho.pz");
+  set_pixel_shader("shadersnew/source_sky.frag.sho.pz");
 
   MaterialParamBase *param;
 

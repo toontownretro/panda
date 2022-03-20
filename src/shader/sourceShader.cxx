@@ -139,7 +139,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/source_vlg.vert.sho");
+  set_vertex_shader("shadersnew/source_vlg.vert.sho.pz");
   //if (use_orig_source_shader) {
   //  set_pixel_shader("shaders/source_vlg_orig.frag.glsl");
   //} else {
