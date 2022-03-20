@@ -3322,6 +3322,11 @@ update_shader_texture_bindings(ShaderContext *prev) {
       _glgsg->_supports_multi_bind && _glgsg->_supports_sampler_objects) {
     // Prepare to multi-bind the textures and samplers.
     multi_bind = true;
+    // HACK: set glActiveTexture() to an unrealistically high number,
+    // so any textures that need to be updated don't stomp on textures
+    // we binded prior.  A better solution would be to update all textures
+    // then bind them in a separate pass.
+    _glgsg->set_active_texture_stage(31);
   }
 #endif
 
@@ -3465,8 +3470,23 @@ update_shader_texture_bindings(ShaderContext *prev) {
         tindex = gtc->_index;
       }
 
+      //_glgsg->_bound_textures[_glgsg->_active_texture_stage] = curr_tex;
+
+      //if (GLCAT.is_debug()) {
+      //  GLCAT.debug()
+      //    << "Shader needs tex unit " << i << " to have texture " << tindex << ": ";
+      //  tex->write(GLCAT.debug(false), 0);
+      //  GLCAT.debug(false) << ", we think currently bound tex is " << _glgsg->_bound_textures[i] << "\n";
+     // }
+
       if (_glgsg->_bound_textures[i] != tindex) {
         _glgsg->_bound_textures[i] = tindex;
+        //if (GLCAT.is_debug()) {
+        //  GLCAT.debug()
+        //    << "Binding texture " << tindex << " to tex unit " << i << ": ";
+        //  tex->write(GLCAT.debug(false), 0);
+        //  GLCAT.debug(false) << "\n";
+        //}
         min_tex_changed_slot = std::min(min_tex_changed_slot, i);
         tex_changed = true;
       }
@@ -3480,6 +3500,13 @@ update_shader_texture_bindings(ShaderContext *prev) {
         //gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
         sindex = gsc->_index;
       }
+
+      //if (GLCAT.is_debug()) {
+      //  GLCAT.debug()
+      //    << "Shader needs samp unit " << i << " to have sampler " << sindex << ": ";
+       // sampler.output(GLCAT.debug(false));
+      //  GLCAT.debug(false) << ", we think currently bound samp is " << _glgsg->_bound_samplers[i] << "\n";
+      //}
 
       if (_glgsg->_bound_samplers[i] != sindex) {
         _glgsg->_bound_samplers[i] = sindex;
