@@ -17,6 +17,7 @@
     materialPool.I materialPool.h \
     materialRegistry.I materialRegistry.h \
     skyBoxMaterial.I skyBoxMaterial.h \
+    sourceLightmappedMaterial.I sourceLightmappedMaterial.h \
     sourceMaterial.I sourceMaterial.h \
     sourceSkyMaterial.I sourceSkyMaterial.h \
     standardMaterial.I standardMaterial.h
@@ -34,6 +35,7 @@
     materialPool.cxx \
     materialRegistry.cxx \
     skyBoxMaterial.cxx \
+    sourceLightmappedMaterial.cxx \
     sourceMaterial.cxx \
     sourceSkyMaterial.cxx \
     standardMaterial.cxx

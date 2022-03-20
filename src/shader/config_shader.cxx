@@ -23,6 +23,7 @@
 //#include "skyBoxShader.h"
 #include "sourceShader.h"
 #include "sourceSkyShader.h"
+#include "sourceLightmappedShader.h"
 //#include "lightmappedShader.h"
 
 #include "basicShader.h"
@@ -110,6 +111,7 @@ init_libshader() {
   //SkyBoxShader::init_type();
   SourceShader::init_type();
   SourceSkyShader::init_type();
+  SourceLightmappedShader::init_type();
 
   BasicShader::init_type();
 

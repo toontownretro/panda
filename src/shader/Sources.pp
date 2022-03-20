@@ -20,6 +20,7 @@
     shaderStage.h shaderStage.I \
     basicShader.h basicShader.I \
     //skyBoxShader.h skyBoxShader.I \
+    sourceLightmappedShader.h sourceLightmappedShader.I \
     sourceShader.h sourceShader.I \
     sourceSkyShader.h sourceSkyShader.I
     //vertexLitShader.h vertexLitShader.I
@@ -41,6 +42,7 @@
     shaderStage.cxx \
     basicShader.cxx \
     //skyBoxShader.cxx \
+    sourceLightmappedShader.cxx \
     sourceShader.cxx \
     sourceSkyShader.cxx
     //vertexLitShader.cxx
