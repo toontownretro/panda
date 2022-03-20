@@ -328,10 +328,7 @@ build() {
             // Check if the side's material enables alpha of some sort.  If it
             // does, the side cannot be opaque.
 
-            Filename material_filename = downcase(side->_material_filename.get_fullpath());
-            if (material_filename.get_extension().empty()) {
-              material_filename.set_extension("pmat");
-            }
+            Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_basename()) + ".mto");
 
             PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -1188,11 +1185,6 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
     }
   }
 
-  // Check if the render state needs transparency.
-  if (poly->_base_tex != nullptr && Texture::has_alpha(poly->_base_tex->get_format())) {
-    state = state->set_attrib(TransparencyAttrib::make(TransparencyAttrib::M_dual));
-  }
-
   for (size_t k = 0; k < w->get_num_points(); k++) {
     LPoint3 point = w->get_point(k);
     vwriter.add_data3f(point);
@@ -1423,10 +1415,7 @@ build_entity_polygons(int i) {
 
       // We now have the final polygon for the side.
 
-      Filename material_filename = downcase(side->_material_filename.get_fullpath());
-      if (material_filename.get_extension().empty()) {
-        material_filename.set_extension("pmat");
-      }
+      Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_basename()) + ".mto");
 
       PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -2255,14 +2244,14 @@ render_cube_maps() {
     }
     cm_side_lists.push_back(side_list);
 
-    //int size_option = atoi(ent->_properties["cubemapsize"].c_str());
-    int size = 512;
-    //if (size_option == 0) {
-    //  size = 128;
+    int size_option = atoi(ent->_properties["cubemapsize"].c_str());
+    int size;
+    if (size_option == 0) {
+      size = 128;
 
-    //} else {
-    //  size = 1 << (size_option - 1);
-    //}
+    } else {
+      size = 1 << (size_option - 1);
+    }
 
     // Create the offscreen buffer and a camera/display region pair for each
     // cube map face.
@@ -2331,7 +2320,7 @@ render_cube_maps() {
         continue;
       }
 
-      MaterialParamBase *envmap_p = poly->_material->get_param("env_map");
+      MaterialParamBase *envmap_p = poly->_material->get_param("envmap");
       if (envmap_p == nullptr || !envmap_p->is_of_type(MaterialParamBool::get_class_type())) {
         continue;
       }
