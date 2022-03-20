@@ -64,8 +64,8 @@ LightBuilder() :
   _grid_size(128),
   _bias(0.005f),
   _bounces(5), // 5
-  _rays_per_luxel(1024),
-  _ray_region_size(512),
+  _rays_per_luxel(512),
+  _ray_region_size(128),
   _rays_per_region(32),
   _graphics_engine(GraphicsEngine::get_global_ptr()),
   _host_output(nullptr),
@@ -377,7 +377,7 @@ make_textures() {
   direct_dynamic->set_default_sampler(sampler);
   direct_dynamic->set_compression(Texture::CM_off);
   direct_dynamic->clear_image();
-  _lm_textures["direct_dynamic"] = direct;
+  _lm_textures["direct_dynamic"] = direct_dynamic;
 
   // Color of indirect lighting reaching a luxel.
   PT(Texture) indirect = new Texture("lm_indirect");
@@ -433,6 +433,14 @@ make_textures() {
   probes->set_compression(Texture::CM_off);
   probes->clear_image();
   _lm_textures["probes"] = probes;
+
+  PT(Texture) probes_flat = new Texture("lm_probes_flat");
+  probes_flat->setup_buffer_texture(_probes.size(), Texture::T_float, Texture::F_rgba32, GeomEnums::UH_static);
+  probes_flat->set_clear_color(LColor(0, 0, 0, 0));
+  probes_flat->set_default_sampler(sampler);
+  probes_flat->set_compression(Texture::CM_off);
+  probes_flat->clear_image();
+  _lm_textures["probes_flat"] = probes_flat;
 
   //
   // Rasterization outputs.
@@ -1539,6 +1547,7 @@ compute_probes() {
   np.set_shader_input("probes", _gpu_buffers["probes"]);
   // Probe output data.
   np.set_shader_input("probe_output", _lm_textures["probes"]);
+  np.set_shader_input("probe_flat_output", _lm_textures["probes_flat"]);
 
   // Use denoised+dialated indirect+direct lightmap.
   np.set_shader_input("luxel_light", _lm_textures["direct"]);
@@ -1546,8 +1555,8 @@ compute_probes() {
   np.set_shader_input("luxel_light_dynamic", _lm_textures["direct_dynamic"]);
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
 
-  np.set_shader_input("u_bias_", LVecBase2(_bias, 0));
-  np.set_shader_input("u_grid_size_probe_count", LVecBase2i(_grid_size, _probes.size()));
+  np.set_shader_input("u_bias_", LVecBase2(_bias));
+  np.set_shader_input("u_grid_size_probe_count", LVecBase2i(_grid_size, (int)_probes.size()));
   np.set_shader_input("u_to_cell_offset", _scene_mins);
   np.set_shader_input("u_sky_color", _sky_color.get_xyz());
 
@@ -1562,15 +1571,23 @@ compute_probes() {
 
   np.set_shader_input("u_ray_params", LVecBase3i(0, ray_count, ray_count));
 
+  //_gsg->finish();
+
+  //std::string blah;
+
   //for (int i = 0; i < ray_iters; i++) {
   //  int ray_from = i * max_rays;
   //  int ray_to = std::min((i + 1) * max_rays, ray_count);
   //  np.set_shader_input("u_ray_params", LVecBase3i(ray_from, ray_to, ray_count));
 
     LVecBase3i group_size((_probes.size() - 1) / 64 + 1, 1, 1);
+  //for (int i = 0; i < 20; i++) {
+    //_gsg->set_state_and_transform(RenderState::make_empty(), TransformState::make_identity());
+    //_lm_textures["probes"]->clear_image();
     _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
     _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
     _gsg->finish();
+    //std::cin >> blah;
   //}
 
   // Retrieve probe data back onto CPU.
@@ -1580,13 +1597,34 @@ compute_probes() {
 
   // Now output the data to a friendly format.
   for (size_t i = 0; i < _probes.size(); i++) {
+    if (lightbuilder_cat.is_debug()) {
+      lightbuilder_cat.debug()
+        << "Probe " << i << ":\n";
+    }
     LightmapAmbientProbe &probe = _probes[i];
     for (int j = 0; j < 9; j++) {
       probe.data[j][0] = probe_datap[i * 36 + j * 4];
       probe.data[j][1] = probe_datap[i * 36 + j * 4 + 1];
       probe.data[j][2] = probe_datap[i * 36 + j * 4 + 2];
+      if (lightbuilder_cat.is_debug()) {
+        lightbuilder_cat.debug(false)
+          << "\t" << probe.data[j] << "\n";
+      }
     }
   }
+
+  //_graphics_engine->extract_texture_data(_lm_textures["probes_flat"], _gsg);
+  //CPTA_uchar probe_flat_data = _lm_textures["probes_flat"]->get_ram_image();
+  //const float *probe_flat_datap = (const float *)probe_flat_data.p();
+
+  //LVecBase3 color;
+  //for (size_t i = 0; i < _probes.size(); i++) {
+  //  color[0] = probe_flat_datap[i * 4];
+  //  color[1] = probe_flat_datap[i * 4 + 1];
+  //  color[2] = probe_flat_datap[i * 4 + 2];
+  //  lightbuilder_cat.info()
+  //    << "Probe " << i << " flat color: " << color << "\n";
+  //}
 
   _lm_textures["probes"]->clear_image();
   _lm_textures["albedo"]->clear_image();
@@ -1667,15 +1705,6 @@ solve() {
       << "Failed to rasterize geoms into lightmap textures\n";
     return false;
   }
-
-  //_graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
-  //_lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
-
-  //_graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
-  //_lm_textures["position"]->write("lm_position_#.png", 0, 0, true, false);
-
-  //_graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
-  //_lm_textures["normal"]->write("lm_normal_#.png", 0, 0, true, false);
 
   //if (!compute_unocclude()) {
   //  lightbuilder_cat.info()
