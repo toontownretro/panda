@@ -631,7 +631,10 @@ output(ostream &out) const {
   out << "ShaderAttrib:";
 
   if (_auto_shader) {
-    out << "auto (" << _shader_name << ")";
+    out << "auto";
+    if (_shader_name != nullptr) {
+      out << " (" << _shader_name->get_name() << ")";
+    }
     return;
   } else if (_has_shader) {
     if (_shader == nullptr) {
