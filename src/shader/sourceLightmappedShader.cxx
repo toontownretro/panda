@@ -72,6 +72,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BUMPMAP("BUMPMAP");
   static const CPT_InternalName IN_ENVMAP("ENVMAP");
   static const CPT_InternalName IN_ENVMAPMASK("ENVMAPMASK");
+  static const CPT_InternalName IN_BASETEXTURE2("BASETEXTURE2");
+  static const CPT_InternalName IN_BUMPMAP2("BUMPMAP2");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -117,13 +119,24 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     set_input(ShaderInput("baseTexture", get_white_texture()));
   }
 
+  if ((param = material->get_param("basetexture2")) != nullptr) {
+    set_pixel_shader_combo(IN_BASETEXTURE2, 1);
+    set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+  }
+
+  bool has_bump = false;
   if ((param = material->get_param("bumpmap")) != nullptr) {
+    has_bump = true;
     set_pixel_shader_combo(IN_BUMPMAP, 1);
     set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
-
-    if ((param = material->get_param("ssbump")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-      set_spec_constant(IN_SSBUMP, true);
-    }
+  }
+  if ((param = material->get_param("bumpmap2")) != nullptr) {
+    has_bump = true;
+    set_pixel_shader_combo(IN_BUMPMAP2, 1);
+    set_input(ShaderInput("normalTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+  }
+  if (has_bump && (param = material->get_param("ssbump")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+    set_spec_constant(IN_SSBUMP, true);
   }
 
   Texture *envmap_tex = nullptr;

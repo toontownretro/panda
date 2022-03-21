@@ -511,8 +511,9 @@ build() {
   arr->add_column(InternalName::get_texcoord_name("lightmap"), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format(arr);
 
-  //arr->add_column(InternalName::make("blend"), 1, GeomEnums::NT_stdfloat, GeomEnums::C_other);
-  //CPT(GeomVertexFormat) blend_format = GeomVertexFormat::register_format(arr);
+  PT(GeomVertexArrayFormat) blend_arr = new GeomVertexArrayFormat(*arr);
+  blend_arr->add_column(InternalName::make("blend"), 1, GeomEnums::NT_stdfloat, GeomEnums::C_other);
+  CPT(GeomVertexFormat) blend_format = GeomVertexFormat::register_format(blend_arr);
 
   // Now write out the meshes to GeomNodes.
 
@@ -547,7 +548,7 @@ build() {
 
     for (MapPoly *poly : group_polys) {
       PT(GeomVertexData) vdata = new GeomVertexData(
-        geom_node->get_name(), format/*poly->_blends.empty() ? format : blend_format*/,
+        geom_node->get_name(), poly->_blends.empty() ? format : blend_format,
         GeomEnums::UH_static);
 
       add_poly_to_geom_node(poly, vdata, geom_node);

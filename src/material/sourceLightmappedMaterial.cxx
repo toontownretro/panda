@@ -56,6 +56,7 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
 
     // Texture types
     if (key == "basetexture" || key == "bumpmap" ||
+        key == "basetexture2" || key == "bumpmap2" ||
         key == "envmapmask" ||
         key == "albedo") {
       if (key == "albedo" || key == "basetexture") {
