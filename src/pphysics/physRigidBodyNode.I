@@ -350,3 +350,12 @@ INLINE bool PhysRigidBodyNode::
 is_gravity_enabled() const {
   return !get_rigid_body()->getActorFlags().isSet(physx::PxActorFlag::eDISABLE_GRAVITY);
 }
+
+/**
+ * Returns the center of mass of the body.  Requires calling
+ * compute_mass_properties() to actually compute the COM.
+ */
+INLINE const LPoint3 &PhysRigidBodyNode::
+get_center_of_mass() const {
+  return _center_of_mass;
+}

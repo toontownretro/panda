@@ -34,6 +34,7 @@ compute_mass_properties() {
   physx::PxShape **shapes = (physx::PxShape **)alloca(sizeof(physx::PxShape *) * num_shapes);
   get_rigid_body()->getShapes(shapes, num_shapes);
   physx::PxMassProperties props = physx::PxRigidBodyExt::computeMassPropertiesFromShapes(shapes, num_shapes);
+  _center_of_mass = physx_vec_to_panda(props.centerOfMass);
   get_rigid_body()->setCMassLocalPose(physx::PxTransform(props.centerOfMass));
   get_rigid_body()->setMass(props.mass);
   physx::PxQuat mass_frame;

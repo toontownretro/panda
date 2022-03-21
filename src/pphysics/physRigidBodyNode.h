@@ -92,8 +92,12 @@ PUBLISHED:
 
   void compute_mass_properties();
 
+  INLINE const LPoint3 &get_center_of_mass() const;
+
 protected:
   PhysRigidBodyNode(const std::string &name);
+
+  LPoint3 _center_of_mass;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const override;
