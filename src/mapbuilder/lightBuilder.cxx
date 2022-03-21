@@ -64,8 +64,8 @@ LightBuilder() :
   _grid_size(128),
   _bias(0.005f),
   _bounces(5), // 5
-  _rays_per_luxel(512),
-  _ray_region_size(128),
+  _rays_per_luxel(256),
+  _ray_region_size(512),
   _rays_per_region(32),
   _graphics_engine(GraphicsEngine::get_global_ptr()),
   _host_output(nullptr),
