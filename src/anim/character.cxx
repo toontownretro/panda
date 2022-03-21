@@ -131,7 +131,6 @@ int Character::
 make_slider(const std::string &name, PN_stdfloat default_value) {
   CharacterSlider slider(name);
   slider._default_value = default_value;
-  slider._value = default_value;
   size_t slider_index = _sliders.size();
   _sliders.push_back(slider);
   return slider_index;
@@ -780,9 +779,9 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   ap_update_net_transform_nodes.stop();
 
   // Also update slider values... this is temporary.
-  for (size_t i = 0; i < _sliders.size(); i++) {
-    _sliders[i].update(current_thread);
-  }
+  //for (size_t i = 0; i < _sliders.size(); i++) {
+  //  _sliders[i].update(current_thread);
+  //}
 
   return true;
 }

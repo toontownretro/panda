@@ -247,7 +247,7 @@ find_slider(const std::string &name) const {
  */
 INLINE PN_stdfloat Character::
 get_slider_value(int n) const {
-  return _sliders[n]._value;
+  return _sliders[n].get_value();
 }
 
 /**

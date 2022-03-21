@@ -21,10 +21,8 @@
 CharacterSlider::
 CharacterSlider() :
   CharacterPart(),
-  _value(0.0f),
   _default_value(0.0f),
-  _vertex_slider(nullptr),
-  _val_changed(true)
+  _vertex_slider(nullptr)
 {
 }
 
@@ -34,10 +32,8 @@ CharacterSlider() :
 CharacterSlider::
 CharacterSlider(const CharacterSlider &other) :
   CharacterPart(other),
-  _value(other._value),
   _default_value(other._default_value),
-  _vertex_slider(nullptr),
-  _val_changed(other._val_changed)
+  _vertex_slider(nullptr)
 {
 }
 
@@ -47,10 +43,8 @@ CharacterSlider(const CharacterSlider &other) :
 CharacterSlider::
 CharacterSlider(CharacterSlider &&other) :
   CharacterPart(std::move(other)),
-  _value(std::move(other._value)),
   _default_value(std::move(other._default_value)),
-  _vertex_slider(std::move(other._vertex_slider)),
-  _val_changed(std::move(other._val_changed))
+  _vertex_slider(std::move(other._vertex_slider))
 {
 }
 
@@ -60,10 +54,8 @@ CharacterSlider(CharacterSlider &&other) :
 void CharacterSlider::
 operator=(const CharacterSlider &other) {
   CharacterPart::operator = (other);
-  _value = other._value;
   _default_value = other._default_value;
   _vertex_slider = other._vertex_slider;
-  _val_changed = other._val_changed;
 }
 
 /**
@@ -72,10 +64,8 @@ operator=(const CharacterSlider &other) {
 CharacterSlider::
 CharacterSlider(const std::string &name) :
   CharacterPart(name),
-  _value(0.0f),
   _default_value(0.0f),
-  _vertex_slider(nullptr),
-  _val_changed(true)
+  _vertex_slider(nullptr)
 {
 }
 
@@ -85,7 +75,8 @@ CharacterSlider(const std::string &name) :
 void CharacterSlider::
 write_datagram(Datagram &dg) {
   CharacterPart::write_datagram(dg);
-  dg.add_stdfloat(_value);
+  dg.add_stdfloat(0.0f);
+  //dg.add_stdfloat(_value);
   dg.add_stdfloat(_default_value);
 }
 
@@ -95,7 +86,8 @@ write_datagram(Datagram &dg) {
 void CharacterSlider::
 read_datagram(DatagramIterator &dgi) {
   CharacterPart::read_datagram(dgi);
-  _value = dgi.get_stdfloat();
+  dgi.get_stdfloat();
+  //_value = dgi.get_stdfloat();
   _default_value = dgi.get_stdfloat();
 }
 
@@ -104,35 +96,21 @@ read_datagram(DatagramIterator &dgi) {
  */
 void CharacterSlider::
 set_value(PN_stdfloat value) {
-  if (!_val_changed) {
-    _val_changed = value != _value;
+  // We set it directly on the VertexSlider as it is properly
+  // cycled.
+  nassertv(_vertex_slider != nullptr);
+  if (_vertex_slider->get_slider() != value) {
+    _vertex_slider->set_slider(value);
   }
-  _value = value;
 }
 
 /**
  *
  */
-bool CharacterSlider::
-is_val_changed() const {
-  return _val_changed;
-}
-
-/**
- *
- */
-void CharacterSlider::
-clear_val_changed() {
-  _val_changed = false;
-}
-
-/**
- *
- */
-void CharacterSlider::
-update(Thread *current_thread) {
-  if (_val_changed && _vertex_slider != nullptr) {
-    _vertex_slider->set_slider(_value, current_thread);
-    _val_changed = false;
-  }
+PN_stdfloat CharacterSlider::
+get_value() const {
+  // We go directly through the VertexSlider to get the value
+  // as it is properly cycled.
+  nassertr(_vertex_slider != nullptr, 0.0f);
+  return _vertex_slider->get_slider();
 }

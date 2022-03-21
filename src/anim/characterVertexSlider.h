@@ -37,8 +37,6 @@ PUBLISHED:
   INLINE const Character *get_character() const;
   INLINE int get_char_slider() const;
 
-  virtual PN_stdfloat get_slider() const;
-
 private:
   WPT(Character) _char;
   int _slider;

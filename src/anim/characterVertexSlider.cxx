@@ -56,16 +56,6 @@ CharacterVertexSlider::
 }
 
 /**
- * Returns the current slider value.
- */
-PN_stdfloat CharacterVertexSlider::
-get_slider() const {
-  nassertr(_char.is_valid_pointer(), 0.0f);
-
-  return _char->get_slider_value(_slider);
-}
-
-/**
  * Tells the BamReader how to create objects of type CharacterVertexSlider.
  */
 void CharacterVertexSlider::
