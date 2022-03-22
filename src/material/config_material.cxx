@@ -16,6 +16,7 @@
 #include "materialParamBool.h"
 #include "materialParamColor.h"
 #include "materialParamFloat.h"
+#include "materialParamMatrix.h"
 #include "materialParamTexture.h"
 #include "materialParamVector.h"
 #include "standardMaterial.h"
@@ -49,12 +50,14 @@ init_libmaterial() {
   MaterialParamBool::init_type();
   MaterialParamColor::init_type();
   MaterialParamFloat::init_type();
+  MaterialParamMatrix::init_type();
   MaterialParamTexture::init_type();
   MaterialParamVector::init_type();
 
   MaterialParamBool::register_with_read_factory();
   MaterialParamColor::register_with_read_factory();
   MaterialParamFloat::register_with_read_factory();
+  MaterialParamMatrix::register_with_read_factory();
   MaterialParamTexture::register_with_read_factory();
   MaterialParamVector::register_with_read_factory();
 
