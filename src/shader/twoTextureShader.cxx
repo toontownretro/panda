@@ -119,6 +119,17 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
   set_input(ShaderInput("textureScroll", scroll));
 
+  LVecBase3 sine_x(0.0f, 0.0f, 1.0f);
+  LVecBase3 sine_y(0.0f, 0.0f, 1.0f);
+  if ((param = material->get_param("basetexturesinex")) != nullptr) {
+    sine_x = DCAST(MaterialParamVector, param)->get_value();
+  }
+  if ((param = material->get_param("basetexturesiney")) != nullptr) {
+    sine_y = DCAST(MaterialParamVector, param)->get_value();
+  }
+  set_input(ShaderInput("sineXParams", sine_x));
+  set_input(ShaderInput("sineYParams", sine_y));
+
   const TextureAttrib *tattr;
   state->get_attrib_def(tattr);
   for (int i = 0; i < tattr->get_num_on_stages(); ++i) {

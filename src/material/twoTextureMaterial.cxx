@@ -63,7 +63,9 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
       param = new MaterialParamMatrix(key);
 
     } else if (key == "basetexturescroll" ||
-               key == "texture2scroll") {
+               key == "texture2scroll" ||
+               key == "basetexturesinex" ||
+               key == "basetexturesiney") {
       param = new MaterialParamVector(key);
     }
 
