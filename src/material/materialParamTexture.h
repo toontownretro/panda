@@ -24,12 +24,31 @@ class EXPCL_PANDA_MATERIAL MaterialParamTexture final : public MaterialParamBase
 PUBLISHED:
   INLINE MaterialParamTexture(const std::string &name, Texture *default_value = nullptr);
 
-  INLINE void set_value(Texture *tex);
+  INLINE void set_value(Texture *tex, int view = 0);
   INLINE Texture *get_value() const;
   MAKE_PROPERTY(value, get_value, set_value);
 
+  INLINE void set_view(int view);
+  INLINE int get_view() const;
+  MAKE_PROPERTY(view, get_view, set_view);
+
+  INLINE void set_sampler_state(const SamplerState &sampler);
+  INLINE const SamplerState &get_sampler_state() const;
+  INLINE void clear_sampler_state();
+  INLINE bool has_sampler_state() const;
+  MAKE_PROPERTY(sampler_state, get_sampler_state, set_sampler_state);
+
 private:
   PT(Texture) _value;
+
+  // For multi-view textures, specifies the view index to use for
+  // this parameter.
+  int _view;
+
+  // The parameter can use the Texture's default sampler or specify
+  // a custom one here for this parameter only.
+  bool _has_sampler;
+  SamplerState _sampler;
 
 public:
   virtual bool from_pdx(const PDXValue &val, const DSearchPath &search_path) override;

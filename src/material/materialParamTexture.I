@@ -17,7 +17,9 @@
 INLINE MaterialParamTexture::
 MaterialParamTexture(const std::string &name, Texture *default_value) :
   MaterialParamBase(name),
-  _value(default_value)
+  _value(default_value),
+  _view(0),
+  _has_sampler(false)
 {
 }
 
@@ -25,8 +27,9 @@ MaterialParamTexture(const std::string &name, Texture *default_value) :
  *
  */
 INLINE void MaterialParamTexture::
-set_value(Texture *tex) {
+set_value(Texture *tex, int view) {
   _value = tex;
+  _view = view;
 }
 
 /**
@@ -35,4 +38,58 @@ set_value(Texture *tex) {
 INLINE Texture *MaterialParamTexture::
 get_value() const {
   return _value;
+}
+
+/**
+ *
+ */
+INLINE void MaterialParamTexture::
+set_view(int view) {
+  _view = view;
+}
+
+/**
+ *
+ */
+INLINE int MaterialParamTexture::
+get_view() const {
+  return _view;
+}
+
+/**
+ *
+ */
+INLINE void MaterialParamTexture::
+set_sampler_state(const SamplerState &sampler) {
+  _sampler = sampler;
+  _has_sampler = true;
+}
+
+/**
+ *
+ */
+INLINE const SamplerState &MaterialParamTexture::
+get_sampler_state() const {
+  if (_has_sampler) {
+    return _sampler;
+
+  } else {
+    return _value->get_default_sampler();
+  }
+}
+
+/**
+ *
+ */
+INLINE void MaterialParamTexture::
+clear_sampler_state() {
+  _has_sampler = false;
+}
+
+/**
+ *
+ */
+INLINE bool MaterialParamTexture::
+has_sampler_state() const {
+  return _has_sampler;
 }
