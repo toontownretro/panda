@@ -1855,9 +1855,9 @@ bind_parameter(const Parameter &param) {
     return report_parameter_error(name, type, "unrecognized parameter name");
   }
   else if (pieces[0] == "osg" && _language == SL_GLSL) {
-    if (!expect_num_words(name, type, 2)) {
-      return false;
-    }
+    //if (!expect_num_words(name, type, 2)) {
+    //  return false;
+    //}
 
     // These inputs are supported by OpenSceneGraph.  We can support them as
     // well, to increase compatibility.

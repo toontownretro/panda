@@ -25,6 +25,7 @@
 #include "sourceMaterial.h"
 #include "sourceSkyMaterial.h"
 #include "sourceLightmappedMaterial.h"
+#include "twoTextureMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -78,4 +79,7 @@ init_libmaterial() {
 
   SourceLightmappedMaterial::init_type();
   SourceLightmappedMaterial::register_with_read_factory();
+
+  TwoTextureMaterial::init_type();
+  TwoTextureMaterial::register_with_read_factory();
 }

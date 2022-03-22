@@ -22,7 +22,8 @@
     //skyBoxShader.h skyBoxShader.I \
     sourceLightmappedShader.h sourceLightmappedShader.I \
     sourceShader.h sourceShader.I \
-    sourceSkyShader.h sourceSkyShader.I
+    sourceSkyShader.h sourceSkyShader.I \
+    twoTextureShader.h twoTextureShader.I
     //vertexLitShader.h vertexLitShader.I
 
   #define INSTALL_HEADERS \
@@ -44,7 +45,8 @@
     //skyBoxShader.cxx \
     sourceLightmappedShader.cxx \
     sourceShader.cxx \
-    sourceSkyShader.cxx
+    sourceSkyShader.cxx \
+    twoTextureShader.cxx
     //vertexLitShader.cxx
 
   #define IGATESCAN all

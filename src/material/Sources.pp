@@ -21,7 +21,8 @@
     sourceLightmappedMaterial.I sourceLightmappedMaterial.h \
     sourceMaterial.I sourceMaterial.h \
     sourceSkyMaterial.I sourceSkyMaterial.h \
-    standardMaterial.I standardMaterial.h
+    standardMaterial.I standardMaterial.h \
+    twoTextureMaterial.I twoTextureMaterial.h
 
   #define COMPOSITE_SOURCES \
     config_material.cxx \
@@ -40,7 +41,8 @@
     sourceLightmappedMaterial.cxx \
     sourceMaterial.cxx \
     sourceSkyMaterial.cxx \
-    standardMaterial.cxx
+    standardMaterial.cxx \
+    twoTextureMaterial.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]
