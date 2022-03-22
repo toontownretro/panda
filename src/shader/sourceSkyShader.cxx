@@ -16,6 +16,7 @@
 #include "materialParamTexture.h"
 #include "materialParamBool.h"
 #include "materialParamVector.h"
+#include "materialParamMatrix.h"
 #include "texture.h"
 #include "samplerState.h"
 #include "luse.h"
@@ -66,27 +67,22 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   Texture *sky_tex;
+  SamplerState sky_sampler;
   if ((param = material->get_param("sky_texture")) != nullptr) {
     sky_tex = DCAST(MaterialParamTexture, param)->get_value();
+    sky_sampler = DCAST(MaterialParamTexture, param)->get_sampler_state();
 
   } else {
     sky_tex = get_white_texture();
+    sky_sampler = sky_tex->get_default_sampler();
   }
 
   LMatrix4 tex_transform = LMatrix4::ident_mat();
-  if ((param = material->get_param("texcoord_scale")) != nullptr) {
-    tex_transform = LMatrix4::scale_mat(DCAST(MaterialParamVector, param)->get_value());
-  }
-  if ((param = material->get_param("texcoord_rotate")) != nullptr) {
-    LQuaternion q;
-    q.set_hpr(DCAST(MaterialParamVector, param)->get_value());
-    tex_transform = tex_transform * q;
-  }
-  if ((param = material->get_param("texcoord_translate")) != nullptr) {
-    tex_transform.set_row(3, DCAST(MaterialParamVector, param)->get_value());
+  if ((param = material->get_param("texcoord_transform")) != nullptr) {
+    tex_transform = DCAST(MaterialParamMatrix, param)->get_value();
   }
 
-  set_input(ShaderInput("skySampler", sky_tex));
+  set_input(ShaderInput("skySampler", sky_tex, sky_sampler));
   set_input(ShaderInput("skyTexTransform", tex_transform));
 
   LVecBase3 scale(1);

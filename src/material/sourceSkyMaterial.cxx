@@ -18,6 +18,7 @@
 #include "materialParamBool.h"
 #include "materialParamTexture.h"
 #include "materialParamVector.h"
+#include "materialParamMatrix.h"
 
 TypeHandle SourceSkyMaterial::_type_handle;
 
@@ -59,10 +60,8 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     } else if (key == "compressed_hdr") {
       param = new MaterialParamBool(key);
 
-    } else if (key == "texcoord_translate" ||
-               key == "texcoord_rotate" ||
-               key == "texcoord_scale") {
-      param = new MaterialParamVector(key);
+    } else if (key == "texcoord_transform") {
+      param = new MaterialParamMatrix(key);
     }
 
     if (param != nullptr) {
