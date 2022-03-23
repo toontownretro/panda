@@ -209,7 +209,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   const LightAttrib *la;
   state->get_attrib_def(la);
-  if (la->get_num_non_ambient_lights() == 1) {
+  if (!la->has_all_off() && la->get_num_non_ambient_lights() == 1) {
     const NodePath &light = la->get_on_light_quick(0);
     if (light.node()->get_type() == CascadeLight::get_class_type()) {
       CascadeLight *clight = DCAST(CascadeLight, light.node());

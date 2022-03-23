@@ -74,18 +74,22 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // Break out the lights by type.
   const LightAttrib *la;
   state->get_attrib_def(la);
-  size_t num_lights = la->get_num_non_ambient_lights();
-  size_t num_ambient_lights = la->get_num_on_lights() - num_lights;
+  size_t num_lights = 0;
+  size_t num_ambient_lights = 0;
+  if (!la->has_all_off()) {
+    num_lights = la->get_num_non_ambient_lights();
+    num_ambient_lights = la->get_num_on_lights() - num_lights;
 
-  const ShaderAttrib *sa;
-  state->get_attrib_def(sa);
-  if (sa->has_shader_input("ambientProbe")) {
-    // SH ambient probe.
-    set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
+    const ShaderAttrib *sa;
+    state->get_attrib_def(sa);
+    if (sa->has_shader_input("ambientProbe")) {
+      // SH ambient probe.
+      set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
 
-  } else if (num_ambient_lights != 0) {
-    // Flat ambient.
-    set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
+    } else if (num_ambient_lights != 0) {
+      // Flat ambient.
+      set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
+    }
   }
 
   if (num_lights > 0) {
