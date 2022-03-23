@@ -117,6 +117,13 @@ class EXPCL_PANDA_ANIM AnimChannelTable final : public AnimChannel {
   DECLARE_CLASS(AnimChannelTable, AnimChannel);
 
 PUBLISHED:
+  enum MotionFlags {
+    MF_none = 0,
+    MF_linear_x = 1,
+    MF_linear_y = 2,
+    MF_linear_z = 4,
+  };
+
   INLINE explicit AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames);
 
   INLINE void set_joint_table(JointFrames &&table);
@@ -146,6 +153,9 @@ PUBLISHED:
   virtual PT(AnimChannel) make_copy() const override;
   virtual PN_stdfloat get_length(Character *character) const override;
   virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data) override;
+  virtual LVector3 get_root_motion_vector(Character *character) const override;
+
+  void calc_root_motion(unsigned int flags, int root_joint = 0);
 
 public:
   static void register_with_read_factory();
@@ -167,6 +177,8 @@ private:
   SliderEntry _slider_entries[max_character_joints];
   size_t _num_slider_entries;
   vector_stdfloat _slider_table;
+
+  LVector3 _root_motion_vector;
 };
 
 #include "animChannelTable.I"

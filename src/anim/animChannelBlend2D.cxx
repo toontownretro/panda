@@ -369,6 +369,26 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 /**
  *
  */
+LVector3 AnimChannelBlend2D::
+get_root_motion_vector(Character *character) const {
+  ((AnimChannelBlend2D *)this)->compute_weights_if_necessary(character);
+
+  if (_active_tri == nullptr) {
+    return LVector3(0.0f);
+  }
+
+  const Channel &c0 = _channels[_active_tri->a];
+  const Channel &c1 = _channels[_active_tri->b];
+  const Channel &c2 = _channels[_active_tri->c];
+
+  return (c0._channel->get_root_motion_vector(character) * c0._weight) +
+         (c1._channel->get_root_motion_vector(character) * c1._weight) +
+         (c2._channel->get_root_motion_vector(character) * c2._weight);
+}
+
+/**
+ *
+ */
 AnimChannelBlend2D::
 AnimChannelBlend2D(const AnimChannelBlend2D &copy) :
   AnimChannel(copy),

@@ -213,6 +213,32 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 /**
  *
  */
+LVector3 AnimChannelBlend1D::
+get_root_motion_vector(Character *character) const {
+  if (_channels.empty() || _blend_param < 0) {
+    return LVector3(0.0f);
+  }
+
+  const Channel *from, *to;
+  PN_stdfloat frac = ((AnimChannelBlend1D *)this)->get_blend_targets(character, from, to);
+
+  if (to == nullptr) {
+    return from->_channel->get_root_motion_vector(character);
+
+  } else if (from == nullptr) {
+    return to->_channel->get_root_motion_vector(character);
+
+  } else {
+    // Return the weighted average of the two motion vectors.
+    LVector3 from_vec = from->_channel->get_root_motion_vector(character);
+    LVector3 to_vec = to->_channel->get_root_motion_vector(character);
+    return (from_vec * (1.0f - frac)) + (to_vec * frac);
+  }
+}
+
+/**
+ *
+ */
 void AnimChannelBlend1D::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);

@@ -183,6 +183,8 @@ PUBLISHED:
   void blend(const AnimEvalContext &context, AnimEvalData &a,
              AnimEvalData &b, PN_stdfloat weight) const;
 
+  virtual LVector3 get_root_motion_vector(Character *character) const=0;
+
 public:
   virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
   virtual void write_datagram(BamWriter *manager, Datagram &me) override;

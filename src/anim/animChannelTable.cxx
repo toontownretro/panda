@@ -196,6 +196,61 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 /**
  *
  */
+LVector3 AnimChannelTable::
+get_root_motion_vector(Character *character) const {
+  return _root_motion_vector;
+}
+
+/**
+ * Extracts the motion of the indicated translation components of the root
+ * joint.  The specified translation components are stripped from the animation
+ * of the root joint.
+ */
+void AnimChannelTable::
+calc_root_motion(unsigned int flags, int root_joint) {
+  // We currently do one motion keyframe along the entire animation for
+  // translation only.  Assumes that the root joint moves on a completely
+  // straight and contiguous line for the entire animation.
+
+  // Get frame data for root joint.
+  nassertv(root_joint >= 0 && root_joint < (int)_num_joint_entries);
+  const JointEntry &root_entry = _joint_entries[root_joint];
+  nassertv(root_entry.num_frames > 1);
+  const JointFrame &first_frame = _joint_frames[root_entry.first_frame];
+  const JointFrame &last_frame = _joint_frames[root_entry.first_frame + root_entry.num_frames - 1];
+
+  // Extract translation vector for requested axes between start and end frame.
+  LVector3 translation_vector(0.0f, 0.0f, 0.0f);
+  if (flags & MF_linear_x) {
+    translation_vector[0] = last_frame.pos[0] - first_frame.pos[0];
+  }
+  if (flags & MF_linear_y) {
+    translation_vector[1] = last_frame.pos[1] - first_frame.pos[1];
+  }
+  if (flags & MF_linear_z) {
+    translation_vector[2] = last_frame.pos[2] - first_frame.pos[2];
+  }
+
+  // Now zero the actual animation data for the extracted translation axes.
+  for (int i = root_entry.first_frame; i < root_entry.first_frame + root_entry.num_frames; ++i) {
+    JointFrame &frame = _joint_frames[i];
+    if (flags & MF_linear_x) {
+      frame.pos[0] = 0.0f;
+    }
+    if (flags & MF_linear_y) {
+      frame.pos[1] = 0.0f;
+    }
+    if (flags & MF_linear_z) {
+      frame.pos[2] = 0.0f;
+    }
+  }
+
+  _root_motion_vector = translation_vector;
+}
+
+/**
+ *
+ */
 void AnimChannelTable::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
@@ -254,6 +309,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _slider_table.size(); i++) {
     me.add_stdfloat(_slider_table[i]);
   }
+
+  _root_motion_vector.write_datagram(me);
 }
 
 /**
@@ -293,4 +350,6 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   for (size_t i = 0; i < _slider_table.size(); i++) {
     _slider_table[i] = scan.get_stdfloat();
   }
+
+  _root_motion_vector.read_datagram(scan);
 }

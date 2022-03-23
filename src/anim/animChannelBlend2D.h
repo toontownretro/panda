@@ -36,6 +36,7 @@ PUBLISHED:
 
   virtual PN_stdfloat get_length(Character *character) const override;
   virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data) override;
+  virtual LVector3 get_root_motion_vector(Character *character) const override;
 
   INLINE void set_blend_x(int param);
   INLINE int get_blend_x() const;

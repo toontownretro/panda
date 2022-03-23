@@ -185,6 +185,19 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 /**
  *
  */
+LVector3 AnimChannelLayered::
+get_root_motion_vector(Character *character) const {
+  if (_channels.empty()) {
+    return LVector3(0.0f);
+  }
+
+  // Return the vector of the base layer.
+  return _channels[0]._channel->get_root_motion_vector(character);
+}
+
+/**
+ *
+ */
 void AnimChannelLayered::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);

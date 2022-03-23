@@ -282,6 +282,19 @@ load(const Filename &filename, const DSearchPath &search_path) {
       if (seqe->has_attribute("zero_z")) {
         seq._zero_z = seqe->get_attribute_value("zero_z").get_bool();
       }
+      if (seqe->has_attribute("motion")) {
+        PDXList *motion_axes_list = seqe->get_attribute_value("motion").get_list();
+        for (size_t j = 0; j < motion_axes_list->size(); ++j) {
+          char maxis = downcase(motion_axes_list->get(j).get_string())[0];
+          if (maxis == 'x') {
+            seq._motion_x = true;
+          } else if (maxis == 'y') {
+            seq._motion_y = true;
+          } else if (maxis == 'z') {
+            seq._motion_z = true;
+          }
+        }
+      }
       if (seqe->has_attribute("real_time")) {
         seq._real_time = seqe->get_attribute_value("real_time").get_bool();
       }
@@ -963,6 +976,25 @@ build_graph() {
         chan->set_num_frames(pmdl_seq->_num_frames);
       }
 
+      if (!layered) {
+        // Calculate root motion if requested.
+        if (pmdl_seq->_motion_x || pmdl_seq->_motion_y || pmdl_seq->_motion_z) {
+          if (chan->is_of_type(AnimChannelTable::get_class_type())) {
+            unsigned int mflags = 0;
+            if (pmdl_seq->_motion_x) {
+              mflags |= AnimChannelTable::MF_linear_x;
+            }
+            if (pmdl_seq->_motion_y) {
+              mflags |= AnimChannelTable::MF_linear_y;
+            }
+            if (pmdl_seq->_motion_z) {
+              mflags |= AnimChannelTable::MF_linear_z;
+            }
+            DCAST(AnimChannelTable, chan)->calc_root_motion(mflags);
+          }
+        }
+      }
+
       chan->add_activity(activities->get_value_id(pmdl_seq->_activity),
                          pmdl_seq->_activity_weight);
 
@@ -1512,6 +1544,24 @@ make_layered_channel(const PMDLSequence *seq) {
       flags |= AnimChannel::F_pre_delta;
     }
     base_chan->set_flags(flags);
+
+    // If sequence specifies root motion, calculate and apply it to the base
+    // layer.
+    if (seq->_motion_x || seq->_motion_y || seq->_motion_z) {
+      if (base_chan->is_of_type(AnimChannelTable::get_class_type())) {
+        unsigned int mflags = 0;
+        if (seq->_motion_x) {
+          mflags |= AnimChannelTable::MF_linear_x;
+        }
+        if (seq->_motion_y) {
+          mflags |= AnimChannelTable::MF_linear_y;
+        }
+        if (seq->_motion_z) {
+          mflags |= AnimChannelTable::MF_linear_z;
+        }
+        DCAST(AnimChannelTable, base_chan)->calc_root_motion(mflags);
+      }
+    }
   }
 
   for (int i = 0; i < seq->_layers.size(); i++) {

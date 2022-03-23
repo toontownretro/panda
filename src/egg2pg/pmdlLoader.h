@@ -220,6 +220,10 @@ public:
   bool _zero_y = false;
   bool _zero_z = false;
 
+  bool _motion_x = false;
+  bool _motion_y = false;
+  bool _motion_z = false;
+
   bool _real_time = false;
 
   // If not -1, overrides the frame rate of all animations in sequence.
