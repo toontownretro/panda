@@ -218,7 +218,7 @@
     writableConfigurable.h writableParam.I \
     writableParam.h
 
-  #define IGATESCAN $[filter-out threadManager.h threadManager.I threadManager.cxx, $[SOURCES] $[COMPOSITE_SOURCES]]
+  #define IGATESCAN $[filter-out %.I %.T %.lxx %.yxx %.N %_src.cxx %_src.h %_src.c threadManager.h threadManager.I threadManager.cxx, $[SOURCES] $[COMPOSITE_SOURCES]]
 
   #define IGATEEXT \
     bamReader_ext.cxx \
