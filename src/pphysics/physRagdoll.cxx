@@ -21,6 +21,11 @@
 #include "config_pphysics.h"
 #include "clockObject.h"
 
+static ConfigVariableDouble phys_ragdoll_joint_stiffness("phys-ragdoll-joint-stiffness", 0.0);
+static ConfigVariableDouble phys_ragdoll_joint_damping("phys-ragdoll-joint-damping", 0.0);
+static ConfigVariableDouble phys_ragdoll_joint_restitution("phys-ragdoll-joint-restitution", 0.0);
+static ConfigVariableDouble phys_ragdoll_joint_bounce_threshold("phys-ragdoll-joint-bounce-threshold", 0.0);
+
 /**
  *
  */
@@ -146,22 +151,30 @@ create_joints() {
       if (joint->limit_x[0] == 0 && joint->limit_x[1] == 0) {
         djoint->set_angular_motion(PhysD6Joint::A_x, PhysD6Joint::M_locked);
 
-      } else if (joint->limit_x[0] == -180 && joint->limit_x[1] == 180) {
+      } else if (joint->limit_x[0] <= -180 && joint->limit_x[1] >= 180) {
         djoint->set_angular_motion(PhysD6Joint::A_x, PhysD6Joint::M_free);
 
       } else {
         djoint->set_angular_motion(PhysD6Joint::A_x, PhysD6Joint::M_limited);
-        djoint->set_twist_limit(
-          PhysJointLimitAngularPair(joint->limit_x[0], joint->limit_x[1],
-            (joint->limit_x[1] - joint->limit_x[0]) * phys_ragdoll_contact_distance_ratio));
+        PhysJointLimitAngularPair limit(joint->limit_x[0], joint->limit_x[1],
+            (joint->limit_x[1] - joint->limit_x[0]) * phys_ragdoll_contact_distance_ratio);
+        limit.set_stiffness(phys_ragdoll_joint_stiffness);
+        limit.set_damping(phys_ragdoll_joint_damping);
+        limit.set_restitution(phys_ragdoll_joint_restitution);
+        limit.set_bounce_threshold(phys_ragdoll_joint_bounce_threshold);
+        djoint->set_twist_limit(limit);
       }
 
-      bool y_locked = false;
-      bool z_locked = false;
+      bool y_locked_or_free = false;
+      bool z_locked_or_free = false;
 
       if (joint->limit_y[0] == 0 && joint->limit_y[1] == 0) {
         djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_locked);
-        y_locked = true;
+        y_locked_or_free = true;
+
+      } else if (joint->limit_y[0] <= -180 && joint->limit_y[1] >= 180) {
+        djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_free);
+        y_locked_or_free = true;
 
       } else {
         djoint->set_angular_motion(PhysD6Joint::A_y, PhysD6Joint::M_limited);
@@ -169,17 +182,30 @@ create_joints() {
 
       if (joint->limit_z[0] == 0 && joint->limit_z[1] == 0) {
         djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_locked);
-        z_locked = true;
+        z_locked_or_free = true;
+
+      } else if (joint->limit_z[0] <= -180 && joint->limit_z[1] >= 180) {
+        djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_free);
+        z_locked_or_free = true;
 
       } else {
         djoint->set_angular_motion(PhysD6Joint::A_z, PhysD6Joint::M_limited);
       }
 
-      if (!y_locked || !z_locked) {
-        PN_stdfloat dist_y = (joint->limit_y[1] - joint->limit_y[0]) * phys_ragdoll_contact_distance_ratio;
-        PN_stdfloat dist_z = (joint->limit_z[1] - joint->limit_z[0]) * phys_ragdoll_contact_distance_ratio;
-        djoint->set_pyramid_swing_limit(
-          PhysJointLimitPyramid(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1], std::max(dist_y, dist_z)));
+      if (!y_locked_or_free || !z_locked_or_free) {
+        PN_stdfloat dist_y = 0.0f;
+        PN_stdfloat dist_z = 0.0f;
+        if (!y_locked_or_free) {
+          dist_y = (joint->limit_y[1] - joint->limit_y[0]) * phys_ragdoll_contact_distance_ratio;
+        } else {
+          dist_z = (joint->limit_z[1] - joint->limit_z[0]) * phys_ragdoll_contact_distance_ratio;
+        }
+        PhysJointLimitPyramid limit(joint->limit_y[0], joint->limit_y[1], joint->limit_z[0], joint->limit_z[1], std::max(dist_y, dist_z));
+        limit.set_stiffness(phys_ragdoll_joint_stiffness);
+        limit.set_damping(phys_ragdoll_joint_damping);
+        limit.set_restitution(phys_ragdoll_joint_restitution);
+        limit.set_bounce_threshold(phys_ragdoll_joint_bounce_threshold);
+        djoint->set_pyramid_swing_limit(limit);
       }
 
       joint->djoint = djoint;
