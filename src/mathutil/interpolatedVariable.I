@@ -87,6 +87,7 @@ INLINE InterpolatedVariable<Type>::
 InterpolatedVariable() {
   _interpolated_value_time = -1.0;
   _last_networked_time = -1.0;
+  _last_networked_value = Type();
   _interpolation_amount = 0.0;
   _looping = false;
   _angles = false;
