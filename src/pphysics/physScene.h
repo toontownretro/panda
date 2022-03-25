@@ -22,6 +22,8 @@
 #include "physx_shaders.h"
 #include "refCallbackData.h"
 #include "callbackObject.h"
+#include "pset.h"
+#include "physRigidActorNode.h"
 
 #include "physx_utils.h"
 
@@ -41,7 +43,7 @@ PUBLISHED:
   PhysScene();
   ~PhysScene();
 
-  int simulate(double dt);
+  int simulate(double frame_time);
 
   INLINE void set_gravity(const LVector3 &gravity);
   INLINE LVector3 get_gravity() const;
@@ -88,6 +90,9 @@ public:
   INLINE physx::PxScene *get_scene() const;
   INLINE physx::PxControllerManager *get_controller_manager() const;
 
+  INLINE void add_actor(PhysRigidActorNode *actor);
+  INLINE void remove_actor(PhysRigidActorNode *actor);
+
 private:
   void run_callbacks();
 
@@ -107,6 +112,8 @@ private:
   ContactEventQueue _global_contact_queue;
 
   double _local_time;
+  double _last_frame_time;
+  int _tick_count;
   int _max_substeps;
   double _fixed_timestep;
 
@@ -114,6 +121,9 @@ private:
   physx::PxControllerManager *_controller_mgr;
 
   bool _debug_vis_enabled;
+
+  typedef pflat_set<PT(PhysRigidActorNode)> Actors;
+  Actors _actors;
 };
 
 #include "physScene.I"

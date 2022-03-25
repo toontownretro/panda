@@ -20,6 +20,7 @@
 #include "collideMask.h"
 #include "callbackObject.h"
 #include "pvector.h"
+#include "interpolatedVariable.h"
 
 class PhysScene;
 
@@ -119,6 +120,14 @@ protected:
   BitMask32 _solid_mask;
 
   pvector<PT(PhysShape)> _shapes;
+
+  // Used to interpolate simulation results for rendering
+  // with a fixed simulation timestep.
+  InterpolatedVec3 _iv_pos;
+  InterpolatedQuat _iv_rot;
+  bool _needs_interpolation;
+
+  friend class PhysScene;
 
 public:
   virtual physx::PxRigidActor *get_rigid_actor() const = 0;

@@ -28,8 +28,11 @@ PhysRigidActorNode(const std::string &name) :
   _sync_enabled(true),
   _collision_group(0),
   _contents_mask(BitMask32::all_on()),
-  _solid_mask(BitMask32::all_on())
+  _solid_mask(BitMask32::all_on()),
+  _needs_interpolation(false)
 {
+  _iv_pos.set_interpolation_amount(0.0f);
+  _iv_rot.set_interpolation_amount(0.0f);
 }
 
 /**
@@ -48,6 +51,7 @@ get_phys_bounds() const {
 void PhysRigidActorNode::
 add_to_scene(PhysScene *scene) {
   scene->get_scene()->addActor(*get_rigid_actor());
+  scene->add_actor(this);
 }
 
 /**
@@ -56,6 +60,7 @@ add_to_scene(PhysScene *scene) {
 void PhysRigidActorNode::
 remove_from_scene(PhysScene *scene) {
   scene->get_scene()->removeActor(*get_rigid_actor());
+  scene->remove_actor(this);
 }
 
 /**
@@ -234,6 +239,10 @@ do_transform_changed() {
 
   CPT(TransformState) net_transform = np.get_net_transform();
   get_rigid_actor()->setGlobalPose(panda_trans_to_physx(net_transform));
+
+  // Clear interpolation history.
+  _iv_pos.reset(net_transform->get_pos());
+  _iv_rot.reset(net_transform->get_norm_quat());
 }
 
 /**

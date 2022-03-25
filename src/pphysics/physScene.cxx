@@ -22,6 +22,7 @@
 #include "physQueryFilter.h"
 #include "physx_utils.h"
 #include "physGeometry.h"
+#include "clockObject.h"
 
 /**
  *
@@ -29,6 +30,8 @@
 PhysScene::
 PhysScene() :
   _local_time(0.0),
+  _last_frame_time(0.0),
+  _tick_count(0),
   _max_substeps(10),
   _fixed_timestep(1 / 60.0),
   _debug_vis_enabled(false)
@@ -92,94 +95,125 @@ PhysScene::
  * Returns the number of simulation steps that were run.
  */
 int PhysScene::
-simulate(double dt) {
+simulate(double frame_time) {
 
-  // Don't simulate less than 0.1 ms or more than 1 sec.
-  if (dt < 1.0 && dt > 0.0001) {
-    if (dt > 0.1) {
-      // Cap at 100 ms.
-      dt = 0.1;
-    }
+  _global_contact_queue.clear();
 
-    // Clear left-over global contact events from last simulation.
-    _global_contact_queue.clear();
+  ClockObject *clock = ClockObject::get_global_clock();
 
-    _local_time += dt;
-    _scene->simulate(dt);
-    _scene->fetchResults(true);
+  double dt = frame_time - _last_frame_time;
+  _last_frame_time = frame_time;
+  _local_time += dt;
 
-    // Now synchronize the simulation results with all of the scene nodes.
-    physx::PxU32 num_active_actors;
-    physx::PxActor **active_actors = _scene->getActiveActors(num_active_actors);
-    //if (pphysics_cat.is_debug()) {
-    //  pphysics_cat.debug()
-    //    << num_active_actors << " active actors this sim\n";
-    //}
-    for (physx::PxU32 i = 0; i < num_active_actors; i++) {
-      physx::PxActor *actor = active_actors[i];
-
-      if (!actor->is<physx::PxRigidActor>()) {
-        continue;
-      }
-
-      physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
-
-      PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
-      if (node == nullptr) {
-        continue;
-      }
-
-      // Disable automatic syncing with PhysX when the node's transform changes.
-      // We are doing the exact opposite here, synchronizing PhysX's transform
-      // with the node.
-      node->set_sync_enabled(false);
-
-      NodePath np(node);
-
-      physx::PxTransform global_pose = rigid_actor->getGlobalPose();
-
-      //if (pphysics_cat.is_debug()) {
-      //  pphysics_cat.debug()
-      //    << "Global pose for rigid actor connected to " << np << ": "
-      //    << "pos: " << global_pose.p.x << ", " << global_pose.p.y << ", " << global_pose.p.z
-      //   << " | quat: " << global_pose.q.x << ", " << global_pose.q.y << ", " << global_pose.q.z << ", " << global_pose.q.w << "\n";
-      //}
-
-      // Update the local-space transform of the node.
-      if (np.get_parent().is_empty()) {
-        // Has no parent!  Just throw the global pose on there.
-        CPT(TransformState) ts = node->get_transform();
-        ts = ts->set_pos(physx_vec_to_panda(global_pose.p));
-        ts = ts->set_quat(physx_quat_to_panda(global_pose.q));
-        node->set_transform(ts);
-
-      } else {
-        // The global pose needs to be transformed into the local coordinate
-        // space of the associate node's parent.
-        NodePath parent = np.get_parent();
-
-        CPT(TransformState) curr_ts = node->get_transform();
-
-        CPT(TransformState) global_ts = physx_trans_to_panda(global_pose);
-
-        CPT(TransformState) parent_net = parent.get_net_transform();
-
-        CPT(TransformState) local_ts = parent_net->invert_compose(global_ts);
-        local_ts = local_ts->set_scale(curr_ts->get_scale());
-        local_ts = local_ts->set_shear(curr_ts->get_shear());
-
-        node->set_transform(local_ts);
-      }
-
-      node->set_sync_enabled(true);
-    }
-
-    run_callbacks();
-
-    return 1;
+  int num_steps = 0;
+  if (_local_time >= _fixed_timestep) {
+    num_steps = (int)(_local_time / _fixed_timestep);
+    _local_time -= num_steps * _fixed_timestep;
   }
 
-  return 0;
+  if (num_steps > 0) {
+    num_steps = std::min(num_steps, _max_substeps);
+
+    for (int i = 0; i < num_steps; ++i) {
+      //_global_contact_queue.clear();
+
+      double sim_time = _tick_count * _fixed_timestep;
+      clock->set_frame_time(sim_time);
+
+      _scene->simulate(_fixed_timestep);
+      _scene->fetchResults(true);
+
+      // Record transforms of active actors in interpolation history.
+      physx::PxU32 num_active_actors;
+      physx::PxActor **active_actors = _scene->getActiveActors(num_active_actors);
+      for (physx::PxU32 i = 0; i < num_active_actors; i++) {
+        physx::PxActor *actor = active_actors[i];
+
+        if (!actor->is<physx::PxRigidActor>()) {
+          continue;
+        }
+
+        physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
+
+        PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
+        if (node == nullptr) {
+          continue;
+        }
+
+        // Disable automatic syncing with PhysX when the node's transform changes.
+        // We are doing the exact opposite here, synchronizing PhysX's transform
+        // with the node.
+        //node->set_sync_enabled(false);
+
+        NodePath np(node);
+
+        physx::PxTransform global_pose = rigid_actor->getGlobalPose();
+
+        // Update the local-space transform of the node.
+        if (np.get_parent().is_empty()) {
+          // Has no parent!  Just throw the global pose on there.
+          bool pos_changed = node->_iv_pos.record_value(physx_vec_to_panda(global_pose.p), sim_time, false);
+          bool rot_changed = node->_iv_rot.record_value(physx_quat_to_panda(global_pose.q), sim_time, false);
+          if (pos_changed || rot_changed) {
+            node->_needs_interpolation = true;
+          }
+
+        } else {
+          // The global pose needs to be transformed into the local coordinate
+          // space of the associate node's parent.
+          NodePath parent = np.get_parent();
+
+          CPT(TransformState) global_ts = physx_trans_to_panda(global_pose);
+
+          CPT(TransformState) parent_net = parent.get_net_transform();
+
+          CPT(TransformState) local_ts = parent_net->invert_compose(global_ts);
+          bool pos_changed = node->_iv_pos.record_value(local_ts->get_pos(), sim_time, false);
+          bool rot_changed = node->_iv_rot.record_value(local_ts->get_norm_quat(), sim_time, false);
+          if (pos_changed || rot_changed) {
+            node->_needs_interpolation = true;
+          }
+        }
+
+        //node->set_sync_enabled(true);
+      }
+
+      _tick_count++;
+
+      run_callbacks();
+    }
+
+    clock->set_frame_time(frame_time);
+  }
+
+  if (_tick_count > 0) {
+    // Interpolate actor transforms for the true rendering time.
+    double interp_time = (_tick_count - 1) * _fixed_timestep;
+    interp_time -= _fixed_timestep;
+    interp_time += _local_time;
+    interp_time = std::max(0.0, interp_time);
+
+    for (PhysRigidActorNode *actor : _actors) {
+      if (!actor->_needs_interpolation) {
+        continue;
+      }
+
+      int pret = actor->_iv_pos.interpolate(interp_time);
+      int rret = actor->_iv_rot.interpolate(interp_time);
+      if (pret && rret) {
+        actor->_needs_interpolation = false;
+      }
+
+      CPT(TransformState) ts = TransformState::make_pos_quat(
+        actor->_iv_pos.get_interpolated_value(),
+        actor->_iv_rot.get_interpolated_value());
+      actor->set_sync_enabled(false);
+      actor->set_transform(ts);
+      actor->set_sync_enabled(true);
+    }
+  }
+
+  return num_steps;
 }
 
 /**

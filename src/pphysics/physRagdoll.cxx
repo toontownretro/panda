@@ -216,6 +216,9 @@ start_ragdoll(PhysScene *scene, NodePath render) {
   }
 
   scene->get_scene()->addAggregate(*_aggregate);
+  for (const Joint *joint : _all_joints) {
+    scene->add_actor(joint->actor);
+  }
   _enabled = true;
 }
 
@@ -225,7 +228,13 @@ start_ragdoll(PhysScene *scene, NodePath render) {
 void PhysRagdoll::
 stop_ragdoll() {
   if (_aggregate->getScene() != nullptr) {
-    _aggregate->getScene()->removeAggregate(*_aggregate);
+    physx::PxScene *scene = _aggregate->getScene();
+    PhysScene *ps = (PhysScene *)scene->userData;
+    scene->removeAggregate(*_aggregate);
+
+    for (const Joint *joint : _all_joints) {
+      ps->remove_actor(joint->actor);
+    }
   }
   _enabled = false;
 }
@@ -288,7 +297,13 @@ void PhysRagdoll::
 destroy() {
   if (_aggregate != nullptr) {
     if (_aggregate->getScene() != nullptr) {
-      _aggregate->getScene()->removeAggregate(*_aggregate);
+      physx::PxScene *scene = _aggregate->getScene();
+      PhysScene *ps = (PhysScene *)scene->userData;
+      scene->removeAggregate(*_aggregate);
+
+      for (const Joint *joint : _all_joints) {
+        ps->remove_actor(joint->actor);
+      }
     }
   }
 

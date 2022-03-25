@@ -50,6 +50,7 @@ shift_origin(const LVector3 &shift) {
 INLINE void PhysScene::
 set_fixed_timestep(double step) {
   _fixed_timestep = step;
+  _last_frame_time = -step;
 }
 
 /**
@@ -153,4 +154,20 @@ get_scene() const {
 INLINE physx::PxControllerManager *PhysScene::
 get_controller_manager() const {
   return _controller_mgr;
+}
+
+/**
+ *
+ */
+INLINE void PhysScene::
+add_actor(PhysRigidActorNode *actor) {
+  _actors.insert(actor);
+}
+
+/**
+ *
+ */
+INLINE void PhysScene::
+remove_actor(PhysRigidActorNode *actor) {
+  _actors.erase(actor);
 }
