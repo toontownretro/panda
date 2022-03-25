@@ -115,6 +115,7 @@ PUBLISHED:
 
   INLINE int add_channel(AnimChannel *channel);
   INLINE int get_num_channels() const;
+  INLINE bool is_valid_channel_index(int n) const;
   INLINE AnimChannel *get_channel(int n) const;
 
   bool bind_anim(AnimChannelTable *anim);
@@ -162,6 +163,7 @@ PUBLISHED:
   void advance();
 
   INLINE int get_num_anim_layers() const;
+  INLINE bool is_valid_layer_index(int n) const;
   INLINE AnimLayer *get_anim_layer(int n);
 
   INLINE void set_auto_advance_flag(bool flag);

@@ -476,6 +476,15 @@ get_num_channels() const {
 }
 
 /**
+ * Returns true if the given index is within the range of
+ * the character's set of channels.
+ */
+INLINE bool Character::
+is_valid_channel_index(int n) const {
+  return n >= 0 && n < (int)_channels.size();
+}
+
+/**
  * Returns the channel at the indicated index.
  */
 INLINE AnimChannel *Character::
@@ -509,6 +518,15 @@ get_ik_chain(int n) {
 INLINE int Character::
 get_num_anim_layers() const {
   return (int)_anim_layers.size();
+}
+
+/**
+ * Returns true if the given index is within the range of the
+ * character's current set of anim layers.
+ */
+INLINE bool Character::
+is_valid_layer_index(int n) const {
+  return n >= 0 && n < (int)_anim_layers.size();
 }
 
 /**
