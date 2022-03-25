@@ -22,7 +22,9 @@
     fftCompressor.h finiteBoundingVolume.h frustum.h  \
     frustum_src.I frustum_src.h geometricBoundingVolume.I \
     geometricBoundingVolume.h \
+    interpolatedVariable.I interpolatedVariable.h \
     intersectionBoundingVolume.h intersectionBoundingVolume.I \
+    lerpFunctions.h \
     linmath_events.h \
     look_at.h look_at_src.I \
     look_at_src.h \
@@ -56,6 +58,7 @@
     config_mathutil.cxx \
     fftCompressor.cxx  \
     finiteBoundingVolume.cxx geometricBoundingVolume.cxx  \
+    interpolatedVariable.cxx \
     intersectionBoundingVolume.cxx \
     look_at.cxx \
     linmath_events.cxx \
