@@ -573,7 +573,7 @@ start_playing() {
 
   _start_time = 0.0;
 
-  nassertv(playing);
+  //nassertv(playing);
 }
 
 /**
