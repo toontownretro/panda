@@ -21,6 +21,7 @@ AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames) :
   _num_frames = num_frames;
   _num_joint_entries = 0;
   _num_slider_entries = 0;
+  _root_motion_vector.fill(0.0f);
   //_is_loaded = true;
 }
 
@@ -83,6 +84,7 @@ INLINE AnimChannelTable::
 AnimChannelTable() :
   AnimChannel("table") {
   //_is_loaded = false;
+  _root_motion_vector.fill(0.0f);
 }
 
 /**
@@ -94,7 +96,8 @@ AnimChannelTable(const AnimChannelTable &copy) :
   _joint_frames(copy._joint_frames),
   _slider_table(copy._slider_table),
   _num_joint_entries(copy._num_joint_entries),
-  _num_slider_entries(copy._num_slider_entries)
+  _num_slider_entries(copy._num_slider_entries),
+  _root_motion_vector(copy._root_motion_vector)
 {
   std::copy(copy._joint_entries, copy._joint_entries + copy._num_joint_entries, _joint_entries);
   std::copy(copy._slider_entries, copy._slider_entries + copy._num_slider_entries, _slider_entries);
