@@ -44,8 +44,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/depth.vert.sho.pz");
-  set_pixel_shader("shadersnew/depth.frag.sho.pz");
+  set_vertex_shader("shaders/depth.vert.sho.pz");
+  set_pixel_shader("shaders/depth.frag.sho.pz");
 
   // Check if alpha is enabled (indicating we should do alpha cutouts for
   // shadows).

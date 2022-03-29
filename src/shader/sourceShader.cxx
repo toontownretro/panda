@@ -143,13 +143,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/source_vlg.vert.sho.pz");
+  set_vertex_shader("shaders/source_vlg.vert.sho.pz");
   //if (use_orig_source_shader) {
   //  set_pixel_shader("shaders/source_vlg_orig.frag.glsl");
   //} else {
   //  set_pixel_shader("shaders/source_vlg.frag.glsl");
   //}
-  set_pixel_shader("shadersnew/source_vlg.frag.sho.pz");
+  set_pixel_shader("shaders/source_vlg.frag.sho.pz");
 
   // Hardware skinning?
   if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&

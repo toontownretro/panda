@@ -86,8 +86,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/source_lightmapped.vert.sho.pz");
-  set_pixel_shader("shadersnew/source_lightmapped.frag.sho.pz");
+  set_vertex_shader("shaders/source_lightmapped.vert.sho.pz");
+  set_pixel_shader("shaders/source_lightmapped.frag.sho.pz");
 
   const AlphaTestAttrib *at;
   if (state->get_attrib(at)) {

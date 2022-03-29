@@ -50,8 +50,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/eyes.vert.sho.pz");
-  set_pixel_shader("shadersnew/eyes.frag.sho.pz");
+  set_vertex_shader("shaders/eyes.vert.sho.pz");
+  set_pixel_shader("shaders/eyes.frag.sho.pz");
 
   if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
       anim_spec.get_num_transforms() > 0) {

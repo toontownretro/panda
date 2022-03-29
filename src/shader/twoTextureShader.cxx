@@ -64,8 +64,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/two_texture.vert.sho.pz");
-  set_pixel_shader("shadersnew/two_texture.frag.sho.pz");
+  set_vertex_shader("shaders/two_texture.vert.sho.pz");
+  set_pixel_shader("shaders/two_texture.frag.sho.pz");
 
   // Hardware skinning?
   if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
