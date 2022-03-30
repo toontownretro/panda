@@ -1498,7 +1498,6 @@ read_index() {
 
   uint64_t cdir_entries = 0;
   uint64_t cdir_offset = 0;
-  uint64_t cdir_size = 0;
   uint32_t comment_length = 0;
   std::streampos eocd_offset = 0;
   bool found = false;
@@ -1519,7 +1518,7 @@ read_index() {
         eocd_offset = read->tellg() - (std::streamoff)4;
         reader.skip_bytes(6);
         cdir_entries = reader.get_uint16();
-        cdir_size = reader.get_uint32();
+        /*cdir_size = */reader.get_uint32();
         cdir_offset = reader.get_uint32();
         if (comment_length > 0) {
           _comment = reader.get_fixed_string(comment_length);
@@ -1563,7 +1562,7 @@ read_index() {
       if (reader.get_uint32() == 0x06064b50) {
         reader.skip_bytes(20);
         cdir_entries = reader.get_uint64();
-        cdir_size = reader.get_uint64();
+        /*cdir_size = */reader.get_uint64();
         cdir_offset = reader.get_uint64();
       } else {
         express_cat.info()
@@ -1739,9 +1738,9 @@ read_index(std::istream &read) {
     return false;
   }
 
-  uint16_t version = reader.get_uint8();
+  /*uint16_t version = */reader.get_uint8();
   _system = reader.get_uint8();
-  uint16_t min_version = reader.get_uint16();
+  /*uint16_t min_version = */reader.get_uint16();
   _flags = reader.get_uint16();
   _compression_method = (CompressionMethod)reader.get_uint16();
   {
@@ -2055,7 +2054,13 @@ write_index(std::ostream &write, streampos &fpos) {
 
   if (_timestamp > dos_epoch) {
     // Convert from UNIX timestamp to DOS/FAT timestamp.
+#ifdef _MSC_VER
+    struct tm time_data;
+    struct tm *time = &time_data;
+    localtime_s(time, &_timestamp);
+#else
     struct tm *time = localtime(&_timestamp);
+#endif
     writer.add_uint16((time->tm_sec >> 1)
                     | (time->tm_min << 5)
                     | (time->tm_hour << 11));
@@ -2157,7 +2162,13 @@ write_header(std::ostream &write, std::streampos &fpos) {
 
   if (_timestamp > 315532800) {
     // Convert from UNIX timestamp to DOS/FAT timestamp.
+#ifdef _MSC_VER
+    struct tm time_data;
+    struct tm *time = &time_data;
+    localtime_s(time, &_timestamp);
+#else
     struct tm *time = localtime(&_timestamp);
+#endif
     writer.add_uint16((time->tm_sec >> 1)
                     | (time->tm_min << 5)
                     | (time->tm_hour << 11));

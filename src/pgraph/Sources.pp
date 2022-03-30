@@ -83,7 +83,6 @@
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
-    pandaNodeChain.I pandaNodeChain.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \
@@ -186,7 +185,6 @@
     occluderEffect.cxx \
     occluderNode.cxx \
     pandaNode.cxx \
-    pandaNodeChain.cxx \
     paramNodePath.cxx \
     planeNode.cxx \
     polylightEffect.cxx \
@@ -289,7 +287,6 @@
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
-    pandaNodeChain.I pandaNodeChain.h \
     paramNodePath.I paramNodePath.h \
     planeNode.I planeNode.h \
     polylightEffect.I polylightEffect.h \

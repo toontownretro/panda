@@ -39,8 +39,8 @@ TypeHandle LightLensNode::_type_handle;
 LightLensNode::
 LightLensNode(const std::string &name, Lens *lens) :
   Camera(name, lens),
-  _attrib_count(0),
-  _used_by_auto_shader(false)
+  _used_by_auto_shader(false),
+  _attrib_count(0)
 {
   set_active(false);
   _shadow_caster = false;
@@ -98,11 +98,11 @@ LightLensNode::
 LightLensNode(const LightLensNode &copy) :
   Light(copy),
   Camera(copy),
-  _shadow_caster(copy._shadow_caster),
   _sb_size(copy._sb_size),
+  _shadow_caster(copy._shadow_caster),
   _sb_sort(copy._sb_sort),
-  _attrib_count(0),
-  _used_by_auto_shader(false)
+  _used_by_auto_shader(false),
+  _attrib_count(0)
 {
   if (_shadow_caster) {
     setup_shadow_map();
