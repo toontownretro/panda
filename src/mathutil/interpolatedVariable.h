@@ -30,7 +30,7 @@ extern EXPCL_PANDA_MATHUTIL ConfigVariableDouble iv_extrapolate_amount;
 static constexpr double extra_interpolation_history_stored = 0.05;
 
 template <class Type>
-class EXPCL_PANDA_MATHUTIL SamplePointBase {
+class SamplePointBase {
 public:
   INLINE SamplePointBase() { timestamp = 0.0; }
   Type value;
@@ -96,7 +96,7 @@ PUBLISHED:
  * Implementation derived from InterpolatedVar code in Valve's Source Engine.
  */
 template <class Type>
-class EXPCL_PANDA_MATHUTIL InterpolatedVariable : public ReferenceCount {
+class InterpolatedVariable : public ReferenceCount {
 PUBLISHED:
   INLINE InterpolatedVariable();
 

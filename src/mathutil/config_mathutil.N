@@ -77,4 +77,18 @@ forcetype PointerToArrayBase<LQuaternionf>
 forcetype PointerToArray<LQuaternionf>
 forcetype ConstPointerToArray<LQuaternionf>
 
+forcetype InterpolatedVariable<float>
+forcetype InterpolatedVariable<LVecBase2f>
+forcetype InterpolatedVariable<LVecBase3f>
+forcetype InterpolatedVariable<LVecBase4f>
+forcetype InterpolatedVariable<LQuaternionf>
+
+forcetype InterpolatedVariable<double>
+forcetype InterpolatedVariable<LVecBase2d>
+forcetype InterpolatedVariable<LVecBase3d>
+forcetype InterpolatedVariable<LVecBase4d>
+forcetype InterpolatedVariable<LQuaterniond>
+
+forcetype InterpolatedVariable<int>
+
 forceinclude "pointerToArray_ext.h"
