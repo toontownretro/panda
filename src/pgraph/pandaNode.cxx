@@ -1149,8 +1149,6 @@ reset_prev_transform(Thread *current_thread) {
  */
 void PandaNode::
 reset_all_prev_transform(Thread *current_thread) {
-  return;
-
   nassertv(current_thread->get_pipeline_stage() == 0);
 
   // Rather than keeping a linked list of all nodes that have changed their
