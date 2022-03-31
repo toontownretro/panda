@@ -44,6 +44,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ALPHA_TEST("ALPHA_TEST");
   static const CPT_InternalName IN_ALPHA_TEST_MODE("ALPHA_TEST_MODE");
   static const CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
+  static const CPT_InternalName IN_PLANAR_REFLECTION("PLANAR_REFLECTION");
 
   set_language(Shader::SL_GLSL);
 
@@ -59,12 +60,15 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (material == nullptr) {
     const TextureAttrib *ta;
     if (state->get_attrib(ta)) {
-      Texture *tex = ta->get_texture();
-      if (tex != nullptr) {
-        // We have a color texture.
-        set_vertex_shader_combo(IN_BASETEXTURE, 1);
-        set_pixel_shader_combo(IN_BASETEXTURE, 1);
-        set_input(ShaderInput("base_texture_sampler", tex));
+      for (int i = 0; i < ta->get_num_on_stages(); ++i) {
+        TextureStage *stage = ta->get_on_stage(i);
+        if (stage == TextureStage::get_default()) {
+          // We have a color texture.
+          set_vertex_shader_combo(IN_BASETEXTURE, 1);
+          set_pixel_shader_combo(IN_BASETEXTURE, 1);
+          set_input(ShaderInput("base_texture_sampler", ta->get_on_texture(stage)));
+          break;
+        }
       }
     }
   } else {
@@ -72,10 +76,23 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (p != nullptr && p->is_of_type(MaterialParamTexture::get_class_type())) {
       set_vertex_shader_combo(IN_BASETEXTURE, 1);
       set_pixel_shader_combo(IN_BASETEXTURE, 1);
-       set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
+      set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
     }
   }
 
+  // Check for planar reflection.
+  const TextureAttrib *ta;
+  if (state->get_attrib(ta)) {
+    for (int i = 0; i < ta->get_num_on_stages(); ++i) {
+      TextureStage *stage = ta->get_on_stage(i);
+      if (stage->get_name() == "reflection") {
+        set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
+        set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
+        set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
+        break;
+      }
+    }
+  }
 
   const AlphaTestAttrib *at;
   if (state->get_attrib(at)) {
