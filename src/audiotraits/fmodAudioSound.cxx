@@ -362,6 +362,10 @@ void FMODAudioSound::
 stop() {
   ReMutexHolder holder(FMODAudioManager::_lock);
 
+  if (!get_finished_event().empty()) {
+    throw_event(get_finished_event(), EventParameter(this));
+  }
+
   FMOD_RESULT result;
 
   if (_channel != nullptr) {
@@ -1293,10 +1297,6 @@ update() {
 void FMODAudioSound::
 finished() {
   ReMutexHolder holder(FMODAudioManager::_lock);
-
-  if (!get_finished_event().empty()) {
-    throw_event(get_finished_event(), EventParameter(this));
-  }
 
   stop();
 }
