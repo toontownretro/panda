@@ -168,6 +168,21 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
 }
 
 /**
+ * Specifies the loop range of the sound.  This is used to constrain loops
+ * to a specific section of the sound, rather than looping the entire sound.
+ * An example of this would be a single music file that contains an intro and
+ * a looping section.
+ *
+ * The start and end points are in seconds.  If end is < 0 or < start, it is
+ * implicitly set to the length of the sound.
+ *
+ * This is currently only implemented in FMOD.
+ */
+void AudioSound::
+set_loop_range(PN_stdfloat start, PN_stdfloat end) {
+}
+
+/**
  *
  */
 void AudioSound::

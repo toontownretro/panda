@@ -224,6 +224,12 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   result = _sound->getLength(&_length, FMOD_TIMEUNIT_MS);
   fmod_audio_errcheck("_sound->getLength()", result);
 
+  // By default, the loop range is the entire sound.  The user can constrain
+  // this range later.  We need to remember the loop range for fixing up MIDIs
+  // with faster or slower play rates.
+  _loop_start = 0;
+  _loop_end = _length;
+
 #ifdef HAVE_STEAM_AUDIO
   _sa_source = nullptr;
 #endif
@@ -249,6 +255,8 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
   _playrate = copy->_playrate;
   _is_midi = copy->_is_midi;
   _length = copy->_length;
+  _loop_start = copy->_loop_start;
+  _loop_end = copy->_loop_end;
   _last_update_frame = 0;
 
   // 3D attributes of the sound.
@@ -655,7 +663,8 @@ set_play_rate_on_channel() {
 
     // We have to manually fix up the loop points when changing the speed of a
     // MIDI because FMOD does not handle this for us.
-    result = _sound->setLoopPoints(0, FMOD_TIMEUNIT_MS, _length / _playrate, FMOD_TIMEUNIT_MS);
+    result = _sound->setLoopPoints((unsigned int)((float)_loop_start / _playrate), FMOD_TIMEUNIT_MS,
+                                   (unsigned int)((float)_loop_end / _playrate), FMOD_TIMEUNIT_MS);
     fmod_audio_errcheck("_sound->setLoopPoints()", result);
 
   } else if (_channel != nullptr) {
@@ -1443,4 +1452,40 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
   _sa_spatial_dsp->setParameterFloat(31, _dist_factor); // DISTANCEATTEN_DISTANCEFACTOR
 #endif
+}
+
+/**
+ * Specifies the loop range of the sound.  This is used to constrain loops
+ * to a specific section of the sound, rather than looping the entire sound.
+ * An example of this would be a single music file that contains an intro and
+ * a looping section.
+ *
+ * The start and end points are in seconds.  If end is < 0 or < start, it is
+ * implicitly set to the length of the sound.
+ *
+ * This is currently only implemented in FMOD.
+ */
+void FMODAudioSound::
+set_loop_range(PN_stdfloat start, PN_stdfloat end) {
+  nassertv(_sound != nullptr);
+
+  PN_stdfloat length_sec = _length / 1000.0f;
+
+  nassertv(start <= length_sec);
+  if (end < 0.0f || end <= start) {
+    end = length_sec;
+  }
+
+  _loop_start = (unsigned int)(start * 1000.0f);
+  _loop_end = (unsigned int)(end * 1000.0f);
+
+  FMOD_RESULT hr;
+  if (_is_midi) {
+    // MIDIs need to factor in current music speed.
+    hr = _sound->setLoopPoints((unsigned int)((float)_loop_start / _playrate), FMOD_TIMEUNIT_MS,
+                               (unsigned int)((float)_loop_end / _playrate), FMOD_TIMEUNIT_MS);
+  } else {
+    hr = _sound->setLoopPoints(_loop_start, FMOD_TIMEUNIT_MS, _loop_end, FMOD_TIMEUNIT_MS);
+  }
+  fmod_audio_errcheck("_sound->setLoopPoints()", hr);
 }

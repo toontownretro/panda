@@ -159,6 +159,8 @@ public:
 
   virtual void apply_steam_audio_properties(const SteamAudioProperties &props) override;
 
+  virtual void set_loop_range(PN_stdfloat start, PN_stdfloat end = -1.0f) override;
+
   void update();
 
   void finished();
@@ -188,6 +190,8 @@ private:
 
   float _sample_frequency;
   unsigned int _length;
+  unsigned int _loop_start;
+  unsigned int _loop_end;
 
   FMOD_SPEAKERMODE  _speakermode;
 

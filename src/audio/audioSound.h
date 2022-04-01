@@ -99,7 +99,6 @@ PUBLISHED:
   virtual void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
                                  PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
 
-
   // Controls the distance (in units) that this sound begins to fall off.
   // Also affects the rate it falls off.  Default is 1.0 CloserFaster, <1.0
   // FartherSlower, >1.0
@@ -135,6 +134,8 @@ PUBLISHED:
   virtual int get_num_dsps() const;
 
   virtual void apply_steam_audio_properties(const SteamAudioProperties &props);
+
+  virtual void set_loop_range(PN_stdfloat start, PN_stdfloat end = -1.0f);
 
   enum SoundStatus { BAD, READY, PLAYING };
   virtual SoundStatus status() const = 0;
