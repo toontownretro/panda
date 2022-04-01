@@ -51,6 +51,11 @@
 #include "bamFile.h"
 #include "staticTextFont.h"
 #include "mouseButton.h"
+#include "characterNode.h"
+#include "character.h"
+#include "animChannelBundle.h"
+#include "animChannel.h"
+#include "animChannelTable.h"
 
 // This is generated data for the standard texture we apply to the blue
 // triangle.
@@ -713,37 +718,85 @@ load_default_model(const NodePath &parent) {
  */
 void WindowFramework::
 loop_animations(int hierarchy_match_flags) {
-#if 0
-  // If we happened to load up both a character file and its matching
-  // animation file, attempt to bind them together now and start the
-  // animations looping.
-  auto_bind(get_render().node(), _anim_controls, hierarchy_match_flags);
 
-  // Build a unique list of all characters.  We need a state machine for each
-  // character.
-  pset<Character *> characters;
-  for (int i = 0; i < _anim_controls.get_num_anims(); i++) {
-    Character *character = _anim_controls.get_anim(i)->get_part();
-    AnimControl *control = _anim_controls.get_anim(i);
-    std::string name = _anim_controls.get_anim_name(i);
-    auto it = characters.insert(character);
-
-    PT(AnimStateMachine) state_machine;
-    if (it.second) {
-      state_machine = new AnimStateMachine("fsm");
-      character->set_anim_graph(state_machine);
-    } else {
-      state_machine = DCAST(AnimStateMachine, character->get_anim_graph());
+  // Find all CharacterNodes and associated AnimChannels in the scene graph.
+  Character *the_character = nullptr;
+  NodePathCollection char_np_coll = get_render().find_all_matches("**/+CharacterNode");
+  for (int i = 0; i < char_np_coll.get_num_paths(); ++i) {
+    CharacterNode *char_node = DCAST(CharacterNode, char_np_coll.get_path(i).node());
+    if (char_node == nullptr) {
+      continue;
     }
 
-    PT(AnimSequence) seq = new AnimSequence(name, control);
-    state_machine->add_state(name, seq);
+    Character *character = char_node->get_character();
+    if (character == nullptr) {
+      continue;
+    }
 
-    if (it.second) {
-      state_machine->set_state(name);
+    if (i == 0) {
+      the_character = character;
+    }
+
+    // Grab all AnimChannels stored in the Character.
+    for (int j = 0; j < character->get_num_channels(); ++j) {
+      AnimChannel *chan = character->get_channel(j);
+      if (chan->has_flags(AnimChannel::F_delta|AnimChannel::F_pre_delta)) {
+        // Delta animations are meant to be layered on top of other animations.
+        // Don't attempt to play them by themselves.
+        continue;
+      }
+
+      _character_anims.push_back({ character, j });
     }
   }
-#endif
+
+  if (the_character != nullptr) {
+    // Now also bind any AnimChannels stored in the scene graph (meaning they
+    // were loaded separately and not pre-bundled in the Character).
+    NodePathCollection anim_np_coll = get_render().find_all_matches("**/+AnimChannelBundle");
+    for (int i = 0; i < anim_np_coll.get_num_paths(); ++i) {
+      AnimChannelBundle *bundle = DCAST(AnimChannelBundle, anim_np_coll.get_path(i).node());
+      if (bundle == nullptr) {
+        continue;
+      }
+      for (int j = 0; j < bundle->get_num_channels(); ++j) {
+        AnimChannel *chan = bundle->get_channel(j);
+        if (chan == nullptr) {
+          continue;
+        }
+
+        // Currently we only bind flat AnimChannelTables found in the scene
+        // graph.  In the future I would like to be able to call bind() on any
+        // top-level AnimChannel, which should recurse down into all the
+        // AnimChannelTables and bind each one to the Character.
+        if (chan->get_type() != AnimChannelTable::get_class_type()) {
+          continue;
+        }
+
+        if (chan->has_flags(AnimChannel::F_delta|AnimChannel::F_pre_delta)) {
+          // Delta animations are meant to be layered on top of other animations.
+          // Don't attempt to play them by themselves.
+          continue;
+        }
+
+        AnimChannelTable *tchan = DCAST(AnimChannelTable, chan);
+        if (!the_character->bind_anim(tchan)) {
+          continue;
+        }
+
+        // Channel was successfully bound to the character, so store it
+        // on the character for playing and record the index.
+        int chan_index = the_character->add_channel(tchan);
+        _character_anims.push_back({ the_character, chan_index });
+      }
+    }
+  }
+
+  if (!_character_anims.empty()) {
+    // Loop the first channel.
+    const CharacterAnim *control = &_character_anims[_anim_index];
+    control->_char->loop(control->_channel, false);
+  }
 }
 
 /**
@@ -769,11 +822,10 @@ stagger_animations() {
  */
 void WindowFramework::
 next_anim_control() {
-#if 0
   if (_anim_controls_enabled) {
     destroy_anim_controls();
 
-    if (_anim_controls.get_num_anims() == 0) {
+    if (_character_anims.empty()) {
       set_anim_controls(false);
       return;
     }
@@ -782,21 +834,20 @@ next_anim_control() {
     pause_button();
     ++_anim_index;
 
-    if (_anim_index >= _anim_controls.get_num_anims()) {
-      set_anim_controls(false);
-      _anim_controls.loop_all(true);
-    } else {
-      create_anim_controls();
-      play_button();
+    if (_anim_index >= (int)_character_anims.size()) {
+      _anim_index = 0;
     }
+
+    create_anim_controls();
+    play_button();
+
   } else {
     _anim_index = 0;
     set_anim_controls(true);
-    if (_anim_controls.get_num_anims() > 0) {
+    if (!_character_anims.empty()) {
       play_button();
     }
   }
-#endif
 }
 
 /**
@@ -1357,7 +1408,6 @@ void WindowFramework::
 create_anim_controls() {
   destroy_anim_controls();
 
-#if 0
   PT(PGItem) group = new PGItem("anim_controls_group");
   PGFrameStyle style;
   style.set_type(PGFrameStyle::T_flat);
@@ -1370,7 +1420,7 @@ create_anim_controls() {
   _anim_controls_group = get_aspect_2d().attach_new_node(group);
   _anim_controls_group.set_pos(0.0f, 0.0f, -0.9f);
 
-  if (_anim_index >= _anim_controls.get_num_anims()) {
+  if (_anim_index >= (int)_character_anims.size()) {
     PT(TextNode) label = new TextNode("label");
     label->set_align(TextNode::A_center);
     label->set_text("No animation.");
@@ -1381,15 +1431,17 @@ create_anim_controls() {
     return;
   }
 
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  Character *character = control->_char;
+  AnimChannel *chan = character->get_channel(control->_channel);
+  nassertv(chan != nullptr);
 
-  if (control->get_num_frames() <= 1) {
+  if (chan->get_num_frames() <= 1) {
     // Don't show the controls when the animation has only 0 or 1 frames.
     ostringstream text;
-    text << _anim_controls.get_anim_name(_anim_index);
-    text << " (" << control->get_num_frames() << " frame"
-         << ((control->get_num_frames() == 1) ? "" : "s") << ")";
+    text << chan->get_name();
+    text << " (" << chan->get_num_frames() << " frame"
+         << ((chan->get_num_frames() == 1) ? "" : "s") << ")";
 
     PT(TextNode) label = new TextNode("label");
     label->set_align(TextNode::A_center);
@@ -1401,9 +1453,12 @@ create_anim_controls() {
     return;
   }
 
+  AnimLayer *layer = character->get_anim_layer(0);
+  nassertv(layer != nullptr);
+
   PT(TextNode) label = new TextNode("anim_name");
   label->set_align(TextNode::A_left);
-  label->set_text(_anim_controls.get_anim_name(_anim_index));
+  label->set_text(chan->get_name());
   NodePath tnp = _anim_controls_group.attach_new_node(label);
   tnp.set_pos(-0.95f, 0.0f, 0.15f);
   tnp.set_scale(0.05f);
@@ -1413,7 +1468,7 @@ create_anim_controls() {
   _anim_slider->set_suppress_flags(MouseWatcherRegion::SF_mouse_button);
   _anim_slider->get_thumb_button()->set_suppress_flags(MouseWatcherRegion::SF_mouse_button);
 
-  _anim_slider->set_range(0.0f, (PN_stdfloat)(control->get_num_frames() - 1));
+  _anim_slider->set_range(0.0f, (PN_stdfloat)(chan->get_num_frames() - 1));
   _anim_slider->set_scroll_size(0.0f);
   _anim_slider->set_page_size(1.0f);
   NodePath snp = _anim_controls_group.attach_new_node(_anim_slider);
@@ -1422,7 +1477,7 @@ create_anim_controls() {
   _frame_number = new TextNode("frame_number");
   _frame_number->set_text_color(0.0f, 0.0f, 0.0f, 1.0f);
   _frame_number->set_align(TextNode::A_center);
-  _frame_number->set_text(format_string(control->get_frame()));
+  _frame_number->set_text(format_string(layer->_cycle * chan->get_num_frames()));
   NodePath fnp = NodePath(_anim_slider->get_thumb_button()).attach_new_node(_frame_number);
   fnp.set_scale(0.05f);
   fnp.set_pos(0.0f, 0.0f, -0.01f);
@@ -1431,7 +1486,7 @@ create_anim_controls() {
   _play_rate_slider->setup_slider(false, 0.4, 0.05f, 0.005f);
   _play_rate_slider->set_suppress_flags(MouseWatcherRegion::SF_mouse_button);
   _play_rate_slider->get_thumb_button()->set_suppress_flags(MouseWatcherRegion::SF_mouse_button);
-  _play_rate_slider->set_value(control->get_play_rate());
+  _play_rate_slider->set_value(layer->_play_rate);
   NodePath pnp = _anim_controls_group.attach_new_node(_play_rate_slider);
   pnp.set_pos(0.75f, 0.0f, 0.15f);
 
@@ -1447,8 +1502,6 @@ create_anim_controls() {
     update_anim_controls();
     return AsyncTask::DS_cont;
   });
-
-#endif
 }
 
 /**
@@ -1472,24 +1525,27 @@ destroy_anim_controls() {
  */
 void WindowFramework::
 update_anim_controls() {
-#if 0
-  AnimControl *control = _anim_controls.get_anim(_anim_index);
-  nassertv(control != nullptr);
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  Character *character = control->_char;
+  AnimChannel *chan = character->get_channel(control->_channel);
+  nassertv(chan != nullptr);
+
+  AnimLayer *layer = character->get_anim_layer(0);
+  nassertv(layer != nullptr);
 
   if (_anim_slider != nullptr) {
     if (_anim_slider->is_button_down()) {
-      control->pose((int)(_anim_slider->get_value() + 0.5));
+      character->pose(control->_channel, (int)(_anim_slider->get_value() + 0.5));
     } else {
-      _anim_slider->set_value((PN_stdfloat)control->get_frame());
+      _anim_slider->set_value(layer->_cycle * chan->get_num_frames());
     }
   }
 
   if (_frame_number != nullptr) {
-    _frame_number->set_text(format_string(control->get_frame()));
+    _frame_number->set_text(format_string((int)(layer->_cycle * chan->get_num_frames())));
   }
 
-  control->set_play_rate(_play_rate_slider->get_value());
-#endif
+  layer->_play_rate = _play_rate_slider->get_value();
 }
 
 /**
@@ -1544,9 +1600,10 @@ setup_shuttle_button(const string &label, int index,
  */
 void WindowFramework::
 back_button() {
-  //AnimControl *control = _anim_controls.get_anim(_anim_index);
-  //nassertv(control != nullptr);
-  ///control->pose(control->get_frame() - 1);
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  AnimChannel *chan = control->_char->get_channel(control->_channel);
+  AnimLayer *layer = control->_char->get_anim_layer(0);
+  control->_char->pose(control->_channel, (int)(layer->_cycle * chan->get_num_frames()) - 1);
 }
 
 /**
@@ -1554,9 +1611,8 @@ back_button() {
  */
 void WindowFramework::
 pause_button() {
-  //AnimControl *control = _anim_controls.get_anim(_anim_index);
-  //nassertv(control != nullptr);
-  //control->stop();
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  control->_char->stop(0);
 }
 
 /**
@@ -1564,9 +1620,8 @@ pause_button() {
  */
 void WindowFramework::
 play_button() {
-  //AnimControl *control = _anim_controls.get_anim(_anim_index);
-  //nassertv(control != nullptr);
-  //control->loop(false);
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  control->_char->loop(control->_channel, false);
 }
 
 /**
@@ -1574,9 +1629,10 @@ play_button() {
  */
 void WindowFramework::
 forward_button() {
-  //AnimControl *control = _anim_controls.get_anim(_anim_index);
-  //nassertv(control != nullptr);
-  //control->pose(control->get_frame() + 1);
+  const CharacterAnim *control = &_character_anims[_anim_index];
+  AnimChannel *chan = control->_char->get_channel(control->_channel);
+  AnimLayer *layer = control->_char->get_anim_layer(0);
+  control->_char->pose(control->_channel, (int)(layer->_cycle * chan->get_num_frames()) + 1);
 }
 
 /**

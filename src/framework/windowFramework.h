@@ -39,6 +39,8 @@ class DirectionalLight;
 class GraphicsEngine;
 class GraphicsPipe;
 class DisplayRegion;
+class CharacterNode;
+class AnimChannel;
 
 /**
  * This encapsulates the data that is normally associated with a single
@@ -169,7 +171,13 @@ private:
   NodePath _aspect_2d;
   NodePath _pixel_2d;
 
-  //AnimControlCollection _anim_controls;
+  struct CharacterAnim {
+    Character *_char;
+    int _channel;
+  };
+  typedef pvector<CharacterAnim> CharacterAnims;
+  CharacterAnims _character_anims;
+
   bool _anim_controls_enabled;
   int _anim_index;
   NodePath _anim_controls_group;
