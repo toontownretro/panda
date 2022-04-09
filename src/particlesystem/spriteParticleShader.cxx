@@ -23,6 +23,8 @@
 #include "fogAttrib.h"
 #include "fog.h"
 #include "alphaTestAttrib.h"
+#include "materialParamBool.h"
+#include "shaderAttrib.h"
 
 TypeHandle SpriteParticleShader::_type_handle;
 
@@ -44,12 +46,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ALPHA_TEST("ALPHA_TEST");
   static const CPT_InternalName IN_ALPHA_TEST_MODE("ALPHA_TEST_MODE");
   static const CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
+  static const CPT_InternalName IN_BILLBOARD_MODE("BILLBOARD_MODE");
 
   set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shadersnew/spriteParticle.vert.sho");
-  set_geometry_shader("shadersnew/spriteParticle.geom.sho");
-  set_pixel_shader("shadersnew/spriteParticle.frag.sho");
+  set_vertex_shader("shaders/spriteParticle.vert.sho.pz");
+  set_geometry_shader("shaders/spriteParticle.geom.sho.pz");
+  set_pixel_shader("shaders/spriteParticle.frag.sho.pz");
 
   const RenderModeAttrib *rma;
   state->get_attrib_def(rma);
@@ -59,6 +62,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // First use the thickness that the RenderModeAttrib specifies,
   // then modulate it with the sizes specified in the material.
   x_size = y_size = rma->get_thickness();
+
+  // 0 is point-eye, 1 is point-world.
+  int billboard = 0;
 
   if (material != nullptr) {
     MaterialParamFloat *x_size_p = (MaterialParamFloat *)material->get_param("x_size");
@@ -70,7 +76,23 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (y_size_p != nullptr) {
       y_size *= y_size_p->get_value();
     }
+
+    MaterialParamBool *point_world_p = (MaterialParamBool *)material->get_param("point_world");
+    if (point_world_p != nullptr) {
+      billboard = (int)point_world_p->get_value();
+    }
   }
+
+  // Bad hack to specify billboard mode through scene graph ShaderAttrib.
+  const ShaderAttrib *sha;
+  state->get_attrib_def(sha);
+  if (sha->has_shader_input(IN_BILLBOARD_MODE)) {
+    LVecBase4 value;
+    value = sha->get_shader_input_vector(IN_BILLBOARD_MODE);
+    billboard = (int)value[0];
+  }
+
+  set_geometry_shader_combo(IN_BILLBOARD_MODE, billboard);
 
   set_input(ShaderInput("sprite_size", LVecBase2(x_size, y_size)));
 
