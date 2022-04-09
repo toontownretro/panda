@@ -49,6 +49,9 @@ init_libparticlesystem2() {
   P2_INIT_PositionLineSegment::init_type();
   P2_INIT_PositionParametricCurve::init_type();
   P2_INIT_PositionCharacterJoints::init_type();
+  P2_INIT_VelocityExplicit::init_type();
+  P2_INIT_VelocityCone::init_type();
+  P2_INIT_VelocityRadiate::init_type();
   P2_INIT_RotationRandom::init_type();
 
   ParticleEmitter2::init_type();
