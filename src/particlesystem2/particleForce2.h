@@ -30,13 +30,28 @@ class ParticleSystem2;
 class EXPCL_PANDA_PARTICLESYSTEM2 ParticleForce2 : public TypedWritableReferenceCount {
   DECLARE_CLASS(ParticleForce2, TypedWritableReferenceCount);
 PUBLISHED:
-  ParticleForce2() = default;
+  // Defines which axes the force should apply to.
+  enum AxisMask {
+    AM_x = 1,
+    AM_y = 2,
+    AM_z = 4,
+    AM_all = (AM_x | AM_y | AM_z),
+  };
+
+  ParticleForce2();
+
+  void set_axis_mask(unsigned int mask);
+
+  INLINE LVector3 apply_axis_mask(const LVector3 &vec);
 
 public:
   /**
    * Accumulates the force onto all particles in the system.
    */
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system)=0;
+
+protected:
+  unsigned int _axis_mask;
 };
 
 /**

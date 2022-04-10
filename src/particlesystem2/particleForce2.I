@@ -10,3 +10,15 @@
  * @author brian
  * @date 2022-04-06
  */
+
+/**
+ *
+ */
+INLINE LVector3 ParticleForce2::
+apply_axis_mask(const LVector3 &vec) {
+  return LVector3(
+    ((_axis_mask & AM_x) != 0u) ? vec[0] : 0.0f,
+    ((_axis_mask & AM_y) != 0u) ? vec[1] : 0.0f,
+    ((_axis_mask & AM_z) != 0u) ? vec[2] : 0.0f
+  );
+}

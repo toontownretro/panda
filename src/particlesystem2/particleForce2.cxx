@@ -25,6 +25,24 @@ IMPLEMENT_CLASS(FrictionParticleForce);
 /**
  *
  */
+ParticleForce2::
+ParticleForce2() :
+  _axis_mask(AM_all)
+{
+}
+
+/**
+ * Sets the mask of vector axes that the force should apply to.
+ * This can be used to limit a force to only the X axis, for example.
+ */
+void ParticleForce2::
+set_axis_mask(unsigned int mask) {
+  _axis_mask = mask;
+}
+
+/**
+ *
+ */
 VectorParticleForce::
 VectorParticleForce(const LVector3 &force) :
   _force(force)
@@ -48,7 +66,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     if (!p._alive) {
       continue;
     }
-    *accum += _force * strength;
+    *accum += apply_axis_mask(_force * strength);
     ++accum;
   }
 }
@@ -125,7 +143,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     LVector3 combined = tangential + centripetal;
     combined.normalize();
 
-    centripetal = combined * _coef * strength * p._velocity.length();
+    centripetal = apply_axis_mask(combined * _coef * strength * p._velocity.length());
 
     *accum += _inv_transform.xform_vec(centripetal);
     ++accum;
@@ -167,7 +185,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
       continue;
     }
 
-    *accum += p2_random_unit_vector() * strength * _amplitude;
+    *accum += apply_axis_mask(p2_random_unit_vector()) * strength * _amplitude;
     ++accum;
   }
 }
@@ -220,7 +238,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     vec /= len;
     vec *= -_amplitude * strength;
     vec /= std::pow(len, _falloff);
-    *accum += vec;
+    *accum += apply_axis_mask(vec);
     ++accum;
   }
 }
@@ -244,7 +262,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
       continue;
     }
 
-    *accum -= p._velocity * _coef;
+    *accum -= apply_axis_mask(p._velocity) * _coef;
     ++accum;
   }
 }
