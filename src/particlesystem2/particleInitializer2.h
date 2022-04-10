@@ -94,24 +94,6 @@ private:
 };
 
 /**
- * Initializes particles to a random position within the area of a given
- * 2-D rectangle.
- */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionRectangleArea : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_PositionRectangleArea, ParticleInitializer2);
-
-PUBLISHED:
-  P2_INIT_PositionRectangleArea(const LPoint2 &a, const LPoint2 &b);
-
-public:
-  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
-
-private:
-  LPoint2 _a;
-  LPoint2 _b;
-};
-
-/**
  * Initializer that sets a particle's position to a random point within a
  * specified sphere.
  */
@@ -119,68 +101,21 @@ class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionSphereVolume : public Particle
   DECLARE_CLASS(P2_INIT_PositionSphereVolume, ParticleInitializer2);
 
 PUBLISHED:
-  P2_INIT_PositionSphereVolume(const LPoint3 &center, PN_stdfloat radius);
+  P2_INIT_PositionSphereVolume(const LPoint3 &center, PN_stdfloat radius_min, PN_stdfloat radius_max,
+                               const LVecBase3 &bias = LVecBase3(1.0f),
+                               const LVecBase3 &scale = LVecBase3(1.0f),
+                               const LVecBase3i &absolute_value = LVecBase3i(0));
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
 private:
   LPoint3 _center;
-  PN_stdfloat _radius;
-};
-
-/**
- * Initializes particle positions to a random point on the surface of a given
- * sphere.
- */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionSphereSurface : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_PositionSphereSurface, ParticleInitializer2);
-
-PUBLISHED:
-  P2_INIT_PositionSphereSurface(const LPoint3 &center, PN_stdfloat radius_min, PN_stdfloat radius_max);
-
-public:
-  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
-
-private:
-  LPoint3 _center;
-  PN_stdfloat _radius_min, _radius_max;
-};
-
-/**
- * Initializes particles to a random position within the area of a given
- * 2-D circle.
- */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionCircleArea : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_PositionCircleArea, ParticleInitializer2);
-
-PUBLISHED:
-  P2_INIT_PositionCircleArea(const LPoint2 &center, PN_stdfloat radius);
-
-public:
-  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
-
-private:
-  LPoint2 _center;
-  PN_stdfloat _radius;
-};
-
-/**
- * Initializes particles to a random position on the perimeter of a given
- * 2-D circle.
- */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionCirclePerimeter : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_PositionCirclePerimeter, ParticleInitializer2);
-
-PUBLISHED:
-  P2_INIT_PositionCirclePerimeter(const LPoint2 &center, PN_stdfloat radius_min, PN_stdfloat radius_max);
-
-public:
-  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
-
-private:
-  LPoint2 _center;
-  PN_stdfloat _radius_min, _radius_max;
+  PN_stdfloat _radius_min;
+  PN_stdfloat _radius_range;
+  LVecBase3 _bias;
+  LVecBase3 _scale;
+  LVecBase3i _absolute_value;
 };
 
 /**

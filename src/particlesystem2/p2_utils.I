@@ -36,11 +36,28 @@ p2_normalized_rand() {
 }
 
 /**
+ * Returns a float in [0, 1] biased by an exponent.
+ */
+INLINE PN_stdfloat
+p2_normalized_rand(PN_stdfloat bias) {
+  return std::pow((PN_stdfloat)rand() / (PN_stdfloat)RAND_MAX, bias);
+}
+
+/**
  * Lerps between min and max based on a random fraction.
  */
 INLINE PN_stdfloat
 p2_random_min_max(PN_stdfloat min, PN_stdfloat max) {
   PN_stdfloat frac = p2_normalized_rand();
+  return min * (1.0f - frac) + max * frac;
+}
+
+/**
+ * Lerps between min and max based on a random fraction.
+ */
+INLINE PN_stdfloat
+p2_random_min_max(PN_stdfloat min, PN_stdfloat max, PN_stdfloat bias) {
+  PN_stdfloat frac = p2_normalized_rand(bias);
   return min * (1.0f - frac) + max * frac;
 }
 
@@ -53,11 +70,27 @@ p2_random_min_range(PN_stdfloat min, PN_stdfloat range) {
 }
 
 /**
+ * Returns a float in [min, min+range].
+ */
+INLINE PN_stdfloat
+p2_random_min_range(PN_stdfloat min, PN_stdfloat range, PN_stdfloat bias) {
+  return min + range * p2_normalized_rand(bias);
+}
+
+/**
  * Returns a float in [base-spread, base+spread].
  */
 INLINE PN_stdfloat
 p2_random_base_spread(PN_stdfloat base, PN_stdfloat spread) {
   return base + (spread - (p2_normalized_rand() * 2.0f * spread));
+}
+
+/**
+ * Returns a float in [base-spread, base+spread].
+ */
+INLINE PN_stdfloat
+p2_random_base_spread(PN_stdfloat base, PN_stdfloat spread, PN_stdfloat bias) {
+  return base + (spread - (p2_normalized_rand(bias) * 2.0f * spread));
 }
 
 /**

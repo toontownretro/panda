@@ -21,16 +21,11 @@ IMPLEMENT_CLASS(ParticleInitializer2);
 IMPLEMENT_CLASS(P2_INIT_LifespanRandom);
 
 IMPLEMENT_CLASS(P2_INIT_PositionExplicit); // PointEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionBoxVolume); // BoxEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionRectangleArea); // RectangleEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionSphereVolume); // SphereVolumeEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionSphereSurface); // SphereSurfaceEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionCircleArea); // DiscEmitter
-IMPLEMENT_CLASS(P2_INIT_PositionCirclePerimeter); // RingEmitter
-//IMPLEMENT_CLASS(P2_INIT_PositionArc); // ArcEmitter
+IMPLEMENT_CLASS(P2_INIT_PositionBoxVolume); // BoxEmitter+RectangleEmitter
+IMPLEMENT_CLASS(P2_INIT_PositionSphereVolume); // SphereVolumeEmitter+SphereSurfaceEmitter+DiscEmitter+RingEmitter+ArcEmitter
 IMPLEMENT_CLASS(P2_INIT_PositionLineSegment); // LineEmitter
 IMPLEMENT_CLASS(P2_INIT_PositionParametricCurve);
-IMPLEMENT_CLASS(P2_INIT_PositionCharacterJoints); //
+IMPLEMENT_CLASS(P2_INIT_PositionCharacterJoints);
 
 IMPLEMENT_CLASS(P2_INIT_VelocityExplicit); // ET_EXPLICIT
 IMPLEMENT_CLASS(P2_INIT_VelocityCone); //
@@ -108,33 +103,16 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
 /**
  *
  */
-P2_INIT_PositionRectangleArea::
-P2_INIT_PositionRectangleArea(const LPoint2 &a, const LPoint2 &b) :
-  _a(a),
-  _b(b)
-{
-}
-
-/**
- *
- */
-void P2_INIT_PositionRectangleArea::
-init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  for (int i = 0; i < num_particles; ++i) {
-    Particle *p = &system->_particles[particles[i]];
-    p->_pos[0] = p2_random_min_max(_a[0], _b[0]);
-    p->_pos[1] = p2_random_min_max(_a[1], _b[1]);
-    p->_pos[2] = 0.0f;
-  }
-}
-
-/**
- *
- */
 P2_INIT_PositionSphereVolume::
-P2_INIT_PositionSphereVolume(const LPoint3 &center, PN_stdfloat radius) :
+P2_INIT_PositionSphereVolume(const LPoint3 &center, PN_stdfloat radius_min, PN_stdfloat radius_max,
+                             const LVecBase3 &bias, const LVecBase3 &scale,
+                             const LVecBase3i &absolute_value) :
   _center(center),
-  _radius(radius)
+  _radius_min(radius_min),
+  _radius_range(radius_max - radius_min),
+  _bias(bias),
+  _scale(scale),
+  _absolute_value(absolute_value)
 {
 }
 
@@ -150,83 +128,28 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     // Pick random direction vector.
     LVector3 vec = p2_random_unit_vector();
 
-    // Random distance along vector.
-    PN_stdfloat dist = p2_normalized_rand() * _radius;
+    // Take absolute values of requested axes, to create hemisphere/
+    // quarter-sphere volumes.
+    if (_absolute_value[0]) {
+      vec[0] = std::abs(vec[0]);
+    }
+    if (_absolute_value[1]) {
+      vec[1] = std::abs(vec[1]);
+    }
+    if (_absolute_value[2]) {
+      vec[2] = std::abs(vec[2]);
+    }
 
-    p->_pos = _center + (vec * dist);
-  }
-}
+    // Bias towards a particular direction to create rings/arcs.
+    vec.componentwise_mult(_bias);
+    vec.normalize();
 
-/**
- *
- */
-P2_INIT_PositionSphereSurface::
-P2_INIT_PositionSphereSurface(const LPoint3 &center, PN_stdfloat radius_min, PN_stdfloat radius_max) :
-  _center(center),
-  _radius_min(radius_min),
-  _radius_max(radius_max)
-{
-}
+    vec *= p2_random_min_range(_radius_min, _radius_range);
 
-/**
- *
- */
-void P2_INIT_PositionSphereSurface::
-init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  for (int i = 0; i < num_particles; ++i) {
-    Particle *p = &system->_particles[particles[i]];
-    p->_pos = _center + p2_random_unit_vector() * p2_random_min_max(_radius_min, _radius_max);
-  }
-}
+    // Scale the offset vector to create ovals, arches, etc.
+    vec.componentwise_mult(_scale);
 
-/**
- *
- */
-P2_INIT_PositionCircleArea::
-P2_INIT_PositionCircleArea(const LPoint2 &center, PN_stdfloat radius) :
-  _center(center),
-  _radius(radius)
-{
-}
-
-/**
- *
- */
-void P2_INIT_PositionCircleArea::
-init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  for (int i = 0; i < num_particles; ++i) {
-    Particle *p = &system->_particles[particles[i]];
-    PN_stdfloat dist = p2_normalized_rand() * _radius;
-    PN_stdfloat theta = p2_normalized_rand() * 2.0f * MathNumbers::pi_f;
-    p->_pos[0] = std::cos(theta) * dist;
-    p->_pos[1] = std::sin(theta) * dist;
-    p->_pos[2] = 0.0f;
-  }
-}
-
-/**
- *
- */
-P2_INIT_PositionCirclePerimeter::
-P2_INIT_PositionCirclePerimeter(const LPoint2 &center, PN_stdfloat radius_min, PN_stdfloat radius_max) :
-  _center(center),
-  _radius_min(radius_max),
-  _radius_max(radius_max)
-{
-}
-
-/**
- *
- */
-void P2_INIT_PositionCirclePerimeter::
-init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  for (int i = 0; i < num_particles; ++i) {
-    Particle *p = &system->_particles[particles[i]];
-    PN_stdfloat theta = p2_normalized_rand() * 2.0f * MathNumbers::pi_f;
-    PN_stdfloat dist = p2_random_min_max(_radius_min, _radius_max);
-    p->_pos[0] = std::cos(theta) * dist;
-    p->_pos[1] = std::sin(theta) * dist;
-    p->_pos[2] = 0.0f;
+    p->_pos = _center + vec;
   }
 }
 

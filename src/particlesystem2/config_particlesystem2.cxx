@@ -41,11 +41,7 @@ init_libparticlesystem2() {
   P2_INIT_LifespanRandom::init_type();
   P2_INIT_PositionExplicit::init_type();
   P2_INIT_PositionBoxVolume::init_type();
-  P2_INIT_PositionRectangleArea::init_type();
   P2_INIT_PositionSphereVolume::init_type();
-  P2_INIT_PositionSphereSurface::init_type();
-  P2_INIT_PositionCircleArea::init_type();
-  P2_INIT_PositionCirclePerimeter::init_type();
   P2_INIT_PositionLineSegment::init_type();
   P2_INIT_PositionParametricCurve::init_type();
   P2_INIT_PositionCharacterJoints::init_type();
