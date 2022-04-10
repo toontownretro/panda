@@ -221,13 +221,6 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
       continue;
     }
 
-    //if (_radius > 0.0f) {
-    //  if ((p._pos - _point).length_squared() > (_radius * _radius)) {
-    //    ++accum;
-    //    continue;
-    //  }
-    //}
-
     // Attract to force point.
     LVector3 vec = p._pos - _point;
     PN_stdfloat len = vec.length();
@@ -235,9 +228,15 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
       accum++;
       continue;
     }
-    vec /= len;
+    if (_radius <= 0.0f) {
+      vec /= len;
+    }
     vec *= -_amplitude * strength;
-    vec /= std::pow(len, _falloff);
+    if (_radius > 0.0f) {
+      vec /= std::pow(_radius, _falloff);
+    } else {
+      vec /= std::pow(len, _falloff);
+    }
     *accum += apply_axis_mask(vec);
     ++accum;
   }
