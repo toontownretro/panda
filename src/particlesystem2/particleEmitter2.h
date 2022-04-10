@@ -125,7 +125,10 @@ private:
   // How long emitter should be active for.
   PN_stdfloat _duration;
 
-  PN_stdfloat _next_litter;
+  PN_stdfloat _last_litter;
+  PN_stdfloat _next_interval;
+
+  //PN_stdfloat _next_litter;
 
 public:
   static TypeHandle get_class_type() {

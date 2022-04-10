@@ -13,6 +13,7 @@
 
 #include "particleEmitter2.h"
 #include "p2_utils.h"
+#include "config_particlesystem2.h"
 
 TypeHandle ParticleEmitter2::_type_handle;
 TypeHandle BurstParticleEmitter::_type_handle;
@@ -48,7 +49,8 @@ ContinuousParticleEmitter() :
   _interval_max(1.0f),
   _start_time(0.0f),
   _duration(0.0f),
-  _next_litter(0.0f)
+  _last_litter(0.0f),
+  _next_interval(0.0f)
 {
 }
 
@@ -113,14 +115,26 @@ update(double time) {
     }
   }
 
-  // We are active, determine if we should emit particles.
-  if (time >= (double)_next_litter) {
-    // It's time to emit some particles.
-    int count = (int)p2_random_min_max(_litter_min, _litter_max);
-    // Determine next emission time.
-    _next_litter = (PN_stdfloat)time + p2_random_min_max(_interval_min, _interval_max);
-    return count;
+  int count = 0;
+  double remaining_time = time - _last_litter;
+  int litter_count = 0;
+  while (remaining_time >= _next_interval) {
+    count += (int)p2_random_min_max(_litter_min, _litter_max);
+    remaining_time -= _next_interval;
+    _next_interval = p2_random_min_max(_interval_min, _interval_max);
+    litter_count++;
   }
+
+  if (particlesystem2_cat.is_debug()) {
+    particlesystem2_cat.debug()
+      << litter_count << " liters on this update\n";
+  }
+
+  if (count > 0) {
+    _last_litter = time;
+  }
+
+  return count;
 
   return 0;
 }
