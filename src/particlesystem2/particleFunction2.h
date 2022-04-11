@@ -55,12 +55,12 @@ private:
 };
 
 /**
- * A function that applies motion to the particle according to its velocity
- * vector and applied forces.
+ * A function that applies linear motion to the particle according to its
+ * velocity vector and applied forces.
  */
-class EXPCL_PANDA_PARTICLESYSTEM2 MotionParticleFunction : public ParticleFunction2 {
+class EXPCL_PANDA_PARTICLESYSTEM2 LinearMotionParticleFunction : public ParticleFunction2 {
 PUBLISHED:
-  MotionParticleFunction(PN_stdfloat drag = 0.0f);
+  LinearMotionParticleFunction(PN_stdfloat drag = 0.0f);
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
@@ -84,6 +84,20 @@ public:
 
 private:
   static TypeHandle _type_handle;
+};
+
+/**
+ * Applies angular velocity to the rotation of particles so they rotate over
+ * time.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 AngularMotionParticleFunction : public ParticleFunction2 {
+  DECLARE_CLASS(AngularMotionParticleFunction, ParticleFunction2);
+
+PUBLISHED:
+  AngularMotionParticleFunction() = default;
+
+public:
+  virtual void update(double time, double dt, ParticleSystem2 *system) override;
 };
 
 /**

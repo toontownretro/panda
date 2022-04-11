@@ -17,7 +17,8 @@
 #include "p2_utils.h"
 
 TypeHandle ParticleFunction2::_type_handle;
-TypeHandle MotionParticleFunction::_type_handle;
+IMPLEMENT_CLASS(LinearMotionParticleFunction);
+IMPLEMENT_CLASS(AngularMotionParticleFunction);
 TypeHandle LifespanKillerParticleFunction::_type_handle;
 IMPLEMENT_CLASS(LerpParticleFunction);
 IMPLEMENT_CLASS(VelocityJitterParticleFunction);
@@ -26,8 +27,8 @@ IMPLEMENT_CLASS(BounceParticleFunction);
 /**
  *
  */
-MotionParticleFunction::
-MotionParticleFunction(PN_stdfloat drag) :
+LinearMotionParticleFunction::
+LinearMotionParticleFunction(PN_stdfloat drag) :
   _drag(drag)
 {
 }
@@ -35,7 +36,7 @@ MotionParticleFunction(PN_stdfloat drag) :
 /**
  * Adds the current velocity of the particle to the particle's position.
  */
-void MotionParticleFunction::
+void LinearMotionParticleFunction::
 update(double time, double dt, ParticleSystem2 *system) {
 
   if (!system->_forces.empty()) {
@@ -56,12 +57,11 @@ update(double time, double dt, ParticleSystem2 *system) {
         continue;
       }
 
-      p._prev_pos = p._pos;
-      p._pos += (p._velocity * dt) + (*force_accum * dt * dt * 0.5);
-      p._velocity += *force_accum * dt;
+      LVector3 accel_vec = *force_accum;
 
-      // Add rotation speed.
-      p._rotation += p._rotation_speed * dt;
+      p._prev_pos = p._pos;
+      p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
+      p._velocity += accel_vec * dt;
 
       ++force_accum;
     }
@@ -76,8 +76,21 @@ update(double time, double dt, ParticleSystem2 *system) {
 
       p._prev_pos = p._pos;
       p._pos += p._velocity * dt;
-      p._rotation += p._rotation_speed * dt;
     }
+  }
+}
+
+/**
+ *
+ */
+void AngularMotionParticleFunction::
+update(double time, double dt, ParticleSystem2 *system) {
+  for (Particle &p : system->_particles) {
+    if (!p._alive) {
+      continue;
+    }
+
+    p._rotation += p._rotation_speed * dt;
   }
 }
 

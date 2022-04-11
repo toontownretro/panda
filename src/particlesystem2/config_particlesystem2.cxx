@@ -61,7 +61,9 @@ init_libparticlesystem2() {
   ContinuousParticleEmitter::init_type();
 
   ParticleFunction2::init_type();
-  MotionParticleFunction::init_type();
+
+  LinearMotionParticleFunction::init_type();
+  AngularMotionParticleFunction::init_type();
   LifespanKillerParticleFunction::init_type();
   LerpParticleFunction::init_type();
   VelocityJitterParticleFunction::init_type();
