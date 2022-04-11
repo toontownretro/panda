@@ -18,7 +18,7 @@
 
 IMPLEMENT_CLASS(ParticleInitializer2);
 
-IMPLEMENT_CLASS(P2_INIT_LifespanRandom);
+IMPLEMENT_CLASS(P2_INIT_LifespanRandomRange);
 
 IMPLEMENT_CLASS(P2_INIT_PositionExplicit); // PointEmitter
 IMPLEMENT_CLASS(P2_INIT_PositionBoxVolume); // BoxEmitter+RectangleEmitter
@@ -31,28 +31,37 @@ IMPLEMENT_CLASS(P2_INIT_VelocityExplicit); // ET_EXPLICIT
 IMPLEMENT_CLASS(P2_INIT_VelocityCone); //
 IMPLEMENT_CLASS(P2_INIT_VelocityRadiate); // ET_RADIATE
 
-IMPLEMENT_CLASS(P2_INIT_RotationRandom);
+IMPLEMENT_CLASS(P2_INIT_RotationRandomRange);
+IMPLEMENT_CLASS(P2_INIT_RotationVelocityRandomRange);
 
-//IMPLEMENT_CLASS(P2_INIT_ScaleRandom);
+IMPLEMENT_CLASS(P2_INIT_ScaleRandomRange);
+IMPLEMENT_CLASS(P2_INIT_ColorRandomRange);
+IMPLEMENT_CLASS(P2_INIT_AlphaRandomRange);
 
 /**
  *
  */
-P2_INIT_LifespanRandom::
-P2_INIT_LifespanRandom(PN_stdfloat ls_min, PN_stdfloat ls_max) :
+P2_INIT_LifespanRandomRange::
+P2_INIT_LifespanRandomRange(PN_stdfloat ls_min, PN_stdfloat ls_max, PN_stdfloat exponent) :
   _lifespan_min(ls_min),
-  _lifespan_max(ls_max)
+  _lifespan_range(ls_max - ls_min),
+  _lifespan_exponent(exponent)
 {
 }
 
 /**
  *
  */
-void P2_INIT_LifespanRandom::
+void P2_INIT_LifespanRandomRange::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
-    p->_duration = p2_random_min_max(_lifespan_min, _lifespan_max);
+
+    if (_lifespan_exponent != 1.0f) {
+      p->_duration = p2_random_min_range(_lifespan_min, _lifespan_range, _lifespan_exponent);
+    } else {
+      p->_duration = p2_random_min_range(_lifespan_min, _lifespan_range);
+    }
   }
 }
 
@@ -238,10 +247,12 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
  *
  */
 P2_INIT_VelocityExplicit::
-P2_INIT_VelocityExplicit(const LVector3 &dir, PN_stdfloat amp_min, PN_stdfloat amp_max) :
+P2_INIT_VelocityExplicit(const LVector3 &dir, PN_stdfloat amp_min, PN_stdfloat amp_max,
+                         PN_stdfloat amp_exponent) :
   _vel(dir),
   _amplitude_min(amp_min),
-  _amplitude_range(amp_max - amp_min)
+  _amplitude_range(amp_max - amp_min),
+  _amplitude_exponent(amp_exponent)
 {
 }
 
@@ -252,7 +263,7 @@ void P2_INIT_VelocityExplicit::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
-    p->_velocity += _vel * p2_random_min_range(_amplitude_min, _amplitude_range);
+    p->_velocity += _vel * p2_random_min_range(_amplitude_min, _amplitude_range, _amplitude_exponent);
   }
 }
 
@@ -261,11 +272,13 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
  */
 P2_INIT_VelocityCone::
 P2_INIT_VelocityCone(const LVecBase3 &min_hpr, const LVecBase3 &max_hpr,
-                     PN_stdfloat min_amplitude, PN_stdfloat max_amplitude) :
+                     PN_stdfloat min_amplitude, PN_stdfloat max_amplitude,
+                     PN_stdfloat amplitude_exponent) :
   _min_hpr(min_hpr),
   _max_hpr(max_hpr),
   _min_amplitude(min_amplitude),
-  _max_amplitude(max_amplitude)
+  _amplitude_range(max_amplitude - min_amplitude),
+  _amplitude_exponent(amplitude_exponent)
 {
 }
 
@@ -286,7 +299,7 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     q.set_hpr(LVecBase3(yaw, pitch, 0.0f));
 
     // Pick random amplitude within given range.
-    PN_stdfloat amplitude = p2_random_min_max(_min_amplitude, _max_amplitude);
+    PN_stdfloat amplitude = p2_random_min_range(_min_amplitude, _amplitude_range, _amplitude_exponent);
 
     // Construct velocity vector.
     p->_velocity += q.get_forward() * amplitude;
@@ -297,10 +310,12 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
  *
  */
 P2_INIT_VelocityRadiate::
-P2_INIT_VelocityRadiate(const LPoint3 &point, PN_stdfloat min_amp, PN_stdfloat max_amp) :
+P2_INIT_VelocityRadiate(const LPoint3 &point, PN_stdfloat min_amp, PN_stdfloat max_amp,
+                        PN_stdfloat amp_exp) :
   _point(point),
   _min_amplitude(min_amp),
-  _max_amplitude(max_amp)
+  _amplitude_range(max_amp - min_amp),
+  _amplitude_exponent(amp_exp)
 {
 }
 
@@ -318,7 +333,7 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
       vec = LVector3::up();
     }
 
-    PN_stdfloat amplitude = p2_random_min_max(_min_amplitude, _max_amplitude);
+    PN_stdfloat amplitude = p2_random_min_range(_min_amplitude, _amplitude_range, _amplitude_exponent);
 
     p->_velocity += vec * amplitude;
   }
@@ -327,28 +342,162 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
 /**
  *
  */
-P2_INIT_RotationRandom::
-P2_INIT_RotationRandom(PN_stdfloat min_rot, PN_stdfloat max_rot,
-                       PN_stdfloat min_rot_speed, PN_stdfloat max_rot_speed) :
-  _min_rot(min_rot),
-  _max_rot(max_rot),
-  _min_rot_speed(min_rot_speed),
-  _max_rot_speed(max_rot_speed)
+P2_INIT_RotationRandomRange::
+P2_INIT_RotationRandomRange(PN_stdfloat base, PN_stdfloat offset_min, PN_stdfloat offset_max,
+                       PN_stdfloat offset_exponent) :
+  _rot_base(base),
+  _offset_min(offset_min),
+  _offset_range(offset_max - offset_min),
+  _offset_exponent(offset_exponent)
 {
 }
 
 /**
  *
  */
-void P2_INIT_RotationRandom::
+void P2_INIT_RotationRandomRange::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  PN_stdfloat rot_range = _max_rot - _min_rot;
-  PN_stdfloat rot_speed_range = _max_rot_speed - _min_rot_speed;
-
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
-    p->_rotation = p2_random_min_range(_min_rot, rot_range);
-    p->_rotation_speed = p2_random_min_range(_min_rot_speed, rot_speed_range);
+    p->_rotation = _rot_base;
+    if (_offset_exponent != 1.0f) {
+      p->_rotation += p2_random_min_range(_offset_min, _offset_range, _offset_exponent);
+    } else {
+      p->_rotation += p2_random_min_range(_offset_min, _offset_range);
+    }
+  }
+}
+
+/**
+ *
+ */
+P2_INIT_RotationVelocityRandomRange::
+P2_INIT_RotationVelocityRandomRange(PN_stdfloat speed_min, PN_stdfloat speed_max,
+                               PN_stdfloat speed_exponent, bool random_flip,
+                               PN_stdfloat random_flip_chance,
+                               PN_stdfloat random_flip_exponent) :
+  _vel_min(speed_min),
+  _vel_range(speed_max - speed_min),
+  _vel_exponent(speed_exponent),
+  _random_flip(random_flip),
+  _random_flip_chance(random_flip_chance),
+  _random_flip_exponent(random_flip_exponent)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_RotationVelocityRandomRange::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    PN_stdfloat speed;
+    if (_vel_exponent != 1.0f) {
+      speed = p2_random_min_range(_vel_min, _vel_range, _vel_exponent);
+    } else {
+      speed = p2_random_min_range(_vel_min, _vel_range);
+    }
+
+    if (_random_flip) {
+      if (p2_normalized_rand(_random_flip_exponent) <= _random_flip_chance) {
+        // Flip rotational velocity in opposite direction.
+        speed = -speed;
+      }
+    }
+
+    p->_rotation_speed += speed;
+  }
+}
+
+/**
+ *
+ */
+P2_INIT_ScaleRandomRange::
+P2_INIT_ScaleRandomRange(const LVecBase3 &scale_min, const LVecBase3 &scale_max,
+                    bool componentwise,
+                    PN_stdfloat scale_exponent) :
+  _scale_min(scale_min),
+  _scale_range(scale_max - scale_min),
+  _scale_exponent(scale_exponent),
+  _componentwise(componentwise)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_ScaleRandomRange::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    if (_componentwise) {
+      // Pick a random value for each scale component separately.
+      p->_scale[0] = p2_random_min_range(_scale_min[0], _scale_range[0], _scale_exponent);
+      p->_scale[1] = p2_random_min_range(_scale_min[1], _scale_range[1], _scale_exponent);
+    } else {
+      // Pick a single random value to lerp between the min and max scale uniformly.
+      p->_scale = (_scale_min + _scale_range * p2_normalized_rand(_scale_exponent)).get_xz();
+    }
+  }
+}
+
+/**
+ *
+ */
+P2_INIT_ColorRandomRange::
+P2_INIT_ColorRandomRange(const LVecBase3 &color_1, const LVecBase3 &color_2,
+                         bool componentwise, PN_stdfloat exponent) :
+  _color_min(color_1),
+  _color_range(color_2 - color_1),
+  _componentwise(componentwise),
+  _exponent(exponent)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_ColorRandomRange::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    if (_componentwise) {
+      // Pick a random value for each RGB component.
+      p->_color[0] = p2_random_min_range(_color_min[0], _color_range[0], _exponent);
+      p->_color[1] = p2_random_min_range(_color_min[1], _color_range[1], _exponent);
+      p->_color[2] = p2_random_min_range(_color_min[2], _color_range[2], _exponent);
+
+    } else {
+      // Pick a single random fraction to lerp between the two colors.
+      p->_color = LColor(_color_min + _color_range * p2_normalized_rand(_exponent), p->_color[3]);
+    }
+  }
+}
+
+/**
+ *
+ */
+P2_INIT_AlphaRandomRange::
+P2_INIT_AlphaRandomRange(PN_stdfloat alpha_min, PN_stdfloat alpha_max, PN_stdfloat exponent) :
+  _alpha_min(alpha_min),
+  _alpha_range(alpha_max - alpha_min),
+  _alpha_exponent(exponent)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_AlphaRandomRange::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    p->_color[3] = p2_random_min_range(_alpha_min, _alpha_range, _alpha_exponent);
   }
 }

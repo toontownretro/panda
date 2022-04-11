@@ -43,20 +43,22 @@ public:
 };
 
 /**
- * Initializes particles to a random lifespawn within a given range.
+ * Initializes particles to a random lifespan within a given range.
  */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_LifespanRandom : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_LifespanRandom, ParticleInitializer2);
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_LifespanRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_LifespanRandomRange, ParticleInitializer2);
 
 PUBLISHED:
-  P2_INIT_LifespanRandom(PN_stdfloat lifespan_min, PN_stdfloat lifespan_max);
+  P2_INIT_LifespanRandomRange(PN_stdfloat lifespan_min, PN_stdfloat lifespan_max,
+                              PN_stdfloat exponent = 1.0f);
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
 private:
   PN_stdfloat _lifespan_min;
-  PN_stdfloat _lifespan_max;
+  PN_stdfloat _lifespan_range;
+  PN_stdfloat _lifespan_exponent;
 };
 
 /**
@@ -179,7 +181,8 @@ class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_VelocityExplicit : public ParticleInit
   DECLARE_CLASS(P2_INIT_VelocityExplicit, ParticleInitializer2);
 
 PUBLISHED:
-  P2_INIT_VelocityExplicit(const LVector3 &dir, PN_stdfloat amplitude_min, PN_stdfloat amplitude_max);
+  P2_INIT_VelocityExplicit(const LVector3 &dir, PN_stdfloat amplitude_min, PN_stdfloat amplitude_max,
+                           PN_stdfloat amplitude_exponent = 1.0f);
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
@@ -188,6 +191,7 @@ private:
   LVector3 _vel;
   PN_stdfloat _amplitude_min;
   PN_stdfloat _amplitude_range;
+  PN_stdfloat _amplitude_exponent;
 };
 
 /**
@@ -199,7 +203,8 @@ class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_VelocityCone : public ParticleInitiali
 
 PUBLISHED:
   P2_INIT_VelocityCone(const LVecBase3 &min_hpr, const LVecBase3 &max_hpr,
-                       PN_stdfloat min_amplitude, PN_stdfloat max_amplitude);
+                       PN_stdfloat min_amplitude, PN_stdfloat max_amplitude,
+                       PN_stdfloat amplitude_exponent = 1.0f);
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
@@ -209,7 +214,8 @@ private:
   LVecBase3 _max_hpr;
 
   PN_stdfloat _min_amplitude;
-  PN_stdfloat _max_amplitude;
+  PN_stdfloat _amplitude_range;
+  PN_stdfloat _amplitude_exponent;
 };
 
 /**
@@ -225,7 +231,8 @@ class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_VelocityRadiate : public ParticleIniti
 
 PUBLISHED:
   P2_INIT_VelocityRadiate(const LPoint3 &point,
-                          PN_stdfloat min_amplitude, PN_stdfloat max_amplitude);
+                          PN_stdfloat min_amplitude, PN_stdfloat max_amplitude,
+                          PN_stdfloat amplitude_exponent = 1.0f);
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
@@ -233,25 +240,105 @@ public:
 private:
   LPoint3 _point;
   PN_stdfloat _min_amplitude;
-  PN_stdfloat _max_amplitude;
+  PN_stdfloat _amplitude_range;
+  PN_stdfloat _amplitude_exponent;
 };
 
 /**
- * Initializes particles to a random rotation and rotational velocity.
+ * Initializes particles to a random rotation.
  */
-class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_RotationRandom : public ParticleInitializer2 {
-  DECLARE_CLASS(P2_INIT_RotationRandom, ParticleInitializer2);
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_RotationRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_RotationRandomRange, ParticleInitializer2);
 
 PUBLISHED:
-  P2_INIT_RotationRandom(PN_stdfloat min_rot, PN_stdfloat max_rot,
-                         PN_stdfloat min_rot_speed, PN_stdfloat max_rot_speed);
+  P2_INIT_RotationRandomRange(PN_stdfloat base, PN_stdfloat offset_min, PN_stdfloat offset_max,
+                         PN_stdfloat offset_exponent = 1.0f);
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
 private:
-  PN_stdfloat _min_rot, _max_rot;
-  PN_stdfloat _min_rot_speed, _max_rot_speed;
+  PN_stdfloat _rot_base;
+  PN_stdfloat _offset_min, _offset_range, _offset_exponent;
+};
+
+/**
+ * Initializes particles to a random rotational velocity.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_RotationVelocityRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_RotationVelocityRandomRange, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_RotationVelocityRandomRange(PN_stdfloat speed_min, PN_stdfloat speed_max,
+                                 PN_stdfloat speed_exponent = 1.0f, bool random_flip = false,
+                                 PN_stdfloat random_flip_chance = 0.5f,
+                                 PN_stdfloat random_flip_exponent = 1.0f);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+private:
+  PN_stdfloat _vel_min, _vel_range, _vel_exponent;
+
+  // If true, chosen rotational velocity has a random chance of being
+  // flipped to spin in opposite direction.
+  bool _random_flip;
+  PN_stdfloat _random_flip_chance, _random_flip_exponent;
+};
+
+/**
+ * Initializes particles to a random scale within a given range.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_ScaleRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_ScaleRandomRange, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_ScaleRandomRange(const LVecBase3 &scale_min, const LVecBase3 &scale_max,
+                           bool componentwise = true,
+                           PN_stdfloat scale_exponent = 1.0f);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+private:
+  LVecBase3 _scale_min, _scale_range;
+  PN_stdfloat _scale_exponent;
+  bool _componentwise;
+};
+
+/**
+ * Initializes particles to a random RGB color within a given range.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_ColorRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_ColorRandomRange, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_ColorRandomRange(const LVecBase3 &color1, const LVecBase3 &color2, bool componentwise = false,
+                           PN_stdfloat exponent = 1.0f);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+private:
+  LVecBase3 _color_min, _color_range;
+  PN_stdfloat _exponent;
+  bool _componentwise;
+};
+
+/**
+ * Initializes particles to a random alpha value within a given range.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_AlphaRandomRange : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_AlphaRandomRange, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_AlphaRandomRange(PN_stdfloat alpha_min, PN_stdfloat alpha_max, PN_stdfloat exponent = 1.0f);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+private:
+  PN_stdfloat _alpha_min, _alpha_range, _alpha_exponent;
 };
 
 #include "particleInitializer2.I"

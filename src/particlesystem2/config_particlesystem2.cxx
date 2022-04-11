@@ -38,7 +38,8 @@ init_libparticlesystem2() {
   initialized = true;
 
   ParticleInitializer2::init_type();
-  P2_INIT_LifespanRandom::init_type();
+
+  P2_INIT_LifespanRandomRange::init_type();
   P2_INIT_PositionExplicit::init_type();
   P2_INIT_PositionBoxVolume::init_type();
   P2_INIT_PositionSphereVolume::init_type();
@@ -48,9 +49,14 @@ init_libparticlesystem2() {
   P2_INIT_VelocityExplicit::init_type();
   P2_INIT_VelocityCone::init_type();
   P2_INIT_VelocityRadiate::init_type();
-  P2_INIT_RotationRandom::init_type();
+  P2_INIT_RotationRandomRange::init_type();
+  P2_INIT_RotationVelocityRandomRange::init_type();
+  P2_INIT_ScaleRandomRange::init_type();
+  P2_INIT_ColorRandomRange::init_type();
+  P2_INIT_AlphaRandomRange::init_type();
 
   ParticleEmitter2::init_type();
+
   BurstParticleEmitter::init_type();
   ContinuousParticleEmitter::init_type();
 
@@ -62,9 +68,11 @@ init_libparticlesystem2() {
   BounceParticleFunction::init_type();
 
   ParticleRenderer2::init_type();
+
   SpriteParticleRenderer2::init_type();
 
   ParticleForce2::init_type();
+
   VectorParticleForce::init_type();
   CylinderVortexParticleForce::init_type();
   JitterParticleForce::init_type();
