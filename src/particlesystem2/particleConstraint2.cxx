@@ -1,0 +1,182 @@
+/**
+ * PANDA 3D SOFTWARE
+ * Copyright (c) Carnegie Mellon University.  All rights reserved.
+ *
+ * All use of this software is subject to the terms of the revised BSD
+ * license.  You should have received a copy of this license along
+ * with this source code in a file named "LICENSE."
+ *
+ * @file particleConstraint2.cxx
+ * @author brian
+ * @date 2022-04-11
+ */
+
+#include "particleConstraint2.h"
+#include "particleSystem2.h"
+#include "luse.h"
+#include "p2_utils.h"
+
+IMPLEMENT_CLASS(ParticleConstraint2);
+IMPLEMENT_CLASS(PathParticleConstraint);
+
+/**
+ *
+ */
+PathParticleConstraint::
+PathParticleConstraint() :
+  _min_distance(0.0f),
+  _max_distance(100.0f),
+  _max_distance_mid(-1.0f),
+  _max_distance_end(-1.0f),
+  _travel_time(10.0f),
+  _random_bulge(0.0f),
+  _start_input(0),
+  _end_input(1),
+  _bulge_control(0),
+  _mid_point(0.5f)
+{
+}
+
+/**
+ *
+ */
+void
+evaluate_path_points(int start_input, int end_input, PN_stdfloat mid, int bulge_control,
+                     PN_stdfloat bulge,
+                     double time, LPoint3 &start_pt, LPoint3 &mid_pt, LPoint3 &end_pt,
+                     ParticleSystem2 *system) {
+  start_pt = system->get_input_value(start_input)->get_pos();
+  end_pt = system->get_input_value(end_input)->get_pos();
+  mid_pt = start_pt + (end_pt - start_pt) * mid;
+
+  if (bulge_control) {
+    LVector3 target = end_pt - start_pt;
+    PN_stdfloat bulge_scale = 0.0f;
+    int input = start_input;
+    if (bulge_control == 2) {
+      input = end_input;
+    }
+    LVector3 fwd = system->get_input_value(input)->get_quat().get_forward();
+    PN_stdfloat len = target.length();
+    if (len > 1.0e-6) {
+      target *= 1.0f / len;
+      bulge_scale = 1.0f - std::abs(target.dot(fwd));
+    }
+
+    LPoint3 potential_mid_pt = fwd;
+    PN_stdfloat offset_dist = potential_mid_pt.length();
+    if (offset_dist > 1.0e-6) {
+      potential_mid_pt *= (bulge * len * bulge_scale) / offset_dist;
+      mid_pt += potential_mid_pt;
+    }
+
+  } else {
+    // Offset mid point by random bulge vector.
+    mid_pt += p2_random_unit_vector() * p2_random_min_max(-bulge, bulge);
+  }
+}
+
+/**
+ *
+ */
+bool PathParticleConstraint::
+enforce_constraint(double time, double dt, ParticleSystem2 *system) {
+  // Evaulate current constraint path.
+  LPoint3 start_pt, mid_pt, end_pt;
+  evaluate_path_points(_start_input, _end_input, _mid_point, _bulge_control,
+                       _random_bulge, time, start_pt, mid_pt, end_pt, system);
+
+  double timescale = 1.0 / std::max((double)0.001, (double)_travel_time);
+
+  bool constant_radius = true;
+  PN_stdfloat rad0 = _max_distance;
+  PN_stdfloat radm = rad0;
+
+  if (_max_distance_mid >= 0.0f) {
+    constant_radius = _max_distance_mid == _max_distance;
+    radm = _max_distance_mid;
+  }
+
+  PN_stdfloat rad1 = radm;
+  if (_max_distance_end >= 0.0f) {
+    constant_radius &= _max_distance_end == _max_distance;
+    rad1 = _max_distance_end;
+  }
+
+  PN_stdfloat radm_minus_rad0 = radm - rad0;
+  PN_stdfloat rad1_minus_radm = rad1 - radm;
+
+  PN_stdfloat min_dist = _min_distance;
+  PN_stdfloat min_dist_sqr = _min_distance * _min_distance;
+
+  PN_stdfloat max_dist = std::max(rad0, std::max(radm, rad1));
+  PN_stdfloat max_dist_sqr = max_dist * max_dist;
+
+  bool changed_something = false;
+
+  LVector3 delta0 = mid_pt - start_pt;
+  LVector3 delta1 = end_pt - mid_pt;
+
+  for (Particle &p : system->_particles) {
+    if (!p._alive) {
+      continue;
+    }
+
+    PN_stdfloat t_scale = std::min(1.0, timescale * (time - p._spawn_time));
+
+    // Bezier
+    LVector3 l0 = delta0;
+    l0 *= t_scale;
+    l0 += start_pt;
+
+    LVector3 l1 = delta1;
+    l1 *= t_scale;
+    l1 += mid_pt;
+
+    LVector3 center = l1;
+    center -= l0;
+    center *= t_scale;
+    center += l0;
+
+    LPoint3 point = p._pos;
+    point -= center;
+
+    PN_stdfloat dist_sqr = point.length_squared();
+    bool too_far = dist_sqr > max_dist_sqr;
+    if (!constant_radius && !too_far) {
+      PN_stdfloat r0 = rad0 + (radm_minus_rad0 * t_scale);
+      PN_stdfloat r1 = radm + (rad1_minus_radm * t_scale);
+      max_dist = r0 + ((r1 - r0) * t_scale);
+
+      too_far = dist_sqr > (max_dist * max_dist);
+    }
+
+    bool too_close = dist_sqr < min_dist_sqr;
+    bool need_adjust = too_far || too_close;
+
+    if (need_adjust) {
+      //if ()
+
+      PN_stdfloat guess = 1.0f / std::sqrt(dist_sqr);
+      guess *= (3.0f - (dist_sqr * (guess * guess)));
+      guess *= 0.5f;
+      point *= guess;
+
+      LPoint3 clamp_far = point;
+      clamp_far *= max_dist;
+      clamp_far += center;
+      LPoint3 clamp_near = point;
+      clamp_near *= min_dist;
+      clamp_near += center;
+
+      if (too_close) {
+        p._pos = clamp_near;
+      } else if (too_far) {
+        p._pos = clamp_far;
+      }
+      changed_something = true;
+    }
+  }
+
+  return changed_something;
+}

@@ -107,6 +107,23 @@ get_force(int n) const {
 }
 
 /**
+ * Returns the number of constraints in the system.
+ */
+INLINE int ParticleSystem2::
+get_num_constraints() const {
+  return (int)_constraints.size();
+}
+
+/**
+ * Returns the nth constraint in the system.
+ */
+INLINE ParticleConstraint2 *ParticleSystem2::
+get_constraint(int n) const {
+  nassertr(n >= 0 && n < (int)_constraints.size(), nullptr);
+  return _constraints[n];
+}
+
+/**
  * Returns the number of particle systems that are children of this system.
  */
 INLINE int ParticleSystem2::

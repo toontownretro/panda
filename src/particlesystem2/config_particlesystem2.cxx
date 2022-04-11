@@ -18,6 +18,7 @@
 #include "particleInitializer2.h"
 #include "particleRenderer2.h"
 #include "particleForce2.h"
+#include "particleConstraint2.h"
 
 ConfigureDef(config_particlesystem2);
 ConfigureFn(config_particlesystem2) {
@@ -80,6 +81,9 @@ init_libparticlesystem2() {
   JitterParticleForce::init_type();
   AttractParticleForce::init_type();
   FrictionParticleForce::init_type();
+
+  ParticleConstraint2::init_type();
+  PathParticleConstraint::init_type();
 
   ParticleSystem2::init_type();
 }

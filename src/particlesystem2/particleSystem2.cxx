@@ -94,6 +94,17 @@ add_force(ParticleForce2 *force) {
 }
 
 /**
+ * Adds a new physical constraint to the particle system.  The constraint
+ * will limit the motion of particles in some way.  Note that the system
+ * needs a LinearMotionParticleFunction for constraints to have any
+ * effect.
+ */
+void ParticleSystem2::
+add_constraint(ParticleConstraint2 *constraint) {
+  _constraints.push_back(constraint);
+}
+
+/**
  * Adds the given particle system as a child of this particle system.
  * The child will be started and stopped along with this system, and input
  * nodes set on this system will propagate down to the child.

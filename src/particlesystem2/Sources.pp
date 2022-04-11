@@ -8,6 +8,7 @@
     config_particlesystem2.h \
     p2_utils.h p2_utils.I \
     particle.h \
+    particleConstraint2.h particleConstraint2.I \
     particleEmitter2.h particleEmitter2.I \
     particleForce2.h particleForce2.I \
     particleFunction2.h particleFunction2.I \
@@ -22,6 +23,7 @@
     config_particlesystem2.cxx \
     p2_utils.cxx \
     particle.cxx \
+    particleConstraint2.cxx \
     particleEmitter2.cxx \
     particleForce2.cxx \
     particleFunction2.cxx \

@@ -26,6 +26,7 @@
 #include "particleInitializer2.h"
 #include "particleRenderer2.h"
 #include "particleForce2.h"
+#include "particleConstraint2.h"
 
 /**
  * A particle system is a collection of particles, which are essentially
@@ -70,6 +71,12 @@ PUBLISHED:
   INLINE ParticleForce2 *get_force(int n) const;
   MAKE_SEQ(get_forces, get_num_forces, get_force);
   MAKE_SEQ_PROPERTY(forces, get_num_forces, get_force);
+
+  void add_constraint(ParticleConstraint2 *constraint);
+  INLINE int get_num_constraints() const;
+  INLINE ParticleConstraint2 *get_constraint(int n) const;
+  MAKE_SEQ(get_constraints, get_num_constraints, get_constraint);
+  MAKE_SEQ_PROPERTY(constraints, get_num_constraints, get_constraint);
 
   void add_child(ParticleSystem2 *child);
   INLINE int get_num_children() const;
@@ -120,6 +127,9 @@ public:
 
   typedef pvector<PT(ParticleForce2)> Forces;
   Forces _forces;
+
+  typedef pvector<PT(ParticleConstraint2)> Constraints;
+  Constraints _constraints;
 
   // Resized to always contain _pool_size particles.
   typedef pvector<Particle> Particles;

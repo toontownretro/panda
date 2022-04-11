@@ -78,6 +78,36 @@ update(double time, double dt, ParticleSystem2 *system) {
       p._pos += p._velocity * dt;
     }
   }
+
+  // Enforce constraints.
+  if (!system->_constraints.empty() && system->_num_alive_particles > 0) {
+    bool constraint_satisifed[100];
+    bool final_constraint[100];
+    for (size_t i = 0; i < system->_constraints.size() && i < 100u; ++i) {
+      // TODO: final constraints.
+
+      constraint_satisifed[i] = false;
+    }
+
+    for (int p = 0; p < 3; ++p) {
+      for (size_t i = 0; i < system->_constraints.size() && i < 100u; ++i) {
+        if (!constraint_satisifed[i]) {
+          ParticleConstraint2 *constraint = system->_constraints[i];
+          bool did_something = constraint->enforce_constraint(time, dt, system);
+          if (did_something) {
+            // Invalidate other constraints.
+            for (size_t j = 0; j < system->_constraints.size() && j < 100; ++j) {
+              if (i != j) {
+                constraint_satisifed[j] = false;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // TODO: run final constraints
+  }
 }
 
 /**
