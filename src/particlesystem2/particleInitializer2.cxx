@@ -79,9 +79,14 @@ P2_INIT_PositionExplicit(const LPoint3 &point) :
  */
 void P2_INIT_PositionExplicit::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
+  LPoint3 origin_ps_space = emission_xform.xform_point(_point);
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
-    p->_pos = _point;
+    p->_pos = origin_ps_space;
   }
 }
 
@@ -100,12 +105,16 @@ P2_INIT_PositionBoxVolume(const LPoint3 &mins, const LPoint3 &maxs) :
  */
 void P2_INIT_PositionBoxVolume::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
     p->_pos[0] = p2_random_min_max(_mins[0], _maxs[0]);
     p->_pos[1] = p2_random_min_max(_mins[1], _maxs[1]);
     p->_pos[2] = p2_random_min_max(_mins[2], _maxs[2]);
+    emission_xform.xform_point_in_place(p->_pos);
   }
 }
 
@@ -130,6 +139,9 @@ P2_INIT_PositionSphereVolume(const LPoint3 &center, PN_stdfloat radius_min, PN_s
  */
 void P2_INIT_PositionSphereVolume::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
 
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
@@ -158,7 +170,7 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     // Scale the offset vector to create ovals, arches, etc.
     vec.componentwise_mult(_scale);
 
-    p->_pos = _center + vec;
+    p->_pos = emission_xform.xform_point(_center + vec);
   }
 }
 
@@ -177,12 +189,15 @@ P2_INIT_PositionLineSegment(const LPoint3 &a, const LPoint3 &b) :
  */
 void P2_INIT_PositionLineSegment::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
     // Pick random point along line segment.
     PN_stdfloat frac = p2_normalized_rand();
-    p->_pos = _a * (1.0f - frac) + _b * frac;
+    p->_pos = emission_xform.xform_point(_a * (1.0f - frac) + _b * frac);
   }
 }
 
@@ -202,6 +217,9 @@ void P2_INIT_PositionParametricCurve::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
   nassertv(_curve != nullptr);
 
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
   PN_stdfloat max_t = _curve->get_max_t();
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
@@ -209,6 +227,7 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     PN_stdfloat t = p2_normalized_rand() * max_t;
     // Evaluate position on curve at parametric point.
     _curve->get_point(t, p->_pos);
+    emission_xform.xform_point_in_place(p->_pos);
   }
 }
 
@@ -261,9 +280,12 @@ P2_INIT_VelocityExplicit(const LVector3 &dir, PN_stdfloat amp_min, PN_stdfloat a
  */
 void P2_INIT_VelocityExplicit::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
-    p->_velocity += _vel * p2_random_min_range(_amplitude_min, _amplitude_range, _amplitude_exponent);
+    p->_velocity += emission_xform.xform_vec(_vel * p2_random_min_range(_amplitude_min, _amplitude_range, _amplitude_exponent));
   }
 }
 
@@ -287,6 +309,9 @@ P2_INIT_VelocityCone(const LVecBase3 &min_hpr, const LVecBase3 &max_hpr,
  */
 void P2_INIT_VelocityCone::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
@@ -302,7 +327,7 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     PN_stdfloat amplitude = p2_random_min_range(_min_amplitude, _amplitude_range, _amplitude_exponent);
 
     // Construct velocity vector.
-    p->_velocity += q.get_forward() * amplitude;
+    p->_velocity += emission_xform.xform_vec(q.get_forward() * amplitude);
   }
 }
 
@@ -324,10 +349,18 @@ P2_INIT_VelocityRadiate(const LPoint3 &point, PN_stdfloat min_amp, PN_stdfloat m
  */
 void P2_INIT_VelocityRadiate::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  // Matrix to transform from emission space to particle system space.
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+
+  // Transform radiate origin from emission space into particle system space,
+  // since we're constructing the velocity vector from the particle's position,
+  // which is already in particle system space.
+  LPoint3 origin_ps_space = emission_xform.xform_point(_point);
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
-    LVector3 vec = p->_pos - _point;
+    LVector3 vec = p->_pos - origin_ps_space;
     if (!vec.normalize()) {
       // Arbitrary direction.
       vec = LVector3::up();

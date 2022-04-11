@@ -30,7 +30,14 @@ ParticleSystem2() :
 }
 
 /**
+ * Sets the maximum number of particles that can be simulated simultaneously in
+ * the system.  Memory for `size` particles is pre-allocated when the system
+ * starts.
  *
+ * The pool should be big enough to hold the maximum number of particles that
+ * may be simulated at the same time, at any point in the simulation of the
+ * system.  For performance and memory considerations, it is important to keep
+ * the pool size no bigger than actually needed.
  */
 void ParticleSystem2::
 set_pool_size(int size) {
@@ -39,7 +46,8 @@ set_pool_size(int size) {
 }
 
 /**
- *
+ * Adds a new emitter to the particle system.  Emitters are responsible for
+ * determining when to spawn new particles, how often, and how many.
  */
 void ParticleSystem2::
 add_emitter(ParticleEmitter2 *emitter) {
@@ -47,7 +55,8 @@ add_emitter(ParticleEmitter2 *emitter) {
 }
 
 /**
- *
+ * Adds a new renderer to the particle system.  Renderers create a visual
+ * representation of the particle system.
  */
 void ParticleSystem2::
 add_renderer(ParticleRenderer2 *renderer) {
@@ -55,7 +64,9 @@ add_renderer(ParticleRenderer2 *renderer) {
 }
 
 /**
- *
+ * Adds a new initializer to the particle system.  Initializers are
+ * responsible for setting up the initial values of particle attributes
+ * when they spawn, such as position and velocity.
  */
 void ParticleSystem2::
 add_initializer(ParticleInitializer2 *initializer) {
@@ -63,7 +74,9 @@ add_initializer(ParticleInitializer2 *initializer) {
 }
 
 /**
- *
+ * Adds a new function to the particle system.  Functions define the behavior
+ * of particles in the system, such as how they move and change appearance
+ * over time.
  */
 void ParticleSystem2::
 add_function(ParticleFunction2 *func) {
@@ -71,7 +84,9 @@ add_function(ParticleFunction2 *func) {
 }
 
 /**
- *
+ * Adds a new physical force to the particle system.  The force will act
+ * upon all particles in the system.  Note that the system needs a
+ * LinearMotionParticleFunction for forces to have any effect.
  */
 void ParticleSystem2::
 add_force(ParticleForce2 *force) {
@@ -79,11 +94,38 @@ add_force(ParticleForce2 *force) {
 }
 
 /**
- *
+ * Adds the given particle system as a child of this particle system.
+ * The child will be started and stopped along with this system, and input
+ * nodes set on this system will propagate down to the child.
  */
 void ParticleSystem2::
 add_child(ParticleSystem2 *child) {
   _children.push_back(child);
+}
+
+/**
+ * Adds a new input node to the particle system.  Initializers and functions
+ * may use the transform of this node to influence their behaviors.
+ *
+ * By convention, the first input node defines the emission coordinate space.
+ */
+void ParticleSystem2::
+add_input(const NodePath &input) {
+  _inputs.push_back(input);
+  _input_values.push_back(TransformState::make_identity());
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+set_input(int n, const NodePath &input) {
+  if (n >= _inputs.size()) {
+    _inputs.resize(n + 1);
+    _input_values.resize(n + 1);
+  }
+  _inputs[n] = input;
+  _input_values[n] = TransformState::make_identity();
 }
 
 /**
@@ -93,6 +135,8 @@ void ParticleSystem2::
 start(const NodePath &parent, double time) {
   nassertv(!_running);
   nassertv(_pool_size > 0);
+
+  _parent = parent;
 
   _elapsed = time;
 
@@ -139,6 +183,8 @@ stop() {
     renderer->shutdown(this);
   }
 
+  _parent.clear();
+
   _running = false;
   _num_alive_particles = 0;
 }
@@ -151,6 +197,20 @@ update(double dt) {
   nassertv(_running);
 
   _dt = dt;
+
+  nassertv(!_parent.is_empty());
+
+  // Fetch current values of all dynamic input nodes.
+  // This is the transform of the input node relative to the particle
+  // system's render parent, or world-space as far as the particle system
+  // is concerned.
+  for (size_t i = 0; i < _inputs.size(); ++i) {
+    if (!_inputs[i].is_empty()) {
+      _input_values[i] = _inputs[i].get_transform(_parent);
+    } else {
+      _input_values[i] = TransformState::make_identity();
+    }
+  }
 
   // First update the emitter so they can birth new particles if necessary.
   for (ParticleEmitter2 *emitter : _emitters) {
