@@ -75,22 +75,29 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
  *
  */
 CylinderVortexParticleForce::
-CylinderVortexParticleForce(PN_stdfloat radius, PN_stdfloat length, PN_stdfloat coef,
-                            const LVecBase3 &hpr, const LPoint3 &center) :
-  _radius(radius),
-  _length(length),
-  _coef(coef)
+CylinderVortexParticleForce(PN_stdfloat coef, const LVector3 &axis, const LPoint3 &center) :
+  _coef(coef),
+  _axis(axis),
+  _center(center),
+  _input(-1),
+  _local_axis(false)
 {
-  set_transform(hpr, center);
 }
 
 /**
- * Sets the rotation and center point of the cylinder vortex.
+ *
  */
 void CylinderVortexParticleForce::
-set_transform(const LVecBase3 &hpr, const LPoint3 &center) {
-  compose_matrix(_transform, LVecBase3(1.0f), hpr, center);
-  _inv_transform.invert_from(_transform);
+set_local_axis(bool flag) {
+  _local_axis = flag;
+}
+
+/**
+ *
+ */
+void CylinderVortexParticleForce::
+set_input(int input) {
+  _input = input;
 }
 
 /**
@@ -98,54 +105,43 @@ set_transform(const LVecBase3 &hpr, const LPoint3 &center) {
  */
 void CylinderVortexParticleForce::
 accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
+  LVector3 world_axis = _axis;
+  if (_local_axis && _input != -1) {
+    // Twist axis specified relative to an input node.
+    world_axis = system->get_input_value(_input)->get_mat().xform_vec(world_axis);
+  }
+  world_axis.normalize();
+
+  LPoint3 center = _center;
+  if (_input != -1) {
+    // Center point relative to an input node.
+    center = system->get_input_value(_input)->get_mat().xform_point(center);
+  }
+
   for (Particle &p : system->_particles) {
     if (!p._alive) {
       continue;
     }
 
-    LPoint3 local = _transform.xform_point(p._pos);
-
-    // Clip to cylinder length.
-    if (local[2] < -_length || local[2] > _length) {
+    LVector3 offset = p._pos - center;
+    if (!offset.normalize()) {
+      ++accum;
+      continue;
+    }
+    LVector3 parallel = offset;
+    LVector3 axis_offset = offset;
+    axis_offset.componentwise_mult(world_axis);
+    parallel.componentwise_mult(axis_offset);
+    offset -= parallel;
+    if (!offset.normalize()) {
       ++accum;
       continue;
     }
 
-    // Clip to cylinder radius.
-    PN_stdfloat x_squared = local[0] * local[0];
-    PN_stdfloat y_squared = local[1] * local[1];
-    PN_stdfloat dist_squared = x_squared + y_squared;
-    PN_stdfloat radius_squared = _radius * _radius;
-    if (dist_squared > radius_squared) {
-      ++accum;
-      continue;
-    }
-    if (IS_NEARLY_ZERO(dist_squared)) {
-      ++accum;
-      continue;
-    }
+    LVector3 tangential = offset.cross(world_axis);
+    tangential *= strength * _coef;
 
-    PN_stdfloat r = csqrt(dist_squared);
-    if (IS_NEARLY_ZERO(r)) {
-      ++accum;
-      continue;
-    }
-
-    LVector3 tangential = local;
-    tangential[2] = 0.0f;
-    tangential.normalize();
-    tangential = tangential.cross(LVector3(0.0f, 0.0f, 1.0f));
-
-    LVector3 centripetal = -local;
-    centripetal[2] = 0.0f;
-    centripetal.normalize();
-
-    LVector3 combined = tangential + centripetal;
-    combined.normalize();
-
-    centripetal = apply_axis_mask(combined * _coef * strength * p._velocity.length());
-
-    *accum += _inv_transform.xform_vec(centripetal);
+    *accum += apply_axis_mask(tangential);
     ++accum;
   }
 }
@@ -194,8 +190,9 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
  *
  */
 AttractParticleForce::
-AttractParticleForce(const LPoint3 &point, PN_stdfloat falloff, PN_stdfloat amplitude,
+AttractParticleForce(int input, const LPoint3 &point, PN_stdfloat falloff, PN_stdfloat amplitude,
                      PN_stdfloat radius) :
+  _input(input),
   _point(point),
   _falloff(falloff),
   _amplitude(amplitude),
@@ -216,13 +213,23 @@ set_point(const LPoint3 &point) {
  */
 void AttractParticleForce::
 accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
+  LPoint3 ps_space_point;
+  if (_input != -1) {
+    // Get system-space point relative to an input node.  Allows the particles
+    // to attract to a moving target in the game world, for instance.
+    ps_space_point = system->get_input_value(_input)->get_mat().xform_point(_point);
+  } else {
+    // Static point, already in system-space.
+    ps_space_point = _point;
+  }
+
   for (Particle &p : system->_particles) {
     if (!p._alive) {
       continue;
     }
 
     // Attract to force point.
-    LVector3 vec = p._pos - _point;
+    LVector3 vec = p._pos - ps_space_point;
     PN_stdfloat len = vec.length();
     if (IS_NEARLY_ZERO(len)) {
       accum++;

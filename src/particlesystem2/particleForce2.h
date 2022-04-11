@@ -79,20 +79,21 @@ class EXPCL_PANDA_PARTICLESYSTEM2 CylinderVortexParticleForce : public ParticleF
   DECLARE_CLASS(CylinderVortexParticleForce, ParticleForce2);
 
 PUBLISHED:
-  CylinderVortexParticleForce(PN_stdfloat radius, PN_stdfloat length,
-                              PN_stdfloat coef, const LVecBase3 &hpr, const LPoint3 &center);
+  CylinderVortexParticleForce(PN_stdfloat coef = 1.0f, const LVector3 &axis = LVector3::up(),
+                              const LPoint3 &center = LPoint3(0.0f));
 
-  void set_transform(const LVecBase3 &hpr, const LPoint3 &center);
+  void set_local_axis(bool flag);
+  void set_input(int input);
 
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
 private:
-  PN_stdfloat _radius, _length, _coef;
-  // Transform world-space particle position into force space.
-  LMatrix4 _transform;
-  // Transform force space into world-space.
-  LMatrix4 _inv_transform;
+  PN_stdfloat _coef;
+  LVector3 _axis;
+  LPoint3 _center;
+  bool _local_axis;
+  int _input;
 };
 
 /**
@@ -121,7 +122,7 @@ class EXPCL_PANDA_PARTICLESYSTEM2 AttractParticleForce : public ParticleForce2 {
   DECLARE_CLASS(AttractParticleForce, ParticleForce2);
 
 PUBLISHED:
-  AttractParticleForce(const LPoint3 &point, PN_stdfloat falloff, PN_stdfloat amplitude,
+  AttractParticleForce(int input, const LPoint3 &point, PN_stdfloat falloff, PN_stdfloat amplitude,
                        PN_stdfloat radius = -1.0f);
 
   void set_point(const LPoint3 &point);
@@ -130,7 +131,7 @@ public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
 private:
-  // TODO: Get point from input.
+  int _input;
   LPoint3 _point;
   PN_stdfloat _amplitude;
   PN_stdfloat _falloff;
