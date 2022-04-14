@@ -28,7 +28,11 @@
     linmath_events.h \
     look_at.h look_at_src.I \
     look_at_src.h \
+    mathutil_avx_src.I mathutil_avx_src.h \
+    mathutil_avx512_src.I mathutil_avx512_src.h \
     mathutil_misc.I mathutil_misc.T mathutil_misc.h \
+    mathutil_simd.I mathutil_simd.h \
+    mathutil_sse_src.I mathutil_sse_src.h \
     mersenne.h \
     omniBoundingVolume.I  \
     omniBoundingVolume.h \
@@ -62,7 +66,11 @@
     intersectionBoundingVolume.cxx \
     look_at.cxx \
     linmath_events.cxx \
+    mathutil_avx_src.cxx \
+    mathutil_avx512_src.cxx \
     mathutil_misc.cxx \
+    mathutil_simd.cxx \
+    mathutil_sse_src.cxx \
     mersenne.cxx \
     omniBoundingVolume.cxx \
     parabola.cxx \
@@ -114,5 +122,14 @@
 
   #define SOURCES \
     test_tri.cxx
+
+#end test_bin_target
+
+#begin test_bin_target
+  #define BUILD_TESTS 1
+  #define TARGET test_simd
+  #define LOCAL_LIBS mathutil
+  #define SOURCES \
+    test_simd.cxx
 
 #end test_bin_target
