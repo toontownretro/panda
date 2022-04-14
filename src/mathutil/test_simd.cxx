@@ -13,21 +13,51 @@
 
 #include "pandabase.h"
 #include "mathutil_simd.h"
+#include "clockObject.h"
 
 #include <mmintrin.h>
 
-#pragma clang optimize off
+//
 
 /**
  *
  */
 int
 main(int argc, char *argv[]) {
-  FourVector3s v1(LVector3::up());
-  FourVector3s v2(LVector3::right());
-  FourVector3s c = v1.cross(v2);
+  ClockObject *clock = ClockObject::get_global_clock();
 
-  std::cout << c << "\n";
+  constexpr int num_vecs = 1000000;
+  constexpr int num_groups = num_vecs / SIMD_NATIVE_WIDTH;
+  SIMDNativeVector3 *vecs = new SIMDNativeVector3[num_groups];
+  for (int i = 0; i < num_groups; ++i) {
+    vecs[i].load(LVector3::up());
+  }
+  SIMDNativeVector3 *vec2 = new SIMDNativeVector3[num_groups];
+  for (int i = 0; i < num_groups; ++i) {
+    vec2[i].load(LVector3::down());
+  }
+  SIMD_NATIVE_ALIGN float dots[num_vecs];
+
+  double vstart = clock->get_real_time();
+
+  SIMDNativeFloat *vdots = reinterpret_cast<SIMDNativeFloat *>(dots);
+  for (int i = 0; i < num_groups; ++i) {
+    (*vdots) = vecs[i].dot(vec2[i]);
+    vdots++;
+  }
+  double vend = clock->get_real_time();
+
+  std::cerr << vend - vstart << "\n";
+
+  std::cerr << dots[5] << "\n";
+
+  //vstart = clock->get_real_time();
+  //for (int i = 0; i < num_vecs; ++i) {
+  //  dots[i] = vecs[i].dot(vec2[i]);
+ // }
+  //vend = clock->get_real_time();
+
+  //std::cerr << vend - vstart << "\n";
 
   return 0;
 }

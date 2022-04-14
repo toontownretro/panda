@@ -12,6 +12,95 @@
  */
 
 /**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask::
+EightFloatsMask(PN_vec8f_mask &&mask) :
+  _mask(std::move(mask))
+{
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE void EightFloatsMask::
+operator = (PN_vec8f_mask &&mask) {
+  _mask = std::move(mask);
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask EightFloatsMask::
+operator & (const EightFloatsMask &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mask & other._mask;
+#else
+  return _mm256_and_ps(_mask, other._mask);
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask EightFloatsMask::
+operator | (const EightFloatsMask &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mask | other._mask;
+#else
+  return _mm256_or_ps(_mask, other._mask);
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask EightFloatsMask::
+operator ^ (const EightFloatsMask &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mask ^ other._mask;
+#else
+  return _mm256_xor_ps(_mask, other._mask);
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask EightFloatsMask::
+operator ~ () const {
+#ifdef HAVE_MASK_REGISTERS
+  return ~_mask;
+#else
+  return _mm256_xor_ps(EightFloats::_negative_one._data, _mask);
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE bool EightFloatsMask::
+is_all_on() const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mask == 0xF;
+#else
+  return _mm256_movemask_ps(_mask) == 0xF;
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE bool EightFloatsMask::
+is_all_off() const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mask == 0;
+#else
+  return _mm256_movemask_ps(_mask) == 0;
+#endif
+}
+
+/**
  * Fills all components of the float vector/SIMD register with a single
  * float value.
  */
@@ -85,10 +174,10 @@ EightFloats(EightFloats &&other) :
  */
 ALWAYS_INLINE void EightFloats::
 load() {
-#ifndef __GNUC__
-  _data = _mm256_load_ps(_data.m256_f32);
-#else
+#if defined(__clang__) || defined(__GNUC__)
   _data = _mm256_load_ps(reinterpret_cast<const float *>(&_data));
+#else
+  _data = _mm256_load_ps(_data.m256_f32);
 #endif
 
 }
@@ -177,6 +266,16 @@ operator & (const EightFloats &other) const {
 }
 
 /**
+ * Shorthand for blend_zero().
+ *
+ * Does a masked blend with 0 on AVX-512, an actual AND otherwise.
+ */
+ALWAYS_INLINE EightFloats EightFloats::
+operator & (const EightFloatsMask &mask) const {
+  return blend_zero(mask);
+}
+
+/**
  *
  */
 ALWAYS_INLINE EightFloats EightFloats::
@@ -259,6 +358,14 @@ operator ^= (const EightFloats &other) {
 /**
  *
  */
+ALWAYS_INLINE const PN_vec8f &EightFloats::
+operator * () const {
+  return _data;
+}
+
+/**
+ *
+ */
 ALWAYS_INLINE void EightFloats::
 operator = (const EightFloats &other) {
   _data = other._data;
@@ -277,7 +384,7 @@ operator = (EightFloats &&other) {
  */
 ALWAYS_INLINE float EightFloats::
 operator [] (int n) const {
-#ifdef __GNUC__
+#if defined(__clang__) || defined(__GNUC__)
   return (reinterpret_cast<const float *>(&_data))[n];
 #else
   return _data.m256_f32[n];
@@ -286,7 +393,7 @@ operator [] (int n) const {
 
 ALWAYS_INLINE float &EightFloats::
 operator [] (int n) {
-#ifdef __GNUC__
+#if defined(__clang__) || defined(__GNUC__)
   return (reinterpret_cast<float *>(&_data))[n];
 #else
   return _data.m256_f32[n];
@@ -296,49 +403,97 @@ operator [] (int n) {
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE float *EightFloats::
+modify_data() {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<float *>(&_data);
+#else
+  return _data.m256_f32;
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE const float *EightFloats::
+get_data() const {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<const float *>(&_data);
+#else
+  return _data.m256_f32;
+#endif
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator > (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GT_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_GT_OQ);
+#endif
 }
 
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator >= (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GE_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_GE_OQ);
+#endif
 }
 
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator < (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LT_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_LT_OQ);
+#endif
 }
 
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator <= (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LE_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_LE_OQ);
+#endif
 }
 
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator == (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_EQ_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_EQ_OQ);
+#endif
 }
 
 /**
  *
  */
-ALWAYS_INLINE EightFloats EightFloats::
+ALWAYS_INLINE EightFloatsMask EightFloats::
 operator != (const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_NEQ_OQ);
+#else
   return _mm256_cmp_ps(_data, other._data, _CMP_NEQ_OQ);
+#endif
 }
 
 /**
@@ -346,7 +501,11 @@ operator != (const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_zero() const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, _zero._data, _CMP_EQ_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, _zero._data, _CMP_EQ_OQ)) != 0;
+#endif
 }
 
 /**
@@ -362,7 +521,11 @@ is_any_negative() const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_greater(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GT_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_GT_OQ)) != 0;
+#endif
 }
 
 /**
@@ -370,7 +533,11 @@ is_any_greater(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_greater_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GE_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_GE_OQ)) != 0;
+#endif
 }
 
 /**
@@ -378,7 +545,11 @@ is_any_greater_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_less(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LT_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_LT_OQ)) != 0;
+#endif
 }
 
 /**
@@ -386,7 +557,11 @@ is_any_less(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_less_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LE_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_LE_OQ)) != 0;
+#endif
 }
 
 /**
@@ -394,7 +569,11 @@ is_any_less_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_EQ_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_EQ_OQ)) != 0;
+#endif
 }
 
 /**
@@ -402,7 +581,11 @@ is_any_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_any_not_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_NEQ_OQ) != 0;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_NEQ_OQ)) != 0;
+#endif
 }
 
 /**
@@ -410,7 +593,11 @@ is_any_not_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_zero() const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, _zero._data, _CMP_EQ_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_zero._data, _data, _CMP_EQ_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -426,7 +613,11 @@ is_all_negative() const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_greater(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GT_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_GT_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -434,7 +625,11 @@ is_all_greater(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_greater_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_GE_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_GE_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -442,7 +637,11 @@ is_all_greater_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_less(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LT_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_LT_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -450,7 +649,11 @@ is_all_less(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_less_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_LE_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_LE_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -458,7 +661,11 @@ is_all_less_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_EQ_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_EQ_OQ)) == 0xFF;
+#endif
 }
 
 /**
@@ -466,7 +673,62 @@ is_all_equal(const EightFloats &other) const {
  */
 ALWAYS_INLINE bool EightFloats::
 is_all_not_equal(const EightFloats &other) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_cmp_ps_mask(_data, other._data, _CMP_NEQ_OQ) == 0xFF;
+#else
   return _mm256_movemask_ps(_mm256_cmp_ps(_data, other._data, _CMP_NEQ_OQ)) == 0xFF;
+#endif
+}
+
+/**
+ * Selects from other where the bit in mask is not set, and from this
+ * vector where the bit is set.
+ *
+ * Also see blend_zero().
+ */
+ALWAYS_INLINE EightFloats EightFloats::
+blend(const EightFloats &other, const EightFloatsMask &mask) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_mask_blend_ps(mask._mask, other._data, _data);
+#else
+  return _mm256_blendv_ps(other._data, _data, mask._mask);
+#endif
+}
+
+/**
+ * Selects 0 where the bit in mask is not set, and the current value where the
+ * bit is set.
+ *
+ * Faster than blend(0.0f, mask) on non-AVX512 hardware.
+ */
+ALWAYS_INLINE EightFloats EightFloats::
+blend_zero(const EightFloatsMask &mask) const {
+#ifdef HAVE_MASK_REGISTERS
+  return _mm256_mask_blend_ps(mask._mask, _zero._data, _data);
+#else
+  return _mm256_and_ps(_data, mask._mask);
+#endif
+}
+
+/**
+ * Multiplies m1 with m2 and returns the result added onto this vector.
+ *
+ * Implemented as fused-multiply-add with AVX.
+ */
+ALWAYS_INLINE EightFloats EightFloats::
+madd(const EightFloats &m1, const EightFloats &m2) const {
+  return _mm256_fmadd_ps(m1._data, m2._data, _data);
+}
+
+/**
+ * Multiplies m1 with m2 and returns the result subtracted from this
+ * vector.
+ *
+ * Implemented as fused-multiply-subtract with AVX.
+ */
+ALWAYS_INLINE EightFloats EightFloats::
+msub(const EightFloats &m1, const EightFloats &m2) const {
+  return _mm256_fmsub_ps(m1._data, m2._data, _data);
 }
 
 /**
@@ -611,4 +873,69 @@ simd_rsqrt(const EightFloats &val) {
 ALWAYS_INLINE EightFloats
 simd_recip(const EightFloats &val) {
   return _mm256_rcp_ps(val._data);
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE void
+simd_transpose(EightFloats &a, EightFloats &b, EightFloats &c, EightFloats &d) {
+  //_MM_TRANSPOSE8_PS(a._data, b._data, c._data, d._data);
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightVector3s::
+EightVector3s(const EightFloats &x, const EightFloats &y, const EightFloats &z) :
+  SIMDVector3<EightFloats, EightVector3s>(x, y, z)
+{
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightVector3s::
+EightVector3s(const LVecBase3f *vectors) {
+  load(vectors);
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE EightVector3s::
+EightVector3s(const LVecBase3f &vec) {
+  load(vec);
+}
+
+/**
+ * WARNING: Not fast at all.  Try to have the memory already laid out in
+ * SOA format.
+ */
+ALWAYS_INLINE void EightVector3s::
+load(const LVecBase3f *v) {
+  FourFloats v0, v1, v2, v3, v4, v5, v6, v7;
+  v0.load_unaligned(v[0].get_data());
+  v1.load_unaligned(v[1].get_data());
+  v2.load_unaligned(v[2].get_data());
+  v3.load_unaligned(v[3].get_data());
+  v4.load_unaligned(v[4].get_data());
+  v5.load_unaligned(v[5].get_data());
+  v6.load_unaligned(v[6].get_data());
+  v7.load_unaligned(v[7].get_data());
+  simd_transpose(v0, v1, v2, v3);
+  simd_transpose(v4, v5, v6, v7);
+  _v[0] = _mm256_set_m128(*v0, *v4);
+  _v[1] = _mm256_set_m128(*v1, *v5);
+  _v[2] = _mm256_set_m128(*v2, *v6);
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE void EightVector3s::
+load(const LVecBase3f &fill) {
+  _v[0].load(fill[0]);
+  _v[1].load(fill[1]);
+  _v[2].load(fill[2]);
 }

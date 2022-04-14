@@ -293,7 +293,7 @@ operator ^ (const FourFloats &other) const {
  */
 ALWAYS_INLINE FourFloats FourFloats::
 operator - () const {
-  return _mm_sub_ps(_mm_setzero_ps(), _data);
+  return _mm_sub_ps(_zero._data, _data);
 }
 
 /**
@@ -915,6 +915,7 @@ ALWAYS_INLINE FourVector3s::
 FourVector3s(const LVecBase3f &a, const LVecBase3f &b, const LVecBase3f &c, const LVecBase3f &d) {
   load(a, b, c, d);
 }
+
 /**
  *
  */
@@ -924,7 +925,8 @@ FourVector3s(const LVecBase3f &vec) {
 }
 
 /**
- *
+ * WARNING: It's more optimal for the memory to already be laid out
+ * in SIMD vector format.
  */
 ALWAYS_INLINE void FourVector3s::
 load(const LVecBase3f *vectors) {
@@ -943,8 +945,10 @@ load(const LVecBase3f *vectors) {
   // z z z z
   simd_transpose(_v[0], _v[1], _v[2], v3);
 }
+
 /**
- *
+ * WARNING: It's more optimal for the memory to already be laid out
+ * in SIMD vector format.
  */
 ALWAYS_INLINE void FourVector3s::
 load(const LVecBase3f &a, const LVecBase3f &b, const LVecBase3f &c, const LVecBase3f &d) {
