@@ -5,7 +5,7 @@
   #define TARGET mathutil
   #define LOCAL_LIBS \
     linmath putil event express
-  #define USE_PACKAGES fftw
+  #define USE_PACKAGES fftw sleef
   #define UNIX_SYS_LIBS m
 
   #define BUILDING_DLL BUILDING_PANDA_MATHUTIL

@@ -11,6 +11,8 @@
  * @date 2022-04-13
  */
 
+#include "pandabase.h"
+
 // SSE2 base
 #include <emmintrin.h>
 
@@ -23,6 +25,9 @@
 #endif
 
 #ifdef __SSE4_1__
+#ifndef HAVE_BLEND
+#define HAVE_BLEND 1
+#endif
 #include <smmintrin.h>
 #endif
 
@@ -30,208 +35,650 @@
 #include <nmmintrin.h>
 #endif
 
-#ifdef CPPPARSER
-typedef int __m128;
-typedef int __m128d;
-typedef int __m128i;
-typedef int __mmask8;
+#if defined(__FMA__) || defined(__AVX2__)
+#ifdef HAVE_FMA
+#define HAVE_FMA 1
+#endif
+#include <immintrin.h> // Included for 128-bit FMA intrinsics.
 #endif
 
-#if defined(__AVX512F__) && defined(__AVX512VL__)
-// With AVX-512, we can compare directly into a mask.
-#include <zmmintrin.h>
-#ifndef HAVE_MASK_REGISTERS
-#define HAVE_MASK_REGISTERS 1
+#ifdef HAVE_SLEEF
+
+#include <sleef.h>
+
+#if defined(__AVX2__)
+#ifndef SLEEF_AVX2_128
+#define SLEEF_AVX2_128 1
 #endif
-typedef __mmask8 PN_vec4f_mask;
-typedef __mmask8 PN_vec2d_mask;
-typedef __mmask8 PN_vec4i_mask;
-#else
-typedef __m128 PN_vec4f_mask;
-typedef __m128d PN_vec2d_mask;
-typedef __m128i PN_vec4i_mask;
+
+#elif defined(__SSE4_1__) || defined(__SSE4_2__)
+#ifndef SLEEF_SSE4
+#define SLEEF_SSE4 1
+#endif
+
+#endif
+
+#endif // HAVE_SLEEF
+
+#ifdef CPPPARSER
+typedef int __m128;
+typedef int __m128i;
 #endif
 
 typedef __m128 PN_vec4f;
-typedef __m128d PN_vec2d;
 typedef __m128i PN_vec4i;
 
-/**
- * Returned from comparisons between two FourFloats.
- *
- * With AVX-512, this is an actual mask in a mask register with a bit set
- * for each column that evaluated true.
- *
- * Without AVX-512, this is a vector storing ~0 for true, and 0 for false,
- * in each column.
- */
-class FourFloatsMask {
-PUBLISHED:
-  FourFloatsMask() = delete;
-  FourFloatsMask(const PN_vec4f_mask &mask) = delete;
-  void operator = (const PN_vec4f_mask &mask) = delete;
+///////////////////////////////////////////////////////////////////////////////
+// Memory load/store operations.
+///////////////////////////////////////////////////////////////////////////////
 
-  ALWAYS_INLINE FourFloatsMask(PN_vec4f_mask &&mask);
-  void operator = (PN_vec4f_mask &&mask);
+ALWAYS_INLINE PN_vec4f &
+simd_fill(PN_vec4f &vec, float val) {
+  vec = _mm_set1_ps(val);
+  return vec;
+}
 
-  ALWAYS_INLINE FourFloatsMask operator & (const FourFloatsMask &other) const;
-  ALWAYS_INLINE FourFloatsMask operator | (const FourFloatsMask &other) const;
-  ALWAYS_INLINE FourFloatsMask operator ^ (const FourFloatsMask &other) const;
-  ALWAYS_INLINE FourFloatsMask operator ~ () const;
+ALWAYS_INLINE PN_vec4i &
+simd_fill(PN_vec4i &vec, int val) {
+  vec = _mm_set1_epi32(val);
+  return vec;
+}
 
-  ALWAYS_INLINE bool is_all_on() const;
-  ALWAYS_INLINE bool is_all_off() const;
+ALWAYS_INLINE PN_vec4f &
+simd_set(PN_vec4f &vec, float a, float b, float c, float d) {
+  vec = _mm_set_ps(a, b, c, d);
+  return vec;
+}
 
-public:
-  PN_vec4f_mask _mask;
-};
+ALWAYS_INLINE PN_vec4i &
+simd_set(PN_vec4i &vec, int a, int b, int c, int d) {
+  vec = _mm_set_epi32(a, b, c, d);
+  return vec;
+}
 
-/**
- * Four 32-bit floats occupying a single M128 SIMD register.
- *
- * SSE
- */
-class EXPCL_PANDA_MATHUTIL ALIGN_16BYTE FourFloats {
-PUBLISHED:
-  static const int width = 4;
+ALWAYS_INLINE PN_vec4f &
+simd_load_aligned(PN_vec4f &vec, const float *data) {
+  vec = _mm_load_ps(data);
+  return vec;
+}
 
-  typedef FourFloatsMask MaskType;
+ALWAYS_INLINE PN_vec4i &
+simd_load_aligned(PN_vec4i &vec, const int *data) {
+  //vec = _mm_load_ps((const float *)data);
+  //return vec;
+}
 
-  ALWAYS_INLINE FourFloats() = default;
-  ALWAYS_INLINE FourFloats(float fill);
-  ALWAYS_INLINE FourFloats(float a, float b, float c, float d);
-  ALWAYS_INLINE FourFloats(const float *data, bool aligned);
-  ALWAYS_INLINE FourFloats(const PN_vec4f &data);
-  ALWAYS_INLINE FourFloats(PN_vec4f &&data);
-  ALWAYS_INLINE FourFloats(const FourFloats &other);
-  ALWAYS_INLINE FourFloats(FourFloats &&other);
+ALWAYS_INLINE PN_vec4f &
+simd_load_unaligned(PN_vec4f &vec, const float *data) {
+  vec = _mm_loadu_ps(data);
+  return vec;
+}
 
-  ALWAYS_INLINE void load();
-  ALWAYS_INLINE void load(float fill);
-  ALWAYS_INLINE void load(float a, float b, float c, float d);
-  ALWAYS_INLINE void load(const float *data);
-  ALWAYS_INLINE void load_unaligned(const float *data);
+ALWAYS_INLINE PN_vec4i &
+simd_load_unaligned4iv(PN_vec4i &vec, const int *data) {
+  //vec = _mm_loadu_epi32(data);
+  //return vec;
+}
 
-  ALWAYS_INLINE FourFloats operator * (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator / (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator - (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator + (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator & (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator & (const FourFloatsMask &mask) const;
-  ALWAYS_INLINE FourFloats operator | (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator ^ (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats operator - () const;
+///////////////////////////////////////////////////////////////////////////////
 
-  ALWAYS_INLINE FourFloatsMask operator > (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloatsMask operator >= (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloatsMask operator < (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloatsMask operator <= (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloatsMask operator == (const FourFloats &other) const;
-  ALWAYS_INLINE FourFloatsMask operator != (const FourFloats &other) const;
+///////////////////////////////////////////////////////////////////////////////
+// Arithetic.
+///////////////////////////////////////////////////////////////////////////////
 
-  ALWAYS_INLINE void operator *= (const FourFloats &other);
-  ALWAYS_INLINE void operator /= (const FourFloats &other);
-  ALWAYS_INLINE void operator -= (const FourFloats &other);
-  ALWAYS_INLINE void operator += (const FourFloats &other);
-  ALWAYS_INLINE void operator &= (const FourFloats &other);
-  ALWAYS_INLINE void operator |= (const FourFloats &other);
-  ALWAYS_INLINE void operator ^= (const FourFloats &other);
+ALWAYS_INLINE PN_vec4f
+simd_add(PN_vec4f a, PN_vec4f b) {
+  return _mm_add_ps(a, b);
+}
 
-  ALWAYS_INLINE const PN_vec4f &operator * () const;
+ALWAYS_INLINE PN_vec4i
+simd_add(PN_vec4i a, PN_vec4i b) {
+  return _mm_add_epi32(a, b);
+}
 
-  ALWAYS_INLINE void operator = (const FourFloats &other);
-  ALWAYS_INLINE void operator = (FourFloats &&other);
+ALWAYS_INLINE PN_vec4f
+simd_sub(PN_vec4f a, PN_vec4f b) {
+  return _mm_sub_ps(a, b);
+}
 
-  ALWAYS_INLINE float operator [] (int n) const;
-  ALWAYS_INLINE float &operator [] (int n);
-  ALWAYS_INLINE float *modify_data();
-  ALWAYS_INLINE const float *get_data() const;
+ALWAYS_INLINE PN_vec4i
+simd_sub(PN_vec4i a, PN_vec4i b) {
+  return _mm_sub_epi32(a, b);
+}
 
-  ALWAYS_INLINE bool is_any_zero() const;
-  ALWAYS_INLINE bool is_any_negative() const;
-  ALWAYS_INLINE bool is_any_greater(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_any_greater_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_any_less(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_any_less_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_any_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_any_not_equal(const FourFloats &other) const;
+ALWAYS_INLINE PN_vec4f
+simd_mul(PN_vec4f a, PN_vec4f b) {
+  return _mm_mul_ps(a, b);
+}
 
-  ALWAYS_INLINE bool is_all_zero() const;
-  ALWAYS_INLINE bool is_all_negative() const;
-  ALWAYS_INLINE bool is_all_greater(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_all_greater_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_all_less(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_all_less_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_all_equal(const FourFloats &other) const;
-  ALWAYS_INLINE bool is_all_not_equal(const FourFloats &other) const;
+ALWAYS_INLINE PN_vec4i
+simd_mul(PN_vec4i a, PN_vec4i b) {
+  return _mm_mul_epi32(a, b);
+}
 
-  ALWAYS_INLINE FourFloats blend(const FourFloats &other, const FourFloatsMask &mask) const;
-  ALWAYS_INLINE FourFloats blend_zero(const FourFloatsMask &mask) const;
+ALWAYS_INLINE PN_vec4f
+simd_div(PN_vec4f a, PN_vec4f b) {
+  return _mm_div_ps(a, b);
+}
 
-  ALWAYS_INLINE FourFloats madd(const FourFloats &m1, const FourFloats &m2) const;
-  ALWAYS_INLINE FourFloats msub(const FourFloats &m1, const FourFloats &m2) const;
+ALWAYS_INLINE PN_vec4i
+simd_div(PN_vec4i a, PN_vec4i b) {
+  return a;
+  //return _mm_div_epi32(a, b);
+}
 
-  ALWAYS_INLINE FourFloats min(const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats max(const FourFloats &other) const;
-  ALWAYS_INLINE FourFloats sqrt() const;
-  ALWAYS_INLINE FourFloats rsqrt() const;
-  ALWAYS_INLINE FourFloats recip() const;
+ALWAYS_INLINE PN_vec4f
+simd_madd(PN_vec4f a, PN_vec4f b, PN_vec4f c) {
+#ifdef HAVE_FMA
+  return _mm_fmadd_ps(a, b, c);
+#else
+  return simd_add(simd_mul(a, b), c);
+#endif
+}
 
-  ALWAYS_INLINE static const FourFloats &zero();
-  ALWAYS_INLINE static const FourFloats &one();
-  ALWAYS_INLINE static const FourFloats &negative_one();
-  ALWAYS_INLINE static const FourFloats &two();
-  ALWAYS_INLINE static const FourFloats &three();
-  ALWAYS_INLINE static const FourFloats &four();
-  ALWAYS_INLINE static const FourFloats &point_five();
-  ALWAYS_INLINE static const FourFloats &flt_epsilon();
+ALWAYS_INLINE PN_vec4i
+simd_madd(PN_vec4i a, PN_vec4i b, PN_vec4i c) {
+  return simd_add(simd_mul(a, b), c);
+}
 
-public:
-  PN_vec4f _data;
+ALWAYS_INLINE PN_vec4f
+simd_msub(PN_vec4f a, PN_vec4f b, PN_vec4f c) {
+#ifdef HAVE_FMA
+  return _mm_fmsub_ps(a, b, c);
+#else
+  return simd_sub(c, simd_mul(a, b));
+#endif
+}
 
-  static FourFloats _zero;
-  static FourFloats _one;
-  static FourFloats _negative_one;
-  static FourFloats _two;
-  static FourFloats _three;
-  static FourFloats _four;
-  static FourFloats _point_five;
-  static FourFloats _flt_epsilon;
-};
+ALWAYS_INLINE PN_vec4i
+simd_msub(PN_vec4i a, PN_vec4i b, PN_vec4i c) {
+  return simd_sub(c, simd_mul(a, b));
+}
 
-ALWAYS_INLINE FourFloats simd_min(const FourFloats &a, const FourFloats &b);
-ALWAYS_INLINE FourFloats simd_max(const FourFloats &a, const FourFloats &b);
-ALWAYS_INLINE FourFloats simd_sqrt(const FourFloats &val);
-ALWAYS_INLINE FourFloats simd_rsqrt(const FourFloats &val);
-ALWAYS_INLINE FourFloats simd_recip(const FourFloats &val);
-ALWAYS_INLINE void simd_transpose(FourFloats &a, FourFloats &b, FourFloats &c, FourFloats &d);
+ALWAYS_INLINE PN_vec4f
+simd_neg(PN_vec4f a) {
+  return simd_sub(_mm_setzero_ps(), a);
+}
 
-/**
- *
- */
-class ALIGN_16BYTE FourVector3s : public SIMDVector3<FourFloats, FourVector3s> {
-PUBLISHED:
-  ALWAYS_INLINE FourVector3s() = default;
-  ALWAYS_INLINE FourVector3s(const FourFloats &x, const FourFloats &y, const FourFloats &z);
-  ALWAYS_INLINE FourVector3s(const LVecBase3f *vectors);
-  ALWAYS_INLINE FourVector3s(const LVecBase3f &a, const LVecBase3f &b, const LVecBase3f &c, const LVecBase3f &d);
-  ALWAYS_INLINE FourVector3s(const LVecBase3f &vec);
+ALWAYS_INLINE PN_vec4i
+simd_neg(PN_vec4i a) {
+  return simd_sub(_mm_setzero_si128(), a);
+}
 
-  ALWAYS_INLINE void load(const LVecBase3f *vectors);
-  ALWAYS_INLINE void load(const LVecBase3f &a, const LVecBase3f &b, const LVecBase3f &c, const LVecBase3f &d);
-  ALWAYS_INLINE void load(const LVecBase3f &fill);
-};
+///////////////////////////////////////////////////////////////////////////////
 
-/**
- *
- */
-class ALIGN_16BYTE FourQuaternions : public SIMDQuaternion<FourFloats> {
-PUBLISHED:
-};
+///////////////////////////////////////////////////////////////////////////////
+// Logical operations.
+///////////////////////////////////////////////////////////////////////////////
 
-EXPCL_PANDA_MATHUTIL std::ostream &operator << (std::ostream &out, const FourFloats &ff);
-EXPCL_PANDA_MATHUTIL std::ostream &operator << (std::ostream &out, const FourVector3s &ff);
-//EXPCL_PANDA_MATHUTIL std::ostream &operator << (std::ostream &out, const FourQuaternions &ff);
+ALWAYS_INLINE PN_vec4f
+simd_and(PN_vec4f a, PN_vec4f b) {
+  return _mm_and_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_and(PN_vec4i a, PN_vec4i b) {
+  return _mm_and_si128(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_or(PN_vec4f a, PN_vec4f b) {
+  return _mm_or_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_or(PN_vec4i a, PN_vec4i b) {
+  return _mm_or_si128(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_xor(PN_vec4f a, PN_vec4f b) {
+  return _mm_xor_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_xor(PN_vec4i a, PN_vec4i b) {
+  return _mm_xor_si128(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_not(PN_vec4f a) {
+  PN_vec4f b = { };
+  PN_vec4f mask = _mm_cmpeq_ps(b, b);
+  return _mm_xor_ps(a, mask);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_not(PN_vec4i a) {
+  PN_vec4i b = { };
+  PN_vec4i mask = _mm_cmpeq_epi32(b, b);
+  return _mm_xor_si128(a, mask);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_andnot(PN_vec4f a, PN_vec4f b) {
+  return _mm_andnot_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_andnot(PN_vec4i a, PN_vec4i b) {
+  return _mm_andnot_si128(a, b);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// Comparison operations.
+///////////////////////////////////////////////////////////////////////////////
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_greater(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmpgt_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_greater_equal(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmpge_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_less(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmplt_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_less_equal(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmple_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_equal(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmpeq_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cmp_not_equal(PN_vec4f a, PN_vec4f b) {
+  return _mm_cmpneq_ps(a, b);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Misc operations.
+///////////////////////////////////////////////////////////////////////////////
+
+ALWAYS_INLINE PN_vec4f
+simd_min(PN_vec4f a, PN_vec4f b) {
+  return _mm_min_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_min(PN_vec4i a, PN_vec4i b) {
+  return _mm_min_epi32(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_max(PN_vec4f a, PN_vec4f b) {
+  return _mm_max_ps(a, b);
+}
+
+ALWAYS_INLINE PN_vec4i
+simd_max(PN_vec4i a, PN_vec4i b) {
+  return _mm_max_epi32(a, b);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_sqrt(PN_vec4f a) {
+  return _mm_sqrt_ps(a);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_rsqrt(PN_vec4f a) {
+  return _mm_rsqrt_ps(a);
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_recip(PN_vec4f a) {
+  return _mm_rcp_ps(a);
+}
+
+ALWAYS_INLINE int
+simd_test_sign(PN_vec4f a) {
+  return _mm_movemask_ps(a);
+}
+
+ALWAYS_INLINE bool
+simd_is_any_negative(PN_vec4f a) {
+  return simd_test_sign(a) != 0;
+}
+
+ALWAYS_INLINE bool
+simd_is_all_off(PN_vec4f a) {
+  return simd_test_sign(a) == 0;
+}
+
+ALWAYS_INLINE bool
+simd_is_all_on(PN_vec4f a) {
+  return simd_test_sign(a) == 0xF;
+}
+
+ALWAYS_INLINE bool
+simd_is_any_off(PN_vec4f a) {
+  return simd_test_sign(a) != 0xF;
+}
+
+ALWAYS_INLINE bool
+simd_is_any_on(PN_vec4f a) {
+  return simd_test_sign(a) != 0;
+}
+
+ALWAYS_INLINE bool
+simd_is_any_greater(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_greater(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_any_greater_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_greater_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_any_less(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_less(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_any_less_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_less_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_any_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_any_not_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_any_on(simd_cmp_not_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_greater(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_greater(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_greater_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_greater_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_less(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_less(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_less_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_less_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_equal(a, b));
+}
+
+ALWAYS_INLINE bool
+simd_is_all_not_equal(PN_vec4f a, PN_vec4f b) {
+  return simd_is_all_on(simd_cmp_not_equal(a, b));
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_blend(PN_vec4f mask, PN_vec4f a, PN_vec4f b) {
+#ifdef HAVE_BLEND
+  return _mm_blendv_ps(a, b, mask);
+#else
+  return simd_or(simd_andnot(a, mask), simd_and(b, mask));
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_blend_zero(PN_vec4f mask, PN_vec4f a) {
+  return simd_and(a, mask);
+}
+
+ALWAYS_INLINE float *
+simd_data(PN_vec4f &a) {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<float *>(&a);
+#else
+  return a.m128_f32;
+#endif
+}
+
+ALWAYS_INLINE int *
+simd_data(PN_vec4i &a) {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<int *>(&a);
+#else
+  return a.m128i_i32;
+#endif
+}
+
+ALWAYS_INLINE const float *
+simd_data(const PN_vec4f &a) {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<const float *>(&a);
+#else
+  return a.m128_f32;
+#endif
+}
+
+ALWAYS_INLINE const int *
+simd_data(const PN_vec4i &a) {
+#if defined(__clang__) || defined(__GNUC__)
+  return reinterpret_cast<const int *>(&a);
+#else
+  return a.m128i_i32;
+#endif
+}
+
+ALWAYS_INLINE float &
+simd_col(PN_vec4f &a, int col) {
+#if defined(__clang__) || defined(__GNUC__)
+  return (reinterpret_cast<float *>(&a)[col]);
+#else
+  return a.m128_f32[col];
+#endif
+}
+
+ALWAYS_INLINE int &
+simd_col(PN_vec4i &a, int col) {
+#if defined(__clang__) || defined(__GNUC__)
+  return (reinterpret_cast<int *>(&a)[col]);
+#else
+  return a.m128i_i32[col];
+#endif
+}
+
+ALWAYS_INLINE const float &
+simd_col(const PN_vec4f &a, int col) {
+#if defined(__clang__) || defined(__GNUC__)
+  return (reinterpret_cast<const float *>(&a)[col]);
+#else
+  return a.m128_f32[col];
+#endif
+}
+
+ALWAYS_INLINE const int &
+simd_col(const PN_vec4i &a, int col) {
+#if defined(__clang__) || defined(__GNUC__)
+  return (reinterpret_cast<const int *>(&a)[col]);
+#else
+  return a.m128i_i32[col];
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_sin(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_sinf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_sinf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_sinf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = csin(simd_col(a, 0));
+  simd_col(ret, 1) = csin(simd_col(a, 1));
+  simd_col(ret, 2) = csin(simd_col(a, 2));
+  simd_col(ret, 3) = csin(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_cos(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_cosf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_cosf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_cosf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = ccos(simd_col(a, 0));
+  simd_col(ret, 1) = ccos(simd_col(a, 1));
+  simd_col(ret, 2) = ccos(simd_col(a, 2));
+  simd_col(ret, 3) = ccos(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_tan(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_tanf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_tanf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_tanf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = ctan(simd_col(a, 0));
+  simd_col(ret, 1) = ctan(simd_col(a, 1));
+  simd_col(ret, 2) = ctan(simd_col(a, 2));
+  simd_col(ret, 3) = ctan(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_asin(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_asinf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_asinf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_asinf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = casin(simd_col(a, 0));
+  simd_col(ret, 1) = casin(simd_col(a, 1));
+  simd_col(ret, 2) = casin(simd_col(a, 2));
+  simd_col(ret, 3) = casin(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_acos(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_acosf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_acosf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_acosf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = cacos(simd_col(a, 0));
+  simd_col(ret, 1) = cacos(simd_col(a, 1));
+  simd_col(ret, 2) = cacos(simd_col(a, 2));
+  simd_col(ret, 3) = cacos(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_atan(PN_vec4f a) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_atanf4_u35avx2128(a);
+#elif defined(SLEEF_SSE4)
+  return Sleef_atanf4_u35sse4(a);
+#elif defined(HAVE_SLEEF)
+  return Sleef_atanf4_u35sse2(a);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = catan(simd_col(a, 0));
+  simd_col(ret, 1) = catan(simd_col(a, 1));
+  simd_col(ret, 2) = catan(simd_col(a, 2));
+  simd_col(ret, 3) = catan(simd_col(a, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE void
+simd_sincos(PN_vec4f a, PN_vec4f &sin, PN_vec4f &cos) {
+#ifdef SLEEF_AVX2_128
+  Sleef___m128_2 ret = Sleef_sincosf4_u35avx2128(a);
+  sin = ret.x;
+  cos = ret.y;
+#elif defined(SLEEF_SSE4)
+  Sleef___m128_2 ret = Sleef_sincos4f_u35sse4(a);
+  sin = ret.x;
+  cos = ret.y;
+#elif defined(HAVE_SLEEF)
+  Sleef___m128_2 ret = Sleef_sincosf4_u35sse2(a);
+  sin = ret.x;
+  cos = ret.y;
+#else
+  csincos(simd_col(a, 0), &simd_col(sin, 0), &simd_col(cos, 0));
+  csincos(simd_col(a, 1), &simd_col(sin, 1), &simd_col(cos, 1));
+  csincos(simd_col(a, 2), &simd_col(sin, 2), &simd_col(cos, 2));
+  csincos(simd_col(a, 3), &simd_col(sin, 3), &simd_col(cos, 3));
+#endif
+}
+
+ALWAYS_INLINE PN_vec4f
+simd_atan2(PN_vec4f a, PN_vec4f b) {
+#ifdef SLEEF_AVX2_128
+  return Sleef_atan2f4_u35avx2128(a, b);
+#elif defined(SLEEF_SSE4)
+  return Sleef_atan2f4_u35sse4(a, b);
+#elif defined(HAVE_SLEEF)
+  return Sleef_atan2f4_u35sse2(a, b);
+#else
+  PN_vec4f ret;
+  simd_col(ret, 0) = catan2(simd_col(a, 0), simd_col(b, 0));
+  simd_col(ret, 1) = catan2(simd_col(a, 1), simd_col(b, 1));
+  simd_col(ret, 2) = catan2(simd_col(a, 2), simd_col(b, 2));
+  simd_col(ret, 3) = catan2(simd_col(a, 3), simd_col(b, 3));
+  return ret;
+#endif
+}
+
+ALWAYS_INLINE void
+simd_transpose(PN_vec4f &a, PN_vec4f &b, PN_vec4f &c, PN_vec4f &d) {
+  _MM_TRANSPOSE4_PS(a, b, c, d);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+EXPCL_PANDA_MATHUTIL std::ostream &operator << (std::ostream &out, const PN_vec4f &data);
+EXPCL_PANDA_MATHUTIL std::ostream &operator << (std::ostream &out, const PN_vec4i &data);
+
+typedef SIMDVector<__m128, float> SSEFloatVector;
+typedef SIMDVector3<SSEFloatVector> SSEVector3f;
+typedef SIMDQuaternion<SSEFloatVector> SSEQuaternionf;
+//typedef SIMDVector<__m128d, double> SSEDoubleVector;
+//typedef SIMDVector<__m128i, int> SSEIntVector;
 
 #include "mathutil_sse_src.I"
 

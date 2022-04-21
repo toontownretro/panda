@@ -210,7 +210,7 @@ PUBLISHED:
 /**
  *
  */
-class ALIGN_32BYTE EightQuaternions : public SIMDQuaternion<EightFloats> {
+class ALIGN_32BYTE EightQuaternions : public SIMDQuaternion<EightFloats, EightQuaternions> {
 PUBLISHED:
 };
 

@@ -12,52 +12,34 @@
  */
 
 #include "pandabase.h"
+#define HAVE_SLEEF 1
 #include "mathutil_simd.h"
 #include "clockObject.h"
-
-#include <mmintrin.h>
-
-//
 
 /**
  *
  */
 int
 main(int argc, char *argv[]) {
-  ClockObject *clock = ClockObject::get_global_clock();
+  LQuaternionf rot;
+  rot.set_hpr(LVecBase3(90, 0, 0));
+  LQuaternionf rot2;
+  rot2.set_hpr(LVecBase3(20, 0, 0));
 
-  constexpr int num_vecs = 1000000;
-  constexpr int num_groups = num_vecs / SIMD_NATIVE_WIDTH;
-  SIMDNativeVector3 *vecs = new SIMDNativeVector3[num_groups];
-  for (int i = 0; i < num_groups; ++i) {
-    vecs[i].load(LVector3::up());
-  }
-  SIMDNativeVector3 *vec2 = new SIMDNativeVector3[num_groups];
-  for (int i = 0; i < num_groups; ++i) {
-    vec2[i].load(LVector3::down());
-  }
-  SIMD_NATIVE_ALIGN float dots[num_vecs];
+  SIMDQuaternionf q = rot;
+  q.output(std::cerr);
+  SIMDQuaternionf q2 = rot2;
+  q2.output(std::cerr);
 
-  double vstart = clock->get_real_time();
+  SIMDQuaternionf ql = (-q).align(q2).lerp(q2, 0.1f);
+  ql.output(std::cerr);
+  std::cerr << ql.get_lquat(0).get_hpr() << "\n";
+  ql = q.slerp(q2, 0.1f);
+  ql.output(std::cerr);
+  std::cerr << ql.get_lquat(0).get_hpr() << "\n";
 
-  SIMDNativeFloat *vdots = reinterpret_cast<SIMDNativeFloat *>(dots);
-  for (int i = 0; i < num_groups; ++i) {
-    (*vdots) = vecs[i].dot(vec2[i]);
-    vdots++;
-  }
-  double vend = clock->get_real_time();
-
-  std::cerr << vend - vstart << "\n";
-
-  std::cerr << dots[5] << "\n";
-
-  //vstart = clock->get_real_time();
-  //for (int i = 0; i < num_vecs; ++i) {
-  //  dots[i] = vecs[i].dot(vec2[i]);
- // }
-  //vend = clock->get_real_time();
-
-  //std::cerr << vend - vstart << "\n";
+  //SIMDVector3f v = LVector3::up();
+  //v.output(std::cerr);
 
   return 0;
 }
