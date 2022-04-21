@@ -183,29 +183,22 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   } else {
     // Evaluate both at full weight and blend between them.
 
-    AnimEvalData from_data(data, context._num_joints);
+    AnimEvalData from_data(data, context._num_joint_groups);
     from_data._weight = 1.0f;
     from->_channel->calc_pose(context, from_data);
 
-    AnimEvalData to_data(data, context._num_joints);
+    AnimEvalData to_data(data, context._num_joint_groups);
     to_data._weight = 1.0f;
     to->_channel->calc_pose(context, to_data);
 
-    PN_stdfloat e0 = 1.0f - frac;
+    SIMDFloatVector vfrac = frac;
+    SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
-    for (int i = 0; i < context._num_joints; i++) {
-      if (!CheckBit(context._joint_mask, i)) {
-        continue;
-      }
-
-      AnimEvalData::Joint &pose = data._pose[i];
-      AnimEvalData::Joint &from_pose = from_data._pose[i];
-      AnimEvalData::Joint &to_pose = to_data._pose[i];
-
-      pose._position = (from_pose._position * e0) + (to_pose._position * frac);
-      pose._scale = (from_pose._scale * e0) + (to_pose._scale * frac);
-      pose._shear = (from_pose._shear * e0) + (to_pose._shear * frac);
-      LQuaternion::blend(from_pose._rotation, to_pose._rotation, frac, pose._rotation);
+    for (int i = 0; i < context._num_joint_groups; i++) {
+      data._position[i] = (from_data._position[i] * ve0).madd(to_data._position[i], vfrac);
+      data._scale[i] = (from_data._scale[i] * ve0).madd(to_data._scale[i], vfrac);
+      data._shear[i] = (from_data._shear[i] * ve0).madd(to_data._shear[i], vfrac);
+      data._rotation[i] = from_data._rotation[i].align_slerp(to_data._rotation[i], vfrac);
     }
   }
 }

@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "luse.h"
 #include "config_anim.h"
+#include "mathutil_simd.h"
 
 class Character;
 class CharacterJoint;
@@ -46,6 +47,9 @@ public:
 
   // The number of joints in the character.
   int _num_joints;
+  // Number of SIMD joint groups.
+  // simd_align(_num_joints, SIMD_NATIVE_WIDTH)
+  int _num_joint_groups;
 
   // Should AnimChannelTables do inter-frame blending?
   bool _frame_blend;
@@ -80,6 +84,11 @@ public:
   INLINE void copy_pose(const AnimEvalData &other, int num_joints);
   INLINE void steal_pose(AnimEvalData &other, int num_joints);
 
+  SIMDVector3f _position[max_character_joints / SIMDVector3f::num_vectors];
+  SIMDVector3f _scale[max_character_joints / SIMDVector3f::num_vectors];
+  SIMDVector3f _shear[max_character_joints / SIMDVector3f::num_vectors];
+  SIMDQuaternionf _rotation[max_character_joints / SIMDQuaternionf::num_quats];
+
   class Joint {
   public:
     INLINE Joint() :
@@ -93,7 +102,7 @@ public:
   };
 
   // Poses of all joints.
-  Joint _pose[max_character_joints];
+  //Joint _pose[max_character_joints];
 
   PN_stdfloat _weight;
 

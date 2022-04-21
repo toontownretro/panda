@@ -25,8 +25,12 @@ AnimEvalData() :
  *
  */
 INLINE AnimEvalData::
-AnimEvalData(const AnimEvalData &copy, int num_joints) {
-  std::copy(copy._pose, copy._pose + num_joints, _pose);
+AnimEvalData(const AnimEvalData &copy, int num_joint_groups) {
+  std::copy(copy._position, copy._position + num_joint_groups, _position);
+  std::copy(copy._scale, copy._scale + num_joint_groups, _scale);
+  std::copy(copy._shear, copy._shear + num_joint_groups, _shear);
+  std::copy(copy._rotation, copy._rotation + num_joint_groups, _rotation);
+
   _weight = copy._weight;
   _cycle = copy._cycle;
 }
@@ -35,8 +39,12 @@ AnimEvalData(const AnimEvalData &copy, int num_joints) {
  *
  */
 INLINE AnimEvalData::
-AnimEvalData(AnimEvalData &&other, int num_joints) {
-  std::move(other._pose, other._pose + num_joints, _pose);
+AnimEvalData(AnimEvalData &&other, int num_joint_groups) {
+  std::move(other._position, other._position + num_joint_groups, _position);
+  std::move(other._scale, other._scale + num_joint_groups, _scale);
+  std::move(other._shear, other._shear + num_joint_groups, _shear);
+  std::move(other._rotation, other._rotation + num_joint_groups, _rotation);
+
   _weight = std::move(other._weight);
   _cycle = std::move(other._cycle);
 }
@@ -45,8 +53,11 @@ AnimEvalData(AnimEvalData &&other, int num_joints) {
  * Copies the joint poses from the indicated AnimEvalData into this one.
  */
 INLINE void AnimEvalData::
-copy_pose(const AnimEvalData &copy, int num_joints) {
-  std::copy(copy._pose, copy._pose + num_joints, _pose);
+copy_pose(const AnimEvalData &copy, int num_joint_groups) {
+  std::copy(copy._position, copy._position + num_joint_groups, _position);
+  std::copy(copy._scale, copy._scale + num_joint_groups, _scale);
+  std::copy(copy._shear, copy._shear + num_joint_groups, _shear);
+  std::copy(copy._rotation, copy._rotation + num_joint_groups, _rotation);
 }
 
 /**
@@ -54,6 +65,9 @@ copy_pose(const AnimEvalData &copy, int num_joints) {
  * try to access the joint poses on the other AnimEvalData after calling this.
  */
 INLINE void AnimEvalData::
-steal_pose(AnimEvalData &other, int num_joints) {
-  std::move(other._pose, other._pose + num_joints, _pose);
+steal_pose(AnimEvalData &other, int num_joint_groups) {
+  std::move(other._position, other._position + num_joint_groups, _position);
+  std::move(other._scale, other._scale + num_joint_groups, _scale);
+  std::move(other._shear, other._shear + num_joint_groups, _shear);
+  std::move(other._rotation, other._rotation + num_joint_groups, _rotation);
 }

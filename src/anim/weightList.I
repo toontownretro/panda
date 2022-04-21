@@ -73,3 +73,11 @@ INLINE PN_stdfloat WeightList::
 get_weight(size_t n) const {
   return _weights[n];
 }
+
+/**
+ *
+ */
+INLINE PN_stdfloat *WeightList::
+get_weights() {
+  return _weights.data();
+}

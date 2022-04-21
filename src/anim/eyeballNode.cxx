@@ -192,10 +192,6 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   net_trans = net_trans->compose(_eye_offset);
 
   LPoint3 origin = net_trans->get_pos();
-  LQuaternion quat = net_trans->get_quat();
-  LVector3 forward = quat.get_forward();
-  LVector3 up = quat.get_up();
-  LVector3 right = quat.get_right();
 
   // Look directly at target.
   LPoint3 view_target;

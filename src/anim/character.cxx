@@ -23,6 +23,7 @@
 #include "randomizer.h"
 #include "animChannelTable.h"
 #include "animEvalContext.h"
+#include "mathutil_simd.h"
 
 TypeHandle Character::_type_handle;
 
@@ -157,19 +158,21 @@ bind_anim(AnimChannelTable *anim) {
   vector_int &joint_map = (*iit).second._joint_map;
   vector_int &slider_map = (*iit).second._slider_map;
 
-  joint_map.resize(get_num_joints());
+  int num_anim_joints = (int)anim->get_joint_names().size();
+  joint_map.resize(num_anim_joints);
   slider_map.resize(get_num_sliders());
 
-  for (int joint = 0; joint < get_num_joints(); joint++) {
-    const std::string &joint_name = get_joint_name(joint);
-    int anim_joint = anim->find_joint_channel(joint_name);
-    if (anim_joint == -1) {
-      // This character joint doesn't appear in the animation.  We can deal
+  for (int anim_joint = 0; anim_joint < num_anim_joints; anim_joint++) {
+    const std::string &anim_joint_name = anim->get_joint_names()[anim_joint];
+    int cjoint = find_joint(anim_joint_name);
+    if (cjoint == -1) {
+      // The character doesn't have this joint from the animation.  We can deal
       // with it, but give a warning about it, because this might be a mistake.
       anim_cat.warning()
-        << "Character joint " << joint_name << " does not appear in animation " << anim->get_name() << "\n";
+        << "Joint " << anim_joint_name << " in animation " << anim->get_name()
+        << " does not exist on Character " << get_name() << "\n";
     }
-    joint_map[joint] = anim_joint;
+    joint_map[anim_joint] = cjoint;
   }
   for (int slider = 0; slider < get_num_sliders(); slider++) {
     const std::string &slider_name = get_slider_name(slider);
@@ -304,6 +307,9 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   ctx._character = this;
   ctx._joints = _joints.data();
   ctx._num_joints = (int)_joints.size();
+  // Set up number of SIMD joint groups.  Pad to ensure it is an exact multiple
+  // of the SIMD vector width.
+  ctx._num_joint_groups = simd_align_value(ctx._num_joints, SIMDFloatVector::num_columns) / SIMDFloatVector::num_columns;
   ctx._frame_blend = cdata->_frame_blend_flag;
   ctx._time = now;
 
@@ -329,15 +335,16 @@ do_update(double now, CData *cdata, Thread *current_thread) {
     // Cache the bind pose on the character and then just copy the poses
     // from here on out.
     for (size_t i = 0; i < _joints.size(); i++) {
-      AnimEvalData::Joint &pose = _bind_pose._pose[i];
-      pose._position = LVecBase4(_joints[i]._default_pos, 0.0f);
-      pose._scale = LVecBase4(_joints[i]._default_scale, 0.0f);
-      pose._shear = LVecBase4(_joints[i]._default_shear, 0.0f);
-      pose._rotation = _joints[i]._default_quat;
+      int group = i / SIMDFloatVector::num_columns;
+      int sub = i % SIMDFloatVector::num_columns;
+      _bind_pose._position[group].set_lvec(sub, _joints[i]._default_pos);
+      _bind_pose._scale[group].set_lvec(sub, _joints[i]._default_scale);
+      _bind_pose._shear[group].set_lvec(sub, _joints[i]._default_shear);
+      _bind_pose._rotation[group].set_lquat(sub, _joints[i]._default_quat);
     }
     _built_bind_pose = true;
   }
-  data.copy_pose(_bind_pose, _joints.size());
+  data.copy_pose(_bind_pose, ctx._num_joint_groups);
 
   //
   // Evaluate our layers.
@@ -672,7 +679,7 @@ copy_subgraph() const {
 
   copy->_joints = _joints;
   copy->_joint_poses = _joint_poses;
-  copy->_bind_pose.copy_pose(_bind_pose, _joint_poses.size());
+  copy->_bind_pose.copy_pose(_bind_pose, simd_align_value(_joint_poses.size(), SIMDFloatVector::num_columns) / SIMDFloatVector::num_columns);
   copy->_built_bind_pose = _built_bind_pose;
 
   // Don't inherit the vertex transforms.
@@ -730,9 +737,10 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
 
       if (!joint._has_forced_value) {
         // Use the transform calculated during the channel evaluation.
-        const AnimEvalData::Joint &pose = data._pose[i];
-        joint._value = LMatrix4::scale_shear_mat(pose._scale.get_xyz(), pose._shear.get_xyz()) * pose._rotation;
-        joint._value.set_row(3, pose._position.get_xyz());
+        int group = i / SIMDFloatVector::num_columns;
+        int sub = i % SIMDFloatVector::num_columns;
+        joint._value = LMatrix4::scale_shear_mat(data._scale[group].get_lvec(sub), data._shear[group].get_lvec(sub)) * data._rotation[group].get_lquat(sub);
+        joint._value.set_row(3, data._position[group].get_lvec(sub));
 
       } else {
         // Take the local transform from the forced value.
@@ -740,7 +748,6 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       }
 
       // Now compute the net transform.
-      LMatrix4 old_net = joint._net_transform;
       if (joint._parent != -1) {
         joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
       } else {

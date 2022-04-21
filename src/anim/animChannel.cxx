@@ -184,6 +184,39 @@ add_ik_event(const IKEvent &event) {
 }
 
 /**
+ * Returns an array filled with 1s, for each possible joint.
+ */
+static float *
+get_ident_joint_weights() {
+  static float *ident_joint_weights = nullptr;
+  if (ident_joint_weights == nullptr) {
+    ident_joint_weights = (float *)PANDA_MALLOC_ARRAY(sizeof(float) * max_character_joints);
+    for (int i = 0; i < max_character_joints; ++i) {
+      ident_joint_weights[i] = 1.0f;
+    }
+  }
+  return ident_joint_weights;
+}
+
+/**
+ * Returns an array of quaternions that offset the rotation of each joint
+ * in a delta animation.  Every joint but the root is set to the identity
+ * quat.
+ */
+static SIMDQuaternionf *
+get_delta_joint_offsets() {
+  static SIMDQuaternionf *delta_joint_offsets = nullptr;
+  if (delta_joint_offsets == nullptr) {
+    delta_joint_offsets = new SIMDQuaternionf[max_character_joints / SIMDQuaternionf::num_quats];
+    for (int i = 0; i < (max_character_joints / SIMDQuaternionf::num_quats); ++i) {
+      delta_joint_offsets[i] = SIMDQuaternionf(LQuaternionf::ident_quat());
+    }
+    delta_joint_offsets[0].set_lquat(0, root_delta_fixup);
+  }
+  return delta_joint_offsets;
+}
+
+/**
  * Blends between "a" and "b" using the indicated weight, and stores the
  * result in "a".  A weight of 0 returns "a", 1 returns "b".  The joint
  * weights of the channel are taken into account as well.  "b" may be
@@ -201,82 +234,43 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
 
   } else if (_weights == nullptr && weight == 1.0f && !has_flags(F_delta | F_pre_delta)) {
     // If there's no per-joint weight list, the blend has full weight on B, and
-    // we're not an additive channel, just copy B to A.
-    a.steal_pose(b, context._num_joints);
+    // we're not an additive channel, just move B to A.
+    a.steal_pose(b, context._num_joint_groups);
     return;
   }
 
-  int num_joints = context._num_joints;
-  int i;
-  PN_stdfloat s1, s2;
-
-  // Build per-joint weight list.
-  PN_stdfloat *weights = (PN_stdfloat *)alloca(num_joints * sizeof(PN_stdfloat));
-  for (i = 0; i < num_joints; i++) {
-    if (!CheckBit(context._joint_mask, i)) {
-      // Don't care about this joint.
-      weights[i] = 0.0f;
-
-    } else if (_weights != nullptr) {
-      weights[i] = weight * _weights->get_weight(i);
-
-    } else {
-      weights[i] = weight;
-    }
+  SIMDFloatVector vweight = weight;
+  SIMDFloatVector *vweights;
+  if (_weights != nullptr) {
+    vweights = reinterpret_cast<SIMDFloatVector *>(_weights->get_weights());
+  } else {
+    vweights = reinterpret_cast<SIMDFloatVector *>(get_ident_joint_weights());
   }
 
   if (has_flags(F_delta | F_pre_delta)) {
     // Additive blend.
 
-    for (i = 0; i < num_joints; i++) {
-      s2 = weights[i];
-      if (s2 <= 0.0f) {
-        continue;
-      }
+    SIMDQuaternionf *delta_offsets = get_delta_joint_offsets();
 
-      if (has_flags(F_pre_delta)) {
-        // Underlay delta.
+    for (int i = 0; i < context._num_joint_groups; i++) {
+      SIMDFloatVector s2 = vweight * vweights[i];
 
-        nassert_raise("Pre-delta blending is not implemented.");
-
-      } else {
-        // Overlay delta.
-        LQuaternion b_rot;
-        AnimEvalData::Joint &a_pose = a._pose[i];
-        const AnimEvalData::Joint &b_pose = b._pose[i];
-        if (i == 0 && source_delta_anims) {
-          // Apply the stupid rotation fix for the root joint of delta animations.
-          b_rot = b_pose._rotation * root_delta_fixup;
-        } else {
-          b_rot = b_pose._rotation;
-        }
-        a_pose._position += (b_pose._position * s2);
-        quaternion_ma_seq(a_pose._rotation, s2, b_rot, a_pose._rotation);
-        // Not doing scale or shear.
-      }
+      a._position[i] = a._position[i].madd(b._position[i], s2);
+      a._rotation[i] = a._rotation[i].accumulate_scaled_rhs_source(b._rotation[i] * delta_offsets[i], s2);
     }
 
   } else {
+    SIMDFloatVector v1(1.0f);
+
     // Mix blend.
-    LQuaternion q3;
-    for (i = 0; i < num_joints; i++) {
-      s2 = weights[i];
-      if (s2 <= 0.0f) {
-        continue;
-      }
+    for (int i = 0; i < context._num_joint_groups; i++) {
+      SIMDFloatVector s2 = vweight * vweights[i];
+      SIMDFloatVector s1 = v1 - s2;
 
-      s1 = 1.0f - s2;
-
-      AnimEvalData::Joint &a_pose = a._pose[i];
-      const AnimEvalData::Joint &b_pose = b._pose[i];
-
-      a_pose._position = (a_pose._position * s1) + (b_pose._position * s2);
-      a_pose._scale = (a_pose._scale * s1) + (b_pose._scale * s2);
-      a_pose._shear = (a_pose._shear * s1) + (b_pose._shear * s2);
-
-      LQuaternion::slerp(b_pose._rotation, a_pose._rotation, s1, q3);
-      a_pose._rotation = q3;
-
+      a._position[i] = (a._position[i] * s1).madd(b._position[i], s2);
+      a._scale[i] = (a._scale[i] * s1).madd(b._scale[i], s2);
+      a._shear[i] = (a._shear[i] * s1).madd(b._shear[i], s2);
+      a._rotation[i] = a._rotation[i].align_slerp(b._rotation[i], s2);
     }
   }
 }
@@ -296,7 +290,7 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     ik_helper.pre_ik(data);
   }
 
-  AnimEvalData this_data(data, context._num_joints);
+  AnimEvalData this_data(data, context._num_joint_groups);
 
   if (has_flags(F_real_time)) {
     // Compute cycle from current rendering time instead of relative to
@@ -314,13 +308,13 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   // animation, but the character needs to remain stationary so it can be
   // moved around with game code.
   if (has_flags(F_zero_root_x)) {
-    this_data._pose[0]._position[0] = 0.0f;
+    //this_data._pose[0]._position[0] = 0.0f;
   }
   if (has_flags(F_zero_root_y)) {
-    this_data._pose[0]._position[1] = 0.0f;
+    //this_data._pose[0]._position[1] = 0.0f;
   }
   if (has_flags(F_zero_root_z)) {
-    this_data._pose[0]._position[2] = 0.0f;
+    //this_data._pose[0]._position[2] = 0.0f;
   }
 
   // Now blend the channel onto the output using the requested weight.

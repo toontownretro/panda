@@ -56,6 +56,7 @@ PUBLISHED:
 
   INLINE size_t get_num_weights() const;
   INLINE PN_stdfloat get_weight(size_t n) const;
+  INLINE PN_stdfloat *get_weights();
 
 private:
   WeightList() = default;

@@ -23,6 +23,7 @@
 #include "animChannelTable.h"
 #include "animChannelBundle.h"
 #include "vector_stdfloat.h"
+#include "deg_2_rad.h"
 
 using std::min;
 
@@ -88,7 +89,6 @@ make_bundle() {
     }
   }
 
-  bundle->set_joint_table(std::move(_joint_table));
   bundle->set_slider_table(std::move(_slider_table));
 
   return bundle;
@@ -279,18 +279,12 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
   // tables.  Each of these represents a separate component of the transform
   // data, and will be added to the table.
 
-  JointEntry joint;
-  joint.name = name;
-
-  joint.first_frame = (int)_joint_table.size();
-  joint.num_frames = 0;
+  // Record name of the anim joint.
+  bundle->_joint_names.push_back(name);
 
   EggXfmSAnim::const_iterator ci;
 
-  vector_stdfloat x, y, z;
-  vector_stdfloat sx, sy, sz;
-  vector_stdfloat h, p, r;
-  vector_stdfloat a, b, c;
+  vector_float x, y, z, h, p, r, i, j, k, a, b, c;
 
   for (ci = egg_anim->begin(); ci != egg_anim->end(); ++ci) {
     if ((*ci)->is_of_type(EggSAnimData::get_class_type())) {
@@ -298,61 +292,51 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
 
       char table_id = child->get_name()[0];
 
-      for (int i = 0; i < child->get_num_rows(); i++) {
+      for (int ri = 0; ri < child->get_num_rows(); ri++) {
         switch (table_id) {
         case 'x':
-          x.push_back((PN_stdfloat)child->get_value(i));
+          x.push_back((float)child->get_value(ri));
           break;
         case 'y':
-          y.push_back((PN_stdfloat)child->get_value(i));
+          y.push_back((float)child->get_value(ri));
           break;
         case 'z':
-          z.push_back((PN_stdfloat)child->get_value(i));
+          z.push_back((float)child->get_value(ri));
           break;
         case 'i':
-          sx.push_back((PN_stdfloat)child->get_value(i));
+          i.push_back((float)child->get_value(ri));
           break;
         case 'j':
-          sy.push_back((PN_stdfloat)child->get_value(i));
+          j.push_back((float)child->get_value(ri));
           break;
         case 'k':
-          sz.push_back((PN_stdfloat)child->get_value(i));
+          k.push_back((float)child->get_value(ri));
           break;
+        // NOTE: hpr stored in radians so we don't have to convert to radians
+        // when constructing quaternion during animation eval.
         case 'h':
-          h.push_back((PN_stdfloat)child->get_value(i));
+          h.push_back(deg_2_rad((float)child->get_value(ri)));
           break;
         case 'p':
-          p.push_back((PN_stdfloat)child->get_value(i));
+          p.push_back(deg_2_rad((float)child->get_value(ri)));
           break;
         case 'r':
-          r.push_back((PN_stdfloat)child->get_value(i));
+          r.push_back(deg_2_rad((float)child->get_value(ri)));
           break;
         case 'a':
-          a.push_back((PN_stdfloat)child->get_value(i));
+          a.push_back((float)child->get_value(ri));
           break;
         case 'b':
-          b.push_back((PN_stdfloat)child->get_value(i));
+          b.push_back((float)child->get_value(ri));
           break;
         case 'c':
-          c.push_back((PN_stdfloat)child->get_value(i));
+          c.push_back((float)child->get_value(ri));
           break;
         default:
           break;
         }
       }
     }
-  }
-
-  // Check for any 0-length frames.
-
-  if (h.empty()) {
-    h.push_back(0.0f);
-  }
-  if (p.empty()) {
-    p.push_back(0.0f);
-  }
-  if (r.empty()) {
-    r.push_back(0.0f);
   }
 
   if (x.empty()) {
@@ -364,17 +348,24 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
   if (z.empty()) {
     z.push_back(0.0f);
   }
-
-  if (sx.empty()) {
-    sx.push_back(1.0f);
+  if (h.empty()) {
+    h.push_back(0.0f);
   }
-  if (sy.empty()) {
-    sy.push_back(1.0f);
+  if (p.empty()) {
+    p.push_back(0.0f);
   }
-  if (sz.empty()) {
-    sz.push_back(1.0f);
+  if (r.empty()) {
+    r.push_back(0.0f);
   }
-
+  if (i.empty()) {
+    i.push_back(1.0f);
+  }
+  if (j.empty()) {
+    j.push_back(1.0f);
+  }
+  if (k.empty()) {
+    k.push_back(1.0f);
+  }
   if (a.empty()) {
     a.push_back(0.0f);
   }
@@ -385,50 +376,79 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
     c.push_back(0.0f);
   }
 
-  joint.num_frames = std::max(x.size(), std::max(y.size(), z.size()));
-  joint.num_frames = std::max((size_t)joint.num_frames, std::max(h.size(), std::max(p.size(), r.size())));
-  joint.num_frames = std::max((size_t)joint.num_frames, std::max(sx.size(), std::max(sy.size(), sz.size())));
-  joint.num_frames = std::max((size_t)joint.num_frames, std::max(a.size(), std::max(b.size(), c.size())));
-
-  for (int i = 0; i < joint.num_frames; i++) {
-    LVecBase4 pos(
-      x[i % x.size()],
-      y[i % y.size()],
-      z[i % z.size()],
-      0.0f
-    );
-
-    LVecBase4 scale(
-      sx[i % sx.size()],
-      sy[i % sy.size()],
-      sz[i % sz.size()],
-      0.0f
-    );
-
-    LVector3 hpr(
-      h[i % h.size()],
-      p[i % p.size()],
-      r[i % r.size()]
-    );
-
-    LVecBase4 shear(
-      a[i % a.size()],
-      b[i % b.size()],
-      c[i % c.size()],
-      0.0f
-    );
-
-    LQuaternion quat;
-    quat.set_hpr(hpr);
-
-    JointFrame frame;
-    frame.pos = std::move(pos);
-    frame.quat = std::move(quat);
-    frame.scale = std::move(scale);
-    frame.shear = std::move(shear);
-
-    _joint_table.push_back(std::move(frame));
+  uint16_t format = 0;
+  if (x.size() > 1u) {
+    format |= AnimChannelTable::JF_x;
   }
+  if (y.size() > 1u) {
+    format |= AnimChannelTable::JF_y;
+  }
+  if (z.size() > 1u) {
+    format |= AnimChannelTable::JF_z;
+  }
+  if (h.size() > 1u) {
+    format |= AnimChannelTable::JF_h;
+  }
+  if (p.size() > 1u) {
+    format |= AnimChannelTable::JF_p;
+  }
+  if (r.size() > 1u) {
+    format |= AnimChannelTable::JF_r;
+  }
+  if (i.size() > 1u) {
+    format |= AnimChannelTable::JF_i;
+  }
+  if (j.size() > 1u) {
+    format |= AnimChannelTable::JF_j;
+  }
+  if (k.size() > 1u) {
+    format |= AnimChannelTable::JF_k;
+  }
+  if (a.size() > 1u) {
+    format |= AnimChannelTable::JF_a;
+  }
+  if (b.size() > 1u) {
+    format |= AnimChannelTable::JF_b;
+  }
+  if (c.size() > 1u) {
+    format |= AnimChannelTable::JF_c;
+  }
+  bundle->_joint_formats.push_back(format);
 
-  bundle->add_joint_entry(joint);
+  for (int fi = 0; fi < x.size(); ++fi) {
+    bundle->_frames[fi].push_back(x[fi]);
+  }
+  for (int fi = 0; fi < y.size(); ++fi) {
+    bundle->_frames[fi].push_back(y[fi]);
+  }
+  for (int fi = 0; fi < z.size(); ++fi) {
+    bundle->_frames[fi].push_back(z[fi]);
+  }
+  for (int fi = 0; fi < h.size(); ++fi) {
+    bundle->_frames[fi].push_back(h[fi]);
+  }
+  for (int fi = 0; fi < p.size(); ++fi) {
+    bundle->_frames[fi].push_back(p[fi]);
+  }
+  for (int fi = 0; fi < r.size(); ++fi) {
+    bundle->_frames[fi].push_back(r[fi]);
+  }
+  for (int fi = 0; fi < i.size(); ++fi) {
+    bundle->_frames[fi].push_back(i[fi]);
+  }
+  for (int fi = 0; fi < j.size(); ++fi) {
+    bundle->_frames[fi].push_back(j[fi]);
+  }
+  for (int fi = 0; fi < k.size(); ++fi) {
+    bundle->_frames[fi].push_back(k[fi]);
+  }
+  for (int fi = 0; fi < a.size(); ++fi) {
+    bundle->_frames[fi].push_back(a[fi]);
+  }
+  for (int fi = 0; fi < b.size(); ++fi) {
+    bundle->_frames[fi].push_back(b[fi]);
+  }
+  for (int fi = 0; fi < c.size(); ++fi) {
+    bundle->_frames[fi].push_back(c[fi]);
+  }
 }

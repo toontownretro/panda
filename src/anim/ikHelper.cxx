@@ -270,10 +270,13 @@ calc_joint_net_transform(int joint, const AnimEvalData &pose) {
     return;
   }
 
+  int group = joint / SIMDFloatVector::num_columns;
+  int sub = joint % SIMDFloatVector::num_columns;
+
   // Compose a matrix of the current parent-space joint pose.
-  const AnimEvalData::Joint &jpose = pose._pose[joint];
-  LMatrix4 local = LMatrix4::scale_shear_mat(jpose._scale.get_xyz(), jpose._shear.get_xyz()) * jpose._rotation;
-  local.set_row(3, jpose._position.get_xyz());
+  LMatrix4 local = LMatrix4::scale_shear_mat(pose._scale[group].get_lvec(sub),
+    pose._shear[group].get_lvec(sub)) * pose._rotation[group].get_lquat(sub);
+  local.set_row(3, pose._position[group].get_lvec(sub));
 
   // Transform local matrix by the parent's net matrix.
   int parent = _context->_character->get_joint_parent(joint);
@@ -317,13 +320,30 @@ joint_net_to_local(int joint, LMatrix4 *net_transforms,
   PN_stdfloat e0 = 1.0f - weight;
 
   // Blend between IK'd local pose and existing pose.
-  AnimEvalData::Joint &pose = data._pose[joint];
-  pose._position = pose._position * e0 + LVecBase4(pos, 1.0f) * weight;
+  int group = joint / SIMDFloatVector::num_columns;
+  int sub = joint % SIMDFloatVector::num_columns;
+
+  LVecBase3f dpos, dscale, dshear;
+  LQuaternionf dquat;
+  data._position[group].get_lvec(sub, dpos);
+  data._scale[group].get_lvec(sub, dscale);
+  data._shear[group].get_lvec(sub, dshear);
+  data._rotation[group].get_lquat(sub, dquat);
+
+  dpos *= e0;
+  dpos += pos * weight;
+  dscale *= e0;
+  dscale += scale * weight;
+  dshear *= e0;
+  dshear += shear * weight;
   LQuaternion q2;
-  LQuaternion::slerp(pose._rotation, quat, weight, q2);
-  pose._rotation = q2;
-  pose._scale = pose._scale * e0 + LVecBase4(scale, 1.0f) * weight;
-  pose._shear = pose._shear * e0 + LVecBase4(shear, 1.0f) * weight;
+  LQuaternion::slerp(dquat, quat, weight, q2);
+  dquat = q2;
+
+  data._position[group].set_lvec(sub, dpos);
+  data._scale[group].set_lvec(sub, dscale);
+  data._shear[group].set_lvec(sub, dshear);
+  data._rotation[group].set_lquat(sub, dquat);
 }
 
 #define KNEEMAX_EPSILON 0.9998

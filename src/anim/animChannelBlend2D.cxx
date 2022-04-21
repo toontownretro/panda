@@ -301,9 +301,9 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat w1 = c1._weight;
   PN_stdfloat w2 = c2._weight;
 
-  AnimEvalData c0_data(data, context._num_joints);
-  AnimEvalData c1_data(data, context._num_joints);
-  AnimEvalData c2_data(data, context._num_joints);
+  AnimEvalData c0_data(data, context._num_joint_groups);
+  AnimEvalData c1_data(data, context._num_joint_groups);
+  AnimEvalData c2_data(data, context._num_joint_groups);
 
   // Calculate the channels at full weight and blend between them.
 
@@ -323,44 +323,44 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   }
 
   if (c0._weight == 1.0f) {
-    data.steal_pose(c0_data, context._num_joints);
+    data.steal_pose(c0_data, context._num_joint_groups);
 
   } else if (c1._weight == 1.0f) {
-    data.steal_pose(c1_data, context._num_joints);
+    data.steal_pose(c1_data, context._num_joint_groups);
 
   } else if (c2._weight == 1.0f) {
-    data.steal_pose(c2_data, context._num_joints);
+    data.steal_pose(c2_data, context._num_joint_groups);
 
   } else {
-    for (int i = 0; i < context._num_joints; i++) {
-      if (!CheckBit(context._joint_mask, i)) {
-        continue;
+    SIMDFloatVector vw0 = w0;
+    SIMDFloatVector vw1 = w1;
+    SIMDFloatVector vw2 = w2;
+
+    for (int i = 0; i < context._num_joint_groups; ++i) {
+      data._position[i] = c0_data._position[i] * vw0;
+      data._position[i] = data._position[i].madd(c1_data._position[i], vw1);
+      data._position[i] = data._position[i].madd(c2_data._position[i], vw2);
+      data._scale[i] = c0_data._scale[i] * vw0;
+      data._scale[i] = data._scale[i].madd(c1_data._scale[i], vw1);
+      data._scale[i] = data._scale[i].madd(c2_data._scale[i], vw2);
+      data._shear[i] = c0_data._shear[i] * vw0;
+      data._shear[i] = data._shear[i].madd(c1_data._shear[i], vw1);
+      data._shear[i] = data._shear[i].madd(c2_data._shear[i], vw2);
+    }
+
+    SIMDFloatVector diagonal_weight;
+
+    // Blend rotation.
+    if (w1 < 0.001f) {
+      diagonal_weight = vw2 / (vw0 + vw2);
+      for (int i = 0; i < context._num_joint_groups; ++i) {
+        data._rotation[i] = c0_data._rotation[i].align_slerp(c2_data._rotation[i], diagonal_weight);
       }
-
-      AnimEvalData::Joint &pose = data._pose[i];
-      AnimEvalData::Joint &pose_0 = c0_data._pose[i];
-      AnimEvalData::Joint &pose_1 = c1_data._pose[i];
-      AnimEvalData::Joint &pose_2 = c2_data._pose[i];
-
-      pose._position = pose_0._position * w0;
-      pose._position += pose_1._position * w1;
-      pose._position += pose_2._position * w2;
-
-      pose._scale = pose_0._scale * w0;
-      pose._scale += pose_1._scale * w1;
-      pose._scale += pose_2._scale * w2;
-
-      pose._shear = pose_0._shear * w0;
-      pose._shear += pose_1._shear * w1;
-      pose._shear += pose_2._shear * w2;
-
-      if (w1 < 0.001f) {
-        // On diagonal.
-        LQuaternion::blend(pose_0._rotation, pose_2._rotation, w2 / (w0 + w2), pose._rotation);
-      } else {
-        LQuaternion q;
-        LQuaternion::blend(pose_0._rotation, pose_1._rotation, w1 / (w0 + w1), q);
-        LQuaternion::blend(q, pose_2._rotation, w2, pose._rotation);
+    } else {
+      diagonal_weight = vw1 / (vw0 + vw1);
+      for (int i = 0; i < context._num_joint_groups; ++i) {
+        data._rotation[i] = c0_data._rotation[i].align_slerp(c1_data._rotation[i], diagonal_weight);
+        data._rotation[i] = data._rotation[i].align_slerp(c2_data._rotation[i], vw2);
       }
     }
   }

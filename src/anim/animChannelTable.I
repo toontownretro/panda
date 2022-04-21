@@ -19,9 +19,9 @@ AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames) :
   AnimChannel(name) {
   _fps = fps;
   _num_frames = num_frames;
-  _num_joint_entries = 0;
   _num_slider_entries = 0;
   _root_motion_vector.fill(0.0f);
+  _frames.resize(num_frames);
   //_is_loaded = true;
 }
 
@@ -93,13 +93,13 @@ AnimChannelTable() :
 INLINE AnimChannelTable::
 AnimChannelTable(const AnimChannelTable &copy) :
   AnimChannel(copy),
-  _joint_frames(copy._joint_frames),
+  _joint_names(copy._joint_names),
+  _joint_formats(copy._joint_formats),
+  _frames(copy._frames),
   _slider_table(copy._slider_table),
-  _num_joint_entries(copy._num_joint_entries),
   _num_slider_entries(copy._num_slider_entries),
   _root_motion_vector(copy._root_motion_vector)
 {
-  std::copy(copy._joint_entries, copy._joint_entries + copy._num_joint_entries, _joint_entries);
   std::copy(copy._slider_entries, copy._slider_entries + copy._num_slider_entries, _slider_entries);
 }
 
@@ -107,33 +107,33 @@ AnimChannelTable(const AnimChannelTable &copy) :
  *
  */
 INLINE void AnimChannelTable::
-set_joint_table(JointFrames &&table) {
-  _joint_frames = std::move(table);
+set_joint_table(FrameDatas &&table) {
+  _frames = std::move(table);
 }
 
 
 /**
  *
  */
-INLINE const JointFrames &AnimChannelTable::
+INLINE const FrameDatas &AnimChannelTable::
 get_joint_table() const {
-  return _joint_frames;
+  return _frames;
 }
 
 /**
  *
  */
-INLINE const JointFrame &AnimChannelTable::
-get_joint_frame(int joint, int frame) const {
-  return get_joint_frame(_joint_entries[joint], frame);
+INLINE void AnimChannelTable::
+set_joint_names(vector_string &&names) {
+  _joint_names = std::move(names);
 }
 
 /**
  *
  */
-INLINE const JointFrame &AnimChannelTable::
-get_joint_frame(const JointEntry &joint, int frame) const {
-  return _joint_frames[joint.first_frame + (frame % joint.num_frames)];
+INLINE const vector_string &AnimChannelTable::
+get_joint_names() const {
+  return _joint_names;
 }
 
 /**
@@ -169,26 +169,6 @@ get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const {
 }
 
 /**
- * Records the name of indicated joint channel.  This is used to aid Character
- * in binding to the animation, because we can't guarantee ordering of
- * channels.
- */
-INLINE void AnimChannelTable::
-add_joint_entry(const JointEntry &entry) {
-  nassertv(_num_joint_entries < max_character_joints);
-  _joint_entries[_num_joint_entries++] = entry;
-}
-
-/**
- *
- */
-INLINE const JointEntry &AnimChannelTable::
-get_joint_entry(int joint) const {
-  assert(joint >= 0 && joint < (int)_num_joint_entries);
-  return _joint_entries[joint];
-}
-
-/**
  * Records the name of indicated slider channel.  This is used to aid Character
  * in binding to the animation, because we can't guarantee ordering of
  * channels.
@@ -213,7 +193,7 @@ get_slider_entry(int slider) const {
  */
 INLINE int AnimChannelTable::
 get_num_joint_entries() const {
-  return _num_joint_entries;
+  return (int)_joint_names.size();
 }
 
 /**

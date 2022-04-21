@@ -19,8 +19,30 @@
 #include "animEvalContext.h"
 #include "characterJoint.h"
 #include "character.h"
+#include "pbitops.h"
+#include <intrin.h>
 
 IMPLEMENT_CLASS(AnimChannelTable);
+
+/**
+ * Converts a set of Euler angles in radians to a quaternion.
+ * Assumes CS_zup_right.
+ */
+INLINE void
+quat_from_hpr_radians(const LVecBase3 &hpr, LQuaternionf &quat) {
+  float s, c;
+
+  csincos(hpr[0] * 0.5f, &s, &c);
+  LQuaternionf quat_h(c, 0, 0, s);
+
+  csincos(hpr[1] * 0.5f, &s, &c);
+  LQuaternionf quat_p(c, s, 0, 0);
+
+  csincos(hpr[2] * 0.5f, &s, &c);
+  LQuaternionf quat_r(c, 0, s, 0);
+
+  quat = quat_r * quat_p * quat_h;
+}
 
 /**
  * Returns the index of the joint channel with the indicated name, or -1 if no
@@ -28,8 +50,8 @@ IMPLEMENT_CLASS(AnimChannelTable);
  */
 int AnimChannelTable::
 find_joint_channel(const std::string &name) const {
-  for (size_t i = 0; i < _num_joint_entries; i++) {
-    if (_joint_entries[i].name == name) {
+  for (size_t i = 0; i < _joint_names.size(); i++) {
+    if (_joint_names[i] == name) {
       return (int)i;
     }
   }
@@ -69,6 +91,132 @@ get_length(Character *character) const {
 }
 
 /**
+ * Extracts from the animation table a pose for every joint at the indicated
+ * animation frame.
+ *
+ * Don't use this to extract from frame 0, use extract_frame0_data() instead.
+ */
+void AnimChannelTable::
+extract_frame_data(int frame, AnimEvalData &data, const AnimEvalContext &context, const vector_int &joint_map) const {
+  const vector_float &fzero = _frames[0];
+  const vector_float &fdata = _frames[frame];
+
+  int zero_ofs = 0;
+  int frame_ofs = 0;
+
+  for (int i = 0; i < (int)_joint_formats.size(); ++i) {
+    uint16_t format = _joint_formats[i];
+
+    // Extract translation.
+    LVecBase3f pos;
+    pos[0] = (format & JF_x) ? fdata[frame_ofs++] : fzero[zero_ofs];
+    pos[1] = (format & JF_y) ? fdata[frame_ofs++] : fzero[zero_ofs + 1];
+    pos[2] = (format & JF_z) ? fdata[frame_ofs++] : fzero[zero_ofs + 2];
+
+    // Extract rotation (euler angles in radians).
+    LVecBase3f hpr;
+    hpr[0] = (format & JF_h) ? fdata[frame_ofs++] : fzero[zero_ofs + 3];
+    hpr[1] = (format & JF_p) ? fdata[frame_ofs++] : fzero[zero_ofs + 4];
+    hpr[2] = (format & JF_r) ? fdata[frame_ofs++] : fzero[zero_ofs + 5];
+
+    // Extract scale.
+    LVecBase3f scale;
+    scale[0] = (format & JF_i) ? fdata[frame_ofs++] : fzero[zero_ofs + 6];
+    scale[1] = (format & JF_j) ? fdata[frame_ofs++] : fzero[zero_ofs + 7];
+    scale[2] = (format & JF_k) ? fdata[frame_ofs++] : fzero[zero_ofs + 8];
+
+    // Extract shear.
+    LVecBase3f shear;
+    shear[0] = (format & JF_a) ? fdata[frame_ofs++] : fzero[zero_ofs + 9];
+    shear[1] = (format & JF_b) ? fdata[frame_ofs++] : fzero[zero_ofs + 10];
+    shear[2] = (format & JF_c) ? fdata[frame_ofs++] : fzero[zero_ofs + 11];
+
+    zero_ofs += 12;
+
+    int cjoint = joint_map[i];
+    if (cjoint == -1) {
+      continue;
+    }
+
+    LQuaternionf quat;
+    quat_from_hpr_radians(hpr, quat);
+
+    int group = cjoint / SIMDFloatVector::num_columns;
+    int sub = cjoint % SIMDFloatVector::num_columns;
+    data._position[group].set_lvec(sub, pos);
+    data._scale[group].set_lvec(sub, scale);
+    data._shear[group].set_lvec(sub, shear);
+    data._rotation[group].set_lquat(sub, quat);
+  }
+}
+
+/**
+ * Extracts a pose for every joint at the first frame of the animation.
+ * Every joint is guaranteed to have a pose recorded at frame 0.
+ */
+void AnimChannelTable::
+extract_frame0_data(AnimEvalData &data, const AnimEvalContext &context, const vector_int &joint_map) const {
+  const vector_float &fzero = _frames[0];
+
+  LVecBase3f pos, hpr, scale, shear;
+  LQuaternionf quat;
+
+  int itr = 0;
+  for (int i = 0; i < (int)_joint_formats.size(); ++i) {
+    pos[0] = fzero[itr++];
+    pos[1] = fzero[itr++];
+    pos[2] = fzero[itr++];
+    hpr[0] = fzero[itr++];
+    hpr[1] = fzero[itr++];
+    hpr[2] = fzero[itr++];
+    scale[0] = fzero[itr++];
+    scale[1] = fzero[itr++];
+    scale[2] = fzero[itr++];
+    shear[0] = fzero[itr++];
+    shear[1] = fzero[itr++];
+    shear[2] = fzero[itr++];
+
+    int cjoint = joint_map[i];
+    if (cjoint == -1) {
+      continue;
+    }
+
+    quat_from_hpr_radians(hpr, quat);
+
+    int group = cjoint / SIMDFloatVector::num_columns;
+    int sub = cjoint % SIMDFloatVector::num_columns;
+    data._position[group].set_lvec(sub, pos);
+    data._scale[group].set_lvec(sub, scale);
+    data._shear[group].set_lvec(sub, shear);
+    data._rotation[group].set_lquat(sub, quat);
+  }
+}
+
+/**
+ * Returns the offset into non-zero frames for the indicated transform
+ * component of the indicated joint.
+ */
+int AnimChannelTable::
+get_non0_joint_component_offset(int joint, JointFormat component) const {
+  int offset = 0;
+
+  for (int i = 0; i < joint; ++i) {
+    offset += count_bits_in_word(_joint_formats[i]);
+  }
+
+  // Offset is now at the beginning of the requested joint.
+  // Determine the additional offset to the requested component.
+
+  uint16_t format = _joint_formats[joint];
+  nassertr(format & component, offset);
+  format &= ~flood_bits_up(component);
+
+  offset += count_bits_in_word(format);
+
+  return offset;
+}
+
+/**
  *
  */
 void AnimChannelTable::
@@ -82,9 +230,8 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   const vector_int &joint_map = (*it).second._joint_map;
 
-  // Every joint should have an entry in the mapping, even if it's
-  // to no anim joint.
-  //nassertv(context._num_joints == (int)joint_map.size());
+  // Every anim joint should appear in the mapping.
+  nassertv(joint_map.size() >= _joint_formats.size());
 
   // Convert cycles to frame numbers for table lookup.
 
@@ -141,54 +288,41 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   PN_stdfloat frac = fframe - frame;
 
-  if (!context._frame_blend || frame == next_frame || frac == 0.0f) {
+  if (!context._frame_blend || frame == next_frame) {
+
     // Hold the current frame until the next one is ready.
-    for (int i = 0; i < context._num_joints; i++) {
-      if (!CheckBit(context._joint_mask, i)) {
-        continue;
-      }
-
-      int anim_joint = joint_map[i];
-      if (anim_joint < 0) {
-        // Invalid anim joint.
-        continue;
-      }
-
-      const JointFrame &jframe = get_joint_frame(anim_joint, frame);
-
-      AnimEvalData::Joint &pose = data._pose[i];
-      pose._position = jframe.pos;
-      pose._scale = jframe.scale;
-      pose._shear = jframe.shear;
-      pose._rotation = jframe.quat;
+    if (frame == 0) {
+      extract_frame0_data(data, context, joint_map);
+    } else {
+      extract_frame_data(frame, data, context, joint_map);
     }
 
   } else {
     // Frame blending is enabled.  Need to blend between successive frames.
 
-    PN_stdfloat e0 = 1.0f - frac;
+    AnimEvalData next_data;
+    if (frame == 0) {
+      extract_frame0_data(data, context, joint_map);
+    } else {
+      extract_frame_data(frame, data, context, joint_map);
+    }
+    if (next_frame == 0) {
+      extract_frame0_data(next_data, context, joint_map);
+    } else {
+      extract_frame_data(next_frame, next_data, context, joint_map);
+    }
 
-    for (int i = 0; i < context._num_joints; i++) {
-      if (!CheckBit(context._joint_mask, i)) {
-        continue;
-      }
+    SIMDFloatVector vfrac = frac;
+    SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
-      int anim_joint = joint_map[i];
-      if (anim_joint < 0) {
-        // Invalid anim joint.
-        continue;
-      }
-
-      const JointEntry &je = get_joint_entry(anim_joint);
-      const JointFrame &jf = get_joint_frame(je, frame);
-      const JointFrame &jf_next = get_joint_frame(je, next_frame);
-
-      AnimEvalData::Joint &pose = data._pose[i];
-
-      pose._position = (jf.pos * e0) + (jf_next.pos * frac);
-      pose._scale = (jf.scale * e0) + (jf_next.scale * frac);
-      pose._shear = (jf.shear * e0) + (jf_next.shear * frac);
-      LQuaternion::blend(jf.quat, jf_next.quat, frac, pose._rotation);
+    for (int i = 0; i < context._num_joint_groups; ++i) {
+      data._position[i] *= ve0;
+      data._position[i] = data._position[i].madd(next_data._position[i], vfrac);
+      data._scale[i] *= ve0;
+      data._scale[i] = data._scale[i].madd(next_data._scale[i], vfrac);
+      data._shear[i] *= ve0;
+      data._shear[i] = data._shear[i].madd(next_data._shear[i], vfrac);
+      data._rotation[i] = data._rotation[i].align_slerp(next_data._rotation[i], vfrac);
     }
   }
 }
@@ -199,6 +333,51 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 LVector3 AnimChannelTable::
 get_root_motion_vector(Character *character) const {
   return _root_motion_vector;
+}
+
+/**
+ * Extracts the delta of the indicated transform component of the indicated
+ * joint between the first and last frame of the animation, and removes
+ * the transform component from the animation table for the joint.
+ */
+float AnimChannelTable::
+extract_component_delta(int joint, JointFormat component) {
+  nassertr(_joint_formats[joint] & component, 0.0f);
+
+  int ofs = get_non0_joint_component_offset(joint, component);
+  int zero_ofs = get_highest_on_bit(component);
+  int last_frame = (int)_frames.size() - 1;
+
+  float delta = _frames[last_frame][ofs] - _frames[0][joint * 12 + zero_ofs];
+
+  // Zero out initial data.
+  _frames[0][joint * 12 + zero_ofs] = 0.0f;
+
+  // Now remove from non-zero frames.
+  for (size_t i = 1; i < _frames.size(); ++i) {
+    _frames[i].erase(_frames[i].begin() + ofs);
+  }
+
+  // This component is no longer animating.
+  _joint_formats[joint] &= ~component;
+
+  return delta;
+}
+
+/**
+ * Applies an offset to a transform component of a joint across all animation
+ * frames.
+ */
+void AnimChannelTable::
+offset_joint_component(int joint, JointFormat component, float offset) {
+  _frames[0][joint * 12 + get_highest_on_bit(component)] += offset;
+
+  if (_joint_formats[joint] & component) {
+    int ofs = get_non0_joint_component_offset(joint, component);
+    for (size_t i = 1; i < _frames.size(); ++i) {
+      _frames[i][ofs] += offset;
+    }
+  }
 }
 
 /**
@@ -213,36 +392,32 @@ calc_root_motion(unsigned int flags, int root_joint) {
   // straight and contiguous line for the entire animation.
 
   // Get frame data for root joint.
-  nassertv(root_joint >= 0 && root_joint < (int)_num_joint_entries);
-  const JointEntry &root_entry = _joint_entries[root_joint];
-  nassertv(root_entry.num_frames > 1);
-  const JointFrame &first_frame = _joint_frames[root_entry.first_frame];
-  const JointFrame &last_frame = _joint_frames[root_entry.first_frame + root_entry.num_frames - 1];
+  nassertv(root_joint >= 0 && root_joint < (int)_joint_formats.size());
+
+  uint16_t format = _joint_formats[root_joint];
+
+  // Forget about transform components that are static on the root joint,
+  // we know the motion vector will be 0 for those.
+  if (!(format & JF_x)) {
+    flags &= ~MF_linear_x;
+  }
+  if (!(format & JF_y)) {
+    flags &= ~MF_linear_y;
+  }
+  if (!(format & JF_z)) {
+    flags &= ~MF_linear_z;
+  }
 
   // Extract translation vector for requested axes between start and end frame.
   LVector3 translation_vector(0.0f, 0.0f, 0.0f);
   if (flags & MF_linear_x) {
-    translation_vector[0] = last_frame.pos[0] - first_frame.pos[0];
+    translation_vector[0] = extract_component_delta(root_joint, JF_x);
   }
   if (flags & MF_linear_y) {
-    translation_vector[1] = last_frame.pos[1] - first_frame.pos[1];
+    translation_vector[1] = extract_component_delta(root_joint, JF_y);
   }
   if (flags & MF_linear_z) {
-    translation_vector[2] = last_frame.pos[2] - first_frame.pos[2];
-  }
-
-  // Now zero the actual animation data for the extracted translation axes.
-  for (int i = root_entry.first_frame; i < root_entry.first_frame + root_entry.num_frames; ++i) {
-    JointFrame &frame = _joint_frames[i];
-    if (flags & MF_linear_x) {
-      frame.pos[0] = 0.0f;
-    }
-    if (flags & MF_linear_y) {
-      frame.pos[1] = 0.0f;
-    }
-    if (flags & MF_linear_z) {
-      frame.pos[2] = 0.0f;
-    }
+    translation_vector[2] = extract_component_delta(root_joint, JF_z);
   }
 
   _root_motion_vector = translation_vector;
@@ -277,37 +452,17 @@ void AnimChannelTable::
 write_datagram(BamWriter *manager, Datagram &me) {
   AnimChannel::write_datagram(manager, me);
 
-  me.add_uint8(_num_joint_entries);
-  for (size_t i = 0; i < _num_joint_entries; i++) {
-    const JointEntry &entry = _joint_entries[i];
-
-    me.add_string(entry.name);
-
-    me.add_int16(entry.first_frame);
-    me.add_int16(entry.num_frames);
+  me.add_uint8(_joint_formats.size());
+  for (size_t i = 0; i < _joint_formats.size(); ++i) {
+    me.add_string(_joint_names[i]);
+    me.add_uint16(_joint_formats[i]);
   }
 
-  me.add_uint16(_joint_frames.size());
-  for (size_t i = 0; i < _joint_frames.size(); i++) {
-    _joint_frames[i].pos.get_xyz().write_datagram(me);
-    _joint_frames[i].quat.write_datagram(me);
-    _joint_frames[i].scale.get_xyz().write_datagram(me);
-    _joint_frames[i].shear.get_xyz().write_datagram(me);
-  }
-
-  me.add_uint8(_num_slider_entries);
-  for (size_t i = 0; i < _num_slider_entries; i++) {
-    const SliderEntry &entry = _slider_entries[i];
-
-    me.add_string(entry.name);
-
-    me.add_int16(entry.first_frame);
-    me.add_int16(entry.num_frames);
-  }
-
-  me.add_uint16(_slider_table.size());
-  for (size_t i = 0; i < _slider_table.size(); i++) {
-    me.add_stdfloat(_slider_table[i]);
+  me.add_uint16(_frames.size());
+  for (const vector_float &frame : _frames) {
+    for (const float &data : frame) {
+      me.add_float32(data);
+    }
   }
 
   _root_motion_vector.write_datagram(me);
@@ -320,35 +475,35 @@ void AnimChannelTable::
 fillin(DatagramIterator &scan, BamReader *manager) {
   AnimChannel::fillin(scan, manager);
 
-  _num_joint_entries = scan.get_uint8();
-  for (size_t i = 0; i < _num_joint_entries; i++) {
-    _joint_entries[i].name = scan.get_string();
-    _joint_entries[i].first_frame = scan.get_int16();
-    _joint_entries[i].num_frames = scan.get_int16();
+  unsigned int num_joints = scan.get_uint8();
+  _joint_formats.resize(num_joints);
+  _joint_names.resize(num_joints);
+  for (unsigned int i = 0; i < num_joints; ++i) {
+    _joint_names[i] = scan.get_string();
+    _joint_formats[i] = scan.get_uint16();
   }
 
-  _joint_frames.resize(scan.get_uint16());
-  for (size_t i = 0; i < _joint_frames.size(); i++) {
-    LVecBase3 vec3;
-    vec3.read_datagram(scan);
-    _joint_frames[i].pos.set(vec3[0], vec3[1], vec3[2], 0.0f);
-    _joint_frames[i].quat.read_datagram(scan);
-    vec3.read_datagram(scan);
-    _joint_frames[i].scale.set(vec3[0], vec3[1], vec3[2], 0.0f);
-    vec3.read_datagram(scan);
-    _joint_frames[i].shear.set(vec3[0], vec3[1], vec3[2], 0.0f);
+  _frames.resize(scan.get_uint16());
+
+  // Fill frame 0.  Every joint has an entry in every component.
+  for (unsigned int i = 0; i < num_joints * 12; ++i) {
+    _frames[0].push_back(scan.get_float32());
   }
 
-  _num_slider_entries = scan.get_uint8();
-  for (size_t i = 0; i < _num_slider_entries; i++) {
-    _slider_entries[i].name = scan.get_string();
-    _slider_entries[i].first_frame = scan.get_int16();
-    _slider_entries[i].num_frames = scan.get_int16();
+  // Every non-zero frame stores the exact same number of floats, the sum
+  // of the number of floats stored for each joint.
+  int num_floats = 0;
+  for (unsigned int i = 0; i < num_joints; ++i) {
+    uint16_t format = _joint_formats[i];
+    // Each bit turned on in the format is a transform component that gets
+    // stored.
+    num_floats += count_bits_in_word(format);
   }
 
-  _slider_table.resize(scan.get_uint16());
-  for (size_t i = 0; i < _slider_table.size(); i++) {
-    _slider_table[i] = scan.get_stdfloat();
+  for (size_t i = 1; i < _frames.size(); ++i) {
+    for (unsigned int j = 0; j < num_floats; ++j) {
+      _frames[i].push_back(scan.get_float32());
+    }
   }
 
   _root_motion_vector.read_datagram(scan);
