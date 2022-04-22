@@ -11,11 +11,23 @@
  * @date 2022-04-13
  */
 
-EightFloats EightFloats::_zero(0.0f);
-EightFloats EightFloats::_one(1.0f);
-EightFloats EightFloats::_negative_one(-1.0f);
-EightFloats EightFloats::_two(2.0f);
-EightFloats EightFloats::_three(3.0f);
-EightFloats EightFloats::_four(4.0f);
-EightFloats EightFloats::_point_five(0.5f);
-EightFloats EightFloats::_flt_epsilon(FLT_EPSILON);
+/**
+ *
+ */
+std::ostream &
+operator << (std::ostream &out, const PN_vec8f &ff) {
+  const float *data = simd_data(ff);
+  out << "__m256 [ " << data[0] << " " << data[1] << " " << data[2] << " " << data[3] << " " << data[4] << " " << data[5] << " " << data[6] << " " << data[7] << " ]";
+  return out;
+}
+
+/**
+ *
+ */
+std::ostream &
+operator << (std::ostream &out, const PN_vec8i &ff) {
+  const int *data = simd_data(ff);
+  out << "__m256i [ " << data[0] << " " << data[1] << " " << data[2] << " " << data[3] << " " << data[4] << " " << data[5] << " " << data[6] << " " << data[7] << " ]";
+  return out;
+}
+

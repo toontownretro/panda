@@ -44,6 +44,7 @@
 
 #ifdef HAVE_SLEEF
 
+#include <sleef-config.h>
 #include <sleef.h>
 
 #if defined(__AVX2__)

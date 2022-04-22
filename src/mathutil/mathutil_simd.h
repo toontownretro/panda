@@ -278,7 +278,7 @@ protected:
 
 #include "mathutil_sse_src.h"
 
-#if 0//defined(__AVX__) || defined(__AVX2__)
+#if defined(__AVX__) || defined(__AVX2__)
 #define HAVE_AVX 1
 #include "mathutil_avx_src.h"
 #endif
@@ -302,13 +302,11 @@ typedef SixteenQuaternions SIMDNativeQuaternion;
 #elif defined(HAVE_AVX)
 
 #define SIMD_NATIVE_ALIGNMENT 32
-#define SIMD_NATIVE_WIDTH 8
 typedef PN_vec8f PN_native_vecf;
 typedef PN_vec8i PN_native_veci;
-typedef PN_vec4d PN_native_vecd;
-typedef EightFloats SIMDNativeFloat;
-typedef EightVector3s SIMDNativeVector3;
-typedef EightQuaternions SIMDNativeQuaternion;
+typedef AVXFloatVector SIMDFloatVector;
+typedef AVXVector3f SIMDVector3f;
+typedef AVXQuaternionf SIMDQuaternionf;
 
 #else
 
