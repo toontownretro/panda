@@ -20,6 +20,11 @@
 #include "luse.h"
 #include "pbitops.h"
 
+#define SSE2      0
+#define SSE4      1
+#define AVX2_128  2
+#define AVX2      3
+
 /**
  * Template base class for a wrapper around a SIMD register+data type
  * combination.
@@ -154,7 +159,9 @@ public:
   ALWAYS_INLINE void componentwise_mult(const SIMDVector3 &other);
 
   ALWAYS_INLINE ThisClass madd(const SIMDVector3 &m1, const FloatType &m2) const;
+  ALWAYS_INLINE void madd_in_place(const SIMDVector3 &m1, const FloatType &m2);
   ALWAYS_INLINE ThisClass msub(const SIMDVector3 &m1, const FloatType &m2) const;
+  ALWAYS_INLINE void msub_in_place(const SIMDVector3 &m1, const FloatType &m2);
 
   ALWAYS_INLINE ThisClass operator + (const SIMDVector3 &other) const;
   ALWAYS_INLINE ThisClass operator - (const SIMDVector3 &other) const;

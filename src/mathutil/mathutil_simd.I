@@ -817,6 +817,15 @@ madd(const SIMDVector3 &m1, const FloatType &m2) const {
  *
  */
 template<class FloatType>
+ALWAYS_INLINE void SIMDVector3<FloatType>::
+madd_in_place(const SIMDVector3 &m1, const FloatType &m2) {
+  operator = (madd(m1, m2));
+}
+
+/**
+ *
+ */
+template<class FloatType>
 ALWAYS_INLINE SIMDVector3<FloatType> SIMDVector3<FloatType>::
 msub(const SIMDVector3 &m1, const FloatType &m2) const {
   SIMDVector3<FloatType> result;
@@ -824,6 +833,15 @@ msub(const SIMDVector3 &m1, const FloatType &m2) const {
   result._v[1] = _v[1].msub(m1._v[1], m2);
   result._v[2] = _v[2].msub(m1._v[2], m2);
   return result;
+}
+
+/**
+ *
+ */
+template<class FloatType>
+ALWAYS_INLINE void SIMDVector3<FloatType>::
+msub_in_place(const SIMDVector3 &m1, const FloatType &m2) {
+  operator = (msub(m1, m2));
 }
 
 /**
