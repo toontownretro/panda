@@ -183,11 +183,12 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   } else {
     // Evaluate both at full weight and blend between them.
 
-    AnimEvalData from_data(data, context._num_joint_groups);
-    from_data._weight = 1.0f;
-    from->_channel->calc_pose(context, from_data);
+    float orig_weight = data._weight;
+    data._weight = 1.0f;
+    from->_channel->calc_pose(context, data);
 
-    AnimEvalData to_data(data, context._num_joint_groups);
+    AnimEvalData to_data;
+    to_data._cycle = data._cycle;
     to_data._weight = 1.0f;
     to->_channel->calc_pose(context, to_data);
 
@@ -195,11 +196,19 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
     for (int i = 0; i < context._num_joint_groups; i++) {
-      data._pose[i].pos = (from_data._pose[i].pos * ve0).madd(to_data._pose[i].pos, vfrac);
-      data._pose[i].scale = (from_data._pose[i].scale * ve0).madd(to_data._pose[i].scale, vfrac);
-      data._pose[i].shear = (from_data._pose[i].shear * ve0).madd(to_data._pose[i].shear, vfrac);
-      data._pose[i].quat = from_data._pose[i].quat.align_slerp(to_data._pose[i].quat, vfrac);
+      data._pose[i].pos *= ve0;
+      data._pose[i].pos.madd_in_place(to_data._pose[i].pos, vfrac);
+
+      data._pose[i].scale *= ve0;
+      data._pose[i].scale.madd_in_place(to_data._pose[i].scale, vfrac);
+
+      data._pose[i].shear *= ve0;
+      data._pose[i].shear.madd_in_place(to_data._pose[i].shear, vfrac);
+
+      data._pose[i].quat = data._pose[i].quat.align_lerp(to_data._pose[i].quat, vfrac);
     }
+
+    data._weight = orig_weight;
   }
 }
 

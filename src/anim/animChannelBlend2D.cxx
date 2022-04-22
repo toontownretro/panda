@@ -301,67 +301,65 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat w1 = c1._weight;
   PN_stdfloat w2 = c2._weight;
 
-  AnimEvalData c0_data(data, context._num_joint_groups);
-  AnimEvalData c1_data(data, context._num_joint_groups);
-  AnimEvalData c2_data(data, context._num_joint_groups);
+  if (w0 == 1.0f) {
+    c0._channel->calc_pose(context, data);
+    return;
 
-  // Calculate the channels at full weight and blend between them.
+  } else if (w1 == 1.0f) {
+    c1._channel->calc_pose(context, data);
+    return;
 
-  if (c0._weight != 0.0f) {
-    c0_data._weight = 1.0f;
-    c0._channel->calc_pose(context, c0_data);
+  } else if (w2 == 1.0f) {
+    c2._channel->calc_pose(context, data);
+    return;
   }
 
-  if (c1._weight != 0.0f) {
-    c1_data._weight = 1.0f;
-    c1._channel->calc_pose(context, c1_data);
+  float orig_weight = data._weight;
+  data._weight = 1.0f;
+  c0._channel->calc_pose(context, data);
+  data._weight = orig_weight;
+
+  AnimEvalData c1_data;
+  c1_data._weight = 1.0f;
+  c1_data._cycle = data._cycle;
+  c1._channel->calc_pose(context, c1_data);
+
+  AnimEvalData c2_data;
+  c2_data._weight = 1.0f;
+  c2_data._cycle = data._cycle;
+  c2._channel->calc_pose(context, c2_data);
+
+  SIMDFloatVector vw0 = w0;
+  SIMDFloatVector vw1 = w1;
+  SIMDFloatVector vw2 = w2;
+
+  for (int i = 0; i < context._num_joint_groups; ++i) {
+    data._pose[i].pos *= vw0;
+    data._pose[i].pos.madd_in_place(c1_data._pose[i].pos, vw1);
+    data._pose[i].pos.madd_in_place(c2_data._pose[i].pos, vw2);
+
+    data._pose[i].scale *= vw0;
+    data._pose[i].scale.madd_in_place(c1_data._pose[i].scale, vw1);
+    data._pose[i].scale.madd_in_place(c2_data._pose[i].scale, vw2);
+
+    data._pose[i].shear *= vw0;
+    data._pose[i].shear.madd_in_place(c1_data._pose[i].shear, vw1);
+    data._pose[i].shear.madd_in_place(c2_data._pose[i].shear, vw2);
   }
 
-  if (c2._weight != 0.0f) {
-    c2_data._weight = 1.0f;
-    c2._channel->calc_pose(context, c2_data);
-  }
+  SIMDFloatVector diagonal_weight;
 
-  if (c0._weight == 1.0f) {
-    data.steal_pose(c0_data, context._num_joint_groups);
-
-  } else if (c1._weight == 1.0f) {
-    data.steal_pose(c1_data, context._num_joint_groups);
-
-  } else if (c2._weight == 1.0f) {
-    data.steal_pose(c2_data, context._num_joint_groups);
-
-  } else {
-    SIMDFloatVector vw0 = w0;
-    SIMDFloatVector vw1 = w1;
-    SIMDFloatVector vw2 = w2;
-
+  // Blend rotation.
+  if (w1 < 0.001f) {
+    diagonal_weight = vw2 / (vw0 + vw2);
     for (int i = 0; i < context._num_joint_groups; ++i) {
-      data._pose[i].pos = c0_data._pose[i].pos * vw0;
-      data._pose[i].pos = data._pose[i].pos.madd(c1_data._pose[i].pos, vw1);
-      data._pose[i].pos = data._pose[i].pos.madd(c2_data._pose[i].pos, vw2);
-      data._pose[i].scale = c0_data._pose[i].scale * vw0;
-      data._pose[i].scale = data._pose[i].scale.madd(c1_data._pose[i].scale, vw1);
-      data._pose[i].scale = data._pose[i].scale.madd(c2_data._pose[i].scale, vw2);
-      data._pose[i].shear = c0_data._pose[i].shear * vw0;
-      data._pose[i].shear = data._pose[i].shear.madd(c1_data._pose[i].shear, vw1);
-      data._pose[i].shear = data._pose[i].shear.madd(c2_data._pose[i].shear, vw2);
+      data._pose[i].quat = data._pose[i].quat.align_lerp(c2_data._pose[i].quat, diagonal_weight);
     }
-
-    SIMDFloatVector diagonal_weight;
-
-    // Blend rotation.
-    if (w1 < 0.001f) {
-      diagonal_weight = vw2 / (vw0 + vw2);
-      for (int i = 0; i < context._num_joint_groups; ++i) {
-        data._pose[i].quat = c0_data._pose[i].quat.align_slerp(c2_data._pose[i].quat, diagonal_weight);
-      }
-    } else {
-      diagonal_weight = vw1 / (vw0 + vw1);
-      for (int i = 0; i < context._num_joint_groups; ++i) {
-        data._pose[i].quat = c0_data._pose[i].quat.align_slerp(c1_data._pose[i].quat, diagonal_weight);
-        data._pose[i].quat = data._pose[i].quat.align_slerp(c2_data._pose[i].quat, vw2);
-      }
+  } else {
+    diagonal_weight = vw1 / (vw0 + vw1);
+    for (int i = 0; i < context._num_joint_groups; ++i) {
+      data._pose[i].quat = data._pose[i].quat.align_lerp(c1_data._pose[i].quat, diagonal_weight);
+      data._pose[i].quat = data._pose[i].quat.align_lerp(c2_data._pose[i].quat, vw2);
     }
   }
 }

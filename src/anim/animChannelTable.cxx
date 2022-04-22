@@ -33,6 +33,9 @@ IMPLEMENT_CLASS(AnimChannelTable);
  */
 INLINE void
 quat_from_hpr_radians(const LVecBase3 &hpr, LQuaternionf &quat) {
+  // FIXME: Figure out how to optimize this.  We shouldn't have to
+  // multiply 3 quaternions.
+
   float s, c;
 
   csincos(hpr[0] * 0.5f, &s, &c);
@@ -315,7 +318,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       extract_frame_data(next_frame, next_data, context, joint_map);
     }
 
-    frameblend_pcollector.start();
+    //frameblend_pcollector.start();
 
 #if 1
     // Measured this to take 75 microseconds for 500 characters with 42
@@ -368,7 +371,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     }
 #endif
 
-    frameblend_pcollector.stop();
+    //frameblend_pcollector.stop();
   }
 }
 
