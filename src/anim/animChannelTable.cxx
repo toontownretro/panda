@@ -317,8 +317,6 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
     frameblend_pcollector.start();
 
-#if 1
-
     SIMDFloatVector vfrac = frac;
     SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
@@ -331,104 +329,6 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       data._pose[i].shear = data._pose[i].shear.madd(next_data._pose[i].shear, vfrac);
       data._pose[i].quat = data._pose[i].quat.align_slerp(next_data._pose[i].quat, vfrac);
     }
-
-#else
-/*
-      LVecBase3f pos = data._position[group].get_lvec(sub);
- mov         rax,r12
- shl         rax,4
- lea         rax,[rax+rax*2]
- lea         r14,[r15+rax]
- lea         rcx,[r13*4]
-      pos *= e0;
- vmulss      xmm0,xmm7,dword ptr [r14+r13*4]
- vmulss      xmm9,xmm7,dword ptr [r14+r13*4+10h]
- vmulss      xmm10,xmm7,dword ptr [r14+r13*4+20h]
-      pos += next_data._position[group].get_lvec(sub) * frac;
- add         rax,rsp
- add         rax,0B0h
- or          rax,rcx
- vfmadd231ss xmm0,xmm6,dword ptr [rax]
- vmovss      dword ptr [rsp+3Ch],xmm0
- vfmadd231ss xmm9,xmm6,dword ptr [rax+10h]
- vfmadd231ss xmm10,xmm6,dword ptr [rax+20h]
-
-      LVecBase3f scale = data._scale[group].get_lvec(sub);
-      scale *= e0;
- vmulss      xmm11,xmm7,dword ptr [r14+r13*4+0C00h]
- vmulss      xmm12,xmm7,dword ptr [r14+r13*4+0C10h]
- vmulss      xmm13,xmm7,dword ptr [r14+r13*4+0C20h]
-      scale += next_data._scale[group].get_lvec(sub) * frac;
- vfmadd231ss xmm11,xmm6,dword ptr [rax+0C00h]
- vfmadd231ss xmm12,xmm6,dword ptr [rax+0C10h]
- vfmadd231ss xmm13,xmm6,dword ptr [rax+0C20h]
-
-      LVecBase3f shear = data._shear[group].get_lvec(sub);
-      shear *= e0;
- vmulss      xmm14,xmm7,dword ptr [r14+r13*4+1800h]
- vmulss      xmm15,xmm7,dword ptr [r14+r13*4+1810h]
- vmulss      xmm8,xmm7,dword ptr [r14+r13*4+1820h]
-      shear += next_data._shear[group].get_lvec(sub) * frac;
- vfmadd231ss xmm14,xmm6,dword ptr [rax+1800h]
- vfmadd231ss xmm15,xmm6,dword ptr [rax+1810h]
- vfmadd231ss xmm8,xmm6,dword ptr [rax+1820h]
-
-      LQuaternionf quat;
-      LQuaternion::slerp(data._rotation[group].get_lquat(sub), next_data._rotation[group].get_lquat(sub), frac, quat);
- shl         r12,6
- lea         rax,[rsp+r12]
- add         rax,0B0h
- vmovss      xmm0,dword ptr [rax+r13*4+2430h]
- vmovss      xmm1,dword ptr [rax+r13*4+2420h]
- vmovss      xmm2,dword ptr [rax+r13*4+2400h]
- vmovss      xmm3,dword ptr [rax+r13*4+2410h]
- vmovss      dword ptr [rsp+60h],xmm2
- vmovss      dword ptr [rsp+64h],xmm3
- vmovss      dword ptr [rsp+68h],xmm1
- vmovss      dword ptr [rsp+6Ch],xmm0
- add         r12,r15
- vmovss      xmm0,dword ptr [r12+r13*4+2430h]
- vmovss      xmm1,dword ptr [r12+r13*4+2420h]
- vmovss      xmm2,dword ptr [r12+r13*4+2400h]
- vmovss      xmm3,dword ptr [r12+r13*4+2410h]
- vmovss      dword ptr [rsp+40h],xmm2
- vmovss      dword ptr [rsp+44h],xmm3
- vmovss      dword ptr [rsp+48h],xmm1
- vmovss      dword ptr [rsp+4Ch],xmm0
- lea         rcx,[rsp+40h]
- lea         rdx,[rsp+60h]
- vmovaps     xmm2,xmm6
- mov         r9,rsi
- call        rbx
- vmovss      xmm0,dword ptr [rsp+3Ch]
-*/
-    float e0 = 1.0f - frac;
-
-    for (int i = 0; i < context._num_joints; ++i) {
-      int group = i / SIMDFloatVector::num_columns;
-      int sub = i % SIMDFloatVector::num_columns;
-
-      LVecBase3f pos = data._position[group].get_lvec(sub);
-      pos *= e0;
-      pos += next_data._position[group].get_lvec(sub) * frac;
-
-      LVecBase3f scale = data._scale[group].get_lvec(sub);
-      scale *= e0;
-      scale += next_data._scale[group].get_lvec(sub) * frac;
-
-      LVecBase3f shear = data._shear[group].get_lvec(sub);
-      shear *= e0;
-      shear += next_data._shear[group].get_lvec(sub) * frac;
-
-      LQuaternionf quat;
-      LQuaternion::slerp(data._rotation[group].get_lquat(sub), next_data._rotation[group].get_lquat(sub), frac, quat);
-
-      data._position[group].set_lvec(sub, pos);
-      data._scale[group].set_lvec(sub, scale);
-      data._shear[group].set_lvec(sub, shear);
-      data._rotation[group].set_lquat(sub, quat);
-    }
-#endif
 
     frameblend_pcollector.stop();
   }
