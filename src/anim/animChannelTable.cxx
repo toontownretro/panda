@@ -317,18 +317,56 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
     frameblend_pcollector.start();
 
+#if 1
+    // Measured this to take 75 microseconds for 500 characters with 42
+    // joints each.  ~6x faster than the scalar version below.  Using slerp()
+    // with sleef trig functions takes much longer than basic lerp().
+
     SIMDFloatVector vfrac = frac;
     SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
     for (int i = 0; i < context._num_joint_groups; ++i) {
       data._pose[i].pos *= ve0;
-      data._pose[i].pos = data._pose[i].pos.madd(next_data._pose[i].pos, vfrac);
+      data._pose[i].pos.madd_in_place(next_data._pose[i].pos, vfrac);
+
       data._pose[i].scale *= ve0;
-      data._pose[i].scale = data._pose[i].scale.madd(next_data._pose[i].scale, vfrac);
+      data._pose[i].scale.madd_in_place(next_data._pose[i].scale, vfrac);
+
       data._pose[i].shear *= ve0;
-      data._pose[i].shear = data._pose[i].shear.madd(next_data._pose[i].shear, vfrac);
-      data._pose[i].quat = data._pose[i].quat.align_slerp(next_data._pose[i].quat, vfrac);
+      data._pose[i].shear.madd_in_place(next_data._pose[i].shear, vfrac);
+
+      data._pose[i].quat = data._pose[i].quat.align_lerp(next_data._pose[i].quat, vfrac);
     }
+
+#else
+    // Scalar version (though compiler optimizes it to use mulss/addss).
+    // Measured this to take around 450 microseconds for 500 characters with
+    // 42 joints each.
+    float e0 = 1.0f - frac;
+    for (int i = 0; i < context._num_joints; ++i) {
+      int group = i / SIMDFloatVector::num_columns;
+      int sub = i % SIMDFloatVector::num_columns;
+
+      LVecBase3f pos = data._pose[group].pos.get_lvec(sub);
+      pos *= e0;
+      LVecBase3f scale = data._pose[group].scale.get_lvec(sub);
+      scale *= e0;
+      LVecBase3f shear = data._pose[group].shear.get_lvec(sub);
+      shear *= e0;
+
+      pos += next_data._pose[group].pos.get_lvec(sub) * frac;
+      scale += next_data._pose[group].scale.get_lvec(sub) * frac;
+      shear += next_data._pose[group].shear.get_lvec(sub) * frac;
+
+      LQuaternionf quat;
+      LQuaternionf::blend(data._pose[group].quat.get_lquat(sub), next_data._pose[group].quat.get_lquat(sub), frac, quat);
+
+      data._pose[group].pos.set_lvec(sub, pos);
+      data._pose[group].scale.set_lvec(sub, scale);
+      data._pose[group].shear.set_lvec(sub, shear);
+      data._pose[group].quat.set_lquat(sub, quat);
+    }
+#endif
 
     frameblend_pcollector.stop();
   }
