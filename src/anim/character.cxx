@@ -337,10 +337,10 @@ do_update(double now, CData *cdata, Thread *current_thread) {
     for (size_t i = 0; i < _joints.size(); i++) {
       int group = i / SIMDFloatVector::num_columns;
       int sub = i % SIMDFloatVector::num_columns;
-      _bind_pose._position[group].set_lvec(sub, _joints[i]._default_pos);
-      _bind_pose._scale[group].set_lvec(sub, _joints[i]._default_scale);
-      _bind_pose._shear[group].set_lvec(sub, _joints[i]._default_shear);
-      _bind_pose._rotation[group].set_lquat(sub, _joints[i]._default_quat);
+      _bind_pose._pose[group].pos.set_lvec(sub, _joints[i]._default_pos);
+      _bind_pose._pose[group].scale.set_lvec(sub, _joints[i]._default_scale);
+      _bind_pose._pose[group].shear.set_lvec(sub, _joints[i]._default_shear);
+      _bind_pose._pose[group].quat.set_lquat(sub, _joints[i]._default_quat);
     }
     _built_bind_pose = true;
   }
@@ -739,8 +739,8 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         // Use the transform calculated during the channel evaluation.
         int group = i / SIMDFloatVector::num_columns;
         int sub = i % SIMDFloatVector::num_columns;
-        joint._value = LMatrix4::scale_shear_mat(data._scale[group].get_lvec(sub), data._shear[group].get_lvec(sub)) * data._rotation[group].get_lquat(sub);
-        joint._value.set_row(3, data._position[group].get_lvec(sub));
+        joint._value = LMatrix4::scale_shear_mat(data._pose[group].scale.get_lvec(sub), data._pose[group].shear.get_lvec(sub)) * data._pose[group].quat.get_lquat(sub);
+        joint._value.set_row(3, data._pose[group].pos.get_lvec(sub));
 
       } else {
         // Take the local transform from the forced value.

@@ -274,9 +274,9 @@ calc_joint_net_transform(int joint, const AnimEvalData &pose) {
   int sub = joint % SIMDFloatVector::num_columns;
 
   // Compose a matrix of the current parent-space joint pose.
-  LMatrix4 local = LMatrix4::scale_shear_mat(pose._scale[group].get_lvec(sub),
-    pose._shear[group].get_lvec(sub)) * pose._rotation[group].get_lquat(sub);
-  local.set_row(3, pose._position[group].get_lvec(sub));
+  LMatrix4 local = LMatrix4::scale_shear_mat(pose._pose[group].scale.get_lvec(sub),
+    pose._pose[group].shear.get_lvec(sub)) * pose._pose[group].quat.get_lquat(sub);
+  local.set_row(3, pose._pose[group].pos.get_lvec(sub));
 
   // Transform local matrix by the parent's net matrix.
   int parent = _context->_character->get_joint_parent(joint);
@@ -325,10 +325,10 @@ joint_net_to_local(int joint, LMatrix4 *net_transforms,
 
   LVecBase3f dpos, dscale, dshear;
   LQuaternionf dquat;
-  data._position[group].get_lvec(sub, dpos);
-  data._scale[group].get_lvec(sub, dscale);
-  data._shear[group].get_lvec(sub, dshear);
-  data._rotation[group].get_lquat(sub, dquat);
+  data._pose[group].pos.get_lvec(sub, dpos);
+  data._pose[group].scale.get_lvec(sub, dscale);
+  data._pose[group].shear.get_lvec(sub, dshear);
+  data._pose[group].quat.get_lquat(sub, dquat);
 
   dpos *= e0;
   dpos += pos * weight;
@@ -340,10 +340,10 @@ joint_net_to_local(int joint, LMatrix4 *net_transforms,
   LQuaternion::slerp(dquat, quat, weight, q2);
   dquat = q2;
 
-  data._position[group].set_lvec(sub, dpos);
-  data._scale[group].set_lvec(sub, dscale);
-  data._shear[group].set_lvec(sub, dshear);
-  data._rotation[group].set_lquat(sub, dquat);
+  data._pose[group].pos.set_lvec(sub, dpos);
+  data._pose[group].scale.set_lvec(sub, dscale);
+  data._pose[group].shear.set_lvec(sub, dshear);
+  data._pose[group].quat.set_lquat(sub, dquat);
 }
 
 #define KNEEMAX_EPSILON 0.9998

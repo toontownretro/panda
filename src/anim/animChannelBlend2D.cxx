@@ -337,15 +337,15 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     SIMDFloatVector vw2 = w2;
 
     for (int i = 0; i < context._num_joint_groups; ++i) {
-      data._position[i] = c0_data._position[i] * vw0;
-      data._position[i] = data._position[i].madd(c1_data._position[i], vw1);
-      data._position[i] = data._position[i].madd(c2_data._position[i], vw2);
-      data._scale[i] = c0_data._scale[i] * vw0;
-      data._scale[i] = data._scale[i].madd(c1_data._scale[i], vw1);
-      data._scale[i] = data._scale[i].madd(c2_data._scale[i], vw2);
-      data._shear[i] = c0_data._shear[i] * vw0;
-      data._shear[i] = data._shear[i].madd(c1_data._shear[i], vw1);
-      data._shear[i] = data._shear[i].madd(c2_data._shear[i], vw2);
+      data._pose[i].pos = c0_data._pose[i].pos * vw0;
+      data._pose[i].pos = data._pose[i].pos.madd(c1_data._pose[i].pos, vw1);
+      data._pose[i].pos = data._pose[i].pos.madd(c2_data._pose[i].pos, vw2);
+      data._pose[i].scale = c0_data._pose[i].scale * vw0;
+      data._pose[i].scale = data._pose[i].scale.madd(c1_data._pose[i].scale, vw1);
+      data._pose[i].scale = data._pose[i].scale.madd(c2_data._pose[i].scale, vw2);
+      data._pose[i].shear = c0_data._pose[i].shear * vw0;
+      data._pose[i].shear = data._pose[i].shear.madd(c1_data._pose[i].shear, vw1);
+      data._pose[i].shear = data._pose[i].shear.madd(c2_data._pose[i].shear, vw2);
     }
 
     SIMDFloatVector diagonal_weight;
@@ -354,13 +354,13 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     if (w1 < 0.001f) {
       diagonal_weight = vw2 / (vw0 + vw2);
       for (int i = 0; i < context._num_joint_groups; ++i) {
-        data._rotation[i] = c0_data._rotation[i].align_slerp(c2_data._rotation[i], diagonal_weight);
+        data._pose[i].quat = c0_data._pose[i].quat.align_slerp(c2_data._pose[i].quat, diagonal_weight);
       }
     } else {
       diagonal_weight = vw1 / (vw0 + vw1);
       for (int i = 0; i < context._num_joint_groups; ++i) {
-        data._rotation[i] = c0_data._rotation[i].align_slerp(c1_data._rotation[i], diagonal_weight);
-        data._rotation[i] = data._rotation[i].align_slerp(c2_data._rotation[i], vw2);
+        data._pose[i].quat = c0_data._pose[i].quat.align_slerp(c1_data._pose[i].quat, diagonal_weight);
+        data._pose[i].quat = data._pose[i].quat.align_slerp(c2_data._pose[i].quat, vw2);
       }
     }
   }

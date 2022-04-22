@@ -195,10 +195,10 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
     for (int i = 0; i < context._num_joint_groups; i++) {
-      data._position[i] = (from_data._position[i] * ve0).madd(to_data._position[i], vfrac);
-      data._scale[i] = (from_data._scale[i] * ve0).madd(to_data._scale[i], vfrac);
-      data._shear[i] = (from_data._shear[i] * ve0).madd(to_data._shear[i], vfrac);
-      data._rotation[i] = from_data._rotation[i].align_slerp(to_data._rotation[i], vfrac);
+      data._pose[i].pos = (from_data._pose[i].pos * ve0).madd(to_data._pose[i].pos, vfrac);
+      data._pose[i].scale = (from_data._pose[i].scale * ve0).madd(to_data._pose[i].scale, vfrac);
+      data._pose[i].shear = (from_data._pose[i].shear * ve0).madd(to_data._pose[i].shear, vfrac);
+      data._pose[i].quat = from_data._pose[i].quat.align_slerp(to_data._pose[i].quat, vfrac);
     }
   }
 }

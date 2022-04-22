@@ -84,25 +84,16 @@ public:
   INLINE void copy_pose(const AnimEvalData &other, int num_joints);
   INLINE void steal_pose(AnimEvalData &other, int num_joints);
 
-  SIMDVector3f _position[max_character_joints / SIMDVector3f::num_vectors];
-  SIMDVector3f _scale[max_character_joints / SIMDVector3f::num_vectors];
-  SIMDVector3f _shear[max_character_joints / SIMDVector3f::num_vectors];
-  SIMDQuaternionf _rotation[max_character_joints / SIMDQuaternionf::num_quats];
-
-  class Joint {
+  class JointPose {
   public:
-    INLINE Joint() :
-      _rotation(LQuaternion::ident_quat()),
-      _scale(1)
-    { }
-    LVecBase4 _position;
-    LVecBase4 _scale;
-    LVecBase4 _shear;
-    LQuaternion _rotation;
+    SIMDVector3f pos;
+    SIMDVector3f scale;
+    SIMDVector3f shear;
+    SIMDQuaternionf quat;
   };
 
   // Poses of all joints.
-  //Joint _pose[max_character_joints];
+  JointPose _pose[max_character_joints / SIMDFloatVector::num_columns];
 
   PN_stdfloat _weight;
 

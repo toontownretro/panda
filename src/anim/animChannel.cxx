@@ -255,8 +255,8 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
     for (int i = 0; i < context._num_joint_groups; i++) {
       SIMDFloatVector s2 = vweight * vweights[i];
 
-      a._position[i] = a._position[i].madd(b._position[i], s2);
-      a._rotation[i] = a._rotation[i].accumulate_scaled_rhs_source(b._rotation[i] * delta_offsets[i], s2);
+      a._pose[i].pos = a._pose[i].pos.madd(b._pose[i].pos, s2);
+      a._pose[i].quat = a._pose[i].quat.accumulate_scaled_rhs_source(b._pose[i].quat * delta_offsets[i], s2);
     }
 
   } else {
@@ -267,10 +267,10 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       SIMDFloatVector s2 = vweight * vweights[i];
       SIMDFloatVector s1 = v1 - s2;
 
-      a._position[i] = (a._position[i] * s1).madd(b._position[i], s2);
-      a._scale[i] = (a._scale[i] * s1).madd(b._scale[i], s2);
-      a._shear[i] = (a._shear[i] * s1).madd(b._shear[i], s2);
-      a._rotation[i] = a._rotation[i].align_slerp(b._rotation[i], s2);
+      a._pose[i].pos = (a._pose[i].pos * s1).madd(b._pose[i].pos, s2);
+      a._pose[i].scale = (a._pose[i].scale * s1).madd(b._pose[i].scale, s2);
+      a._pose[i].shear = (a._pose[i].shear * s1).madd(b._pose[i].shear, s2);
+      a._pose[i].quat = a._pose[i].quat.align_slerp(b._pose[i].quat, s2);
     }
   }
 }
