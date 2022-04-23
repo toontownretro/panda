@@ -28,24 +28,23 @@ static PStatCollector frameblend_pcollector("*:Animation:FrameBlend");
 IMPLEMENT_CLASS(AnimChannelTable);
 
 /**
- * Converts a set of Euler angles in radians to a quaternion.
- * Assumes CS_zup_right.
+ * Converts a set of Euler angles encoded as sine of half angle to a
+ * Quaternion.
  */
-INLINE void
-quat_from_hpr_radians(const LVecBase3 &hpr, LQuaternionf &quat) {
-  // FIXME: Figure out how to optimize this.  We shouldn't have to
-  // multiply 3 quaternions.
+ALWAYS_INLINE void
+quat_from_hpr_sine_half_angle(const LVecBase3 &hpr, LQuaternionf &quat) {
+  // HPR is encoded as sine of half angle to lessen computation here.
+  float sy = hpr[0];
+  float sp = hpr[1];
+  float sr = hpr[2];
 
-  float s, c;
+  float cy = csqrt(1.0f - sy * sy);
+  float cp = csqrt(1.0f - sp * sp);
+  float cr = csqrt(1.0f - sr * sr);
 
-  csincos(hpr[0] * 0.5f, &s, &c);
-  LQuaternionf quat_h(c, 0, 0, s);
-
-  csincos(hpr[1] * 0.5f, &s, &c);
-  LQuaternionf quat_p(c, s, 0, 0);
-
-  csincos(hpr[2] * 0.5f, &s, &c);
-  LQuaternionf quat_r(c, 0, s, 0);
+  LQuaternionf quat_h(cy, 0, 0, sy);
+  LQuaternionf quat_p(cp, sp, 0, 0);
+  LQuaternionf quat_r(cr, 0, sr, 0);
 
   quat = quat_r * quat_p * quat_h;
 }
@@ -119,7 +118,7 @@ extract_frame_data(int frame, AnimEvalData &data, const AnimEvalContext &context
     pos[1] = (format & JF_y) ? fdata[frame_ofs++] : fzero[zero_ofs + 1];
     pos[2] = (format & JF_z) ? fdata[frame_ofs++] : fzero[zero_ofs + 2];
 
-    // Extract rotation (euler angles in radians).
+    // Extract rotation (Euler angles encoded as sine of half angle).
     LVecBase3f hpr;
     hpr[0] = (format & JF_h) ? fdata[frame_ofs++] : fzero[zero_ofs + 3];
     hpr[1] = (format & JF_p) ? fdata[frame_ofs++] : fzero[zero_ofs + 4];
@@ -145,7 +144,7 @@ extract_frame_data(int frame, AnimEvalData &data, const AnimEvalContext &context
     }
 
     LQuaternionf quat;
-    quat_from_hpr_radians(hpr, quat);
+    quat_from_hpr_sine_half_angle(hpr, quat);
 
     int group = cjoint / SIMDFloatVector::num_columns;
     int sub = cjoint % SIMDFloatVector::num_columns;
@@ -187,7 +186,7 @@ extract_frame0_data(AnimEvalData &data, const AnimEvalContext &context, const ve
       continue;
     }
 
-    quat_from_hpr_radians(hpr, quat);
+    quat_from_hpr_sine_half_angle(hpr, quat);
 
     int group = cjoint / SIMDFloatVector::num_columns;
     int sub = cjoint % SIMDFloatVector::num_columns;

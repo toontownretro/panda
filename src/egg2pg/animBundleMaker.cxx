@@ -24,6 +24,7 @@
 #include "animChannelBundle.h"
 #include "vector_stdfloat.h"
 #include "deg_2_rad.h"
+#include "cmath.h"
 
 using std::min;
 
@@ -315,13 +316,13 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
         // NOTE: hpr stored in radians so we don't have to convert to radians
         // when constructing quaternion during animation eval.
         case 'h':
-          h.push_back(deg_2_rad((float)child->get_value(ri)));
+          h.push_back(csin(deg_2_rad((float)child->get_value(ri)) * 0.5f));
           break;
         case 'p':
-          p.push_back(deg_2_rad((float)child->get_value(ri)));
+          p.push_back(csin(deg_2_rad((float)child->get_value(ri)) * 0.5f));
           break;
         case 'r':
-          r.push_back(deg_2_rad((float)child->get_value(ri)));
+          r.push_back(csin(deg_2_rad((float)child->get_value(ri)) * 0.5f));
           break;
         case 'a':
           a.push_back((float)child->get_value(ri));
