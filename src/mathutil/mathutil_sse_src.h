@@ -106,7 +106,7 @@ simd_load_aligned(PN_vec4f &vec, const float *data) {
 ALWAYS_INLINE PN_vec4i &
 simd_load_aligned(PN_vec4i &vec, const int *data) {
   //vec = _mm_load_ps((const float *)data);
-  //return vec;
+  return vec;
 }
 
 ALWAYS_INLINE PN_vec4f &
@@ -118,7 +118,7 @@ simd_load_unaligned(PN_vec4f &vec, const float *data) {
 ALWAYS_INLINE PN_vec4i &
 simd_load_unaligned4iv(PN_vec4i &vec, const int *data) {
   //vec = _mm_loadu_epi32(data);
-  //return vec;
+  return vec;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
