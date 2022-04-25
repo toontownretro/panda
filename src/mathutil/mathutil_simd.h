@@ -285,7 +285,7 @@ protected:
 
 #include "mathutil_sse_src.h"
 
-#if defined(__AVX__) || defined(__AVX2__)
+#if /*defined(__AVX__) ||*/ defined(__AVX2__)
 #define HAVE_AVX 1
 #include "mathutil_avx_src.h"
 #endif
