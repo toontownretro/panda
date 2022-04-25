@@ -95,6 +95,8 @@ get_length(Character *character) const {
   return _num_frames / _fps;
 }
 
+//#pragma clang optimize off
+
 /**
  * Extracts from the animation table a pose for every joint at the indicated
  * animation frame.
@@ -257,7 +259,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   int next_frame;
   switch (context._play_mode) {
   case AnimLayer::PM_pose:
-    next_frame = std::min(std::max(frame + 1, 0), num_frames);
+    next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
     break;
   case AnimLayer::PM_play:
     next_frame = std::min(std::max(frame + 1, 0), play_frames) + start_frame;
@@ -265,7 +267,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   case AnimLayer::PM_loop:
     {
       if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames);
+        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
       } else {
         next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
       }
@@ -274,7 +276,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   case AnimLayer::PM_pingpong:
     {
       if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames);
+        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
 
       } else {
         next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
@@ -290,6 +292,9 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     next_frame = frame;
     break;
   }
+
+  // Ensure we don't read out of bounds.
+  nassertv(frame >= 0 && frame < num_frames && next_frame >= 0 && next_frame < num_frames);
 
   PN_stdfloat frac = fframe - frame;
 
