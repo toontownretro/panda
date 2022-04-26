@@ -21,6 +21,8 @@
 #include "materialParamTexture.h"
 #include "materialParamMatrix.h"
 #include "materialParamVector.h"
+#include "renderState.h"
+#include "shaderAttrib.h"
 
 TypeHandle TwoTextureShader::_type_handle;
 
@@ -67,10 +69,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_vertex_shader("shaders/two_texture.vert.sho.pz");
   set_pixel_shader("shaders/two_texture.frag.sho.pz");
 
-  // Hardware skinning?
-  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
-      anim_spec.get_num_transforms() > 0) {
-    set_vertex_shader_combo(IN_SKINNING, 1);
+  // Toggle GPU skinning.
+  const ShaderAttrib *sha;
+  state->get_attrib_def(sha);
+  if (sha->has_hardware_skinning()) {
+    if (sha->get_num_transforms() > 4) {
+      // 8 transforms version.
+      set_vertex_shader_combo(IN_SKINNING, 2);
+    } else {
+      set_vertex_shader_combo(IN_SKINNING, 1);
+    }
   }
 
   const FogAttrib *fa;

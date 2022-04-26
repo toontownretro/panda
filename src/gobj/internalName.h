@@ -85,7 +85,9 @@ PUBLISHED:
   INLINE static PT(InternalName) get_aspect_ratio();
   INLINE static PT(InternalName) get_transform_blend();
   INLINE static PT(InternalName) get_transform_weight();
+  INLINE static PT(InternalName) get_transform_weight2();
   INLINE static PT(InternalName) get_transform_index();
+  INLINE static PT(InternalName) get_transform_index2();
   INLINE static PT(InternalName) get_morph(InternalName *column, const std::string &slider);
   INLINE static PT(InternalName) get_index();
   INLINE static PT(InternalName) get_world();
@@ -136,7 +138,9 @@ private:
   static PT(InternalName) _aspect_ratio;
   static PT(InternalName) _transform_blend;
   static PT(InternalName) _transform_weight;
+  static PT(InternalName) _transform_weight2;
   static PT(InternalName) _transform_index;
+  static PT(InternalName) _transform_index2;
   static PT(InternalName) _index;
   static PT(InternalName) _world;
   static PT(InternalName) _camera;

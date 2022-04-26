@@ -273,6 +273,23 @@ get_transform_weight() {
 }
 
 /**
+ * Returns the standard InternalName "transform_weight2". This is the column
+ * header for the n-component transform_weight value, which is used in
+ * conjuntion with "transform_index2" to define vertex animation on the
+ * graphics card.  The transform_weight value specifies the weight of the nth
+ * transform.  By convention, there are 1 fewer weight values than transforms,
+ * since the weights are assumed to sum to 1 (and the last value is therefore
+ * implicit).
+ */
+INLINE PT(InternalName) InternalName::
+get_transform_weight2() {
+  if (_transform_weight2 == nullptr) {
+    _transform_weight2 = InternalName::make("transform_weight2");
+  }
+  return _transform_weight2;
+}
+
+/**
  * Returns the standard InternalName "transform_index". This is the column
  * header for the n-component transform_index value, which is used in
  * conjuntion with "transform_weight" to define vertex animation on the
@@ -286,6 +303,22 @@ get_transform_index() {
     _transform_index = InternalName::make("transform_index");
   }
   return _transform_index;
+}
+
+/**
+ * Returns the standard InternalName "transform_index2". This is the column
+ * header for the n-component transform_index2 value, which is used in
+ * conjuntion with "transform_weight2" to define vertex animation on the
+ * graphics card.  The transform_index2 value specifies the nth transform, by
+ * lookup in the TransformTable.  The transform_index2 column may be omitted,
+ * in which case the nth transform is the nth entry in the table.
+ */
+INLINE PT(InternalName) InternalName::
+get_transform_index2() {
+  if (_transform_index2 == nullptr) {
+    _transform_index2 = InternalName::make("transform_index2");
+  }
+  return _transform_index2;
 }
 
 /**

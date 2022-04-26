@@ -53,10 +53,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_vertex_shader("shaders/eyes.vert.sho.pz");
   set_pixel_shader("shaders/eyes.frag.sho.pz");
 
-  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
-      anim_spec.get_num_transforms() > 0) {
-    // Doing skinning in the vertex shader.
-    set_vertex_shader_combo(IN_SKINNING, 1);
+  // Toggle GPU skinning.
+  const ShaderAttrib *sa;
+  state->get_attrib_def(sa);
+  if (sa->has_hardware_skinning()) {
+    if (sa->get_num_transforms() > 4) {
+      // 8 transforms version.
+      set_vertex_shader_combo(IN_SKINNING, 2);
+    } else {
+      set_vertex_shader_combo(IN_SKINNING, 1);
+    }
   }
 
   // Check for fog.
@@ -80,8 +86,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     num_lights = la->get_num_non_ambient_lights();
     num_ambient_lights = la->get_num_on_lights() - num_lights;
 
-    const ShaderAttrib *sa;
-    state->get_attrib_def(sa);
     if (sa->has_shader_input("ambientProbe")) {
       // SH ambient probe.
       set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);

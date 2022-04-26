@@ -28,6 +28,7 @@ ShaderAttrib() :
   _shader_name(nullptr),
   _flags(0),
   _has_flags(0),
+  _num_transforms(0),
   _instance_count(0),
   _has_texture_inputs(false)
 {
@@ -44,6 +45,7 @@ ShaderAttrib(const ShaderAttrib &copy) :
   _has_shader(copy._has_shader),
   _flags(copy._flags),
   _has_flags(copy._has_flags),
+  _num_transforms(copy._num_transforms),
   _instance_count(copy._instance_count),
   _inputs(copy._inputs),
   _shader_name(copy._shader_name),
@@ -126,6 +128,22 @@ get_num_shader_inputs() const {
 INLINE const InternalName *ShaderAttrib::
 get_shader_name() const {
   return _shader_name;
+}
+
+/**
+ *
+ */
+INLINE bool ShaderAttrib::
+has_hardware_skinning() const {
+  return (_flags & F_hardware_skinning) != 0;
+}
+
+/**
+ *
+ */
+INLINE int ShaderAttrib::
+get_num_transforms() const {
+  return _num_transforms;
 }
 
 /**

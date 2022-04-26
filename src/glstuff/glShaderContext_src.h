@@ -103,6 +103,8 @@ private:
 
   pvector<GLint> _uniform_location_map;
   GLint _color_attrib_index;
+  GLint _transform_weight2_index;
+  GLint _transform_index2_index;
   GLint _transform_table_index;
   GLint _slider_table_index;
   GLsizei _transform_table_size;

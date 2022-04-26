@@ -100,6 +100,8 @@ PUBLISHED:
   CPT(RenderAttrib) set_flag(int flag, bool value) const;
   CPT(RenderAttrib) clear_flag(int flag) const;
 
+  CPT(RenderAttrib) set_hardware_skinning(bool flag, int num_transforms = 4) const;
+
   CPT(RenderAttrib) clear_shader_input(const InternalName *id) const;
   CPT(RenderAttrib) clear_shader_input(const std::string &id) const;
 
@@ -115,6 +117,9 @@ PUBLISHED:
   INLINE size_t get_num_shader_inputs() const;
 
   INLINE const InternalName *get_shader_name() const;
+
+  INLINE bool has_hardware_skinning() const;
+  INLINE int get_num_transforms() const;
 
   const NodePath &get_shader_input_nodepath(const InternalName *id) const;
   LVecBase4 get_shader_input_vector(const InternalName *id) const;
@@ -147,6 +152,7 @@ private:
   bool        _auto_shader;
   bool        _has_shader;
   int         _flags;
+  int         _num_transforms;
   int         _has_flags;
   int         _instance_count;
 

@@ -32,6 +32,8 @@ public:
     memset(_arrays, 0, sizeof(_arrays));
     _vertex_array_colors = false;
     _has_vertex_colors = false;
+    _has_vertex_8joints = false;
+    _vertex_array_8joints = false;
     _index_buffer = 0;
   }
   GLuint _vao_id;
@@ -40,6 +42,11 @@ public:
   bool _vertex_array_colors;
   // True if the vertex format has a color column.
   bool _has_vertex_colors;
+  // True if the vertex format has transform_weight2 and transform_index2
+  // columns.  Indicates that the vertex format has data for GPU animation
+  // with up to 8 joint assignments per vertex.
+  bool _has_vertex_8joints;
+  bool _vertex_array_8joints;
   // BitMask of vertex array indices into the vertex format that are
   // actually needed by the shader.
   BitMask32 _used_arrays;

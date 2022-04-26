@@ -92,10 +92,22 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     const ShaderAttrib *sattr;
     _state->get_attrib_def(sattr);
     if (sattr->auto_shader()) {
-      //GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
-      if (_munged_data->get_format()->get_animation().get_animation_type() == Geom::AT_hardware) {
-        static CPT(RenderState) state = RenderState::make(
-          DCAST(ShaderAttrib, ShaderAttrib::make())->set_flag(ShaderAttrib::F_hardware_skinning, true));
+      GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
+      const GeomVertexAnimationSpec &anim_spec = data_reader.get_format()->get_animation();
+      if (anim_spec.get_animation_type() == Geom::AT_hardware) {
+        const RenderState *state;
+        if (anim_spec.get_num_transforms() == 4) {
+          static CPT(RenderState) state4 = RenderState::make(
+            DCAST(ShaderAttrib, ShaderAttrib::make())->set_hardware_skinning(true, 4));
+          state = state4;
+        } else if (anim_spec.get_num_transforms() == 8) {
+          static CPT(RenderState) state8 = RenderState::make(
+            DCAST(ShaderAttrib, ShaderAttrib::make())->set_hardware_skinning(true, 8));
+          state = state8;
+        } else {
+          state = RenderState::make_empty();
+        }
+
         // Compose it backwards so the flag still gets picked up if the higher
         // ShaderAttrib has an override value.
         _state = state->compose(_state);

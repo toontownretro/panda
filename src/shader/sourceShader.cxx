@@ -31,6 +31,7 @@
 #include "fog.h"
 #include "alphaTestAttrib.h"
 #include "cascadeLight.h"
+#include "renderState.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -151,10 +152,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   //}
   set_pixel_shader("shaders/source_vlg.frag.sho.pz");
 
-  // Hardware skinning?
-  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
-      anim_spec.get_num_transforms() > 0) {
-    set_vertex_shader_combo(IN_SKINNING, 1);
+  // Toggle GPU skinning.
+  const ShaderAttrib *sa;
+  state->get_attrib_def(sa);
+  if (sa->has_hardware_skinning()) {
+    if (sa->get_num_transforms() > 4) {
+      // 8 transforms version.
+      set_vertex_shader_combo(IN_SKINNING, 2);
+    } else {
+      set_vertex_shader_combo(IN_SKINNING, 1);
+    }
   }
 
   const AlphaTestAttrib *at;
@@ -189,8 +196,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   bool has_ambient_probe = false;
 
   if (!la->has_all_off()) {
-    const ShaderAttrib *sa;
-    state->get_attrib_def(sa);
     if (sa->has_shader_input("ambientProbe")) {
       set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
       has_ambient_probe = true;

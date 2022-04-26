@@ -56,6 +56,8 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
   _camera_transform = nullptr;
   _projection_transform = nullptr;
   _color_attrib_index = -1;
+  _transform_weight2_index = -1;
+  _transform_index2_index = -1;
   _transform_table_index = -1;
   _slider_table_index = -1;
   _frame_number_loc = -1;
@@ -214,7 +216,10 @@ CLP(ShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderContext
       Shader::ShaderVarSpec &spec = *it;
       if (spec._name == InternalName::get_color()) {
         _color_attrib_index = spec._id._location;
-        break;
+      } else if (spec._name == InternalName::get_transform_weight2()) {
+        _transform_weight2_index = spec._id._location;
+      } else if (spec._name == InternalName::get_transform_index2()) {
+        _transform_index2_index = spec._id._location;
       }
     }
 
@@ -3069,6 +3074,24 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
           vao->_vertex_array_colors = true;
           _glgsg->_glEnableVertexAttribArray(_color_attrib_index);
         }
+      }
+    }
+
+    if (_transform_weight2_index != -1 && _transform_index2_index != -1) {
+      if (!vao->_has_vertex_8joints) {
+        if (vao->_vertex_array_8joints) {
+          vao->_vertex_array_8joints = false;
+          _glgsg->_glDisableVertexAttribArray(_transform_weight2_index);
+          _glgsg->_glDisableVertexAttribArray(_transform_index2_index);
+        }
+        GLfloat ident_weights[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        _glgsg->_glVertexAttrib4fv(_transform_weight2_index, ident_weights);
+        _glgsg->_glVertexAttribI4ui(_transform_index2_index, 0, 0, 0, 0);
+
+      } else if (!vao->_vertex_array_8joints) {
+        vao->_vertex_array_8joints = true;
+        _glgsg->_glEnableVertexAttribArray(_transform_weight2_index);
+        _glgsg->_glEnableVertexAttribArray(_transform_index2_index);
       }
     }
   }

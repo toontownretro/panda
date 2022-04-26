@@ -4491,6 +4491,8 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
 
   _current_vao = &vao;
 
+  bool got_tw2 = false, got_ti2 = false;
+
   size_t num_columns = format->get_num_columns();
   for (size_t ci = 0; ci < num_columns; ++ci) {
     GLuint binding = format->get_array_with(ci);
@@ -4533,6 +4535,13 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
       vao._vertex_array_colors = true;
     }
 
+    if (name == InternalName::get_transform_weight2()) {
+      got_tw2 = true;
+    }
+    if (name == InternalName::get_transform_index2()) {
+      got_ti2 = true;
+    }
+
     for (int i = 0; i < column->get_num_elements(); ++i) {
       if (normalized) {
         _glVertexAttribFormat(loc, size, type, normalized, offset);
@@ -4563,6 +4572,11 @@ update_shader_vertex_format(const GeomVertexFormat *format) {
       offset += column->get_element_stride();
       ++loc;
     }
+  }
+
+  if (got_tw2 && got_ti2) {
+    vao._has_vertex_8joints = true;
+    vao._vertex_array_8joints = true;
   }
 }
 #endif

@@ -12,6 +12,7 @@
  */
 
 #include "basicShader.h"
+#include "shaderAttrib.h"
 #include "internalName.h"
 #include "textureAttrib.h"
 #include "texture.h"
@@ -22,6 +23,7 @@
 #include "geomVertexAnimationSpec.h"
 #include "material.h"
 #include "materialParamTexture.h"
+#include "renderState.h"
 
 TypeHandle BasicShader::_type_handle;
 
@@ -51,10 +53,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   set_vertex_shader("shaders/basic.vert.sho.pz");
   set_pixel_shader("shaders/basic.frag.sho.pz");
 
-  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
-      anim_spec.get_num_transforms() > 0) {
-    // Doing skinning in the vertex shader.
-    set_vertex_shader_combo(IN_SKINNING, 1);
+  // Toggle GPU skinning.
+  const ShaderAttrib *sha;
+  state->get_attrib_def(sha);
+  if (sha->has_hardware_skinning()) {
+    if (sha->get_num_transforms() > 4) {
+      // 8 transforms version.
+      set_vertex_shader_combo(IN_SKINNING, 2);
+    } else {
+      set_vertex_shader_combo(IN_SKINNING, 1);
+    }
   }
 
   if (material == nullptr) {

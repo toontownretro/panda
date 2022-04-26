@@ -1347,6 +1347,21 @@ append_vdata(const GeomVertexData *vdata, int vertex_offset) {
         index.set_data4i(indices);
       }
     }
+    index.set_column(InternalName::get_transform_index2());
+    if (index.has_column()) {
+      int num_values = index.get_column()->get_num_values();
+      int num_rows = vdata->get_num_rows();
+
+      index.set_row_unsafe(vertex_offset);
+      for (int ci = 0; ci < num_rows; ++ci) {
+        LVecBase4i indices = index.get_data4i();
+        for (int i = 0; i < num_values; i++) {
+          nassertv(indices[i] >= 0 && indices[i] < (int)transform_map.size());
+          indices[i] = transform_map[indices[i]];
+        }
+        index.set_data4i(indices);
+      }
+    }
   }
 
   if (vdata->get_transform_blend_table() != nullptr) {

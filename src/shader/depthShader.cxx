@@ -13,6 +13,7 @@
 
 #include "depthShader.h"
 #include "renderState.h"
+#include "shaderAttrib.h"
 #include "transparencyAttrib.h"
 #include "textureAttrib.h"
 #include "textureStage.h"
@@ -110,9 +111,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
   }
 
-  if (anim_spec.get_animation_type() == GeomEnums::AT_hardware &&
-      anim_spec.get_num_transforms() > 0) {
-    set_vertex_shader_combo(IN_SKINNING, 1);
+  // Toggle GPU skinning.
+  const ShaderAttrib *sha;
+  state->get_attrib_def(sha);
+  if (sha->has_hardware_skinning()) {
+    if (sha->get_num_transforms() > 4) {
+      // 8 transforms version.
+      set_vertex_shader_combo(IN_SKINNING, 2);
+    } else {
+      set_vertex_shader_combo(IN_SKINNING, 1);
+    }
   }
 
   const ClipPlaneAttrib *cpa;

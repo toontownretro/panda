@@ -2418,18 +2418,37 @@ make_vertex_data(const EggRenderState *render_state,
     // indexes into the blend table per vertex, and also one for each
     // different type of morph delta.
 
+    // Determine the max number of grefs.  We might need additional columns to
+    // support more than 4 grefs.
+    int max_grefs = 0;
+    EggVertexPool::const_iterator vi;
+    for (vi = vertex_pool->begin(); vi != vertex_pool->end(); ++vi) {
+      EggVertex *vertex = (*vi);
+      max_grefs = std::max(max_grefs, (int)vertex->gref_size());
+    }
+
     // Tell the format that we're setting it up for GPU-based animation.
     GeomVertexAnimationSpec animation;
-    animation.set_hardware(4, true);
+    animation.set_hardware(max_grefs <= 4 ? 4 : 8, true);
     temp_format->set_animation(animation);
 
     PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
     anim_array_format->add_column
-      (InternalName::get_transform_weight(), animation.get_num_transforms(),
+      (InternalName::get_transform_weight(), 4,
        GeomEnums::NT_stdfloat, GeomEnums::C_other);
     anim_array_format->add_column
-      (InternalName::get_transform_index(), animation.get_num_transforms(),
+      (InternalName::get_transform_index(), 4,
        GeomEnums::NT_uint8, GeomEnums::C_index);
+    if (max_grefs > 4) {
+      // We require an additional column to support more vertex-joint
+      // assignments.
+      anim_array_format->add_column
+        (InternalName::get_transform_weight2(), 4,
+        GeomEnums::NT_stdfloat, GeomEnums::C_other);
+      anim_array_format->add_column
+        (InternalName::get_transform_index2(), 4,
+        GeomEnums::NT_uint8, GeomEnums::C_index);
+    }
     temp_format->add_array(anim_array_format);
 
     //PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
@@ -2439,7 +2458,6 @@ make_vertex_data(const EggRenderState *render_state,
     //temp_format->add_array(anim_array_format);
 
     pmap<string, BitArray> slider_names;
-    EggVertexPool::const_iterator vi;
     for (vi = vertex_pool->begin(); vi != vertex_pool->end(); ++vi) {
       EggVertex *vertex = (*vi);
 
@@ -2643,7 +2661,9 @@ make_vertex_data(const EggRenderState *render_state,
       // weights.
 
       LVecBase4f weights(0);
+      LVecBase4f weights2(0);
       LVecBase4i indices(0);
+      LVecBase4i indices2(0);
 
       // For normalizing the weights.
       double weight_total = 0.0f;
@@ -2658,26 +2678,28 @@ make_vertex_data(const EggRenderState *render_state,
         weight_total = 1.0f;
 
       } else {
-        if (vertex->gref_size() > 4) {
-          // A vertex cannot be influenced by more than four joints for
+        if (vertex->gref_size() > 8) {
+          // A vertex cannot be influenced by more than eight joints for
           // hardware skinning.
           egg2pg_cat.warning()
             << "Vertex references " << vertex->gref_size() << " joints, which is "
-            << vertex->gref_size() - 4 << " more than the max (4)\n";
+            << vertex->gref_size() - 4 << " more than the max (8)\n";
         }
         double quantize = egg_vertex_membership_quantize;
         EggVertex::GroupRef::const_iterator gri;
         int vtx_weight_index = 0;
-        for (gri = vertex->gref_begin(); gri != vertex->gref_end() && vtx_weight_index < 4; ++gri) {
+        for (gri = vertex->gref_begin(); gri != vertex->gref_end() && vtx_weight_index < 8; ++gri) {
           EggGroup *egg_group = (*gri);
 
-          //if (vtx_weight_index < 4) {
-            // Find the index into the TransformTable of this EggGroup's VertexTransform.
-            auto it = _vertex_transform_indices[xform_table].find(egg_group);
-            if (it != _vertex_transform_indices[xform_table].end()) {
+          // Find the index into the TransformTable of this EggGroup's VertexTransform.
+          auto it = _vertex_transform_indices[xform_table].find(egg_group);
+          if (it != _vertex_transform_indices[xform_table].end()) {
+            if (vtx_weight_index >= 4) {
+              indices2[vtx_weight_index - 4] = (*it).second;
+            } else {
               indices[vtx_weight_index] = (*it).second;
             }
-          //}
+          }
 
           double membership = egg_group->get_vertex_membership(vertex);
           if (quantize != 0.0) {
@@ -2686,32 +2708,41 @@ make_vertex_data(const EggRenderState *render_state,
 
           weight_total += membership;
 
-          //if (vtx_weight_index < 4) {
+          if (vtx_weight_index >= 4) {
+            weights2[vtx_weight_index - 4] = membership;
+          } else {
             weights[vtx_weight_index] = membership;
+          }
 
-            vtx_weight_index++;
-          //}
+          vtx_weight_index++;
         }
       }
 
       if (weight_total > 0.0001f && (weight_total < 0.999f || weight_total > 1.0001f)) {
         weights /= weight_total;
+        weights2 /= weight_total;
       }
 
       if (weight_total > 1.0001f) {
         egg2pg_cat.warning()
           << "Had to normalize vertex joint weights, non-norm total " << weight_total << ", non-norm weights "
-          << weights * weight_total << ", norm weights " << weights << "\n";
+          << weights * weight_total << " " << weights2 * weight_total << ", norm weights " << weights << " " << weights2 << "\n";
       }
 
       // Write the indices of the VertexTransforms that the vertex is assigned
       // to.
       gvw.set_column(InternalName::get_transform_index());
       gvw.add_data4i(indices);
+      if (gvw.set_column(InternalName::get_transform_index2())) {
+        gvw.add_data4i(indices2);
+      }
 
       // And finally the weights of each VertexTransform.
       gvw.set_column(InternalName::get_transform_weight());
       gvw.add_data4f(weights);
+      if (gvw.set_column(InternalName::get_transform_weight2())) {
+        gvw.add_data4f(weights2);
+      }
     }
   }
 

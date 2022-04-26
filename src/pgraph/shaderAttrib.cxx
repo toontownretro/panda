@@ -177,6 +177,21 @@ clear_flag(int flag) const {
  *
  */
 CPT(RenderAttrib) ShaderAttrib::
+set_hardware_skinning(bool flag, int num_transforms) const {
+  ShaderAttrib *result = new ShaderAttrib(*this);
+  if (flag) {
+    result->_flags |= F_hardware_skinning;
+  } else {
+    result->_flags &= ~F_hardware_skinning;
+  }
+  result->_num_transforms = num_transforms;
+  return return_new(result);
+}
+
+/**
+ *
+ */
+CPT(RenderAttrib) ShaderAttrib::
 set_shader_input(const ShaderInput &input) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
   Inputs::iterator i = result->_inputs.find(input.get_name());
@@ -680,6 +695,9 @@ compare_to_impl(const RenderAttrib *other) const {
   if (this->_has_flags != that->_has_flags) {
     return (this->_has_flags < that->_has_flags) ? -1 : 1;
   }
+  if (this->_num_transforms != that->_num_transforms) {
+    return (this->_num_transforms < that->_num_transforms) ? -1 : 1;
+  }
   if (this->_instance_count != that->_instance_count) {
     return (this->_instance_count < that->_instance_count) ? -1 : 1;
   }
@@ -721,6 +739,7 @@ get_hash_impl() const {
   hash = int_hash::add_hash(hash, (int)_has_shader);
   hash = int_hash::add_hash(hash, _flags);
   hash = int_hash::add_hash(hash, _has_flags);
+  hash = int_hash::add_hash(hash, _num_transforms);
   hash = int_hash::add_hash(hash, _instance_count);
   hash = pointer_hash::add_hash(hash, _shader_name);
 
@@ -784,6 +803,7 @@ compose_impl(const RenderAttrib *other) const {
   attr->_flags &= ~(over->_has_flags);
   attr->_flags |= over->_flags;
   attr->_has_flags |= (over->_has_flags);
+  attr->_num_transforms = std::max(_num_transforms, over->_num_transforms);
   return return_new(attr);
 }
 
@@ -809,6 +829,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_int32(_shader_priority);
   dg.add_int32(_flags);
   dg.add_int32(_has_flags);
+  dg.add_int32(_num_transforms);
   dg.add_int32(_instance_count);
 }
 
@@ -855,6 +876,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _shader_priority = scan.get_int32();
   _flags = scan.get_int32();
   _has_flags = scan.get_int32();
+  _num_transforms = scan.get_int32();
   _instance_count = scan.get_int32();
 }
 
