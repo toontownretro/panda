@@ -63,7 +63,7 @@ has_combo(CPT_InternalName name) const {
  */
 INLINE const ShaderObject::Combo &ShaderObject::
 get_combo(size_t n) const {
-  nassertr(n >= 0 && n < _combos.size(), Combo());
+  assert(n < _combos.size());
   return _combos[n];
 }
 
@@ -76,11 +76,8 @@ get_combo(CPT_InternalName name) const {
   key.name = name;
 
   auto it = std::find(_combos.begin(), _combos.end(), key);
-  if (it == _combos.end()) {
-    return Combo();
-  } else {
-    return *it;
-  }
+  assert(it != _combos.end());
+  return (*it);
 }
 
 /**
