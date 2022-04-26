@@ -960,13 +960,13 @@ update() {
 #endif
     update_dirty_dsps();
 
-    if (!_queued_plays.empty()) {
+    //if (!_queued_plays.empty()) {
       // Call play on all sounds that have been queued up during the frame.
-      for (FMODAudioSound *sound : _queued_plays) {
-        sound->start_playing();
-      }
-      _queued_plays.clear();
-    }
+    //  for (FMODAudioSound *sound : _queued_plays) {
+    //    sound->start_playing();
+    //  }
+    //  _queued_plays.clear();
+    //}
 
     _system->update();
     _last_update_frame = current_frame;

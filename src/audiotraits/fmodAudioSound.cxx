@@ -359,8 +359,8 @@ FMODAudioSound::
  */
 void FMODAudioSound::
 play() {
-  //start_playing();
-  _manager->_queued_plays.insert(this);
+  start_playing();
+  //_manager->_queued_plays.insert(this);
 }
 
 /**
@@ -394,7 +394,7 @@ stop() {
   _start_time = 0.0;
   _paused = false;
 
-  _manager->_queued_plays.erase(this);
+  //_manager->_queued_plays.erase(this);
 
   _manager->stopping_sound(this);
 }
@@ -477,8 +477,8 @@ set_time(PN_stdfloat start_time) {
 
   if (status() == PLAYING) {
     // Already playing; skip to the indicated time.
-    //start_playing();
-    _manager->_queued_plays.insert(this);
+    start_playing();
+    //_manager->_queued_plays.insert(this);
   }
 }
 
