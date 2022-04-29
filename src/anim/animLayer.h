@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "numeric_types.h"
 #include "animEvalContext.h"
+#include "animTimer.h"
 
 class AnimEventQueue;
 
@@ -25,16 +26,8 @@ static const int max_anim_layers = 15;
 /**
  * An animation layer, used by the AnimSequencePlayer.
  */
-class EXPCL_PANDA_ANIM AnimLayer {
+class EXPCL_PANDA_ANIM AnimLayer : public AnimTimer {
 PUBLISHED:
-  enum PlayMode {
-    PM_none,
-    PM_pose,
-    PM_loop,
-    PM_play,
-    PM_pingpong,
-  };
-
   AnimLayer();
 
   void init(Character *character);
@@ -63,7 +56,6 @@ PUBLISHED:
 
   bool is_playing() const;
   void accumulate_cycle();
-  PN_stdfloat clamp_cycle(PN_stdfloat c) const;
 
   void update();
   void calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition);

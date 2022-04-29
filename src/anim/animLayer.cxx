@@ -33,7 +33,7 @@ init(Character *character) {
   _character = character;
   _play_mode = PM_none;
   _start_cycle = 0.0f;
-  _play_cycles = 0.999999f;
+  _play_cycles = 1.0f;
   _last_advance_time = 0.0f;
   _last_event_channel = -1;
   _last_event_cycle = 0.0f;
@@ -148,41 +148,9 @@ accumulate_cycle() {
     _unclamped_cycle += elapsed * (channel->get_cycle_rate(_character) * _play_rate);
 
     // Now clamp and wrap it based on the selected play mode.
-    _cycle = clamp_cycle(_unclamped_cycle);
+    _cycle = adjust_value(_unclamped_cycle, _start_cycle, _play_cycles, _play_mode);
   }
 }
-
-/**
- * Returns a wrapped and clamped cycle value from the indicated full cycle.
- * Takes into account play mode and playback range.
- */
-PN_stdfloat AnimLayer::
-clamp_cycle(PN_stdfloat c) const {
-  PN_stdfloat clamped;
-  if (_play_mode == PM_play || _play_mode == PM_pose) {
-    clamped = std::min(std::max(c, 0.0f), _play_cycles) + _start_cycle;
-
-  } else if (_play_mode == PM_loop) {
-    nassertr(_play_cycles >= 0.0f, 0.0f);
-    clamped = cmod(c, _play_cycles) + _start_cycle;
-
-  } else if (_play_mode == PM_pingpong) {
-    // Pingpong.
-    nassertr(_play_cycles >= 0.0f, 0.0f);
-    c = cmod(c, _play_cycles * 2.0f);
-    if (c > _play_cycles) {
-      clamped = (_play_cycles * 2.0f - c) + _start_cycle;
-    } else {
-      clamped = c + _start_cycle;
-    }
-
-  } else {
-    clamped = c;
-  }
-
-  return std::clamp(clamped, 0.0f, 0.999999f);
-}
-
 
 /**
  *
@@ -340,7 +308,8 @@ calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition) {
         PN_stdfloat dt = (context._time - blend->_layer_anim_time);
         cycle = blend->_cycle + (dt * blend->_play_rate *
                                  blend_channel->get_cycle_rate(_character));
-        cycle = blend->clamp_cycle(cycle);
+        cycle = blend->adjust_value(cycle, blend->_start_cycle, blend->_play_cycles,
+                                         blend->_play_mode);
       }
 
       context._play_mode = blend->_play_mode;

@@ -20,6 +20,7 @@
     animEvent.h \
     animEventQueue.h animEventQueue.I \
     animLayer.h animLayer.I \
+    animTimer.h animTimer.I \
     character.h character.I \
     characterAttachment.h characterAttachment.I \
     characterJoint.h characterJoint.I \

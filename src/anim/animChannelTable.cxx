@@ -241,56 +241,28 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   nassertv(joint_map.size() >= _joint_formats.size());
 
   // Convert cycles to frame numbers for table lookup.
-
-  // Ensure the cycle is within range.  The cycle can never be 1.0,
-  // because the frame index is floor(cycle * num_frames).
-  PN_stdfloat cycle = std::clamp(data._cycle, 0.0f, 0.999999f);
+  PN_stdfloat cycle = data._cycle;
 
   int num_frames = get_num_frames();
-  int start_frame = (int)floor(context._start_cycle * num_frames);
-  int play_frames = (int)floor(context._play_cycles * num_frames);
+  int start_frame = std::clamp((int)cfloor(context._start_cycle * num_frames), 0, num_frames - 1);
+  int play_frames = (int)cfloor(context._play_cycles * num_frames);
+  int end_frame = std::clamp(start_frame + play_frames - 1, 0, num_frames - 1);
 
   // Calculate the floating-point frame.
   PN_stdfloat fframe = cycle * num_frames;
   // Snap to integer frame.
-  int frame = (int)floor(fframe);
+  int frame = (int)cfloor(fframe);
+  frame = std::clamp(frame, start_frame, end_frame);
 
-  // Determine next frame for inter-frame blending.
-  int next_frame;
-  switch (context._play_mode) {
-  case AnimLayer::PM_pose:
-    next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
-    break;
-  case AnimLayer::PM_play:
-    next_frame = std::min(std::max(frame + 1, 0), play_frames) + start_frame;
-    break;
-  case AnimLayer::PM_loop:
-    {
-      if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
-      } else {
-        next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
-      }
-    }
-    break;
-  case AnimLayer::PM_pingpong:
-    {
-      if (play_frames == 0) {
-        next_frame = std::min(std::max(frame + 1, 0), num_frames - 1);
-
-      } else {
-        next_frame = cmod(frame + 1, play_frames + 1) + start_frame;
-        if (next_frame > play_frames) {
-          next_frame = (play_frames * 2.0f - next_frame) + start_frame;
-        } else {
-          next_frame += start_frame;
-        }
-      }
-    }
-    break;
-  default:
-    next_frame = frame;
-    break;
+  // Calculate next frame.
+  // TODO: Need to blend into next frame that will actually be used.  Needs to
+  // take into account play mode and range.  This works for most cases though.
+  int next_frame = frame + 1;
+  if (context._play_mode == AnimLayer::PM_loop ||
+      context._play_mode == AnimLayer::PM_pingpong) {
+    next_frame = cmod(next_frame, num_frames);
+  } else {
+    next_frame = std::clamp(next_frame, start_frame, end_frame);
   }
 
   // Ensure we don't read out of bounds.
