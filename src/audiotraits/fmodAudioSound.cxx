@@ -894,6 +894,14 @@ get_3d_distance_factor() const {
 }
 
 /**
+ * Returns the base frequency/sample rate of the audio file.
+ */
+PN_stdfloat FMODAudioSound::
+get_sound_frequency() const {
+  return _sample_frequency;
+}
+
+/**
  * In Multichannel Speaker systems [like Surround].
  *
  * Speakers which don't exist in some systems will simply be ignored.  But I

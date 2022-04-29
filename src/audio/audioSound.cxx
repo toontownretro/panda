@@ -78,6 +78,14 @@ get_3d_distance_factor() const {
 }
 
 /**
+ * Returns the default frequency/sample rate of the audio file.
+ */
+PN_stdfloat AudioSound::
+get_sound_frequency() const {
+  return 0.0f;
+}
+
+/**
  * For use only with FMOD.
  */
 PN_stdfloat AudioSound::

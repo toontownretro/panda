@@ -139,6 +139,8 @@ public:
   void set_3d_distance_factor(PN_stdfloat factor);
   PN_stdfloat get_3d_distance_factor() const;
 
+  virtual PN_stdfloat get_sound_frequency() const override;
+
   AudioSound::SoundStatus status() const;
 
   virtual PN_stdfloat get_speaker_mix(int speaker);

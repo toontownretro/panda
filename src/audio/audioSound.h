@@ -114,6 +114,8 @@ PUBLISHED:
   virtual void set_3d_distance_factor(PN_stdfloat dist);
   virtual PN_stdfloat get_3d_distance_factor() const;
 
+  virtual PN_stdfloat get_sound_frequency() const;
+
   // speaker_mix is for use with FMOD.
   virtual PN_stdfloat get_speaker_mix(int speaker);
   virtual void set_speaker_mix(int speaker, PN_stdfloat mix);
