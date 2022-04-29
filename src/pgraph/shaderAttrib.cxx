@@ -829,7 +829,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   dg.add_int32(_shader_priority);
   dg.add_int32(_flags);
   dg.add_int32(_has_flags);
-  dg.add_int32(_num_transforms);
+  //dg.add_int32(_num_transforms);
   dg.add_int32(_instance_count);
 }
 
@@ -876,7 +876,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _shader_priority = scan.get_int32();
   _flags = scan.get_int32();
   _has_flags = scan.get_int32();
-  _num_transforms = scan.get_int32();
+  //_num_transforms = scan.get_int32();
   _instance_count = scan.get_int32();
 }
 
