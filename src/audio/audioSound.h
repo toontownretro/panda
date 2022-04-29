@@ -19,6 +19,7 @@
 #include "typedReferenceCount.h"
 #include "pointerTo.h"
 #include "filterProperties.h"
+#include "cmath.h"
 
 class AudioManager;
 class DSP;
@@ -26,6 +27,28 @@ class SteamAudioProperties;
 
 class EXPCL_PANDA_AUDIO AudioSound : public TypedReferenceCount {
 PUBLISHED:
+  enum Note {
+    N_c = 0,
+    N_c_sharp = 1,
+    N_d_flat = N_c_sharp,
+    N_d = 2,
+    N_d_sharp = 3,
+    N_e_flat = N_d_sharp,
+    N_e = 4,
+    N_f = 5,
+    N_f_sharp = 6,
+    N_g_flat = N_f_sharp,
+    N_g = 7,
+    N_g_sharp = 8,
+    N_a_flat = N_g_sharp,
+    N_a = 9,
+    N_a_sharp = 10,
+    N_b_flat = N_a_sharp,
+    N_b = 11,
+
+    N_COUNT,
+  };
+
   virtual ~AudioSound();
 
   // For best compatibility, set the loop_count, volume, and balance, prior to
@@ -73,6 +96,12 @@ PUBLISHED:
   // play_rate is any positive PN_stdfloat value.  inits to 1.0.
   virtual void set_play_rate(PN_stdfloat play_rate=1.0f) = 0;
   virtual PN_stdfloat get_play_rate() const = 0;
+  // Music-oriented methods for adjusting play rate.
+  INLINE void set_semitone_offset(PN_stdfloat offset);
+  INLINE void set_tone_offset(PN_stdfloat offset);
+  INLINE void set_semisemitone_offset(PN_stdfloat offset);
+  INLINE void set_octave_offset(PN_stdfloat offset);
+  INLINE void set_note_offset(Note base_note, int base_octave, Note target_note, int target_octave);
 
   // inits to manager's state.
   virtual void set_active(bool flag=true) = 0;
