@@ -59,16 +59,20 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
   if (_geom != nullptr) {
     //GraphicsStateGuardianBase *gsg = traverser->get_gsg();
 
+    const GeomVertexAnimationSpec &anim_spec = _munged_data->get_format()->get_animation();
+
     // If there is any animation left in the vertex data after it has been
     // munged--that is, we couldn't arrange to handle the animation in
     // hardware--then we have to calculate that animation now.
     bool cpu_animated = false;
 
-    const GeomVertexData *animated_vertices =
+    if (anim_spec.get_animation_type() != GeomEnums::AT_none) {
+      const GeomVertexData *animated_vertices =
       _munged_data->animate_vertices(force, current_thread);
-    if (animated_vertices != _munged_data) {
-      cpu_animated = true;
-      std::swap(_munged_data, animated_vertices);
+      if (animated_vertices != _munged_data) {
+        cpu_animated = true;
+        std::swap(_munged_data, animated_vertices);
+      }
     }
 
 #ifndef NDEBUG
@@ -92,8 +96,6 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     const ShaderAttrib *sattr;
     _state->get_attrib_def(sattr);
     if (sattr->auto_shader()) {
-      GeomVertexDataPipelineReader data_reader(_munged_data, current_thread);
-      const GeomVertexAnimationSpec &anim_spec = data_reader.get_format()->get_animation();
       if (anim_spec.get_animation_type() == Geom::AT_hardware) {
         const RenderState *state;
         if (anim_spec.get_num_transforms() == 4) {

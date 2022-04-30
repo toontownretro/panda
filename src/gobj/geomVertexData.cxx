@@ -945,16 +945,16 @@ animate_vertices(bool force, Thread *current_thread) const {
   UpdateSeq modified;
   {
     PStatTimer timer2(((GeomVertexData *)this)->_blends_pcollector, current_thread);
-    if (!cdata->_transform_blend_table.is_null()) {
-      if (cdata->_slider_table != nullptr) {
-        modified =
-          std::max(cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread),
-              cdata->_slider_table->get_modified(current_thread));
-      } else {
-        modified = cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread);
-      }
+    //if (!cdata->_transform_blend_table.is_null()) {
+    //  if (cdata->_slider_table != nullptr) {
+    //    modified =
+    //      std::max(cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread),
+    //          cdata->_slider_table->get_modified(current_thread));
+    //  } else {
+    //    modified = cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread);
+    //  }
 
-    } else if (cdata->_slider_table != nullptr) {
+    /*} else*/ if (cdata->_slider_table != nullptr) {
       modified = cdata->_slider_table->get_modified(current_thread);
 
     } else {
@@ -1481,11 +1481,13 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
 
   int num_rows = get_num_rows();
 
+#ifndef NDEBUG
   if (gobj_cat.is_debug()) {
     gobj_cat.debug()
       << "Animating " << num_rows << " vertices for " << get_name()
       << "\n";
   }
+#endif
 
   const GeomVertexFormat *orig_format = cdata->_format;
   CPT(GeomVertexFormat) new_format = orig_format;
@@ -1495,7 +1497,7 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
     cdata->_animated_vertices =
       new GeomVertexData(get_name(), new_format,
                          std::min(get_usage_hint(), UH_dynamic));
-    // So we can continue to to joint animation in the GPU while doing CPU
+    // So we can continue to do joint animation in the GPU while doing CPU
     // morphing.
     cdata->_animated_vertices->set_transform_table(cdata->_transform_table);
   }
@@ -1590,6 +1592,7 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
     }
   }
 
+#if 0
   // Then apply the transforms.
   CPT(TransformBlendTable) tb_table = cdata->_transform_blend_table.get_read_pointer(current_thread);
   if (tb_table != nullptr) {
@@ -1797,6 +1800,7 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
       }
     }
   }
+#endif
 }
 
 
