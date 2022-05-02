@@ -19,6 +19,7 @@
 #include "luse.h"
 #include "parametricCurve.h"
 #include "character.h"
+#include "pt_Character.h"
 
 class ParticleSystem2;
 
@@ -169,7 +170,7 @@ public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
 private:
-  PT(Character) _char;
+  PT_Character _char;
   PN_stdfloat _radius;
 };
 
