@@ -68,7 +68,7 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
 
     if (anim_spec.get_animation_type() != GeomEnums::AT_none) {
       const GeomVertexData *animated_vertices =
-      _munged_data->animate_vertices(force, current_thread);
+        _munged_data->animate_vertices(force, current_thread);
       if (animated_vertices != _munged_data) {
         cpu_animated = true;
         std::swap(_munged_data, animated_vertices);
