@@ -24,7 +24,8 @@ JobSystem() :
   _cv_mutex("jobsystem-cv-mutex"),
   _cv_work_available(_cv_mutex),
   _queue_lock("jobsystem-queue-lock"),
-  _initialized(false)
+  _initialized(false),
+  _queued_jobs(0)
 {
 }
 

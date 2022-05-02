@@ -33,8 +33,12 @@ PUBLISHED:
 
   void initialize();
 
+  INLINE void wait_all_jobs();
+
   INLINE void schedule(Job *job);
   INLINE void wait_for_work();
+
+  INLINE void job_finished();
 
   INLINE static JobSystem *get_global_ptr();
 
@@ -51,6 +55,7 @@ private:
 
   typedef pdeque<PT(Job)> JobQueue;
   JobQueue _job_queue;
+  AtomicAdjust::Integer _queued_jobs;
   Mutex _queue_lock;
 
   bool _initialized;

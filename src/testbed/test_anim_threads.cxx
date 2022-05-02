@@ -53,6 +53,7 @@ animate_characters(GenericAsyncTask *task, void *data) {
   for (Job *job : animate_jobs) {
     sys->schedule(job);
   }
+  sys->wait_all_jobs();
   return AsyncTask::DS_cont;
 }
 
@@ -91,6 +92,7 @@ main(int argc, char *argv[]) {
     if (i == num_groups - 1) {
       end += remainder;
     }
+    std::cout << start << " -> " << end << "\n";
     PT(AnimateJob) job = new AnimateJob(start, end);
     animate_jobs.push_back(job);
   }

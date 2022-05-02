@@ -12,6 +12,16 @@
  */
 
 /**
+ * Blocks this thread until all queued jobs have been executed and completed.
+ */
+INLINE void JobSystem::
+wait_all_jobs() {
+  while (AtomicAdjust::get(_queued_jobs) > 0) {
+  }
+}
+
+
+/**
  *
  */
 INLINE void JobSystem::
@@ -19,6 +29,7 @@ schedule(Job *job) {
   _queue_lock.acquire();
   _job_queue.push_back(job);
   _queue_lock.release();
+  AtomicAdjust::inc(_queued_jobs);
   _cv_work_available.notify();
 }
 
@@ -43,6 +54,14 @@ INLINE void JobSystem::
 wait_for_work() {
   MutexHolder holder(_cv_mutex);
   _cv_work_available.wait();
+}
+
+/**
+ * Called from a worker thread after it finishes executing a job.
+ */
+INLINE void JobSystem::
+job_finished() {
+  AtomicAdjust::dec(_queued_jobs);
 }
 
 /**

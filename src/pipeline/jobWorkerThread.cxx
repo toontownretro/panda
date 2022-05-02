@@ -42,6 +42,7 @@ thread_main() {
       //Thread::relax();
     } else {
       job->execute();
+      sys->job_finished();
     }
   }
 }
