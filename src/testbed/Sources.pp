@@ -38,3 +38,9 @@
   #define TARGET test_map
   #define SOURCES test_map.cxx
 #end test_bin_target
+
+#begin test_bin_target
+  #define BUILD_TESTS 1
+  #define TARGET test_anim_threads
+  #define SOURCES test_anim_threads.cxx
+#end test_bin_target
