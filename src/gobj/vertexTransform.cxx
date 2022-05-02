@@ -81,8 +81,8 @@ get_next_modified(Thread *current_thread) {
  */
 void VertexTransform::
 mark_modified(Thread *current_thread) {
-  CDWriter cdata(_cycler, true, current_thread);
-  cdata->_modified = get_next_modified(current_thread);
+  //CDWriter cdata(_cycler, true, current_thread);
+  //cdata->_modified = get_next_modified(current_thread);
 
   //Palettes::iterator pi;
   //for (pi = _tables.begin(); pi != _tables.end(); ++pi) {
