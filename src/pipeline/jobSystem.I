@@ -26,6 +26,7 @@ wait_all_jobs() {
  */
 INLINE void JobSystem::
 schedule(Job *job) {
+  job->set_pipeline_stage(Thread::get_current_pipeline_stage());
   _queue_lock.acquire();
   _job_queue.push_back(job);
   _queue_lock.release();

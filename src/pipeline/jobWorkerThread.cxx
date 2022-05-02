@@ -41,6 +41,9 @@ thread_main() {
       //Thread::force_yield();
       //Thread::relax();
     } else {
+      // Operate on the pipeline stage of the thread that scheduled this
+      // job.
+      set_pipeline_stage(job->get_pipeline_stage());
       job->execute();
       sys->job_finished();
     }

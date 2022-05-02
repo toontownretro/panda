@@ -24,9 +24,15 @@ class EXPCL_PANDA_PIPELINE Job : public TypedReferenceCount {
   DECLARE_CLASS(Job, TypedReferenceCount);
 
 public:
-  Job() = default;
+  INLINE Job();
 
   virtual void execute() = 0;
+
+  INLINE void set_pipeline_stage(int stage);
+  INLINE int get_pipeline_stage() const;
+
+private:
+  int _pipeline_stage;
 };
 
 #include "job.I"
