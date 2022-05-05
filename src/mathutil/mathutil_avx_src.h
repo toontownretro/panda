@@ -408,6 +408,8 @@ simd_is_all_not_equal(PN_vec8f a, PN_vec8f b) {
 ALWAYS_INLINE PN_vec8f
 simd_blend(PN_vec8f mask, PN_vec8f a, PN_vec8f b) {
   return _mm256_blendv_ps(a, b, mask);
+  // equivalent to:
+  // return simd_or(simd_andnot(mask, a), simd_and(b, mask));
 }
 
 ALWAYS_INLINE PN_vec8f

@@ -436,7 +436,7 @@ simd_blend(PN_vec4f mask, PN_vec4f a, PN_vec4f b) {
 #ifdef HAVE_BLEND
   return _mm_blendv_ps(a, b, mask);
 #else
-  return simd_or(simd_andnot(a, mask), simd_and(b, mask));
+  return simd_or(simd_andnot(mask, a), simd_and(b, mask));
 #endif
 }
 
