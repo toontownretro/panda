@@ -27,6 +27,7 @@ PUBLISHED:
   INLINE SteamNetworkMessage();
 
   INLINE void set_datagram(const Datagram &dg);
+  INLINE void set_datagram(Datagram &&dg);
   INLINE const Datagram &get_datagram() const;
   MAKE_PROPERTY(dg, get_datagram);
 

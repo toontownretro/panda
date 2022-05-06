@@ -26,6 +26,6 @@ typedef uint32_t SteamNetworkPollGroupHandle;
 typedef uint32_t SteamNetworkConnectionHandle;
 static constexpr SteamNetworkConnectionHandle INVALID_STEAM_NETWORK_CONNECTION_HANDLE = 0U;
 static constexpr SteamNetworkListenSocketHandle INVALID_STEAM_NETWORK_LISTEN_SOCKET_HANDLE = 0U;
-static constexpr SteamNetworkPollGroupHandle INVALID_STEAM_NETWORK_POLL_GROUP_HANDLe = 0U;
+static constexpr SteamNetworkPollGroupHandle INVALID_STEAM_NETWORK_POLL_GROUP_HANDLE = 0U;
 
 #endif // STEAMNET_INCLUDES_H

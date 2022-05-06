@@ -31,6 +31,15 @@ set_datagram(const Datagram &dg) {
 /**
  *
  */
+INLINE void SteamNetworkMessage::
+set_datagram(Datagram &&dg) {
+  _dg = std::move(dg);
+  _dgi = DatagramIterator(_dg);
+}
+
+/**
+ *
+ */
 INLINE const Datagram &SteamNetworkMessage::
 get_datagram() const {
   return _dg;
