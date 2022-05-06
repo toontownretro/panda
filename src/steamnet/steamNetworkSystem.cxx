@@ -29,9 +29,35 @@ static SteamNetworkSystem *_callback_instance = nullptr;
 /**
  *
  */
+static void *
+sns_malloc(size_t s) {
+  return memory_hook->heap_alloc_array(s);
+}
+
+/**
+ *
+ */
+static void
+sns_free(void *p) {
+  memory_hook->heap_free_array(p);
+}
+
+/**
+ *
+ */
+static void *
+sns_realloc(void *p, size_t s) {
+  return memory_hook->heap_realloc_array(p, s);
+}
+
+/**
+ *
+ */
 SteamNetworkSystem::
 SteamNetworkSystem() {
   _client_connection = 0;
+
+  //SteamNetworkingSockets_SetCustomMemoryAllocator(sns_malloc, sns_free, sns_realloc);
 
   SteamNetworkingErrMsg err_msg;
   if (!GameNetworkingSockets_Init(nullptr, err_msg)) {
@@ -171,6 +197,8 @@ receive_message_on_connection(SteamNetworkConnectionHandle conn, SteamNetworkMes
 
   msg.set_connection(in_msg->GetConnection());
 
+  in_msg->Release();
+
   return true;
 }
 
@@ -190,6 +218,8 @@ receive_message_on_poll_group(SteamNetworkPollGroupHandle poll_group, SteamNetwo
   copy_datagram_coll.stop();
 
   msg.set_connection(in_msg->GetConnection());
+
+  in_msg->Release();
 
   return true;
 }
