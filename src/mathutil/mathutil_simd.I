@@ -768,7 +768,7 @@ cross(const SIMDVector3 &other) const {
   result._v[0] = _v[1] * other._v[2];
   result._v[0].msub_in_place(_v[2], other._v[1]);
 
-  result._v[1] = _v[2] * other._v[0]);
+  result._v[1] = _v[2] * other._v[0];
   result._v[1].msub_in_place(_v[0], other._v[2]);
 
   result._v[2] = _v[0] * other._v[1];
@@ -851,9 +851,9 @@ template<class FloatType>
 ALWAYS_INLINE SIMDVector3<FloatType> SIMDVector3<FloatType>::
 operator + (const SIMDVector3 &other) const {
   SIMDVector3<FloatType> result;
-  result._v[0] = _v[0] + other._v[0]);
-  result._v[1] = _v[1] + other._v[1]);
-  result._v[2] = _v[2] + other._v[2]);
+  result._v[0] = _v[0] + other._v[0];
+  result._v[1] = _v[1] + other._v[1];
+  result._v[2] = _v[2] + other._v[2];
   return result;
 }
 
