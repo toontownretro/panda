@@ -97,6 +97,33 @@ InterpolatedVariable() {
  *
  */
 template<class Type>
+bool InterpolatedVariable<Type>::
+record_void_value(const void *value, double timestamp, bool record_last_networked) {
+  return record_value(*(const Type *)value, timestamp, record_last_networked);
+}
+
+/**
+ *
+ */
+template<class Type>
+void InterpolatedVariable<Type>::
+record_last_networked_void_value(const void *value, double timestamp) {
+  record_last_networked_value(*(const Type *)value, timestamp);
+}
+
+/**
+ *
+ */
+template<class Type>
+void InterpolatedVariable<Type>::
+copy_interpolated_value(void *dest) const {
+  *(Type *)dest = _interpolated_value;
+}
+
+/**
+ *
+ */
+template<class Type>
 INLINE bool InterpolatedVariable<Type>::
 record_value(const Type &value, double timestamp, bool record_last_networked) {
 
