@@ -124,6 +124,17 @@ copy_interpolated_value(void *dest) const {
  *
  */
 template<class Type>
+int InterpolatedVariable<Type>::
+interpolate_into(double now, void *dest) {
+  int ret = interpolate(now);
+  *(Type *)dest = _interpolated_value;
+  return ret;
+}
+
+/**
+ *
+ */
+template<class Type>
 INLINE bool InterpolatedVariable<Type>::
 record_value(const Type &value, double timestamp, bool record_last_networked) {
 
