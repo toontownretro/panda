@@ -124,6 +124,15 @@ copy_interpolated_value(void *dest) const {
  *
  */
 template<class Type>
+void InterpolatedVariable<Type>::
+copy_last_networked_value(void *dest) const {
+  *(Type *)dest = _last_networked_value;
+}
+
+/**
+ *
+ */
+template<class Type>
 int InterpolatedVariable<Type>::
 interpolate_into(double now, void *dest) {
   int ret = interpolate(now);

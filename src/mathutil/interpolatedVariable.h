@@ -94,6 +94,7 @@ public:
                                  bool record_last_networked = true) = 0;
   virtual void record_last_networked_void_value(const void *value, double timestamp) = 0;
   virtual void copy_interpolated_value(void *dest) const = 0;
+  virtual void copy_last_networked_value(void *dest) const = 0;
   virtual int interpolate_into(double now, void *dest) = 0;
 };
 
@@ -115,6 +116,7 @@ PUBLISHED:
   virtual bool record_void_value(const void *value, double timestamp, bool record_last_networked) override;
   virtual void record_last_networked_void_value(const void *value, double timestamp) override;
   virtual void copy_interpolated_value(void *dest) const override;
+  virtual void copy_last_networked_value(void *dest) const override;
   virtual int interpolate_into(double now, void *dest) override;
 
   INLINE bool record_value(const Type &value, double timestamp,
