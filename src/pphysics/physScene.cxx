@@ -100,6 +100,8 @@ simulate(double frame_time) {
   _global_contact_queue.clear();
 
   ClockObject *clock = ClockObject::get_global_clock();
+  ClockObject::Mode save_mode = clock->get_mode();
+  clock->set_mode(ClockObject::M_slave);
 
   double dt = frame_time - _last_frame_time;
   _last_frame_time = frame_time;
@@ -185,6 +187,8 @@ simulate(double frame_time) {
 
     clock->set_frame_time(frame_time);
   }
+
+  clock->set_mode(save_mode);
 
   if (_tick_count > 0) {
     // Interpolate actor transforms for the true rendering time.
