@@ -382,6 +382,24 @@ build() {
         return EC_unknown_error;
       }
 
+      if (vis._is_leaked && vis._leak_path.size() > 1u) {
+        // Show path to the outside node.
+        LineSegs segs("leak_path");
+        LColorf start_color(0, 0, 1, 1);
+        LColorf end_color(1, 0, 0, 1);
+        segs.set_thickness(2.0f);
+        segs.set_color(start_color);
+        segs.move_to(vis._leak_path[0]);
+        for (size_t i = 1; i < vis._leak_path.size(); ++i) {
+          float frac = (float)i / (float)(vis._leak_path.size() - 1u);
+          LColorf color = end_color * frac + start_color * (1.0f - frac);
+          segs.set_color(color);
+          segs.draw_to(vis._leak_path[i]);
+        }
+        PT(GeomNode) leak_lines = segs.create();
+        _out_top->add_child(leak_lines);
+      }
+
       // Save off portal centers for audio probe placement.
       for (BSPVisPortal *p : vis._portal_list) {
         auto it = std::find(_portal_centers.begin(), _portal_centers.end(), p->_origin);
@@ -1023,10 +1041,10 @@ bake_steam_audio() {
         probe_positions.push_back(leaf_center);
       }
 
-      // Also place probes at center of each portal.
-      for (const LPoint3 &portal_center : _portal_centers) {
-        probe_positions.push_back(portal_center);
-      }
+      //// Also place probes at center of each portal.
+      //for (const LPoint3 &portal_center : _portal_centers) {
+      //  probe_positions.push_back(portal_center);
+      //}
 
       for (const LPoint3 &center : probe_positions) {
         // Place probe here.

@@ -345,6 +345,21 @@ bake() {
     mapbuilder_cat.warning()
       << "****** leaked ******\n";
 
+    _is_leaked = true;
+    _leak_path = _outside_node->_occupied_path;
+
+    const MapEntitySrc *ent = _outside_node->_occupied_ent;
+    if (ent != nullptr) {
+      mapbuilder_cat.warning()
+      << "Leaked from entity:\n";
+    mapbuilder_cat.warning(false)
+      << "classname: " << ent->_class_name << "\n"
+      << "id: " << ent->_editor_id << "\n"
+      << "origin: " << _outside_node->_occupied_path[0] << "\n"
+      << "targetname: " << ((MapEntitySrc *)ent)->_properties["targetname"] << "\n";
+    }
+
+
     mark_visible_sides();
 
     // Remove portals that lead to/from solid leaves.
@@ -908,7 +923,7 @@ calc_node_portal_bounds(BSPNode *node) {
  *
  */
 bool VisBuilderBSP::
-place_occupant(BSPNode *node, const LPoint3 &origin) {
+place_occupant(BSPNode *node, const LPoint3 &origin, const MapEntitySrc *ent) {
   while (!node->is_leaf()) {
     PN_stdfloat d = node->_plane.dist_to_plane(origin);
     if (d >= 0) {
@@ -924,7 +939,7 @@ place_occupant(BSPNode *node, const LPoint3 &origin) {
 
   // Mark this node and all nodes reachable through portals from this
   // node as occupied.
-  r_flood_portals(node);
+  r_flood_portals(node, { origin }, ent);
 
   return true;
 }
@@ -933,17 +948,20 @@ place_occupant(BSPNode *node, const LPoint3 &origin) {
  *
  */
 void VisBuilderBSP::
-r_flood_portals(BSPNode *node) {
+r_flood_portals(BSPNode *node, pvector<LPoint3> path, const MapEntitySrc *ent) {
   if (node->_occupied || node->_opaque) {
     return;
   }
 
   node->_occupied = true;
+  node->_occupied_path = path;
+  node->_occupied_ent = ent;
 
   // Flood outward through portals.
   for (BSPPortal *portal : node->_portals) {
     int s = (portal->_nodes[1] == node);
-    r_flood_portals(portal->_nodes[!s]);
+    path.push_back(portal->_winding.get_center());
+    r_flood_portals(portal->_nodes[!s], path, ent);
   }
 }
 
@@ -959,6 +977,10 @@ flood_entities() {
   MapFile *src_map = _builder->_source_map;
   for (size_t i = 1; i < src_map->_entities.size(); ++i) {
     MapEntitySrc *ent = src_map->_entities[i];
+    if (ent->_class_name == "env_cubemap") {
+      // Ignore these.
+      continue;
+    }
     auto origin_it = ent->_properties.find("origin");
     if (origin_it == ent->_properties.end()) {
       continue;
@@ -972,7 +994,7 @@ flood_entities() {
     origin[2] += 1;
 
     // Find the leaf of the entity.
-    if (place_occupant(_tree_root, origin/*, ent->_class_name*/)) {
+    if (place_occupant(_tree_root, origin, ent)) {
       inside = true;
     }
   }

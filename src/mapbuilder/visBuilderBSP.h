@@ -29,6 +29,7 @@ typedef BaseWinding<12> BSPPortalWinding;
 class BSPNode;
 class MapBuilder;
 class BSPPortal;
+class MapEntitySrc;
 
 /**
  * An input polygon to the BSP tree.  These perform BSP tree cuts and
@@ -175,6 +176,8 @@ public:
   // True if a path through portals exists from an entity to this node.
   // If false, the node is unreachable and will be filled.
   bool _occupied = false;
+  pvector<LPoint3> _occupied_path;
+  const MapEntitySrc *_occupied_ent = nullptr;
 
   // Both nodes and leaves have portal lists.  Nodes have portals during portal
   // generation, but are moved down to the leaves at the end.
@@ -256,8 +259,8 @@ private:
   Winding get_node_winding(BSPNode *node);
 
   bool flood_entities();
-  bool place_occupant(BSPNode *node, const LPoint3 &origin);
-  void r_flood_portals(BSPNode *node);
+  bool place_occupant(BSPNode *node, const LPoint3 &origin, const MapEntitySrc *ment);
+  void r_flood_portals(BSPNode *node, pvector<LPoint3> path, const MapEntitySrc *ment);
   void r_fill_outside(BSPNode *node);
   void r_remove_opaque_portals(BSPNode *node);
 
@@ -300,6 +303,9 @@ public:
   PT(BSPTree) _output_tree;
 
   bool _hint_split;
+
+  bool _is_leaked;
+  pvector<LPoint3> _leak_path;
 
   size_t _portal_bytes;
   size_t _portal_longs;
