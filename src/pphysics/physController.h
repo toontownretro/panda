@@ -132,6 +132,7 @@ PUBLISHED:
 
   INLINE void set_foot_position(const LPoint3 &pos);
   INLINE LPoint3 get_foot_position() const;
+  MAKE_PROPERTY(foot_position, get_foot_position, set_foot_position);
 
   INLINE void set_step_offset(PN_stdfloat offset);
   INLINE PN_stdfloat get_step_offset() const;
@@ -168,6 +169,7 @@ PUBLISHED:
   //
 
   INLINE unsigned int get_collision_flags() const;
+  MAKE_PROPERTY(collision_flags, get_collision_flags);
 
   INLINE size_t get_num_shape_hits() const;
   INLINE const PhysControllerShapeHitData *get_shape_hit(size_t n) const;
