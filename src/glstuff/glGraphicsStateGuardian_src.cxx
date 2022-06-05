@@ -3324,6 +3324,12 @@ reset() {
   }
 #endif
 
+  if (has_extension("GL_NV_conservative_raster")) {
+    _supports_conservative_raster = true;
+  } else {
+    _supports_conservative_raster = false;
+  }
+
   // Set up all the enableddisabled flags to GL's known initial values:
   // everything off.
   _multisample_mode = 0;
@@ -7358,6 +7364,22 @@ framebuffer_copy_to_ram(Texture *tex, int view, int z,
 
   report_my_gl_errors(this);
   return true;
+}
+
+/**
+ *
+ */
+void CLP(GraphicsStateGuardian)::
+set_conservative_raster(bool flag) {
+  if (!_supports_conservative_raster) {
+    return;
+  }
+
+  if (flag) {
+    glEnable(GL_CONSERVATIVE_RASTERIZATION_NV);
+  } else {
+    glDisable(GL_CONSERVATIVE_RASTERIZATION_NV);
+  }
 }
 
 /**

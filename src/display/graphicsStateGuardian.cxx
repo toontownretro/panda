@@ -3392,6 +3392,13 @@ framebuffer_copy_to_ram(Texture *, int, int, const DisplayRegion *,
 }
 
 /**
+ *
+ */
+void GraphicsStateGuardian::
+set_conservative_raster(bool flag) {
+}
+
+/**
  * Called the first time a particular light has been bound to a given id
  * within a frame, this should set up the associated hardware light with the
  * light's properties.

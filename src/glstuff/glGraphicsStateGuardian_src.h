@@ -428,6 +428,8 @@ public:
   virtual bool framebuffer_copy_to_ram
     (Texture *tex, int view, int z, const DisplayRegion *dr, const RenderBuffer &rb);
 
+  virtual void set_conservative_raster(bool flag) override;
+
   virtual GraphicsOutput *make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host);
 
   LVecBase4 get_light_color(Light *light) const;
@@ -1047,6 +1049,8 @@ public:
   bool _supports_texture_lod;
   bool _supports_texture_lod_bias;
   bool _supports_texture_max_level;
+
+  bool _supports_conservative_raster;
 
 #ifndef OPENGLES_1
   GLsizei _sattr_instance_count;
