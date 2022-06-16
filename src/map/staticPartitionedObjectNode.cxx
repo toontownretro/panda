@@ -104,23 +104,61 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     return;
   }
 
-  ++_trav_counter;
+  Camera *camera = trav->get_scene()->get_camera_node();
+  int view_cluster = mtrav->_view_cluster;
 
-  const BitArray &pvs = mtrav->_pvs;
-  int num_visgroups = (int)_leaf_objects.size();
+  CamData &cam_data = _cam_geoms[camera];
 
-  for (int i = 0; i < num_visgroups; ++i) {
-    if (!pvs.get_bit(i)) {
-      // Not in PVS.
-      continue;
+  if (cam_data._view_cluster == view_cluster) {
+    const TransformState *trans = trav->get_scene()->get_cs_world_transform();
+    Thread *current_thread = trav->get_current_thread();
+    // Same view cluster as before.
+    // Zoom through cached object list.
+    for (const GeomEntry &geom : cam_data._geoms) {
+      if (data._view_frustum != nullptr) {
+        if (!geom._geom->is_in_view(data._view_frustum, current_thread)) {
+          continue;
+        }
+      }
+      if (data._state->is_empty()) {
+        CullableObject cobj(geom._geom, geom._state, trans, current_thread);
+        trav->get_cull_handler()->record_object(cobj, trav);
+
+      } else if (geom._state->is_empty()) {
+        CullableObject cobj(geom._geom, data._state, trans, current_thread);
+        trav->get_cull_handler()->record_object(cobj, trav);
+
+      } else {
+        CPT(RenderState) state = data._state->compose(geom._state);
+        CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
+        trav->get_cull_handler()->record_object(cobj, trav);
+      }
     }
 
-    const pvector<Object *> &objects = _leaf_objects[i];
+  } else {
+    // Camera changed clusters.
+    ++_trav_counter;
 
-    for (Object *obj : objects) {
-      if (obj->_last_trav_counter != _trav_counter) {
-        obj->_last_trav_counter = _trav_counter;
-        add_object_for_draw(trav, data, obj);
+    cam_data._geoms.clear();
+    cam_data._view_cluster = view_cluster;
+
+    const BitArray &pvs = mtrav->_pvs;
+    int num_visgroups = (int)_leaf_objects.size();
+
+    for (int i = 0; i < num_visgroups; ++i) {
+      if (!pvs.get_bit(i)) {
+        // Not in PVS.
+        continue;
+      }
+
+      const pvector<Object *> &objects = _leaf_objects[i];
+
+      for (Object *obj : objects) {
+        if (obj->_last_trav_counter != _trav_counter) {
+          obj->_last_trav_counter = _trav_counter;
+          add_object_for_draw(trav, data, obj);
+          cam_data._geoms.insert(cam_data._geoms.end(), obj->_geoms.begin(), obj->_geoms.end());
+        }
       }
     }
   }

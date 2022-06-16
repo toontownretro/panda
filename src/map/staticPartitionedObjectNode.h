@@ -18,6 +18,9 @@
 #include "pandaNode.h"
 #include "geomNode.h"
 #include "pvector.h"
+#include "camera.h"
+#include "pmap.h"
+#include "weakPointerTo.h"
 
 class SpatialPartition;
 
@@ -63,10 +66,21 @@ private:
     int _last_trav_counter;
   };
 
+  class CamData {
+  public:
+    CamData() = default;
+
+    int _view_cluster = -1;
+    pvector<GeomEntry> _geoms;
+  };
+
   pvector<Object> _objects;
 
   // List of objects per visgroup/leaf.
   pvector<pvector<Object *>> _leaf_objects;
+
+  typedef pflat_hash_map<WPT(Camera), CamData> CamGeoms;
+  CamGeoms _cam_geoms;
 
   int _trav_counter;
 
