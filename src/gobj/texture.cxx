@@ -1621,6 +1621,7 @@ release(PreparedGraphicsObjects *prepared_objects) {
   PreparedViews::iterator pvi;
   pvi = _prepared_views.find(prepared_objects);
   if (pvi != _prepared_views.end()) {
+    bool erased = false;
     Contexts temp;
     temp.swap((*pvi).second);
     Contexts::iterator ci;
@@ -1628,9 +1629,12 @@ release(PreparedGraphicsObjects *prepared_objects) {
       TextureContext *tc = (*ci).second;
       if (tc != nullptr) {
         prepared_objects->release_texture(tc);
+        erased = true;
       }
     }
-    _prepared_views.erase(pvi);
+    if (!erased) {
+      _prepared_views.erase(pvi);
+    }
   }
 
   // Maybe it wasn't prepared yet, but it's about to be.
