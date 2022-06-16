@@ -42,29 +42,19 @@ public:
 };
 
 /**
- * A collection of nearby world polygons and mesh entities that should be
- * treated as a single unit (aka flattened together).  If vis is active,
- * the vis builder will assign the group to the set of area clusters that
- * it intersects with.
- */
-struct MapGeomGroup {
-public:
-  PT(BoundingBox) bounds;
-  pvector<MapGeomBase *> geoms;
-  BitArray clusters;
-
-  bool _can_see_sky = false;
-  bool _in_3d_skybox = false;
-};
-
-/**
  * A single planar polygon of a MapMesh.
  */
 class MapPoly : public MapGeomBase {
 public:
+  MapPoly() = default;
+
   // The winding defines the vertices of the polygon and the plane that it
   // lies on.
   Winding _winding;
+
+  bool _sees_sky = false;
+  bool _in_3d_skybox = false;
+  pset<int> _leaves;
 
   pvector<LVector3> _normals;
   pvector<LVecBase2> _uvs;
@@ -91,6 +81,8 @@ public:
   // Original side ID in the .vmf file.
   int _side_id;
 
+  bool _visible;
+
   virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
 };
 
@@ -102,6 +94,10 @@ public:
  */
 class MapMesh : public MapGeomBase {
 public:
+  MapMesh() = default;
+
+  bool _3d_sky_mesh = false;
+
   pvector<PT(MapPoly)> _polys;
   // If true, the polygons of the mesh block visibility.  This only applies to
   // world meshes.
@@ -138,8 +134,7 @@ PUBLISHED:
 
   ErrorCode bake_steam_audio();
 
-  //void build_mesh_groups();
-  void divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs);
+  void build_entity_physics(int entity, MapModel &model);
 
   void add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node);
 
@@ -150,9 +145,11 @@ public:
   PT(MapFile) _source_map;
   MapBuildOptions _options;
 
-  pvector<MapGeomGroup> _mesh_groups;
-
   pvector<PT(MapMesh)> _meshes;
+  // World polygons in the 3-D skybox.  Determined by the BSP visibility
+  // builder.
+  PT(MapMesh) _3d_sky_mesh;
+  int _3d_sky_mesh_index;
 
   int _world_mesh_index;
 

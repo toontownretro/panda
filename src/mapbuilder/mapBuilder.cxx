@@ -27,7 +27,7 @@
 #include "renderState.h"
 #include "transparencyAttrib.h"
 #include "physTriangleMeshData.h"
-#include "visBuilder.h"
+//#include "visBuilder.h"
 #include "lineSegs.h"
 #include "depthWriteAttrib.h"
 #include "cullBinAttrib.h"
@@ -62,6 +62,12 @@
 #include "visClusterSampler.h"
 #include "visBuilderBSP.h"
 #include "depthTestAttrib.h"
+#include "mapObjects.h"
+#include "physConvexMeshData.h"
+#include "lightAttrib.h"
+#include "alphaTestAttrib.h"
+
+#include <stack>
 
 #define HAVE_STEAM_AUDIO
 #ifdef HAVE_STEAM_AUDIO
@@ -131,7 +137,8 @@ overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const {
  */
 MapBuilder::
 MapBuilder(const MapBuildOptions &options) :
-  _options(options)
+  _options(options),
+  _3d_sky_mesh_index(-1)
 {
 }
 
@@ -181,6 +188,39 @@ build() {
     return ec;
   }
 
+  // Swap world mesh into index 0.
+  if (_world_mesh_index != 0) {
+    PT(MapMesh) tmp = _meshes[0];
+    _meshes[0] = _meshes[_world_mesh_index];
+    _meshes[_world_mesh_index] = tmp;
+    _world_mesh_index = 0;
+  }
+
+  // Merge func_detail meshes into the world mesh.
+  for (auto it = _meshes.begin(); it != _meshes.end();) {
+    MapMesh *mesh = *it;
+    MapEntitySrc *ent = _source_map->_entities[mesh->_entity];
+    if (ent->_class_name != "func_detail") {
+      ++it;
+      continue;
+    }
+
+    for (MapPoly *poly : mesh->_polys) {
+      _meshes[0]->_polys.push_back(poly);
+    }
+    it = _meshes.erase(it);
+  }
+
+  // Now erase func_detail entities.
+  //for (auto it = _source_map->_entities.begin(); it != _source_map->_entities.end();) {
+  //  MapEntitySrc *ent = *it;
+  //  if (ent->_class_name == "func_detail") {
+  //    it = _source_map->_entities.erase(it);
+  //  } else {
+  //    ++it;
+  //  }
+  //}
+
   // Calculate scene bounds.
   _scene_mins.set(1e+9, 1e+9, 1e+9);
   _scene_maxs.set(-1e+9, -1e+9, -1e+9);
@@ -206,29 +246,6 @@ build() {
 
   _scene_bounds = new BoundingBox(_scene_mins, _scene_maxs);
 
-  // Make the octree bounds cubic and closest pow 2.
-  LVector3 scene_size = _scene_maxs - _scene_mins;
-  PN_stdfloat octree_size = ceil_pow_2(std::ceil(std::max(scene_size[0], std::max(scene_size[1], scene_size[2]))));
-  LPoint3 octree_mins = _scene_mins;
-  LPoint3 octree_maxs(_scene_mins + LPoint3(octree_size));
-
-  lightbuilder_cat.info()
-    << "Octree mins: " << octree_mins << " Octree maxs: " << octree_maxs << "\n";
-
-  // Now build mesh groups by recursively dividing all polygons in an octree
-  // fashion.
-  pvector<MapGeomBase *> all_geoms;
-  for (MapMesh *mesh : _meshes) {
-    for (MapPoly *poly : mesh->_polys) {
-      all_geoms.push_back(poly);
-    }
-  }
-  divide_meshes(all_geoms, octree_mins, octree_maxs);
-
-  mapbuilder_cat.info()
-    << "Grouped " << all_geoms.size() << " polygons into " << _mesh_groups.size()
-    << " groups\n";
-
   // Output entity information.
   for (size_t i = 0; i < _source_map->_entities.size(); i++) {
     MapEntitySrc *src_ent = _source_map->_entities[i];
@@ -238,6 +255,12 @@ build() {
 
     PT(MapEntity) ent = new MapEntity;
     ent->set_class_name(src_ent->_class_name);
+    // Find mesh referencing entity.
+    for (size_t j = 0; j < _meshes.size(); ++j) {
+      if (_meshes[j]->_entity == i) {
+        ent->set_model_index((int)j);
+      }
+    }
 
     PT(PDXElement) props = new PDXElement;
     for (auto it = src_ent->_properties.begin(); it != src_ent->_properties.end(); ++it) {
@@ -254,6 +277,17 @@ build() {
     }
     ent->set_properties(props);
 
+    for (const MapEntityConnection &conn : src_ent->_connections) {
+      MapEntity::Connection mconn;
+      mconn._output_name = conn._output_name;
+      mconn._target_name = conn._entity_target_name;
+      mconn._input_name = conn._input_name;
+      mconn._delay = conn._delay;
+      mconn._repeat = (conn._repeat > 0);
+      mconn._parameters.push_back(conn._parameters);
+      ent->add_connection(mconn);
+    }
+
     _out_data->add_entity(ent);
   }
 
@@ -261,14 +295,14 @@ build() {
   // VISIBILITY
   //
   switch (_options.get_vis()) {
-  case MapBuildOptions::VT_voxel:
-    {
-      VisBuilder vis(this);
-      if (!vis.build()) {
-        return EC_unknown_error;
-      }
-    }
-    break;
+  //case MapBuildOptions::VT_voxel:
+  //  {
+  //    VisBuilder vis(this);
+  //    if (!vis.build()) {
+  //      return EC_unknown_error;
+  //    }
+  //  }
+  //  break;
 
   case MapBuildOptions::VT_bsp:
     {
@@ -535,113 +569,60 @@ build() {
 
   // Now write out the meshes to GeomNodes.
 
-  // Start with the mesh groups.
-  for (size_t i = 0; i < _mesh_groups.size(); i++) {
-    const MapGeomGroup &group = _mesh_groups[i];
+  for (size_t i = 0; i < _meshes.size(); ++i) {
+    MapModel model;
 
-    // Now build the Geoms within the group.
+    LPoint3 mmins(9999999);
+    LPoint3 mmaxs(-9999999);
 
-    std::ostringstream ss;
-    ss << "mesh-group-" << i;
-    PT(GeomNode) geom_node = new GeomNode(ss.str());
-    //geom_node->set_attrib(ColorAttrib::make_flat(cluster_colors[i % 6]));
-
-    PT(PhysTriangleMeshData) phys_mesh_data = new PhysTriangleMeshData;
-    vector_string surface_props;
-    int phys_polygons = 0;
-
-    pvector<MapPoly *> group_polys;
-
-    for (MapGeomBase *geom : group.geoms) {
-      if (geom->_is_mesh) {
-        MapMesh *mesh = (MapMesh *)geom;
-        for (MapPoly *poly : mesh->_polys) {
-          group_polys.push_back(poly);
-        }
-
+    const MapMesh *mesh = _meshes[i];
+    MapEntitySrc *ent = _source_map->_entities[mesh->_entity];
+    std::string ent_name;
+    bool is_world = false;
+    if (mesh->_entity == 0) {
+      if (mesh->_3d_sky_mesh) {
+        ent_name = "3d_skybox";
       } else {
-        group_polys.push_back((MapPoly *)geom);
+        ent_name = "world";
       }
+      is_world = true;
+    } else {
+      ent_name = ent->_class_name + ":" + ent->_properties["targetname"];
     }
 
-    for (MapPoly *poly : group_polys) {
+    // Build Geoms out of the mesh's MapPolys.
+
+    std::ostringstream ss;
+    ss << "mesh-" << i << "-" << ent_name;
+    model._geom_node = new GeomNode(ss.str());
+    GeomNode *geom_node = model._geom_node;
+
+    for (MapPoly *poly : mesh->_polys) {
       PT(GeomVertexData) vdata = new GeomVertexData(
         geom_node->get_name(), poly->_blends.empty() ? format : blend_format,
         GeomEnums::UH_static);
-
       add_poly_to_geom_node(poly, vdata, geom_node);
 
-      Material *mat = poly->_material;
-      Winding *w = &poly->_winding;
-
-      bool add_phys = (mat != nullptr) ?
-        (!mat->has_tag("compile_trigger") && !mat->has_tag("compile_nodraw")) : true;
-
-      if (add_phys) {
-
-        std::string surface_prop = "default";
-        if (mat != nullptr && mat->has_tag("surface_prop")) {
-          // Grab physics surface property from material.
-          surface_prop = mat->get_tag_value("surface_prop");
-        }
-
-        // Find or add to surface prop list for this mesh.
-        int mat_index = -1;
-        for (int j = 0; j < (int)surface_props.size(); ++j) {
-          if (surface_props[j] == surface_prop) {
-            mat_index = j;
-            break;
-          }
-        }
-        if (mat_index == -1) {
-          mat_index = (int)surface_props.size();
-          surface_props.push_back(surface_prop);
-        }
-
-        // Add the polygon to the physics triangle mesh.
-        // Need to reverse them.
-        pvector<LPoint3> phys_verts;
-        phys_verts.resize(w->get_num_points());
-        for (int k = 0; k < w->get_num_points(); k++) {
-          phys_verts[k] = w->get_point(k);
-        }
-        std::reverse(phys_verts.begin(), phys_verts.end());
-        phys_mesh_data->add_polygon(phys_verts, mat_index);
-        phys_polygons++;
+      for (int j = 0; j < poly->_winding.get_num_points(); ++j) {
+        mmins = mmins.fmin(poly->_winding.get_point(j));
+        mmaxs = mmaxs.fmax(poly->_winding.get_point(j));
       }
     }
 
-    //if (geom_node->get_num_geoms() == 0 && phys_polygons == 0) {
-      // No geometry or physics polygons.  Skip it.
-    //  continue;
-    //}
+    model._mins = mmins;
+    model._maxs = mmaxs;
 
-    MapMeshGroup out_group;
-    out_group._in_3d_skybox = group._in_3d_skybox;
-    out_group._clusters = group.clusters;
-    out_group._geom_node = geom_node;
-    _out_data->add_mesh_group(out_group);
+    // Build physics for model.
+    build_entity_physics((int)i, model);
 
-    // The node we parent the mesh group to will decide which mesh group(s) to
-    // render based on the current view cluster.
-    _out_node->add_child(geom_node);
-
-    if (phys_polygons > 0) {
-      // Cook the physics mesh.
-      if (!phys_mesh_data->cook_mesh()) {
-        mapbuilder_cat.error()
-          << "Failed to cook physics mesh for mesh group " << i << "\n";
-        _out_data->add_model_phys_data(MapModelPhysData());
-      } else {
-        MapModelPhysData mm_phys_data;
-        mm_phys_data._phys_mesh_data = phys_mesh_data->get_mesh_data();
-        mm_phys_data._phys_surface_props = surface_props;
-        _out_data->add_model_phys_data(mm_phys_data);
-      }
-    } else {
-      _out_data->add_model_phys_data(MapModelPhysData());
+    if (geom_node->get_num_geoms() > 0) {
+      _out_top->add_child(geom_node);
     }
+
+    _out_data->add_model(model);
   }
+
+  _out_data->_3d_sky_model = _3d_sky_mesh_index;
 
   if (mapbuilder_cat.is_debug()) {
     mapbuilder_cat.debug()
@@ -668,8 +649,8 @@ build() {
   // After building the lightmaps, we can flatten the Geoms within each mesh
   // group to reduce draw calls.  If we flattened before building lightmaps,
   // Geoms would have overlapping lightmap UVs.
-  for (size_t i = 0; i < _out_data->get_num_mesh_groups(); i++) {
-    NodePath(_out_node->get_child(i)).flatten_strong();
+  for (size_t i = 0; i < _out_data->get_num_models(); i++) {
+    NodePath(_out_data->get_model(i)->get_geom_node()).flatten_strong();
   }
 
   if (_options._do_steam_audio) {
@@ -712,7 +693,8 @@ public:
 #ifndef CPPPARSER
 void
 ipl_progress_callback(IPLfloat32 progress, void *user_data) {
-  std::cerr << "progress: " << progress << "\n";
+  std::cout << "Progress: " << (int)(progress * 100.0f) << "%\r" << std::flush;
+  //std::cerr << "progress: " << progress << "\n";
 }
 #endif
 #endif
@@ -734,16 +716,36 @@ bake_steam_audio() {
   IPLerror err = iplContextCreate(&ctx_settings, &context);
   assert(err == IPL_STATUS_SUCCESS);
 
-  IPLEmbreeDeviceSettings embree_set{};
-  IPLEmbreeDevice embree_dev = nullptr;
-  err = iplEmbreeDeviceCreate(context, &embree_set, &embree_dev);
+  //IPLEmbreeDeviceSettings embree_set{};
+  //IPLEmbreeDevice embree_dev = nullptr;
+  //err = iplEmbreeDeviceCreate(context, &embree_set, &embree_dev);
+  //assert(err == IPL_STATUS_SUCCESS);
+
+  IPLOpenCLDeviceList ocl_d_list;
+  IPLOpenCLDeviceSettings cl_settings{};
+  cl_settings.type = IPL_OPENCLDEVICETYPE_GPU;
+  cl_settings.requiresTAN = IPL_FALSE;
+  cl_settings.numCUsToReserve = 0;
+  cl_settings.fractionCUsForIRUpdate = 0.0f;
+  err = iplOpenCLDeviceListCreate(context, &cl_settings, &ocl_d_list);
+  assert(err == IPL_STATUS_SUCCESS);
+  assert(iplOpenCLDeviceListGetNumDevices(ocl_d_list) != 0);
+  IPLOpenCLDevice ocl_dev;
+  err = iplOpenCLDeviceCreate(context, ocl_d_list, 0, &ocl_dev);
+  assert(err == IPL_STATUS_SUCCESS);
+
+  iplOpenCLDeviceListRelease(&ocl_d_list);
+
+  IPLRadeonRaysDeviceSettings rr_settings{};
+  IPLRadeonRaysDevice rr_dev;
+  err = iplRadeonRaysDeviceCreate(ocl_dev, &rr_settings, &rr_dev);
   assert(err == IPL_STATUS_SUCCESS);
 
   IPLScene scene = nullptr;
   IPLSceneSettings scene_settings{};
   memset(&scene_settings, 0, sizeof(IPLSceneSettings));
-  scene_settings.type = IPL_SCENETYPE_EMBREE;
-  scene_settings.embreeDevice = embree_dev;
+  scene_settings.type = IPL_SCENETYPE_RADEONRAYS;
+  scene_settings.radeonRaysDevice = rr_dev;
   err = iplSceneCreate(context, &scene_settings, &scene);
   assert(err == IPL_STATUS_SUCCESS);
 
@@ -758,6 +760,7 @@ bake_steam_audio() {
   surface_props["carpet"] = {0.24f,0.69f,0.73f,0.05f,0.020f,0.005f,0.003f};
   surface_props["plaster"] = {0.12f,0.06f,0.04f,0.05f,0.056f,0.056f,0.004f};
   surface_props["sky"] = {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f};
+  surface_props["default_silent"] = {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f};
 
   // Build up a huge vector of all Geoms in the entire scene.  World geometry
   // and static props.
@@ -767,8 +770,9 @@ bake_steam_audio() {
   pmap<std::string, int> material_indices;
 
   // Start with static world geometry.
-  for (int i = 0; i < _out_node->get_num_children(); i++) {
-    GeomNode *child = (GeomNode *)_out_node->get_child(i);
+  const MapModel *world_model = _out_data->get_model(0);
+  //for (int i = 0; i < _out_node->get_num_children(); i++) {
+    GeomNode *child = world_model->get_geom_node();
     for (int j = 0; j < child->get_num_geoms(); j++) {
       const RenderState *state = child->get_geom_state(j);
       const MaterialAttrib *mattr;
@@ -780,6 +784,10 @@ bake_steam_audio() {
       // get this from the pmat file tags.
       std::string surfaceprop = "default";
       if (mattr->get_material() != nullptr) {
+        if (mattr->get_material()->has_tag("compile_sky")) {
+          // Skip sky polygons/geoms.
+          continue;
+        }
         if (mattr->get_material()->has_tag("surface_prop")) {
           surfaceprop = mattr->get_material()->get_tag_value("surface_prop");
           if (surface_props.find(surfaceprop) == surface_props.end()) {
@@ -801,7 +809,7 @@ bake_steam_audio() {
 
       geoms.push_back(entry);
     }
-  }
+  //}
 
   // Now get static props.
   for (int i = 0; i < _out_data->get_num_entities(); i++) {
@@ -1072,24 +1080,24 @@ bake_steam_audio() {
       identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
       IPLReflectionsBakeParams bake_params{};
       bake_params.scene = scene;
-      bake_params.sceneType = IPL_SCENETYPE_EMBREE;
+      bake_params.sceneType = IPL_SCENETYPE_RADEONRAYS;
       bake_params.identifier = identifier;
-      int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION|IPL_REFLECTIONSBAKEFLAGS_BAKEPARAMETRIC;
+      int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION;
       bake_params.bakeFlags = (IPLReflectionsBakeFlags)flags;
       bake_params.probeBatch = batch;
       bake_params.numRays = 32768;
-      bake_params.numDiffuseSamples = 1024;
-      bake_params.numBounces = 64;
-      bake_params.simulatedDuration = 1.0f;
-      bake_params.savedDuration = 1.0f;
+      bake_params.numDiffuseSamples = 2048;
+      bake_params.numBounces = 100;
+      bake_params.simulatedDuration = 2.0f;
+      bake_params.savedDuration = 2.0f;
       bake_params.order = 2;
       bake_params.numThreads = _options.get_num_threads();
-      bake_params.irradianceMinDistance = 1.0f;
+      bake_params.irradianceMinDistance = 5.0f;
       bake_params.rayBatchSize = 1;
-      bake_params.bakeBatchSize = 1;
-      bake_params.openCLDevice = nullptr;
-      bake_params.radeonRaysDevice = nullptr;
-      iplReflectionsBakerBake(context, &bake_params, nullptr, nullptr);
+      bake_params.bakeBatchSize = 32;
+      bake_params.openCLDevice = ocl_dev;
+      bake_params.radeonRaysDevice = rr_dev;
+      iplReflectionsBakerBake(context, &bake_params, ipl_progress_callback, nullptr);
     }
 
     if (_options._do_steam_audio_pathing) {
@@ -1151,7 +1159,9 @@ bake_steam_audio() {
   // Clean up our work.
   iplStaticMeshRelease(&static_mesh);
   iplSceneRelease(&scene);
-  iplEmbreeDeviceRelease(&embree_dev);
+  //iplEmbreeDeviceRelease(&embree_dev);
+  iplRadeonRaysDeviceRelease(&rr_dev);
+  iplOpenCLDeviceRelease(&ocl_dev);
   iplContextRelease(&context);
 
   return EC_ok;
@@ -1164,6 +1174,12 @@ bake_steam_audio() {
  */
 void MapBuilder::
 add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node) {
+  if (!poly->_visible) {
+    // Polygon was determined to be in solid space by the BSP preprocessor.
+    // Don't write a Geom for it.
+    return;
+  }
+
   int start = vdata->get_num_rows();
 
   GeomVertexWriter vwriter(vdata, InternalName::get_vertex());
@@ -1189,7 +1205,7 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   CPT(RenderState) state = RenderState::make_empty();
   if (mat != nullptr) {
     if (mat->has_tag("compile_clip") ||
-        mat->has_tag("compile_trigger") ||
+        //mat->has_tag("compile_trigger") ||
         mat->has_tag("compile_nodraw")) {
       // Skip these for rendering.  We still added the physics mesh above.
       return;
@@ -1247,95 +1263,19 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
 }
 
 /**
- *
- */
-void MapBuilder::
-divide_meshes(const pvector<MapGeomBase *> &geoms, const LPoint3 &node_mins, const LPoint3 &node_maxs) {
-
-  pvector<MapGeomBase *> unassigned_geoms = geoms;
-
-  for (int i = 0; i < 8; i++) {
-    LPoint3 this_mins = node_mins;
-    LPoint3 this_maxs = node_maxs;
-
-    LVector3 size = this_maxs - this_mins;
-    size *= 0.5;
-
-    if ((i & 4) != 0) {
-      this_mins[0] += size[0];
-    }
-    if ((i & 2) != 0) {
-      this_mins[1] += size[1];
-    }
-    if ((i & 1) != 0) {
-      this_mins[2] += size[2];
-    }
-
-    this_maxs = this_mins + size;
-
-    LVector3 qsize = size * 0.5f;
-
-    BoundingBox node_bounds(this_mins, this_maxs);
-    node_bounds.local_object();
-
-    // The list of geoms at this node.
-    pvector<MapGeomBase *> node_geoms;
-
-    // Go through all the unassigned geoms at this node and see if they
-    // can be assigned to us.
-    for (auto it = unassigned_geoms.begin(); it != unassigned_geoms.end();) {
-      MapGeomBase *geom = *it;
-      if (geom->overlaps_box(this_mins + qsize, qsize)) {
-        // Yes!  This geom can be assigned to us.
-        node_geoms.push_back(geom);
-        // Remove it from the unassigned list.
-        it = unassigned_geoms.erase(it);
-      } else {
-        ++it;
-      }
-    }
-
-    if (node_geoms.empty()) {
-      // Nothing in this part of the world.
-      continue;
-    }
-
-    if (size[0] <= _options.get_mesh_group_size()) {
-      // We've reached the mesh group size threshold and we have a set of
-      // map geometry contained within this node.  Create a mesh group here.
-
-      MapGeomGroup group;
-      group.geoms = node_geoms;
-      group.bounds = new BoundingBox;
-      for (MapGeomBase *geom : node_geoms) {
-        assert(!geom->_in_group);
-        group.bounds->extend_by(geom->_bounds);
-        geom->_in_group = true;
-      }
-      _mesh_groups.push_back(std::move(group));
-
-    } else {
-      // Keep dividing meshes amongst octants until we reach the mesh group
-      // size threshold.
-      divide_meshes(node_geoms, this_mins, this_maxs);
-    }
-  }
-}
-
-/**
  * Builds a polygon soup from the convex solids and displacement surfaces in
  * the map.
  */
 MapBuilder::ErrorCode MapBuilder::
 build_polygons() {
   _world_mesh_index = -1;
-  for (size_t i = 0; i < _source_map->_entities.size(); i++) {
-    build_entity_polygons(i);
-  }
+  //for (size_t i = 0; i < _source_map->_entities.size(); i++) {
+  //  build_entity_polygons(i);
+  //}
 
-  //ThreadManager::run_threads_on_individual(
-  //  "BuildPolygons", _source_map->_entities.size(),
-  // false, std::bind(&MapBuilder::build_entity_polygons, this, std::placeholders::_1));
+  ThreadManager::run_threads_on_individual(
+    "BuildPolygons", _source_map->_entities.size(),
+    false, std::bind(&MapBuilder::build_entity_polygons, this, std::placeholders::_1));
   return EC_ok;
 }
 
@@ -1359,7 +1299,7 @@ void MapBuilder::
 build_entity_polygons(int i) {
   MapEntitySrc *ent = _source_map->_entities[i];
 
-  if (ent->_class_name == "func_door" ||
+  if (//ent->_class_name == "func_door" ||
       ent->_class_name == "func_respawnroomvisualizer") {
     // TEMPORARY
     return;
@@ -1484,7 +1424,7 @@ build_entity_polygons(int i) {
 
       // Calculate lightmap vectors.
       // Twice the resolution for the GPU lightmapper.
-      PN_stdfloat lightmap_scale = side->_lightmap_scale * 0.5f;
+      PN_stdfloat lightmap_scale = side->_lightmap_scale;// * 0.5f;
       LVector4 lightmap_vecs[2];
       lightmap_vecs[0][0] = side->_u_axis[0] / lightmap_scale;
       lightmap_vecs[0][1] = side->_u_axis[1] / lightmap_scale;
@@ -1500,6 +1440,7 @@ build_entity_polygons(int i) {
       if (side->_displacement == nullptr) {
         // A regular non-displacement brush face.
         PT(MapPoly) poly = new MapPoly;
+        poly->_visible = true;
         poly->_side_id = side->_editor_id;
         poly->_winding = w;
         poly->_in_group = false;
@@ -1558,6 +1499,8 @@ build_entity_polygons(int i) {
           }
         }
 
+        //std::cout << "Face\n";
+
         for (int l = 0; l < 2; l++) {
           lmins[l] = std::floor(lmins[l]);
           lmaxs[l] = std::ceil(lmaxs[l]);
@@ -1565,20 +1508,23 @@ build_entity_polygons(int i) {
           poly->_lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
         }
 
+        //std::cout << "lmins " << lightmap_mins << ", extents " << poly->_lightmap_size << "\n";
+
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
           const LPoint3 &point = w.get_point(ivert);
           LVecBase2 lightcoord;
           lightcoord[0] = point.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-          lightcoord[0] -= lightmap_mins[0];
-          lightcoord[0] += 0.5;
-          lightcoord[0] /= poly->_lightmap_size[0] + 1;
+          lightcoord[0] -= lmins[0];
+          //lightcoord[0] += 0.5;
+          lightcoord[0] /= poly->_lightmap_size[0];
 
           lightcoord[1] = point.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-          lightcoord[1] -= lightmap_mins[1];
-          lightcoord[1] += 0.5;
-          lightcoord[1] /= poly->_lightmap_size[1] + 1;
+          lightcoord[1] -= lmins[1];
+          //lightcoord[1] += 0.5;
+          lightcoord[1] /= poly->_lightmap_size[1];
 
           poly->_lightmap_uvs.push_back(lightcoord);
+          //std::cout << "luv " << lightcoord << "\n";
         }
 
         solid_polys.push_back(poly);
@@ -1666,20 +1612,32 @@ build_entity_polygons(int i) {
               tri_verts[1][0] = { irow + 1, icol + 1 };
             }
 
-            // Do lightmap coordinates per quad on the displacement.
-            std::pair<size_t, size_t> quad_verts[4] = {
-              { irow, icol },
-              { irow, icol + 1 },
-              { irow + 1, icol },
-              { irow + 1, icol + 1 }
-            };
             LVecBase2 lmins(1e24), lmaxs(-1e24);
             LVecBase2i lightmap_mins, lightmap_size;
-            for (size_t ivert = 0; ivert < 4; ivert++) {
-              size_t row = quad_verts[ivert].first;
-              size_t col = quad_verts[ivert].second;
-              size_t dvertindex = (row * num_cols) + col;
+            //
+            // TRIANGLE 1
+            //
+            PT(MapPoly) tri0 = new MapPoly;
+            tri0->_visible = true;
+            tri0->_side_id = side->_editor_id;
+            tri0->_vis_occluder = false;
+            tri0->_in_group = false;
+            tri0->_is_mesh = false;
+            LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
+            LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
+            LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
+            LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
+            for (size_t ivert = 0; ivert < 3; ivert++) {
+              size_t row = tri_verts[0][ivert].first;
+              size_t col = tri_verts[0][ivert].second;
+              size_t dvertindex = row * num_cols;
+              dvertindex += col;
               const LPoint3 &dpoint = disp_points[dvertindex];
+              tri0->_winding.add_point(dpoint);
+              tri0->_normals.push_back(-tri_normal);
+              tri0->_uvs.push_back(disp_uvs[dvertindex]);
+              tri0->_blends.push_back(disp_blends[dvertindex]);
+
               for (int l = 0; l < 2; l++) {
                 PN_stdfloat val = dpoint[0] * lightmap_vecs[l][0] +
                                   dpoint[1] * lightmap_vecs[l][1] +
@@ -1696,43 +1654,20 @@ build_entity_polygons(int i) {
               lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
             }
 
-            //
-            // TRIANGLE 1
-            //
-            PT(MapPoly) tri0 = new MapPoly;
-            tri0->_side_id = side->_editor_id;
-            tri0->_vis_occluder = false;
-            tri0->_in_group = false;
-            tri0->_is_mesh = false;
             tri0->_lightmap_size = lightmap_size;
-            LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
-            LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
-            LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
-            LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
-            for (size_t ivert = 0; ivert < 3; ivert++) {
-              size_t row = tri_verts[0][ivert].first;
-              size_t col = tri_verts[0][ivert].second;
-              size_t dvertindex = row * num_cols;
-              dvertindex += col;
-              const LPoint3 &dpoint = disp_points[dvertindex];
-              tri0->_winding.add_point(dpoint);
-              tri0->_normals.push_back(-tri_normal);
-              tri0->_uvs.push_back(disp_uvs[dvertindex]);
-              tri0->_blends.push_back(disp_blends[dvertindex]);
-            }
 
             for (size_t ivert = 0; ivert < 3; ivert++) {
               const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
               LVecBase2 lightcoord;
               lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-              lightcoord[0] -= lightmap_mins[0];
-              lightcoord[0] += 0.5;
-              lightcoord[0] /= tri0->_lightmap_size[0] + 1;
+              lightcoord[0] -= lmins[0];
+              //lightcoord[0] += 0.5;
+              lightcoord[0] /= tri0->_lightmap_size[0];// + 1;
 
               lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-              lightcoord[1] -= lightmap_mins[1];
-              lightcoord[1] += 0.5;
-              lightcoord[1] /= tri0->_lightmap_size[1] + 1;
+              lightcoord[1] -= lmins[1];
+              //lightcoord[1] += 0.5;
+              lightcoord[1] /= tri0->_lightmap_size[1];// + 1;
 
               tri0->_lightmap_uvs.push_back(lightcoord);
             }
@@ -1747,15 +1682,17 @@ build_entity_polygons(int i) {
             // TRIANGLE 2
             //
             tri0 = new MapPoly;
+            tri0->_visible = true;
             tri0->_side_id = side->_editor_id;
             tri0->_vis_occluder = false;
             tri0->_in_group = false;
             tri0->_is_mesh = false;
-            tri0->_lightmap_size = lightmap_size;
             p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
             p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
             p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
             tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
+            lmins = LVecBase2(1e24);
+            lmaxs = LVecBase2(-1e24);
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[1][ivert].first;
               size_t col = tri_verts[1][ivert].second;
@@ -1766,19 +1703,37 @@ build_entity_polygons(int i) {
               tri0->_normals.push_back(-tri_normal);
               tri0->_uvs.push_back(disp_uvs[dvertindex]);
               tri0->_blends.push_back(disp_blends[dvertindex]);
+
+              for (int l = 0; l < 2; l++) {
+                PN_stdfloat val = dpoint[0] * lightmap_vecs[l][0] +
+                                  dpoint[1] * lightmap_vecs[l][1] +
+                                  dpoint[2] * lightmap_vecs[l][2] +
+                                  lightmap_vecs[l][3];
+                lmins[l] = std::min(val, lmins[l]);
+                lmaxs[l] = std::max(val, lmaxs[l]);
+              }
             }
+            for (int l = 0; l < 2; l++) {
+              lmins[l] = std::floor(lmins[l]);
+              lmaxs[l] = std::ceil(lmaxs[l]);
+              lightmap_mins[l] = (int)lmins[l];
+              lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+            }
+
+            tri0->_lightmap_size = lightmap_size;
+
             for (size_t ivert = 0; ivert < 3; ivert++) {
               const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
               LVecBase2 lightcoord;
               lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-              lightcoord[0] -= lightmap_mins[0];
-              lightcoord[0] += 0.5;
-              lightcoord[0] /= tri0->_lightmap_size[0] + 1;
+              lightcoord[0] -= lmins[0];
+              //lightcoord[0] += 0.5;
+              lightcoord[0] /= tri0->_lightmap_size[0];// + 1;
 
               lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-              lightcoord[1] -= lightmap_mins[1];
-              lightcoord[1] += 0.5;
-              lightcoord[1] /= tri0->_lightmap_size[1] + 1;
+              lightcoord[1] -= lmins[1];
+              //lightcoord[1] += 0.5;
+              lightcoord[1] /= tri0->_lightmap_size[1];// + 1;
 
               tri0->_lightmap_uvs.push_back(lightcoord);
             }
@@ -1918,17 +1873,157 @@ build_lighting() {
         continue;
       }
 
-      if (poly->_material != nullptr && poly->_material->has_tag("compile_sky")) {
-        // Skip sky polygons.  The lightmapper treats emptiness as the sky.
-        continue;
+      bool is_sky = false;
+
+      if (poly->_material != nullptr) {
+        if (poly->_material->has_tag("compile_trigger")) {
+          continue;
+        } else if (poly->_material->has_tag("compile_sky")) {
+          is_sky = true;
+        }
       }
 
-      NodePath geom_np(poly->_geom_node);
+      if (!is_sky) {
+        NodePath geom_np(poly->_geom_node);
 
-      builder.add_geom(poly->_geom_node->get_geom(poly->_geom_index),
-                       poly->_geom_node->get_geom_state(poly->_geom_index),
-                       geom_np.get_net_transform(), poly->_lightmap_size,
-                       poly->_geom_node, poly->_geom_index);
+        builder.add_geom(poly->_geom_node->get_geom(poly->_geom_index),
+                        poly->_geom_node->get_geom_state(poly->_geom_index),
+                        geom_np.get_net_transform(), poly->_lightmap_size,
+                        poly->_geom_node, poly->_geom_index);
+
+      } else {
+        // Add sky triangles as occluders (not lightmapped) with the sky
+        // contents, so rays that hit them bring in the sky/sun color.
+        const Winding &w = poly->_winding;
+        for (size_t ipoint = 1; ipoint < (w.get_num_points() - 1); ++ipoint) {
+          LightBuilder::OccluderTri otri;
+          otri.a = w.get_point(ipoint + 1);
+          otri.b = w.get_point(ipoint);
+          otri.c = w.get_point(0);
+          otri.contents = LightBuilder::C_sky;
+          builder._occluder_tris.push_back(std::move(otri));
+        }
+      }
+    }
+  }
+
+  // Now get static props.
+  for (int i = 0; i < _out_data->get_num_entities(); i++) {
+    MapEntity *ent = _out_data->get_entity(i);
+    std::cout << "clsname " << ent->get_class_name() << "\n";
+    if (ent->get_class_name() != "prop_static") {
+      continue;
+    }
+
+    PDXElement *props = ent->get_properties();
+    if (props->has_attribute("disableshadows") && props->get_attribute_value("disableshadows").get_int()) {
+      std::cout << "Shadows disabled\n";
+      continue;
+    }
+
+    Filename model_filename = Filename::from_os_specific(props->get_attribute_value("model").get_string());
+    model_filename.set_extension("bam");
+    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(model_filename);
+    if (prop_model_node == nullptr) {
+      continue;
+    }
+    ModelRoot *prop_mdl_root = DCAST(ModelRoot, prop_model_node);
+    NodePath prop_model(prop_model_node);
+
+    if (props->has_attribute("origin")) {
+      LPoint3 pos;
+      props->get_attribute_value("origin").to_vec3(pos);
+      prop_model.set_pos(pos);
+    }
+
+    if (props->has_attribute("angles")) {
+      LVecBase3 phr;
+      props->get_attribute_value("angles").to_vec3(phr);
+      prop_model.set_hpr(phr[1] - 90, -phr[0], phr[2]);
+    }
+
+    if (props->has_attribute("skin")) {
+      int skin = props->get_attribute_value("skin").get_int();
+      if (skin >= 0 && skin < prop_mdl_root->get_num_material_groups()) {
+        prop_mdl_root->set_active_material_group(skin);
+      }
+    }
+
+    prop_model.flatten_light();
+
+    NodePathCollection geom_nodes;
+    // Get all the Geoms.
+    // If there's an LOD, only get Geoms from the lowest LOD level.
+    NodePath lod = prop_model.find("**/+LODNode");
+    if (!lod.is_empty()) {
+      NodePath lowest_lod = lod.get_child(0);
+      if (lowest_lod.node()->is_geom_node()) {
+        geom_nodes.add_path(lowest_lod);
+      }
+      geom_nodes.add_paths_from(lowest_lod.find_all_matches("**/+GeomNode"));
+
+    } else {
+      // Otherwise get all the Geoms.
+      geom_nodes = prop_model.find_all_matches("**/+GeomNode");
+    }
+
+    // Now add the triangles from all the geoms as occluders.
+    for (int j = 0; j < geom_nodes.get_num_paths(); ++j) {
+      NodePath geom_np = geom_nodes.get_path(j);
+      GeomNode *geom_node = DCAST(GeomNode, geom_np.node());
+      for (int k = 0; k < geom_node->get_num_geoms(); ++k) {
+        if (geom_node->get_geom(k)->get_primitive_type() != GeomEnums::PT_polygons) {
+          continue;
+        }
+
+        const RenderState *state = geom_node->get_geom_state(k);
+        // Exclude triangles with transparency enabled.
+        const TransparencyAttrib *trans;
+        state->get_attrib_def(trans);
+        if (trans->get_mode() != TransparencyAttrib::M_none) {
+          continue;
+        }
+        if (state->has_attrib(AlphaTestAttrib::get_class_slot())) {
+          continue;
+        }
+        const MaterialAttrib *mattr;
+        state->get_attrib_def(mattr);
+        Material *mat = mattr->get_material();
+        if (mat != nullptr) {
+          if ((mat->_attrib_flags & Material::F_transparency) != 0u &&
+              mat->_transparency_mode > 0) {
+            continue;
+
+          } else if ((mat->_attrib_flags & Material::F_alpha_test) != 0u &&
+                      mat->_alpha_test_mode > 0) {
+            continue;
+          }
+        }
+
+        builder.add_vertex_geom(geom_node->get_geom(k), state, geom_np.get_net_transform(), geom_node, k);
+
+/*
+        PT(Geom) geom = geom_node->get_geom(k)->decompose();
+
+        const GeomVertexData *vdata = geom->get_vertex_data();
+        GeomVertexReader vreader(vdata, InternalName::get_vertex());
+        for (size_t l = 0; l < geom->get_num_primitives(); ++l) {
+          CPT(GeomPrimitive) prim = geom->get_primitive(l);
+          for (int iprim = 0; iprim < prim->get_num_primitives(); ++iprim) {
+            LightBuilder::OccluderTri otri;
+            int s = prim->get_primitive_start(iprim);
+            assert(prim->get_primitive_end(iprim) == (s + 3));
+            vreader.set_row(prim->get_vertex(s));
+            otri.a = vreader.get_data3f();
+            vreader.set_row(prim->get_vertex(s + 1));
+            otri.b = vreader.get_data3f();
+            vreader.set_row(prim->get_vertex(s + 2));
+            otri.c = vreader.get_data3f();
+            builder._occluder_tris.push_back(std::move(otri));
+          }
+        }
+        */
+      }
     }
   }
 
@@ -2154,6 +2249,95 @@ build_lighting() {
     return EC_lightmap_failed;
   }
 
+#if 0
+  // Write debug data.
+  LightDebugData &ld_data = _out_data->_light_debug_data;
+  for (const LightBuilder::LightmapVertex &v : builder._vertices) {
+    LightDebugData::Vertex lv;
+    lv.pos = v.pos;
+    ld_data._vertices.push_back(lv);
+  }
+  for (const LightBuilder::LightmapTri &tri : builder._triangles) {
+    LightDebugData::Triangle lt;
+    lt.vert0 = tri.indices[0];
+    lt.vert1 = tri.indices[1];
+    lt.vert2 = tri.indices[2];
+    ld_data._triangles.push_back(lt);
+  }
+  for (const LightBuilder::KDNode *pnode = builder._kd_tree_head; pnode != nullptr; pnode = pnode->next) {
+    const LightBuilder::KDNode &node = *pnode;
+
+    LightDebugData::KDNode ln;
+    ln.first_tri = node.first_triangle;
+    ln.num_tris = node.num_triangles;
+    ln.back_child = node.get_child_node_index(0);
+    ln.front_child = node.get_child_node_index(1);
+    ln.mins = node.mins;
+    ln.maxs = node.maxs;
+    for (int j = 0; j < 6; ++j) {
+      ln.neighbors[j] = node.get_neighbor_node_index(j);
+    }
+    ln.axis = node.axis;
+    ln.dist = node.dist;
+    ld_data._kd_nodes.push_back(ln);
+  }
+  for (unsigned int itri : builder._kd_tri_list) {
+    ld_data._tri_list.push_back(itri);
+  }
+#endif
+
+#if 0
+  // Debug K-D tree.
+  std::stack<int> node_stack;
+  std::stack<int> depth_stack;
+  node_stack.push(0);
+  depth_stack.push(0);
+  LineSegs lines("kd");
+  while (!node_stack.empty()) {
+    int node_idx = node_stack.top();
+    node_stack.pop();
+    int depth = depth_stack.top();
+    depth_stack.pop();
+
+    const LightBuilder::KDNode &node = builder._kd_nodes[node_idx];
+
+    LColor color(1, 0, 0, 1);
+    //color[depth % 3] = 1.0f;
+    lines.set_color(color);
+
+    const LPoint3 &mins = node.mins;
+    const LPoint3 &maxs = node.maxs;
+
+    lines.move_to(mins);
+    lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+    lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+    lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+    lines.draw_to(mins);
+    lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+    lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+    lines.draw_to(LPoint3(mins.get_x(), mins.get_y(), maxs.get_z()));
+    lines.move_to(LPoint3(maxs.get_x(), mins.get_y(), maxs.get_z()));
+    lines.draw_to(maxs);
+    lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), maxs.get_z()));
+    lines.move_to(maxs);
+    lines.draw_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+    lines.draw_to(LPoint3(mins.get_x(), maxs.get_y(), mins.get_z()));
+    lines.move_to(LPoint3(maxs.get_x(), maxs.get_y(), mins.get_z()));
+    lines.draw_to(LPoint3(maxs.get_x(), mins.get_y(), mins.get_z()));
+
+    if (node.children[0] != -1) {
+      node_stack.push(node.children[0]);
+      depth_stack.push(depth + 1);
+    }
+    if (node.children[1] != -1) {
+      node_stack.push(node.children[1]);
+      depth_stack.push(depth + 1);
+    }
+  }
+
+  _out_top->add_child(lines.create());
+#endif
+
   // Now output the probes to the output map data.
   for (size_t i = 0; i < builder._probes.size(); i++) {
     const LightBuilder::LightmapAmbientProbe &probe = builder._probes[i];
@@ -2166,11 +2350,16 @@ build_lighting() {
     _out_data->add_ambient_probe(mprobe);
   }
 
-  // Assign the sun light to any mesh groups that can see the sky.
+  // Assign the sun light to any polys that can see the sky.
   if (!dlnp.is_empty()) {
-    for (size_t i = 0; i < _mesh_groups.size(); ++i) {
-      if (_mesh_groups[i]._can_see_sky) {
-        NodePath(_out_node->get_child(i)).set_light(dlnp);
+    for (size_t i = 0; i < _meshes[0]->_polys.size(); ++i) {
+      MapPoly *poly = _meshes[0]->_polys[i];
+      if (poly->_sees_sky && poly->_geom_node != nullptr) {
+        CPT(RenderState) state = poly->_geom_node->get_geom_state(poly->_geom_index);
+        CPT(LightAttrib) lattr;
+        state->get_attrib_def(lattr);
+        state = state->set_attrib(lattr->add_on_light(dlnp));
+        poly->_geom_node->set_geom_state(poly->_geom_index, state);
       }
     }
   }
@@ -2187,46 +2376,6 @@ render_cube_maps() {
   mapbuilder_cat.info()
     << "Baking cube map textures...\n";
 
-  GraphicsEngine *engine = GraphicsEngine::get_global_ptr();
-  GraphicsPipeSelection *selection = GraphicsPipeSelection::get_global_ptr();
-  PT(GraphicsPipe) pipe = selection->make_module_pipe("pandagl");
-  if (pipe == nullptr) {
-    return EC_unknown_error;
-  }
-
-  // Make sure we don't render any cube maps on surfaces when rendering
-  // cube maps.
-  //default_cube_map = "";
-
-  //ShaderManager::get_global_ptr()->set_default_cube_map(nullptr);
-
-  PT(Shader) filter_shader = Shader::load_compute(Shader::SL_GLSL, "shaders/cubemap_filter.compute.glsl");
-  NodePath filter_state("cm_filter");
-  filter_state.set_shader(filter_shader);
-
-  FrameBufferProperties props;
-  props.clear();
-  WindowProperties winprops;
-  winprops.clear();
-  winprops.set_size(1, 1);
-
-  PT(GraphicsOutput) output = engine->make_output(pipe, "cubemap_host", -1, props, winprops,
-                                                  GraphicsPipe::BF_refuse_window);
-  if (output == nullptr) {
-    return EC_unknown_error;
-  }
-  GraphicsStateGuardian *gsg = output->get_gsg();
-
-  props.set_rgba_bits(16, 16, 16, 16);
-  props.set_depth_bits(1);
-  //props.set_multisamples(0);
-  props.set_force_hardware(true);
-  props.set_float_color(true);
-
-  // Make sure we antialias and render an HDR cube map.
-  //_out_top->set_attrib(AntialiasAttrib::make(AntialiasAttrib::M_multisample));
-  _out_top->set_attrib(LightRampAttrib::make_identity());
-
   PT(TextureStage) cm_stage = new TextureStage("envmap");
 
   pvector<vector_int> cm_side_lists;
@@ -2239,13 +2388,8 @@ render_cube_maps() {
       continue;
     }
 
-    // Place the cube map camera rig into the level scene graph.
-    NodePath cam_rig("cubemap_cam_rig");
-    cam_rig.reparent_to(NodePath(_out_top));
-
     // Position the camera at the origin of the cube map entity.
     LPoint3 pos = KeyValues::to_3f(ent->_properties["origin"]);
-    cam_rig.set_pos(pos);
 
     vector_int side_list;
     // The cube map may have a list of sides that should be explicitly given
@@ -2272,63 +2416,29 @@ render_cube_maps() {
       size = 1 << (size_option - 1);
     }
 
-    // Create the offscreen buffer and a camera/display region pair for each
-    // cube map face.
-    PT(GraphicsOutput) buffer = output->make_cube_map("cubemap_render", size, cam_rig,
-                                                      PandaNode::get_all_camera_mask(), true, &props);
-    if (buffer == nullptr) {
-      return EC_unknown_error;
-    }
-
-    engine->open_windows();
-
-    // Now render into the cube map texture.
-    engine->render_frame();
-    engine->render_frame();
-    engine->sync_frame();
-
-    gsg->finish();
-
-    engine->remove_window(buffer);
-
-    Texture *cm_tex = buffer->get_texture();
-    // Make sure mipmaps are enabled.
-    cm_tex->set_minfilter(SamplerState::FT_linear_mipmap_linear);
+    // Just create a cube map texture with no image data.  The images will be
+    // baked in the show.
+    std::ostringstream ss;
+    ss << "cubemap-" << pos[0] << "." << pos[1] << "." << pos[2] << "-" << size;
+    PT(Texture) cm_tex = new Texture(ss.str());
+    cm_tex->setup_cube_map(size, Texture::T_half_float, Texture::F_rgb16);
+    cm_tex->set_clear_color(LColor(0, 0, 0, 1));
+    cm_tex->set_minfilter(SamplerState::FT_linear);
     cm_tex->set_magfilter(SamplerState::FT_linear);
-
-    filter_state.set_shader_input("inputTexture", cm_tex);
-
-    // Now filter the cube map down the mip chain.
-    int mip = 0;
-    while (size > 1) {
-      size /= 2;
-      mip++;
-      filter_state.set_shader_input("outputTexture", cm_tex, false, true, -1, mip, 0);
-      filter_state.set_shader_input("mipLevel_mipSize_numMips", LVecBase3i(mip, size, 10));
-      gsg->set_state_and_transform(filter_state.get_state(), TransformState::make_identity());
-      gsg->dispatch_compute(size / 16, size / 16, 6);
-    }
-    gsg->finish();
-
-    engine->extract_texture_data(cm_tex, gsg);
+    cm_tex->set_wrap_u(SamplerState::WM_clamp);
+    cm_tex->set_wrap_v(SamplerState::WM_clamp);
+    cm_tex->set_wrap_w(SamplerState::WM_clamp);
 
     CPT(RenderAttrib) tattr = TextureAttrib::make();
     tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_stage, cm_tex);
     cm_states.push_back(RenderState::make(tattr));
 
     // Save cube map texture in output map data.
-    _out_data->add_cube_map(cm_tex, pos);
+    _out_data->add_cube_map(cm_tex, pos, size);
 
     // Dissolve the env_cubemap entity.
     it = _source_map->_entities.erase(it);
-
-    cam_rig.remove_node();
   }
-
-  engine->remove_window(output);
-
-  //_out_top->clear_attrib(AntialiasAttrib::get_class_slot());
-  _out_top->clear_attrib(LightRampAttrib::get_class_slot());
 
   // Now apply the cube map textures to map polygons.
   for (size_t i = 0; i < _meshes.size(); i++) {
@@ -2378,18 +2488,107 @@ render_cube_maps() {
     }
   }
 
-  // Now build a K-D tree of cube map positions for locating the
-  // closest cube map to use for a model.
-  //KDTree cm_tree;
-  //for (int i = 0; i < _out_data->get_num_cube_maps(); i++) {
-  //  const MapCubeMap *mcm = _out_data->get_cube_map(i);
-  //  cm_tree.add_input(mcm->_pos, mcm->_pos, i);
-  //}
-  //cm_tree.build();
-  //_out_data->set_cube_map_tree(std::move(cm_tree));
-
   mapbuilder_cat.info()
     << "Done.\n";
 
   return EC_ok;
+}
+
+/**
+ * Bakes physics meshes for each brush entity in the level.
+ *
+ * Both a triangle mesh and a convex mesh are created for each entity.
+ * Triangle meshes should be used for brush entities that are solid and
+ * visible.  The convex mesh should be used for "volume" entities like
+ * triggers.  Triangle meshes cannot be used as a trigger volume, and
+ * convex meshes cannot have per-triangle materials.
+ */
+void MapBuilder::
+build_entity_physics(int mesh_index, MapModel &model) {
+  MapMesh *mesh = _meshes[mesh_index];
+  int ent_index = mesh->_entity;
+  MapEntitySrc *ent = _source_map->_entities[ent_index];
+
+  // First do the triangle mesh.  Build it from all of the mesh's
+  // MapPolys, which are polygons formed by clipping together the
+  // brush planes, and displacement polygons.
+  PT(PhysTriangleMeshData) tri_mesh_data = new PhysTriangleMeshData;
+  vector_string surface_props;
+  int phys_polygons = 0;
+  for (MapPoly *poly : mesh->_polys) {
+    Material *mat = poly->_material;
+    Winding *w = &poly->_winding;
+
+    if (w->is_empty()) {
+      continue;
+    }
+
+    std::string surface_prop = "default";
+    if (mat != nullptr && mat->has_tag("surface_prop")) {
+      // Grab the physics surface property from the material.
+      surface_prop = mat->get_tag_value("surface_prop");
+    }
+
+    // Find or add to surface prop list for this mesh.
+    vector_string::const_iterator it = std::find(surface_props.begin(), surface_props.end(), surface_prop);
+    int mat_index;
+    if (it == surface_props.end()) {
+      // New material.
+      mat_index = (int)surface_props.size();
+      surface_props.push_back(surface_prop);
+    } else {
+      // Existing index.
+      mat_index = it - surface_props.begin();
+    }
+
+    // Add the polygon to the physics triangle mesh.
+    // Need to reverse the vertex order.
+    pvector<LPoint3> phys_verts;
+    phys_verts.resize(w->get_num_points());
+    for (int i = 0; i < w->get_num_points(); ++i) {
+      phys_verts[i] = w->get_point(i);
+    }
+    std::reverse(phys_verts.begin(), phys_verts.end());
+    tri_mesh_data->add_polygon(phys_verts, mat_index);
+  }
+
+  // Cook the triangle mesh.
+  bool ret = tri_mesh_data->cook_mesh();
+  assert(ret);
+
+  model._tri_mesh_data = tri_mesh_data->get_mesh_data();
+  model._phys_surface_props = surface_props;
+
+  // Now build convex mesh pieces.  One for each brush in the entity.
+  // Don't do this for the world.
+  if (ent_index == 0) {
+    return;
+  }
+
+  for (MapSolid *solid : ent->_solids) {
+    PT(PhysConvexMeshData) cm_data = new PhysConvexMeshData;
+
+    // Get polygon for side by clipping a huge winding along side
+    // plane by all other side planes.
+    for (MapSide *side : solid->_sides) {
+      Winding w(side->_plane);
+      for (MapSide *other_side : solid->_sides) {
+        if (side == other_side) {
+          continue;
+        }
+        w = w.chop(-other_side->_plane);
+      }
+
+      // Add winding points to convex mesh.
+      for (int i = 0; i < w.get_num_points(); ++i) {
+        cm_data->add_point(w.get_point(i));
+      }
+    }
+
+    // Now cook the convex mesh piece.
+    ret = cm_data->cook_mesh();
+    assert(ret);
+
+    model._convex_mesh_data.push_back(cm_data->get_mesh_data());
+  }
 }

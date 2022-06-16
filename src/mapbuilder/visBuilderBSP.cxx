@@ -195,49 +195,82 @@ bake() {
     // Build portal representations for vis.
     r_build_portal_list(_tree_root);
 
-    // Assign mesh groups to BSP leaves.
-    for (size_t i = 0; i < _builder->_mesh_groups.size(); ++i) {
-      MapGeomGroup *group = &_builder->_mesh_groups[i];
-
-      for (size_t j = 0; j < group->geoms.size(); ++j) {
-        MapPoly *poly = (MapPoly *)group->geoms[j];
-        std::stack<MGFilterStack> node_stack;
-        node_stack.push({ _tree_root, poly->_winding });
-        while (!node_stack.empty()) {
-          MGFilterStack data = node_stack.top();
-          node_stack.pop();
-          BSPNode *node = data.node;
-          if (!node->is_leaf()) {
-            // Clip face into children.
-            PlaneSide s = data.winding.get_plane_side(node->_plane);
-            if (s == PS_on) {
-              // Winding lies on node plane.
-              // Compare normals to determine direction to traverse.
-              LPlane plane = data.winding.get_plane();
-              if (plane.get_normal().dot(node->_plane.get_normal()) >= 0.999f) {
-                // Winding is facing node plane direction, traverse forward.
-                node_stack.push({ node->_children[FRONT_CHILD], data.winding });
-              } else {
-                // Facing away, traverse behind.
-                node_stack.push({ node->_children[BACK_CHILD], data.winding });
-              }
-
+    // Clip world polys into BSP tree.  Polys completely in solid leaves
+    // will be removed from rendering.
+    bool any_in_3d_sky = false;
+    MapMesh *world_mesh = _builder->_meshes[0];
+    for (size_t j = 0; j < world_mesh->_polys.size(); ++j) {
+      MapPoly *poly = world_mesh->_polys[j];
+      // Set true if the polygon resides somewhat or completely in
+      // a non-solid leaf.  If the polygon is completely in solid space,
+      // the polygon will not be written out for rendering.
+      poly->_visible = false;
+      std::stack<MGFilterStack> node_stack;
+      node_stack.push({ _tree_root, poly->_winding });
+      while (!node_stack.empty()) {
+        MGFilterStack data = node_stack.top();
+        node_stack.pop();
+        BSPNode *node = data.node;
+        if (!node->is_leaf()) {
+          // Clip face into children.
+          PlaneSide s = data.winding.get_plane_side(node->_plane);
+          if (s == PS_on) {
+            // Winding lies on node plane.
+            // Compare normals to determine direction to traverse.
+            LPlane plane = data.winding.get_plane();
+            if (plane.get_normal().dot(node->_plane.get_normal()) >= 0.999f) {
+              // Winding is facing node plane direction, traverse forward.
+              node_stack.push({ node->_children[FRONT_CHILD], data.winding });
             } else {
-              Winding front, back;
-              data.winding.clip_epsilon(node->_plane, 0.001, front, back);
-              node_stack.push({ node->_children[FRONT_CHILD], front });
-              node_stack.push({ node->_children[BACK_CHILD], back });
+              // Facing away, traverse behind.
+              node_stack.push({ node->_children[BACK_CHILD], data.winding });
             }
 
           } else {
-            if (!data.winding.is_empty() && node->_leaf_id != -1) {
-              // Valid winding left over in this leaf.  Assign the group to
-              // this leaf.
-              group->clusters.set_bit(node->_leaf_id);
+            Winding front, back;
+            data.winding.clip_epsilon(node->_plane, 0.001, front, back);
+            node_stack.push({ node->_children[FRONT_CHILD], front });
+            node_stack.push({ node->_children[BACK_CHILD], back });
+          }
+
+        } else {
+          if (!data.winding.is_empty() && node->_leaf_id != -1) {
+            // Valid winding left over in this empty leaf.  Polygon
+            // should be rendered.
+            poly->_visible = true;
+            poly->_leaves.insert(node->_leaf_id);
+            if (node->_sky_3d) {
+              poly->_in_3d_skybox = true;
+              any_in_3d_sky = true;
             }
           }
         }
       }
+    }
+
+    if (any_in_3d_sky) {
+      _builder->_3d_sky_mesh = new MapMesh;
+      _builder->_3d_sky_mesh->_is_mesh = true;
+      _builder->_3d_sky_mesh->_3d_sky_mesh = true;
+      _builder->_3d_sky_mesh->_in_group = false;
+      _builder->_3d_sky_mesh->_in_mesh_group = false;
+      _builder->_3d_sky_mesh->_entity = 0;
+      int num_sky_polys = 0;
+      for (auto it = world_mesh->_polys.begin(); it != world_mesh->_polys.end();) {
+        MapPoly *poly = *it;
+        if (poly->_in_3d_skybox) {
+          // Move this polygon into the 3-D skybox mesh.
+          _builder->_3d_sky_mesh->_polys.push_back(poly);
+          it = world_mesh->_polys.erase(it);
+          num_sky_polys++;
+        } else {
+          ++it;
+        }
+      }
+      _builder->_meshes.push_back(_builder->_3d_sky_mesh);
+      _builder->_3d_sky_mesh_index = (int)_builder->_meshes.size() - 1;
+      mapbuilder_cat.info()
+        << num_sky_polys << " world polygons in 3-D skybox.\n";
     }
 
     mapbuilder_cat.info()
@@ -269,16 +302,6 @@ bake() {
         pvs.add_visible_cluster(leaf_id);
       }
 
-      // Assign mesh groups to the cluster.
-      int mesh_group_index = 0;
-      for (auto it = _builder->_mesh_groups.begin(); it != _builder->_mesh_groups.end(); ++it) {
-        if (it->clusters.get_bit(_empty_leaf_list[i]->_leaf_id)) {
-          // Mesh group resides in this area cluster.
-          pvs.set_mesh_group(mesh_group_index);
-        }
-        mesh_group_index++;
-      }
-
       // Store the AABB of the leaf for debug visualization in the show.
       pvs._box_bounds.push_back(_empty_leaf_list[i]->_mins);
       pvs._box_bounds.push_back(_empty_leaf_list[i]->_maxs);
@@ -291,14 +314,14 @@ bake() {
     // any visgroups in the PVS of the cluster's visgroups contain a
     // skybox face.
     int num_sees_sky = 0;
-    for (size_t i = 0; i < _builder->_mesh_groups.size(); ++i) {
-      MapGeomGroup *group = &_builder->_mesh_groups[i];
+    for (size_t i = 0; i < world_mesh->_polys.size(); ++i) {
+      MapPoly *poly = world_mesh->_polys[i];
 
-      BitArray clusters = group->clusters;
-      int index = clusters.get_lowest_on_bit();
-      while (index >= 0) {
+      for (auto it = poly->_leaves.begin(); it != poly->_leaves.end(); ++it) {
+        int index = *it;
+
         if (_empty_leaf_list[index]->_has_sky) {
-          group->_can_see_sky = true;
+          poly->_sees_sky = true;
           num_sees_sky++;
           break;
 
@@ -308,7 +331,7 @@ bake() {
           for (int leaf_id : _empty_leaf_list[index]->_pvs) {
             if (_empty_leaf_list[leaf_id]->_has_sky) {
               num_sees_sky++;
-              group->_can_see_sky = true;
+              poly->_sees_sky = true;
               got_it = true;
               break;
             }
@@ -317,29 +340,11 @@ bake() {
             break;
           }
         }
-
-        // Check next mesh group cluster.
-        clusters.clear_bit(index);
-        index = clusters.get_lowest_on_bit();
-      }
-
-      // Also determine if it's in the 3-D skybox by checking if
-      // any of the leaves the mesh group is in are 3-D skybox leaves.
-      clusters = group->clusters;
-      index = clusters.get_lowest_on_bit();
-      while (index >= 0) {
-        if (_empty_leaf_list[index]->_sky_3d) {
-          group->_in_3d_skybox = true;
-          break;
-        }
-
-        clusters.clear_bit(index);
-        index = clusters.get_lowest_on_bit();
       }
     }
 
     mapbuilder_cat.info()
-      << num_sees_sky << " / " << _builder->_mesh_groups.size() << " mesh groups can see the sky\n";
+      << num_sees_sky << " / " << world_mesh->_polys.size() << " world polys can see the sky\n";
 
   } else {
     mapbuilder_cat.warning()
@@ -977,7 +982,8 @@ flood_entities() {
   MapFile *src_map = _builder->_source_map;
   for (size_t i = 1; i < src_map->_entities.size(); ++i) {
     MapEntitySrc *ent = src_map->_entities[i];
-    if (ent->_class_name == "env_cubemap") {
+    if (ent->_class_name == "env_cubemap" ||
+        ent->_class_name == "prop_static") {
       // Ignore these.
       continue;
     }

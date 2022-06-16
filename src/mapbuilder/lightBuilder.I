@@ -12,23 +12,6 @@
  */
 
 /**
- * Sets the number of cells along one dimension of the triangle grid.
- */
-INLINE void LightBuilder::
-set_grid_size(int size) {
-  nassertv(size % 2 == 0);
-  _grid_size = size;
-}
-
-/**
- * Returns the number of cells along one dimension of the triangle grid.
- */
-INLINE int LightBuilder::
-get_grid_size() const {
-  return _grid_size;
-}
-
-/**
  * Sets a constant bias value to apply to all rays casted into the scene.
  * This is used to solve acne problems.
  */

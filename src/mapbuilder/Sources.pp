@@ -13,35 +13,35 @@
   #endif
 
   #define SOURCES \
-    area.h area.I \
+    //area.h area.I \
     config_mapbuilder.h \
     lightBuilder.h lightBuilder.I \
     mapBuilder.h mapBuilder.I \
     mapBuildOptions.h mapBuildOptions.I \
     mapObjects.h mapObjects.I \
-    portal.h portal.I \
-    visBuilder.h visBuilder.I \
+    //portal.h portal.I \
+    //visBuilder.h visBuilder.I \
     visBuilderBSP.h visBuilderBSP.I \
     visClusterSampler.h visClusterSampler.I \
-    visTile.h visTile.I \
-    voxelOctree.h voxelOctree.I \
-    voxelSpace.h voxelSpace.I \
+    //visTile.h visTile.I \
+    //voxelOctree.h voxelOctree.I \
+    //voxelSpace.h voxelSpace.I \
     winding.h winding.I
 
   #define COMPOSITE_SOURCES \
-    area.cxx \
+    //area.cxx \
     config_mapbuilder.cxx \
     lightBuilder.cxx \
     mapBuilder.cxx \
     mapBuildOptions.cxx \
     mapObjects.cxx \
-    portal.cxx \
-    visBuilder.cxx \
+    //portal.cxx \
+    //visBuilder.cxx \
     visBuilderBSP.cxx \
     visClusterSampler.cxx \
-    visTile.cxx \
-    voxelOctree.cxx \
-    voxelSpace.cxx \
+    //visTile.cxx \
+    //voxelOctree.cxx \
+    //voxelSpace.cxx \
     winding.cxx
 
   #define INSTALL_HEADERS \

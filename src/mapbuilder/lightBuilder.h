@@ -26,6 +26,7 @@
 #include "pmap.h"
 #include "imagePacker.h"
 #include "notifyCategoryProxy.h"
+#include "pvector.h"
 
 NotifyCategoryDecl(lightbuilder, EXPCL_PANDA_MAPBUILDER, EXPTP_PANDA_MAPBUILDER);
 
@@ -64,13 +65,12 @@ PUBLISHED:
   void add_geom(const Geom *geom, const RenderState *state, const TransformState *transform,
                 const LVecBase2i &lightmap_size, GeomNode *geom_node = nullptr, int geom_index = -1,
                 uint32_t contents = 0);
+  void add_vertex_geom(const Geom *geom, const RenderState *state, const TransformState *transform,
+                       GeomNode *geom_node = nullptr, int geom_index = -1, uint32_t contents = 0);
 
   //void add_light(NodePath light);
 
   bool solve();
-
-  INLINE void set_grid_size(int grid_size);
-  INLINE int get_grid_size() const;
 
   INLINE void set_ray_bias(PN_stdfloat bias);
   INLINE PN_stdfloat get_ray_bias() const;
@@ -101,17 +101,28 @@ private:
   bool make_textures();
   bool offset_geom_lightmap_uvs();
   bool collect_vertices_and_triangles();
+  bool build_kd_tree();
   bool make_gpu_buffers();
   bool rasterize_geoms_into_lightmap_textures();
+  bool rasterize_vertex_lit_geoms();
   bool compute_unocclude();
   bool compute_direct();
+  bool compute_vtx_reflectivity();
   bool compute_indirect();
   bool denoise_lightmaps();
   bool dialate_lightmaps();
   bool write_geoms();
   bool compute_probes();
 
+  void free_texture(Texture *tex);
+
 public:
+  enum Contents {
+    C_none = 0,
+    C_sky = 1,
+    C_transparent = 2,
+  };
+
   /**
    * A single vertex in the scene.  Comes from a geom.
    */
@@ -132,6 +143,7 @@ public:
     int indices[3];
 
     // Index of lightmap palette that contains the triangle.
+    // -1 is no lighting (occluder only), -2 is per-vertex lighting.
     int palette;
 
     // AABB of triangle.
@@ -144,12 +156,21 @@ public:
   };
   typedef pvector<LightmapTri> Triangles;
   Triangles _triangles;
+  int _first_vertex_lit_vertex;
+  int _num_vertex_lit_vertices;
+  int _first_vertex_lit_tri;
+  int _num_vertex_lit_tris;
+  int _first_vertex_lit_geom;
+  int _num_vertex_lit_geoms;
+  int _vertex_palette_width;
+  int _vertex_palette_height;
 
-  struct TriSort {
-    int cell_index;
-    int tri_index;
+  struct OccluderTri {
+    LPoint3 a, b, c;
+    uint32_t contents = 0;
   };
-  typedef pvector<TriSort> TriSorts;
+  typedef pvector<OccluderTri> OccluderTris;
+  OccluderTris _occluder_tris;
 
   /**
    * A geom in the scene that should have a lightmap computed for it.
@@ -157,6 +178,14 @@ public:
    * There should be NO overlapping polygons in the lightmap UV set!!!
    */
   struct LightmapGeom {
+
+    enum LightMode {
+      LM_lightmap,
+      LM_per_vertex,
+    };
+
+    LightMode light_mode;
+
     // The GeomNode that the Geom came from...
     PT(GeomNode) source_geom_node;
     // and the Geom's index into the GeomNode.
@@ -186,9 +215,14 @@ public:
     // for this geom.
     int palette = -1;
 
+    LVecBase2 uv_mins, uv_maxs;
+
     // Base index into triangle buffer for this geom's set of triangles.
     int first_triangle = -1;
     int num_triangles;
+
+    int first_vertex = -1;
+    int num_vertices;
 
     // Non-indexed copy of the geom.  Original indexed geom is preserved.
     PT(Geom) ni_geom;
@@ -263,6 +297,107 @@ public:
   typedef pvector<LightmapAmbientProbe> AmbientProbes;
   AmbientProbes _probes;
 
+  struct KDSplit {
+    enum Split {
+      S_min,
+      S_max,
+      S_COUNT,
+    };
+    enum Axis {
+      A_x,
+      A_y,
+      A_z,
+      A_COUNT,
+    };
+    int triangle;
+    float dist;
+    unsigned char axis;
+    Split split;
+
+    bool operator < (const KDSplit &other) const {
+      if (dist != other.dist) {
+        return dist < other.dist;
+      }
+      return split < other.split;
+    }
+  };
+  typedef pvector<KDSplit> KDSplits;
+
+  class KDNode : public MemoryBase {
+  public:
+    enum Face {
+      F_left,
+      F_right,
+      F_back,
+      F_front,
+      F_bottom,
+      F_top,
+    };
+
+    static constexpr int nil = -1;
+
+    KDNode() :
+      mins(0.0f),
+      maxs(0.0f),
+      axis(0),
+      dist(0.0f),
+      first_triangle(0),
+      num_triangles(0)
+    {
+      children[0] = nullptr;
+      children[1] = nullptr;
+      next = nullptr;
+      id = -1;
+      for (int i = 0; i < 6; ++i) {
+        neighbors[i] = nullptr;
+      }
+    }
+
+    // Child nodes, in front and behind splitting plane respectively.
+    KDNode *children[2];
+
+    // Bounding box.
+    LPoint3 mins, maxs;
+
+    // Defines the splitting plane.
+    unsigned char axis;
+    float dist;
+
+    // KDNode indices neighboring each face of the node box volume.
+    KDNode *neighbors[6];
+
+    // List of LightmapTri indices at leaf.
+    vector_int triangles;
+    int first_triangle, num_triangles;
+
+    // Linked list.
+    KDNode *next;
+    int id;
+
+    INLINE int get_child_node_index(int child) const {
+      if (children[child] != nullptr) {
+        return children[child]->id;
+      }
+      return -1;
+    }
+
+    INLINE int get_neighbor_node_index(int neighbor) const {
+      if (neighbors[neighbor] != nullptr) {
+        return neighbors[neighbor]->id;
+      }
+      return -1;
+    }
+
+    INLINE bool is_leaf() const { return children[0] == nullptr && children[1] == nullptr; }
+  };
+  int _kd_node_count;
+  KDNode *_kd_tree_head;
+  KDNode *_kd_tree_tail;
+
+  // Each leaf has a section in this list indentifying the triangles within the
+  // leaf.
+  pvector<unsigned int> _kd_tri_list;
+
   // The width and height of the lightmap palette.
   LVecBase2i _lightmap_size;
 
@@ -278,10 +413,6 @@ public:
   Textures _gpu_buffers;
 
   LPoint3 _scene_mins, _scene_maxs;
-
-  // The number of cells along one dimension of the triangle grid.
-  // FIXME: replace with a K-D tree.
-  int _grid_size;
 
   // Bias in world coordinates for ray casting.
   PN_stdfloat _bias;
@@ -311,9 +442,20 @@ private:
   static CPT(InternalName) _lightmap_uv_name;
 
 private:
-  void add_tri_to_grid(int size, const LVecBase3i &offset, const LPoint3 &mins,
-                       const LPoint3 &maxs, LPoint3 points[3],
-                       int tri_index, TriSorts &triangles);
+  void make_geom_vertices_and_triangles(LightmapGeom &lgeom, int &triangle, int &vertex);
+
+  KDNode *alloc_kd_node();
+  void free_kd_tree();
+  KDNode *r_build_kd_tree(const KDSplits *splits, int num_tris, const LPoint3 &mins, const LPoint3 &maxs, int depth, float parent_sah, vector_int &tmp);
+  float split_triangles(const KDSplits *splits, int num_tris, unsigned char &axis, int &split,
+                        const LPoint3 &mins, const LPoint3 &maxs);
+  void r_kd_node_output(const KDNode *node, int indent_level = 0);
+  void r_build_kd_ropes(KDNode *node, KDNode *rope[6]);
+  void make_kd_leaf(KDNode *node, const KDSplits *splits, int num_tris);
+  void optimize_ropes(KDNode *rope[6], const LPoint3 &mins, const LPoint3 &maxs);
+  void add_kd_node(KDNode *node);
+
+  PTA_uchar convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size);
 };
 
 #include "lightBuilder.I"
