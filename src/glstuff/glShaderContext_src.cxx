@@ -2271,6 +2271,7 @@ issue_parameters(int altered) {
       uint32_t dim = spec._dim[1] * spec._dim[2];
       int array_size = min(spec._dim[0], (uint32_t)(ptr_data->_size / dim));
 
+#if 0
       size_t mem_size;
       switch (ptr_data->_type) {
       case ShaderType::ST_bool:
@@ -2298,6 +2299,7 @@ issue_parameters(int altered) {
         continue;
       }
       memcpy(_ptr_cache[i]._data, (unsigned char *)ptr_data->_ptr, mem_size);
+#endif
 
       GLint p = get_uniform_location(spec._id._location);
       if (p < 0) {
