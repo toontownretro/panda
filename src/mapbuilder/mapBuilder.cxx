@@ -1001,6 +1001,7 @@ bake_steam_audio() {
       const BSPTree *tree = (const BSPTree *)_out_data->get_area_cluster_tree();
 
       pvector<LPoint3> probe_positions;
+      pvector<float> probe_radii;
       for (size_t i = 0; i < tree->_leaves.size(); ++i) {
         if (tree->_leaves[i].solid || tree->_leaves[i].value < 0) {
           // Don't place a probe in solid leaves.
@@ -1046,7 +1047,16 @@ bake_steam_audio() {
         }
         leaf_center /= total_points;
 
+        // Now determine radius.
+        float radius = 0.0f;
+        for (size_t j = 0; j < boundary_windings.size(); ++j) {
+          for (int k = 0; k < boundary_windings[j].get_num_points(); ++k) {
+            radius = std::max(radius, (boundary_windings[j].get_point(k) - leaf_center).length());
+          }
+        }
+
         probe_positions.push_back(leaf_center);
+        probe_radii.push_back(radius);
       }
 
       //// Also place probes at center of each portal.
@@ -1054,13 +1064,16 @@ bake_steam_audio() {
       //  probe_positions.push_back(portal_center);
       //}
 
-      for (const LPoint3 &center : probe_positions) {
+      for (size_t i = 0; i < probe_positions.size(); ++i) {
+        LPoint3 center = probe_positions[i];
+        float radius = probe_radii[i];
+
         // Place probe here.
         IPLSphere sphere;
         sphere.center.x = center[0] * HAMMER_UNITS_TO_METERS;
         sphere.center.y = center[2] * HAMMER_UNITS_TO_METERS;
         sphere.center.z = -center[1] * HAMMER_UNITS_TO_METERS;
-        sphere.radius = 10.0f;
+        sphere.radius = radius * HAMMER_UNITS_TO_METERS;
         iplProbeBatchAddProbe(batch, sphere);
         num_probes++;
       }
@@ -1088,13 +1101,13 @@ bake_steam_audio() {
       bake_params.numRays = 32768;
       bake_params.numDiffuseSamples = 2048;
       bake_params.numBounces = 100;
-      bake_params.simulatedDuration = 2.0f;
-      bake_params.savedDuration = 2.0f;
+      bake_params.simulatedDuration = 1.0f;
+      bake_params.savedDuration = 1.0f;
       bake_params.order = 2;
       bake_params.numThreads = _options.get_num_threads();
       bake_params.irradianceMinDistance = 5.0f;
       bake_params.rayBatchSize = 1;
-      bake_params.bakeBatchSize = 32;
+      bake_params.bakeBatchSize = 64;
       bake_params.openCLDevice = ocl_dev;
       bake_params.radeonRaysDevice = rr_dev;
       iplReflectionsBakerBake(context, &bake_params, ipl_progress_callback, nullptr);
