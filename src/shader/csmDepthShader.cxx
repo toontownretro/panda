@@ -72,14 +72,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   AlphaTestAttrib::PandaCompareFunc alpha_mode = AlphaTestAttrib::M_greater_equal;
   const TransparencyAttrib *ta;
   const AlphaTestAttrib *ata;
-  if (state->get_attrib(ata) && ata->get_mode() != AlphaTestAttrib::M_always &&
-      ata->get_mode() != AlphaTestAttrib::M_none) {
+  if (state->get_attrib(ta) && ta->get_mode() != TransparencyAttrib::M_none) {
+    has_alpha = true;
+
+  } else if (state->get_attrib(ata) && ata->get_mode() != AlphaTestAttrib::M_always &&
+             ata->get_mode() != AlphaTestAttrib::M_none) {
     has_alpha = true;
     alpha_ref = ata->get_reference_alpha();
     alpha_mode = ata->get_mode();
-
-  } else if (state->get_attrib(ta) && ta->get_mode() != TransparencyAttrib::M_none) {
-    has_alpha = true;
   }
 
   if (has_alpha) {
