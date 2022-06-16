@@ -340,7 +340,7 @@ make_palette() {
       // existing palette.  Try again on a fresh palette.
       LightmapPage page;
       page.index = _pages.size();
-      page.packer.reset(0, 1024, 1024, 2);
+      page.packer.reset(0, 2048, 2048, 2);
       LVecBase2i offset = page.packer.add_block(lmgeom.lightmap_size[0], lmgeom.lightmap_size[1]);
       if (offset[0] != -1) {
         // Geom was successfully added into this palette.
@@ -2590,21 +2590,76 @@ write_geoms() {
   for (size_t i = 0; i < _pages.size(); i++) {
     const unsigned char *page_data = lm_ram_image.p() + page_size * i;
 
+    LightmapPage &page = _pages[i];
+
+    // Chop dimensions to absolute minimum size needed by this page.
+    // During the build process, each page is the same size (the max of all
+    // pages) because of how the pages are stored in a single texture array.
+    // However, since the output pages are separate textures, we can store
+    // each page at a different size, saving on memory.
+    LVecBase2i page_dim = page.packer.get_minimum_dimensions_npot();
+
+    // The geoms in this page need their lightmap UV's offset again.
+    float u_scale = (float)_lightmap_size[0] / (float)page_dim[0];
+    float v_scale = (float)_lightmap_size[1] / (float)page_dim[1];
+
     std::ostringstream ss;
     ss << "lm_direct_page_" << i;
     PT(Texture) tex = new Texture(ss.str());
-    tex->setup_2d_texture(_lightmap_size[0], _lightmap_size[1], Texture::T_half_float,
+    tex->setup_2d_texture(page_dim[0], page_dim[1], Texture::T_half_float,
                           Texture::F_rgb16);
     tex->set_minfilter(SamplerState::FT_linear);
     tex->set_magfilter(SamplerState::FT_linear);
     tex->set_wrap_u(SamplerState::WM_clamp);
     tex->set_wrap_v(SamplerState::WM_clamp);
     tex->set_keep_ram_image(false);
-    tex->set_ram_image(convert_rgba32_to_rgb16(page_data, page_size));
+    tex->set_ram_image(convert_rgba32_to_rgb16(page_data, page_size, _lightmap_size, page_dim));
+
+    lightbuilder_cat.info()
+      << "Output lightmap page " << i << ":\n";
+    tex->write(lightbuilder_cat.info(false), 0);
 
     CPT(RenderAttrib) tattr = TextureAttrib::make();
     tattr = DCAST(TextureAttrib, tattr)->add_on_stage(stage, tex);
     page_texture_states.push_back(RenderState::make(tattr));
+
+    if (page_dim != _lightmap_size) {
+      // Page size is smaller than largest page.  Re-offset the lightmap UVs
+      // of geoms in this page to correspond to chopped page size.
+
+      pmap<CPT(GeomVertexData), PT(GeomVertexData)> mod_vdatas;
+
+      for (int igeom : page.geoms) {
+        const LightmapGeom &lgeom = _geoms[igeom];
+
+        // Grab the vertex indices referenced by all primitives of the Geom.
+        // We will only offset these vertex UV's.
+        BitArray referenced_vertices;
+        for (size_t iprim = 0; iprim < lgeom.geom->get_num_primitives(); ++iprim) {
+          const GeomPrimitive *prim = lgeom.geom->get_primitive(iprim);
+          GeomPrimitivePipelineReader prim_reader(prim, Thread::get_current_thread());
+          prim_reader.get_referenced_vertices(referenced_vertices);
+        }
+
+        PT(GeomVertexData) &mod_vdata = mod_vdatas[lgeom.geom->get_vertex_data()];
+        if (mod_vdata == nullptr) {
+          mod_vdata = lgeom.geom->modify_vertex_data();
+        }
+
+        GeomVertexRewriter luv_rewriter(mod_vdata, get_lightmap_uv_name());
+
+        // Offset the referenced vertices.
+        int index = referenced_vertices.get_lowest_on_bit();
+        while (index >= 0) {
+          luv_rewriter.set_row(index);
+          const LVecBase2f &luv = luv_rewriter.get_data2f();
+          luv_rewriter.set_data2f(luv[0] * u_scale, luv[1] * v_scale);
+
+          referenced_vertices.clear_bit(index);
+          index = referenced_vertices.get_lowest_on_bit();
+        }
+      }
+    }
   }
 
   free_texture(_lm_textures["reflectivity"]);
@@ -2951,28 +3006,32 @@ free_texture(Texture *tex) {
  * mipmap level.
  */
 PTA_uchar LightBuilder::
-convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size) {
-  size_t num_pixels = image_size / (sizeof(float) * 4u);
+convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
+                        const LVecBase2i &orig_size, const LVecBase2i &new_size) {
+
+  int y_diff = orig_size[1] - new_size[1];
+  int x_diff = orig_size[0] - new_size[0];
+
+  // New size should be same or smaller.
+  assert(y_diff >= 0 && x_diff >= 0);
 
   const float *fp32_data = (const float *)image;
 
   PTA_uchar fp16_image;
-  fp16_image.resize(sizeof(unsigned short) * num_pixels * 3);
+  fp16_image.resize(sizeof(unsigned short) * new_size[0] * new_size[1] * 3);
   unsigned short *fp16_data = (unsigned short *)fp16_image.p();
 
-  for (size_t i = 0; i < num_pixels; ++i) {
-    float fp32_r = fp32_data[i * 4];
-    float fp32_g = fp32_data[i * 4 + 1];
-    float fp32_b = fp32_data[i * 4 + 2];
-    // Skip over alpha.
+  for (int y = 0; y < orig_size[1] - y_diff; ++y) {
+    for (int x = 0; x < orig_size[0] - x_diff; ++x) {
 
-    // Now convert to half-float.
-    unsigned short fp16_r = fp16_ieee_from_fp32_value(fp32_r);
-    unsigned short fp16_g = fp16_ieee_from_fp32_value(fp32_g);
-    unsigned short fp16_b = fp16_ieee_from_fp32_value(fp32_b);
-    fp16_data[i * 3] = fp16_r;
-    fp16_data[i * 3 + 1] = fp16_g;
-    fp16_data[i * 3 + 2] = fp16_b;
+      int orig_pos = y * orig_size[0] * 4;
+      orig_pos += x * 4;
+
+      // Convert to half float and store in new image.
+      *fp16_data++ = fp16_ieee_from_fp32_value(fp32_data[orig_pos]);
+      *fp16_data++ = fp16_ieee_from_fp32_value(fp32_data[orig_pos + 1]);
+      *fp16_data++ = fp16_ieee_from_fp32_value(fp32_data[orig_pos + 2]);
+    }
   }
 
   return fp16_image;

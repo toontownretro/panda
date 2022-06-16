@@ -455,7 +455,8 @@ private:
   void optimize_ropes(KDNode *rope[6], const LPoint3 &mins, const LPoint3 &maxs);
   void add_kd_node(KDNode *node);
 
-  PTA_uchar convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size);
+  PTA_uchar convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
+    const LVecBase2i &orig_size, const LVecBase2i &new_size);
 };
 
 #include "lightBuilder.I"
