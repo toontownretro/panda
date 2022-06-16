@@ -28,6 +28,11 @@
 #include "graphicsStateGuardianBase.h"
 //#include "shaderSource.h"
 #include "shaderStage.h"
+#include "textureAttrib.h"
+#include "textureStagePool.h"
+
+#include "sourceShader.h"
+#include "sourceLightmappedMaterial.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -159,6 +164,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     MaterialShaders::const_iterator msi = _material_shaders.find(material_type);
     if (msi != _material_shaders.end()) {
       shader = (*msi).second;
+    }
+
+    // Hack until we figure out materials with idential names.
+    if (shader != nullptr && shader->is_exact_type(SourceShader::get_class_type())) {
+      const TextureAttrib *tattr;
+      state->get_attrib_def(tattr);
+      static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
+      if (tattr->has_on_stage(lm_stage)) {
+        shader = _material_shaders[SourceLightmappedMaterial::get_class_type()];
+      }
     }
 
   } else {
