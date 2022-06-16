@@ -251,22 +251,26 @@ remove_from_tree(ChildInfo *info) {
  */
 void DynamicVisNode::
 insert_into_tree(ChildInfo *info, const GeometricBoundingVolume *bounds, const SpatialPartition *tree) {
-  nassertv(bounds != nullptr && !bounds->is_infinite());
+  //nassertv(bounds != nullptr && !bounds->is_infinite());
   info->_visgroups.reserve(128);
 
   TypeHandle type = bounds->get_type();
 
   if (type == BoundingBox::get_class_type()) {
     const BoundingBox *bbox = (const BoundingBox *)bounds;
-    const LPoint3 &mins = bbox->get_minq();
-    const LPoint3 &maxs = bbox->get_maxq();
-    tree->get_leaf_values_containing_box(mins, maxs, info->_visgroups);
+    if (!bbox->is_empty() && !bbox->is_infinite()) {
+      const LPoint3 &mins = bbox->get_minq();
+      const LPoint3 &maxs = bbox->get_maxq();
+      tree->get_leaf_values_containing_box(mins, maxs, info->_visgroups);
+    }
 
   } else if (type == BoundingSphere::get_class_type()) {
     const BoundingSphere *bsphere = (const BoundingSphere *)bounds;
-    LPoint3 center = bsphere->get_center();
-    PN_stdfloat radius = bsphere->get_radius();
-    tree->get_leaf_values_containing_sphere(center, radius, info->_visgroups);
+    if (!bsphere->is_empty() && !bsphere->is_infinite()) {
+      LPoint3 center = bsphere->get_center();
+      PN_stdfloat radius = bsphere->get_radius();
+      tree->get_leaf_values_containing_sphere(center, radius, info->_visgroups);
+    }
 
   } else {
     nassert_raise("Bounds type is not box or sphere!");
