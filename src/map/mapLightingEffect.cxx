@@ -29,6 +29,7 @@
 #include "pStatTimer.h"
 #include "directionalLight.h"
 #include "bitMask.h"
+#include "textureStagePool.h"
 
 IMPLEMENT_CLASS(MapLightingEffect);
 
@@ -43,7 +44,9 @@ MapLightingEffect() :
   _probe(nullptr),
   _probe_color(PTA_LVecBase3::empty_array(9)),
   _last_map_data(nullptr),
-  _lighting_state(RenderState::make_empty())
+  _lighting_state(RenderState::make_empty()),
+  _has_lighting_origin(false),
+  _lighting_origin(0.0f, 0.0f, 0.0f)
 {
 }
 
@@ -54,6 +57,19 @@ CPT(RenderEffect) MapLightingEffect::
 make(BitMask32 camera_mask) {
   MapLightingEffect *effect = new MapLightingEffect;
   effect->_camera_mask = camera_mask;
+
+  return return_new(effect);
+}
+
+/**
+ * Creates a new MapLightingEffect for applying to a unique node.
+ */
+CPT(RenderEffect) MapLightingEffect::
+make(BitMask32 camera_mask, const LPoint3 &lighting_origin) {
+  MapLightingEffect *effect = new MapLightingEffect;
+  effect->_camera_mask = camera_mask;
+  effect->_has_lighting_origin = true;
+  effect->_lighting_origin = lighting_origin;
 
   return return_new(effect);
 }
@@ -186,22 +202,30 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
 
   PStatTimer timer(map_lighting_coll);
 
-  static PT(TextureStage) cm_ts = new TextureStage("envmap");
+  static TextureStage *cm_ts = TextureStagePool::get_stage(new TextureStage("envmap"));
 
   // Determine the lighting origin.  This the world-space geometric center
-  // of the node's external bounding volume.
+  // of the node's external bounding volume, or, if a lighting origin was
+  // specified, the node's current net transform offset by the lighting
+  // origin.
   LPoint3 pos;
-  if (!bounds->is_infinite()) {
-    pos = bounds->get_approx_center();
-
-    // Move it into world-space if not already.
-    if (!parent_net_transform->is_identity()) {
-      parent_net_transform->get_mat().xform_point_in_place(pos);
-    }
+  if (_has_lighting_origin) {
+    pos = net_transform->get_mat().xform_point(_lighting_origin);
 
   } else {
-    pos = net_transform->get_pos();
+    if (!bounds->is_infinite() && !bounds->is_empty()) {
+      pos = bounds->get_approx_center();
+
+      // Move it into world-space if not already.
+      if (!parent_net_transform->is_identity()) {
+        parent_net_transform->get_mat().xform_point_in_place(pos);
+      }
+
+    } else {
+      pos = net_transform->get_pos();
+    }
   }
+
 
   int cluster = mdata->get_area_cluster_tree()->get_leaf_value_from_point(pos);
 
@@ -313,13 +337,21 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   int num_added_lights = 0;
   if (!mdata->_dir_light.is_empty()) {
     RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
+    bool sees_sky = false;
     if (ret.hit) {
       RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
       if ((geom->get_mask() & 2) != 0) {
         // Hit sky, sun is visible.
-        lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_dir_light);
-        num_added_lights++;
+        sees_sky = true;
       }
+    } else {
+      // No hit = sky.
+      sees_sky = true;
+    }
+
+    if (sees_sky) {
+      lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_dir_light);
+      num_added_lights++;
     }
   }
   for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {

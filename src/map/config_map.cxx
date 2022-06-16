@@ -17,7 +17,6 @@
 #include "mapRoot.h"
 #include "mapRender.h"
 #include "mapCullTraverser.h"
-#include "mapNodeData.h"
 #include "dynamicVisNode.h"
 #include "mapLightingEffect.h"
 #include "spatialPartition.h"
@@ -46,7 +45,6 @@ init_libmap() {
   MapRoot::init_type();
   MapRender::init_type();
   MapCullTraverser::init_type();
-  MapNodeData::init_type();
   DynamicVisNode::init_type();
   MapLightingEffect::init_type();
   SpatialPartition::init_type();

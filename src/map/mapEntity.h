@@ -28,13 +28,32 @@ class EXPCL_PANDA_MAP MapEntity : public TypedWritableReferenceCount {
 
 PUBLISHED:
   /**
-   *
+   * Describes an I/O connection of the entity.  Links an event fired by this
+   * entity to a method on another entity.  Allows for scripting interactions
+   * between entities in a level.
    */
-  //class Connection {
-  //PUBLISHED:
-  //  const std::string &get_output_name() const;
+  class Connection {
+  PUBLISHED:
+    ~Connection() = default;
 
-  //};
+    INLINE const std::string &get_output_name() const;
+    INLINE const std::string &get_target_name() const;
+    INLINE const std::string &get_input_name() const;
+    INLINE int get_num_parameters() const;
+    INLINE const std::string &get_parameter(int n) const;
+    INLINE float get_delay() const;
+    INLINE bool get_repeat() const;
+
+  public:
+    Connection() = default;
+
+    std::string _output_name;
+    std::string _target_name;
+    std::string _input_name;
+    vector_string _parameters;
+    float _delay;
+    bool _repeat;
+  };
 
   MapEntity();
 
@@ -46,6 +65,10 @@ PUBLISHED:
 
   INLINE void set_properties(PDXElement *properties);
   INLINE PDXElement *get_properties() const;
+
+  INLINE void add_connection(const Connection &conn);
+  INLINE int get_num_connections() const;
+  INLINE const Connection *get_connection(int n) const;
 
 public:
   static void register_with_read_factory();
@@ -64,6 +87,9 @@ private:
 
   // Name/value entity properties.
   PT(PDXElement) _properties;
+
+  typedef pvector<Connection> Connections;
+  Connections _connections;
 };
 
 #include "mapEntity.I"

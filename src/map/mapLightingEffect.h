@@ -36,6 +36,7 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
 
 PUBLISHED:
   static CPT(RenderEffect) make(BitMask32 camera_mask);
+  static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin);
 
   const RenderState *get_current_lighting_state() const;
 
@@ -67,6 +68,9 @@ private:
   // Cached data to determine if we need to recompute the node's lighting.
   CPT(TransformState) _last_transform;
   const MapData *_last_map_data;
+
+  bool _has_lighting_origin;
+  LPoint3 _lighting_origin;
 
   // This is the actual lighting state.
   PT(Texture) _cube_map;

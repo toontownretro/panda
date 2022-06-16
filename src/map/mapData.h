@@ -46,10 +46,6 @@ PUBLISHED:
   INLINE size_t get_num_visible_clusters() const;
   INLINE int get_visible_cluster(size_t n) const;
 
-  INLINE void set_mesh_group(int index);
-  INLINE void clear_mesh_group(int index);
-  INLINE const BitArray &get_mesh_groups() const;
-
   INLINE size_t get_num_boxes() const;
   INLINE void get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const;
 
@@ -58,28 +54,10 @@ PUBLISHED:
 public:
   vector_int _pvs;
 
-  // Indices of mesh groups that reside in this cluster.
-  // A 1 bit means the mesh group is in there.
-  BitArray _mesh_groups;
-
   // Cluster bounds for visualization purposes.
   pvector<LPoint3> _box_bounds;
 
   bool _3d_sky_cluster;
-};
-
-class EXPCL_PANDA_MAP MapMeshGroup {
-PUBLISHED:
-  INLINE void set_cluster(int cluster);
-  INLINE void clear_cluster(int cluster);
-  INLINE const BitArray &get_clusters() const;
-
-  INLINE bool is_in_3d_skybox() const { return _in_3d_skybox; }
-
-public:
-  BitArray _clusters;
-  PT(GeomNode) _geom_node;
-  bool _in_3d_skybox;
 };
 
 /**
@@ -88,10 +66,14 @@ public:
  */
 class EXPCL_PANDA_MAP MapCubeMap {
 PUBLISHED:
+  INLINE void set_texture(Texture *tex) { _texture = tex; }
   INLINE Texture *get_texture() const { return _texture; }
+  INLINE const LPoint3 &get_pos() const { return _pos; }
+  INLINE int get_size() const { return _size; }
 
   PT(Texture) _texture;
   LPoint3 _pos;
+  int _size;
 };
 
 /**
@@ -101,7 +83,10 @@ PUBLISHED:
 class EXPCL_PANDA_MAP MapAmbientProbe {
 PUBLISHED:
   LPoint3 _pos;
-  INLINE LVecBase3 get_color(int i) const { return _color[i]; }
+
+  INLINE const LVecBase3 &get_color(int i) const { return _color[i]; }
+  INLINE const LPoint3 &get_pos() const { return _pos; }
+
 public:
   LVecBase3 _color[9];
 };
@@ -109,19 +94,112 @@ public:
 /**
  *
  */
-class EXPCL_PANDA_MAP MapModelPhysData {
+class EXPCL_PANDA_MAP MapModel {
 PUBLISHED:
-  CPTA_uchar _phys_mesh_data;
+  MapModel() = default;
+  ~MapModel() = default;
+
+  INLINE GeomNode *get_geom_node() const { return _geom_node; }
+
+  INLINE const LPoint3 &get_mins() const { return _mins; }
+  INLINE const LPoint3 &get_maxs() const { return _maxs; }
 
   INLINE int get_num_surface_props() const { return (int)_phys_surface_props.size(); }
   INLINE std::string get_surface_prop(int n) const { return _phys_surface_props[n]; }
 
+  INLINE CPTA_uchar get_tri_mesh_data() const { return _tri_mesh_data; };
+
+  INLINE int get_num_convex_meshes() const { return (int)_convex_mesh_data.size(); }
+  INLINE CPTA_uchar get_convex_mesh_data(int n) const {
+    nassertr(n >= 0 && n < (int)_convex_mesh_data.size(), CPTA_uchar());
+    return _convex_mesh_data[n];
+  }
+
 public:
+  PT(GeomNode) _geom_node;
+
+  LPoint3 _mins, _maxs;
+
   // The mesh data indexes into this list.
   // When the map is loaded, we create a PhysMaterial corresponding to
-  // the surfaceprop name in Python code and add them to the PhysShape
+  // the surfaceprop name in show code and add them to the PhysShape
   // created for this model phys data in the same order.
   vector_string _phys_surface_props;
+  CPTA_uchar _tri_mesh_data;
+  pvector<CPTA_uchar> _convex_mesh_data;
+};
+
+/**
+ *
+ */
+class EXPCL_PANDA_MAP LightDebugData {
+PUBLISHED:
+  LightDebugData() = default;
+
+  class Vertex {
+  PUBLISHED:
+    LPoint3 pos;
+  };
+  class Triangle {
+  PUBLISHED:
+    int vert0;
+    int vert1;
+    int vert2;
+  };
+  class KDNode {
+  PUBLISHED:
+    int first_tri;
+    int num_tris;
+    int back_child;
+    int front_child;
+    LPoint3 mins;
+    LPoint3 maxs;
+    int neighbors[6];
+    unsigned char axis;
+    float dist;
+
+    INLINE int get_neighbor(int n) const {
+      return neighbors[n];
+    }
+  };
+
+  INLINE const Vertex *get_vert(int n) const {
+    return &_vertices[n];
+  }
+  INLINE int get_num_vertices() const {
+    return (int)_vertices.size();
+  }
+
+  INLINE int get_num_tris() const {
+    return (int)_triangles.size();
+  }
+  INLINE const Triangle *get_tri(int n) const {
+    return &_triangles[n];
+  }
+
+  INLINE int get_num_kd_nodes() const {
+    return (int)_kd_nodes.size();
+  }
+  INLINE const KDNode *get_kd_node(int n) const {
+    return &_kd_nodes[n];
+  }
+
+  INLINE int get_kd_tri(int n) const {
+    return _tri_list[n];
+  }
+
+  void write_datagram(Datagram &me);
+  void read_datagram(DatagramIterator &scan);
+
+public:
+  typedef pvector<Vertex> Vertices;
+  typedef pvector<Triangle> Triangles;
+  typedef pvector<KDNode> KDNodes;
+
+  Vertices _vertices;
+  Triangles _triangles;
+  KDNodes _kd_nodes;
+  vector_int _tri_list;
 };
 
 /**
@@ -137,9 +215,11 @@ PUBLISHED:
   INLINE int get_num_entities() const;
   INLINE MapEntity *get_entity(int n) const;
 
-  INLINE void add_model_phys_data(const MapModelPhysData &data);
-  INLINE int get_num_model_phys_datas() const;
-  INLINE const MapModelPhysData *get_model_phys_data(int n) const;
+  INLINE void add_model(const MapModel &model);
+  INLINE int get_num_models() const;
+  INLINE const MapModel *get_model(int n) const;
+
+  INLINE int get_3d_sky_model_index() const;
 
   INLINE void set_area_cluster_tree(SpatialPartition *tree);
   INLINE const SpatialPartition *get_area_cluster_tree() const;
@@ -148,16 +228,10 @@ PUBLISHED:
   INLINE int get_num_clusters() const;
   INLINE const AreaClusterPVS *get_cluster_pvs(int cluster) const;
 
-  INLINE void add_mesh_group(const MapMeshGroup &group);
-  INLINE int get_num_mesh_groups() const;
-  INLINE const MapMeshGroup *get_mesh_group(int n) const;
-
-  INLINE void add_cube_map(Texture *tex, const LPoint3 &pos);
+  INLINE void add_cube_map(Texture *tex, const LPoint3 &pos, int size);
   INLINE int get_num_cube_maps() const;
   INLINE const MapCubeMap *get_cube_map(int n) const;
-
-  //INLINE void set_cube_map_tree(KDTree &&tree);
-  //INLINE const KDTree *get_cube_map_tree() const;
+  INLINE MapCubeMap *modify_cube_map(int n);
 
   INLINE void add_light(NodePath light);
   INLINE int get_num_lights() const;
@@ -171,6 +245,8 @@ PUBLISHED:
   INLINE CPTA_uchar get_steam_audio_probe_data() const;
   INLINE CPTA_uchar get_steam_audio_pathing_probe_data() const;
 
+  INLINE const LightDebugData *get_light_debug_data() const;
+
   INLINE void set_cam(NodePath cam);
 
   INLINE NodePath get_dir_light() const { return _dir_light; }
@@ -180,7 +256,6 @@ PUBLISHED:
   void check_lighting_pvs();
 
   void build_trace_scene();
-
 
 public:
   static void register_with_read_factory();
@@ -194,13 +269,11 @@ private:
 
 private:
   pvector<PT(MapEntity)> _entities;
-
-  pvector<MapModelPhysData> _model_phys_data;
+  pvector<MapModel> _models;
+  int _3d_sky_model = -1;
 
   PT(SpatialPartition) _cluster_tree;
   pvector<AreaClusterPVS> _cluster_pvs;
-
-  pvector<MapMeshGroup> _mesh_groups;
 
   pvector<MapCubeMap> _cube_maps;
   // For doing nearest neighbor cube map search.
@@ -227,6 +300,8 @@ private:
   SteamAudioSceneData _steam_audio_scene_data;
   CPTA_uchar _steam_audio_probe_data;
   CPTA_uchar _steam_audio_pathing_probe_data;
+
+  LightDebugData _light_debug_data;
 
   friend class MapLightingEffect;
   friend class MapBuilder;

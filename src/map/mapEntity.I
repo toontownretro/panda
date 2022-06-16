@@ -14,6 +14,63 @@
 /**
  *
  */
+INLINE const std::string &MapEntity::Connection::
+get_output_name() const {
+  return _output_name;
+}
+
+/**
+ *
+ */
+INLINE const std::string &MapEntity::Connection::
+get_target_name() const {
+  return _target_name;
+}
+
+/**
+ *
+ */
+INLINE const std::string &MapEntity::Connection::
+get_input_name() const {
+  return _input_name;
+}
+
+/**
+ *
+ */
+INLINE int MapEntity::Connection::
+get_num_parameters() const {
+  return (int)_parameters.size();
+}
+
+/**
+ *
+ */
+INLINE const std::string &MapEntity::Connection::
+get_parameter(int n) const {
+  assert(n >= 0 && n < (int)_parameters.size());
+  return _parameters[n];
+}
+
+/**
+ *
+ */
+INLINE float MapEntity::Connection::
+get_delay() const {
+  return _delay;
+}
+
+/**
+ *
+ */
+INLINE bool MapEntity::Connection::
+get_repeat() const {
+  return _repeat;
+}
+
+/**
+ *
+ */
 INLINE void MapEntity::
 set_model_index(int model) {
   _model_index = model;
@@ -57,4 +114,29 @@ set_properties(PDXElement *props) {
 INLINE PDXElement *MapEntity::
 get_properties() const {
   return _properties;
+}
+
+/**
+ *
+ */
+INLINE void MapEntity::
+add_connection(const Connection &conn) {
+  _connections.push_back(conn);
+}
+
+/**
+ *
+ */
+INLINE int MapEntity::
+get_num_connections() const {
+  return (int)_connections.size();
+}
+
+/**
+ *
+ */
+INLINE const MapEntity::Connection *MapEntity::
+get_connection(int n) const {
+  nassertr(n >= 0 && n < (int)_connections.size(), nullptr);
+  return &_connections[n];
 }

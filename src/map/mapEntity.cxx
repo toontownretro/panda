@@ -49,6 +49,20 @@ write_datagram(BamWriter *manager, Datagram &me) {
   } else {
     me.add_bool(false);
   }
+
+  nassertv(_connections.size() <= 255u);
+  me.add_uint8(_connections.size());
+  for (const Connection &conn : _connections) {
+    me.add_string(conn._output_name);
+    me.add_string(conn._target_name);
+    me.add_string(conn._input_name);
+    me.add_uint8(conn._parameters.size());
+    for (const std::string &param : conn._parameters) {
+      me.add_string(param);
+    }
+    me.add_float32(conn._delay);
+    me.add_bool(conn._repeat);
+  }
 }
 
 /**
@@ -61,6 +75,20 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   if (scan.get_bool()) {
     _properties = new PDXElement;
     _properties->from_datagram(scan);
+  }
+
+  _connections.resize(scan.get_uint8());
+  for (size_t i = 0; i < _connections.size(); ++i) {
+    Connection &conn = _connections[i];
+    conn._output_name = scan.get_string();
+    conn._target_name = scan.get_string();
+    conn._input_name = scan.get_string();
+    conn._parameters.resize(scan.get_uint8());
+    for (size_t j = 0; j < conn._parameters.size(); ++j) {
+      conn._parameters[j] = scan.get_string();
+    }
+    conn._delay = scan.get_float32();
+    conn._repeat = scan.get_bool();
   }
 }
 

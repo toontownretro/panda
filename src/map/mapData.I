@@ -37,30 +37,6 @@ get_visible_cluster(size_t n) const {
 }
 
 /**
- * Marks the indicated mesh group index as residing in this cluster.
- */
-INLINE void AreaClusterPVS::
-set_mesh_group(int index) {
-  _mesh_groups.set_bit(index);
-}
-
-/**
- * Clears the indicated mesh group from this cluster.
- */
-INLINE void AreaClusterPVS::
-clear_mesh_group(int index) {
-  _mesh_groups.clear_bit(index);
-}
-
-/**
- * Returns the BitArray of mesh groups that reside in this cluster.
- */
-INLINE const BitArray &AreaClusterPVS::
-get_mesh_groups() const {
-  return _mesh_groups;
-}
-
-/**
  * Returns the number of area boxes that make up the cluster.
  */
 INLINE size_t AreaClusterPVS::
@@ -82,30 +58,6 @@ get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const {
 /**
  *
  */
-INLINE void MapMeshGroup::
-set_cluster(int cluster) {
-  _clusters.set_bit(cluster);
-}
-
-/**
- *
- */
-INLINE void MapMeshGroup::
-clear_cluster(int cluster) {
-  _clusters.clear_bit(cluster);
-}
-
-/**
- *
- */
-INLINE const BitArray &MapMeshGroup::
-get_clusters() const {
-  return _clusters;
-}
-
-/**
- *
- */
 INLINE void MapData::
 add_entity(MapEntity *ent) {
   _entities.push_back(ent);
@@ -122,7 +74,7 @@ get_num_entities() const {
 /**
  *
  */
-MapEntity *MapData::
+INLINE MapEntity *MapData::
 get_entity(int n) const {
   nassertr(n >= 0 && n < (int)_entities.size(), nullptr);
   return _entities[n];
@@ -132,25 +84,34 @@ get_entity(int n) const {
  *
  */
 INLINE void MapData::
-add_model_phys_data(const MapModelPhysData &data) {
-  _model_phys_data.push_back(data);
+add_model(const MapModel &model) {
+  _models.push_back(model);
 }
 
 /**
  *
  */
 INLINE int MapData::
-get_num_model_phys_datas() const {
-  return (int)_model_phys_data.size();
+get_num_models() const {
+  return (int)_models.size();
 }
 
 /**
  *
  */
-INLINE const MapModelPhysData *MapData::
-get_model_phys_data(int n) const {
-  nassertr(n >= 0 && n < (int)_model_phys_data.size(), nullptr);
-  return &_model_phys_data[n];
+INLINE const MapModel *MapData::
+get_model(int n) const {
+  nassertr(n >= 0 && n < (int)_models.size(), nullptr);
+  return &_models[n];
+}
+
+/**
+ * Returns the index of the MapModel that contains the 3-D skybox
+ * geometry.
+ */
+INLINE int MapData::
+get_3d_sky_model_index() const {
+  return _3d_sky_model;
 }
 
 /**
@@ -198,35 +159,11 @@ get_cluster_pvs(int cluster) const {
  *
  */
 INLINE void MapData::
-add_mesh_group(const MapMeshGroup &group) {
-  _mesh_groups.push_back(group);
-}
-
-/**
- *
- */
-INLINE int MapData::
-get_num_mesh_groups() const {
-  return (int)_mesh_groups.size();
-}
-
-/**
- *
- */
-INLINE const MapMeshGroup *MapData::
-get_mesh_group(int n) const {
-  nassertr(n >= 0 && n < (int)_mesh_groups.size(), nullptr);
-  return &_mesh_groups[n];
-}
-
-/**
- *
- */
-INLINE void MapData::
-add_cube_map(Texture *tex, const LPoint3 &pos) {
+add_cube_map(Texture *tex, const LPoint3 &pos, int size) {
   MapCubeMap cm;
   cm._texture = tex;
   cm._pos = pos;
+  cm._size = size;
   _cube_maps.push_back(cm);
 }
 
@@ -243,6 +180,15 @@ get_num_cube_maps() const {
  */
 INLINE const MapCubeMap *MapData::
 get_cube_map(int n) const {
+  nassertr(n >= 0 && n < (int)_cube_maps.size(), nullptr);
+  return &_cube_maps[n];
+}
+
+/**
+ *
+ */
+INLINE MapCubeMap *MapData::
+modify_cube_map(int n) {
   nassertr(n >= 0 && n < (int)_cube_maps.size(), nullptr);
   return &_cube_maps[n];
 }
@@ -335,6 +281,14 @@ get_steam_audio_probe_data() const {
 INLINE CPTA_uchar MapData::
 get_steam_audio_pathing_probe_data() const {
   return _steam_audio_pathing_probe_data;
+}
+
+/**
+ *
+ */
+INLINE const LightDebugData *MapData::
+get_light_debug_data() const {
+  return &_light_debug_data;
 }
 
 /**
