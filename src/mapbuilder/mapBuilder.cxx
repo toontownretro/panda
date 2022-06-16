@@ -1436,8 +1436,9 @@ build_entity_polygons(int i) {
       texture_vecs[1][3] = side->_uv_shift[1] + origin.dot(texture_vecs[1].get_xyz());
 
       // Calculate lightmap vectors.
-      // Twice the resolution for the GPU lightmapper.
-      PN_stdfloat lightmap_scale = side->_lightmap_scale;// * 0.5f;
+      // Twice the resolution for the GPU lightmapper, but no smaller than 1 unit
+      // per luxel.
+      PN_stdfloat lightmap_scale = std::max(1.0f, side->_lightmap_scale * 0.5f);
       LVector4 lightmap_vecs[2];
       lightmap_vecs[0][0] = side->_u_axis[0] / lightmap_scale;
       lightmap_vecs[0][1] = side->_u_axis[1] / lightmap_scale;
