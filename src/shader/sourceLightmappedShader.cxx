@@ -31,6 +31,7 @@
 #include "fogAttrib.h"
 #include "fog.h"
 #include "alphaTestAttrib.h"
+#include "textureStagePool.h"
 
 TypeHandle SourceLightmappedShader::_type_handle;
 
@@ -153,16 +154,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   const TextureAttrib *tattr;
   state->get_attrib_def(tattr);
-  for (int i = 0; i < tattr->get_num_on_stages(); ++i) {
-    TextureStage *stage = tattr->get_on_stage(i);
-    const std::string &name = stage->get_name();
 
-    if (name == "lightmap") {
-      set_input(ShaderInput("lightmapTexture", tattr->get_on_texture(stage)));
+  static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
+  static TextureStage *envmap_stage = TextureStagePool::get_stage(new TextureStage("envmap"));
 
-    } else if (env_cubemap && name == "envmap") {
-      envmap_tex = tattr->get_on_texture(stage);
-    }
+  Texture *lm_tex = tattr->get_on_texture(lm_stage);
+  if (lm_tex != nullptr) {
+    set_input(ShaderInput("lightmapTexture", lm_tex));
+  }
+  if (env_cubemap) {
+    envmap_tex = tattr->get_on_texture(envmap_stage);
   }
 
   if (env_cubemap && envmap_tex == nullptr) {

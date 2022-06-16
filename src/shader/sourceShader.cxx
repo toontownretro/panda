@@ -32,6 +32,7 @@
 #include "alphaTestAttrib.h"
 #include "cascadeLight.h"
 #include "renderState.h"
+#include "textureStagePool.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -361,14 +362,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     const TextureAttrib *ta;
     state->get_attrib_def(ta);
-    for (int i = 0; i < ta->get_num_on_stages(); i++) {
-      TextureStage *stage = ta->get_on_stage(i);
-      const std::string &stage_name = stage->get_name();
-      if (stage_name == "envmap") {
-        envmap_tex = ta->get_on_texture(stage);
-        break;
-      }
-    }
+    static TextureStage *envmap_stage = TextureStagePool::get_stage(new TextureStage("envmap"));
+    envmap_tex = ta->get_on_texture(envmap_stage);
 
     if (envmap_tex == nullptr) {
       envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
