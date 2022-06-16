@@ -27,6 +27,7 @@ PUBLISHED:
   bool reset(int sort_id, int max_width, int max_height, int border = 2);
   LVecBase2i add_block(int width, int height);
   LVecBase2i get_minimum_dimensions();
+  LVecBase2i get_minimum_dimensions_npot();
   float get_efficiency();
   int get_sort_id() const;
   void increment_sort_id();

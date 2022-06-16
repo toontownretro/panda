@@ -173,3 +173,11 @@ get_minimum_dimensions() {
     ceil_pow_2(_minimum_height)
   );
 }
+
+LVecBase2i ImagePacker::
+get_minimum_dimensions_npot() {
+  return LVecBase2i(
+    _minimum_width,
+    _minimum_height
+  );
+}
