@@ -150,6 +150,14 @@ get_bool() const {
   case VT_float:
     return std::get<float>(_value) != 0.0f;
   case VT_string:
+    {
+      int result;
+      if (!string_to_int(std::get<std::string>(_value), result)) {
+        nassert_raise("PDXValue::get_bool(): Cannot cast non-numeric string to bool");
+        return false;
+      }
+      return result != 0;
+    }
     return std::get<std::string>(_value).length() != 0;
   case VT_list:
     return std::get<PT(PDXList)>(_value)->size() > 0;
