@@ -113,6 +113,9 @@ operator << (ostream &out, GeomEnums::NumericType numeric_type) {
 
   case GeomEnums::NT_packed_ufloat:
     return out << "packed_ufloat";
+
+  case GeomEnums::NT_float16:
+    return out << "float16";
   }
 
   return out << "**invalid numeric type (" << (int)numeric_type << ")**";

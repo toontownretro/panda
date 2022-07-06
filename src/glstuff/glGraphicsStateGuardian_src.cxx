@@ -8674,6 +8674,9 @@ get_numeric_type(Geom::NumericType numeric_type) {
 #else
     break;
 #endif
+
+  case Geom::NT_float16:
+    return GL_HALF_FLOAT;
   }
 
   GLCAT.error()

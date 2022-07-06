@@ -23,6 +23,7 @@
     bufferResidencyTracker.I bufferResidencyTracker.h \
     cg_preamble.cxx \
     config_gobj.h \
+    fp16_bitcasts.h fp16.h \
     geom.h geom.I \
     geomContext.I geomContext.h \
     geomEnums.h \
@@ -209,9 +210,9 @@
     bufferContextChain.I bufferContextChain.h \
     bufferResidencyTracker.I bufferResidencyTracker.h \
     config_gobj.h \
+    fp16_bitcasts.h fp16.h \
     geom.I geom.h \
     textureContext.I textureContext.h \
-    geom.h geom.I \
     geomContext.I geomContext.h \
     geomEnums.h \
     geomMunger.h geomMunger.I \

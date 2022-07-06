@@ -15,6 +15,7 @@
 #include "geomVertexData.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "fp16.h"
 
 using std::max;
 using std::min;
@@ -134,6 +135,10 @@ output(std::ostream &out) const {
     out << "d";
     break;
 
+  case NT_float16:
+    out << "h";
+    break;
+
   case NT_stdfloat:
   case NT_packed_ufloat:
     out << "?";
@@ -168,6 +173,7 @@ setup() {
   switch (_numeric_type) {
   case NT_uint16:
   case NT_int16:
+  case NT_float16:
     _component_bytes = 2;  // sizeof(uint16_t)
     break;
 
@@ -481,6 +487,9 @@ get_data1f(const unsigned char *pointer) {
       return GeomVertexData::unpack_ufloat_a(dword);
     }
 
+  case NT_float16:
+    return fp16_ieee_to_fp32_value(*(const uint16_t *)pointer);
+
   default:
     nassertr(false, 0.0f);
   }
@@ -577,6 +586,14 @@ get_data2f(const unsigned char *pointer) {
 
     case NT_packed_ufloat:
       nassertr(false, _v2);
+      return _v2;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v2.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]));
+      }
       return _v2;
     }
   }
@@ -687,6 +704,15 @@ get_data3f(const unsigned char *pointer) {
         _v3.set(GeomVertexData::unpack_ufloat_a(dword),
                 GeomVertexData::unpack_ufloat_b(dword),
                 GeomVertexData::unpack_ufloat_c(dword));
+      }
+      return _v3;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v3.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]),
+                fp16_ieee_to_fp32_value(pi[2]));
       }
       return _v3;
     }
@@ -804,6 +830,16 @@ get_data4f(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]),
+                fp16_ieee_to_fp32_value(pi[2]),
+                fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4;
     }
   }
 
@@ -861,6 +897,9 @@ get_data1d(const unsigned char *pointer) {
       uint32_t dword = *(const uint32_t *)pointer;
       return GeomVertexData::unpack_ufloat_a(dword);
     }
+
+  case NT_float16:
+    return fp16_ieee_to_fp32_value(*(const uint16_t *)pointer);
   }
 
   return 0.0;
@@ -956,6 +995,14 @@ get_data2d(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v2d);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v2d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]));
+      }
+      return _v2d;
     }
   }
 
@@ -1065,6 +1112,15 @@ get_data3d(const unsigned char *pointer) {
         _v3d.set(GeomVertexData::unpack_ufloat_a(dword),
                  GeomVertexData::unpack_ufloat_b(dword),
                  GeomVertexData::unpack_ufloat_c(dword));
+      }
+      return _v3d;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v3d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]),
+                 fp16_ieee_to_fp32_value(pi[2]));
       }
       return _v3d;
     }
@@ -1182,6 +1238,17 @@ get_data4d(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4d);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]),
+                 fp16_ieee_to_fp32_value(pi[2]),
+                 fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4d;
+
     }
   }
 
@@ -1239,6 +1306,9 @@ get_data1i(const unsigned char *pointer) {
       uint32_t dword = *(const uint32_t *)pointer;
       return (int)GeomVertexData::unpack_ufloat_a(dword);
     }
+
+  case NT_float16:
+    return (int)fp16_ieee_to_fp32_value(*(const uint16_t *)pointer);
   }
 
   return 0;
@@ -1332,6 +1402,14 @@ get_data2i(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v2i);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v2i.set((int)fp16_ieee_to_fp32_value(pi[0]),
+                 (int)fp16_ieee_to_fp32_value(pi[1]));
+      }
+      return _v2i;
     }
   }
 
@@ -1440,6 +1518,16 @@ get_data3i(const unsigned char *pointer) {
                  (int)GeomVertexData::unpack_ufloat_c(dword));
       }
       return _v3i;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v3i.set((int)fp16_ieee_to_fp32_value(pi[0]),
+                 (int)fp16_ieee_to_fp32_value(pi[1]),
+                 (int)fp16_ieee_to_fp32_value(pi[2]));
+      }
+      return _v3i;
+
     }
   }
 
@@ -1552,6 +1640,17 @@ get_data4i(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4i);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4i.set((int)fp16_ieee_to_fp32_value(pi[0]),
+                 (int)fp16_ieee_to_fp32_value(pi[1]),
+                 (int)fp16_ieee_to_fp32_value(pi[2]),
+                 (int)fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4i;
+
     }
   }
 
@@ -1609,6 +1708,10 @@ set_data1f(unsigned char *pointer, float data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      *(uint16_t *)pointer = fp16_ieee_from_fp32_value(data);
       break;
     }
     break;
@@ -1714,6 +1817,14 @@ set_data2f(unsigned char *pointer, const LVecBase2f &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+      }
       break;
     }
     break;
@@ -1828,6 +1939,14 @@ set_data3f(unsigned char *pointer, const LVecBase3f &data) {
     case NT_packed_ufloat:
       *(uint32_t *)pointer = GeomVertexData::pack_ufloat(data[0], data[1], data[2]);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+      }
     }
     break;
 
@@ -1952,6 +2071,16 @@ set_data4f(unsigned char *pointer, const LVecBase4f &data) {
     case NT_packed_ufloat:
       nassertv(false);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+        pi[3] = fp16_ieee_from_fp32_value(data[3]);
+      }
+      break;
     }
     break;
   }
@@ -2008,6 +2137,10 @@ set_data1d(unsigned char *pointer, double data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      *(uint16_t *)pointer = fp16_ieee_from_fp32_value(data);
       break;
     }
     break;
@@ -2112,6 +2245,14 @@ set_data2d(unsigned char *pointer, const LVecBase2d &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+      }
       break;
     }
     break;
@@ -2225,6 +2366,15 @@ set_data3d(unsigned char *pointer, const LVecBase3d &data) {
 
     case NT_packed_ufloat:
       *(uint32_t *)pointer = GeomVertexData::pack_ufloat(data[0], data[1], data[2]);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+      }
       break;
     }
     break;
@@ -2350,6 +2500,16 @@ set_data4d(unsigned char *pointer, const LVecBase4d &data) {
     case NT_packed_ufloat:
       nassertv(false);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+        pi[3] = fp16_ieee_from_fp32_value(data[3]);
+      }
+      break;
     }
     break;
   }
@@ -2410,6 +2570,10 @@ set_data1i(unsigned char *pointer, int data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      *(uint16_t *)pointer = fp16_ieee_from_fp32_value((float)data);
       break;
     }
     break;
@@ -2512,6 +2676,14 @@ set_data2i(unsigned char *pointer, const LVecBase2i &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value((float)data[0]);
+        pi[1] = fp16_ieee_from_fp32_value((float)data[1]);
+      }
       break;
     }
     break;
@@ -2622,6 +2794,15 @@ set_data3i(unsigned char *pointer, const LVecBase3i &data) {
 
     case NT_packed_ufloat:
       *(uint32_t *)pointer = GeomVertexData::pack_ufloat(data[0], data[1], data[2]);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value((float)data[0]);
+        pi[1] = fp16_ieee_from_fp32_value((float)data[1]);
+        pi[2] = fp16_ieee_from_fp32_value((float)data[2]);
+      }
       break;
     }
     break;
@@ -2743,6 +2924,16 @@ set_data4i(unsigned char *pointer, const LVecBase4i &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value((float)data[0]);
+        pi[1] = fp16_ieee_from_fp32_value((float)data[1]);
+        pi[2] = fp16_ieee_from_fp32_value((float)data[2]);
+        pi[3] = fp16_ieee_from_fp32_value((float)data[3]);
+      }
       break;
     }
     break;
@@ -2899,6 +3090,16 @@ get_data4f(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]),
+                fp16_ieee_to_fp32_value(pi[2]),
+                fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4;
     }
   }
 
@@ -3055,6 +3256,16 @@ get_data4d(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4d);
       break;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]),
+                 fp16_ieee_to_fp32_value(pi[2]),
+                 fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4d;
     }
   }
 
@@ -3212,6 +3423,16 @@ set_data4f(unsigned char *pointer, const LVecBase4f &data) {
     case NT_packed_ufloat:
       nassertv(false);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+        pi[3] = fp16_ieee_from_fp32_value(data[3]);
+      }
+      break;
     }
     break;
   }
@@ -3368,6 +3589,16 @@ set_data4d(unsigned char *pointer, const LVecBase4d &data) {
     case NT_packed_ufloat:
       nassertv(false);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value((float)data[0]);
+        pi[1] = fp16_ieee_from_fp32_value((float)data[1]);
+        pi[2] = fp16_ieee_from_fp32_value((float)data[2]);
+        pi[3] = fp16_ieee_from_fp32_value((float)data[3]);
+      }
+      break;
     }
     break;
   }
@@ -3494,6 +3725,16 @@ get_data3f(const unsigned char *pointer) {
                 GeomVertexData::unpack_ufloat_c(dword));
       }
       return _v3;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v3.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]),
+                fp16_ieee_to_fp32_value(pi[2]));
+      }
+      return _v3;
+
     }
   } else {
     const LVecBase4f &v4 = get_data4f(pointer);
@@ -3582,6 +3823,16 @@ get_data4f(const unsigned char *pointer) {
     case NT_packed_ufloat:
       nassertr(false, _v4);
       return _v4;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4.set(fp16_ieee_to_fp32_value(pi[0]),
+                fp16_ieee_to_fp32_value(pi[1]),
+                fp16_ieee_to_fp32_value(pi[2]),
+                fp16_ieee_to_fp32_value(pi[3]));
+      }
+      return _v4;
     }
   }
 
@@ -3620,6 +3871,9 @@ get_data1d(const unsigned char *pointer) {
 
   case NT_float64:
     return *(const PN_float64 *)pointer;
+
+  case NT_float16:
+    return fp16_ieee_to_fp32_value(*(const uint16_t *)pointer);
 
   default:
     nassertr(false, 0.0);
@@ -3709,6 +3963,16 @@ get_data3d(const unsigned char *pointer) {
                  GeomVertexData::unpack_ufloat_c(dword));
       }
       return _v3d;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v3d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]),
+                 fp16_ieee_to_fp32_value(pi[2]));
+      }
+      return _v3d;
+
     }
   } else {
     const LVecBase4d &v4 = get_data4d(pointer);
@@ -3796,6 +4060,16 @@ get_data4d(const unsigned char *pointer) {
     case NT_int32:
     case NT_packed_ufloat:
       nassertr(false, _v4d);
+      return _v4d;
+
+    case NT_float16:
+      {
+        const uint16_t *pi = (const uint16_t *)pointer;
+        _v4d.set(fp16_ieee_to_fp32_value(pi[0]),
+                 fp16_ieee_to_fp32_value(pi[1]),
+                 fp16_ieee_to_fp32_value(pi[2]),
+                 fp16_ieee_to_fp32_value(pi[3]));
+      }
       return _v4d;
     }
   }
@@ -3908,6 +4182,15 @@ set_data3f(unsigned char *pointer, const LVecBase3f &data) {
     case NT_packed_ufloat:
       *(uint32_t *)pointer = GeomVertexData::pack_ufloat(data[0], data[1], data[2]);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+      }
+      break;
     }
   } else {
     set_data4f(pointer, LVecBase4f(data[0], data[1], data[2], 1.0f));
@@ -4001,6 +4284,16 @@ set_data4f(unsigned char *pointer, const LVecBase4f &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+        pi[3] = fp16_ieee_from_fp32_value(data[3]);
+      }
       break;
     }
   }
@@ -4111,6 +4404,16 @@ set_data3d(unsigned char *pointer, const LVecBase3d &data) {
     case NT_packed_ufloat:
       *(uint32_t *)pointer = GeomVertexData::pack_ufloat(data[0], data[1], data[2]);
       break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+      }
+      break;
+
     }
   } else {
     set_data4d(pointer, LVecBase4d(data[0], data[1], data[2], 1.0f));
@@ -4204,6 +4507,16 @@ set_data4d(unsigned char *pointer, const LVecBase4d &data) {
 
     case NT_packed_ufloat:
       nassertv(false);
+      break;
+
+    case NT_float16:
+      {
+        uint16_t *pi = (uint16_t *)pointer;
+        pi[0] = fp16_ieee_from_fp32_value(data[0]);
+        pi[1] = fp16_ieee_from_fp32_value(data[1]);
+        pi[2] = fp16_ieee_from_fp32_value(data[2]);
+        pi[3] = fp16_ieee_from_fp32_value(data[3]);
+      }
       break;
     }
   }

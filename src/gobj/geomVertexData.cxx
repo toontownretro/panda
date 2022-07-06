@@ -21,6 +21,7 @@
 #include "bamWriter.h"
 #include "pset.h"
 #include "indent.h"
+#include "fp16.h"
 
 using std::ostream;
 
@@ -2511,6 +2512,16 @@ set_num_rows(int n) {
         PN_float64 *pi = (PN_float64 *)pointer;
         for (int i = 0; i < num_values; i++) {
           pi[i] = 1.0;
+        }
+        pointer += stride;
+      }
+      break;
+
+    case NT_float16:
+      while (pointer < stop) {
+        uint16_t *pi = (uint16_t *)pointer;
+        for (int i = 0; i < num_values; i++) {
+          pi[i] = fp16_ieee_from_fp32_value(1.0);
         }
         pointer += stride;
       }
