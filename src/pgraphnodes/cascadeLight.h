@@ -65,6 +65,8 @@ PUBLISHED:
   INLINE void get_cascade_atlas_mins_maxs(int n, LVecBase2 &mins, LVecBase2 &maxs) const;
   INLINE void get_cascade_atlas_scale(int n, LVecBase2 &scale) const;
 
+  void update(const NodePath &scene_root);
+
 public:
   virtual void setup_shadow_map();
 
@@ -92,8 +94,7 @@ private:
 
   void setup_cascades();
   void compute_pssm_splits(const LMatrix4 &transform, float distance,
-                           Camera *scene_cam, CullTraverser *trav,
-                           CullTraverserData &data);
+                           Camera *scene_cam, const NodePath &scene_root);
   INLINE float get_split_start(int n) const;
   INLINE LPoint3 get_interpolated_point(CoordinateOrigin origin, float depth);
   INLINE void compute_mvp(int n, LMatrix4 &mvp, const TransformState *to_local);

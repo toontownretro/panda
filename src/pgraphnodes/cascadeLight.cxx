@@ -46,7 +46,7 @@ CascadeLight(const std::string &name) :
   // Make sure we render the shadow scene using the specialized CSMDepth
   // shader.
   CPT(RenderState) state = get_initial_state();
-  //state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none), 100);
+  //state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_counter_clockwise), 100);
   state = state->set_attrib(ShaderAttrib::make("CSMDepth"), 100);
   set_initial_state(state);
 
@@ -141,51 +141,36 @@ setup_shadow_map() {
 }
 
 /**
- * This function will be called during the cull traversal to perform any
- * additional operations that should be performed at cull time.  This may
- * include additional manipulation of render state or additional
- * visible/invisible decisions, or any other arbitrary operation.
  *
- * Note that this function will *not* be called unless set_cull_callback() is
- * called in the constructor of the derived class.  It is necessary to call
- * set_cull_callback() to indicated that we require cull_callback() to be
- * called.
- *
- * By the time this function is called, the node has already passed the
- * bounding-volume test for the viewing frustum, and the node's transform and
- * state have already been applied to the indicated CullTraverserData object.
- *
- * The return value is true if this node should be visible, or false if it
- * should be culled.
  */
-bool CascadeLight::
-cull_callback(CullTraverser *trav, CullTraverserData &data) {
+void CascadeLight::
+update(const NodePath &root) {
   //std::cout << "Cascade callback\n";
   if (!_shadow_caster) {
     // We aren't even casting shadows.  Don't do anything.
-    return true;
+    return;
   }
 
   ClockObject *global_clock = ClockObject::get_global_clock();
   int frame = global_clock->get_frame_count();
-  if (frame == _last_update_frame) {
-    // We already updated this frame.  Don't do anything.
-    return true;
-  }
+  //if (frame == _last_update_frame) {
+  //  // We already updated this frame.  Don't do anything.
+  //  return true;
+  //}
 
   _last_update_frame = frame;
 
   //std::cout << "update cascades, we have " << _cascades.size() << "\n";
 
   // Get the camera node transform
-  nassertr(!_scene_camera.is_empty(), true);
+  nassertv(!_scene_camera.is_empty());
   NodePath cam_np = _scene_camera.get_node_path();
 
   const LMatrix4 &transform = cam_np.get_net_transform()->get_mat();
 
   // Get Camera and Lens pointers
   Camera *cam = DCAST(Camera, cam_np.node());
-  nassertr(cam != nullptr, true);
+  nassertv(cam != nullptr);
   Lens *lens = cam->get_lens();
 
   // Extract near and far points of scene camera.
@@ -206,8 +191,30 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   }
 
   // Do the actual PSSM
-  compute_pssm_splits(transform, _csm_distance / lens->get_far(), cam, trav, data);
+  compute_pssm_splits(transform, _csm_distance / lens->get_far(), cam, root);
+}
 
+/**
+ * This function will be called during the cull traversal to perform any
+ * additional operations that should be performed at cull time.  This may
+ * include additional manipulation of render state or additional
+ * visible/invisible decisions, or any other arbitrary operation.
+ *
+ * Note that this function will *not* be called unless set_cull_callback() is
+ * called in the constructor of the derived class.  It is necessary to call
+ * set_cull_callback() to indicated that we require cull_callback() to be
+ * called.
+ *
+ * By the time this function is called, the node has already passed the
+ * bounding-volume test for the viewing frustum, and the node's transform and
+ * state have already been applied to the indicated CullTraverserData object.
+ *
+ * The return value is true if this node should be visible, or false if it
+ * should be culled.
+ */
+bool CascadeLight::
+cull_callback(CullTraverser *trav, CullTraverserData &data) {
+  update(trav->get_scene()->get_scene_root());
   return true;
 }
 
@@ -274,15 +281,13 @@ get_snap_offset(const LMatrix4& mat, size_t resolution) {
  */
 void CascadeLight::
 compute_pssm_splits(const LMatrix4 &transform, float max_distance,
-                    Camera *main_cam, CullTraverser *trav,
-                    CullTraverserData &data) {
+                    Camera *main_cam, const NodePath &root) {
 
   // CSM distance should never be smaller than the camera far plane.
   nassertv(max_distance <= 1.0f);
 
   float filmsize_bias = 1.0f + _border_bias;
 
-  NodePath root = trav->get_scene()->get_scene_root().get_parent();
   NodePath light_np = NodePath(this);
 
   LPoint3 min_point(FLT_MAX);
