@@ -65,6 +65,7 @@ private:
   // At the end of shader generation, the variation index will be
   // computed from the values of all combos.
   vector_int _combo_values;
+  pset<int> _specified_combos;
   size_t _variation_index;
 
   typedef pflat_hash_map<Filename, CPT(ShaderObject), string_hash> ObjectCache;

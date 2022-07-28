@@ -37,6 +37,7 @@ operator = (const ShaderStage &copy) {
 INLINE void ShaderStage::
 reset() {
   _object = nullptr;
+  _specified_combos.clear();
   _combo_values.clear();
   _variation_index = 0;
 }
@@ -51,7 +52,7 @@ set_source_filename(const Filename &filename) {
 
   // Set all combo values to 0.
   _combo_values.resize(_object->get_num_combos());
-  memset(_combo_values.data(), 0, sizeof(int) * _combo_values.size());
+  //memset(_combo_values.data(), 0, sizeof(int) * _combo_values.size());
 }
 
 /**
@@ -107,6 +108,7 @@ set_combo_value(size_t i, int value) {
   nassertv(value >= combo.min_val && value <= combo.max_val);
 #endif
   _combo_values[i] = value;
+  _specified_combos.insert(i);
 }
 
 /**
@@ -121,6 +123,7 @@ set_combo_value(const InternalName *name, int value) {
   nassertv(value >= combo.min_val && value <= combo.max_val);
 #endif
   _combo_values[index] = value;
+  _specified_combos.insert(index);
 }
 
 /**
@@ -130,7 +133,8 @@ set_combo_value(const InternalName *name, int value) {
 INLINE void ShaderStage::
 calc_variation_index() {
   _variation_index = 0;
-  for (size_t i = 0; i < _combo_values.size(); ++i) {
+  for (auto it = _specified_combos.begin(); it != _specified_combos.end(); ++it) {
+    int i = *it;
     const ShaderObject::Combo &combo = _object->get_combo(i);
     _variation_index += combo.scale * _combo_values[i];
   }
