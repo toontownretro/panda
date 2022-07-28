@@ -585,6 +585,8 @@ INLINE bool InterpolatedVariable<Type>::
 get_interpolation_info(InterpolationInfo &info, double now, int &no_more_changes) const {
   double target_time = now - _interpolation_amount;
 
+  no_more_changes = 0;
+
   info.hermite = false;
   info.frac = 0;
   info.oldest = info.older = info.newer = -1;
@@ -653,7 +655,11 @@ get_interpolation_info(InterpolationInfo &info, double now, int &no_more_changes
 
   // This is the single-sample case.
   info.newer = info.older;
-  return (info.older != -1);
+  if (info.older == -1) {
+    no_more_changes = -1;
+    return false;
+  }
+  return true;
 }
 
 /**
