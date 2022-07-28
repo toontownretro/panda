@@ -23,6 +23,7 @@
     sourceLightmappedShader.h sourceLightmappedShader.I \
     sourceShader.h sourceShader.I \
     sourceSkyShader.h sourceSkyShader.I \
+    sourceWater.h sourceWater.I \
     twoTextureShader.h twoTextureShader.I
     //vertexLitShader.h vertexLitShader.I
 
@@ -46,6 +47,7 @@
     sourceLightmappedShader.cxx \
     sourceShader.cxx \
     sourceSkyShader.cxx \
+    sourceWater.cxx \
     twoTextureShader.cxx
     //vertexLitShader.cxx
 

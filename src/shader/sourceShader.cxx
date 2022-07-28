@@ -33,6 +33,7 @@
 #include "cascadeLight.h"
 #include "renderState.h"
 #include "textureStagePool.h"
+#include "clipPlaneAttrib.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -129,6 +130,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BUMPMAP("BUMPMAP");
   static const CPT_InternalName IN_ENVMAP("ENVMAP");
   static const CPT_InternalName IN_HAS_SHADOW_SUNLIGHT("HAS_SHADOW_SUNLIGHT");
+  static const CPT_InternalName IN_CLIPPING("CLIPPING");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -142,6 +144,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BASEMAPALPHAPHONGMASK("BASEMAPALPHAPHONGMASK");
   static const CPT_InternalName IN_NUM_CASCADES("NUM_CASCADES");
   static const CPT_InternalName IN_CSM_LIGHT_ID("CSM_LIGHT_ID");
+  static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
+  static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
 
   set_language(Shader::SL_GLSL);
 
@@ -152,6 +156,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   //  set_pixel_shader("shaders/source_vlg.frag.glsl");
   //}
   set_pixel_shader("shaders/source_vlg.frag.sho.pz");
+
+  const ClipPlaneAttrib *cpa;
+  if (state->get_attrib(cpa)) {
+    if (cpa->get_num_on_planes() > 0) {
+      set_pixel_shader_combo(IN_CLIPPING, 1);
+      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
+    }
+  }
 
   // Toggle GPU skinning.
   const ShaderAttrib *sa;
@@ -206,6 +218,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
       }
     }
+  }
+
+  if (sa->has_shader_input("bakedVertexLight")) {
+    set_spec_constant(IN_BAKED_VERTEX_LIGHT, true);
+  } else {
+    set_spec_constant(IN_BAKED_VERTEX_LIGHT, false);
   }
 
   bool has_direct_light = (num_lights != 0u);

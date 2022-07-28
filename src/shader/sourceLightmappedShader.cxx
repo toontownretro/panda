@@ -32,6 +32,7 @@
 #include "fog.h"
 #include "alphaTestAttrib.h"
 #include "textureStagePool.h"
+#include "clipPlaneAttrib.h"
 
 TypeHandle SourceLightmappedShader::_type_handle;
 
@@ -72,9 +73,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_SELFILLUM("SELFILLUM");
   static const CPT_InternalName IN_BUMPMAP("BUMPMAP");
   static const CPT_InternalName IN_ENVMAP("ENVMAP");
+  static const CPT_InternalName IN_PLANAR_REFLECTION("PLANAR_REFLECTION");
   static const CPT_InternalName IN_ENVMAPMASK("ENVMAPMASK");
   static const CPT_InternalName IN_BASETEXTURE2("BASETEXTURE2");
   static const CPT_InternalName IN_BUMPMAP2("BUMPMAP2");
+  static const CPT_InternalName IN_CLIPPING("CLIPPING");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -84,11 +87,20 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NORMALMAPALPHAENVMAPMASK("NORMALMAPALPHAENVMAPMASK");
   static const CPT_InternalName IN_SSBUMP("SSBUMP");
   static const CPT_InternalName IN_NUM_CASCADES("NUM_CASCADES");
+  static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
 
   set_language(Shader::SL_GLSL);
 
   set_vertex_shader("shaders/source_lightmapped.vert.sho.pz");
   set_pixel_shader("shaders/source_lightmapped.frag.sho.pz");
+
+  const ClipPlaneAttrib *cpa;
+  if (state->get_attrib(cpa)) {
+    if (cpa->get_num_on_planes() > 0) {
+      set_pixel_shader_combo(IN_CLIPPING, 1);
+      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
+    }
+  }
 
   const AlphaTestAttrib *at;
   if (state->get_attrib(at)) {
@@ -141,7 +153,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   Texture *envmap_tex = nullptr;
+  Texture *planar_tex = nullptr;
   bool env_cubemap = false;
+  bool has_envmap = false;
   if ((param = material->get_param("envmap")) != nullptr) {
     if (param->get_type() == MaterialParamTexture::get_class_type()) {
       envmap_tex = DCAST(MaterialParamTexture, param)->get_value();
@@ -157,6 +171,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
   static TextureStage *envmap_stage = TextureStagePool::get_stage(new TextureStage("envmap"));
+  static TextureStage *planar_stage = TextureStagePool::get_stage(new TextureStage("reflection"));
 
   Texture *lm_tex = tattr->get_on_texture(lm_stage);
   if (lm_tex != nullptr) {
@@ -165,14 +180,26 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (env_cubemap) {
     envmap_tex = tattr->get_on_texture(envmap_stage);
   }
+  if ((param = material->get_param("planarreflection")) != nullptr &&
+      DCAST(MaterialParamBool, param)->get_value()) {
+    planar_tex = tattr->get_on_texture(planar_stage);
+  }
 
   if (env_cubemap && envmap_tex == nullptr) {
     envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
   }
 
-  if (envmap_tex != nullptr) {
-    set_pixel_shader_combo(IN_ENVMAP, 1);
-    set_input(ShaderInput("envmapTexture", envmap_tex));
+  if (envmap_tex != nullptr || planar_tex != nullptr) {
+
+    if (envmap_tex != nullptr) {
+      set_pixel_shader_combo(IN_ENVMAP, 1);
+      set_input(ShaderInput("envmapTexture", envmap_tex));
+
+    } else {
+      set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
+      set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
+      set_input(ShaderInput("reflectionSampler", planar_tex));
+    }
 
     if ((param = material->get_param("envmapmask")) != nullptr) {
       set_pixel_shader_combo(IN_ENVMAPMASK, 1);

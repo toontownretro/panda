@@ -68,7 +68,8 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     } else if (key == "selfillum" ||
                key == "basealphaenvmapmask" ||
                key == "normalmapalphaenvmapmask" ||
-               key == "ssbump") {
+               key == "ssbump" ||
+               key == "planarreflection") {
       param = new MaterialParamBool(key);
 
     // Float types

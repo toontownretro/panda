@@ -24,6 +24,7 @@
 #include "skyBoxMaterial.h"
 #include "sourceMaterial.h"
 #include "sourceSkyMaterial.h"
+#include "sourceWaterMaterial.h"
 #include "sourceLightmappedMaterial.h"
 #include "twoTextureMaterial.h"
 
@@ -76,6 +77,9 @@ init_libmaterial() {
 
   SourceSkyMaterial::init_type();
   SourceSkyMaterial::register_with_read_factory();
+
+  SourceWaterMaterial::init_type();
+  SourceWaterMaterial::register_with_read_factory();
 
   SourceLightmappedMaterial::init_type();
   SourceLightmappedMaterial::register_with_read_factory();

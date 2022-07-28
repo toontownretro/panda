@@ -21,6 +21,7 @@
     sourceLightmappedMaterial.I sourceLightmappedMaterial.h \
     sourceMaterial.I sourceMaterial.h \
     sourceSkyMaterial.I sourceSkyMaterial.h \
+    sourceWaterMaterial.I sourceWaterMaterial.h \
     standardMaterial.I standardMaterial.h \
     twoTextureMaterial.I twoTextureMaterial.h
 
@@ -41,6 +42,7 @@
     sourceLightmappedMaterial.cxx \
     sourceMaterial.cxx \
     sourceSkyMaterial.cxx \
+    sourceWaterMaterial.cxx \
     standardMaterial.cxx \
     twoTextureMaterial.cxx
 
