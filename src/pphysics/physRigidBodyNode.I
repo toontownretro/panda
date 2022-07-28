@@ -138,6 +138,23 @@ get_max_angular_velocity() const {
 }
 
 /**
+ *
+ */
+INLINE void PhysRigidBodyNode::
+set_inertia_tensor(const LVecBase3 &inertia) {
+  get_rigid_body()->setMassSpaceInertiaTensor(physx::PxVec3(inertia[0], inertia[1], inertia[2]));
+}
+
+/**
+ *
+ */
+INLINE LVecBase3 PhysRigidBodyNode::
+get_inertia_tensor() const {
+  physx::PxVec3 inertia = get_rigid_body()->getMassSpaceInertiaTensor();
+  return LVecBase3(inertia.x, inertia.y, inertia.z);
+}
+
+/**
  * Applies a force defined global coordinates to the rigid body's center of
  * mass.
  */

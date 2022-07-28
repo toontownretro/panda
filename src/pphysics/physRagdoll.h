@@ -36,11 +36,11 @@
  */
 class EXPCL_PANDA_PPHYSICS PhysRagdoll : public ReferenceCount {
 PUBLISHED:
-  class EXPCL_PANDA_PPHYSICS LimbContactCallback : public CallbackObject {
+  class EXPCL_PANDA_PPHYSICS LimbSleepCallback : public CallbackObject {
   public:
-    ALLOC_DELETED_CHAIN(LimbContactCallback);
+    ALLOC_DELETED_CHAIN(LimbSleepCallback);
 
-    INLINE LimbContactCallback(PhysRagdoll *ragdoll) { _ragdoll = ragdoll; }
+    INLINE LimbSleepCallback(PhysRagdoll *ragdoll) { _ragdoll = ragdoll; }
 
     virtual void do_callback(CallbackData *cbdata) override;
 
@@ -56,6 +56,7 @@ PUBLISHED:
     PN_stdfloat mass;
     PN_stdfloat damping;
     PN_stdfloat angular_damping;
+    PN_stdfloat inertia;
 
     LVecBase2 limit_x;
     LVecBase2 limit_y;
@@ -73,7 +74,7 @@ PUBLISHED:
 
   void add_joint(const std::string &parent, const std::string &child,
                  PhysShape *shape, PN_stdfloat mass, PN_stdfloat rot_damping,
-                 PN_stdfloat damping,
+                 PN_stdfloat damping, PN_stdfloat inertia,
                  const LVecBase2 &limit_x, const LVecBase2 &limit_y, const LVecBase2 &limit_z);
 
   void start_ragdoll(PhysScene *scene, NodePath render);
@@ -87,7 +88,7 @@ PUBLISHED:
   Joint *get_joint(int n) const;
   int get_num_joints() const;
 
-  void update();
+  bool update();
 
   void create_joints();
   void clear_joints();
@@ -107,7 +108,7 @@ private:
 
 private:
 
-  PT(LimbContactCallback) _contact_callback;
+  PT(LimbSleepCallback) _sleep_callback;
 
   typedef pvector<PT(AudioSound)> Sounds;
   Sounds _hard_impact_sounds;
@@ -135,7 +136,9 @@ private:
   CharacterNode *_char_node;
   Character *_char;
 
-  friend class LimbContactCallback;
+  int _awake_joints;
+
+  friend class LimbSleepCallback;
 };
 
 #include "physRagdoll.I"

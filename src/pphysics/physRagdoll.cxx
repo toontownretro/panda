@@ -15,7 +15,7 @@
 #include "physSystem.h"
 #include "look_at.h"
 #include "loader.h"
-#include "physContactCallbackData.h"
+#include "physSleepStateCallbackData.h"
 #include "physEnums.h"
 #include "randomizer.h"
 #include "config_pphysics.h"
@@ -35,6 +35,7 @@ PhysRagdoll(const NodePath &character_np) {
   _char_node = DCAST(CharacterNode, _char_np.find("**/+CharacterNode").node());
   _char = _char_node->get_character();
   _enabled = false;
+  _awake_joints = 0;
   PhysSystem *sys = PhysSystem::ptr();
   physx::PxPhysics *physics = sys->get_physics();
   _aggregate = physics->createAggregate(_char->get_num_joints(), true);
@@ -50,7 +51,7 @@ PhysRagdoll(const NodePath &character_np) {
     _char_joints[i] = nullptr;
   }
 
-  //_contact_callback = new LimbContactCallback(this);
+  _sleep_callback = new LimbSleepCallback(this);
 }
 
 /**
@@ -78,7 +79,7 @@ joint_default_net_transform(int joint) {
 void PhysRagdoll::
 add_joint(const std::string &parent, const std::string &child,
           PhysShape *shape, PN_stdfloat mass, PN_stdfloat rot_damping,
-          PN_stdfloat damping,
+          PN_stdfloat damping, PN_stdfloat inertia,
           const LVecBase2 &limit_x, const LVecBase2 &limit_y, const LVecBase2 &limit_z) {
 
   PT(Joint) joint = new Joint;
@@ -92,6 +93,7 @@ add_joint(const std::string &parent, const std::string &child,
   joint->mass = mass;
   joint->damping = damping;
   joint->angular_damping = rot_damping;
+  joint->inertia = inertia;
 
   joint->limit_x = limit_x;
   joint->limit_y = limit_y;
@@ -127,7 +129,12 @@ create_joints() {
     joint->actor->add_shape(joint->shape);
     joint->actor->set_mass(joint->mass);
     joint->actor->set_angular_damping(joint->angular_damping);
+    joint->actor->set_linear_damping(joint->damping);
+    joint->actor->set_inertia_tensor(joint->actor->get_inertia_tensor() * (joint->inertia * 0.5f));
     joint->actor->set_transform(joint_pose);
+    joint->actor->set_sleep_callback(_sleep_callback);
+    joint->actor->set_wake_callback(_sleep_callback);
+    joint->actor->set_sleep_threshold(0.25f);
     //joint->actor->set_contact_callback(_contact_callback);
     joint->actor->set_max_depenetration_velocity(phys_ragdoll_max_depenetration_vel);
     joint->actor->set_num_position_iterations(phys_ragdoll_pos_iterations);
@@ -221,6 +228,8 @@ create_joints() {
 void PhysRagdoll::
 start_ragdoll(PhysScene *scene, NodePath render) {
   create_joints();
+
+  _awake_joints = 0;
 
   for (size_t i = 0; i < _char_joints.size(); i++) {
     Joint *joint = _char_joints[i];
@@ -385,46 +394,63 @@ get_joint(int n) const {
 /**
  *
  */
-void PhysRagdoll::
+bool PhysRagdoll::
 update() {
   if (!_enabled) {
-    return;
+    return false;
+  }
+
+  if (_awake_joints <= 0) {
+    return false;
   }
 
   CPT(TransformState) char_net = _char_np.get_net_transform();
+  LMatrix4 world_to_char;
+  world_to_char.invert_from(char_net->get_mat());
+
+  LMatrix4 char_root_to_parent;
+  LMatrix4 local_trans;
 
   for (size_t i = 0; i < _char_joints.size(); i++) {
     Joint *limb = _char_joints[i];
 
     if (limb == nullptr || limb->actor == nullptr) {
-      _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
       continue;
     }
+
+    //if (limb == nullptr || limb->actor == nullptr) {
+    //  _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
+    //  continue;
+    //}
 
     CPT(TransformState) limb_actor_transform = limb->actor->get_transform();
-    if (limb_actor_transform == nullptr) {
-      _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
-      continue;
-    }
+    const LMatrix4 &limb_actor_mat = limb_actor_transform->get_mat();
+    //if (limb_actor_transform == nullptr) {
+    //  _char->set_joint_forced_value(i, _char->get_joint_default_value(i));
+    //  continue;
+    //}
 
-    LMatrix4 net_inverse = LMatrix4::ident_mat();
     int parent = _char->get_joint_parent(limb->joint);
     if (parent != -1) {
-      net_inverse = _char->get_joint_net_transform(parent);
+      char_root_to_parent.invert_from(_char->get_joint_net_transform(parent));
     } else {
-      net_inverse = _char->get_root_xform();
+      char_root_to_parent.invert_from(_char->get_root_xform());
     }
-    net_inverse.invert_in_place();
-    CPT(TransformState) joint_trans_state = char_net->
-      invert_compose(limb_actor_transform);
-    LMatrix4 joint_trans = joint_trans_state->get_mat();
-    _char->set_joint_forced_value(limb->joint, joint_trans * net_inverse);
+
+    // First move world-space limb actor transform into character-root space.
+    local_trans = limb_actor_mat * world_to_char;
+    // Then move into the coordinate space of the parent joint of this ragdoll
+    // joint.
+    local_trans *= char_root_to_parent;
+    _char->set_joint_forced_value(limb->joint, local_trans);
 
     if (_debug) {
       limb->debug.set_transform(limb->actor->get_transform());
       limb->debug.set_scale(_debug_scale);
     }
   }
+
+  return true;
 }
 
 /**
@@ -455,63 +481,17 @@ add_soft_impact_sound(AudioSound *sound) {
 /**
  *
  */
-void PhysRagdoll::LimbContactCallback::
+void PhysRagdoll::LimbSleepCallback::
 do_callback(CallbackData *cbdata) {
-  PhysContactCallbackData *data = (PhysContactCallbackData *)cbdata;
+  PhysSleepStateCallbackData *data = (PhysSleepStateCallbackData *)cbdata;
 
-  if (_ragdoll.was_deleted()) {
+  if (!_ragdoll.is_valid_pointer()) {
     return;
   }
 
-  if (_ragdoll->_hard_impact_sounds.empty() && _ragdoll->_soft_impact_sounds.empty()) {
-    return;
-  }
-
-  if (data->get_num_contact_pairs() == 0) {
-    return;
-  }
-
-  const PhysContactPair *pair = data->get_contact_pair(0);
-  if (!pair->is_contact_type(PhysEnums::CT_found)) {
-    return;
-  }
-  if (pair->get_num_contact_points() == 0) {
-    return;
-  }
-  PhysContactPoint point = pair->get_contact_point(0);
-
-  ClockObject *clock = ClockObject::get_global_clock();
-  double dt = clock->get_dt();
-
-  if (dt > 0.1) {
-    return;
-  }
-
-  PN_stdfloat speed = point.get_impulse().length();
-  if (speed < 70.0f) {
-    return;
-  }
-
-  LPoint3 position = point.get_position();
-
-  //std::cout << "Ragdoll contact between " << NodePath(data->get_actor_a()) << " and " << NodePath(data->get_actor_b()) << " force " << force_magnitude << "\n";
-
-  Randomizer random;
-
-  float volume = speed * speed * (1.0f / (320.0f * 320.0f));
-  volume = std::min(1.0f, volume);
-
-  if (speed >= _ragdoll->_hard_impact_force && !_ragdoll->_hard_impact_sounds.empty()) {
-    int index = random.random_int(_ragdoll->_hard_impact_sounds.size());
-    _ragdoll->_hard_impact_sounds[index]->set_volume(volume);
-    _ragdoll->_hard_impact_sounds[index]->set_3d_attributes(
-      position[0], position[1], position[2], 0.0, 0.0, 0.0);
-    _ragdoll->_hard_impact_sounds[index]->play();
-  } else if (speed >= _ragdoll->_soft_impact_force && !_ragdoll->_soft_impact_sounds.empty()) {
-    int index = random.random_int(_ragdoll->_soft_impact_sounds.size());
-    _ragdoll->_soft_impact_sounds[index]->set_volume(volume);
-    _ragdoll->_soft_impact_sounds[index]->set_3d_attributes(
-      position[0], position[1], position[2], 0.0, 0.0, 0.0);
-    _ragdoll->_soft_impact_sounds[index]->play();
+  if (data->is_asleep()) {
+    --_ragdoll->_awake_joints;
+  } else {
+    ++_ragdoll->_awake_joints;
   }
 }

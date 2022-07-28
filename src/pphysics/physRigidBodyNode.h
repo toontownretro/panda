@@ -54,6 +54,9 @@ PUBLISHED:
   INLINE void set_max_angular_velocity(PN_stdfloat max);
   INLINE PN_stdfloat get_max_angular_velocity() const;
 
+  INLINE void set_inertia_tensor(const LVecBase3 &inertia);
+  INLINE LVecBase3 get_inertia_tensor() const;
+
   INLINE void add_force(const LVector3 &global_force, ForceType type = FT_force, bool auto_wake = true);
   INLINE void add_torque(const LVector3 &global_torque, ForceType type = FT_force, bool auto_wake = true);
 
