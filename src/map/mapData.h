@@ -28,6 +28,7 @@
 #include "rayTrace.h"
 #include "rayTraceTriangleMesh.h"
 #include "rayTraceScene.h"
+#include "geomVertexArrayData.h"
 
 class SteamAudioSceneData {
 PUBLISHED:
@@ -202,6 +203,43 @@ public:
   vector_int _tri_list;
 };
 
+class EXPCL_PANDA_MAP MapStaticProp {
+PUBLISHED:
+  ~MapStaticProp() = default;
+
+  enum Flags {
+    F_none = 0,
+    F_no_shadows = 1,
+    F_no_vertex_lighting = 2,
+  };
+
+  INLINE const Filename &get_model_filename() const { return _model_filename; }
+  INLINE int get_skin() const { return _skin; }
+  INLINE const LPoint3 &get_pos() const { return _pos; }
+  INLINE const LVecBase3 &get_hpr() const { return _hpr; }
+  INLINE bool get_solid() const { return _solid; }
+  INLINE const GeomVertexArrayData *get_vertex_lighting(int n) const {
+    nassertr(n >= 0 && n < (int)_geom_vertex_lighting.size(), nullptr);
+    return _geom_vertex_lighting[n];
+  }
+
+public:
+  MapStaticProp() = default;
+
+  Filename _model_filename;
+  int _skin;
+  LPoint3 _pos;
+  LVecBase3 _hpr;
+  bool _solid;
+
+  unsigned int _flags;
+
+  // One entry for each Geom of the prop.  Pointers will be
+  // shared if the Geoms share a GeomVertexData.
+  typedef pvector<CPT(GeomVertexArrayData)> GeomVertexLighting;
+  GeomVertexLighting _geom_vertex_lighting;
+};
+
 /**
  * The main data store for a map.
  */
@@ -251,6 +289,12 @@ PUBLISHED:
 
   INLINE NodePath get_dir_light() const { return _dir_light; }
 
+  INLINE size_t get_num_static_props() const { return _static_props.size(); }
+  INLINE const MapStaticProp *get_static_prop(size_t n) const {
+    nassertr(n < _static_props.size(), nullptr);
+    return &_static_props[n];
+  }
+
   RayTraceScene *get_trace_scene() const;
 
   void check_lighting_pvs();
@@ -293,6 +337,8 @@ private:
   pvector<vector_int> _light_pvs;
   pvector<vector_int> _probe_pvs;
   pvector<vector_int> _cube_map_pvs;
+
+  pvector<MapStaticProp> _static_props;
 
   PT(RayTraceScene) _trace_scene;
   pvector<PT(RayTraceTriangleMesh)> _trace_meshes;

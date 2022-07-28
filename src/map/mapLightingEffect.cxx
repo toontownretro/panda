@@ -88,8 +88,8 @@ get_current_lighting_state() const {
 void MapLightingEffect::
 compute_lighting(const TransformState *net_transform, MapData *map_data,
                  const GeometricBoundingVolume *node_bounds,
-                 const TransformState *parent_net_transform) const {
-  ((MapLightingEffect *)this)->do_compute_lighting(net_transform, map_data, node_bounds, parent_net_transform);
+                 const TransformState *parent_net_transform, bool baked) const {
+  ((MapLightingEffect *)this)->do_compute_lighting(net_transform, map_data, node_bounds, parent_net_transform, baked);
 }
 
 /**
@@ -197,7 +197,8 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
  */
 void MapLightingEffect::
 do_compute_lighting(const TransformState *net_transform, MapData *mdata,
-                    const GeometricBoundingVolume *bounds, const TransformState *parent_net_transform) {
+                    const GeometricBoundingVolume *bounds, const TransformState *parent_net_transform,
+                    bool baked) {
   // FIXME: This is most definitely slow.
 
   PStatTimer timer(map_lighting_coll);
@@ -260,35 +261,38 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   // Located closest ambient probe.
   closest_dist = 1e24;
   const MapAmbientProbe *closest_probe = nullptr;
-  //bool closest_probe_visible = false;
-  if (cluster >= 0 && !mdata->_probe_pvs[cluster].empty()) {
-    for (size_t i = 0; i < mdata->_probe_pvs[cluster].size(); i++) {
-      const MapAmbientProbe *map = mdata->get_ambient_probe(mdata->_probe_pvs[cluster][i]);
-      PN_stdfloat dist = (pos - map->_pos).length_squared();
-      if (dist < closest_dist) {
-        // Check that we can actually trace to the probe.
-        //RayTraceHitResult ret;
-        //ret = rt_scene->trace_line(pos, map->_pos, 3);
-        //if (!ret.hit) {
-          // Probe is visible from sample point, we can use it.
-          closest_probe = map;
-          closest_dist = dist;
-        //}
+
+  if (!baked) {
+    //bool closest_probe_visible = false;
+    if (cluster >= 0 && !mdata->_probe_pvs[cluster].empty()) {
+      for (size_t i = 0; i < mdata->_probe_pvs[cluster].size(); i++) {
+        const MapAmbientProbe *map = mdata->get_ambient_probe(mdata->_probe_pvs[cluster][i]);
+        PN_stdfloat dist = (pos - map->_pos).length_squared();
+        if (dist < closest_dist) {
+          // Check that we can actually trace to the probe.
+          //RayTraceHitResult ret;
+          //ret = rt_scene->trace_line(pos, map->_pos, 3);
+          //if (!ret.hit) {
+            // Probe is visible from sample point, we can use it.
+            closest_probe = map;
+            closest_dist = dist;
+          //}
+        }
       }
-    }
-  } else {
-    for (size_t i = 0; i < mdata->_ambient_probes.size(); i++) {
-      const MapAmbientProbe *map = mdata->get_ambient_probe(i);
-      PN_stdfloat dist = (pos - map->_pos).length_squared();
-      if (dist < closest_dist) {
-        // Check that we can actually trace to the probe.
-        //RayTraceHitResult ret;
-        //ret = rt_scene->trace_line(pos, map->_pos, 3);
-        //if (!ret.hit) {
-          // Probe is visible from sample point, we can use it.
-          closest_probe = map;
-          closest_dist = dist;
-        //}
+    } else {
+      for (size_t i = 0; i < mdata->_ambient_probes.size(); i++) {
+        const MapAmbientProbe *map = mdata->get_ambient_probe(i);
+        PN_stdfloat dist = (pos - map->_pos).length_squared();
+        if (dist < closest_dist) {
+          // Check that we can actually trace to the probe.
+          //RayTraceHitResult ret;
+          //ret = rt_scene->trace_line(pos, map->_pos, 3);
+          //if (!ret.hit) {
+            // Probe is visible from sample point, we can use it.
+            closest_probe = map;
+            closest_dist = dist;
+          //}
+        }
       }
     }
   }
@@ -326,7 +330,7 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   }
 
   vector_int sorted_lights;
-  if (cluster >= 0) {
+  if (cluster >= 0 && !baked) {
     sorted_lights = mdata->_light_pvs[cluster];
     std::sort(sorted_lights.begin(), sorted_lights.end(), [pos, mdata](const int &a, const int &b) -> bool {
       return (pos - mdata->_lights[a].get_pos()).length_squared() < (pos - mdata->_lights[b].get_pos()).length_squared();

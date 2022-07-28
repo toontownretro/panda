@@ -42,11 +42,11 @@ PUBLISHED:
 
   void compute_lighting(const TransformState *net_transform, MapData *map_data,
                         const GeometricBoundingVolume *node_bounds,
-                        const TransformState *parent_net_transform) const;
+                        const TransformState *parent_net_transform, bool baked = false) const;
 
   void do_compute_lighting(const TransformState *net_transform, MapData *map_data,
                            const GeometricBoundingVolume *node_bounds,
-                           const TransformState *parent_net_transform);
+                           const TransformState *parent_net_transform, bool baked = false);
 
 public:
   virtual bool has_cull_callback() const override;

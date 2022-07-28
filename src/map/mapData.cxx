@@ -199,6 +199,20 @@ write_datagram(BamWriter *manager, Datagram &me) {
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_pathing_probe_data);
 
   _light_debug_data.write_datagram(me);
+
+  me.add_uint32(_static_props.size());
+  for (const MapStaticProp &prop : _static_props) {
+    me.add_string(prop._model_filename.get_fullpath());
+    me.add_int8(prop._skin);
+    prop._pos.write_datagram(me);
+    prop._hpr.write_datagram(me);
+    me.add_bool(prop._solid);
+
+    me.add_uint32(prop._geom_vertex_lighting.size());
+    for (const CPT(GeomVertexArrayData) &array : prop._geom_vertex_lighting) {
+      manager->write_pointer(me, array);
+    }
+  }
 }
 
 /**
@@ -298,6 +312,18 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _steam_audio_pathing_probe_data = pathing_data;
 
   _light_debug_data.read_datagram(scan);
+
+  _static_props.resize(scan.get_uint32());
+  for (MapStaticProp &prop : _static_props) {
+    prop._model_filename = scan.get_string();
+    prop._skin = scan.get_int8();
+    prop._pos.read_datagram(scan);
+    prop._hpr.read_datagram(scan);
+    prop._solid = scan.get_bool();
+
+    prop._geom_vertex_lighting.resize(scan.get_uint32());
+    manager->read_pointers(scan, prop._geom_vertex_lighting.size());
+  }
 }
 
 /**
@@ -323,6 +349,12 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
 
   for (size_t i = 0; i < _lights.size(); i++) {
     pi += _lights[i].complete_pointers(p_list + pi, manager);
+  }
+
+  for (MapStaticProp &prop : _static_props) {
+    for (CPT(GeomVertexArrayData) &array : prop._geom_vertex_lighting) {
+      array = DCAST(GeomVertexArrayData, p_list[pi++]);
+    }
   }
 
   return pi;
