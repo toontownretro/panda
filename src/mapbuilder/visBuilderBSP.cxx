@@ -1136,7 +1136,9 @@ mark_visible_sides() {
  */
 void VisBuilderBSP::
 r_mark_visible_sides(BSPFace *face, Winding winding, BSPNode *node) {
-  if (winding.is_empty()) {
+  if (winding.get_num_points() < 3) {
+    // If winding has no points or not enough to form a triangle,
+    // face is not in this node.
     return;
   }
 

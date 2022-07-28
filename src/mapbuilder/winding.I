@@ -405,15 +405,15 @@ remove_colinear_points() {
 template<int MaxPoints>
 void BaseWinding<MaxPoints>::
 round_points(PN_stdfloat epsilon) {
-  //for (int i = 0; i < _num_points; i++) {
-  //  for (int j = 0; j < 3; j++) {
-  //    PN_stdfloat v = _points[i][j];
-  //    PN_stdfloat v1 = std::round(v);
-  //    if ((v != v1) && std::abs(v - v1) < epsilon) {
-  //      _points[i][j] = v1;
-  //    }
-  //  }
-  //}
+  for (int i = 0; i < _num_points; i++) {
+    for (int j = 0; j < 3; j++) {
+      PN_stdfloat v = _points[i][j];
+      PN_stdfloat v1 = std::round(v);
+      if ((v != v1) && std::abs(v - v1) < epsilon) {
+        _points[i][j] = v1;
+      }
+    }
+  }
 }
 
 /**
