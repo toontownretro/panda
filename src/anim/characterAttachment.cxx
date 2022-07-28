@@ -78,7 +78,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_uint8(_parents.size());
   for (auto it = _parents.begin(); it != _parents.end(); ++it) {
     const ParentInfluence &inf = *it;
-    me.add_uint16(inf._parent);
+    me.add_int16(inf._parent);
     inf._offset.write_datagram(me);
     me.add_float32(inf._weight);
   }
@@ -94,7 +94,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   set_name(scan.get_string());
   size_t num_parents = scan.get_uint8();
   for (size_t i = 0; i < num_parents; i++) {
-    int parent = scan.get_uint16();
+    int parent = scan.get_int16();
     ParentInfluence inf;
     inf._parent = parent;
     inf._offset.read_datagram(scan);
