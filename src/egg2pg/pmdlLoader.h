@@ -308,6 +308,8 @@ public:
   vector_string _collide_with;
   float _mass_bias = 1;
   float _rot_damping = -1;
+  float _damping = -1;
+  float _inertia = -1;
   LVecBase2 _limit_x;
   LVecBase2 _limit_y;
   LVecBase2 _limit_z;
@@ -330,7 +332,8 @@ public:
   float _rot_damping = 0.0f;
   float _damping = 0.0f;
   float _density = 900.0f;
-  float _thickness = 0.0;
+  float _thickness = 0.0f;
+  float _inertia = 1.0f;
 
   pvector<PMDLPhysicsJoint> _joints;
 };

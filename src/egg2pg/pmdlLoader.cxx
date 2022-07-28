@@ -649,6 +649,9 @@ load(const Filename &filename, const DSearchPath &search_path) {
     if (pme->has_attribute("damping")) {
       _phy._damping = pme->get_attribute_value("damping").get_float();
     }
+    if (pme->has_attribute("inertia")) {
+      _phy._inertia = pme->get_attribute_value("inertia").get_float();
+    }
     if (pme->has_attribute("density")) {
       _phy._density = pme->get_attribute_value("density").get_float();
     }
@@ -675,6 +678,12 @@ load(const Filename &filename, const DSearchPath &search_path) {
         }
         if (jointe->has_attribute("rot_damping")) {
           joint._rot_damping = jointe->get_attribute_value("rot_damping").get_float();
+        }
+        if (jointe->has_attribute("damping")) {
+          joint._damping = jointe->get_attribute_value("damping").get_float();
+        }
+        if (jointe->has_attribute("inertia")) {
+          joint._inertia = jointe->get_attribute_value("inertia").get_float();
         }
         if (jointe->has_attribute("limit_x")) {
           jointe->get_attribute_value("limit_x").to_vec2(joint._limit_x);
@@ -1360,11 +1369,20 @@ build_graph() {
         part.limit_y = pjoint._limit_y;
         part.limit_z = pjoint._limit_z;
         part.mass = part_volume;
-        part.damping = _data->_phy._damping;
+        if (pjoint._damping < 0.0f) {
+          part.damping = _data->_phy._damping;
+        } else {
+          part.damping = pjoint._damping;
+        }
         if (pjoint._rot_damping < 0.0f) {
           part.rot_damping = _data->_phy._rot_damping;
         } else {
           part.rot_damping = pjoint._rot_damping;
+        }
+        if (pjoint._inertia < 0.0f) {
+          part.inertia = _data->_phy._inertia;
+        } else {
+          part.inertia = pjoint._inertia;
         }
         part.mesh_data = mesh_data->get_mesh_data();
 

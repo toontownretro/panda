@@ -60,6 +60,7 @@ PUBLISHED:
     PN_stdfloat mass;
     PN_stdfloat damping;
     PN_stdfloat rot_damping;
+    PN_stdfloat inertia;
     bool concave; // If true, mesh data is a triangle mesh, otherwise it's a
                   // convex mesh.
     CPTA_uchar mesh_data;

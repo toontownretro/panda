@@ -102,6 +102,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
         dg.add_stdfloat(part->mass);
         dg.add_stdfloat(part->damping);
         dg.add_stdfloat(part->rot_damping);
+        dg.add_stdfloat(part->inertia);
         dg.add_bool(part->concave);
         WRITE_PTA(manager, dg, IPD_uchar::write_datagram, part->mesh_data);
       }
@@ -191,6 +192,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
         part.mass = scan.get_stdfloat();
         part.damping = scan.get_stdfloat();
         part.rot_damping = scan.get_stdfloat();
+        part.inertia = scan.get_stdfloat();
         part.concave = scan.get_bool();
         PTA_uchar mesh_data;
         READ_PTA(manager, scan, IPD_uchar::read_datagram, mesh_data);
