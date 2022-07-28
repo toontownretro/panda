@@ -191,7 +191,7 @@ add_geom(const Geom *geom, const RenderState *state, const TransformState *trans
  */
 void LightBuilder::
 add_vertex_geom(const Geom *geom, const RenderState *state, const TransformState *transform,
-                GeomNode *geom_node, int geom_index, uint32_t contents) {
+                int model_index, int geom_index, uint32_t contents) {
   if (geom->is_empty()) {
     lightbuilder_cat.info()
       << "Skipping empty vertex Geom\n";
@@ -216,8 +216,9 @@ add_vertex_geom(const Geom *geom, const RenderState *state, const TransformState
   lgeom.state = state;
   lgeom.net_transform = transform;
   lgeom.vdata = geom->get_vertex_data();
-  lgeom.source_geom_node = geom_node;
+  lgeom.source_geom_node = nullptr;
   lgeom.geom_index = geom_index;
+  lgeom.model_index = model_index;
   lgeom.contents = contents;
   lgeom.num_triangles = 0;
   // Count number of tris.
@@ -488,13 +489,11 @@ make_textures() {
 
   // Color of direct lighting reaching a luxel.
   PT(Texture) direct = new Texture("lm_direct");
-  direct->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
+  direct->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size() * 4,
                                  Texture::T_float, Texture::F_rgba32);
   direct->set_clear_color(LColor(0, 0, 0, 0));
   direct->set_default_sampler(sampler);
   direct->set_compression(Texture::CM_off);
-  direct->set_minfilter(SamplerState::FT_nearest);
-  direct->set_magfilter(SamplerState::FT_nearest);
   direct->clear_image();
   _lm_textures["direct"] = direct;
 
@@ -507,8 +506,6 @@ make_textures() {
   direct_dynamic->set_clear_color(LColor(0, 0, 0, 0));
   direct_dynamic->set_default_sampler(sampler);
   direct_dynamic->set_compression(Texture::CM_off);
-  direct_dynamic->set_minfilter(SamplerState::FT_nearest);
-  direct_dynamic->set_magfilter(SamplerState::FT_nearest);
   direct_dynamic->clear_image();
   _lm_textures["direct_dynamic"] = direct_dynamic;
 
@@ -519,8 +516,6 @@ make_textures() {
   indirect->set_clear_color(LColor(0, 0, 0, 0));
   indirect->set_default_sampler(sampler);
   indirect->set_compression(Texture::CM_off);
-  indirect->set_minfilter(SamplerState::FT_nearest);
-  indirect->set_magfilter(SamplerState::FT_nearest);
   indirect->clear_image();
   _lm_textures["indirect"] = indirect;
 
@@ -531,8 +526,6 @@ make_textures() {
   indirect_accum->set_clear_color(LColor(0, 0, 0, 0));
   indirect_accum->set_default_sampler(sampler);
   indirect_accum->set_compression(Texture::CM_off);
-  indirect_accum->set_minfilter(SamplerState::FT_nearest);
-  indirect_accum->set_magfilter(SamplerState::FT_nearest);
   indirect_accum->clear_image();
   _lm_textures["indirect_accum"] = indirect_accum;
 
@@ -542,13 +535,11 @@ make_textures() {
   // the surface normal.  If a ray hits a triangle, the reflectivity texture
   // it sampled to accumulate the indirect lighting color.
   PT(Texture) reflectivity = new Texture("lm_reflectivity");
-  reflectivity->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size(),
+  reflectivity->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size() * 4,
                                        Texture::T_float, Texture::F_rgba32);
   reflectivity->set_clear_color(LColor(0, 0, 0, 0));
   reflectivity->set_default_sampler(sampler);
   reflectivity->set_compression(Texture::CM_off);
-  reflectivity->set_minfilter(SamplerState::FT_nearest);
-  reflectivity->set_magfilter(SamplerState::FT_nearest);
   reflectivity->clear_image();
   _lm_textures["reflectivity"] = reflectivity;
 
@@ -558,8 +549,6 @@ make_textures() {
   emission->set_clear_color(LColor(0, 0, 0, 0));
   emission->set_default_sampler(sampler);
   emission->set_compression(Texture::CM_off);
-  emission->set_minfilter(SamplerState::FT_nearest);
-  emission->set_magfilter(SamplerState::FT_nearest);
   emission->clear_image();
   _lm_textures["emission"] = emission;
 
@@ -594,8 +583,6 @@ make_textures() {
   albedo->set_clear_color(LColor(1, 1, 1, 0));
   albedo->set_default_sampler(sampler);
   albedo->set_compression(Texture::CM_off);
-  albedo->set_minfilter(SamplerState::FT_nearest);
-  albedo->set_magfilter(SamplerState::FT_nearest);
   albedo->clear_image();
   _lm_textures["albedo"] = albedo;
 
@@ -606,8 +593,6 @@ make_textures() {
   position->set_clear_color(LColor(0, 0, 0, 0));
   position->set_default_sampler(sampler);
   position->set_compression(Texture::CM_off);
-  position->set_minfilter(SamplerState::FT_nearest);
-  position->set_magfilter(SamplerState::FT_nearest);
   position->clear_image();
   _lm_textures["position"] = position;
 
@@ -618,8 +603,6 @@ make_textures() {
   normal->set_clear_color(LColor(0, 0, 0, 0));
   normal->set_default_sampler(sampler);
   normal->set_compression(Texture::CM_off);
-  normal->set_minfilter(SamplerState::FT_nearest);
-  normal->set_magfilter(SamplerState::FT_nearest);
   normal->clear_image();
   _lm_textures["normal"] = normal;
 
@@ -630,8 +613,6 @@ make_textures() {
   unocclude->set_clear_color(LColor(0, 0, 0, 0));
   unocclude->set_default_sampler(sampler);
   unocclude->set_compression(Texture::CM_off);
-  unocclude->set_minfilter(SamplerState::FT_nearest);
-  unocclude->set_magfilter(SamplerState::FT_nearest);
   unocclude->clear_image();
   _lm_textures["unocclude"] = unocclude;
 
@@ -667,8 +648,47 @@ make_textures() {
   vtx_refl_accum->clear_image();
   _lm_textures["vtx_refl_accum"] = vtx_refl_accum;
 
+  PT(Texture) vtx_light = new Texture("vtx_light");
+  vtx_light->setup_2d_texture(vtx_width, vtx_height, Texture::T_float, Texture::F_rgba32);
+  vtx_light->set_clear_color(LColor(0, 0, 0, 0));
+  vtx_light->set_default_sampler(sampler);
+  vtx_light->set_compression(Texture::CM_off);
+  vtx_light->set_minfilter(SamplerState::FT_nearest);
+  vtx_light->set_magfilter(SamplerState::FT_nearest);
+  vtx_light->clear_image();
+  _lm_textures["vtx_light"] = vtx_light;
+
+  PT(Texture) vtx_light_dynamic = new Texture("vtx_light_dynamic");
+  vtx_light_dynamic->setup_2d_texture(vtx_width, vtx_height, Texture::T_float, Texture::F_rgba32);
+  vtx_light_dynamic->set_clear_color(LColor(0, 0, 0, 0));
+  vtx_light_dynamic->set_default_sampler(sampler);
+  vtx_light_dynamic->set_compression(Texture::CM_off);
+  vtx_light_dynamic->set_minfilter(SamplerState::FT_nearest);
+  vtx_light_dynamic->set_magfilter(SamplerState::FT_nearest);
+  vtx_light_dynamic->clear_image();
+  _lm_textures["vtx_light_dynamic"] = vtx_light_dynamic;
+
   return true;
 }
+
+class PosNormalPair {
+public:
+  LPoint3 pos;
+  LVector3 normal;
+
+  class Compare {
+  public:
+    bool operator () (const PosNormalPair &a, const PosNormalPair &b) const {
+      if (a.pos != b.pos) {
+        return a.pos < b.pos;
+      }
+      if (a.normal != b.normal) {
+        return a.normal < b.normal;
+      }
+      return false;
+    }
+  };
+};
 
 /**
  *
@@ -714,6 +734,8 @@ make_geom_vertices_and_triangles(LightmapGeom &geom, int &triangle, int &vertex)
   GeomVertexReader n_reader(geom.geom->get_vertex_data(), InternalName::get_normal());
   GeomVertexReader luv_reader(geom.geom->get_vertex_data(), get_lightmap_uv_name());
 
+  pmap<PosNormalPair, int, PosNormalPair::Compare> unique_positions;
+
   // Now copy in the vertex data for those vertices in increasing order.
   int index = referenced_vertices.get_lowest_on_bit();
   //int dest_row = 0;
@@ -731,24 +753,44 @@ make_geom_vertices_and_triangles(LightmapGeom &geom, int &triangle, int &vertex)
     n_reader.set_row(index);
     normal = n_reader.get_data3f();
 
-    LVecBase2 uv(0.0f, 0.0f);
-    if (luv_reader.has_column()) {
-      luv_reader.set_row(index);
-      uv = luv_reader.get_data2f();
+    PosNormalPair pair;
+    pair.pos = pos;
+    pair.normal = normal;
+
+    pmap<PosNormalPair, int, PosNormalPair::Compare>::const_iterator it = unique_positions.end();
+    if (geom.light_mode == LightmapGeom::LM_per_vertex) {
+      it = unique_positions.find(pair);
     }
+    if (it != unique_positions.end()) {
+      // We already have a vertex at this position.  Re-use it.
+      index_remap[index] = (*it).second;
 
-    // Transform position and normal into world coordinates.
-    pos = mat.xform_point(pos);
-    normal = mat.xform_vec(normal).normalized();
+      _vertices[(*it).second].orig_vertices.insert(index);
 
-    index_remap[index] = (int)_vertices.size();
+    } else {
+      unique_positions[pair] = (int)_vertices.size();
 
-    LightmapVertex l_vert;
-    l_vert.pos = pos;
-    l_vert.normal = normal;
-    l_vert.uv = uv;
-    _vertices.push_back(std::move(l_vert));
-    geom.num_vertices++;
+      LVecBase2 uv(0.0f, 0.0f);
+      if (luv_reader.has_column()) {
+        luv_reader.set_row(index);
+        uv = luv_reader.get_data2f();
+      }
+
+      // Transform position and normal into world coordinates.
+      pos = mat.xform_point(pos);
+      normal = mat.xform_vec(normal).normalized();
+
+      index_remap[index] = (int)_vertices.size();
+
+      LightmapVertex l_vert;
+      l_vert.pos = pos;
+      l_vert.normal = normal;
+      l_vert.uv = uv;
+      l_vert.orig_vertex = index;
+      l_vert.orig_vertices.insert(index);
+      _vertices.push_back(std::move(l_vert));
+      geom.num_vertices++;
+    }
 
     //++dest_row;
 
@@ -1939,16 +1981,16 @@ rasterize_geoms_into_lightmap_textures() {
           }
 
           // Check for emission.
-          MaterialParamBase *selfillum_param = mat->get_param("selfillum");
-          if (selfillum_param != nullptr && DCAST(MaterialParamBool, selfillum_param)->get_value()) {
-            MaterialParamBase *tint_param = mat->get_param("selfillumtint");
-            if (tint_param != nullptr) {
-              emission_color = DCAST(MaterialParamColor, tint_param)->get_value().get_xyz();
-              emission_color[0] = std::pow(emission_color[0], 2.2f);
-              emission_color[1] = std::pow(emission_color[1], 2.2f);
-              emission_color[2] = std::pow(emission_color[2], 2.2f);
-            }
-          }
+          //MaterialParamBase *selfillum_param = mat->get_param("selfillum");
+          //if (selfillum_param != nullptr && DCAST(MaterialParamBool, selfillum_param)->get_value()) {
+          //  MaterialParamBase *tint_param = mat->get_param("selfillumtint");
+          //  if (tint_param != nullptr) {
+          //    emission_color = DCAST(MaterialParamColor, tint_param)->get_value().get_xyz();
+          //    emission_color[0] = std::pow(emission_color[0], 2.2f);
+          //    emission_color[1] = std::pow(emission_color[1], 2.2f);
+          //    emission_color[2] = std::pow(emission_color[2], 2.2f);
+          //  }
+          //}
         }
       }
 
@@ -1998,6 +2040,10 @@ rasterize_geoms_into_lightmap_textures() {
 
   _gsg->finish();
 
+  _graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
+  _lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
+  _graphics_engine->extract_texture_data(_lm_textures["emission"], _gsg);
+  _lm_textures["emission"]->write("lm_emission_#.png", 0, 0, true, false);
   _graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
   _lm_textures["position"]->write("lm_position_#.pfm", 0, 0, true, false);
   _graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
@@ -2152,8 +2198,9 @@ compute_unocclude() {
   np.set_shader_input("vertices", _gpu_buffers["vertices"]);
   np.set_shader_input("triangles", _gpu_buffers["triangles"]);
   np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("triangle_cells", _gpu_buffers["triangle_cells"]);
-  np.set_shader_input("grid", _gpu_buffers["grid"]);
+  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
+  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
+  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
 
   np.set_shader_input("position", _lm_textures["position"]);
   np.set_shader_input("unocclude", _lm_textures["unocclude"]);
@@ -2231,6 +2278,9 @@ compute_direct() {
   lightbuilder_cat.info()
     << "Done.\n";
 
+  _graphics_engine->extract_texture_data(_lm_textures["direct"], _gsg);
+  _lm_textures["direct"]->write("lm_direct_#.png", 0, 0, true, false);
+
   return true;
 }
 
@@ -2259,6 +2309,8 @@ compute_vtx_reflectivity() {
 
   np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
   np.set_shader_input("vtx_albedo", _lm_textures["vtx_albedo"]);
+  np.set_shader_input("vtx_light", _lm_textures["vtx_light"]);
+  np.set_shader_input("vtx_light_dynamic", _lm_textures["vtx_light_dynamic"]);
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
 
   np.set_shader_input("u_vtx_palette_size_first_vtx_num_verts",
@@ -2327,6 +2379,7 @@ compute_indirect() {
   vnp.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
 
   vnp.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
+  vnp.set_shader_input("vtx_light", _lm_textures["vtx_light"]);
 
   vnp.set_shader_input("u_sky_color", _sky_color.get_xyz());
 
@@ -2473,8 +2526,10 @@ denoise_lightmaps() {
   size_t page_size = sizeof(float) * 3 * _lightmap_size[0] * _lightmap_size[1];
 
   oidn::FilterRef filter = device.newFilter("RTLightmap");
+  filter.set("directional", true);
+  filter.set("hdr", true);
   // Denoise each page.
-  for (size_t i = 0; i < _pages.size(); i++) {
+  for (size_t i = 0; i < _pages.size() * 4; i++) {
     void *page_ptr = (void *)(color_data.p() + i * page_size);
 
     filter.setImage("color", page_ptr,
@@ -2500,7 +2555,7 @@ denoise_lightmaps() {
   const float *color_datap = (const float *)color_data.p();
   const float *alpha_datap = (const float *)alpha_data.p();
 
-  for (int i = 0; i < _lightmap_size[0] * _lightmap_size[1] * _pages.size(); i++) {
+  for (int i = 0; i < _lightmap_size[0] * _lightmap_size[1] * _pages.size() * 4; i++) {
     new_datap[i * 4] = color_datap[i * 3];
     new_datap[i * 4 + 1] = color_datap[i * 3 + 1];
     new_datap[i * 4 + 2] = color_datap[i * 3 + 2];
@@ -2538,7 +2593,7 @@ dialate_lightmaps() {
   LVecBase3i group_size((_lightmap_size[0] - 1) / 8 + 1,
                         (_lightmap_size[1] - 1) / 8 + 1, 1);
 
-  for (size_t i = 0; i < _pages.size(); i++) {
+  for (size_t i = 0; i < _pages.size() * 4; i++) {
     np.set_shader_input("u_palette_size_page", LVecBase3i(_lightmap_size[0], _lightmap_size[1], i));
 
     // Run all pages simultaneously.
@@ -2588,7 +2643,7 @@ write_geoms() {
   pvector<CPT(RenderState)> page_texture_states;
   // Extract each page from the lightmap array texture into individual textures.
   for (size_t i = 0; i < _pages.size(); i++) {
-    const unsigned char *page_data = lm_ram_image.p() + page_size * i;
+    const unsigned char *page_data = lm_ram_image.p() + page_size * i * 4;
 
     LightmapPage &page = _pages[i];
 
@@ -2604,16 +2659,27 @@ write_geoms() {
     float v_scale = (float)_lightmap_size[1] / (float)page_dim[1];
 
     std::ostringstream ss;
-    ss << "lm_direct_page_" << i;
+    ss << "lm_page_" << i;
     PT(Texture) tex = new Texture(ss.str());
-    tex->setup_2d_texture(page_dim[0], page_dim[1], Texture::T_half_float,
+    tex->setup_2d_texture_array(page_dim[0], page_dim[1], 4, Texture::T_half_float,
                           Texture::F_rgb16);
     tex->set_minfilter(SamplerState::FT_linear);
     tex->set_magfilter(SamplerState::FT_linear);
     tex->set_wrap_u(SamplerState::WM_clamp);
     tex->set_wrap_v(SamplerState::WM_clamp);
     tex->set_keep_ram_image(false);
-    tex->set_ram_image(convert_rgba32_to_rgb16(page_data, page_size, _lightmap_size, page_dim));
+
+    size_t chopped_page_size = sizeof(unsigned short) * page_dim[0] * page_dim[1] * 3;
+    PTA_uchar ram_image;
+    ram_image.resize(chopped_page_size * 4);
+    unsigned char *ram_image_datap = ram_image.p();
+    for (int j = 0; j < 4; ++j) {
+      convert_rgba32_to_rgb16(page_data, page_size, _lightmap_size, page_dim, ram_image_datap);
+      page_data += page_size;
+      ram_image_datap += chopped_page_size;
+    }
+
+    tex->set_ram_image(ram_image);
 
     lightbuilder_cat.info()
       << "Output lightmap page " << i << ":\n";
@@ -2684,6 +2750,49 @@ write_geoms() {
     }
   }
 
+#if 1
+  PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
+  arr->add_column(InternalName::make("vertex_lighting"), 3, GeomEnums::NT_float16, GeomEnums::C_other);
+  CPT(GeomVertexArrayFormat) vtx_light_format = GeomVertexArrayFormat::register_format(arr);
+
+  pmap<CPT(GeomVertexData), PT(GeomVertexArrayData)> light_arrays;
+
+  // Now write baked vertex-lit lighting for static props.
+  _graphics_engine->extract_texture_data(_lm_textures["vtx_light"], _gsg);
+  const float *vtx_light_data = (const float *)(_lm_textures["vtx_light"]->get_ram_image().p());
+  for (size_t i = 0; i < _geoms.size(); ++i) {
+    LightmapGeom &lgeom = _geoms[i];
+    if (lgeom.light_mode != LightmapGeom::LM_per_vertex) {
+      continue;
+    }
+
+    PT(GeomVertexArrayData) &light_array = light_arrays[lgeom.geom->get_vertex_data()];
+    if (light_array == nullptr) {
+      light_array = new GeomVertexArrayData(vtx_light_format, GeomEnums::UH_static);
+      light_array->set_num_rows(lgeom.geom->get_vertex_data()->get_num_rows());
+    }
+    GeomVertexWriter lwriter(light_array);
+    lwriter.set_column(InternalName::make("vertex_lighting"));
+
+    for (size_t j = lgeom.first_vertex; j < (lgeom.first_vertex + lgeom.num_vertices); ++j) {
+      LightmapVertex &lvert = _vertices[j];
+
+      int palette_offset = j - _first_vertex_lit_vertex;
+      float r = vtx_light_data[palette_offset * 4];
+      float g = vtx_light_data[palette_offset * 4 + 1];
+      float b = vtx_light_data[palette_offset * 4 + 2];
+
+      // Write this to all vertex indices that share this LightmapVertex.
+      for (auto it = lvert.orig_vertices.begin(); it != lvert.orig_vertices.end(); ++it) {
+        lwriter.set_row(*it);
+        lwriter.set_data3f(r, g, b);
+      }
+    }
+
+    lgeom.vertex_light_array = light_array;
+  }
+
+#endif
   return true;
 }
 
@@ -2892,11 +3001,11 @@ solve() {
   //_graphics_engine->extract_texture_data(_lm_textures["vtx_albedo"], _gsg);
   //_lm_textures["vtx_albedo"]->write("lm_vtx_albedo.png");
 
-  //if (!compute_unocclude()) {
-  //  lightbuilder_cat.info()
-  //    << "Failed to compute luxel unocclusion\n";
-  //  return false;
-  //}
+  if (!compute_unocclude()) {
+    lightbuilder_cat.info()
+      << "Failed to compute luxel unocclusion\n";
+    return false;
+  }
 
   //_graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
   //_lm_textures["position"]->write("lm_position_#.png", 0, 0, true, false);
@@ -2932,6 +3041,8 @@ solve() {
       << "Failed to dialate lightmaps\n";
     return false;
   }
+
+  //_graphics_engine->extract_texture_data(_lm_textures["reflectivity"], _gsg);
 
   if (!denoise_lightmaps()) {
     lightbuilder_cat.error()
@@ -3005,9 +3116,10 @@ free_texture(Texture *tex) {
  * half-float.  The given image is expected to be a single page of a single
  * mipmap level.
  */
-PTA_uchar LightBuilder::
+void LightBuilder::
 convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
-                        const LVecBase2i &orig_size, const LVecBase2i &new_size) {
+                        const LVecBase2i &orig_size, const LVecBase2i &new_size,
+                        unsigned char *out) {
 
   int y_diff = orig_size[1] - new_size[1];
   int x_diff = orig_size[0] - new_size[0];
@@ -3016,10 +3128,7 @@ convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
   assert(y_diff >= 0 && x_diff >= 0);
 
   const float *fp32_data = (const float *)image;
-
-  PTA_uchar fp16_image;
-  fp16_image.resize(sizeof(unsigned short) * new_size[0] * new_size[1] * 3);
-  unsigned short *fp16_data = (unsigned short *)fp16_image.p();
+  unsigned short *fp16_data = (unsigned short *)out;
 
   for (int y = 0; y < orig_size[1] - y_diff; ++y) {
     for (int x = 0; x < orig_size[0] - x_diff; ++x) {
@@ -3033,7 +3142,5 @@ convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
       *fp16_data++ = fp16_ieee_from_fp32_value(fp32_data[orig_pos + 2]);
     }
   }
-
-  return fp16_image;
 }
 

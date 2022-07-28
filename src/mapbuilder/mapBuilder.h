@@ -141,6 +141,8 @@ PUBLISHED:
 private:
   void build_entity_polygons(int entity);
 
+  void r_collect_geoms(PandaNode *node, pvector<std::pair<CPT(Geom), CPT(RenderState) > > &geoms);
+
 public:
   PT(MapFile) _source_map;
   MapBuildOptions _options;

@@ -183,6 +183,55 @@ build() {
 
   ErrorCode ec = EC_ok;
 
+  // Write static prop entities.
+  for (auto it = _source_map->_entities.begin(); it != _source_map->_entities.end();) {
+    MapEntitySrc *sent = *it;
+    if (sent->_class_name != "prop_static") {
+      ++it;
+      continue;
+    }
+
+    MapStaticProp sprop;
+    sprop._model_filename = Filename::from_os_specific(sent->_properties["model"]);
+    sprop._model_filename.set_extension("bam");
+    sprop._flags = 0;
+
+    if (sent->_properties.find("origin") != sent->_properties.end()) {
+      sprop._pos = KeyValues::to_3f(sent->_properties["origin"]);
+    } else {
+      sprop._pos.set(0, 0, 0);
+    }
+    if (sent->_properties.find("angles") != sent->_properties.end()) {
+      LVecBase3f phr = KeyValues::to_3f(sent->_properties["angles"]);
+      sprop._hpr.set(phr[1] - 90, -phr[0], phr[2]);
+    } else {
+      sprop._hpr.set(0, 0, 0);
+    }
+    if (sent->_properties.find("skin") != sent->_properties.end()) {
+      string_to_int(sent->_properties["skin"], sprop._skin);
+    } else {
+      sprop._skin = 0;
+    }
+    if (sent->_properties.find("solid") != sent->_properties.end()) {
+      int solid;
+      string_to_int(sent->_properties["solid"], solid);
+      sprop._solid = (solid != 0);
+    } else {
+      sprop._solid = false;
+    }
+    if (sent->_properties.find("disableshadows") != sent->_properties.end()) {
+      int disable_shadows;
+      string_to_int(sent->_properties["disableshadows"], disable_shadows);
+      if (disable_shadows != 0) {
+        sprop._flags |= MapStaticProp::F_no_shadows;
+      }
+    }
+
+    _out_data->_static_props.push_back(std::move(sprop));
+
+    it = _source_map->_entities.erase(it);
+  }
+
   ec = build_polygons();
   if (ec != EC_ok) {
     return ec;
@@ -812,33 +861,15 @@ bake_steam_audio() {
   //}
 
   // Now get static props.
-  for (int i = 0; i < _out_data->get_num_entities(); i++) {
-    MapEntity *ent = _out_data->get_entity(i);
-    if (ent->get_class_name() != "prop_static") {
-      continue;
-    }
-
-    PDXElement *props = ent->get_properties();
-
-    Filename model_filename = Filename::from_os_specific(props->get_attribute_value("model").get_string());
-    model_filename.set_extension("bam");
-    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(model_filename);
+  for (int i = 0; i < _out_data->get_num_static_props(); i++) {
+    const MapStaticProp *sprop = _out_data->get_static_prop(i);
+    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(sprop->get_model_filename());
     if (prop_model_node == nullptr) {
       continue;
     }
     NodePath prop_model(prop_model_node);
-
-    if (props->has_attribute("origin")) {
-      LPoint3 pos;
-      props->get_attribute_value("origin").to_vec3(pos);
-      prop_model.set_pos(pos);
-    }
-
-    if (props->has_attribute("angles")) {
-      LVecBase3 phr;
-      props->get_attribute_value("angles").to_vec3(phr);
-      prop_model.set_hpr(phr[1] - 90, -phr[0], phr[2]);
-    }
+    prop_model.set_pos(sprop->get_pos());
+    prop_model.set_hpr(sprop->get_hpr());
 
     std::string surfaceprop = "default";
     ModelRoot *mroot = DCAST(ModelRoot, prop_model_node);
@@ -1385,6 +1416,8 @@ build_entity_polygons(int i) {
         break;
       }
 
+      w.round_points();
+
       // We now have the final polygon for the side.
 
       Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_basename()) + ".mto");
@@ -1922,122 +1955,77 @@ build_lighting() {
   }
 
   // Now get static props.
-  for (int i = 0; i < _out_data->get_num_entities(); i++) {
-    MapEntity *ent = _out_data->get_entity(i);
-    std::cout << "clsname " << ent->get_class_name() << "\n";
-    if (ent->get_class_name() != "prop_static") {
+  for (int i = 0; i < _out_data->get_num_static_props(); i++) {
+    MapStaticProp *sprop = (MapStaticProp *)_out_data->get_static_prop(i);
+
+    if ((sprop->_flags & MapStaticProp::F_no_shadows) &&
+        (sprop->_flags & MapStaticProp::F_no_vertex_lighting)) {
       continue;
     }
 
-    PDXElement *props = ent->get_properties();
-    if (props->has_attribute("disableshadows") && props->get_attribute_value("disableshadows").get_int()) {
-      std::cout << "Shadows disabled\n";
-      continue;
-    }
-
-    Filename model_filename = Filename::from_os_specific(props->get_attribute_value("model").get_string());
-    model_filename.set_extension("bam");
-    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(model_filename);
+    PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(sprop->get_model_filename());
     if (prop_model_node == nullptr) {
       continue;
     }
     ModelRoot *prop_mdl_root = DCAST(ModelRoot, prop_model_node);
     NodePath prop_model(prop_model_node);
-
-    if (props->has_attribute("origin")) {
-      LPoint3 pos;
-      props->get_attribute_value("origin").to_vec3(pos);
-      prop_model.set_pos(pos);
-    }
-
-    if (props->has_attribute("angles")) {
-      LVecBase3 phr;
-      props->get_attribute_value("angles").to_vec3(phr);
-      prop_model.set_hpr(phr[1] - 90, -phr[0], phr[2]);
-    }
-
-    if (props->has_attribute("skin")) {
-      int skin = props->get_attribute_value("skin").get_int();
-      if (skin >= 0 && skin < prop_mdl_root->get_num_material_groups()) {
-        prop_mdl_root->set_active_material_group(skin);
-      }
+    prop_model.set_pos(sprop->get_pos());
+    prop_model.set_hpr(sprop->get_hpr());
+    int skin = sprop->get_skin();
+    if (skin >= 0 && skin < prop_mdl_root->get_num_material_groups()) {
+      prop_mdl_root->set_active_material_group(skin);
     }
 
     prop_model.flatten_light();
 
-    NodePathCollection geom_nodes;
     // Get all the Geoms.
     // If there's an LOD, only get Geoms from the lowest LOD level.
     NodePath lod = prop_model.find("**/+LODNode");
     if (!lod.is_empty()) {
-      NodePath lowest_lod = lod.get_child(0);
-      if (lowest_lod.node()->is_geom_node()) {
-        geom_nodes.add_path(lowest_lod);
-      }
-      geom_nodes.add_paths_from(lowest_lod.find_all_matches("**/+GeomNode"));
-
-    } else {
-      // Otherwise get all the Geoms.
-      geom_nodes = prop_model.find_all_matches("**/+GeomNode");
+      prop_model = lod.get_child(0);
     }
 
+    pvector<std::pair<CPT(Geom), CPT(RenderState)>> geoms;
+    r_collect_geoms(prop_model.node(), geoms);
+
+    sprop->_geom_vertex_lighting.resize(geoms.size());
+
     // Now add the triangles from all the geoms as occluders.
-    for (int j = 0; j < geom_nodes.get_num_paths(); ++j) {
-      NodePath geom_np = geom_nodes.get_path(j);
-      GeomNode *geom_node = DCAST(GeomNode, geom_np.node());
-      for (int k = 0; k < geom_node->get_num_geoms(); ++k) {
-        if (geom_node->get_geom(k)->get_primitive_type() != GeomEnums::PT_polygons) {
-          continue;
-        }
+    for (int j = 0; j < (int)geoms.size(); ++j) {
+      CPT(Geom) geom = geoms[j].first;
+      CPT(RenderState) state = geoms[j].second;
 
-        const RenderState *state = geom_node->get_geom_state(k);
-        // Exclude triangles with transparency enabled.
-        const TransparencyAttrib *trans;
-        state->get_attrib_def(trans);
-        if (trans->get_mode() != TransparencyAttrib::M_none) {
-          continue;
-        }
-        if (state->has_attrib(AlphaTestAttrib::get_class_slot())) {
-          continue;
-        }
-        const MaterialAttrib *mattr;
-        state->get_attrib_def(mattr);
-        Material *mat = mattr->get_material();
-        if (mat != nullptr) {
-          if ((mat->_attrib_flags & Material::F_transparency) != 0u &&
-              mat->_transparency_mode > 0) {
-            continue;
+      bool cast_shadows = (sprop->_flags & MapStaticProp::F_no_shadows) == 0;
 
-          } else if ((mat->_attrib_flags & Material::F_alpha_test) != 0u &&
-                      mat->_alpha_test_mode > 0) {
-            continue;
-          }
-        }
-
-        builder.add_vertex_geom(geom_node->get_geom(k), state, geom_np.get_net_transform(), geom_node, k);
-
-/*
-        PT(Geom) geom = geom_node->get_geom(k)->decompose();
-
-        const GeomVertexData *vdata = geom->get_vertex_data();
-        GeomVertexReader vreader(vdata, InternalName::get_vertex());
-        for (size_t l = 0; l < geom->get_num_primitives(); ++l) {
-          CPT(GeomPrimitive) prim = geom->get_primitive(l);
-          for (int iprim = 0; iprim < prim->get_num_primitives(); ++iprim) {
-            LightBuilder::OccluderTri otri;
-            int s = prim->get_primitive_start(iprim);
-            assert(prim->get_primitive_end(iprim) == (s + 3));
-            vreader.set_row(prim->get_vertex(s));
-            otri.a = vreader.get_data3f();
-            vreader.set_row(prim->get_vertex(s + 1));
-            otri.b = vreader.get_data3f();
-            vreader.set_row(prim->get_vertex(s + 2));
-            otri.c = vreader.get_data3f();
-            builder._occluder_tris.push_back(std::move(otri));
-          }
-        }
-        */
+      // Exclude triangles with transparency enabled.
+      const TransparencyAttrib *trans;
+      state->get_attrib_def(trans);
+      if (trans->get_mode() != TransparencyAttrib::M_none) {
+        cast_shadows = false;
       }
+      if (state->has_attrib(AlphaTestAttrib::get_class_slot())) {
+        cast_shadows = false;
+      }
+      const MaterialAttrib *mattr;
+      state->get_attrib_def(mattr);
+      Material *mat = mattr->get_material();
+      if (mat != nullptr) {
+        if ((mat->_attrib_flags & Material::F_transparency) != 0u &&
+            mat->_transparency_mode > 0) {
+          cast_shadows = false;
+
+        } else if ((mat->_attrib_flags & Material::F_alpha_test) != 0u &&
+                    mat->_alpha_test_mode > 0) {
+          cast_shadows = false;
+        }
+      }
+
+      uint32_t contents = 0;
+      if (!cast_shadows) {
+        contents |= LightBuilder::C_dont_block_light;
+      }
+
+      builder.add_vertex_geom(geom, state, TransformState::make_identity(), i, j, contents);
     }
   }
 
@@ -2262,6 +2250,18 @@ build_lighting() {
   if (!builder.solve()) {
     return EC_lightmap_failed;
   }
+
+#if 1
+  // Write static prop vertex light arrays.
+  for (const LightBuilder::LightmapGeom &lgeom : builder._geoms) {
+    if (lgeom.light_mode != LightBuilder::LightmapGeom::LM_per_vertex) {
+      continue;
+    }
+
+    MapStaticProp *sprop = (MapStaticProp *)_out_data->get_static_prop(lgeom.model_index);
+    sprop->_geom_vertex_lighting[lgeom.geom_index] = lgeom.vertex_light_array;
+  }
+#endif
 
 #if 0
   // Write debug data.
@@ -2604,5 +2604,22 @@ build_entity_physics(int mesh_index, MapModel &model) {
     assert(ret);
 
     model._convex_mesh_data.push_back(cm_data->get_mesh_data());
+  }
+}
+
+/**
+ *
+ */
+void MapBuilder::
+r_collect_geoms(PandaNode *node, pvector<std::pair<CPT(Geom), CPT(RenderState) > > &geoms) {
+  if (node->is_geom_node()) {
+    GeomNode *gn = (GeomNode *)node;
+    for (size_t i = 0; i < gn->get_num_geoms(); ++i) {
+      geoms.push_back({ gn->get_geom(i), gn->get_geom_state(i) });
+    }
+  }
+
+  for (int i = 0; i < node->get_num_children(); ++i) {
+    r_collect_geoms(node->get_child(i), geoms);
   }
 }

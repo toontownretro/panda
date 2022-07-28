@@ -66,7 +66,7 @@ PUBLISHED:
                 const LVecBase2i &lightmap_size, GeomNode *geom_node = nullptr, int geom_index = -1,
                 uint32_t contents = 0);
   void add_vertex_geom(const Geom *geom, const RenderState *state, const TransformState *transform,
-                       GeomNode *geom_node = nullptr, int geom_index = -1, uint32_t contents = 0);
+                       int model_index = -1, int geom_index = -1, uint32_t contents = 0);
 
   //void add_light(NodePath light);
 
@@ -119,8 +119,15 @@ private:
 public:
   enum Contents {
     C_none = 0,
-    C_sky = 1,
-    C_transparent = 2,
+    C_sky = 0b1,
+    C_transparent = 0b10,
+
+    // Object shouldn't block rays for direct lighting, meaning it won't
+    // cast direct light shadows.
+    C_dont_block_light = 0b100,
+    // Object shouldn't block rays for indirect lighting, meaning it won't
+    // reflect light.
+    C_dont_reflect_light = 0b1000,
   };
 
   /**
@@ -131,6 +138,10 @@ public:
     LPoint3 pos;
     LVector3 normal;
     LVecBase2 uv;
+    // Index into the source Geom's vertex data.
+    int orig_vertex;
+
+    pset<int> orig_vertices;
   };
   typedef pvector<LightmapVertex> Vertices;
   Vertices _vertices;
@@ -190,6 +201,7 @@ public:
     PT(GeomNode) source_geom_node;
     // and the Geom's index into the GeomNode.
     int geom_index = -1;
+    int model_index = -1;
 
     // If true, this indicates that the Geom comes from an instanced model in
     // the scene, such as a static prop.  The lightmap and UV offsets for the
@@ -230,6 +242,8 @@ public:
 
     // See LightmapTri for explanation of this.
     uint32_t contents;
+
+    PT(GeomVertexArrayData) vertex_light_array;
   };
   typedef pvector<LightmapGeom> LightmapGeoms;
   LightmapGeoms _geoms;
@@ -455,8 +469,8 @@ private:
   void optimize_ropes(KDNode *rope[6], const LPoint3 &mins, const LPoint3 &maxs);
   void add_kd_node(KDNode *node);
 
-  PTA_uchar convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
-    const LVecBase2i &orig_size, const LVecBase2i &new_size);
+  void convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
+    const LVecBase2i &orig_size, const LVecBase2i &new_size, unsigned char *out);
 };
 
 #include "lightBuilder.I"
