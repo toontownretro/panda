@@ -79,7 +79,9 @@ CylinderVortexParticleForce(PN_stdfloat coef, const LVector3 &axis, const LPoint
   _coef(coef),
   _axis(axis),
   _center(center),
-  _input(-1),
+  _input0(-1),
+  _input1(-1),
+  _mode(AM_explicit),
   _local_axis(false)
 {
 }
@@ -96,8 +98,24 @@ set_local_axis(bool flag) {
  *
  */
 void CylinderVortexParticleForce::
-set_input(int input) {
-  _input = input;
+set_input0(int input) {
+  _input0 = input;
+}
+
+/**
+ *
+ */
+void CylinderVortexParticleForce::
+set_input1(int input) {
+  _input1 = input;
+}
+
+/**
+ *
+ */
+void CylinderVortexParticleForce::
+set_mode(AxisMode mode) {
+  _mode = mode;
 }
 
 /**
@@ -105,17 +123,32 @@ set_input(int input) {
  */
 void CylinderVortexParticleForce::
 accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
-  LVector3 world_axis = _axis;
-  if (_local_axis && _input != -1) {
-    // Twist axis specified relative to an input node.
-    world_axis = system->get_input_value(_input)->get_mat().xform_vec(world_axis);
+  LVector3 world_axis;
+
+  switch (_mode) {
+  case AM_explicit:
+    world_axis = _axis;
+    if (_local_axis && _input0 != -1) {
+      // Twist axis specified relative to an input node.
+      world_axis = system->get_input_value(_input0)->get_mat().xform_vec(world_axis);
+    }
+    break;
+  case AM_input:
+    // Forward vector of input.
+    world_axis = system->get_input_value(_input0)->get_quat().get_forward();
+    break;
+  case AM_vec_between_inputs:
+    // Vector between two inputs.
+    world_axis = system->get_input_value(_input1)->get_pos() - system->get_input_value(_input0)->get_pos();
+    break;
   }
+
   world_axis.normalize();
 
   LPoint3 center = _center;
-  if (_input != -1) {
+  if (_input0 != -1) {
     // Center point relative to an input node.
-    center = system->get_input_value(_input)->get_mat().xform_point(center);
+    center = system->get_input_value(_input0)->get_mat().xform_point(center);
   }
 
   for (Particle &p : system->_particles) {

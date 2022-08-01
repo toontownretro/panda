@@ -37,6 +37,7 @@ public:
    * `time` is the number of seconds elapsed since the particle system began.
    */
   virtual int update(double time)=0;
+  virtual void initialize()=0;
 
 public:
   static TypeHandle get_class_type() {
@@ -66,6 +67,7 @@ PUBLISHED:
 
 public:
   virtual int update(double time) override;
+  virtual void initialize() override;
 
 private:
   PN_stdfloat _start_time;
@@ -108,6 +110,7 @@ PUBLISHED:
 
 public:
   virtual int update(double time) override;
+  virtual void initialize() override;
 
 private:
   // System-relative time to start emitting particles.

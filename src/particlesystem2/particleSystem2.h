@@ -35,12 +35,13 @@
 class EXPCL_PANDA_PARTICLESYSTEM2 ParticleSystem2 : public TypedWritableReferenceCount {
 PUBLISHED:
   ParticleSystem2();
+  ~ParticleSystem2();
 
   void set_pool_size(int size);
   INLINE int get_pool_size() const;
   MAKE_PROPERTY(pool_size, get_pool_size, set_pool_size);
 
-  void update(double dt);
+  bool update(double dt);
 
   void add_emitter(ParticleEmitter2 *emitter);
   INLINE int get_num_emitters() const;
@@ -84,8 +85,8 @@ PUBLISHED:
   MAKE_SEQ(get_children, get_num_children, get_child);
   MAKE_SEQ_PROPERTY(children, get_num_children, get_child);
 
-  void add_input(const NodePath &input);
-  void set_input(int n, const NodePath &input);
+  void add_input(const NodePath &input, bool system_lifetime);
+  void set_input(int n, const NodePath &input, bool system_lifetime);
   INLINE int get_num_inputs() const;
   INLINE const NodePath &get_input(int n) const;
   INLINE const TransformState *get_input_value(int n) const;
@@ -95,6 +96,7 @@ PUBLISHED:
   MAKE_SEQ_PROPERTY(input_values, get_num_inputs, get_input_value);
 
   void start(const NodePath &parent, double time = 0.0);
+  void soft_stop();
   void stop();
 
   INLINE const NodePath &get_parent_node() const;
@@ -111,6 +113,9 @@ PUBLISHED:
 
   void kill_particle(int n);
   bool birth_particles(int count);
+
+private:
+  void priv_stop();
 
 public:
   typedef pvector<PT(ParticleInitializer2)> Initializers;
@@ -137,6 +142,7 @@ public:
 
   double _elapsed;
   bool _running;
+  bool _soft_stopped;
   int _pool_size;
   int _num_alive_particles;
 
@@ -158,6 +164,8 @@ public:
   // at the beginning of each system update.
   typedef pvector<CPT(TransformState)> InputValues;
   InputValues _input_values;
+  typedef pvector<bool> InputLifetime;
+  InputLifetime _input_lifetime;
 
   // Node that the particle system is parented to.
   // Normally, this is render, or the root node of the scene graph.

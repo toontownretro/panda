@@ -12,6 +12,7 @@
  */
 
 #include "particleSystem2.h"
+#include "particleManager2.h"
 
 TypeHandle ParticleSystem2::_type_handle;
 
@@ -22,11 +23,26 @@ ParticleSystem2::
 ParticleSystem2() :
   _elapsed(0.0),
   _running(false),
+  _soft_stopped(false),
   _pool_size(256),
   _num_alive_particles(0),
   _dt(0.0),
   _prev_dt(0.05)
 {
+}
+
+/**
+ *
+ */
+ParticleSystem2::
+~ParticleSystem2() {
+  for (int i = 0; i < _inputs.size(); ++i) {
+    // Remove nodes that should only exist for the lifetime of
+    // the system.
+    if (_input_lifetime[i]) {
+      _inputs[i].remove_node();
+    }
+  }
 }
 
 /**
@@ -119,24 +135,30 @@ add_child(ParticleSystem2 *child) {
  * may use the transform of this node to influence their behaviors.
  *
  * By convention, the first input node defines the emission coordinate space.
+ *
+ * If system_lifetime is true, the node will be removed along with the particle
+ * system.
  */
 void ParticleSystem2::
-add_input(const NodePath &input) {
+add_input(const NodePath &input, bool system_lifetime) {
   _inputs.push_back(input);
   _input_values.push_back(TransformState::make_identity());
+  _input_lifetime.push_back(system_lifetime);
 }
 
 /**
  *
  */
 void ParticleSystem2::
-set_input(int n, const NodePath &input) {
+set_input(int n, const NodePath &input, bool system_lifetime) {
   if (n >= _inputs.size()) {
     _inputs.resize(n + 1);
     _input_values.resize(n + 1);
+    _input_lifetime.resize(n + 1);
   }
   _inputs[n] = input;
   _input_values[n] = TransformState::make_identity();
+  _input_lifetime[n] = system_lifetime;
 }
 
 /**
@@ -149,12 +171,15 @@ start(const NodePath &parent, double time) {
 
   _parent = parent;
 
+  _soft_stopped = false;
+
   _elapsed = time;
 
   _num_alive_particles = 0;
 
   // Resize to contain pool size particles.
   _particles.resize(_pool_size);
+  _free_particles.clear();
   for (int i = 0; i < (int)_particles.size(); ++i) {
     Particle *p = &_particles[i];
     p->_pos.fill(0.0f);
@@ -179,7 +204,22 @@ start(const NodePath &parent, double time) {
     renderer->initialize(parent, this);
   }
 
+  for (ParticleEmitter2 *emitter : _emitters) {
+    emitter->initialize();
+  }
+
   _running = true;
+
+  ParticleManager2::get_global_ptr()->add_system(this);
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+soft_stop() {
+  nassertv(_running);
+  _soft_stopped = true;
 }
 
 /**
@@ -187,6 +227,16 @@ start(const NodePath &parent, double time) {
  */
 void ParticleSystem2::
 stop() {
+  nassertv(_running);
+  priv_stop();
+  ParticleManager2::get_global_ptr()->remove_system(this);
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+priv_stop() {
   nassertv(_running);
 
   // Shutdown our renderers.
@@ -198,18 +248,20 @@ stop() {
 
   _running = false;
   _num_alive_particles = 0;
+  _free_particles.clear();
+  _soft_stopped = false;
 }
 
 /**
  * Main particle system update routine.
  */
-void ParticleSystem2::
+bool ParticleSystem2::
 update(double dt) {
-  nassertv(_running);
+  nassertr(_running, false);
 
   _dt = dt;
 
-  nassertv(!_parent.is_empty());
+  nassertr(!_parent.is_empty(), false);
 
   // Fetch current values of all dynamic input nodes.
   // This is the transform of the input node relative to the particle
@@ -223,12 +275,15 @@ update(double dt) {
     }
   }
 
-  // First update the emitter so they can birth new particles if necessary.
-  for (ParticleEmitter2 *emitter : _emitters) {
-    int birth_count = emitter->update(_elapsed);
-    if (birth_count > 0) {
-      // Emitter wants to birth some particles.
-      birth_particles(birth_count);
+  // Don't update emitters if the system was soft-stopped.
+  if (!_soft_stopped) {
+    // First update the emitter so they can birth new particles if necessary.
+    for (ParticleEmitter2 *emitter : _emitters) {
+      int birth_count = emitter->update(_elapsed);
+      if (birth_count > 0) {
+        // Emitter wants to birth some particles.
+        birth_particles(birth_count);
+      }
     }
   }
 
@@ -252,6 +307,14 @@ update(double dt) {
   _elapsed += dt;
 
   _prev_dt = dt;
+
+  if (_soft_stopped && _num_alive_particles == 0) {
+    // Soft-stop complete.
+    priv_stop();
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -325,6 +388,18 @@ birth_particles(int count) {
   // Now run each initializer on the new particles.
   for (ParticleInitializer2 *init : _initializers) {
     init->init_particles(_elapsed, indices, count, this);
+  }
+
+  // Remember initial values for functions that want to lerp from
+  // the chosen initial value, for instance.
+  for (int i = 0; i < count; ++i) {
+    Particle *p = &_particles[indices[i]];
+    p->_initial_pos = p->_pos;
+    p->_initial_vel = p->_velocity;
+    p->_initial_scale = p->_scale;
+    p->_initial_color = p->_color;
+    p->_initial_rotation = p->_rotation;
+    p->_initial_rotation_speed = p->_rotation_speed;
   }
 
   return true;

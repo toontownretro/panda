@@ -16,12 +16,55 @@
 
 #include "pandabase.h"
 #include "luse.h"
+#include "internalName.h"
+
+#define P2_MAX_PARTICLE_FIELDS 32
+
+enum ParticleField : uint8_t {
+  PF_position,
+  PF_linear_velocity,
+  PF_lifespan,
+  PF_scale,
+  PF_angles,
+  PF_angular_velocity,
+  PF_color_rgb,
+  PF_alpha,
+  PF_birth_time,
+  PF_trail_length,
+
+  PF_BUILTIN_COUNT,
+};
+
+enum ParticleNumericType : uint8_t {
+  PNT_int8,
+  PNT_uint8,
+  PNT_int16,
+  PNT_uint16,
+  PNT_int32,
+  PNT_uint32,
+  PNT_int64,
+  PNT_uint64,
+  PNT_float32,
+  PNT_float64,
+};
+
+class ParticleFieldDef {
+public:
+  CPT_InternalName _name;
+  unsigned char _field_id;
+  ParticleNumericType _numeric_type;
+  unsigned char _num_components;
+
+  INLINE bool is_integer() const { return _numeric_type <= PNT_uint64; }
+  INLINE bool is_float() const { return _numeric_type >= PNT_float32; }
+  INLINE unsigned char get_component_width() const;
+  INLINE size_t get_stride() const { return get_component_width() * _num_components; }
+};
 
 /**
  * Data for a single particle in a particle system.
  */
 class Particle {
-PUBLISHED:
 public:
   LPoint3 _pos;
   LPoint3 _prev_pos;
@@ -35,6 +78,13 @@ public:
   PN_stdfloat _spawn_time;
   size_t _id;
   bool _alive;
+
+  LPoint3 _initial_pos;
+  LVector3 _initial_vel;
+  LVecBase2 _initial_scale;
+  LColor _initial_color;
+  PN_stdfloat _initial_rotation;
+  PN_stdfloat _initial_rotation_speed;
 };
 
 #include "particle.I"

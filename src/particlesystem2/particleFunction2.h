@@ -181,6 +181,9 @@ private:
     LVecBase3 _start_value;
     LVecBase3 _end_value;
 
+    bool _start_is_initial;
+    bool _end_is_initial;
+
     PN_stdfloat _func_data[2];
   };
   typedef pvector<LerpSegment> LerpSegments;

@@ -79,21 +79,32 @@ class EXPCL_PANDA_PARTICLESYSTEM2 CylinderVortexParticleForce : public ParticleF
   DECLARE_CLASS(CylinderVortexParticleForce, ParticleForce2);
 
 PUBLISHED:
+  enum AxisMode {
+    AM_explicit, // Explicit axis
+    AM_input, // Axis taken from rotation of input
+    AM_vec_between_inputs, // Axis set to vector between positions of two inputs
+  };
   CylinderVortexParticleForce(PN_stdfloat coef = 1.0f, const LVector3 &axis = LVector3::up(),
                               const LPoint3 &center = LPoint3(0.0f));
 
   void set_local_axis(bool flag);
-  void set_input(int input);
+  void set_input0(int input);
+  void set_input1(int input);
+  void set_mode(AxisMode mode);
 
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
 private:
-  PN_stdfloat _coef;
+  AxisMode _mode;
+
+  int _input0, _input1;
+
   LVector3 _axis;
-  LPoint3 _center;
   bool _local_axis;
-  int _input;
+
+  PN_stdfloat _coef;
+  LPoint3 _center;
 };
 
 /**

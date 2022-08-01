@@ -41,6 +41,13 @@ update(double time) {
 /**
  *
  */
+void BurstParticleEmitter::
+initialize() {
+}
+
+/**
+ *
+ */
 ContinuousParticleEmitter::
 ContinuousParticleEmitter() :
   _litter_min(1),
@@ -137,4 +144,13 @@ update(double time) {
   return count;
 
   return 0;
+}
+
+/**
+ *
+ */
+void ContinuousParticleEmitter::
+initialize() {
+  _last_litter = 0.0;
+  _next_interval = 0.0;
 }
