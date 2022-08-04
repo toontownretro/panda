@@ -10,3 +10,27 @@
  * @author brian
  * @date 2022-04-04
  */
+
+/**
+ *
+ */
+INLINE NodePath SpriteParticleRenderer2::
+get_geom_np() const {
+  return _geom_np;
+}
+
+/**
+ *
+ */
+INLINE GeomNode *SpriteParticleRenderer2::
+get_geom_node() const {
+  return _geom_node;
+}
+
+/**
+ *
+ */
+INLINE const RenderState *SpriteParticleRenderer2::
+get_render_state() const {
+  return _render_state;
+}

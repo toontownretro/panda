@@ -63,6 +63,10 @@ PUBLISHED:
 
   void set_render_state(const RenderState *state);
 
+  INLINE NodePath get_geom_np() const;
+  INLINE GeomNode *get_geom_node() const;
+  INLINE const RenderState *get_render_state() const;
+
 public:
   virtual void initialize(const NodePath &parent, ParticleSystem2 *system) override;
   virtual void update(ParticleSystem2 *system) override;

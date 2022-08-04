@@ -19,6 +19,7 @@
 #include "geomVertexFormat.h"
 #include "geomPoints.h"
 #include "omniBoundingVolume.h"
+#include "boundingBox.h"
 
 TypeHandle ParticleRenderer2::_type_handle;
 TypeHandle SpriteParticleRenderer2::_type_handle;
@@ -68,7 +69,7 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
   //prim->set_vertices(_index_buffer);
   _geom_node = new GeomNode("sprite-particles");
   _geom_node->add_geom(geom, _render_state);
-  _geom_node->set_bounds(new OmniBoundingVolume); // TEMPORARY
+  //_geom_node->set_bounds(new OmniBoundingVolume); // TEMPORARY
   _geom_np = parent.attach_new_node(_geom_node);
   _prim = prim;
 }
@@ -93,6 +94,9 @@ update(ParticleSystem2 *system) {
   GeomVertexWriter swriter(_vdata, InternalName::get_size());
   GeomVertexWriter rwriter(_vdata, InternalName::get_rotate());
 
+  LPoint3 mins(9999999);
+  LPoint3 maxs(-9999999);
+
   int num_alive = 0;
   for (size_t i = 0; i < system->_particles.size(); ++i) {
     const Particle *p = &system->_particles[i];
@@ -105,11 +109,18 @@ update(ParticleSystem2 *system) {
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);
 
+    mins = mins.fmin(p->_pos - LPoint3(p->_scale[0]));
+    mins = mins.fmin(p->_pos - LPoint3(p->_scale[1]));
+    maxs = maxs.fmax(p->_pos + LPoint3(p->_scale[0]));
+    maxs = maxs.fmax(p->_pos + LPoint3(p->_scale[1]));
+
     num_alive++;
   }
 
   // Set the primitive to render all alive particles consecutively.
   _prim->set_nonindexed_vertices(0, num_alive);
+
+  _geom_node->set_bounds(new BoundingBox(mins, maxs));
 }
 
 /**
