@@ -342,6 +342,37 @@ private:
   PN_stdfloat _alpha_min, _alpha_range, _alpha_exponent;
 };
 
+/**
+ *
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_RemapAttribute : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_RemapAttribute, ParticleInitializer2);
+
+PUBLISHED:
+  enum Attribute {
+    A_r,
+    A_g,
+    A_b,
+    A_alpha,
+    A_x,
+    A_y,
+    A_z,
+    A_sx,
+    A_sy,
+    A_rotation,
+    A_rotation_velocity,
+    A_vel_x,
+    A_vel_y,
+    A_vel_z,
+  };
+
+private:
+  Attribute _src_attrib;
+  float _src_min, _src_max;
+  Attribute _dest_attrib;
+  float _dest_min, _dest_max;
+};
+
 #include "particleInitializer2.I"
 
 #endif // PARTICLEINITIALIZER2_H

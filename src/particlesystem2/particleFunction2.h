@@ -129,6 +129,88 @@ private:
   static TypeHandle _type_handle;
 };
 
+class EXPCL_PANDA_PARTICLESYSTEM2 ParticleLerpSegment {
+PUBLISHED:
+  enum LerpType {
+    LT_constant,
+    LT_linear,
+    LT_exponential,
+    LT_stepwave,
+    LT_sinusoid,
+  };
+
+  INLINE ParticleLerpSegment();
+  ~ParticleLerpSegment() = default;
+
+  INLINE void set_range(float start, float end);
+  INLINE void set_start(float start);
+  INLINE float get_start() const;
+  INLINE void set_end(float end);
+  INLINE float get_end() const;
+  MAKE_PROPERTY(start, get_start, set_start);
+  MAKE_PROPERTY(end, get_end, set_end);
+
+  INLINE void set_type(LerpType type);
+  INLINE LerpType get_type() const;
+  MAKE_PROPERTY(type, get_type, set_type);
+
+  INLINE void set_start_value(const LVecBase3 &value);
+  INLINE const LVecBase3 &get_start_value() const;
+  MAKE_PROPERTY(start_value, get_start_value, set_start_value);
+
+  INLINE void set_end_value(const LVecBase3 &value);
+  INLINE const LVecBase3 &get_end_value() const;
+  MAKE_PROPERTY(end_value, get_end_value, set_end_value);
+
+  INLINE void set_scale_on_initial(bool flag);
+  INLINE bool is_scale_on_initial() const;
+  MAKE_PROPERTY(scale_on_initial, is_scale_on_initial, set_scale_on_initial);
+
+  INLINE void set_start_is_initial(bool flag);
+  INLINE bool get_start_is_initial() const;
+  MAKE_PROPERTY(start_is_initial, get_start_is_initial, set_start_is_initial);
+
+  INLINE void set_end_is_initial(bool flag);
+  INLINE bool get_end_is_initial() const;
+  MAKE_PROPERTY(end_is_initial, get_end_is_initial, set_end_is_initial);
+
+  // Only for LT_exponential.
+  INLINE void set_exponent(float exp);
+  INLINE float get_exponent() const;
+  MAKE_PROPERTY(exponent, get_exponent, set_exponent);
+
+  // Only for LT_sinusoid.
+  INLINE void set_period(float period);
+  INLINE float get_period() const;
+  MAKE_PROPERTY(period, get_period, set_period);
+
+  // Only for LT_stepwave.
+  INLINE void set_step_start_width(float width);
+  INLINE float get_step_start_width() const;
+  MAKE_PROPERTY(step_start_width, get_step_start_width, set_step_start_width);
+  INLINE void set_step_end_width(float width);
+  INLINE float get_step_end_width() const;
+  MAKE_PROPERTY(step_end_width, get_step_end_width, set_step_end_width);
+
+public:
+  PN_stdfloat _start_frac;
+  PN_stdfloat _end_frac;
+
+  LerpType _type;
+
+  LVecBase3 _start_value;
+  LVecBase3 _end_value;
+
+  // If true, start_value and end_value are scales on the initial particle
+  // attribute value, rather than concrete values for the attribute.
+  bool _scale_on_initial;
+
+  bool _start_is_initial;
+  bool _end_is_initial;
+
+  PN_stdfloat _func_data[2];
+};
+
 /**
  * Lerps a particle component over its lifetime with interpolation segments
  * and functions.
@@ -145,48 +227,16 @@ PUBLISHED:
     C_rotation,
   };
 
-  enum LerpType {
-    LT_constant,
-    LT_linear,
-    LT_exponential,
-    LT_stepwave,
-    LT_sinusoid,
-  };
-
   LerpParticleFunction(Component component);
 
-  void add_constant_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &value);
-  void add_linear_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                          const LVecBase3 &end_value);
-  void add_exponential_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                               const LVecBase3 &end_value, PN_stdfloat exponent = 1.0f);
-  void add_stepwave_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                            const LVecBase3 &end_value, PN_stdfloat start_width = 0.5f, PN_stdfloat end_width = 0.5f);
-  void add_sinusoid_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                            const LVecBase3 &end_value, PN_stdfloat period = 1.0f);
+  void add_segment(const ParticleLerpSegment &segment);
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
 
 private:
   Component _component;
-
-  class LerpSegment {
-  public:
-    PN_stdfloat _start_frac;
-    PN_stdfloat _end_frac;
-
-    LerpType _type;
-
-    LVecBase3 _start_value;
-    LVecBase3 _end_value;
-
-    bool _start_is_initial;
-    bool _end_is_initial;
-
-    PN_stdfloat _func_data[2];
-  };
-  typedef pvector<LerpSegment> LerpSegments;
+  typedef pvector<ParticleLerpSegment> LerpSegments;
   LerpSegments _segments;
 };
 

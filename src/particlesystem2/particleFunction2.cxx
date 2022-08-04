@@ -156,76 +156,7 @@ LerpParticleFunction(Component component) :
  *
  */
 void LerpParticleFunction::
-add_constant_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &value) {
-  LerpSegment seg;
-  seg._start_frac = start;
-  seg._end_frac = end;
-  seg._type = LT_constant;
-  seg._start_value = value;
-  _segments.push_back(seg);
-}
-
-/**
- *
- */
-void LerpParticleFunction::
-add_linear_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                   const LVecBase3 &end_value) {
-  LerpSegment seg;
-  seg._type = LT_linear;
-  seg._start_frac = start;
-  seg._end_frac = end;
-  seg._start_value = start_value;
-  seg._end_value = end_value;
-  _segments.push_back(seg);
-}
-
-/**
- *
- */
-void LerpParticleFunction::
-add_exponential_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                        const LVecBase3 &end_value, PN_stdfloat exponent) {
-  LerpSegment seg;
-  seg._type = LT_exponential;
-  seg._start_frac = start;
-  seg._end_frac = end;
-  seg._start_value = start_value;
-  seg._end_value = end_value;
-  seg._func_data[0] = exponent;
-  _segments.push_back(seg);
-}
-
-/**
- *
- */
-void LerpParticleFunction::
-add_stepwave_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                     const LVecBase3 &end_value, PN_stdfloat start_width, PN_stdfloat end_width) {
-  LerpSegment seg;
-  seg._type = LT_stepwave;
-  seg._start_frac = start;
-  seg._end_frac = end;
-  seg._start_value = start_value;
-  seg._end_value = end_value;
-  seg._func_data[0] = start_width;
-  seg._func_data[1] = end_width;
-  _segments.push_back(seg);
-}
-
-/**
- *
- */
-void LerpParticleFunction::
-add_sinusoid_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_value,
-                     const LVecBase3 &end_value, PN_stdfloat period) {
-  LerpSegment seg;
-  seg._type = LT_sinusoid;
-  seg._start_frac = start;
-  seg._end_frac = end;
-  seg._start_value = start_value;
-  seg._end_value = end_value;
-  seg._func_data[0] = period;
+add_segment(const ParticleLerpSegment &seg) {
   _segments.push_back(seg);
 }
 
@@ -235,6 +166,7 @@ add_sinusoid_segment(PN_stdfloat start, PN_stdfloat end, const LVecBase3 &start_
 void LerpParticleFunction::
 update(double time, double dt, ParticleSystem2 *system) {
   LVecBase3 value;
+  LVecBase3 start_value, end_value;
 
   for (int i = 0; i < (int)system->_particles.size(); ++i) {
     Particle *p = &system->_particles[i];
@@ -245,7 +177,7 @@ update(double time, double dt, ParticleSystem2 *system) {
     PN_stdfloat elapsed = (PN_stdfloat)time - p->_spawn_time;
     PN_stdfloat frac = elapsed / p->_duration;
 
-    for (const LerpSegment &seg : _segments) {
+    for (const ParticleLerpSegment &seg : _segments) {
       if (frac < seg._start_frac || frac > seg._end_frac) {
         continue;
       }
@@ -254,37 +186,97 @@ update(double time, double dt, ParticleSystem2 *system) {
       PN_stdfloat remapped_frac = remap_val_clamped(
         frac, seg._start_frac, seg._end_frac, 0.0f, 1.0f);
 
+      if (!seg._start_is_initial) {
+        start_value = seg._start_value;
+
+      } else {
+        switch (_component) {
+        case C_rgb:
+          start_value = p->_initial_color.get_xyz();
+          break;
+        case C_alpha:
+          start_value = LVecBase3(p->_initial_color[3]);
+          break;
+        case C_scale:
+          start_value = LVecBase3(p->_initial_scale, 1.0f);
+          break;
+        case C_rotation:
+          start_value = LVecBase3(p->_initial_rotation);
+          break;
+        }
+      }
+
+      if (!seg._end_is_initial) {
+        end_value = seg._end_value;
+
+      } else {
+        switch (_component) {
+        case C_rgb:
+          end_value = p->_initial_color.get_xyz();
+          break;
+        case C_alpha:
+          end_value = LVecBase3(p->_initial_color[3]);
+          break;
+        case C_scale:
+          end_value = LVecBase3(p->_initial_scale, 1.0f);
+          break;
+        case C_rotation:
+          end_value = LVecBase3(p->_initial_rotation);
+          break;
+        }
+      }
+
       // Evaluate lerp function.
       switch (seg._type) {
-      case LT_constant:
-        value = seg._start_value;
+      case ParticleLerpSegment::LT_constant:
+        value = start_value;
         break;
 
-      case LT_linear:
-        value = seg._start_value * (1.0f - remapped_frac) + seg._end_value * remapped_frac;
+      case ParticleLerpSegment::LT_linear:
+        value = start_value * (1.0f - remapped_frac) + end_value * remapped_frac;
         break;
 
-      case LT_exponential:
+      case ParticleLerpSegment::LT_exponential:
         {
           PN_stdfloat exp_frac = std::pow(remapped_frac, seg._func_data[0]);
-          value = seg._start_value * (1.0f - exp_frac) + seg._end_value * exp_frac;
+          value = start_value * (1.0f - exp_frac) + end_value * exp_frac;
         }
         break;
 
-      case LT_stepwave:
+      case ParticleLerpSegment::LT_stepwave:
         if (fmodf(remapped_frac, seg._func_data[0] + seg._func_data[1]) > seg._func_data[0]) {
-          value = seg._start_value;
+          value = start_value;
         } else {
-          value = seg._end_value;
+          value = end_value;
         }
         break;
 
-      case LT_sinusoid:
+      case ParticleLerpSegment::LT_sinusoid:
         {
           PN_stdfloat weight_a = (1.0f + std::cos(remapped_frac * MathNumbers::pi_f * 2.0f / seg._func_data[0])) * 0.5f;
-          value = seg._start_value * weight_a + seg._end_value * (1.0f - weight_a);
+          value = start_value * weight_a + end_value * (1.0f - weight_a);
         }
         break;
+      }
+
+      if (seg._scale_on_initial) {
+        switch (_component) {
+        case C_rgb:
+          value[0] *= p->_initial_color[0];
+          value[1] *= p->_initial_color[1];
+          value[2] *= p->_initial_color[2];
+          break;
+        case C_alpha:
+          value[0] *= p->_initial_color[3];
+          break;
+        case C_scale:
+          value[0] *= p->_initial_scale[0];
+          value[1] *= p->_initial_scale[1];
+          break;
+        case C_rotation:
+          value[0] *= p->_initial_rotation;
+          break;
+        }
       }
 
       // Store lerped value on specified particle component.
