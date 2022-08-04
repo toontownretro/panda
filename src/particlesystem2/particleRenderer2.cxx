@@ -36,6 +36,23 @@ SpriteParticleRenderer2() :
 /**
  *
  */
+SpriteParticleRenderer2::
+SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy) :
+  _render_state(copy._render_state)
+{
+}
+
+/**
+ *
+ */
+PT(ParticleRenderer2) SpriteParticleRenderer2::
+make_copy() const {
+  return new SpriteParticleRenderer2(*this);
+}
+
+/**
+ *
+ */
 void SpriteParticleRenderer2::
 set_render_state(const RenderState *state) {
   _render_state = state;
@@ -134,4 +151,54 @@ shutdown(ParticleSystem2 *system) {
   if (!_geom_np.is_empty()) {
     _geom_np.remove_node();
   }
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+write_datagram(BamWriter *manager, Datagram &me) {
+  manager->write_pointer(me, _render_state);
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  manager->read_pointer(scan);
+}
+
+/**
+ *
+ */
+int SpriteParticleRenderer2::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = ParticleRenderer2::complete_pointers(p_list, manager);
+  _render_state = DCAST(RenderState, p_list[pi++]);
+  manager->finalize_now((RenderState *)_render_state.p());
+  return pi;
+}
+
+/**
+ *
+ */
+TypedWritable *SpriteParticleRenderer2::
+make_from_bam(const FactoryParams &params) {
+  SpriteParticleRenderer2 *obj = new SpriteParticleRenderer2;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

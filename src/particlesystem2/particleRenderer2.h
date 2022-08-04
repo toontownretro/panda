@@ -31,6 +31,8 @@ class EXPCL_PANDA_PARTICLESYSTEM2 ParticleRenderer2 : public TypedWritableRefere
 PUBLISHED:
   ParticleRenderer2() = default;
 
+  virtual PT(ParticleRenderer2) make_copy() const=0;
+
 public:
   virtual void initialize(const NodePath &parent, ParticleSystem2 *system)=0;
   virtual void update(ParticleSystem2 *system)=0;
@@ -60,6 +62,9 @@ private:
 class EXPCL_PANDA_PARTICLESYSTEM2 SpriteParticleRenderer2 : public ParticleRenderer2 {
 PUBLISHED:
   SpriteParticleRenderer2();
+  SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy);
+
+  virtual PT(ParticleRenderer2) make_copy() const override;
 
   void set_render_state(const RenderState *state);
 
@@ -71,6 +76,12 @@ public:
   virtual void initialize(const NodePath &parent, ParticleSystem2 *system) override;
   virtual void update(ParticleSystem2 *system) override;
   virtual void shutdown(ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   NodePath _geom_np;

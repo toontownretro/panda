@@ -14,6 +14,7 @@
     particleFunction2.h particleFunction2.I \
     particleInitializer2.h particleInitializer2.I \
     particleManager2.h particleManager2.I \
+    particlePool2.h particlePool2.I \
     particleRenderer2.h particleRenderer2.I \
     particleSystem2.h particleSystem2.I
 
@@ -30,6 +31,7 @@
     particleFunction2.cxx \
     particleInitializer2.cxx \
     particleManager2.cxx \
+    particlePool2.cxx \
     particleRenderer2.cxx \
     particleSystem2.cxx
 

@@ -19,6 +19,7 @@
 #include "pdeque.h"
 #include "nodePath.h"
 #include "transformState.h"
+#include "namable.h"
 
 #include "particle.h"
 #include "particleEmitter2.h"
@@ -32,10 +33,13 @@
  * A particle system is a collection of particles, which are essentially
  * points in space with
  */
-class EXPCL_PANDA_PARTICLESYSTEM2 ParticleSystem2 : public TypedWritableReferenceCount {
+class EXPCL_PANDA_PARTICLESYSTEM2 ParticleSystem2 : public TypedWritableReferenceCount, public Namable {
 PUBLISHED:
-  ParticleSystem2();
+  ParticleSystem2(const std::string &name = "");
+  ParticleSystem2(const ParticleSystem2 &copy);
   ~ParticleSystem2();
+
+  PT(ParticleSystem2) make_copy() const;
 
   void set_pool_size(int size);
   INLINE int get_pool_size() const;
@@ -114,8 +118,16 @@ PUBLISHED:
   void kill_particle(int n);
   bool birth_particles(int count);
 
+public:
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  static void register_with_read_factory();
+
 private:
   void priv_stop();
+  bool priv_start(const NodePath &parent, double time);
 
 public:
   typedef pvector<PT(ParticleInitializer2)> Initializers;

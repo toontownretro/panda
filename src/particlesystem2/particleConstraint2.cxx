@@ -180,3 +180,60 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
 
   return changed_something;
 }
+
+/**
+ *
+ */
+void PathParticleConstraint::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_int8(_start_input);
+  me.add_int8(_end_input);
+  me.add_stdfloat(_random_bulge);
+  me.add_int8(_bulge_control);
+  me.add_stdfloat(_mid_point);
+  me.add_stdfloat(_travel_time);
+  me.add_stdfloat(_min_distance);
+  me.add_stdfloat(_max_distance);
+  me.add_stdfloat(_max_distance_mid);
+  me.add_stdfloat(_max_distance_end);
+}
+
+/**
+ *
+ */
+void PathParticleConstraint::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _start_input = scan.get_int8();
+  _end_input = scan.get_int8();
+  _random_bulge = scan.get_stdfloat();
+  _bulge_control = scan.get_int8();
+  _mid_point = scan.get_stdfloat();
+  _travel_time = scan.get_stdfloat();
+  _min_distance = scan.get_stdfloat();
+  _max_distance = scan.get_stdfloat();
+  _max_distance_mid = scan.get_stdfloat();
+  _max_distance_end = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *PathParticleConstraint::
+make_from_bam(const FactoryParams &params) {
+  PathParticleConstraint *obj = new PathParticleConstraint;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void PathParticleConstraint::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}

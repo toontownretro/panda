@@ -43,6 +43,22 @@ set_axis_mask(unsigned int mask) {
 /**
  *
  */
+void ParticleForce2::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_uint8(_axis_mask);
+}
+
+/**
+ *
+ */
+void ParticleForce2::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _axis_mask = scan.get_uint8();
+}
+
+/**
+ *
+ */
 VectorParticleForce::
 VectorParticleForce(const LVector3 &force) :
   _force(force)
@@ -69,6 +85,47 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     *accum += apply_axis_mask(_force * strength);
     ++accum;
   }
+}
+
+/**
+ *
+ */
+void VectorParticleForce::
+write_datagram(BamWriter *manager, Datagram &me) {
+  ParticleForce2::write_datagram(manager, me);
+  _force.write_datagram(me);
+}
+
+/**
+ *
+ */
+void VectorParticleForce::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  ParticleForce2::fillin(scan, manager);
+  _force.read_datagram(scan);
+}
+
+/**
+ *
+ */
+TypedWritable *VectorParticleForce::
+make_from_bam(const FactoryParams &params) {
+  VectorParticleForce *obj = new VectorParticleForce(0.0f);
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void VectorParticleForce::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -182,6 +239,59 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
 /**
  *
  */
+void CylinderVortexParticleForce::
+write_datagram(BamWriter *manager, Datagram &me) {
+  ParticleForce2::write_datagram(manager, me);
+  me.add_uint8(_mode);
+  me.add_int8(_input0);
+  me.add_int8(_input1);
+  _axis.write_datagram(me);
+  me.add_bool(_local_axis);
+  me.add_stdfloat(_coef);
+  _center.write_datagram(me);
+}
+
+/**
+ *
+ */
+void CylinderVortexParticleForce::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  ParticleForce2::fillin(scan, manager);
+  _mode = (AxisMode)scan.get_uint8();
+  _input0 = scan.get_int8();
+  _input1 = scan.get_int8();
+  _axis.read_datagram(scan);
+  _local_axis = scan.get_bool();
+  _coef = scan.get_stdfloat();
+  _center.read_datagram(scan);
+}
+
+/**
+ *
+ */
+TypedWritable *CylinderVortexParticleForce::
+make_from_bam(const FactoryParams &params) {
+  CylinderVortexParticleForce *obj = new CylinderVortexParticleForce;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void CylinderVortexParticleForce::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
 JitterParticleForce::
 JitterParticleForce(PN_stdfloat a, PN_stdfloat start, PN_stdfloat end) :
   _amplitude(a),
@@ -217,6 +327,51 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     *accum += apply_axis_mask(p2_random_unit_vector()) * strength * _amplitude;
     ++accum;
   }
+}
+
+/**
+ *
+ */
+void JitterParticleForce::
+write_datagram(BamWriter *manager, Datagram &me) {
+  ParticleForce2::write_datagram(manager, me);
+  me.add_stdfloat(_amplitude);
+  me.add_stdfloat(_start);
+  me.add_stdfloat(_end);
+}
+
+/**
+ *
+ */
+void JitterParticleForce::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  ParticleForce2::fillin(scan, manager);
+  _amplitude = scan.get_stdfloat();
+  _start = scan.get_stdfloat();
+  _end = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *JitterParticleForce::
+make_from_bam(const FactoryParams &params) {
+  JitterParticleForce *obj = new JitterParticleForce;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void JitterParticleForce::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -285,6 +440,55 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
 /**
  *
  */
+void AttractParticleForce::
+write_datagram(BamWriter *manager, Datagram &me) {
+  ParticleForce2::write_datagram(manager, me);
+  me.add_int8(_input);
+  _point.write_datagram(me);
+  me.add_stdfloat(_amplitude);
+  me.add_stdfloat(_falloff);
+  me.add_stdfloat(_radius);
+}
+
+/**
+ *
+ */
+void AttractParticleForce::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  ParticleForce2::fillin(scan, manager);
+  _input = scan.get_int8();
+  _point.read_datagram(scan);
+  _amplitude = scan.get_stdfloat();
+  _falloff = scan.get_stdfloat();
+  _radius = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *AttractParticleForce::
+make_from_bam(const FactoryParams &params) {
+  AttractParticleForce *obj = new AttractParticleForce;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void AttractParticleForce::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
 FrictionParticleForce::
 FrictionParticleForce(PN_stdfloat coef) :
   _coef(coef)
@@ -304,4 +508,45 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     *accum -= apply_axis_mask(p._velocity) * _coef;
     ++accum;
   }
+}
+
+/**
+ *
+ */
+void FrictionParticleForce::
+write_datagram(BamWriter *manager, Datagram &me) {
+  ParticleForce2::write_datagram(manager, me);
+  me.add_stdfloat(_coef);
+}
+
+/**
+ *
+ */
+void FrictionParticleForce::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  ParticleForce2::fillin(scan, manager);
+  _coef = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *FrictionParticleForce::
+make_from_bam(const FactoryParams &params) {
+  FrictionParticleForce *obj = new FrictionParticleForce(0.0f);
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void FrictionParticleForce::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

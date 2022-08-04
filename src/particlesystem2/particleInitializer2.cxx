@@ -16,6 +16,29 @@
 #include "p2_utils.h"
 #include "nodePath.h"
 
+#define BAM_WRITE(clsname) \
+void clsname:: \
+write_datagram(BamWriter *manager, Datagram &me)
+
+#define BAM_READ(clsname) \
+void clsname:: \
+fillin(DatagramIterator &scan, BamReader *manager)
+
+#define BAM_READ_FACTORY(clsname) \
+void clsname:: \
+register_with_read_factory() { \
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam); \
+} \
+TypedWritable *clsname:: \
+make_from_bam(const FactoryParams &params) { \
+  clsname *obj = new clsname; \
+  DatagramIterator scan; \
+  BamReader *manager; \
+  parse_params(params, scan, manager); \
+  obj->fillin(scan, manager); \
+  return obj; \
+}
+
 IMPLEMENT_CLASS(ParticleInitializer2);
 
 IMPLEMENT_CLASS(P2_INIT_LifespanRandomRange);
@@ -37,6 +60,8 @@ IMPLEMENT_CLASS(P2_INIT_RotationVelocityRandomRange);
 IMPLEMENT_CLASS(P2_INIT_ScaleRandomRange);
 IMPLEMENT_CLASS(P2_INIT_ColorRandomRange);
 IMPLEMENT_CLASS(P2_INIT_AlphaRandomRange);
+
+IMPLEMENT_CLASS(P2_INIT_RemapAttribute);
 
 /**
  *
@@ -65,6 +90,18 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_LifespanRandomRange) {
+  me.add_stdfloat(_lifespan_min);
+  me.add_stdfloat(_lifespan_range);
+  me.add_stdfloat(_lifespan_exponent);
+}
+BAM_READ(P2_INIT_LifespanRandomRange) {
+  _lifespan_min = scan.get_stdfloat();
+  _lifespan_range = scan.get_stdfloat();
+  _lifespan_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_LifespanRandomRange);
+
 /**
  *
  */
@@ -89,6 +126,14 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     p->_pos = origin_ps_space;
   }
 }
+
+BAM_WRITE(P2_INIT_PositionExplicit) {
+  _point.write_datagram(me);
+}
+BAM_READ(P2_INIT_PositionExplicit) {
+  _point.read_datagram(scan);
+}
+BAM_READ_FACTORY(P2_INIT_PositionExplicit);
 
 /**
  *
@@ -117,6 +162,16 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     emission_xform.xform_point_in_place(p->_pos);
   }
 }
+
+BAM_WRITE(P2_INIT_PositionBoxVolume) {
+  _mins.write_datagram(me);
+  _maxs.write_datagram(me);
+}
+BAM_READ(P2_INIT_PositionBoxVolume) {
+  _mins.read_datagram(scan);
+  _maxs.read_datagram(scan);
+}
+BAM_READ_FACTORY(P2_INIT_PositionBoxVolume);
 
 /**
  *
@@ -174,6 +229,24 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_PositionSphereVolume) {
+  _center.write_datagram(me);
+  me.add_stdfloat(_radius_min);
+  me.add_stdfloat(_radius_range);
+  _bias.write_datagram(me);
+  _scale.write_datagram(me);
+  _absolute_value.write_datagram(me);
+}
+BAM_READ(P2_INIT_PositionSphereVolume) {
+  _center.read_datagram(scan);
+  _radius_min = scan.get_stdfloat();
+  _radius_range = scan.get_stdfloat();
+  _bias.read_datagram(scan);
+  _scale.read_datagram(scan);
+  _absolute_value.read_datagram(scan);
+}
+BAM_READ_FACTORY(P2_INIT_PositionSphereVolume);
+
 /**
  *
  */
@@ -200,6 +273,16 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     p->_pos = emission_xform.xform_point(_a * (1.0f - frac) + _b * frac);
   }
 }
+
+BAM_WRITE(P2_INIT_PositionLineSegment) {
+  _a.write_datagram(me);
+  _b.write_datagram(me);
+}
+BAM_READ(P2_INIT_PositionLineSegment) {
+  _a.read_datagram(scan);
+  _b.read_datagram(scan);
+}
+BAM_READ_FACTORY(P2_INIT_PositionLineSegment);
 
 /**
  *
@@ -229,6 +312,24 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     _curve->get_point(t, p->_pos);
     emission_xform.xform_point_in_place(p->_pos);
   }
+}
+
+BAM_WRITE(P2_INIT_PositionParametricCurve) {
+  manager->write_pointer(me, _curve);
+}
+BAM_READ(P2_INIT_PositionParametricCurve) {
+  manager->read_pointer(scan);
+}
+BAM_READ_FACTORY(P2_INIT_PositionParametricCurve);
+
+/**
+ *
+ */
+int P2_INIT_PositionParametricCurve::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = 0;
+  _curve = DCAST(ParametricCurve, p_list[pi++]);
+  return pi;
 }
 
 /**
@@ -289,6 +390,20 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_VelocityExplicit) {
+  _vel.write_datagram(me);
+  me.add_stdfloat(_amplitude_min);
+  me.add_stdfloat(_amplitude_range);
+  me.add_stdfloat(_amplitude_exponent);
+}
+BAM_READ(P2_INIT_VelocityExplicit) {
+  _vel.read_datagram(scan);
+  _amplitude_min = scan.get_stdfloat();
+  _amplitude_range = scan.get_stdfloat();
+  _amplitude_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_VelocityExplicit);
+
 /**
  *
  */
@@ -331,6 +446,22 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_VelocityCone) {
+  _min_hpr.write_datagram(me);
+  _max_hpr.write_datagram(me);
+  me.add_stdfloat(_min_amplitude);
+  me.add_stdfloat(_amplitude_range);
+  me.add_stdfloat(_amplitude_exponent);
+}
+BAM_READ(P2_INIT_VelocityCone) {
+  _min_hpr.read_datagram(scan);
+  _max_hpr.read_datagram(scan);
+  _min_amplitude = scan.get_stdfloat();
+  _amplitude_range = scan.get_stdfloat();
+  _amplitude_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_VelocityCone);
+
 /**
  *
  */
@@ -372,6 +503,20 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_VelocityRadiate) {
+  _point.write_datagram(me);
+  me.add_stdfloat(_min_amplitude);
+  me.add_stdfloat(_amplitude_range);
+  me.add_stdfloat(_amplitude_exponent);
+}
+BAM_READ(P2_INIT_VelocityRadiate) {
+  _point.read_datagram(scan);
+  _min_amplitude = scan.get_stdfloat();
+  _amplitude_range = scan.get_stdfloat();
+  _amplitude_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_VelocityRadiate);
+
 /**
  *
  */
@@ -401,6 +546,20 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     }
   }
 }
+
+BAM_WRITE(P2_INIT_RotationRandomRange) {
+  me.add_stdfloat(_rot_base);
+  me.add_stdfloat(_offset_min);
+  me.add_stdfloat(_offset_range);
+  me.add_stdfloat(_offset_exponent);
+}
+BAM_READ(P2_INIT_RotationRandomRange) {
+  _rot_base = scan.get_stdfloat();
+  _offset_min = scan.get_stdfloat();
+  _offset_range = scan.get_stdfloat();
+  _offset_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_RotationRandomRange);
 
 /**
  *
@@ -445,6 +604,24 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_RotationVelocityRandomRange) {
+  me.add_stdfloat(_vel_min);
+  me.add_stdfloat(_vel_range);
+  me.add_stdfloat(_vel_exponent);
+  me.add_bool(_random_flip);
+  me.add_stdfloat(_random_flip_chance);
+  me.add_stdfloat(_random_flip_exponent);
+}
+BAM_READ(P2_INIT_RotationVelocityRandomRange) {
+  _vel_min = scan.get_stdfloat();
+  _vel_range = scan.get_stdfloat();
+  _vel_exponent = scan.get_stdfloat();
+  _random_flip = scan.get_bool();
+  _random_flip_chance = scan.get_stdfloat();
+  _random_flip_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_RotationVelocityRandomRange);
+
 /**
  *
  */
@@ -477,6 +654,20 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     }
   }
 }
+
+BAM_WRITE(P2_INIT_ScaleRandomRange) {
+  _scale_min.write_datagram(me);
+  _scale_range.write_datagram(me);
+  me.add_stdfloat(_scale_exponent);
+  me.add_bool(_componentwise);
+}
+BAM_READ(P2_INIT_ScaleRandomRange) {
+  _scale_min.read_datagram(scan);
+  _scale_range.read_datagram(scan);
+  _scale_exponent = scan.get_stdfloat();
+  _componentwise = scan.get_bool();
+}
+BAM_READ_FACTORY(P2_INIT_ScaleRandomRange);
 
 /**
  *
@@ -512,6 +703,20 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
   }
 }
 
+BAM_WRITE(P2_INIT_ColorRandomRange) {
+  _color_min.write_datagram(me);
+  _color_range.write_datagram(me);
+  me.add_stdfloat(_exponent);
+  me.add_bool(_componentwise);
+}
+BAM_READ(P2_INIT_ColorRandomRange) {
+  _color_min.read_datagram(scan);
+  _color_range.read_datagram(scan);
+  _exponent = scan.get_stdfloat();
+  _componentwise = scan.get_bool();
+}
+BAM_READ_FACTORY(P2_INIT_ColorRandomRange);
+
 /**
  *
  */
@@ -534,3 +739,15 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     p->_color[3] = p2_random_min_range(_alpha_min, _alpha_range, _alpha_exponent);
   }
 }
+
+BAM_WRITE(P2_INIT_AlphaRandomRange) {
+  me.add_stdfloat(_alpha_min);
+  me.add_stdfloat(_alpha_range);
+  me.add_stdfloat(_alpha_exponent);
+}
+BAM_READ(P2_INIT_AlphaRandomRange) {
+  _alpha_min = scan.get_stdfloat();
+  _alpha_range = scan.get_stdfloat();
+  _alpha_exponent = scan.get_stdfloat();
+}
+BAM_READ_FACTORY(P2_INIT_AlphaRandomRange);

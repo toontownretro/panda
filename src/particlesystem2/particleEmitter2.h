@@ -17,6 +17,12 @@
 #include "pandabase.h"
 #include "typedWritableReferenceCount.h"
 
+class FactoryParams;
+class BamReader;
+class BamWriter;
+class Datagram;
+class DatagramIterator;
+
 /**
  * Emitters are responsible for spawning new particles in a system.
  * Each emitter type spawns particles in a different manner.
@@ -27,6 +33,8 @@
 class EXPCL_PANDA_PARTICLESYSTEM2 ParticleEmitter2 : public TypedWritableReferenceCount {
 PUBLISHED:
   ParticleEmitter2() = default;
+
+  virtual PT(ParticleEmitter2) make_copy() const=0;
 
 public:
   /**
@@ -64,10 +72,18 @@ private:
 class EXPCL_PANDA_PARTICLESYSTEM2 BurstParticleEmitter : public ParticleEmitter2 {
 PUBLISHED:
   BurstParticleEmitter();
+  BurstParticleEmitter(const BurstParticleEmitter &copy);
+
+  virtual PT(ParticleEmitter2) make_copy() const override;
 
 public:
   virtual int update(double time) override;
   virtual void initialize() override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   PN_stdfloat _start_time;
@@ -100,6 +116,9 @@ private:
 class EXPCL_PANDA_PARTICLESYSTEM2 ContinuousParticleEmitter : public ParticleEmitter2 {
 PUBLISHED:
   ContinuousParticleEmitter();
+  ContinuousParticleEmitter(const ContinuousParticleEmitter &copy);
+
+  virtual PT(ParticleEmitter2) make_copy() const override;
 
   void set_emission_rate(PN_stdfloat particles_per_second);
   void set_interval_and_litter_size(PN_stdfloat interval_min, PN_stdfloat interval_max,
@@ -111,6 +130,11 @@ PUBLISHED:
 public:
   virtual int update(double time) override;
   virtual void initialize() override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   // System-relative time to start emitting particles.

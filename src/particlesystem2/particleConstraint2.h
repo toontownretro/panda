@@ -18,6 +18,7 @@
 #include "typedWritableReferenceCount.h"
 
 class ParticleSystem2;
+class FactoryParams;
 
 /**
  * Base class for a physics contraint that applies to all particles in a
@@ -84,6 +85,11 @@ PUBLISHED:
 
 public:
   virtual bool enforce_constraint(double time, double dt, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   int _start_input, _end_input;

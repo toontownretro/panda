@@ -113,6 +113,29 @@ update(double time, double dt, ParticleSystem2 *system) {
 /**
  *
  */
+TypedWritable *LinearMotionParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  LinearMotionParticleFunction *obj = new LinearMotionParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void LinearMotionParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
 void AngularMotionParticleFunction::
 update(double time, double dt, ParticleSystem2 *system) {
   for (Particle &p : system->_particles) {
@@ -122,6 +145,29 @@ update(double time, double dt, ParticleSystem2 *system) {
 
     p._rotation += p._rotation_speed * dt;
   }
+}
+
+/**
+ *
+ */
+TypedWritable *AngularMotionParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  AngularMotionParticleFunction *obj = new AngularMotionParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void AngularMotionParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -141,6 +187,29 @@ update(double time, double dt, ParticleSystem2 *system) {
       system->kill_particle(i);
     }
   }
+}
+
+/**
+ *
+ */
+TypedWritable *LifespanKillerParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  LifespanKillerParticleFunction *obj = new LifespanKillerParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void LifespanKillerParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -301,6 +370,80 @@ update(double time, double dt, ParticleSystem2 *system) {
 /**
  *
  */
+void LerpParticleFunction::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_uint8(_component);
+  me.add_uint8(_segments.size());
+  for (const ParticleLerpSegment &seg : _segments) {
+    me.add_stdfloat(seg._start_frac);
+    me.add_stdfloat(seg._end_frac);
+    me.add_uint8(seg._type);
+    me.add_bool(seg._start_is_initial);
+    me.add_bool(seg._end_is_initial);
+    if (!seg._start_is_initial) {
+      seg._start_value.write_datagram(me);
+    }
+    if (!seg._end_is_initial) {
+      seg._end_value.write_datagram(me);
+    }
+    me.add_bool(seg._scale_on_initial);
+    me.add_stdfloat(seg._func_data[0]);
+    me.add_stdfloat(seg._func_data[1]);
+  }
+}
+
+/**
+ *
+ */
+void LerpParticleFunction::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _component = (Component)scan.get_uint8();
+  _segments.resize(scan.get_uint8());
+  for (size_t i = 0; i < _segments.size(); ++i) {
+    ParticleLerpSegment &seg = _segments[i];
+    seg._start_frac = scan.get_stdfloat();
+    seg._end_frac = scan.get_stdfloat();
+    seg._type = (ParticleLerpSegment::LerpType)scan.get_uint8();
+    seg._start_is_initial = scan.get_bool();
+    seg._end_is_initial = scan.get_bool();
+    if (!seg._start_is_initial) {
+      seg._start_value.read_datagram(scan);
+    }
+    if (!seg._end_is_initial) {
+      seg._end_value.read_datagram(scan);
+    }
+    seg._scale_on_initial = scan.get_bool();
+    seg._func_data[0] = scan.get_stdfloat();
+    seg._func_data[1] = scan.get_stdfloat();
+  }
+}
+
+/**
+ *
+ */
+TypedWritable *LerpParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  LerpParticleFunction *obj = new LerpParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void LerpParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
 VelocityJitterParticleFunction::
 VelocityJitterParticleFunction(PN_stdfloat amp_min, PN_stdfloat amp_max) :
   _amplitude_min(amp_min),
@@ -321,6 +464,47 @@ update(double time, double dt, ParticleSystem2 *system) {
     // Instantaneous random velocity modification.
     p._velocity += p2_random_unit_vector() * p2_random_min_range(_amplitude_min, _amplitude_range);
   }
+}
+
+/**
+ *
+ */
+void VelocityJitterParticleFunction::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_amplitude_min);
+  me.add_stdfloat(_amplitude_range);
+}
+
+/**
+ *
+ */
+void VelocityJitterParticleFunction::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _amplitude_min = scan.get_stdfloat();
+  _amplitude_range = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *VelocityJitterParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  VelocityJitterParticleFunction *obj = new VelocityJitterParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void VelocityJitterParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
 /**
@@ -358,4 +542,45 @@ update(double time, double dt, ParticleSystem2 *system) {
       p._velocity = -reflect * _bounciness;
     }
   }
+}
+
+/**
+ *
+ */
+void BounceParticleFunction::
+write_datagram(BamWriter *manager, Datagram &me) {
+  _plane.write_datagram(me);
+  me.add_stdfloat(_bounciness);
+}
+
+/**
+ *
+ */
+void BounceParticleFunction::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _plane.read_datagram(scan);
+  _bounciness = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *BounceParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  BounceParticleFunction *obj = new BounceParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void BounceParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

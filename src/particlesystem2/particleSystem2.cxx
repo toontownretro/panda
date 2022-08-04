@@ -20,7 +20,8 @@ TypeHandle ParticleSystem2::_type_handle;
  *
  */
 ParticleSystem2::
-ParticleSystem2() :
+ParticleSystem2(const std::string &name) :
+  Namable(name),
   _elapsed(0.0),
   _running(false),
   _soft_stopped(false),
@@ -28,6 +29,29 @@ ParticleSystem2() :
   _num_alive_particles(0),
   _dt(0.0),
   _prev_dt(0.05)
+{
+}
+
+/**
+ *
+ */
+ParticleSystem2::
+ParticleSystem2(const ParticleSystem2 &copy) :
+  Namable(copy),
+  _pool_size(copy._pool_size),
+  _elapsed(0.0),
+  _running(false),
+  _soft_stopped(false),
+  _num_alive_particles(0),
+  _dt(0.0),
+  _prev_dt(0.05),
+  _initializers(copy._initializers),
+  _emitters(copy._emitters),
+  _children(copy._children),
+  _functions(copy._functions),
+  _forces(copy._forces),
+  _constraints(copy._constraints),
+  _renderers(copy._renderers)
 {
 }
 
@@ -43,6 +67,31 @@ ParticleSystem2::
       _inputs[i].remove_node();
     }
   }
+}
+
+/**
+ *
+ */
+PT(ParticleSystem2) ParticleSystem2::
+make_copy() const {
+  PT(ParticleSystem2) sys = new ParticleSystem2(*this);
+
+  // We only need to deep copy emitters, renderers, and children.
+  // Everything else is stateless and can be shared between systems.
+
+  for (size_t i = 0; i < _emitters.size(); ++i) {
+    sys->_emitters[i] = _emitters[i]->make_copy();
+  }
+
+  for (size_t i = 0; i < _renderers.size(); ++i) {
+    sys->_renderers[i] = _renderers[i]->make_copy();
+  }
+
+  for (size_t i = 0; i < _children.size(); ++i) {
+    sys->_children[i] = _children[i]->make_copy();
+  }
+
+  return sys;
 }
 
 /**
@@ -144,6 +193,11 @@ add_input(const NodePath &input, bool system_lifetime) {
   _inputs.push_back(input);
   _input_values.push_back(TransformState::make_identity());
   _input_lifetime.push_back(system_lifetime);
+
+  // Push down to children.
+  for (ParticleSystem2 *child : _children) {
+    child->add_input(input, false);
+  }
 }
 
 /**
@@ -159,6 +213,11 @@ set_input(int n, const NodePath &input, bool system_lifetime) {
   _inputs[n] = input;
   _input_values[n] = TransformState::make_identity();
   _input_lifetime[n] = system_lifetime;
+
+  // Push down to children.
+  for (ParticleSystem2 *child : _children) {
+    child->set_input(n, input, false);
+  }
 }
 
 /**
@@ -166,8 +225,18 @@ set_input(int n, const NodePath &input, bool system_lifetime) {
  */
 void ParticleSystem2::
 start(const NodePath &parent, double time) {
-  nassertv(!_running);
-  nassertv(_pool_size > 0);
+  if (priv_start(parent, time)) {
+    ParticleManager2::get_global_ptr()->add_system(this);
+  }
+}
+
+/**
+ *
+ */
+bool ParticleSystem2::
+priv_start(const NodePath &parent, double time) {
+  nassertr(!_running, false);
+  nassertr(_pool_size > 0, false);
 
   _parent = parent;
 
@@ -210,7 +279,12 @@ start(const NodePath &parent, double time) {
 
   _running = true;
 
-  ParticleManager2::get_global_ptr()->add_system(this);
+  // Start children.
+  for (ParticleSystem2 *child : _children) {
+    child->priv_start(parent, time);
+  }
+
+  return true;
 }
 
 /**
@@ -220,6 +294,12 @@ void ParticleSystem2::
 soft_stop() {
   nassertv(_running);
   _soft_stopped = true;
+
+  for (ParticleSystem2 *child : _children) {
+    if (child->is_running()) {
+      child->soft_stop();
+    }
+  }
 }
 
 /**
@@ -250,6 +330,13 @@ priv_stop() {
   _num_alive_particles = 0;
   _free_particles.clear();
   _soft_stopped = false;
+
+  // Stop children.
+  for (ParticleSystem2 *child : _children) {
+    if (child->is_running()) {
+      child->priv_stop();
+    }
+  }
 }
 
 /**
@@ -309,9 +396,23 @@ update(double dt) {
   _prev_dt = dt;
 
   if (_soft_stopped && _num_alive_particles == 0) {
-    // Soft-stop complete.
-    priv_stop();
-    return false;
+
+    // Our soft-stop is complete, but don't actually stop
+    // until all of our children have also completed their
+    // soft-stops.
+    bool all_children_done = true;
+    for (ParticleSystem2 *child : _children) {
+      if (child->is_running()) {
+        all_children_done = false;
+        break;
+      }
+    }
+
+    if (all_children_done) {
+      // Soft-stop complete.
+      priv_stop();
+      return false;
+    }
   }
 
   return true;
@@ -403,4 +504,139 @@ birth_particles(int count) {
   }
 
   return true;
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_string(get_name());
+  me.add_int32(_pool_size);
+
+  me.add_uint8(_emitters.size());
+  for (ParticleEmitter2 *emitter : _emitters) {
+    manager->write_pointer(me, emitter);
+  }
+
+  me.add_uint8(_initializers.size());
+  for (ParticleInitializer2 *init : _initializers) {
+    manager->write_pointer(me, init);
+  }
+
+  me.add_uint8(_functions.size());
+  for (ParticleFunction2 *func : _functions) {
+    manager->write_pointer(me, func);
+  }
+
+  me.add_uint8(_renderers.size());
+  for (ParticleRenderer2 *renderer : _renderers) {
+    manager->write_pointer(me, renderer);
+  }
+
+  me.add_uint8(_forces.size());
+  for (ParticleForce2 *force : _forces) {
+    manager->write_pointer(me, force);
+  }
+
+  me.add_uint8(_constraints.size());
+  for (ParticleConstraint2 *constraint : _constraints) {
+    manager->write_pointer(me, constraint);
+  }
+
+  me.add_uint8(_children.size());
+  for (ParticleSystem2 *sys : _children) {
+    manager->write_pointer(me, sys);
+  }
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  set_name(scan.get_string());
+  _pool_size = scan.get_int32();
+
+  _emitters.resize(scan.get_uint8());
+  manager->read_pointers(scan, _emitters.size());
+
+  _initializers.resize(scan.get_uint8());
+  manager->read_pointers(scan, _initializers.size());
+
+  _functions.resize(scan.get_uint8());
+  manager->read_pointers(scan, _functions.size());
+
+  _renderers.resize(scan.get_uint8());
+  manager->read_pointers(scan, _renderers.size());
+
+  _forces.resize(scan.get_uint8());
+  manager->read_pointers(scan, _forces.size());
+
+  _constraints.resize(scan.get_uint8());
+  manager->read_pointers(scan, _constraints.size());
+
+  _children.resize(scan.get_uint8());
+  manager->read_pointers(scan, _children.size());
+}
+
+/**
+ *
+ */
+int ParticleSystem2::
+complete_pointers(TypedWritable **p_list, BamReader *manager) {
+  int pi = TypedWritableReferenceCount::complete_pointers(p_list, manager);
+
+  for (size_t i = 0; i < _emitters.size(); ++i) {
+    _emitters[i] = DCAST(ParticleEmitter2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _initializers.size(); ++i) {
+    _initializers[i] = DCAST(ParticleInitializer2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _functions.size(); ++i) {
+    _functions[i] = DCAST(ParticleFunction2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _renderers.size(); ++i) {
+    _renderers[i] = DCAST(ParticleRenderer2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _forces.size(); ++i) {
+    _forces[i] = DCAST(ParticleForce2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _constraints.size(); ++i) {
+    _constraints[i] = DCAST(ParticleConstraint2, p_list[pi++]);
+  }
+
+  for (size_t i = 0; i < _children.size(); ++i) {
+    _children[i] = DCAST(ParticleSystem2, p_list[pi++]);
+  }
+
+  return pi;
+}
+
+/**
+ *
+ */
+TypedWritable *ParticleSystem2::
+make_from_bam(const FactoryParams &params) {
+  ParticleSystem2 *sys = new ParticleSystem2;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  sys->fillin(scan, manager);
+  return sys;
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

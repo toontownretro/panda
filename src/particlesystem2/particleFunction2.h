@@ -18,6 +18,7 @@
 #include "typedWritableReferenceCount.h"
 #include "luse.h"
 #include "plane.h"
+#include "factoryParams.h"
 
 class ParticleSystem2;
 
@@ -65,6 +66,9 @@ PUBLISHED:
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
 
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
 private:
   PN_stdfloat _drag;
 
@@ -98,6 +102,9 @@ PUBLISHED:
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
+
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 };
 
 /**
@@ -110,6 +117,9 @@ PUBLISHED:
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
+
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 public:
   static TypeHandle get_class_type() {
@@ -234,6 +244,14 @@ PUBLISHED:
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  LerpParticleFunction() = default;
+
 private:
   Component _component;
   typedef pvector<ParticleLerpSegment> LerpSegments;
@@ -253,6 +271,14 @@ PUBLISHED:
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  VelocityJitterParticleFunction() = default;
+
 private:
   PN_stdfloat _amplitude_min;
   PN_stdfloat _amplitude_range;
@@ -269,6 +295,14 @@ PUBLISHED:
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  BounceParticleFunction() = default;
 
 private:
   LPlane _plane;

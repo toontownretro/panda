@@ -56,6 +56,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_LifespanRandomRange() = default;
+
 private:
   PN_stdfloat _lifespan_min;
   PN_stdfloat _lifespan_range;
@@ -74,6 +82,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionExplicit() = default;
+
 private:
   LPoint3 _point;
 };
@@ -90,6 +106,14 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionBoxVolume() = default;
 
 private:
   LPoint3 _mins;
@@ -111,6 +135,14 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionSphereVolume() = default;
 
 private:
   LPoint3 _center;
@@ -134,6 +166,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionLineSegment() = default;
+
 private:
   LPoint3 _a;
   LPoint3 _b;
@@ -151,6 +191,15 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  virtual int complete_pointers(TypedWritable **p_list, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionParametricCurve() = default;
 
 private:
   PT(ParametricCurve) _curve;
@@ -188,6 +237,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_VelocityExplicit() = default;
+
 private:
   LVector3 _vel;
   PN_stdfloat _amplitude_min;
@@ -209,6 +266,14 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_VelocityCone() = default;
 
 private:
   LVecBase3 _min_hpr;
@@ -238,6 +303,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_VelocityRadiate() = default;
+
 private:
   LPoint3 _point;
   PN_stdfloat _min_amplitude;
@@ -258,6 +331,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_RotationRandomRange() = default;
+
 private:
   PN_stdfloat _rot_base;
   PN_stdfloat _offset_min, _offset_range, _offset_exponent;
@@ -277,6 +358,14 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_RotationVelocityRandomRange() = default;
 
 private:
   PN_stdfloat _vel_min, _vel_range, _vel_exponent;
@@ -301,6 +390,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_ScaleRandomRange() = default;
+
 private:
   LVecBase3 _scale_min, _scale_range;
   PN_stdfloat _scale_exponent;
@@ -320,6 +417,14 @@ PUBLISHED:
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_ColorRandomRange() = default;
+
 private:
   LVecBase3 _color_min, _color_range;
   PN_stdfloat _exponent;
@@ -337,6 +442,14 @@ PUBLISHED:
 
 public:
   virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_AlphaRandomRange() = default;
 
 private:
   PN_stdfloat _alpha_min, _alpha_range, _alpha_exponent;

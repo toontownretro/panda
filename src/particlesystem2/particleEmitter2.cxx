@@ -14,6 +14,9 @@
 #include "particleEmitter2.h"
 #include "p2_utils.h"
 #include "config_particlesystem2.h"
+#include "factoryParams.h"
+#include "bamReader.h"
+#include "factory.h"
 
 TypeHandle ParticleEmitter2::_type_handle;
 TypeHandle BurstParticleEmitter::_type_handle;
@@ -28,6 +31,25 @@ BurstParticleEmitter() :
   _litter_min(1),
   _litter_max(1)
 {
+}
+
+/**
+ *
+ */
+BurstParticleEmitter::
+BurstParticleEmitter(const BurstParticleEmitter &copy) :
+  _start_time(copy._start_time),
+  _litter_min(copy._litter_min),
+  _litter_max(copy._litter_max)
+{
+}
+
+/**
+ *
+ */
+PT(ParticleEmitter2) BurstParticleEmitter::
+make_copy() const {
+  return new BurstParticleEmitter(*this);
 }
 
 /**
@@ -48,6 +70,49 @@ initialize() {
 /**
  *
  */
+void BurstParticleEmitter::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_start_time);
+  me.add_int32(_litter_min);
+  me.add_int32(_litter_max);
+}
+
+/**
+ *
+ */
+void BurstParticleEmitter::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _start_time = scan.get_stdfloat();
+  _litter_min = scan.get_int32();
+  _litter_max = scan.get_int32();
+}
+
+/**
+ *
+ */
+TypedWritable *BurstParticleEmitter::
+make_from_bam(const FactoryParams &params) {
+  BurstParticleEmitter *obj = new BurstParticleEmitter;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void BurstParticleEmitter::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
 ContinuousParticleEmitter::
 ContinuousParticleEmitter() :
   _litter_min(1),
@@ -59,6 +124,27 @@ ContinuousParticleEmitter() :
   _last_litter(0.0f),
   _next_interval(0.0f)
 {
+}
+
+/**
+ *
+ */
+ContinuousParticleEmitter::
+ContinuousParticleEmitter(const ContinuousParticleEmitter &copy) :
+  _litter_min(copy._litter_min),
+  _litter_max(copy._litter_max),
+  _interval_min(copy._interval_min),
+  _interval_max(copy._interval_max),
+  _start_time(copy._start_time),
+  _duration(copy._duration),
+  _last_litter(0.0f),
+  _next_interval(0.0f)
+{
+}
+
+PT(ParticleEmitter2) ContinuousParticleEmitter::
+make_copy() const {
+  return new ContinuousParticleEmitter(*this);
 }
 
 /**
@@ -153,4 +239,53 @@ void ContinuousParticleEmitter::
 initialize() {
   _last_litter = 0.0;
   _next_interval = 0.0;
+}
+
+/**
+ *
+ */
+void ContinuousParticleEmitter::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_start_time);
+  me.add_stdfloat(_interval_min);
+  me.add_stdfloat(_interval_max);
+  me.add_int32(_litter_min);
+  me.add_int32(_litter_max);
+  me.add_stdfloat(_duration);
+}
+
+/**
+ *
+ */
+void ContinuousParticleEmitter::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _start_time = scan.get_stdfloat();
+  _interval_min = scan.get_stdfloat();
+  _interval_max = scan.get_stdfloat();
+  _litter_min = scan.get_int32();
+  _litter_max = scan.get_int32();
+  _duration = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *ContinuousParticleEmitter::
+make_from_bam(const FactoryParams &params) {
+  ContinuousParticleEmitter *obj = new ContinuousParticleEmitter;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void ContinuousParticleEmitter::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

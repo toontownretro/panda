@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "typedWritableReferenceCount.h"
 #include "luse.h"
+#include "factoryParams.h"
 
 class ParticleSystem2;
 
@@ -50,6 +51,9 @@ public:
    */
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system)=0;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+
 protected:
   unsigned int _axis_mask;
 };
@@ -67,6 +71,11 @@ PUBLISHED:
 
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   LVector3 _force;
@@ -95,6 +104,11 @@ PUBLISHED:
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
 private:
   AxisMode _mode;
 
@@ -121,6 +135,14 @@ PUBLISHED:
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  JitterParticleForce() = default;
+
 private:
   PN_stdfloat _amplitude;
   PN_stdfloat _start, _end;
@@ -141,6 +163,14 @@ PUBLISHED:
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
 
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  AttractParticleForce() = default;
+
 private:
   int _input;
   LPoint3 _point;
@@ -160,6 +190,11 @@ PUBLISHED:
 
 public:
   virtual void accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
 
 private:
   PN_stdfloat _coef;

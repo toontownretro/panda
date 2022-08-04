@@ -39,7 +39,6 @@ init_libparticlesystem2() {
   initialized = true;
 
   ParticleInitializer2::init_type();
-
   P2_INIT_LifespanRandomRange::init_type();
   P2_INIT_PositionExplicit::init_type();
   P2_INIT_PositionBoxVolume::init_type();
@@ -57,12 +56,10 @@ init_libparticlesystem2() {
   P2_INIT_AlphaRandomRange::init_type();
 
   ParticleEmitter2::init_type();
-
   BurstParticleEmitter::init_type();
   ContinuousParticleEmitter::init_type();
 
   ParticleFunction2::init_type();
-
   LinearMotionParticleFunction::init_type();
   AngularMotionParticleFunction::init_type();
   LifespanKillerParticleFunction::init_type();
@@ -71,11 +68,9 @@ init_libparticlesystem2() {
   BounceParticleFunction::init_type();
 
   ParticleRenderer2::init_type();
-
   SpriteParticleRenderer2::init_type();
 
   ParticleForce2::init_type();
-
   VectorParticleForce::init_type();
   CylinderVortexParticleForce::init_type();
   JitterParticleForce::init_type();
@@ -86,4 +81,41 @@ init_libparticlesystem2() {
   PathParticleConstraint::init_type();
 
   ParticleSystem2::init_type();
+
+  P2_INIT_LifespanRandomRange::register_with_read_factory();
+  P2_INIT_PositionExplicit::register_with_read_factory();
+  P2_INIT_PositionBoxVolume::register_with_read_factory();
+  P2_INIT_PositionSphereVolume::register_with_read_factory();
+  P2_INIT_PositionLineSegment::register_with_read_factory();
+  P2_INIT_PositionParametricCurve::register_with_read_factory();
+  P2_INIT_VelocityExplicit::register_with_read_factory();
+  P2_INIT_VelocityCone::register_with_read_factory();
+  P2_INIT_VelocityRadiate::register_with_read_factory();
+  P2_INIT_RotationRandomRange::register_with_read_factory();
+  P2_INIT_RotationVelocityRandomRange::register_with_read_factory();
+  P2_INIT_ScaleRandomRange::register_with_read_factory();
+  P2_INIT_ColorRandomRange::register_with_read_factory();
+  P2_INIT_AlphaRandomRange::register_with_read_factory();
+
+  LinearMotionParticleFunction::register_with_read_factory();
+  AngularMotionParticleFunction::register_with_read_factory();
+  LifespanKillerParticleFunction::register_with_read_factory();
+  LerpParticleFunction::register_with_read_factory();
+  VelocityJitterParticleFunction::register_with_read_factory();
+  BounceParticleFunction::register_with_read_factory();
+
+  BurstParticleEmitter::register_with_read_factory();
+  ContinuousParticleEmitter::register_with_read_factory();
+
+  SpriteParticleRenderer2::register_with_read_factory();
+
+  PathParticleConstraint::register_with_read_factory();
+
+  VectorParticleForce::register_with_read_factory();
+  CylinderVortexParticleForce::register_with_read_factory();
+  JitterParticleForce::register_with_read_factory();
+  AttractParticleForce::register_with_read_factory();
+  FrictionParticleForce::register_with_read_factory();
+
+  ParticleSystem2::register_with_read_factory();
 }
