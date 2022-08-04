@@ -118,6 +118,8 @@ PUBLISHED:
   void kill_particle(int n);
   bool birth_particles(int count);
 
+  bool write_pto(const Filename &filename);
+
 public:
   virtual void write_datagram(BamWriter *manager, Datagram &me) override;
   virtual void fillin(DatagramIterator &scan, BamReader *manager) override;

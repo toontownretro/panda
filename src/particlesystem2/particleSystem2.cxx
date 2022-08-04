@@ -13,6 +13,9 @@
 
 #include "particleSystem2.h"
 #include "particleManager2.h"
+#include "virtualFileSystem.h"
+#include "datagramOutputFile.h"
+#include "bam.h"
 
 TypeHandle ParticleSystem2::_type_handle;
 
@@ -639,4 +642,36 @@ make_from_bam(const FactoryParams &params) {
 void ParticleSystem2::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+bool ParticleSystem2::
+write_pto(const Filename &filename) {
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  vfs->delete_file(filename);
+
+  DatagramOutputFile dout;
+  if (!dout.open(filename)) {
+    return false;
+  }
+
+  if (!dout.write_header(_bam_header)) {
+    return false;
+  }
+
+  BamWriter writer(&dout);
+  if (!writer.init()) {
+    return false;
+  }
+
+  // Always write raw data if we're using this method.
+  writer.set_file_material_mode(BamWriter::BTM_unchanged);
+
+  if (!writer.write_object(this)) {
+    return false;
+  }
+
+  return true;
 }
