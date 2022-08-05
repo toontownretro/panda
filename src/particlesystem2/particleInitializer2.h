@@ -463,27 +463,79 @@ class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_RemapAttribute : public ParticleInitia
 
 PUBLISHED:
   enum Attribute {
-    A_r,
-    A_g,
-    A_b,
+    A_rgb,
     A_alpha,
-    A_x,
-    A_y,
-    A_z,
-    A_sx,
-    A_sy,
+    A_pos,
+    A_scale,
     A_rotation,
     A_rotation_velocity,
-    A_vel_x,
-    A_vel_y,
-    A_vel_z,
+    A_vel,
   };
+
+  enum Mode {
+    M_unclamped,
+    M_clamp,
+    M_ignore_out_of_range,
+  };
+
+  P2_INIT_RemapAttribute(Attribute src, int src_component, float src_min, float src_max,
+                         Attribute dest, int dest_component, float dest_min, float dest_max);
+
+  INLINE void set_mode(Mode mode);
+  INLINE Mode get_mode() const;
+  MAKE_PROPERTY(mode, get_mode, set_mode);
+
+  INLINE void set_spline(bool flag);
+  INLINE bool get_spline() const;
+  MAKE_PROPERTY(spline, get_spline, set_spline);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_RemapAttribute() = default;
 
 private:
   Attribute _src_attrib;
-  float _src_min, _src_max;
+  int _src_component;
+  float _src_min, _src_range;
   Attribute _dest_attrib;
-  float _dest_min, _dest_max;
+  int _dest_component;
+  float _dest_min, _dest_range;
+
+  Mode _mode;
+  bool _spline;
+};
+
+/**
+ *
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_PositionModelHitBoxes : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_PositionModelHitBoxes, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_PositionModelHitBoxes(int model_root_input);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_PositionModelHitBoxes() = default;
+
+private:
+  // Input NodePath to the ModelRoot of the model containing the hitboxes we
+  // want to spawn particles within.
+  int _model_root_input;
 };
 
 #include "particleInitializer2.I"

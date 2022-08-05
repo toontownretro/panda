@@ -51,6 +51,8 @@ INLINE PN_stdfloat p2_random_base_spread(PN_stdfloat base, PN_stdfloat spread, P
  */
 INLINE LVector3 p2_random_unit_vector();
 
+INLINE PN_stdfloat p2_simple_spline(PN_stdfloat val);
+
 #include "p2_utils.I"
 
 #endif // P2_UTILS_H

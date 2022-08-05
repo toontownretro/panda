@@ -106,3 +106,12 @@ p2_random_unit_vector() {
 
   return LVector3(r * ccos(theta), r * csin(theta), z);
 }
+
+/**
+ *
+ */
+INLINE PN_stdfloat
+p2_simple_spline(PN_stdfloat val) {
+  PN_stdfloat val_sqr = val * val;
+  return 3 * val_sqr - 2 * val_sqr * val;
+}

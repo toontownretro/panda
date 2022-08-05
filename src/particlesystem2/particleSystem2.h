@@ -99,12 +99,18 @@ PUBLISHED:
   MAKE_SEQ(get_input_values, get_num_inputs, get_input_value);
   MAKE_SEQ_PROPERTY(input_values, get_num_inputs, get_input_value);
 
-  void start(const NodePath &parent, double time = 0.0);
+  void start(const NodePath &sg_parent, const NodePath &follow_parent = NodePath(), double time = 0.0);
   void soft_stop();
   void stop();
 
   INLINE const NodePath &get_parent_node() const;
   MAKE_PROPERTY(parent_node, get_parent_node);
+
+  INLINE const NodePath &get_follow_parent() const;
+  MAKE_PROPERTY(follow_parent, get_follow_parent);
+
+  INLINE const NodePath &get_node() const;
+  MAKE_PROPERTY(node, get_node);
 
   INLINE bool is_running() const;
   MAKE_PROPERTY(running, is_running);
@@ -129,9 +135,29 @@ public:
 
 private:
   void priv_stop();
-  bool priv_start(const NodePath &parent, double time);
+  bool priv_start(const NodePath &parent, const NodePath &follow_parent, double time);
 
 public:
+  // Cached hitbox data for spawning particles within models.
+  class HitBoxInfo {
+  public:
+    // Relative to joint.
+    LPoint3 _mins, _maxs;
+    // Relative to particle system parent.
+    LPoint3 _ps_mins, _ps_maxs;
+    int _joint;
+  };
+  class InputHitBoxCache : public ReferenceCount {
+  public:
+    NodePath _character_np;
+    Character *_character;
+    pvector<HitBoxInfo> _hitboxes;
+    double _last_update_time;
+  };
+
+  void update_input_hitboxes(int input);
+  PT(InputHitBoxCache) load_input_hitboxes(int input);
+
   typedef pvector<PT(ParticleInitializer2)> Initializers;
   Initializers _initializers;
 
@@ -180,12 +206,17 @@ public:
   InputValues _input_values;
   typedef pvector<bool> InputLifetime;
   InputLifetime _input_lifetime;
+  typedef pvector<PT(InputHitBoxCache)> InputHitBoxes;
+  InputHitBoxes _input_hitboxes;
 
   // Node that the particle system is parented to.
   // Normally, this is render, or the root node of the scene graph.
   // Particle systems normally don't inherit any transforms, except for
   // initialization (emission relative to another node).
   NodePath _parent;
+  NodePath _follow_parent;
+
+  NodePath _np;
 
 public:
   static TypeHandle get_class_type() {

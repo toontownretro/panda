@@ -185,6 +185,26 @@ get_parent_node() const {
 }
 
 /**
+ * Returns the NodePath that the particle system node should follow.
+ * This allows a particle system to be parented to one node, but have it
+ * follow only the position of another node, without inheriting render
+ * state or other transform from the follow node.
+ */
+INLINE const NodePath &ParticleSystem2::
+get_follow_parent() const {
+  return _follow_parent;
+}
+
+/**
+ * Returns the scene graph node representing this particle system.
+ * It is parented to the NodePath returned by get_parent_node().
+ */
+INLINE const NodePath &ParticleSystem2::
+get_node() const {
+  return _np;
+}
+
+/**
  * Returns true if the particle system is currently running/active.
  */
 INLINE bool ParticleSystem2::

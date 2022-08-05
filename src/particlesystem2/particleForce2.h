@@ -65,7 +65,7 @@ class EXPCL_PANDA_PARTICLESYSTEM2 VectorParticleForce : public ParticleForce2 {
   DECLARE_CLASS(VectorParticleForce, ParticleForce2);
 
 PUBLISHED:
-  VectorParticleForce(const LVector3 &vector);
+  VectorParticleForce(const LVector3 &vector, PN_stdfloat start = 0.0f, PN_stdfloat end = 1.0f);
 
   void set_vector(const LVector3 &vector);
 
@@ -79,6 +79,7 @@ public:
 
 private:
   LVector3 _force;
+  PN_stdfloat _start, _end;
 };
 
 /**

@@ -16,6 +16,12 @@
 #include "virtualFileSystem.h"
 #include "datagramOutputFile.h"
 #include "bam.h"
+#include "modelRoot.h"
+#include "pdxElement.h"
+#include "pdxList.h"
+#include "pdxValue.h"
+#include "characterNode.h"
+#include "character.h"
 
 TypeHandle ParticleSystem2::_type_handle;
 
@@ -196,6 +202,7 @@ add_input(const NodePath &input, bool system_lifetime) {
   _inputs.push_back(input);
   _input_values.push_back(TransformState::make_identity());
   _input_lifetime.push_back(system_lifetime);
+  _input_hitboxes.push_back(nullptr);
 
   // Push down to children.
   for (ParticleSystem2 *child : _children) {
@@ -212,10 +219,12 @@ set_input(int n, const NodePath &input, bool system_lifetime) {
     _inputs.resize(n + 1);
     _input_values.resize(n + 1);
     _input_lifetime.resize(n + 1);
+    _input_hitboxes.resize(n + 1);
   }
   _inputs[n] = input;
   _input_values[n] = TransformState::make_identity();
   _input_lifetime[n] = system_lifetime;
+  _input_hitboxes[n] = nullptr;
 
   // Push down to children.
   for (ParticleSystem2 *child : _children) {
@@ -227,8 +236,8 @@ set_input(int n, const NodePath &input, bool system_lifetime) {
  *
  */
 void ParticleSystem2::
-start(const NodePath &parent, double time) {
-  if (priv_start(parent, time)) {
+start(const NodePath &parent, const NodePath &follow_parent, double time) {
+  if (priv_start(parent, follow_parent, time)) {
     ParticleManager2::get_global_ptr()->add_system(this);
   }
 }
@@ -237,11 +246,16 @@ start(const NodePath &parent, double time) {
  *
  */
 bool ParticleSystem2::
-priv_start(const NodePath &parent, double time) {
+priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
   nassertr(!_running, false);
   nassertr(_pool_size > 0, false);
 
   _parent = parent;
+  _follow_parent = follow_parent;
+  _np = _parent.attach_new_node(get_name());
+  if (!follow_parent.is_empty() && follow_parent != parent) {
+    _np.set_pos(follow_parent.get_pos(parent));
+  }
 
   _soft_stopped = false;
 
@@ -284,7 +298,8 @@ priv_start(const NodePath &parent, double time) {
 
   // Start children.
   for (ParticleSystem2 *child : _children) {
-    child->priv_start(parent, time);
+    // Parent children systems to our NodePath.
+    child->priv_start(_np, NodePath(), time);
   }
 
   return true;
@@ -328,6 +343,8 @@ priv_stop() {
   }
 
   _parent.clear();
+  _follow_parent.clear();
+  _np.remove_node();
 
   _running = false;
   _num_alive_particles = 0;
@@ -351,7 +368,13 @@ update(double dt) {
 
   _dt = dt;
 
-  nassertr(!_parent.is_empty(), false);
+  nassertr(!_np.is_empty(), false);
+
+  // If we have a follow parent, synchronize our position with the
+  // follow parent, relative to our scene graph parent.
+  if (!_follow_parent.is_empty() && _follow_parent != _parent) {
+    _np.set_pos(_follow_parent.get_pos(_parent));
+  }
 
   // Fetch current values of all dynamic input nodes.
   // This is the transform of the input node relative to the particle
@@ -359,7 +382,7 @@ update(double dt) {
   // is concerned.
   for (size_t i = 0; i < _inputs.size(); ++i) {
     if (!_inputs[i].is_empty()) {
-      _input_values[i] = _inputs[i].get_transform(_parent);
+      _input_values[i] = _inputs[i].get_transform(_np);
     } else {
       _input_values[i] = TransformState::make_identity();
     }
@@ -674,4 +697,82 @@ write_pto(const Filename &filename) {
   }
 
   return true;
+}
+
+/**
+ *
+ */
+void ParticleSystem2::
+update_input_hitboxes(int input) {
+  nassertv(input >= 0 && input < (int)_input_hitboxes.size());
+
+  PT(InputHitBoxCache) &cache = _input_hitboxes[input];
+  if (cache == nullptr) {
+    cache = load_input_hitboxes(input);
+    if (cache == nullptr) {
+      return;
+    }
+  }
+
+  double now = ClockObject::get_global_clock()->get_frame_time();
+  if (now == cache->_last_update_time) {
+    return;
+  }
+
+  cache->_last_update_time = now;
+
+  CPT(TransformState) ts_char_to_ps_parent = cache->_character_np.get_transform(_np);
+  const LMatrix4 &char_to_ps_parent = ts_char_to_ps_parent->get_mat();
+
+  LMatrix4 ps_joint;
+
+  for (size_t i = 0; i < cache->_hitboxes.size(); ++i) {
+    HitBoxInfo &hbox = cache->_hitboxes[i];
+
+    ps_joint = cache->_character->get_joint_net_transform(hbox._joint) * char_to_ps_parent;
+    hbox._ps_mins = ps_joint.xform_point(hbox._mins);
+    hbox._ps_maxs = ps_joint.xform_point(hbox._maxs);
+  }
+}
+
+/**
+ *
+ */
+PT(ParticleSystem2::InputHitBoxCache) ParticleSystem2::
+load_input_hitboxes(int input) {
+  const NodePath &np = get_input(input);
+  nassertr(np.get_error_type() == NodePath::ET_ok, nullptr);
+  ModelRoot *mdl_root;
+  DCAST_INTO_R(mdl_root, np.node(), nullptr);
+
+  PDXElement *data = mdl_root->get_custom_data();
+  if (data == nullptr) {
+    return nullptr;
+  }
+
+  if (!data->has_attribute("hit_boxes")) {
+    return nullptr;
+  }
+
+  NodePath character_np = np.find("**/+CharacterNode");
+  nassertr(!character_np.is_empty(), nullptr);
+  Character *character = DCAST(CharacterNode, character_np.node())->get_character();
+
+  PT(InputHitBoxCache) cache = new InputHitBoxCache;
+  cache->_character = character;
+  cache->_character_np = character_np;
+  cache->_last_update_time = 0.0;
+
+  PDXList *hit_boxes = data->get_attribute_value("hit_boxes").get_list();
+  for (size_t i = 0; i < hit_boxes->size(); ++i) {
+    PDXElement *hit_box = hit_boxes->get(i).get_element();
+
+    HitBoxInfo hbox;
+    hit_box->get_attribute_value("mins").to_vec3(hbox._mins);
+    hit_box->get_attribute_value("maxs").to_vec3(hbox._maxs);
+    hbox._joint = character->find_joint(hit_box->get_attribute_value("joint").get_string());
+    cache->_hitboxes.push_back(hbox);
+  }
+
+  return cache;
 }

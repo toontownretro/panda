@@ -63,6 +63,8 @@ IMPLEMENT_CLASS(P2_INIT_AlphaRandomRange);
 
 IMPLEMENT_CLASS(P2_INIT_RemapAttribute);
 
+IMPLEMENT_CLASS(P2_INIT_PositionModelHitBoxes);
+
 /**
  *
  */
@@ -751,3 +753,158 @@ BAM_READ(P2_INIT_AlphaRandomRange) {
   _alpha_exponent = scan.get_stdfloat();
 }
 BAM_READ_FACTORY(P2_INIT_AlphaRandomRange);
+
+/**
+ *
+ */
+P2_INIT_RemapAttribute::
+P2_INIT_RemapAttribute(Attribute src, int src_component, float src_min, float src_max,
+                       Attribute dest, int dest_component, float dest_min, float dest_max) :
+  _src_attrib(src),
+  _src_component(src_component),
+  _src_min(src_min),
+  _src_range(src_max - src_min),
+  _dest_attrib(dest),
+  _dest_component(dest_component),
+  _dest_min(dest_min),
+  _dest_range(dest_max - dest_min),
+  _mode(M_clamp),
+  _spline(false)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_RemapAttribute::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    float src;
+    switch (_src_attrib) {
+    case A_rgb:
+      src = p->_color[_src_component];
+      break;
+    case A_alpha:
+      src = p->_color[3];
+      break;
+    case A_pos:
+      src = p->_pos[_src_component];
+      break;
+    case A_scale:
+      src = p->_pos[_src_component];
+      break;
+    case A_rotation:
+      src = p->_rotation;
+      break;
+    case A_rotation_velocity:
+      src = p->_rotation_speed;
+      break;
+    case A_vel:
+      src = p->_velocity[_src_component];
+      break;
+    }
+
+    float cval = (src - _src_min) / _src_range;
+    if (_mode == M_clamp) {
+      cval = std::max(0.0f, std::min(1.0f, cval));
+    } else if (_mode == M_ignore_out_of_range) {
+      if (cval < 0.0f || cval > 1.0f) {
+        continue;
+      }
+    }
+    float dest = _dest_min;
+    if (_spline) {
+      dest += _dest_range * p2_simple_spline(cval);
+    } else {
+      dest += _dest_range * cval;
+    }
+
+    switch (_dest_attrib) {
+    case A_rgb:
+      p->_color[_dest_component] = dest;
+      break;
+    case A_alpha:
+      p->_color[3] = dest;
+      break;
+    case A_pos:
+      p->_pos[_dest_component] = dest;
+      break;
+    case A_scale:
+      p->_scale[_dest_component] = dest;
+      break;
+    case A_rotation:
+      p->_rotation = dest;
+      break;
+    case A_rotation_velocity:
+      p->_rotation_speed = dest;
+      break;
+    case A_vel:
+      p->_velocity[_dest_component] = dest;
+      break;
+    }
+  }
+}
+
+BAM_WRITE(P2_INIT_RemapAttribute) {
+  me.add_uint8(_src_attrib);
+  me.add_int8(_src_component);
+  me.add_float32(_src_min);
+  me.add_float32(_src_range);
+  me.add_uint8(_dest_attrib);
+  me.add_int8(_dest_component);
+  me.add_float32(_dest_min);
+  me.add_float32(_dest_range);
+  me.add_uint8(_mode);
+  me.add_bool(_spline);
+}
+BAM_READ(P2_INIT_RemapAttribute) {
+  _src_attrib = (Attribute)scan.get_uint8();
+  _src_component = scan.get_int8();
+  _src_min = scan.get_float32();
+  _src_range = scan.get_float32();
+  _dest_attrib = (Attribute)scan.get_uint8();
+  _dest_component = scan.get_int8();
+  _dest_min = scan.get_float32();
+  _dest_range = scan.get_float32();
+  _mode = (Mode)scan.get_uint8();
+  _spline = scan.get_bool();
+}
+BAM_READ_FACTORY(P2_INIT_RemapAttribute);
+
+/**
+ *
+ */
+P2_INIT_PositionModelHitBoxes::
+P2_INIT_PositionModelHitBoxes(int model_root_input) :
+  _model_root_input(model_root_input)
+{
+}
+
+/**
+ *
+ */
+void P2_INIT_PositionModelHitBoxes::
+init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  system->update_input_hitboxes(_model_root_input);
+  PT(ParticleSystem2::InputHitBoxCache) hbox_cache = system->_input_hitboxes[_model_root_input];
+
+  for (int i = 0; i < num_particles; ++i) {
+    Particle *p = &system->_particles[particles[i]];
+
+    int hitbox = (int)(p2_normalized_rand() * (hbox_cache->_hitboxes.size() - 1));
+    ParticleSystem2::HitBoxInfo &hbox = hbox_cache->_hitboxes[hitbox];
+    p->_pos[0] = p2_random_min_max(hbox._ps_mins[0], hbox._ps_maxs[0]);
+    p->_pos[1] = p2_random_min_max(hbox._ps_mins[1], hbox._ps_maxs[1]);
+    p->_pos[2] = p2_random_min_max(hbox._ps_mins[2], hbox._ps_maxs[2]);
+  }
+}
+
+BAM_WRITE(P2_INIT_PositionModelHitBoxes) {
+  me.add_int8(_model_root_input);
+}
+BAM_READ(P2_INIT_PositionModelHitBoxes) {
+  _model_root_input = scan.get_int8();
+}
+BAM_READ_FACTORY(P2_INIT_PositionModelHitBoxes);

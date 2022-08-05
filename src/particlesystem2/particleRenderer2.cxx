@@ -87,7 +87,7 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
   _geom_node = new GeomNode("sprite-particles");
   _geom_node->add_geom(geom, _render_state);
   //_geom_node->set_bounds(new OmniBoundingVolume); // TEMPORARY
-  _geom_np = parent.attach_new_node(_geom_node);
+  _geom_np = system->_np.attach_new_node(_geom_node);
   _prim = prim;
 }
 

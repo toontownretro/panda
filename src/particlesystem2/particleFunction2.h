@@ -266,7 +266,8 @@ class EXPCL_PANDA_PARTICLESYSTEM2 VelocityJitterParticleFunction : public Partic
   DECLARE_CLASS(VelocityJitterParticleFunction, ParticleFunction2);
 
 PUBLISHED:
-  VelocityJitterParticleFunction(PN_stdfloat amplitude_min, PN_stdfloat amplitude_max);
+  VelocityJitterParticleFunction(PN_stdfloat amplitude_min, PN_stdfloat amplitude_max,
+                                 const LVecBase3 &scale = LVecBase3(1.0f), PN_stdfloat start = 0.0, PN_stdfloat end = 1.0);
 
 public:
   virtual void update(double time, double dt, ParticleSystem2 *system) override;
@@ -282,6 +283,8 @@ protected:
 private:
   PN_stdfloat _amplitude_min;
   PN_stdfloat _amplitude_range;
+  PN_stdfloat _start, _end;
+  LVecBase3 _scale;
 };
 
 /**

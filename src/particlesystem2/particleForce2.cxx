@@ -60,8 +60,10 @@ fillin(DatagramIterator &scan, BamReader *manager) {
  *
  */
 VectorParticleForce::
-VectorParticleForce(const LVector3 &force) :
-  _force(force)
+VectorParticleForce(const LVector3 &force, PN_stdfloat start, PN_stdfloat end) :
+  _force(force),
+  _start(start),
+  _end(end)
 {
 }
 
@@ -82,6 +84,14 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
     if (!p._alive) {
       continue;
     }
+
+    PN_stdfloat elapsed = system->_elapsed - p._spawn_time;
+    PN_stdfloat frac = elapsed / p._duration;
+    if (frac < _start || frac > _end) {
+      ++accum;
+      continue;
+    }
+
     *accum += apply_axis_mask(_force * strength);
     ++accum;
   }
@@ -94,6 +104,8 @@ void VectorParticleForce::
 write_datagram(BamWriter *manager, Datagram &me) {
   ParticleForce2::write_datagram(manager, me);
   _force.write_datagram(me);
+  me.add_stdfloat(_start);
+  me.add_stdfloat(_end);
 }
 
 /**
@@ -103,6 +115,8 @@ void VectorParticleForce::
 fillin(DatagramIterator &scan, BamReader *manager) {
   ParticleForce2::fillin(scan, manager);
   _force.read_datagram(scan);
+  _start = scan.get_stdfloat();
+  _end = scan.get_stdfloat();
 }
 
 /**

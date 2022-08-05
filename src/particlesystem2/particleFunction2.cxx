@@ -445,9 +445,13 @@ register_with_read_factory() {
  *
  */
 VelocityJitterParticleFunction::
-VelocityJitterParticleFunction(PN_stdfloat amp_min, PN_stdfloat amp_max) :
+VelocityJitterParticleFunction(PN_stdfloat amp_min, PN_stdfloat amp_max,
+                               const LVecBase3 &scale, PN_stdfloat start, PN_stdfloat end) :
   _amplitude_min(amp_min),
-  _amplitude_range(amp_max - amp_min)
+  _amplitude_range(amp_max - amp_min),
+  _scale(scale),
+  _start(start),
+  _end(end)
 {
 }
 
@@ -461,8 +465,16 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
+    PN_stdfloat elapsed = system->_elapsed - p._spawn_time;
+    PN_stdfloat frac = elapsed / p._duration;
+    if (frac < _start || frac > _end) {
+      continue;
+    }
+
     // Instantaneous random velocity modification.
-    p._velocity += p2_random_unit_vector() * p2_random_min_range(_amplitude_min, _amplitude_range);
+    LVector3 vec = p2_random_unit_vector();
+    vec.componentwise_mult(_scale);
+    p._velocity += vec * p2_random_min_range(_amplitude_min, _amplitude_range);
   }
 }
 
