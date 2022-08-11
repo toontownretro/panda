@@ -99,10 +99,12 @@ parallel_process(int count, std::function<void(int)> func) {
     if (i == (_worker_threads.size() - 1)) {
       count += remainder;
     }
-    PT(ParallelProcessJob) job = new ParallelProcessJob(first, count, func);
-    jobs.push_back(std::move(job));
+    if (count > 0) {
+      PT(ParallelProcessJob) job = new ParallelProcessJob(first, count, func);
+      jobs.push_back(std::move(job));
+    }
   }
-  for (size_t i = 0; i < _worker_threads.size(); ++i) {
+  for (size_t i = 0; i < jobs.size(); ++i) {
     schedule(jobs[i]);
   }
   wait_all_jobs();
