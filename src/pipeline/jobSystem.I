@@ -20,18 +20,25 @@ wait_all_jobs() {
   }
 }
 
-
 /**
  *
  */
 INLINE void JobSystem::
 schedule(Job *job) {
   job->set_pipeline_stage(Thread::get_current_pipeline_stage());
-  _queue_lock.acquire();
-  _job_queue.push_back(job);
-  _queue_lock.release();
-  AtomicAdjust::inc(_queued_jobs);
-  _cv_work_available.notify();
+
+  if (!_worker_threads.empty()) {
+    _queue_lock.acquire();
+    _job_queue.push_back(job);
+    _queue_lock.release();
+    AtomicAdjust::inc(_queued_jobs);
+    _cv_work_available.notify();
+
+  } else {
+    // No worker threads, execute job right now on this thread.
+    job->execute();
+  }
+
 }
 
 /**
@@ -75,4 +82,28 @@ get_global_ptr() {
   }
 
   return _global_ptr;
+}
+
+/**
+ *
+ */
+INLINE void JobSystem::
+parallel_process(int count, std::function<void(int)> func) {
+  int num_per_thread = count / (int)_worker_threads.size();
+  int remainder = count % (int)_worker_threads.size();
+  pvector<PT(ParallelProcessJob)> jobs;
+  jobs.reserve(_worker_threads.size());
+  for (size_t i = 0; i < _worker_threads.size(); ++i) {
+    int first = num_per_thread * i;
+    int count = num_per_thread;
+    if (i == (_worker_threads.size() - 1)) {
+      count += remainder;
+    }
+    PT(ParallelProcessJob) job = new ParallelProcessJob(first, count, func);
+    jobs.push_back(std::move(job));
+  }
+  for (size_t i = 0; i < _worker_threads.size(); ++i) {
+    schedule(jobs[i]);
+  }
+  wait_all_jobs();
 }

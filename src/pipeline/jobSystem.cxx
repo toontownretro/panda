@@ -13,6 +13,12 @@
 
 #include "jobSystem.h"
 #include "mutexHolder.h"
+#include "configVariableInt.h"
+
+ConfigVariableInt job_system_num_worker_threads
+("job-system-num-worker-threads", "-1",
+ PRC_DESC("Specifies the number of worker threads the job system should create. "
+          "Max is number of hardware threads - 1, specify -1 to use that number."));
 
 JobSystem *JobSystem::_global_ptr = nullptr;
 
@@ -38,7 +44,14 @@ initialize() {
     return;
   }
 
-  int num_workers = Thread::get_num_supported_threads() - 1;
+  int num_workers = job_system_num_worker_threads;
+  if (num_workers < 0) {
+    num_workers = Thread::get_num_supported_threads() - 1;
+  } else {
+    num_workers = std::min(num_workers, Thread::get_num_supported_threads() - 1);
+  }
+  num_workers = std::max(0, num_workers);
+
   for (int i = 0; i < num_workers; ++i) {
     std::ostringstream ss;
     ss << "job-worker-" << i;

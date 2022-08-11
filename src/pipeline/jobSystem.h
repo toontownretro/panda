@@ -42,6 +42,8 @@ PUBLISHED:
 
   INLINE static JobSystem *get_global_ptr();
 
+  INLINE void parallel_process(int count, std::function<void(int)> func);
+
 public:
   INLINE void pop_job(PT(Job) &job);
 

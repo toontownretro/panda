@@ -14,3 +14,14 @@
 #include "job.h"
 
 IMPLEMENT_CLASS(Job);
+IMPLEMENT_CLASS(ParallelProcessJob);
+
+/**
+ *
+ */
+void ParallelProcessJob::
+execute() {
+  for (int i = 0; i < _num_items; ++i) {
+    _function(_first_item + i);
+  }
+}

@@ -82,6 +82,7 @@ init_libpipeline() {
   GenericThread::init_type();
   Thread::init_type();
   Job::init_type();
+  ParallelProcessJob::init_type();
   JobWorkerThread::init_type();
 
 #ifdef HAVE_THREADS

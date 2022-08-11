@@ -39,3 +39,14 @@ INLINE int Job::
 get_pipeline_stage() const {
   return _pipeline_stage;
 }
+
+/**
+ *
+ */
+INLINE ParallelProcessJob::
+ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
+  _first_item(first_item),
+  _num_items(num_items),
+  _function(func)
+{
+}

@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "typedReferenceCount.h"
+#include <functional>
 
 /**
  *
@@ -33,6 +34,26 @@ public:
 
 private:
   int _pipeline_stage;
+};
+
+/**
+ *
+ */
+class EXPCL_PANDA_PIPELINE ParallelProcessJob : public Job {
+  DECLARE_CLASS(ParallelProcessJob, Job);
+
+public:
+  typedef std::function<void(int)> ProcessFunc;
+
+  INLINE ParallelProcessJob(int first_item, int num_items, ProcessFunc func);
+
+  virtual void execute() override;
+
+protected:
+  int _first_item;
+  int _num_items;
+
+  ProcessFunc _function;
 };
 
 #include "job.I"
