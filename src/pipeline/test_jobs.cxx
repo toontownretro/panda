@@ -26,63 +26,27 @@
 #include "jobSystem.h"
 #include "job.h"
 
-class TestJob : public Job {
-public:
-  TestJob(int start, int end, float *array) :
-    _start(start),
-    _end(end),
-    _array(array)
-  {
-  }
-
-  virtual void execute() override {
-    for (int i = _start; i < _end; ++i) {
-      _array[i] = csqrt(_array[i]);
-    }
-
-    std::cerr << "done from " << Thread::get_current_thread_id() << "\n";
-  }
-
-public:
-  int _start, _end;
-  float *_array;
-};
-
 int
 main(int argc, char *argv[]) {
   JobSystem *sys = JobSystem::get_global_ptr();
-  sys->initialize();
+  AtomicAdjust::Integer count = 0;
 
-  float *array = new float[1000000];
-  for (int i = 0; i < 1000000; ++i) {
-    array[i] = (float)rand() / (float)(RAND_MAX * 0.1f);
-  }
+  Thread::sleep(1.0);
 
-  int num_workers = 10000;
-  int num_per_job = 1000000 / num_workers;
-  int remainder = 1000000 % num_workers;
-  pvector<PT(TestJob)> jobs;
-  for (int i = 0; i < num_workers; ++i) {
-    int start = num_per_job * i;
-    int end = num_per_job * (i + 1);
-    if (i == num_workers - 1) {
-      end += remainder;
-    }
-    std::cout << start << " -> " << end << "\n";
-    PT(TestJob) j = new TestJob(start, end, array);
-    jobs.push_back(j);
-    //jobs.push_back(new TestJob(start, end, array));
-  }
+  sys->parallel_process(200, [&count, sys] (int i) {
+    Thread::sleep(0.05);
 
-  for (TestJob *j : jobs) {
-    sys->schedule(j);
-  }
+    uint32_t outer = Thread::get_current_thread_id();
 
-  int i = 0;
-  while (true) {
-    ++i;
-    Thread::sleep(5.0);
-  }
+    sys->parallel_process(50, [outer, &count] (int i) {
+      std::cerr << "outer: " << outer << ", inner: " << Thread::get_current_thread_id() << "\n";
+      AtomicAdjust::inc(count);
+    });
+
+    Thread::sleep(0.05);
+  });
+
+  std::cout << "Count: " << AtomicAdjust::get(count) << "\n";
 
   return 0;
 }

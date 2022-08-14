@@ -23,6 +23,7 @@
 #include "pointerTo.h"
 #include "pdeque.h"
 #include "mutexHolder.h"
+#include "dcast.h"
 
 /**
  *
@@ -33,9 +34,10 @@ PUBLISHED:
 
   void initialize();
 
-  INLINE void wait_all_jobs();
+  //INLINE void wait_all_jobs();
 
   INLINE void schedule(Job *job);
+  INLINE void schedule(const pvector<PT(Job)> &jobs, bool wait);
   INLINE void wait_for_work();
 
   INLINE void job_finished();
@@ -43,6 +45,8 @@ PUBLISHED:
   INLINE static JobSystem *get_global_ptr();
 
   INLINE void parallel_process(int count, std::function<void(int)> func);
+
+  void wait_job(Job *job);
 
 public:
   INLINE void pop_job(PT(Job) &job);
@@ -57,10 +61,12 @@ private:
 
   typedef pdeque<PT(Job)> JobQueue;
   JobQueue _job_queue;
-  AtomicAdjust::Integer _queued_jobs;
+  //AtomicAdjust::Integer _queued_jobs;
   Mutex _queue_lock;
 
   bool _initialized;
+
+  friend class JobWorkerThread;
 
 private:
   static JobSystem *_global_ptr;

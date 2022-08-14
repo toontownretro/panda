@@ -16,6 +16,8 @@
 
 #include "pandabase.h"
 #include "typedReferenceCount.h"
+#include "atomicAdjust.h"
+#include "deletedChain.h"
 #include <functional>
 
 /**
@@ -27,13 +29,30 @@ class EXPCL_PANDA_PIPELINE Job : public TypedReferenceCount {
 public:
   INLINE Job();
 
+  enum State {
+    S_fresh,
+    S_queued,
+    S_working,
+    S_complete,
+  };
+
   virtual void execute() = 0;
 
   INLINE void set_pipeline_stage(int stage);
   INLINE int get_pipeline_stage() const;
 
+  INLINE void set_state(State state);
+  INLINE State get_state() const;
+
+  //INLINE void set_parent(Job *parent);
+  //INLINE Job *get_parent() const;
+
 private:
   int _pipeline_stage;
+  //int _depth;
+  AtomicAdjust::Integer _state;
+
+  //PT(Job) _parent;
 };
 
 /**
@@ -43,6 +62,8 @@ class EXPCL_PANDA_PIPELINE ParallelProcessJob : public Job {
   DECLARE_CLASS(ParallelProcessJob, Job);
 
 public:
+  ALLOC_DELETED_CHAIN(ParallelProcessJob);
+
   typedef std::function<void(int)> ProcessFunc;
 
   INLINE ParallelProcessJob(int first_item, int num_items, ProcessFunc func);

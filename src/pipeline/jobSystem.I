@@ -14,11 +14,11 @@
 /**
  * Blocks this thread until all queued jobs have been executed and completed.
  */
-INLINE void JobSystem::
-wait_all_jobs() {
-  while (AtomicAdjust::get(_queued_jobs) > 0) {
-  }
-}
+//INLINE void JobSystem::
+//wait_all_jobs() {
+//  while (AtomicAdjust::get(_queued_jobs) > 0) {
+//  }
+//}
 
 /**
  *
@@ -28,17 +28,61 @@ schedule(Job *job) {
   job->set_pipeline_stage(Thread::get_current_pipeline_stage());
 
   if (!_worker_threads.empty()) {
+    //Thread *thread = Thread::get_current_thread();
+    //if (thread != Thread::get_main_thread()) {
+    //  JobWorkerThread *jthread = DCAST(JobWorkerThread, thread);
+    //  job->set_parent(jthread->get_current_job());
+    //}
+
     _queue_lock.acquire();
     _job_queue.push_back(job);
+    job->set_state(Job::S_queued);
     _queue_lock.release();
-    AtomicAdjust::inc(_queued_jobs);
-    _cv_work_available.notify();
+    //AtomicAdjust::inc(_queued_jobs);
+    _cv_work_available.notify_all();
 
   } else {
     // No worker threads, execute job right now on this thread.
+    job->set_state(Job::S_working);
     job->execute();
+    job->set_state(Job::S_complete);
+  }
+}
+
+/**
+ * Schedules several jobs at the same time.  A bit more efficient than
+ * calling schedule() for each job.
+ */
+INLINE void JobSystem::
+schedule(const pvector<PT(Job)> &jobs, bool wait) {
+  for (Job *job : jobs) {
+    job->set_pipeline_stage(Thread::get_current_pipeline_stage());
   }
 
+  if (!_worker_threads.empty()) {
+    _queue_lock.acquire();
+    for (Job *job : jobs) {
+      _job_queue.push_back(job);
+      job->set_state(Job::S_queued);
+      _cv_work_available.notify_all();
+    }
+    _queue_lock.release();
+
+    //_cv_work_available.notify_all();
+
+    if (wait) {
+      for (Job *job : jobs) {
+        wait_job(job);
+      }
+    }
+
+  } else {
+    for (Job *job : jobs) {
+      job->set_state(Job::S_working);
+      job->execute();
+      job->set_state(Job::S_complete);
+    }
+  }
 }
 
 /**
@@ -69,7 +113,7 @@ wait_for_work() {
  */
 INLINE void JobSystem::
 job_finished() {
-  AtomicAdjust::dec(_queued_jobs);
+  //AtomicAdjust::dec(_queued_jobs);
 }
 
 /**
@@ -91,21 +135,26 @@ INLINE void JobSystem::
 parallel_process(int count, std::function<void(int)> func) {
   int num_per_thread = count / (int)_worker_threads.size();
   int remainder = count % (int)_worker_threads.size();
-  pvector<PT(ParallelProcessJob)> jobs;
+
+  pvector<PT(Job)> jobs;
   jobs.reserve(_worker_threads.size());
-  for (size_t i = 0; i < _worker_threads.size(); ++i) {
-    int first = num_per_thread * i;
-    int count = num_per_thread;
-    if (i == (_worker_threads.size() - 1)) {
-      count += remainder;
-    }
-    if (count > 0) {
+  if (num_per_thread > 0) {
+    for (size_t i = 0; i < _worker_threads.size(); ++i) {
+      int first = num_per_thread * i;
+      int count = num_per_thread;
+      if (i == (_worker_threads.size() - 1)) {
+        count += remainder;
+      }
       PT(ParallelProcessJob) job = new ParallelProcessJob(first, count, func);
       jobs.push_back(std::move(job));
     }
+  } else {
+    // If there are fewer items than worker threads, create a job for
+    // each item.
+    for (int i = 0; i < count; ++i) {
+      PT(ParallelProcessJob) job = new ParallelProcessJob(i, 1, func);
+      jobs.push_back(std::move(job));
+    }
   }
-  for (size_t i = 0; i < jobs.size(); ++i) {
-    schedule(jobs[i]);
-  }
-  wait_all_jobs();
+  schedule(jobs, true);
 }

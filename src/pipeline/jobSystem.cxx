@@ -30,9 +30,10 @@ JobSystem() :
   _cv_mutex("jobsystem-cv-mutex"),
   _cv_work_available(_cv_mutex),
   _queue_lock("jobsystem-queue-lock"),
-  _initialized(false),
-  _queued_jobs(0)
+  _initialized(false)//,
+  //_queued_jobs(0)
 {
+  initialize();
 }
 
 /**
@@ -61,4 +62,33 @@ initialize() {
   }
 
   _initialized = true;
+}
+
+/**
+ * Blocks until the indicated job executes to completion.
+ *
+ * While waiting, this thread will attempt to service other jobs
+ * in the queue.
+ */
+void JobSystem::
+wait_job(Job *job) {
+  if (job->get_state() == Job::S_fresh) {
+    return;
+  }
+
+  Thread *thread = Thread::get_current_thread();
+  int orig_pipeline_stage = thread->get_pipeline_stage();
+
+  while (job->get_state() != Job::S_complete) {
+    PT(Job) job2;
+    pop_job(job2);
+    if (job2 != nullptr) {
+      thread->set_pipeline_stage(job2->get_pipeline_stage());
+      job2->set_state(Job::S_working);
+      job2->execute();
+      job2->set_state(Job::S_complete);
+    }
+  }
+
+  thread->set_pipeline_stage(orig_pipeline_stage);
 }

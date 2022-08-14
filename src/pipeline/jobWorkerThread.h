@@ -17,6 +17,8 @@
 #include "pandabase.h"
 #include "thread.h"
 
+class Job;
+
 /**
  *
  */
@@ -27,6 +29,11 @@ public:
   JobWorkerThread(const std::string &name);
 
   virtual void thread_main() override;
+
+  INLINE Job *get_current_job() const;
+
+private:
+  Job *_current_job;
 };
 
 #include "jobWorkerThread.I"

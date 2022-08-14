@@ -13,6 +13,7 @@
 
 #include "jobWorkerThread.h"
 #include "jobSystem.h"
+#include "mutexHolder.h"
 
 IMPLEMENT_CLASS(JobWorkerThread);
 
@@ -21,7 +22,8 @@ IMPLEMENT_CLASS(JobWorkerThread);
  */
 JobWorkerThread::
 JobWorkerThread(const std::string &name) :
-  Thread(name, name)
+  Thread(name, name),
+  _current_job(nullptr)
 {
 }
 
@@ -31,21 +33,29 @@ JobWorkerThread(const std::string &name) :
 void JobWorkerThread::
 thread_main() {
   JobSystem *sys = JobSystem::get_global_ptr();
+
   while (true) {
     //PStatClient::thread_tick();
 
     PT(Job) job;
     sys->pop_job(job);
     if (job == nullptr) {
-      sys->wait_for_work();
+      sys->_cv_mutex.acquire();
+      sys->_cv_work_available.wait();
+      sys->_cv_mutex.release();
+      //sys->wait_for_work();
       //Thread::force_yield();
       //Thread::relax();
     } else {
       // Operate on the pipeline stage of the thread that scheduled this
       // job.
       set_pipeline_stage(job->get_pipeline_stage());
+      _current_job = job;
+      job->set_state(Job::S_working);
       job->execute();
       sys->job_finished();
+      job->set_state(Job::S_complete);
+      _current_job = nullptr;
     }
   }
 }

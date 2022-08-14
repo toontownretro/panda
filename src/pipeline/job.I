@@ -16,7 +16,8 @@
  */
 INLINE Job::
 Job() :
-  _pipeline_stage(0)
+  _pipeline_stage(0),
+  _state(S_fresh)
 {
 }
 
@@ -39,6 +40,38 @@ INLINE int Job::
 get_pipeline_stage() const {
   return _pipeline_stage;
 }
+
+/**
+ *
+ */
+INLINE void Job::
+set_state(State state) {
+  AtomicAdjust::set(_state, (int)state);
+}
+
+/**
+ *
+ */
+INLINE Job::State Job::
+get_state() const {
+  return (State)AtomicAdjust::get(_state);
+}
+
+/**
+ *
+ */
+//INLINE void Job::
+//set_parent(Job *parent) {
+//  _parent = parent;
+//}
+
+/**
+ *
+ */
+//INLINE Job *Job::
+//get_parent() const {
+//  return _parent;
+//}
 
 /**
  *
