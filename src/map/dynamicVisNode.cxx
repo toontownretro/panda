@@ -21,6 +21,7 @@
 #include "boundingSphere.h"
 #include "boundingBox.h"
 #include "omniBoundingVolume.h"
+#include "jobSystem.h"
 
 IMPLEMENT_CLASS(DynamicVisNode);
 
@@ -31,8 +32,7 @@ DynamicVisNode::
 DynamicVisNode(const std::string &name) :
   PandaNode(name),
   _trav_counter(-1),
-  _last_visit_frame(-1),
-  _enabled(true)
+  _tree(nullptr)
 {
   // Give it infinite bounds to optimize recomputing the node's bounding
   // volume when we have a bunch of children.
@@ -48,7 +48,8 @@ DynamicVisNode(const std::string &name) :
  */
 void DynamicVisNode::
 set_culling_enabled(bool flag) {
-  _enabled = flag;
+  CDWriter cdata(_cycler);
+  cdata->_enabled = flag;
 }
 
 /**
@@ -56,7 +57,64 @@ set_culling_enabled(bool flag) {
  */
 bool DynamicVisNode::
 get_culling_enabled() const {
-  return _enabled;
+  CDReader cdata(_cycler);
+  return cdata->_enabled;
+}
+
+/**
+ *
+ */
+void DynamicVisNode::
+update_dirty_children() {
+  if (_tree == nullptr) {
+    return;
+  }
+
+  nassertv(Thread::get_current_pipeline_stage() == 0);
+
+  JobSystem *jsys = JobSystem::get_global_ptr();
+
+  Children children = get_children();
+  jsys->parallel_process(children.size(), [&children] (int i) {
+      PandaNodePipelineReader reader(children.get_child(i), Thread::get_current_thread());
+      reader.check_cached(true);
+    }
+  );
+
+  if (!_dirty_children.empty()) {
+    CDWriter cdata(_cycler);
+
+    // Re-place all the dirty children into visgroup buckets.
+    for (auto it = _dirty_children.begin(); it != _dirty_children.end(); ++it) {
+      ChildInfo *info = *it;
+      // Don't worry about transforming the bounding volume of the node.
+      // It is assumed that the DynamicVisNode always has an identity
+      // transform and child nodes of it are in world-space already.
+      remove_from_tree(info, cdata);
+    }
+
+    jsys->parallel_process(_dirty_children.size(),
+      [this] (int i) {
+        ChildInfo *info = _dirty_children[i];
+        // The bounding volume is in the coordinate space of its parent, meaning
+        // it contains the node's local transform already, so we only have to
+        // check for a bounding volume change.
+        const GeometricBoundingVolume *bounds = (const GeometricBoundingVolume *)info->_node->get_bounds().p();
+        insert_into_tree(info, bounds, _tree);
+      }
+    );
+
+    for (auto it = _dirty_children.begin(); it != _dirty_children.end(); ++it) {
+      ChildInfo *info = *it;
+      // Now insert the child into all the buckets.
+      for (size_t i = 0; i < info->_visgroups.size(); ++i) {
+        int visgroup = info->_visgroups[i];
+        cdata->_visgroups[visgroup].insert(info);
+      }
+    }
+
+    _dirty_children.clear();
+  }
 }
 
 /**
@@ -64,13 +122,21 @@ get_culling_enabled() const {
  * for each visgroup in the new level.
  */
 void DynamicVisNode::
-level_init(int num_clusters) {
+level_init(int num_clusters, const SpatialPartition *tree) {
+  _tree = tree;
+
+  CDWriter cdata(_cycler);
+
   // Everything else should've been reset in level_shutdown().
-  _visgroups.resize(num_clusters);
+  cdata->_visgroups.resize(num_clusters);
 
   // Make sure all existing children are in the dirty list.
   for (auto it = _children.begin(); it != _children.end(); ++it) {
-    _dirty_children.insert(it->second);
+    ChildInfo *info = (*it).second;
+    if (!info->_dirty) {
+      info->_dirty = true;
+      _dirty_children.push_back(info);
+    }
   }
 }
 
@@ -80,14 +146,17 @@ level_init(int num_clusters) {
  */
 void DynamicVisNode::
 level_shutdown() {
+  CDWriter cdata(_cycler);
+
   // Clear out the visgroup set for each child and any tracking info.
   for (auto it = _children.begin(); it != _children.end(); ++it) {
     it->second->_visgroups.clear();
     it->second->_last_trav_counter = -1;
+    it->second->_dirty = false;
   }
   _trav_counter = -1;
-  _last_visit_frame = -1;
-  _visgroups.clear();
+  _tree = nullptr;
+  cdata->_visgroups.clear();
   _dirty_children.clear();
 }
 
@@ -95,21 +164,28 @@ level_shutdown() {
  * Called when the indicated PandaNode has been added as a child of this node.
  */
 void DynamicVisNode::
-child_added(PandaNode *node) {
+child_added(PandaNode *node, int pipeline_stage) {
+  // This should not be called from Cull or Draw.
+  nassertv(pipeline_stage == 0);
+
   auto it = _children.find(node);
   if (it != _children.end()) {
     // Hmm, we already have this child in our registry.
     // Mark it dirty just to be safe.
-    _dirty_children.insert(it->second);
+    ChildInfo *info = (*it).second;
+    if (!info->_dirty) {
+      _dirty_children.push_back(info);
+      info->_dirty = true;
+    }
     return;
   }
 
   ChildInfo *info = new ChildInfo;
   info->_last_trav_counter = -1;
   info->_node = node;
+  info->_dirty = true;
   _children.insert({ node, info });
-
-  _dirty_children.insert(info);
+  _dirty_children.push_back(info);
 }
 
 /**
@@ -117,15 +193,28 @@ child_added(PandaNode *node) {
  * of children.
  */
 void DynamicVisNode::
-child_removed(PandaNode *node) {
+child_removed(PandaNode *node, int pipeline_stage) {
+  // This should not be called from Cull or Draw.
+  nassertv(pipeline_stage == 0);
+
   auto it = _children.find(node);
   if (it == _children.end()) {
     return;
   }
 
   ChildInfo *info = it->second;
-  _dirty_children.erase(info);
-  remove_from_tree(info);
+  if (info->_dirty) {
+    auto dit = std::find(_dirty_children.begin(), _dirty_children.end(), info);
+    if (dit != _dirty_children.end()) {
+      _dirty_children.erase(dit);
+    }
+    info->_dirty = false;
+  }
+
+  {
+    CDWriter cdata(_cycler);
+    remove_from_tree(info, cdata);
+  }
   _children.erase(it);
 }
 
@@ -134,10 +223,18 @@ child_removed(PandaNode *node) {
  * Called when the indicated child node's bounds have been marked as stale.
  */
 void DynamicVisNode::
-child_bounds_stale(PandaNode *node) {
-  auto it = _children.find(node);
+child_bounds_stale(PandaNode *node, int pipeline_stage) {
+  if (pipeline_stage != 0) {
+    return;
+  }
+
+  ChildInfos::const_iterator it = _children.find(node);
   if (it != _children.end()) {
-    _dirty_children.insert(it->second);
+    ChildInfo *info = (*it).second;
+    if (!info->_dirty) {
+      _dirty_children.push_back(info);
+      info->_dirty = true;
+    }
   }
 }
 
@@ -164,47 +261,23 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
 
-  if (!_enabled || mtrav->_data == nullptr || mtrav->_view_cluster < 0) {
+  CDReader cdata(_cycler);
+
+  if (!cdata->_enabled || mtrav->_data == nullptr) {
     // No map, invalid view cluster, or culling disabled.
     return true;
   }
 
-  ClockObject *clock = ClockObject::get_global_clock();
-  int frame = clock->get_frame_count();
-
-  // We only need to check for dirty children once per frame.
-  // If multiple render passes are done over the scene graph, we assume
-  // that nodes will not change during those passes.
-  if (frame != _last_visit_frame) {
-    _last_visit_frame = frame;
-
-    if (!_dirty_children.empty()) {
-      // Re-place all the dirty children into visgroup buckets.
-      for (auto it = _dirty_children.begin(); it != _dirty_children.end(); ++it) {
-        ChildInfo *info = *it;
-
-        // The bounding volume is in the coordinate space of its parent, meaning
-        // it contains the node's local transform already, so we only have to
-        // check for a bounding volume change.
-        const GeometricBoundingVolume *bounds = (const GeometricBoundingVolume *)info->_node->get_bounds().p();
-
-        // Don't worry about transforming the bounding volume of the node.
-        // It is assumed that the DynamicVisNode always has an identity
-        // transform and child nodes of it are in world-space already.
-        remove_from_tree(info);
-        insert_into_tree(info, bounds, mtrav->_data->get_area_cluster_tree());
-      }
-
-      _dirty_children.clear();
-    }
+  if (mtrav->_view_cluster < 0) {
+    return false;
   }
 
   _trav_counter++;
 
   const BitArray &pvs = mtrav->_pvs;
-  int num_visgroups = mtrav->_data->get_num_clusters();
+  //int num_visgroups = mtrav->_data->get_num_clusters();
 
-  for (int i = 0; i < num_visgroups; ++i) {
+  for (int i = 0; i < (int)cdata->_visgroups.size(); ++i) {
     if (!pvs.get_bit(i)) {
       // Not in PVS.
       continue;
@@ -212,7 +285,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
     // This visgroup is in the PVS, so traverse the children in the
     // bucket corresponding to this visgroup.
-    const DynamicVisNode::ChildSet &children = _visgroups[i];
+    const DynamicVisNode::ChildSet &children = cdata->_visgroups[i];
 
     for (auto it = children.begin(); it != children.end(); ++it) {
       ChildInfo *child = *it;
@@ -235,11 +308,11 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
  * Removes the child from all visgroup buckets.
  */
 void DynamicVisNode::
-remove_from_tree(ChildInfo *info) {
+remove_from_tree(ChildInfo *info, CData *cdata) {
   // Iterate over all the visgroup indices and remove the child from that
   // visgroup's bucket.
   for (size_t i = 0; i < info->_visgroups.size(); ++i) {
-    _visgroups[info->_visgroups[i]].erase(info);
+    cdata->_visgroups[info->_visgroups[i]].erase(info);
   }
   info->_visgroups.clear();
 }
@@ -252,6 +325,11 @@ remove_from_tree(ChildInfo *info) {
 void DynamicVisNode::
 insert_into_tree(ChildInfo *info, const GeometricBoundingVolume *bounds, const SpatialPartition *tree) {
   //nassertv(bounds != nullptr && !bounds->is_infinite());
+
+  if (bounds->is_infinite()) {
+    return;
+  }
+
   info->_visgroups.reserve(128);
 
   TypeHandle type = bounds->get_type();
@@ -276,10 +354,31 @@ insert_into_tree(ChildInfo *info, const GeometricBoundingVolume *bounds, const S
     nassert_raise("Bounds type is not box or sphere!");
     return;
   }
+}
 
-  // Now insert the child into all the buckets.
-  for (size_t i = 0; i < info->_visgroups.size(); ++i) {
-    int visgroup = info->_visgroups[i];
-    _visgroups[visgroup].insert(info);
-  }
+/**
+ *
+ */
+DynamicVisNode::CData::
+CData() :
+  _enabled(true)
+{
+}
+
+/**
+ *
+ */
+DynamicVisNode::CData::
+CData(const CData &copy) :
+  _visgroups(copy._visgroups),
+  _enabled(copy._enabled)
+{
+}
+
+/**
+ *
+ */
+CycleData *DynamicVisNode::CData::
+make_copy() const {
+  return new CData(*this);
 }

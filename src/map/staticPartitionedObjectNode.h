@@ -71,7 +71,7 @@ private:
     CamData() = default;
 
     int _view_cluster = -1;
-    pvector<GeomEntry> _geoms;
+    pvector<Object *> _geoms;
   };
 
   pvector<Object> _objects;

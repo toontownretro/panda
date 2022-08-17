@@ -24,6 +24,10 @@
 #include "memoryBase.h"
 #include "lightMutex.h"
 #include "cycleData.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
+#include "cycleDataStageWriter.h"
+#include "pipelineCycler.h"
 
 class CullTraverser;
 class CullTraverserData;
@@ -54,16 +58,18 @@ PUBLISHED:
   DynamicVisNode(const std::string &name);
   DynamicVisNode(const DynamicVisNode &copy) = delete;
 
-  void level_init(int num_clusters);
+  void level_init(int num_clusters, const SpatialPartition *tree);
   void level_shutdown();
 
   void set_culling_enabled(bool flag);
   bool get_culling_enabled() const;
 
+  void update_dirty_children();
+
 public:
-  virtual void child_added(PandaNode *node) override;
-  virtual void child_removed(PandaNode *node) override;
-  virtual void child_bounds_stale(PandaNode *node) override;
+  virtual void child_added(PandaNode *node, int pipeline_stage) override;
+  virtual void child_removed(PandaNode *node, int pipeline_stage) override;
+  virtual void child_bounds_stale(PandaNode *node, int pipeline_stage) override;
 
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
 
@@ -75,6 +81,8 @@ public:
     // is visited.
     int _last_trav_counter;
 
+    bool _dirty;
+
     PandaNode *_node;
 
     // The set of visgroups the node is in.  This is only needed so we can
@@ -82,30 +90,46 @@ public:
     ov_set<int> _visgroups;
   };
 
-  void remove_from_tree(ChildInfo *child);
-  void insert_into_tree(ChildInfo *child, const GeometricBoundingVolume *bounds, const SpatialPartition *tree);
-
 private:
-  typedef pflat_hash_set<ChildInfo *, pointer_hash> ChildSet;
+  typedef pflat_hash_set<PT(ChildInfo)> ChildSet;
 
   // This maps visgroups to a list of children for quick iteration over the
   // children in a visgroup.
   typedef pvector<ChildSet> VisGroupChildren;
-  VisGroupChildren _visgroups;
-
-  //class CData : public CycleData {
-
-  //};
 
   typedef pflat_hash_map<PandaNode *, PT(ChildInfo), pointer_hash> ChildInfos;
+
   ChildInfos _children;
+  pvector<ChildInfo *> _dirty_children;
 
-  ChildSet _dirty_children;
+  /**
+   * We require cycling the set of nodes in each visgroup.
+   *
+   * It is updated by the App stage and read by the Cull stage
+   * to determine the list of nodes to traverse.
+   */
+  class CData : public CycleData {
+  public:
+    CData();
+    CData(const CData &copy);
+    virtual CycleData *make_copy() const override;
 
-  int _last_visit_frame;
+    VisGroupChildren _visgroups;
+    bool _enabled;
+  };
+
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
+  typedef CycleDataStageWriter<CData> CDStageWriter;
+
   int _trav_counter;
 
-  bool _enabled;
+  const SpatialPartition *_tree;
+
+public:
+  void remove_from_tree(ChildInfo *child, CData *cdata);
+  void insert_into_tree(ChildInfo *child, const GeometricBoundingVolume *bounds, const SpatialPartition *tree);
 };
 
 #include "dynamicVisNode.I"

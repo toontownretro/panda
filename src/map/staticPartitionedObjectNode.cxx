@@ -28,6 +28,7 @@
 #include "materialAttrib.h"
 #include "material.h"
 #include "materialParamTexture.h"
+#include "jobSystem.h"
 
 IMPLEMENT_CLASS(StaticPartitionedObjectNode);
 
@@ -94,7 +95,7 @@ void StaticPartitionedObjectNode::
 add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
 
-  if (mtrav->_data == nullptr || mtrav->_view_cluster < 0) {
+  if (mtrav->_data == nullptr) {
     // No map, invalid view cluster, or culling disabled.
 
     for (const Object &obj : _objects) {
@@ -104,36 +105,41 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     return;
   }
 
+  if (mtrav->_view_cluster < 0) {
+    return;
+  }
+
   Camera *camera = trav->get_scene()->get_camera_node();
   int view_cluster = mtrav->_view_cluster;
 
   CamData &cam_data = _cam_geoms[camera];
+
+  //JobSystem *jsys = JobSystem::get_global_ptr();
 
   if (cam_data._view_cluster == view_cluster) {
     const TransformState *trans = trav->get_scene()->get_cs_world_transform();
     Thread *current_thread = trav->get_current_thread();
     // Same view cluster as before.
     // Zoom through cached object list.
-    for (const GeomEntry &geom : cam_data._geoms) {
-      if (data._view_frustum != nullptr) {
-        if (!geom._geom->is_in_view(data._view_frustum, current_thread)) {
-          continue;
+
+    //jsys->parallel_process(cam_data._geoms.size(),
+    //  [&] (int i) {
+      //for (int i = 0; i < (int)cam_data._geoms.size(); ++i) {
+      for (const Object *obj : cam_data._geoms) {
+        //const Object *obj = cam_data._geoms[i];
+        if (data._view_frustum != nullptr) {
+          if (!obj->_bounds->contains(data._view_frustum)) {
+            continue;
+          }
+        }
+
+        for (const GeomEntry &geom : obj->_geoms) {
+          CPT(RenderState) state = data._state->compose(geom._state);
+          CullableObject *cobj = new CullableObject(geom._geom, std::move(state), trans, current_thread);
+          trav->get_cull_handler()->record_object(cobj, trav);
         }
       }
-      if (data._state->is_empty()) {
-        CullableObject cobj(geom._geom, geom._state, trans, current_thread);
-        trav->get_cull_handler()->record_object(cobj, trav);
-
-      } else if (geom._state->is_empty()) {
-        CullableObject cobj(geom._geom, data._state, trans, current_thread);
-        trav->get_cull_handler()->record_object(cobj, trav);
-
-      } else {
-        CPT(RenderState) state = data._state->compose(geom._state);
-        CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
-        trav->get_cull_handler()->record_object(cobj, trav);
-      }
-    }
+    //);
 
   } else {
     // Camera changed clusters.
@@ -157,7 +163,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         if (obj->_last_trav_counter != _trav_counter) {
           obj->_last_trav_counter = _trav_counter;
           add_object_for_draw(trav, data, obj);
-          cam_data._geoms.insert(cam_data._geoms.end(), obj->_geoms.begin(), obj->_geoms.end());
+          cam_data._geoms.push_back(obj);
         }
       }
     }
@@ -180,20 +186,9 @@ add_object_for_draw(CullTraverser *trav, CullTraverserData &data, const Object *
   const TransformState *trans = trav->get_scene()->get_cs_world_transform();
 
   for (const GeomEntry &geom : obj->_geoms) {
-    if (data._state->is_empty()) {
-      CullableObject cobj(geom._geom, geom._state, trans, current_thread);
-      trav->get_cull_handler()->record_object(cobj, trav);
-
-    } else if (geom._state->is_empty()) {
-      CullableObject cobj(geom._geom, data._state, trans, current_thread);
-      trav->get_cull_handler()->record_object(cobj, trav);
-
-    } else {
-      CPT(RenderState) state = data._state->compose(geom._state);
-      CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
-      trav->get_cull_handler()->record_object(cobj, trav);
-    }
-
+    CPT(RenderState) state = data._state->compose(geom._state);
+    CullableObject *cobj = new CullableObject(geom._geom, std::move(state), trans, current_thread);
+    trav->get_cull_handler()->record_object(cobj, trav);
   }
 }
 

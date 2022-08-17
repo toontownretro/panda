@@ -2,7 +2,9 @@
   #define TARGET map
   #define BUILDING_DLL BUILDING_PANDA_MAP
 
-  #define LOCAL_LIBS pgraph linmath raytrace pgraphnodes
+  #define LOCAL_LIBS pgraph linmath raytrace pgraphnodes jobsystem
+
+  //#define USE_PACKAGES tbb
 
   #define SOURCES \
     aabbTree.h aabbTree.I \
