@@ -24,6 +24,7 @@
 #include "callbackObject.h"
 #include "pset.h"
 #include "physRigidActorNode.h"
+#include "pvector.h"
 
 #include "physx_utils.h"
 
@@ -122,7 +123,7 @@ private:
 
   bool _debug_vis_enabled;
 
-  typedef pflat_set<PT(PhysRigidActorNode)> Actors;
+  typedef pvector<PT(PhysRigidActorNode)> Actors;
   Actors _actors;
 };
 

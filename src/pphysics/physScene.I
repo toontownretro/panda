@@ -161,7 +161,8 @@ get_controller_manager() const {
  */
 INLINE void PhysScene::
 add_actor(PhysRigidActorNode *actor) {
-  _actors.insert(actor);
+  nassertv(std::find(_actors.begin(), _actors.end(), actor) == _actors.end());
+  _actors.push_back(actor);
 }
 
 /**
@@ -169,5 +170,7 @@ add_actor(PhysRigidActorNode *actor) {
  */
 INLINE void PhysScene::
 remove_actor(PhysRigidActorNode *actor) {
-  _actors.erase(actor);
+  Actors::const_iterator it = std::find(_actors.begin(), _actors.end(), actor);
+  nassertv(it != _actors.end());
+  _actors.erase(it);
 }
