@@ -20,6 +20,10 @@
 #include "randomizer.h"
 #include "config_pphysics.h"
 #include "clockObject.h"
+#include "jobSystem.h"
+#include "boundingBox.h"
+
+pvector<PT(PhysRagdoll)> PhysRagdoll::_all_ragdolls;
 
 static ConfigVariableDouble phys_ragdoll_joint_stiffness("phys-ragdoll-joint-stiffness", 0.0);
 static ConfigVariableDouble phys_ragdoll_joint_damping("phys-ragdoll-joint-damping", 0.0);
@@ -227,6 +231,10 @@ create_joints() {
  */
 void PhysRagdoll::
 start_ragdoll(PhysScene *scene, NodePath render) {
+  if (_enabled) {
+    return;
+  }
+
   create_joints();
 
   _awake_joints = 0;
@@ -255,6 +263,8 @@ start_ragdoll(PhysScene *scene, NodePath render) {
     scene->add_actor(joint->actor);
   }
   _enabled = true;
+
+  _all_ragdolls.push_back(this);
 }
 
 /**
@@ -262,6 +272,10 @@ start_ragdoll(PhysScene *scene, NodePath render) {
  */
 void PhysRagdoll::
 stop_ragdoll() {
+  if (!_enabled) {
+    return;
+  }
+
   if (_aggregate->getScene() != nullptr) {
     physx::PxScene *scene = _aggregate->getScene();
     PhysScene *ps = (PhysScene *)scene->userData;
@@ -272,6 +286,11 @@ stop_ragdoll() {
     }
   }
   _enabled = false;
+
+  auto it = std::find(_all_ragdolls.begin(), _all_ragdolls.end(), this);
+  if (it != _all_ragdolls.end()) {
+    _all_ragdolls.erase(it);
+  }
 }
 
 /**
@@ -349,6 +368,13 @@ destroy() {
     _aggregate = nullptr;
   }
 
+  if (_enabled) {
+    auto it = std::find(_all_ragdolls.begin(), _all_ragdolls.end(), this);
+    if (it != _all_ragdolls.end()) {
+      _all_ragdolls.erase(it);
+    }
+  }
+
   _enabled = false;
 }
 
@@ -411,6 +437,9 @@ update() {
   LMatrix4 char_root_to_parent;
   LMatrix4 local_trans;
 
+  LPoint3 mins(999999);
+  LPoint3 maxs(-999999);
+
   for (size_t i = 0; i < _char_joints.size(); i++) {
     Joint *limb = _char_joints[i];
 
@@ -450,6 +479,20 @@ update() {
     }
   }
 
+  // Now update the bounding box of the ragdoll based on the joint positions.
+  for (int i = 0; i < (int)_all_joints.size(); ++i) {
+    PhysRigidActorNode *actor = _all_joints[i]->actor;
+    physx::PxBounds3 px_bounds = actor->get_rigid_actor()->getWorldBounds();
+    mins = mins.fmin(physx_vec_to_panda(px_bounds.minimum));
+    maxs = maxs.fmax(physx_vec_to_panda(px_bounds.maximum));
+  }
+
+  // Transform bbox to be relative to the character node.
+  mins = world_to_char.xform_point(mins);
+  maxs = world_to_char.xform_point(maxs);
+
+  _char_node->set_bounds(new BoundingBox(mins, maxs));
+
   return true;
 }
 
@@ -476,6 +519,18 @@ add_hard_impact_sound(AudioSound *sound) {
 void PhysRagdoll::
 add_soft_impact_sound(AudioSound *sound) {
   _soft_impact_sounds.push_back(sound);
+}
+
+/**
+ *
+ */
+void PhysRagdoll::
+update_ragdolls() {
+  JobSystem *jsys = JobSystem::get_global_ptr();
+  jsys->parallel_process(_all_ragdolls.size(), [&](int i) {
+    PhysRagdoll *ragdoll = _all_ragdolls[i];
+    ragdoll->update();
+  });
 }
 
 /**

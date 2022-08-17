@@ -10,3 +10,11 @@
  * @author brian
  * @date 2021-04-22
  */
+
+/**
+ *
+ */
+INLINE bool PhysRagdoll::
+is_awake() const {
+  return _awake_joints > 0;
+}

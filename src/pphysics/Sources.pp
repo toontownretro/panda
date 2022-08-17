@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[HAVE_PHYSX]
 
-#define LOCAL_LIBS pgraph linmath mathutil anim audio pipeline
+#define LOCAL_LIBS pgraph linmath mathutil anim audio pipeline jobsystem
 #define USE_PACKAGES physx
 
 #begin lib_target

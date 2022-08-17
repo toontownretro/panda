@@ -88,7 +88,11 @@ PUBLISHED:
   Joint *get_joint(int n) const;
   int get_num_joints() const;
 
+  INLINE bool is_awake() const;
+
   bool update();
+
+  static void update_ragdolls();
 
   void create_joints();
   void clear_joints();
@@ -137,6 +141,8 @@ private:
   Character *_char;
 
   int _awake_joints;
+
+  static pvector<PT(PhysRagdoll)> _all_ragdolls;
 
   friend class LimbSleepCallback;
 };
