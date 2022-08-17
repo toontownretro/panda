@@ -169,7 +169,10 @@ void JobSystem::
 parallel_process(int count, std::function<void(int)> func) {
   PStatTimer timer(parallel_proc_pcollector);
 
-  if (count == 1) {
+  if (count == 0) {
+    return;
+
+  } else if (count == 1) {
     func(0);
     return;
 
