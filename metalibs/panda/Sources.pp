@@ -18,7 +18,8 @@
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
   nativenet net audio pnmtext steamnet shader \
-  postprocess raytrace bsp material pdx map particlesystem2
+  postprocess raytrace bsp material pdx map particlesystem2 \
+  jobsystem
 
 #define LOCAL_LIBS \
   downloader express pandabase

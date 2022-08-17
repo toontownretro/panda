@@ -14,6 +14,12 @@
 #include "jobWorkerThread.h"
 #include "jobSystem.h"
 #include "mutexHolder.h"
+#include "pStatClient.h"
+#include "pStatTimer.h"
+#include "pStatCollector.h"
+
+PStatCollector exec_job_pcollector("JobSystem:ExecuteJob");
+static PStatCollector sleep_pcollector("JobSystem:Sleep");
 
 IMPLEMENT_CLASS(JobWorkerThread);
 
@@ -23,7 +29,8 @@ IMPLEMENT_CLASS(JobWorkerThread);
 JobWorkerThread::
 JobWorkerThread(const std::string &name) :
   Thread(name, name),
-  _current_job(nullptr)
+  _current_job(nullptr),
+  _state(S_idle)
 {
 }
 
@@ -35,27 +42,52 @@ thread_main() {
   JobSystem *sys = JobSystem::get_global_ptr();
 
   while (true) {
-    //PStatClient::thread_tick();
+    PStatClient::thread_tick();
 
-    PT(Job) job;
-    sys->pop_job(job);
+    Job *job = sys->pop_job(this);
     if (job == nullptr) {
-      sys->_cv_mutex.acquire();
-      sys->_cv_work_available.wait();
-      sys->_cv_mutex.release();
-      //sys->wait_for_work();
-      //Thread::force_yield();
+      PStatTimer timer(sleep_pcollector);
+
       //Thread::relax();
+
+      //Thread::force_yield();
+
+      //
+
+      sys->_cv_mutex.acquire();
+      //std::cerr << "Sleep " << this << "\n";
+      while (AtomicAdjust::get(sys->_queued_jobs) == 0) {
+        sys->_cv_work_available.wait();
+      }
+      //std::cerr << "Wake up " << this << "\n";
+      sys->_cv_mutex.release();
+
+      //
+
     } else {
+      PStatTimer timer(exec_job_pcollector);
+
+      AtomicAdjust::set(_state, S_busy);
+
       // Operate on the pipeline stage of the thread that scheduled this
       // job.
       set_pipeline_stage(job->get_pipeline_stage());
+
       _current_job = job;
+
       job->set_state(Job::S_working);
       job->execute();
-      sys->job_finished();
-      job->set_state(Job::S_complete);
+      if (job->unref()) {
+        job->set_state(Job::S_complete);
+      } else {
+        delete job;
+      }
+
       _current_job = nullptr;
+
+      AtomicAdjust::set(_state, S_idle);
+
+      //Thread::relax();
     }
   }
 }

@@ -34,9 +34,6 @@
     cyclerHolder.h cyclerHolder.I \
     externalThread.h \
     genericThread.h genericThread.I \
-    job.h job.I \
-    jobSystem.h jobSystem.I \
-    jobWorkerThread.h jobWorkerThread.I \
     lightMutex.I lightMutex.h \
     lightMutexDirect.h lightMutexDirect.I \
     lightMutexHolder.I lightMutexHolder.h \
@@ -94,9 +91,6 @@
     cyclerHolder.cxx \
     externalThread.cxx \
     genericThread.cxx \
-    job.cxx \
-    jobSystem.cxx \
-    jobWorkerThread.cxx \
     lightMutex.cxx \
     lightMutexDirect.cxx \
     lightMutexHolder.cxx \
@@ -230,16 +224,5 @@
 
   #define SOURCES \
     test_setjmp.cxx
-
-#end test_bin_target
-#begin test_bin_target
-  #define TARGET test_jobs
-  #define LOCAL_LIBS $[LOCAL_LIBS] pipeline
-  #define OTHER_LIBS \
-   interrogatedb dtoolbase:c prc \
-   dtoolutil:c dtool:m
-
-  #define SOURCES \
-    test_jobs.cxx
 
 #end test_bin_target

@@ -23,7 +23,7 @@
 /**
  *
  */
-class EXPCL_PANDA_PIPELINE Job : public TypedReferenceCount {
+class EXPCL_PANDA_JOBSYSTEM Job : public TypedReferenceCount {
   DECLARE_CLASS(Job, TypedReferenceCount);
 
 public:
@@ -58,7 +58,7 @@ private:
 /**
  *
  */
-class EXPCL_PANDA_PIPELINE ParallelProcessJob : public Job {
+class ALIGN_64BYTE EXPCL_PANDA_JOBSYSTEM ParallelProcessJob : public Job {
   DECLARE_CLASS(ParallelProcessJob, Job);
 
 public:
@@ -66,16 +66,38 @@ public:
 
   typedef std::function<void(int)> ProcessFunc;
 
+  INLINE ParallelProcessJob() = default;
   INLINE ParallelProcessJob(int first_item, int num_items, ProcessFunc func);
 
   virtual void execute() override;
 
-protected:
+public:
   int _first_item;
   int _num_items;
 
   ProcessFunc _function;
 };
+
+#if 0
+/**
+ *
+ */
+template<class T>
+class ALIGN_64BYTE ParallelProcessIterJob : public Job {
+public:
+  typedef std::function<void(const T &)> ProcessFunc;
+
+  INLINE ParallelProcessIterJob() = default;
+
+  virtual void execute() override;
+
+public:
+  T _begin;
+  int _first;
+  int _count;
+  ProcessFunc _function;
+};
+#endif
 
 #include "job.I"
 

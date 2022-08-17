@@ -25,3 +25,17 @@ execute() {
     _function(_first_item + i);
   }
 }
+
+/**
+ *
+ */
+#if 0
+template<class T>
+void ParallelProcessIterJob<T>::
+execute() {
+  T it = std::next(_begin, _first);
+  for (int i = 0; i < _count; ++it, ++i) {
+    _function(it);
+  }
+}
+#endif

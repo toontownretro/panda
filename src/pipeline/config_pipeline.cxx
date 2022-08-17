@@ -18,8 +18,6 @@
 #include "genericThread.h"
 #include "thread.h"
 #include "pandaSystem.h"
-#include "job.h"
-#include "jobWorkerThread.h"
 
 #include "dconfig.h"
 
@@ -81,9 +79,6 @@ init_libpipeline() {
   ExternalThread::init_type();
   GenericThread::init_type();
   Thread::init_type();
-  Job::init_type();
-  ParallelProcessJob::init_type();
-  JobWorkerThread::init_type();
 
 #ifdef HAVE_THREADS
  {

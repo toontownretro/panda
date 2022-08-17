@@ -25,28 +25,46 @@
 #include "conditionVar.h"
 #include "jobSystem.h"
 #include "job.h"
+#include "trueClock.h"
 
 int
 main(int argc, char *argv[]) {
   JobSystem *sys = JobSystem::get_global_ptr();
   AtomicAdjust::Integer count = 0;
+  int job_count = 500;
+
+  Mutex lock("print-lock");
 
   Thread::sleep(1.0);
 
-  sys->parallel_process(200, [&count, sys] (int i) {
-    Thread::sleep(0.05);
+  TrueClock *clock = TrueClock::get_global_ptr();
 
-    uint32_t outer = Thread::get_current_thread_id();
+  double start = clock->get_long_time();
 
-    sys->parallel_process(50, [outer, &count] (int i) {
-      std::cerr << "outer: " << outer << ", inner: " << Thread::get_current_thread_id() << "\n";
-      AtomicAdjust::inc(count);
-    });
+  double wait_time = 0.05;
 
-    Thread::sleep(0.05);
+  pset<Thread *> unique_threads;
+
+  std::cerr << "Start now\n";
+
+  sys->parallel_process(job_count, [&count, wait_time, &lock, &unique_threads] (int i) {
+    lock.acquire();
+    unique_threads.insert(Thread::get_current_thread());
+    lock.release();
+    AtomicAdjust::inc(count);
+    Thread::sleep(wait_time);
   });
+  //for (int i = 0; i < job_count; ++i) {
+  //  AtomicAdjust::inc(count);
+  //  Thread::sleep(wait_time);
+  //}
+
+  double end = clock->get_long_time();
 
   std::cout << "Count: " << AtomicAdjust::get(count) << "\n";
+  std::cout << "Elapsed: " << end - start << "\n";
+  std::cout << "Estimated serial time: " << job_count * wait_time << "\n";
+  std::cout << unique_threads.size() << " / " << sys->_worker_threads.size() << " did work\n";
 
   return 0;
 }

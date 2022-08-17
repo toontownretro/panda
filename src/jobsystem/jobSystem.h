@@ -24,44 +24,48 @@
 #include "pdeque.h"
 #include "mutexHolder.h"
 #include "dcast.h"
+#include "workStealingQueue.h"
+#include "psemaphore.h"
 
 /**
  *
  */
-class EXPCL_PANDA_PIPELINE JobSystem {
+class EXPCL_PANDA_JOBSYSTEM JobSystem {
 PUBLISHED:
   JobSystem();
 
   void initialize();
 
-  //INLINE void wait_all_jobs();
+  void schedule(Job *job);
+  void schedule(const pvector<PT(Job)> &jobs, bool wait);
+  void parallel_process(int count, std::function<void(int)> func);
 
-  INLINE void schedule(Job *job);
-  INLINE void schedule(const pvector<PT(Job)> &jobs, bool wait);
-  INLINE void wait_for_work();
-
-  INLINE void job_finished();
-
-  INLINE static JobSystem *get_global_ptr();
-
-  INLINE void parallel_process(int count, std::function<void(int)> func);
+  //template<typename T>
+  //INLINE void parallel_process(T begin, T end, std::function<void(const T &)> func);
 
   void wait_job(Job *job);
 
-public:
-  INLINE void pop_job(PT(Job) &job);
+  INLINE static JobSystem *get_global_ptr();
 
-private:
+public:
+  Job *get_job_for_thread(Thread *thread);
+  Job *pop_job(Thread *thread);
+
+public:
   Mutex _cv_mutex;
   // Signals to worker threads that a job has been added to the queue.
   ConditionVar _cv_work_available;
+  // The condition is that we have at least 1 queued job on any thread
+  // queue.
+  AtomicAdjust::Integer _queued_jobs;
 
   typedef pvector<PT(JobWorkerThread)> WorkerThreads;
   WorkerThreads _worker_threads;
 
-  typedef pdeque<PT(Job)> JobQueue;
+  typedef WorkStealingQueue<Job *> JobQueue;
   JobQueue _job_queue;
-  //AtomicAdjust::Integer _queued_jobs;
+  // We need to protect pushes onto this queue because jobs may be queued
+  // by more than one non-worker threads, i.e. App and Cull.
   Mutex _queue_lock;
 
   bool _initialized;

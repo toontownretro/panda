@@ -16,24 +16,36 @@
 
 #include "pandabase.h"
 #include "thread.h"
+#include "workStealingQueue.h"
+#include "atomicAdjust.h"
 
 class Job;
 
 /**
  *
  */
-class EXPCL_PANDA_PIPELINE JobWorkerThread : public Thread {
+class EXPCL_PANDA_JOBSYSTEM JobWorkerThread : public Thread {
   DECLARE_CLASS(JobWorkerThread, Thread);
 
 public:
+  enum State {
+    S_idle,
+    S_busy,
+  };
+
   JobWorkerThread(const std::string &name);
 
   virtual void thread_main() override;
 
   INLINE Job *get_current_job() const;
 
-private:
+public:
   Job *_current_job;
+
+  AtomicAdjust::Integer _state;
+
+  typedef WorkStealingQueue<Job *> JobQueue;
+  JobQueue _local_queue;
 };
 
 #include "jobWorkerThread.I"
