@@ -130,8 +130,9 @@ schedule(const pvector<PT(Job)> &jobs, bool wait) {
     for (Job *job : jobs) {
       job->ref();
       job->set_state(Job::S_queued);
-      AtomicAdjust::inc(_queued_jobs);
     }
+
+    AtomicAdjust::add(_queued_jobs, (int)jobs.size());
 
     if (jthread != nullptr) {
       for (Job *job : jobs) {
@@ -211,7 +212,6 @@ parallel_process(int count, std::function<void(int)> func) {
       jobs[i]._num_items = count;
       jobs[i]._function = func;
       //_queued_jobs_semaphore.release();
-      AtomicAdjust::inc(_queued_jobs);
     }
   } else {
     // If there are fewer items than worker threads, create a job for
@@ -224,10 +224,11 @@ parallel_process(int count, std::function<void(int)> func) {
       jobs[i]._first_item = i;
       jobs[i]._num_items = 1;
       jobs[i]._function = func;
-      AtomicAdjust::inc(_queued_jobs);
       //_queued_jobs_semaphore.release();
     }
   }
+
+  AtomicAdjust::add(_queued_jobs, job_count);
 
   if (thread->get_type() == JobWorkerThread::get_class_type()) {
     JobWorkerThread *jthread = DCAST(JobWorkerThread, thread);
@@ -343,6 +344,8 @@ get_job_for_thread(Thread *thread) {
       }
     }
 
+    // Finally, try to steal from worker threads that are busy with another
+    // job with outstanding work in their local queues.
     for (JobWorkerThread *othread : _worker_threads) {
       if (othread != thread && AtomicAdjust::get(othread->_state) == JobWorkerThread::S_busy) {
         if (!othread->_local_queue.empty()) {
