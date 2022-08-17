@@ -12,6 +12,7 @@
  */
 
 #include "particleManager2.h"
+#include "jobSystem.h"
 
 ParticleManager2 *ParticleManager2::_global_ptr = nullptr;
 
@@ -20,14 +21,30 @@ ParticleManager2 *ParticleManager2::_global_ptr = nullptr;
  */
 void ParticleManager2::
 update(double dt) {
-  for (Systems::const_iterator it = _systems.begin(); it != _systems.end();) {
-    ParticleSystem2 *system = *it;
-    if (!system->update(dt)) {
-      // Soft-stop completed during update, remove system.
-      it = _systems.erase(it);
-    } else {
-      ++it;
+  if (_systems.empty()) {
+    return;
+  }
+
+  JobSystem *jsys = JobSystem::get_global_ptr();
+
+  pvector<ParticleSystem2 *> removed_systems;
+  jsys->parallel_process(_systems.size(),
+    [&removed_systems, dt, this](int i) {
+      ParticleSystem2 *system = _systems[i];
+      if (!system->update(dt)) {
+        _removed_systems_lock.acquire();
+        removed_systems.push_back(system);
+        _removed_systems_lock.release();
+      }
     }
+  );
+
+  // Remove systems that stopped during parallel update.
+  for (size_t i = 0; i < removed_systems.size(); ++i) {
+    ParticleSystem2 *system = removed_systems[i];
+    Systems::const_iterator it = std::find(_systems.begin(), _systems.end(), system);
+    assert(it != _systems.end());
+    _systems.erase(it);
   }
 }
 
@@ -36,7 +53,7 @@ update(double dt) {
  */
 void ParticleManager2::
 add_system(ParticleSystem2 *system) {
-  _systems.insert(system);
+  _systems.push_back(system);
 }
 
 /**
@@ -45,7 +62,9 @@ add_system(ParticleSystem2 *system) {
 void ParticleManager2::
 remove_system(ParticleSystem2 *system) {
   nassertv(!system->is_running());
-  _systems.erase(system);
+  Systems::const_iterator it = std::find(_systems.begin(), _systems.end(), system);
+  assert(it != _systems.end());
+  _systems.erase(it);
 }
 
 /**
@@ -54,7 +73,7 @@ remove_system(ParticleSystem2 *system) {
 void ParticleManager2::
 stop_and_remove_all_systems() {
   for (ParticleSystem2 *system : _systems) {
-    system->stop();
+    system->priv_stop();
   }
   _systems.clear();
 }

@@ -15,9 +15,10 @@
 #define PARTICLEMANAGER2_H
 
 #include "pandabase.h"
-#include "pset.h"
+#include "pvector.h"
 #include "particleSystem2.h"
 #include "pointerTo.h"
+#include "lightMutex.h"
 
 /**
  *
@@ -31,15 +32,17 @@ PUBLISHED:
   void stop_and_remove_all_systems();
 
 public:
-  INLINE ParticleManager2() = default;
+  INLINE ParticleManager2();
 
   void add_system(ParticleSystem2 *system);
   void remove_system(ParticleSystem2 *system);
 
 private:
-  typedef pset<PT(ParticleSystem2)> Systems;
+  typedef pvector<PT(ParticleSystem2)> Systems;
   // All active systems.
   Systems _systems;
+
+  LightMutex _removed_systems_lock;
 
 private:
   static ParticleManager2 *_global_ptr;

@@ -2,7 +2,7 @@
   #define TARGET particlesystem2
   #define BUILDING_DLL BUILDING_PANDA_PARTICLESYSTEM2
 
-  #define LOCAL_LIBS linmath mathutil gobj pgraph putil parametrics anim
+  #define LOCAL_LIBS linmath mathutil gobj pgraph putil parametrics anim jobsystem
 
   #define HEADERS \
     config_particlesystem2.h \

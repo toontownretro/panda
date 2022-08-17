@@ -218,6 +218,8 @@ public:
 
   NodePath _np;
 
+  friend class ParticleManager2;
+
 public:
   static TypeHandle get_class_type() {
     return _type_handle;

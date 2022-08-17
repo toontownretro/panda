@@ -14,6 +14,15 @@
 /**
  *
  */
+INLINE ParticleManager2::
+ParticleManager2() :
+  _removed_systems_lock("removed-systems-lock")
+{
+}
+
+/**
+ *
+ */
 INLINE ParticleManager2 *ParticleManager2::
 get_global_ptr() {
   if (_global_ptr == nullptr) {
