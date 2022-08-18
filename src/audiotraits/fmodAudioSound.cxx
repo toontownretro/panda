@@ -44,26 +44,6 @@ TypeHandle FMODAudioSound::_type_handle;
 
 #ifdef HAVE_STEAM_AUDIO
 
-// calculate gain based on atmospheric attenuation.
-// as gain excedes threshold, round off (compress) towards 1.0 using spline
-#define SND_GAIN_COMP_EXP_MAX	2.5f	// Increasing SND_GAIN_COMP_EXP_MAX fits compression curve more closely
-                    // to original gain curve as it approaches 1.0.
-#define SND_GAIN_COMP_EXP_MIN	0.8f
-
-#define SND_GAIN_COMP_THRESH	0.5f		// gain value above which gain curve is rounded to approach 1.0
-
-#define SND_DB_MAX				140.0f	// max db of any sound source
-#define SND_DB_MED				90.0f	// db at which compression curve changes
-
-#define SND_GAIN_MAX 1
-#define SND_GAIN_MIN 0.01
-
-#define SND_REFDB 60.0
-#define SND_REFDIST 36.0
-
-#define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((pow( 10.0f, SND_REFDB / 20 ) / pow( 10.0f, (float)sndlvl / 20 )) / SND_REFDIST) : 0 )
-#define DIST_MULT_TO_SNDLVL( dist_mult ) (int)( dist_mult ? ( 20 * log10( pow( 10.0f, SND_REFDB / 20 ) / (dist_mult * SND_REFDIST) ) ) : 0 )
-
 /**
  * Implements a custom distance attenuation for Steam Audio.
  * Scales the distance by the sound's distance multiplier.
@@ -1359,9 +1339,9 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   }
 
   unsigned int flags = 0u;
-  if (props._enable_occlusion || props._enable_transmission) {
-    flags |= IPL_SIMULATIONFLAGS_DIRECT;
-  }
+  //if (props._enable_occlusion || props._enable_transmission) {
+  //  flags |= IPL_SIMULATIONFLAGS_DIRECT;
+  //}
   if (props._enable_reflections) {
     flags |= IPL_SIMULATIONFLAGS_REFLECTIONS;
   }
@@ -1389,6 +1369,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
     _sa_inputs.distanceAttenuationModel.userData = this;
 
     unsigned int direct_flags = 0u;
+#if 0
     if (props._enable_occlusion) {
       direct_flags |= IPL_DIRECTSIMULATIONFLAGS_OCCLUSION;
       if (props._enable_transmission) {
@@ -1403,6 +1384,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
       _sa_inputs.occlusionRadius = props._volumetric_occlusion_radius;
       _sa_inputs.numOcclusionSamples = 32;
     }
+#endif
     _sa_inputs.directFlags = (IPLDirectSimulationFlags)direct_flags;
 
     if (props._enable_pathing) {
@@ -1442,7 +1424,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 2 : 0);
   _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(4, props._enable_directivity ? 1 : 0);
-  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 1 : 0);
+  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 2 : 0);
   _sa_spatial_dsp->setParameterInt(6, props._enable_transmission ? 1 : 0);
   _sa_spatial_dsp->setParameterBool(7, props._enable_reflections);
   _sa_spatial_dsp->setParameterBool(8, props._enable_pathing);
@@ -1451,6 +1433,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterFloat(13, _max_dist); // DISTANCEATTEN_MAXDIST
   _sa_spatial_dsp->setParameterFloat(18, props._directivity_dipole_weight);
   _sa_spatial_dsp->setParameterFloat(19, props._directivity_dipole_power);
+  _sa_spatial_dsp->setParameterFloat(20, 1.0f); // OCCLUSION
   _sa_spatial_dsp->setParameterFloat(25, 1.0f); // DIRECT_MIXLEVEL
   _sa_spatial_dsp->setParameterBool(26, props._binaural_reflections);
   _sa_spatial_dsp->setParameterFloat(27, 1.0f); // REFLECTIONS_MIXLEVEL
@@ -1459,6 +1442,14 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   // Link back to the IPLSource so the DSP can render simulation results.
   _sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
   _sa_spatial_dsp->setParameterFloat(31, _dist_factor); // DISTANCEATTEN_DISTANCEFACTOR
+
+  if (props._enable_occlusion) {
+    bool calculated;
+    float gain = _manager->calc_sound_occlusion(this, calculated);
+    if (calculated) {
+      _sa_spatial_dsp->setParameterFloat(20, gain);
+    }
+  }
 #endif
 }
 

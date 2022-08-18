@@ -77,6 +77,7 @@
 #include "updateSeq.h"
 #include "thread.h"
 #include "pmutex.h"
+#include "reMutex.h"
 
 // The includes needed for FMOD
 #include <fmod.hpp>
@@ -95,6 +96,8 @@ extern void _fmod_audio_errcheck(const char *context, FMOD_RESULT n);
 #else
 #define fmod_audio_errcheck(context, n) _fmod_audio_errcheck(context, n)
 #endif // NDEBUG
+
+class RayTraceScene;
 
 class EXPCL_FMOD_AUDIO FMODAudioManager : public AudioManager {
   friend class FMODAudioSound;
@@ -189,6 +192,12 @@ public:
 
   FMOD_RESULT get_speaker_mode(FMOD_SPEAKERMODE &mode) const;
 
+  float calc_sound_occlusion(FMODAudioSound *sound, bool &calculated);
+  bool can_trace_sound(FMODAudioSound *sound);
+
+  virtual void set_trace_scene(RayTraceScene *scene);
+  virtual void clear_trace_scene();
+
 private:
   FMOD_DSP_TYPE get_fmod_dsp_type(DSP::DSPType panda_type);
   FMOD::DSP *create_fmod_dsp(DSP *panda_dsp);
@@ -229,6 +238,9 @@ private:
   static DSPManagers _dsp_managers;
 
   static int _last_update_frame;
+
+  UpdateSeq _trace_seq;
+  AtomicAdjust::Integer _trace_count;
 
 #ifdef HAVE_STEAM_AUDIO
   // All this Steam Audio related stuff is stored here in static variables to
@@ -271,7 +283,7 @@ private:
   // method.
   static pset<PT(FMODAudioSound)> _queued_plays;
 
-private:
+public:
   FMOD::ChannelGroup *_channelgroup;
 
   FMOD_VECTOR _position;
@@ -288,6 +300,7 @@ private:
 
   typedef pflat_hash_set<PT(FMODAudioSound)> SoundsPlaying;
   SoundsPlaying _sounds_playing;
+  ReMutex _sounds_playing_lock;
 
   typedef pflat_hash_set<FMODAudioSound *, pointer_hash> AllSounds;
   AllSounds _all_sounds;
@@ -297,6 +310,8 @@ private:
   FMODDSPs _dsps;
 
   FMOD_OUTPUTTYPE _saved_outputtype;
+
+  RayTraceScene *_rt_scene;
 
   unsigned int _concurrent_sound_limit;
 

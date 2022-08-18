@@ -388,3 +388,17 @@ load_steam_audio_pathing_probe_batch(CPTA_uchar data) {
 void AudioManager::
 unload_steam_audio_pathing_probe_batch() {
 }
+
+/**
+ *
+ */
+void AudioManager::
+set_trace_scene(RayTraceScene *scene) {
+}
+
+/**
+ *
+ */
+void AudioManager::
+clear_trace_scene() {
+}

@@ -4,7 +4,7 @@
 
 #begin lib_target
   #define TARGET audio
-  #define LOCAL_LIBS putil event movies linmath
+  #define LOCAL_LIBS putil event movies linmath raytrace
 
   #define BUILDING_DLL BUILDING_PANDA_AUDIO
 

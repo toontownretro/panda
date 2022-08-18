@@ -172,7 +172,7 @@ public:
 public:
   FMODSoundHandle *get_sound_handle() const;
 
-private:
+public:
   PT(FMODAudioManager) _manager;
   PT(FMODSoundHandle) _sound_handle;
   FMOD::Sound      *_sound;
@@ -230,6 +230,8 @@ private:
   int _last_update_frame;
 
   std::string _finished_event;
+
+  UpdateSeq _last_trace_seq;
 
 #ifdef HAVE_STEAM_AUDIO
   // The Steam Audio source corresponding to this audio sound, used for

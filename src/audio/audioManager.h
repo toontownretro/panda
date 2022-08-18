@@ -20,10 +20,12 @@
 #include "luse.h"
 #include "movieAudio.h"
 #include "atomicAdjust.h"
+#include "rayTraceScene.h"
 
 typedef AudioManager *Create_AudioManager_proc();
 
 class DSP;
+class RayTraceScene;
 
 class EXPCL_PANDA_AUDIO AudioManager : public TypedReferenceCount {
 PUBLISHED:
@@ -200,6 +202,9 @@ PUBLISHED:
 
   virtual void load_steam_audio_pathing_probe_batch(CPTA_uchar data);
   virtual void unload_steam_audio_pathing_probe_batch();
+
+  virtual void set_trace_scene(RayTraceScene *scene);
+  virtual void clear_trace_scene();
 
   virtual void output(std::ostream &out) const;
   virtual void write(std::ostream &out) const;

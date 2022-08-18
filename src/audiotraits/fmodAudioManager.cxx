@@ -33,6 +33,8 @@
 #include "pStatTimer.h"
 #include "nullAudioSound.h"
 #include "memoryHook.h"
+#include "rayTraceScene.h"
+#include "look_at.h"
 
 // Panda DSP types.
 #include "chorusDSP.h"
@@ -111,6 +113,8 @@ static PStatCollector sa_refl_coll("SteamAudio:Reflections");
 static PStatCollector sa_refl_update_coll("SteamAudio:Reflections:Update");
 static PStatCollector sa_refl_sim_coll("SteamAudio:Reflections:Simulate");
 static PStatCollector sa_refl_sleep_coll("SteamAudio:Reflections:Sleep");
+static PStatCollector sound_occlusion_coll("Audio:SoundOcclusion");
+static PStatCollector sound_occlusion_lock_coll("Audio:SoundOcclusion:Lock");
 
 extern IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMOD_VECTOR &forward, const FMOD_VECTOR &up);
 
@@ -120,6 +124,8 @@ public:
     Thread("steam-audio-reflections", "steam-audio-reflections-sync") { }
 
   virtual void thread_main() override {
+    double last_trace_time = 0.0;
+
     while (true) {
       PStatClient::thread_tick("steam-audio-reflections-sync");
 
@@ -143,6 +149,31 @@ public:
         //ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
         PStatTimer timer2(sa_refl_sim_coll);
         iplSimulatorRunReflections(FMODAudioManager::_sa_simulator);
+      }
+
+      if ((start - last_trace_time) >= 0.05) {
+
+        PStatTimer timer2(sound_occlusion_coll);
+
+        last_trace_time = start;
+
+        sound_occlusion_lock_coll.start();
+        _mgr->_sounds_playing_lock.acquire();
+        sound_occlusion_lock_coll.stop();
+
+        for (FMODAudioSound *snd : _mgr->_sounds_playing) {
+          if (snd->_sa_spatial_dsp == nullptr) {
+            continue;
+          }
+
+          bool calculated;
+          float gain = _mgr->calc_sound_occlusion(snd, calculated);
+          if (calculated) {
+            //std::cout << "occl gain: " << gain << "\n";
+            snd->_sa_spatial_dsp->setParameterFloat(20, gain);
+          }
+        }
+        _mgr->_sounds_playing_lock.release();
       }
       double end = clock->get_real_time();
 
@@ -285,9 +316,13 @@ AudioManager *Create_FmodAudioManager() {
  *
  */
 FMODAudioManager::
-FMODAudioManager() {
+FMODAudioManager() :
+  _sounds_playing_lock("sounds_playing_lock") {
   ReMutexHolder holder(_lock);
   FMOD_RESULT result;
+
+  _rt_scene = nullptr;
+  _trace_count = 0;
 
   // We need a temporary variable to check the FMOD version.
   unsigned int      version;
@@ -586,7 +621,10 @@ FMODAudioManager::
   FMOD_RESULT result;
 
   // Release all of our sounds
+  _sounds_playing_lock.acquire();
   _sounds_playing.clear();
+  _sounds_playing_lock.release();
+
   _all_sounds.clear();
 
   // Release all DSPs
@@ -935,6 +973,9 @@ void FMODAudioManager::
 update() {
   ReMutexHolder holder(_lock);
 
+  AtomicAdjust::set(_trace_count, 0);
+  ++_trace_seq;
+
   // Call finished() and release our reference to sounds that have finished
   // playing.
   update_sounds();
@@ -1146,6 +1187,8 @@ reduce_sounds_playing_to(unsigned int count) {
   // get stopped first
   update_sounds();
 
+  _sounds_playing_lock.acquire();
+
   int limit = _sounds_playing.size() - count;
   while (limit-- > 0) {
     SoundsPlaying::iterator sound = _sounds_playing.begin();
@@ -1158,6 +1201,8 @@ reduce_sounds_playing_to(unsigned int count) {
     PT(FMODAudioSound) s = (*sound);
     s->stop();
   }
+
+  _sounds_playing_lock.release();
 }
 
 /**
@@ -1493,6 +1538,8 @@ void FMODAudioManager::
 starting_sound(FMODAudioSound *sound) {
   ReMutexHolder holder(_lock);
 
+  ReMutexHolder pholder(_sounds_playing_lock);
+
   // If the sound is already in there, don't do anything.
   if (_sounds_playing.find(sound) != _sounds_playing.end()) {
     return;
@@ -1516,7 +1563,7 @@ starting_sound(FMODAudioSound *sound) {
 void FMODAudioManager::
 stopping_sound(FMODAudioSound *sound) {
   ReMutexHolder holder(_lock);
-
+  ReMutexHolder pholder(_sounds_playing_lock);
   _sounds_playing.erase(sound); // This could case the sound to destruct.
 }
 
@@ -1551,6 +1598,7 @@ update_sounds() {
   // iterating over _sounds_playing since finished() modifies _sounds_playing
   SoundsPlaying sounds_finished;
 
+  _sounds_playing_lock.acquire();
   SoundsPlaying::iterator i = _sounds_playing.begin();
   for (; i != _sounds_playing.end(); ++i) {
     FMODAudioSound *sound = (*i);
@@ -1558,6 +1606,7 @@ update_sounds() {
       sounds_finished.insert(*i);
     }
   }
+  _sounds_playing_lock.release();
 
   i = sounds_finished.begin();
   for (; i != sounds_finished.end(); ++i) {
@@ -1680,4 +1729,154 @@ load_steam_audio_pathing_probe_batch(CPTA_uchar data) {
 void FMODAudioManager::
 unload_steam_audio_pathing_probe_batch() {
   // TODO
+}
+
+#define SND_RADIUS_MAX		(20.0 * 12.0)	// max sound source radius
+#define SND_RADIUS_MIN		(2.0 * 12.0)	// min sound source radius
+
+static float
+db_to_radius(float db) {
+  return SND_RADIUS_MIN + (SND_RADIUS_MAX - SND_RADIUS_MIN) * (db - SND_DB_MIN) / (SND_DB_MAX - SND_DB_MIN);
+}
+
+static float
+db_to_gain(float db) {
+  return powf(10.0f, db / 20.0f);
+}
+
+/**
+ *
+ */
+float FMODAudioManager::
+calc_sound_occlusion(FMODAudioSound *sound, bool &calculated) {
+  float gain = 1.0f;
+
+  if (!can_trace_sound(sound)) {
+    calculated = false;
+    return gain;
+  }
+
+  calculated = true;
+
+  int count = 1;
+
+  float snd_gain_db = -2.7f;
+
+  LPoint3 snd_point(sound->_location.x, sound->_location.z, sound->_location.y);
+  snd_point /= HAMMER_UNITS_TO_METERS;
+  LPoint3 cam_point(_position.x, _position.z, _position.y);
+  cam_point /= HAMMER_UNITS_TO_METERS;
+
+  LVector3 vsrc_forward;
+  vsrc_forward = snd_point - cam_point;
+  float len = vsrc_forward.length();
+
+  RayTraceScene *rt_scene = _rt_scene;
+  RayTraceHitResult tr = rt_scene->trace_ray(cam_point, vsrc_forward, len, BitMask32::all_on());
+  float frac = tr.get_hit_fraction();
+  if (tr.has_hit() && frac < 0.99f && frac > 0.001f) {
+    LPoint3 end_points[4];
+    float sndlvl = DIST_MULT_TO_SNDLVL(sound->_dist_factor);
+    float radius;
+
+    LVector3 vsrc_right;
+    LVector3 vsrc_up;
+    LVector3 vec_l;
+    LVector3 vec_r;
+    LVector3 vec_l2;
+    LVector3 vec_r2;
+
+    int i;
+
+    // Get radius.
+    radius = db_to_radius(sndlvl);
+
+    for (i = 0; i < 4; ++i) {
+      end_points[i] = snd_point;
+    }
+
+    vsrc_forward /= len;
+    LQuaternion q;
+    look_at(q, vsrc_forward);
+    vsrc_right = q.get_right();
+    vsrc_up = q.get_up();
+
+    vec_l = vsrc_up + vsrc_right;
+
+    if (snd_point[2] > cam_point[2] + (10 * 12)) {
+      vsrc_up[2] = -vsrc_up[2];
+    }
+
+    vec_r = vsrc_up - vsrc_right;
+    vec_l.normalize();
+    vec_r.normalize();
+
+    vec_l2 = radius * vec_l;
+    vec_r2 = radius * vec_r;
+
+    vec_l = (radius * 0.5f) * vec_l;
+    vec_r = (radius * 0.5f) * vec_r;
+
+    end_points[0] += vec_l;
+    end_points[1] += vec_r;
+    end_points[2] += vec_l2;
+    end_points[3] += vec_r2;
+
+    for (count = 0, i = 0; i < 4; ++i) {
+      tr = rt_scene->trace_line(cam_point, end_points[i], BitMask32::all_on());
+      frac = tr.get_hit_fraction();
+      if (tr.has_hit() && frac < 0.99f && frac > 0.001f) {
+        ++count;
+        if (count > 1) {
+          gain *= db_to_gain(snd_gain_db);
+        }
+      }
+    }
+  }
+
+  return gain;
+}
+
+/**
+ *
+ */
+bool FMODAudioManager::
+can_trace_sound(FMODAudioSound *sound) {
+  if (_rt_scene == nullptr) {
+    return false;
+  }
+
+  if (sound->_last_trace_seq == UpdateSeq::initial()) {
+    sound->_last_trace_seq = _trace_seq;
+    return true;
+  }
+
+  if (AtomicAdjust::get(_trace_count) >= 2) {
+    return false;
+  }
+
+  if (sound->_last_trace_seq == _trace_seq) {
+    return false;
+  }
+
+  sound->_last_trace_seq = _trace_seq;
+  AtomicAdjust::inc(_trace_count);
+
+  return true;
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+set_trace_scene(RayTraceScene *scene) {
+  _rt_scene = scene;
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+clear_trace_scene() {
+  _rt_scene = nullptr;
 }

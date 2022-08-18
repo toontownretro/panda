@@ -28,6 +28,27 @@ extern ConfigVariableInt fmod_audio_preload_threshold;
 extern ConfigVariableBool fmod_use_steam_audio;
 #endif
 
+// calculate gain based on atmospheric attenuation.
+// as gain excedes threshold, round off (compress) towards 1.0 using spline
+#define SND_GAIN_COMP_EXP_MAX	2.5f	// Increasing SND_GAIN_COMP_EXP_MAX fits compression curve more closely
+                    // to original gain curve as it approaches 1.0.
+#define SND_GAIN_COMP_EXP_MIN	0.8f
+
+#define SND_GAIN_COMP_THRESH	0.5f		// gain value above which gain curve is rounded to approach 1.0
+
+#define SND_DB_MAX				140.0	// max db of any sound source
+#define SND_DB_MED				90.0	// db at which compression curve changes
+#define SND_DB_MIN				60.0	// min db of any sound source
+
+#define SND_GAIN_MAX 1
+#define SND_GAIN_MIN 0.01
+
+#define SND_REFDB 60.0
+#define SND_REFDIST 36.0
+
+#define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((pow( 10.0f, SND_REFDB / 20 ) / pow( 10.0f, (float)sndlvl / 20 )) / SND_REFDIST) : 0 )
+#define DIST_MULT_TO_SNDLVL( dist_mult ) (int)( dist_mult ? ( 20 * log10( pow( 10.0f, SND_REFDB / 20 ) / (dist_mult * SND_REFDIST) ) ) : 0 )
+
 extern "C" EXPCL_FMOD_AUDIO void init_libFmodAudio();
 extern "C" EXPCL_FMOD_AUDIO Create_AudioManager_proc *get_audio_manager_func_fmod_audio();
 
