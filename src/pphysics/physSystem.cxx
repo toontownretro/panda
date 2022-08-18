@@ -111,7 +111,7 @@ initialize() {
     return false;
   }
 
-  _cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(1);
+  _cpu_dispatcher = physx::PxDefaultCpuDispatcherCreate(0);
   if (_cpu_dispatcher == nullptr) {
     pphysics_cat.error()
       << "Failed to initialize PxCpuDispatcher!\n";
