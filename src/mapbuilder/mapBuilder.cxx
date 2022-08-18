@@ -2568,7 +2568,11 @@ build_entity_physics(int mesh_index, MapModel &model) {
 
   // Cook the triangle mesh.
   bool ret = tri_mesh_data->cook_mesh();
-  assert(ret);
+  if (!ret) {
+    mapbuilder_cat.warning()
+      << "Failed to cook triangle mesh for entity " << ent_index
+      << ", classname " << ent->_class_name << "\n";
+  }
 
   model._tri_mesh_data = tri_mesh_data->get_mesh_data();
   model._phys_surface_props = surface_props;
