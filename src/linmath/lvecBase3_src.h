@@ -14,7 +14,7 @@
 /**
  * This is the base class for all three-component vectors and points.
  */
-class EXPCL_PANDA_LINMATH FLOATNAME(LVecBase3) {
+class EXPCL_PANDA_LINMATH FLOATNAME(LVecBase3) : public MemoryBase {
 PUBLISHED:
   typedef FLOATTYPE numeric_type;
   typedef const FLOATTYPE *iterator;

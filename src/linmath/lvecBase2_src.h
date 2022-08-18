@@ -14,7 +14,7 @@
 /**
  * This is the base class for all two-component vectors and points.
  */
-class EXPCL_PANDA_LINMATH FLOATNAME(LVecBase2) {
+class EXPCL_PANDA_LINMATH FLOATNAME(LVecBase2) : public MemoryBase {
 PUBLISHED:
   typedef FLOATTYPE numeric_type;
   typedef const FLOATTYPE *iterator;

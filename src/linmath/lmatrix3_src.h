@@ -18,7 +18,7 @@ class FLOATNAME(LMatrix4);
  * rotation-and-scale (no translation) matrix in 3-d, or a full affine matrix
  * (rotation, scale, translation) in 2-d, e.g.  for a texture matrix.
  */
-class EXPCL_PANDA_LINMATH FLOATNAME(LMatrix3) {
+class EXPCL_PANDA_LINMATH FLOATNAME(LMatrix3) : public MemoryBase {
 public:
   typedef FLOATTYPE numeric_type;
   typedef const FLOATTYPE *iterator;
