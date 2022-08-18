@@ -341,7 +341,7 @@ make_palette() {
       // existing palette.  Try again on a fresh palette.
       LightmapPage page;
       page.index = _pages.size();
-      page.packer.reset(0, 2048, 2048, 2);
+      page.packer.reset(0, 8192, 8192, 2);
       LVecBase2i offset = page.packer.add_block(lmgeom.lightmap_size[0], lmgeom.lightmap_size[1]);
       if (offset[0] != -1) {
         // Geom was successfully added into this palette.
