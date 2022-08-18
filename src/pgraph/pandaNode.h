@@ -380,9 +380,9 @@ protected:
                                        Thread *current_thread) const;
   virtual void parents_changed();
   virtual void children_changed();
-  virtual void child_added(PandaNode *node);
-  virtual void child_removed(PandaNode *node);
-  virtual void child_bounds_stale(PandaNode *node);
+  virtual void child_added(PandaNode *node, int pipeline_stage);
+  virtual void child_removed(PandaNode *node, int pipeline_stage);
+  virtual void child_bounds_stale(PandaNode *node, int pipeline_stage);
   virtual void transform_changed();
   virtual void state_changed();
   virtual void draw_mask_changed();

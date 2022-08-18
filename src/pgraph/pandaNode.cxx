@@ -23,6 +23,7 @@
 #include "clipPlaneAttrib.h"
 #include "boundingSphere.h"
 #include "boundingBox.h"
+#include "omniBoundingVolume.h"
 #include "pStatTimer.h"
 #include "config_mathutil.h"
 #include "lightReMutexHolder.h"
@@ -517,7 +518,7 @@ add_child(PandaNode *child_node, int sort, Thread *current_thread) {
   force_bounds_stale();
 
   children_changed();
-  child_added(child_node);
+  child_added(child_node, 0);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -548,7 +549,7 @@ remove_child(int child_index, Thread *current_thread) {
   force_bounds_stale(pipeline_stage, current_thread);
 
   children_changed();
-  child_removed(child_node);
+  child_removed(child_node, 0);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -583,7 +584,7 @@ remove_child(PandaNode *child_node, Thread *current_thread) {
   if (any_removed) {
     // Call callback hooks.
     children_changed();
-    child_removed(child_node);
+    child_removed(child_node, 0);
     child_node->parents_changed();
   }
 
@@ -629,8 +630,8 @@ replace_child(PandaNode *orig_child, PandaNode *new_child,
 
   if (any_replaced) {
     children_changed();
-    child_removed(orig_child);
-    child_added(new_child);
+    child_removed(orig_child, 0);
+    child_added(new_child, 0);
     orig_child->parents_changed();
     new_child->parents_changed();
   }
@@ -674,7 +675,7 @@ stash_child(int child_index, Thread *current_thread) {
   force_bounds_stale(pipeline_stage, current_thread);
 
   children_changed();
-  child_removed(child_node);
+  child_removed(child_node, 0);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -717,7 +718,7 @@ unstash_child(int stashed_index, Thread *current_thread) {
 
   force_bounds_stale();
   children_changed();
-  child_added(child_node);
+  child_added(child_node, 0);
   child_node->parents_changed();
   mark_bam_modified();
   child_node->mark_bam_modified();
@@ -838,7 +839,7 @@ remove_all_children(Thread *current_thread) {
   force_bounds_stale();
   children_changed();
   for (auto it = removed_children.begin(); it != removed_children.end(); ++it) {
-    child_removed(*it);
+    child_removed(*it, 0);
   }
   mark_bam_modified();
 }
@@ -2253,7 +2254,7 @@ force_bounds_stale(int pipeline_stage, Thread *current_thread) {
   int num_parents = parents.get_num_parents();
   for (int i = 0; i < num_parents; ++i) {
     PandaNode *parent = parents.get_parent(i);
-    parent->child_bounds_stale(this);
+    parent->child_bounds_stale(this, pipeline_stage);
     parent->mark_bounds_stale(pipeline_stage, current_thread);
   }
 }
@@ -2372,7 +2373,7 @@ children_changed() {
  * based on the set of children the node has.
  */
 void PandaNode::
-child_added(PandaNode *node) {
+child_added(PandaNode *node, int pipeline_stage) {
 }
 
 /**
@@ -2381,14 +2382,14 @@ child_added(PandaNode *node) {
  * themselves based on the set of children the node has.
  */
 void PandaNode::
-child_removed(PandaNode *node) {
+child_removed(PandaNode *node, int pipeline_stage) {
 }
 
 /**
  * Called when the indicated child node's bounds have been marked stale.
  */
 void PandaNode::
-child_bounds_stale(PandaNode *node) {
+child_bounds_stale(PandaNode *node, int pipeline_stage) {
 }
 
 /**
@@ -2854,7 +2855,7 @@ detach_one_stage(NodePathComponent *child, int pipeline_stage,
 
   parent_node->force_bounds_stale(pipeline_stage, current_thread);
   parent_node->children_changed();
-  parent_node->child_removed(child->get_node());
+  parent_node->child_removed(child->get_node(), pipeline_stage);
   parent_node->mark_bam_modified();
 }
 
@@ -2890,7 +2891,7 @@ reparent(NodePathComponent *new_parent, NodePathComponent *child, int sort,
 
   if (new_parent != nullptr) {
     new_parent->get_node()->children_changed();
-    new_parent->get_node()->child_added(child->get_node());
+    new_parent->get_node()->child_added(child->get_node(), pipeline_stage);
     new_parent->get_node()->mark_bam_modified();
   }
   child->get_node()->parents_changed();
@@ -3325,6 +3326,8 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
     int num_vertices = cdata->_internal_vertices;
 
+    bool has_infinite = (cdata->_user_bounds != nullptr) && (cdata->_user_bounds->is_infinite());
+
     // Also get the list of the node's children.  When the cdataw destructs, it
     // will also release the lock, since we've got all the data we need from the
     // node.
@@ -3345,24 +3348,27 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
     // not holding a lock on our set of children right now).  But we also need
     // the regular pointers, to pass to BoundingVolume::around().
     const BoundingVolume **child_volumes;
-//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-//    pvector<CPT(BoundingVolume) > child_volumes_ref;
-//    if (update_bounds) {
-//      child_volumes_ref.reserve(num_children + 1);
-//    }
-//#endif
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+    pvector<CPT(BoundingVolume) > child_volumes_ref;
+    if (update_bounds && !has_infinite) {
+      child_volumes_ref.reserve(num_children + 1);
+    }
+#endif
     int child_volumes_i = 0;
 
     CPT(BoundingVolume) internal_bounds = nullptr;
 
-    if (update_bounds) {
+    if (update_bounds && !has_infinite) {
       child_volumes = (const BoundingVolume **)alloca(sizeof(BoundingVolume *) * (num_children + 1));
       internal_bounds = get_internal_bounds(pipeline_stage, current_thread);
 
-      if (!internal_bounds->is_empty()) {
-//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-//        child_volumes_ref.push_back(internal_bounds);
-//#endif
+      if (internal_bounds->is_infinite()) {
+        has_infinite = true;
+
+      } else if (!internal_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+        child_volumes_ref.push_back(internal_bounds);
+#endif
         nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
         child_volumes[child_volumes_i++] = internal_bounds;
       }
@@ -3457,10 +3463,14 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         off_clip_planes = orig_cp->compose_off(child_cdataw->_off_clip_planes);
 
         if (update_bounds) {
-          if (!child_cdataw->_external_bounds->is_empty()) {
-//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-//            child_volumes_ref.push_back(child_cdataw->_external_bounds);
-//#endif
+          if (child_cdataw->_external_bounds->is_infinite()) {
+            has_infinite = true;
+          }
+
+          if (!has_infinite && !child_cdataw->_external_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+            child_volumes_ref.push_back(child_cdataw->_external_bounds);
+#endif
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
           }
@@ -3516,10 +3526,14 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         off_clip_planes = orig_cp->compose_off(child_cdata->_off_clip_planes);
 
         if (update_bounds) {
-          if (!child_cdata->_external_bounds->is_empty()) {
-//#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-//            child_volumes_ref.push_back(child_cdata->_external_bounds);
-//#endif
+          if (child_cdata->_external_bounds->is_infinite()) {
+            has_infinite = true;
+          }
+
+          if (!has_infinite && !child_cdata->_external_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+            child_volumes_ref.push_back(child_cdata->_external_bounds);
+#endif
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
           }
@@ -3585,9 +3599,16 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
             btype = bounds_type;
           }
 
-          compute_external_bounds(cdataw->_external_bounds, btype,
-                                  child_volumes, child_volumes_i,
-                                  pipeline_stage, current_thread);
+          if (has_infinite) {
+            if (cdataw->_external_bounds == nullptr ||
+                cdataw->_external_bounds->get_type() != OmniBoundingVolume::get_class_type()) {
+              cdataw->_external_bounds = new OmniBoundingVolume;
+            }
+          } else {
+            compute_external_bounds(cdataw->_external_bounds, btype,
+                                    child_volumes, child_volumes_i,
+                                    pipeline_stage, current_thread);
+          }
 
           nassertr(cdataw->_external_bounds != nullptr, cdataw);
 
