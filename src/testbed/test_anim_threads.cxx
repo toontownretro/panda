@@ -27,42 +27,23 @@
 #include "pStatClient.h"
 
 pvector<PT(CharacterNode)> char_list;
-pvector<PT(Job)> animate_jobs;
-
-class AnimateJob : public Job {
-public:
-  AnimateJob(int start, int end) :
-    _start(start),
-    _end(end)
-  {
-  }
-
-  virtual void execute() override {
-    for (int i = _start; i < _end; ++i) {
-      char_list[i]->update();
-    }
-  }
-
-private:
-  int _start, _end;
-};
 
 AsyncTask::DoneStatus
 animate_characters(GenericAsyncTask *task, void *data) {
   JobSystem *sys = JobSystem::get_global_ptr();
-  for (Job *job : animate_jobs) {
-    sys->schedule(job);
-  }
-  sys->wait_all_jobs();
+  sys->parallel_process(char_list.size(), [] (int i) {
+    char_list[i]->update();
+  });
+  //for (CharacterNode *node : char_list) {
+  //  node->update();
+  //}
   return AsyncTask::DS_cont;
 }
 
 int
 main(int argc, char *argv[]) {
-  JobSystem *sys = JobSystem::get_global_ptr();
-  sys->initialize();
-
-  PStatClient::connect();
+  //JobSystem *sys = JobSystem::get_global_ptr();
+  //sys->initialize();
 
   PandaFramework framework;
   framework.open_framework(argc, argv);
@@ -83,22 +64,10 @@ main(int argc, char *argv[]) {
     mdl.reparent_to(win_framework->get_render());
   }
 
-  int num_groups = Thread::get_num_supported_threads() - 1;
-  int chars_per_group = (int)char_list.size() / num_groups;
-  int remainder = (int)char_list.size() % num_groups;
-  for (int i = 0; i < num_groups; ++i) {
-    int start = i * chars_per_group;
-    int end = (i + 1) * chars_per_group;
-    if (i == num_groups - 1) {
-      end += remainder;
-    }
-    std::cout << start << " -> " << end << "\n";
-    PT(AnimateJob) job = new AnimateJob(start, end);
-    animate_jobs.push_back(job);
-  }
-
   AsyncTaskManager *tmgr = AsyncTaskManager::get_global_ptr();
   tmgr->add(new GenericAsyncTask("animate", animate_characters, nullptr));
+
+  PStatClient::connect();
 
   framework.main_loop();
 
