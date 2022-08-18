@@ -38,7 +38,7 @@ PUBLISHED:
 
   void schedule(Job *job);
   void schedule(const pvector<PT(Job)> &jobs, bool wait);
-  void parallel_process(int count, std::function<void(int)> func);
+  void parallel_process(int count, std::function<void(int)> func, int count_threshold = 2);
 
   //template<typename T>
   //INLINE void parallel_process(T begin, T end, std::function<void(const T &)> func);

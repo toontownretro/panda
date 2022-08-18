@@ -167,7 +167,7 @@ schedule(const pvector<PT(Job)> &jobs, bool wait) {
  *
  */
 void JobSystem::
-parallel_process(int count, std::function<void(int)> func) {
+parallel_process(int count, std::function<void(int)> func, int count_threshold) {
   PStatTimer timer(parallel_proc_pcollector);
 
   if (count == 0) {
@@ -177,7 +177,8 @@ parallel_process(int count, std::function<void(int)> func) {
     func(0);
     return;
 
-  } else if (_worker_threads.empty()) {
+  } else if (count < count_threshold || _worker_threads.empty()) {
+    // No worker threads or not enough items to prohibit scheduling jobs.
     for (int i = 0; i < count; ++i) {
       func(i);
     }
