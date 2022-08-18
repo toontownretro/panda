@@ -544,25 +544,13 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     // Geom bounding volume against the view frustum, since we've already
     // checked the one on the GeomNode itself.
     const Geom *geom = (*geoms)[0]._geom.get_read_pointer(current_thread);//.get_geom(0);
-    if (!geom->is_empty()) {
+    if (geom->get_fast_primitive(0) != nullptr) {
 
       const RenderState *gstate = (*geoms)[0]._state;
-      if (gstate->is_empty()) {
-        CullableObject object(std::move(geom), data._state, std::move(internal_transform),
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-
-      } else if (data._state->is_empty()) {
-        CullableObject object(std::move(geom), std::move(gstate), std::move(internal_transform),
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-
-      } else {
-        CPT(RenderState) state = data._state->compose(gstate);
-        CullableObject object(std::move(geom), std::move(state), std::move(internal_transform),
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-      }
+      CPT(RenderState) state = data._state->compose(gstate);
+      CullableObject *object = new CullableObject(std::move(geom), std::move(state), std::move(internal_transform),
+                            current_thread);
+      trav->get_cull_handler()->record_object(object, trav);
 
 #if 0
       CPT(RenderState) state = data._state->compose((*geoms)[0]._state);
@@ -582,7 +570,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     // More than one Geom.
     for (int i = 0; i < num_geoms; i++) {
       const Geom *geom = (*geoms)[i]._geom.get_read_pointer(current_thread);
-      if (geom->is_empty()) {
+      if (geom->get_fast_primitive(0) == nullptr) {
         continue;
       }
 
@@ -634,22 +622,10 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       //}
 
       const RenderState *gstate = (*geoms)[i]._state;
-      if (gstate->is_empty()) {
-        CullableObject object(std::move(geom), data._state, internal_transform,
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-
-      } else if (data._state->is_empty()) {
-        CullableObject object(std::move(geom), std::move(gstate), internal_transform,
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-
-      } else {
-        CPT(RenderState) state = data._state->compose(gstate);
-        CullableObject object(std::move(geom), std::move(state), internal_transform,
-                              current_thread);
-        trav->get_cull_handler()->record_object(object, trav);
-      }
+      CPT(RenderState) state = data._state->compose(gstate);
+      CullableObject *object = new CullableObject(std::move(geom), std::move(state), internal_transform,
+                            current_thread);
+      trav->get_cull_handler()->record_object(object, trav);
 
 #if 0
       CullableObject object(std::move(geom), std::move(state), internal_transform);

@@ -26,7 +26,7 @@ CullHandler(HandleType type, CullResult *result, GraphicsStateGuardianBase *gsg)
  * This is called as each Geom is discovered by the CullTraverser.
  */
 INLINE void CullHandler::
-record_object(CullableObject &object, const CullTraverser *traverser) {
+record_object(CullableObject *object, const CullTraverser *traverser) {
   if (_type == HT_bin && _result != nullptr) {
     // Place the object into the appropriate bin for later sorting.
     _result->add_object(object, traverser);
@@ -39,10 +39,13 @@ record_object(CullableObject &object, const CullTraverser *traverser) {
     bool force = !_gsg->get_effective_incomplete_render();
     Thread *current_thread = traverser->get_current_thread();
 
-    if (object.munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
+    if (object->munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
       // Now we can immediately draw the object.
-      _gsg->draw_object(&object, force, current_thread);
+      _gsg->draw_object(object, force, current_thread);
     }
+
+    // Dispense with the object.
+    delete object;
   }
 }
 
@@ -59,7 +62,7 @@ end_traverse() {
  * drawing the object.
  */
 INLINE void CullHandler::
-draw(CullableObject &object, GraphicsStateGuardianBase *gsg,
+draw(CullableObject *object, GraphicsStateGuardianBase *gsg,
      bool force, Thread *current_thread) {
-  gsg->draw_object(&object, force, current_thread);
+  gsg->draw_object(object, force, current_thread);
 }

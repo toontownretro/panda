@@ -41,6 +41,9 @@ TypeHandle CullBinStateSorted::_type_handle;
  */
 CullBinStateSorted::
 ~CullBinStateSorted() {
+  for (CullableObject *object : _objects) {
+    delete object;
+  }
 }
 
 /**
@@ -56,20 +59,22 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinStateSorted::
-add_object(CullableObject &object, Thread *current_thread) {
-  if (object._munged_data != nullptr) {
-    object._sort_data._format = object._munged_data->get_format();
+add_object(CullableObject *object, Thread *current_thread) {
+  if (object->_munged_data != nullptr) {
+    object->_sort_data._format = object->_munged_data->get_format(current_thread);
   } else {
-    object._sort_data._format = nullptr;
+    object->_sort_data._format = nullptr;
   }
-  _objects.emplace_back(std::move(object));
+  _objects.push_back(object);
 }
 
-auto compare_objects_state = [](const CullableObject &a, const CullableObject &b) -> bool {
+auto compare_objects_state = [](const CullableObject *a, const CullableObject *b) -> bool {
   // Group by state changes, in approximate order from heaviest change to
   // lightest change.
-  const RenderState *sa = a._state;
-  const RenderState *sb = b._state;
+  const RenderState *sa = a->_state;
+  const RenderState *sb = b->_state;
+
+#if 0
 
   const ShaderAttrib *sha = nullptr, *shb = nullptr;
 
@@ -101,6 +106,7 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
         return shader_a < shader_b;
       }
 
+#if 0
       if (sha != nullptr && shb != nullptr) {
         //if (!sha->_has_texture_inputs) {
         //  ((ShaderAttrib *)sha)->build_texture_inputs();
@@ -131,43 +137,44 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
           ++it2;
         }
       }
+#endif
     }
   }
 
-  //if (sa != sb) {
+  if (sa != sb) {
 
     // TextureAttribs result in different generated ShaderAttribs with the
     // textures from the TextureAttrib.  They come second to programs in terms
     // of state change cost.
 
-    //const RenderAttrib *ra, *rb;
+    const RenderAttrib *ra, *rb;
 
-    //ra = sa->get_attrib(TextureAttrib::get_class_slot());
-    //rb = sb->get_attrib(TextureAttrib::get_class_slot());
-    //if (ra != rb) {
-    //  return ra < rb;
-    //}
+    ra = sa->get_attrib(TextureAttrib::get_class_slot());
+    rb = sb->get_attrib(TextureAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
 
     // Same goes for MaterialAttrib.
-    //ra = sa->get_attrib(MaterialAttrib::get_class_slot());
-    //rb = sb->get_attrib(MaterialAttrib::get_class_slot());
-    //if (ra != rb) {
-    //  return ra < rb;
-    //}
-  //}
+    ra = sa->get_attrib(MaterialAttrib::get_class_slot());
+    rb = sb->get_attrib(MaterialAttrib::get_class_slot());
+    if (ra != rb) {
+      return ra < rb;
+    }
+  }
 
   //std::cout << "format " << a._sort_data._format << " vs " << b._sort_data._format << "\n";
 
   // Vertex format changes are also fairly slow.
-  if (a._sort_data._format != b._sort_data._format) {
-    return a._sort_data._format < b._sort_data._format;
+  if (a->_sort_data._format != b->_sort_data._format) {
+    return a->_sort_data._format < b->_sort_data._format;
   }
 
   //std::cout << "vdata " << a._munged_data << " vs " << b._munged_data << "\n";
 
   // Prevent unnecessary vertex buffer rebinds.
-  if (a._munged_data != b._munged_data) {
-    return a._munged_data < b._munged_data;
+  if (a->_munged_data != b->_munged_data) {
+    return a->_munged_data < b->_munged_data;
   }
 
   if (sa != sb) {
@@ -191,8 +198,8 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
   }
 
   // Uniform updates are actually pretty fast.
-  if (a._internal_transform != b._internal_transform) {
-    return a._internal_transform < b._internal_transform;
+  if (a->_internal_transform != b->_internal_transform) {
+    return a->_internal_transform < b->_internal_transform;
   }
 
   if (sa != sb) {
@@ -230,6 +237,29 @@ auto compare_objects_state = [](const CullableObject &a, const CullableObject &b
       return ra < rb;
     }
   }
+
+#else
+
+  int compare = sa->compare_sort(*sb);
+  if (compare != 0) {
+    return compare < 0;
+  }
+
+  // Vertex format changes are also fairly slow.
+  if (a->_sort_data._format != b->_sort_data._format) {
+    return a->_sort_data._format < b->_sort_data._format;
+  }
+
+  // Prevent unnecessary vertex buffer rebinds.
+  if (a->_munged_data != b->_munged_data) {
+    return a->_munged_data < b->_munged_data;
+  }
+
+  // Uniform updates are actually pretty fast.
+  if (a->_internal_transform != b->_internal_transform) {
+    return a->_internal_transform < b->_internal_transform;
+  }
+#endif
 
   return false;
 };

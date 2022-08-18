@@ -59,7 +59,7 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
   if (_geom != nullptr) {
     //GraphicsStateGuardianBase *gsg = traverser->get_gsg();
 
-    const GeomVertexAnimationSpec &anim_spec = _munged_data->get_format()->get_animation();
+    const GeomVertexAnimationSpec &anim_spec = _munged_data->get_format(current_thread)->get_animation();
 
     // If there is any animation left in the vertex data after it has been
     // munged--that is, we couldn't arrange to handle the animation in

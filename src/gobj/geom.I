@@ -55,6 +55,18 @@ get_vertex_data(Thread *current_thread) const {
 }
 
 /**
+ * Returns a const pointer to the GeomVertexData, for application code to
+ * directly examine (but not modify) the geom's underlying data.
+ *
+ * This version returns a non-reference counted pointer.
+ */
+INLINE const GeomVertexData *Geom::
+get_vertex_data_noref(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
+  return cdata->_data.get_read_pointer(current_thread);
+}
+
+/**
  * Returns true if there appear to be no vertices to be rendered by this Geom,
  * false if has some actual data.
  */

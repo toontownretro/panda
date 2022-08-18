@@ -39,8 +39,8 @@ get_usage_hint() const {
  * Returns a pointer to the GeomVertexFormat structure that defines this data.
  */
 INLINE const GeomVertexFormat *GeomVertexData::
-get_format() const {
-  CDReader cdata(_cycler);
+get_format(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
   return cdata->_format;
 }
 

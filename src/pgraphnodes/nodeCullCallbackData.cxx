@@ -48,10 +48,10 @@ upcall() {
     // any Geoms, however.
     CallbackObject *cbobj = cbnode->get_draw_callback();
     if (cbobj != nullptr) {
-      CullableObject object(nullptr, _data._state,
+      CullableObject *object = new CullableObject(nullptr, _data._state,
                             _data.get_internal_transform(_trav),
                             _trav->get_current_thread());
-      object.set_draw_callback(cbobj);
+      object->set_draw_callback(cbobj);
       _trav->get_cull_handler()->record_object(object, _trav);
     }
   }

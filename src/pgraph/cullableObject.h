@@ -31,6 +31,7 @@
 #include "callbackObject.h"
 #include "geomDrawCallbackData.h"
 #include "instanceList.h"
+#include "memoryBase.h"
 
 class CullTraverser;
 class GeomMunger;
@@ -39,7 +40,7 @@ class GeomMunger;
  * The smallest atom of cull.  This is normally just a Geom and its associated
  * state, but it also contain a draw callback.
  */
-class ALIGN_64BYTE EXPCL_PANDA_PGRAPH CullableObject {
+class EXPCL_PANDA_PGRAPH CullableObject : public MemoryBase {
 public:
   INLINE CullableObject();
   INLINE CullableObject(CPT(Geom) geom, CPT(RenderState) state,
@@ -47,9 +48,7 @@ public:
                         Thread *current_thread);
 
   INLINE CullableObject(const CullableObject &copy);
-  INLINE CullableObject(CullableObject &&other);
   INLINE void operator = (const CullableObject &copy);
-  INLINE void operator = (CullableObject &&other);
 
   bool munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
                   const CullTraverser *traverser, bool force);
@@ -67,13 +66,13 @@ public:
                             bool force, Thread *current_thread);
 
 public:
-  //ALLOC_DELETED_CHAIN(CullableObject);
+  ALLOC_DELETED_CHAIN(CullableObject);
 
   void output(std::ostream &out) const;
 
 public:
   //CPT(InstanceList) _instances;
-  //PT(CallbackObject) _draw_callback;
+  PT(CallbackObject) _draw_callback;
 
   CPT(RenderState) _state;
   CPT(TransformState) _internal_transform;

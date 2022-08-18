@@ -207,7 +207,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           PT(Geom) geom = new Geom(point_vdata);
           geom->add_primitive(points);
 
-          CullableObject object(geom, point_state,
+          CullableObject *object = new CullableObject(geom, point_state,
                                 xform_data.get_internal_transform(trav),
                                 trav->get_current_thread());
 
@@ -236,7 +236,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
           PT(Geom) geom = new Geom(line_vdata);
           geom->add_primitive(lines);
 
-          CullableObject object(geom, empty_state,
+          CullableObject *object = new CullableObject(geom, empty_state,
                                 xform_data.get_internal_transform(trav),
                                 trav->get_current_thread());
 

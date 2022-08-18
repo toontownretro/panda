@@ -32,6 +32,9 @@ TypeHandle CullBinFrontToBack::_type_handle;
  */
 CullBinFrontToBack::
 ~CullBinFrontToBack() {
+  for (CullableObject *object : _objects) {
+    delete object;
+  }
 }
 
 /**
@@ -47,10 +50,11 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinFrontToBack::
-add_object(CullableObject &object, Thread *current_thread) {
+add_object(CullableObject *object, Thread *current_thread) {
   // Determine the center of the bounding volume.
-  CPT(BoundingVolume) volume = object._geom->get_bounds();
+  CPT(BoundingVolume) volume = object->_geom->get_bounds();
   if (volume->is_empty()) {
+    delete object;
     return;
   }
 
@@ -58,16 +62,16 @@ add_object(CullableObject &object, Thread *current_thread) {
   nassertv(gbv != nullptr);
 
   LPoint3 center = gbv->get_approx_center();
-  nassertv(object._internal_transform != nullptr);
-  center = center * object._internal_transform->get_mat();
+  nassertv(object->_internal_transform != nullptr);
+  center = center * object->_internal_transform->get_mat();
 
   PN_stdfloat distance = _gsg->compute_distance_to(center);
-  object._sort_data._dist = distance;
-  _objects.emplace_back(std::move(object));
+  object->_sort_data._dist = distance;
+  _objects.push_back(object);
 }
 
-auto compare_objects_f2b = [](const CullableObject &a, const CullableObject &b) -> bool {
-  return a._sort_data._dist < b._sort_data._dist;
+auto compare_objects_f2b = [](const CullableObject *a, const CullableObject *b) -> bool {
+  return a->_sort_data._dist < b->_sort_data._dist;
 };
 
 /**
@@ -101,7 +105,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFrontToBack::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (CullableObject &object : _objects) {
+  for (CullableObject *object : _objects) {
     builder.add_object(object);
   }
 }

@@ -2584,32 +2584,34 @@ finish_decal() {
  * Draws the given set of CullableObjects one-by-one.
  */
 bool GraphicsStateGuardian::
-draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) {
+draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *current_thread) {
   bool all_ok = true;
-  for (const CullableObject &object : objects) {
+  for (const CullableObject *object : objects) {
 #ifdef RENDER_TRACK_GEOM_NODES
-    _geom_node = object._geom_node;
+    _geom_node = object->_geom_node;
 #endif
 
-    if (true) {//*object._instances == nullptr &&*/ object._draw_callback == nullptr) {
-      if (object._state != _state_rs || object._internal_transform != _internal_transform) {
-        set_state_and_transform(object._state, object._internal_transform);
+    //std::cout << object->_geom << ", " << object->_draw_callback << "\n";
+
+    if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
+      if (object->_state != _state_rs || object->_internal_transform != _internal_transform) {
+        set_state_and_transform(object->_state, object->_internal_transform);
       }
-      //nassertr(object._geom != nullptr, false);
-      if (!draw_geom(object._geom, object._munged_data, object._num_instances,
-                     object._primitive,
+      //nassertr(object->_geom != nullptr, false);
+      if (!draw_geom(object->_geom, object->_munged_data, object->_num_instances,
+                     object->_primitive,
                      force, current_thread)) {
         all_ok = false;
       }
 
     }
-    #if 0
-    else if (object._draw_callback != nullptr) {
+    #if 1
+    else if (object->_draw_callback != nullptr) {
       // It has a callback associated.
       clear_before_callback();
-      set_state_and_transform(object._state, object._internal_transform);
-      GeomDrawCallbackData cbdata(((CullableObject *)&object), this, force);
-      object._draw_callback->do_callback(&cbdata);
+      set_state_and_transform(object->_state, object->_internal_transform);
+      GeomDrawCallbackData cbdata((CullableObject *)object, this, force);
+      object->_draw_callback->do_callback(&cbdata);
       if (cbdata.get_lost_state()) {
         // Forget our state.
         clear_state_and_transform();
@@ -2637,7 +2639,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
 #ifdef RENDER_TRACK_GEOM_NODES
   _geom_node = object->_geom_node;
 #endif
-  if (true) {///*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
+  if (/*object->_instances == nullptr &&*/ object->_draw_callback == nullptr) {
     nassertr(object->_geom != nullptr, false);
     set_state_and_transform(object->_state, object->_internal_transform);
     return draw_geom(object->_geom, object->_munged_data, object->_num_instances,
@@ -2645,7 +2647,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
                      force, current_thread);
 
   }
-  #if 0
+  #if 1
   else if (object->_draw_callback != nullptr) {
     // It has a callback associated.
     clear_before_callback();

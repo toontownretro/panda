@@ -544,7 +544,7 @@ void ShaderTerrainMesh::add_for_draw(CullTraverser *trav, CullTraverserData &dat
   state = state->set_attrib(current_shader_attrib, 10000);
 
   // Emit chunk
-  CullableObject object(_chunk_geom, std::move(state), std::move(modelview_transform), trav->get_current_thread());
+  CullableObject *object = new CullableObject(_chunk_geom, std::move(state), std::move(modelview_transform), trav->get_current_thread());
   trav->get_cull_handler()->record_object(object, trav);
 
   // After rendering, increment the view index

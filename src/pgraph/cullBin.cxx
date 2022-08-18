@@ -85,14 +85,14 @@ ResultGraphBuilder(PandaNode *root_node) :
  * object to the result returned by make_result_graph().
  */
 void CullBin::ResultGraphBuilder::
-add_object(CullableObject &object) {
-  if (_current_transform != object._internal_transform ||
-      _current_state != object._state) {
+add_object(CullableObject *object) {
+  if (_current_transform != object->_internal_transform ||
+      _current_state != object->_state) {
     // Create a new GeomNode to hold the net transform and state.  We choose
     // to create a new GeomNode for each new state, to make it clearer to the
     // observer when the state changes.
-    _current_transform = object._internal_transform;
-    _current_state = object._state;
+    _current_transform = object->_internal_transform;
+    _current_state = object->_state;
     _current_node = new GeomNode("object_" + format_string(_object_index));
     _root_node->add_child(_current_node);
     _current_node->set_transform(_current_transform);
@@ -107,8 +107,8 @@ add_object(CullableObject &object) {
  * Records a single object.
  */
 void CullBin::ResultGraphBuilder::
-record_one_object(GeomNode *node, CullableObject &object) {
-  PT(Geom) new_geom = object._geom->make_copy();
-  new_geom->set_vertex_data(object._munged_data);
+record_one_object(GeomNode *node, CullableObject *object) {
+  PT(Geom) new_geom = object->_geom->make_copy();
+  new_geom->set_vertex_data(object->_munged_data);
   node->add_geom(new_geom);
 }

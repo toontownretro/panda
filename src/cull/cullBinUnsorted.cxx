@@ -24,6 +24,9 @@ TypeHandle CullBinUnsorted::_type_handle;
  */
 CullBinUnsorted::
 ~CullBinUnsorted() {
+  for (CullableObject *object : _objects) {
+    delete object;
+  }
 }
 
 /**
@@ -39,8 +42,8 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  * Adds a geom, along with its associated state, to the bin for rendering.
  */
 void CullBinUnsorted::
-add_object(CullableObject &object, Thread *current_thread) {
-  _objects.emplace_back(std::move(object));
+add_object(CullableObject *object, Thread *current_thread) {
+  _objects.push_back(object);
 }
 
 /**
@@ -58,7 +61,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinUnsorted::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (CullableObject &object : _objects) {
+  for (CullableObject *object : _objects) {
     builder.add_object(object);
   }
 }

@@ -81,6 +81,7 @@ PUBLISHED:
   //MAKE_PROPERTY(usage_hint, get_usage_hint, set_usage_hint);
 
   INLINE CPT(GeomVertexData) get_vertex_data(Thread *current_thread = Thread::get_current_thread()) const;
+  INLINE const GeomVertexData *get_vertex_data_noref(Thread *current_thread = Thread::get_current_thread()) const;
   PT(GeomVertexData) modify_vertex_data();
   void set_vertex_data(const GeomVertexData *data);
   void offset_vertices(const GeomVertexData *data, int offset);

@@ -93,7 +93,7 @@ PUBLISHED:
   void set_usage_hint(UsageHint usage_hint);
   MAKE_PROPERTY(usage_hint, get_usage_hint, set_usage_hint);
 
-  INLINE const GeomVertexFormat *get_format() const;
+  INLINE const GeomVertexFormat *get_format(Thread *current_thread = Thread::get_current_thread()) const;
   void set_format(const GeomVertexFormat *format);
   void unclean_set_format(const GeomVertexFormat *format);
   MAKE_PROPERTY(format, get_format, set_format);
