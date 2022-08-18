@@ -211,5 +211,6 @@ cook_mesh() {
   memcpy(mesh_data.p(), data.c_str(), data.size());
   _mesh_data = mesh_data;
   _has_mesh_data = true;
-  return ret && (result == physx::PxTriangleMeshCookingResult::eSUCCESS);
+  //std::cout << ret << ", " << result << "\n";
+  return ret && (result != physx::PxTriangleMeshCookingResult::eFAILURE);
 }
