@@ -48,21 +48,11 @@ thread_main() {
     if (job == nullptr) {
       PStatTimer timer(sleep_pcollector);
 
-      //Thread::relax();
-
-      //Thread::force_yield();
-
-      //
-
       sys->_cv_mutex.acquire();
-      //std::cerr << "Sleep " << this << "\n";
       while (AtomicAdjust::get(sys->_queued_jobs) == 0) {
         sys->_cv_work_available.wait();
       }
-      //std::cerr << "Wake up " << this << "\n";
       sys->_cv_mutex.release();
-
-      //
 
     } else {
       PStatTimer timer(exec_job_pcollector);
@@ -86,8 +76,6 @@ thread_main() {
       _current_job = nullptr;
 
       AtomicAdjust::set(_state, S_idle);
-
-      //Thread::relax();
     }
   }
 }

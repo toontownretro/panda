@@ -3,7 +3,7 @@
 
   #define BUILDING_DLL BUILDING_PANDA_JOBSYSTEM
 
-  #define LOCAL_LIBS pipeline pstatclient
+  #define LOCAL_LIBS pipeline pstatclient mathutil
 
   #define HEADERS \
     config_jobsystem.h \

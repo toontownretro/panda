@@ -26,8 +26,6 @@ extern PStatCollector exec_job_pcollector;
 
 JobSystem *JobSystem::_global_ptr = nullptr;
 
-static int waiting_thread_jobs_serviced = 0;
-
 /**
  *
  */
@@ -112,36 +110,33 @@ schedule(Job *job) {
  * calling schedule() for each job.
  */
 void JobSystem::
-schedule(const pvector<PT(Job)> &jobs, bool wait) {
+schedule(Job **jobs, int count, bool wait) {
   PStatTimer timer(schedule_pcollector);
 
-  Thread *thread = Thread::get_current_thread();
-
-  for (Job *job : jobs) {
-    job->set_pipeline_stage(thread->get_pipeline_stage());
-  }
-
   if (!_worker_threads.empty()) {
+    Thread *thread = Thread::get_current_thread();
+
     JobWorkerThread *jthread = nullptr;
     if (thread->get_type() == JobWorkerThread::get_class_type()) {
       jthread = DCAST(JobWorkerThread, thread);
     }
 
-    for (Job *job : jobs) {
-      job->ref();
-      job->set_state(Job::S_queued);
+    for (int i = 0; i < count; ++i) {
+      jobs[i]->set_pipeline_stage(thread->get_pipeline_stage());
+      jobs[i]->ref();
+      jobs[i]->set_state(Job::S_queued);
     }
 
-    AtomicAdjust::add(_queued_jobs, (int)jobs.size());
+    AtomicAdjust::add(_queued_jobs, count);
 
     if (jthread != nullptr) {
-      for (Job *job : jobs) {
-        jthread->_local_queue.push(job);
+      for (int i = 0; i < count; ++i) {
+        jthread->_local_queue.push(jobs[i]);
       }
     } else {
       _queue_lock.acquire();
-      for (Job *job : jobs) {
-        _job_queue.push(job);
+      for (int i = 0; i < count; ++i) {
+        _job_queue.push(jobs[i]);
       }
       _queue_lock.release();
     }
@@ -149,16 +144,16 @@ schedule(const pvector<PT(Job)> &jobs, bool wait) {
     _cv_work_available.notify_all();
 
     if (wait) {
-      for (Job *job : jobs) {
-        wait_job(job);
+      for (int i = 0; i < count; ++i) {
+        wait_job(jobs[i], thread);
       }
     }
 
   } else {
-    for (Job *job : jobs) {
-      job->set_state(Job::S_working);
-      job->execute();
-      job->set_state(Job::S_complete);
+    for (int i = 0; i < count; ++i) {
+      jobs[i]->set_state(Job::S_working);
+      jobs[i]->execute();
+      jobs[i]->set_state(Job::S_complete);
     }
   }
 }
@@ -212,7 +207,6 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
       jobs[i]._first_item = first;
       jobs[i]._num_items = count;
       jobs[i]._function = func;
-      //_queued_jobs_semaphore.release();
     }
   } else {
     // If there are fewer items than worker threads, create a job for
@@ -225,7 +219,6 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
       jobs[i]._first_item = i;
       jobs[i]._num_items = 1;
       jobs[i]._function = func;
-      //_queued_jobs_semaphore.release();
     }
   }
 
@@ -246,12 +239,9 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
 
   _cv_work_available.notify_all();
 
-  //waiting_thread_jobs_serviced = 0;
   for (int i = 0; i < job_count; ++i) {
-    wait_job(&jobs[i]);
+    wait_job(&jobs[i], thread);
   }
-
-  //std::cout << "waiting thread serviced " << waiting_thread_jobs_serviced << " jobs\n";
 }
 
 /**
@@ -261,19 +251,16 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
  * in the queue.
  */
 void JobSystem::
-wait_job(Job *job) {
+wait_job(Job *job, Thread *thread) {
   PStatTimer timer(wait_job_pcollector);
 
   if (job->get_state() == Job::S_fresh) {
     return;
   }
 
-  Thread *thread = Thread::get_current_thread();
   int orig_pipeline_stage = thread->get_pipeline_stage();
 
   while (job->get_state() != Job::S_complete) {
-    //Thread::relax();
-#if 1
     Job *job2 = pop_job(thread);
     if (job2 != nullptr) {
       exec_job_pcollector.start();
@@ -287,11 +274,8 @@ wait_job(Job *job) {
         delete job;
       }
 
-      //waiting_thread_jobs_serviced++;
-
       exec_job_pcollector.stop();
     }
-#endif
   }
 
   thread->set_pipeline_stage(orig_pipeline_stage);
@@ -347,13 +331,16 @@ get_job_for_thread(Thread *thread) {
 
     // Finally, try to steal from worker threads that are busy with another
     // job with outstanding work in their local queues.
-    for (JobWorkerThread *othread : _worker_threads) {
-      if (othread != thread && AtomicAdjust::get(othread->_state) == JobWorkerThread::S_busy) {
-        if (!othread->_local_queue.empty()) {
-          std::optional<Job *> item = othread->_local_queue.steal();
-          if (item.has_value()) {
-            return item.value();
-          }
+
+    if (!_worker_threads.empty()) {
+      static thread_local Randomizer random(Thread::get_current_thread_id());
+
+      int index = random.random_int((int)_worker_threads.size());
+      JobWorkerThread *othread = _worker_threads[index];
+      if (othread != thread && !othread->_local_queue.empty()) {
+        std::optional<Job *> item = othread->_local_queue.steal();
+        if (item.has_value()) {
+          return item.value();
         }
       }
     }
