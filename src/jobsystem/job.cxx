@@ -14,7 +14,16 @@
 #include "job.h"
 
 IMPLEMENT_CLASS(Job);
+IMPLEMENT_CLASS(GenericJob);
 IMPLEMENT_CLASS(ParallelProcessJob);
+
+/**
+ *
+ */
+void GenericJob::
+execute() {
+  _func();
+}
 
 /**
  *

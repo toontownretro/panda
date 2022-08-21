@@ -40,5 +40,6 @@ init_libjobsystem() {
 
   JobWorkerThread::init_type();
   Job::init_type();
+  GenericJob::init_type();
   ParallelProcessJob::init_type();
 }

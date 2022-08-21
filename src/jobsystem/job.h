@@ -56,6 +56,25 @@ private:
 };
 
 /**
+ * A job that calls an std::function taking no parameters.
+ */
+class ALIGN_64BYTE EXPCL_PANDA_JOBSYSTEM GenericJob : public Job {
+  DECLARE_CLASS(GenericJob, Job);
+
+public:
+  ALLOC_DELETED_CHAIN(GenericJob);
+
+  typedef std::function<void()> Func;
+
+  INLINE GenericJob(Func func);
+
+  virtual void execute() override;
+
+private:
+  Func _func;
+};
+
+/**
  *
  */
 class ALIGN_64BYTE EXPCL_PANDA_JOBSYSTEM ParallelProcessJob : public Job {

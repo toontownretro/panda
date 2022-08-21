@@ -76,6 +76,15 @@ get_state() const {
 /**
  *
  */
+INLINE GenericJob::
+GenericJob(Func func) :
+  _func(func)
+{
+}
+
+/**
+ *
+ */
 INLINE ParallelProcessJob::
 ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
   _first_item(first_item),
