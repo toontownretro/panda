@@ -120,6 +120,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(RenderState) &node_state) const {
   if (!_camera_mask.has_bits_in_common(trav->get_camera_mask())) {
     // Don't need to compute lighting for this camera.
+    return true;
   }
 
   ((MapLightingEffect *)this)->do_cull_callback(trav, data, node_transform, node_state);
