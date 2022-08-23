@@ -65,8 +65,8 @@ CascadeLight(const std::string &name) :
 
   // We need a cull callback to update the cascades when we are visited during
   // the cull traversal.
-  set_cull_callback();
-  set_renderable();
+  //set_cull_callback();
+  //set_renderable();
 }
 
 /**
@@ -214,7 +214,7 @@ update(const NodePath &root) {
  */
 bool CascadeLight::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
-  update(trav->get_scene()->get_scene_root());
+  //update(trav->get_scene()->get_scene_root());
   return true;
 }
 
