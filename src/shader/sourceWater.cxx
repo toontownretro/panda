@@ -49,12 +49,13 @@ void SourceWater::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/source_water.vert.sho.pz");
-  set_pixel_shader("shaders/source_water.frag.sho.pz");
+  setup.set_vertex_shader("shaders/source_water.vert.sho.pz");
+  setup.set_pixel_shader("shaders/source_water.frag.sho.pz");
 
   static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
   static TextureStage *refl_stage = TextureStagePool::get_stage(new TextureStage("reflection"));
@@ -75,7 +76,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     refr_tex = sw_get_black_texture();
   }
 
-  set_input(ShaderInput("lightmapSampler", lm_tex));
-  set_input(ShaderInput("reflectionSampler", refl_tex));
-  set_input(ShaderInput("refractionSampler", refr_tex));
+  setup.set_input(ShaderInput("lightmapSampler", lm_tex));
+  setup.set_input(ShaderInput("reflectionSampler", refl_tex));
+  setup.set_input(ShaderInput("refractionSampler", refr_tex));
 }

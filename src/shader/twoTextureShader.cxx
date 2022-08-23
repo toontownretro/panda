@@ -54,7 +54,8 @@ void TwoTextureShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   // Combo names.
   static const CPT_InternalName IN_FOG("FOG");
@@ -64,10 +65,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/two_texture.vert.sho.pz");
-  set_pixel_shader("shaders/two_texture.frag.sho.pz");
+  setup.set_vertex_shader("shaders/two_texture.vert.sho.pz");
+  setup.set_pixel_shader("shaders/two_texture.frag.sho.pz");
 
   // Toggle GPU skinning.
   const ShaderAttrib *sha;
@@ -75,9 +76,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (sha->has_hardware_skinning()) {
     if (sha->get_num_transforms() > 4) {
       // 8 transforms version.
-      set_vertex_shader_combo(IN_SKINNING, 2);
+      setup.set_vertex_shader_combo(IN_SKINNING, 2);
     } else {
-      set_vertex_shader_combo(IN_SKINNING, 1);
+      setup.set_vertex_shader_combo(IN_SKINNING, 1);
     }
   }
 
@@ -85,33 +86,33 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(fa)) {
     Fog *fog = fa->get_fog();
     if (fog != nullptr) {
-      set_pixel_shader_combo(IN_FOG, 1);
-      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      setup.set_pixel_shader_combo(IN_FOG, 1);
+      setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
     }
   }
 
   MaterialParamBase *param;
 
   if ((param = material->get_param("base_color")) != nullptr) {
-    set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    set_input(ShaderInput("baseTexture", get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture", get_white_texture()));
   }
   if ((param = material->get_param("basetexturetransform")) != nullptr) {
-    set_input(ShaderInput("baseTextureTransform", DCAST(MaterialParamMatrix, param)->get_value()));
+    setup.set_input(ShaderInput("baseTextureTransform", DCAST(MaterialParamMatrix, param)->get_value()));
   } else {
-    set_input(ShaderInput("baseTextureTransform", LMatrix4::ident_mat()));
+    setup.set_input(ShaderInput("baseTextureTransform", LMatrix4::ident_mat()));
   }
 
   if ((param = material->get_param("texture2")) != nullptr) {
-    set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    set_input(ShaderInput("baseTexture2", get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture2", get_white_texture()));
   }
   if ((param = material->get_param("texture2transform")) != nullptr) {
-    set_input(ShaderInput("baseTexture2Transform", DCAST(MaterialParamMatrix, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture2Transform", DCAST(MaterialParamMatrix, param)->get_value()));
   } else {
-    set_input(ShaderInput("baseTexture2Transform", LMatrix4::ident_mat()));
+    setup.set_input(ShaderInput("baseTexture2Transform", LMatrix4::ident_mat()));
   }
 
   LVecBase4 scroll(0.0f);
@@ -125,7 +126,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     scroll[2] = two_scroll[0];
     scroll[3] = two_scroll[1];
   }
-  set_input(ShaderInput("textureScroll", scroll));
+  setup.set_input(ShaderInput("textureScroll", scroll));
 
   LVecBase3 sine_x(0.0f, 0.0f, 1.0f);
   LVecBase3 sine_y(0.0f, 0.0f, 1.0f);
@@ -135,8 +136,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = material->get_param("basetexturesiney")) != nullptr) {
     sine_y = DCAST(MaterialParamVector, param)->get_value();
   }
-  set_input(ShaderInput("sineXParams", sine_x));
-  set_input(ShaderInput("sineYParams", sine_y));
+  setup.set_input(ShaderInput("sineXParams", sine_x));
+  setup.set_input(ShaderInput("sineYParams", sine_y));
 
   const TextureAttrib *tattr;
   state->get_attrib_def(tattr);
@@ -145,9 +146,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     const std::string &name = stage->get_name();
 
     if (name == "lightmap") {
-      set_input(ShaderInput("lightmapTexture", tattr->get_on_texture(stage)));
-      set_vertex_shader_combo(IN_LIGHTMAP, 1);
-      set_pixel_shader_combo(IN_LIGHTMAP, 1);
+      setup.set_input(ShaderInput("lightmapTexture", tattr->get_on_texture(stage)));
+      setup.set_vertex_shader_combo(IN_LIGHTMAP, 1);
+      setup.set_pixel_shader_combo(IN_LIGHTMAP, 1);
       break;
     }
   }

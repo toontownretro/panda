@@ -51,13 +51,14 @@ void SourceSkyShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   static CPT_InternalName IN_COMPRESSED_HDR("COMPRESSED_HDR");
 
-  set_language(Shader::SL_GLSL);
-  set_vertex_shader("shaders/source_sky.vert.sho.pz");
-  set_pixel_shader("shaders/source_sky.frag.sho.pz");
+  setup.set_language(Shader::SL_GLSL);
+  setup.set_vertex_shader("shaders/source_sky.vert.sho.pz");
+  setup.set_pixel_shader("shaders/source_sky.frag.sho.pz");
 
   MaterialParamBase *param;
 
@@ -82,25 +83,25 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     tex_transform = DCAST(MaterialParamMatrix, param)->get_value();
   }
 
-  set_input(ShaderInput("skySampler", sky_tex, sky_sampler));
-  set_input(ShaderInput("skyTexTransform", tex_transform));
+  setup.set_input(ShaderInput("skySampler", sky_tex, sky_sampler));
+  setup.set_input(ShaderInput("skyTexTransform", tex_transform));
 
   LVecBase3 scale(1);
 
   if (compressed_hdr) {
-    set_vertex_shader_combo(IN_COMPRESSED_HDR, 1);
-    set_pixel_shader_combo(IN_COMPRESSED_HDR, 1);
+    setup.set_vertex_shader_combo(IN_COMPRESSED_HDR, 1);
+    setup.set_pixel_shader_combo(IN_COMPRESSED_HDR, 1);
 
     // Stuff for manual bilinear interp of RGBScale texture.
     PN_stdfloat w = sky_tex->get_x_size();
     PN_stdfloat h = sky_tex->get_y_size();
     PN_stdfloat fudge = 0.01f / std::max(w, h);
-    set_input(ShaderInput("textureSizeInfo", LVecBase4(0.5f/w-fudge, 0.5f/h-fudge, w, h)));
+    setup.set_input(ShaderInput("textureSizeInfo", LVecBase4(0.5f/w-fudge, 0.5f/h-fudge, w, h)));
 
     scale.set(8.0f, 8.0f, 8.0f);
   }
 
-  set_input(ShaderInput("skyColorScale", scale));
+  setup.set_input(ShaderInput("skyColorScale", scale));
 
   // Z far and sky face index shader inputs set on sky card nodes
   // themselves.

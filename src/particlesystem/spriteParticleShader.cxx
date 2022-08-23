@@ -35,7 +35,8 @@ void SpriteParticleShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   // Internal names for combos and specialization constants.
   static const CPT_InternalName IN_BASETEXTURE("BASETEXTURE");
@@ -48,11 +49,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
   static const CPT_InternalName IN_BILLBOARD_MODE("BILLBOARD_MODE");
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/spriteParticle.vert.sho.pz");
-  set_geometry_shader("shaders/spriteParticle.geom.sho.pz");
-  set_pixel_shader("shaders/spriteParticle.frag.sho.pz");
+  setup.set_vertex_shader("shaders/spriteParticle.vert.sho.pz");
+  setup.set_geometry_shader("shaders/spriteParticle.geom.sho.pz");
+  setup.set_pixel_shader("shaders/spriteParticle.frag.sho.pz");
 
   const RenderModeAttrib *rma;
   state->get_attrib_def(rma);
@@ -92,9 +93,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     billboard = (int)value[0];
   }
 
-  set_geometry_shader_combo(IN_BILLBOARD_MODE, billboard);
+  setup.set_geometry_shader_combo(IN_BILLBOARD_MODE, billboard);
 
-  set_input(ShaderInput("sprite_size", LVecBase2(x_size, y_size)));
+  setup.set_input(ShaderInput("sprite_size", LVecBase2(x_size, y_size)));
 
   // Now get the texture.
   MaterialParamTexture *tex_p = nullptr;
@@ -104,8 +105,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if (tex_p != nullptr) {
     // Use the texture specified in the material.
-    set_pixel_shader_combo(IN_BASETEXTURE, 1);
-    set_input(ShaderInput("baseTextureSampler", tex_p->get_value()));
+    setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
+    setup.set_input(ShaderInput("baseTextureSampler", tex_p->get_value()));
 
   } else {
     // No texture in material, so use the first one from the TextureAttrib.
@@ -115,9 +116,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       for (int i = 0; i < ta->get_num_on_stages(); i++) {
         TextureStage *stage = ta->get_on_stage(i);
         if (stage == TextureStage::get_default()) {
-          set_pixel_shader_combo(IN_BASETEXTURE, 1);
+          setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
           Texture *tex = ta->get_on_texture(stage);
-          set_input(ShaderInput("baseTextureSampler", tex));
+          setup.set_input(ShaderInput("baseTextureSampler", tex));
           break;
         }
       }
@@ -128,12 +129,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(at)) {
     if (at->get_mode() != AlphaTestAttrib::M_none &&
         at->get_mode() != AlphaTestAttrib::M_always) {
-      set_pixel_shader_combo(IN_ALPHA_TEST, 1);
+      setup.set_pixel_shader_combo(IN_ALPHA_TEST, 1);
       // Specialize the pixel shader with the alpha test mode and
       // reference alpha, rather than using uniforms or the like.
       // Same is done for fog mode and clip plane count.
-      set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
-      set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
+      setup.set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
+      setup.set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
     }
   }
 
@@ -141,16 +142,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(fa)) {
     Fog *fog = fa->get_fog();
     if (fog != nullptr) {
-      set_pixel_shader_combo(IN_FOG, 1);
-      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      setup.set_pixel_shader_combo(IN_FOG, 1);
+      setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
     }
   }
 
   const ClipPlaneAttrib *cpa;
   if (state->get_attrib(cpa)) {
     if (cpa->get_num_on_planes() > 0) {
-      set_pixel_shader_combo(IN_CLIPPING, 1);
-      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
+      setup.set_pixel_shader_combo(IN_CLIPPING, 1);
+      setup.set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
     }
   }
 }

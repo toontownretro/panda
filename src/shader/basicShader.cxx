@@ -34,7 +34,8 @@ void BasicShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   // Internal names for combos and specialization constants.
   static const CPT_InternalName IN_SKINNING("SKINNING");
@@ -48,10 +49,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
   static const CPT_InternalName IN_PLANAR_REFLECTION("PLANAR_REFLECTION");
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/basic.vert.sho.pz");
-  set_pixel_shader("shaders/basic.frag.sho.pz");
+  setup.set_vertex_shader("shaders/basic.vert.sho.pz");
+  setup.set_pixel_shader("shaders/basic.frag.sho.pz");
 
   // Toggle GPU skinning.
   const ShaderAttrib *sha;
@@ -59,9 +60,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (sha->has_hardware_skinning()) {
     if (sha->get_num_transforms() > 4) {
       // 8 transforms version.
-      set_vertex_shader_combo(IN_SKINNING, 2);
+      setup.set_vertex_shader_combo(IN_SKINNING, 2);
     } else {
-      set_vertex_shader_combo(IN_SKINNING, 1);
+      setup.set_vertex_shader_combo(IN_SKINNING, 1);
     }
   }
 
@@ -72,9 +73,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         TextureStage *stage = ta->get_on_stage(i);
         if (stage == TextureStage::get_default()) {
           // We have a color texture.
-          set_vertex_shader_combo(IN_BASETEXTURE, 1);
-          set_pixel_shader_combo(IN_BASETEXTURE, 1);
-          set_input(ShaderInput("base_texture_sampler", ta->get_on_texture(stage)));
+          setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
+          setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
+          setup.set_input(ShaderInput("base_texture_sampler", ta->get_on_texture(stage)));
           break;
         }
       }
@@ -82,9 +83,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   } else {
     MaterialParamBase *p = material->get_param("base_color");
     if (p != nullptr && p->is_of_type(MaterialParamTexture::get_class_type())) {
-      set_vertex_shader_combo(IN_BASETEXTURE, 1);
-      set_pixel_shader_combo(IN_BASETEXTURE, 1);
-      set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
+      setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
+      setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
+      setup.set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
     }
   }
 
@@ -94,9 +95,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     for (int i = 0; i < ta->get_num_on_stages(); ++i) {
       TextureStage *stage = ta->get_on_stage(i);
       if (stage->get_name() == "reflection") {
-        set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
-        set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
-        set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
+        setup.set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
+        setup.set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
+        setup.set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
         break;
       }
     }
@@ -106,12 +107,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(at)) {
     if (at->get_mode() != AlphaTestAttrib::M_none &&
         at->get_mode() != AlphaTestAttrib::M_always) {
-      set_pixel_shader_combo(IN_ALPHA_TEST, 1);
+      setup.set_pixel_shader_combo(IN_ALPHA_TEST, 1);
       // Specialize the pixel shader with the alpha test mode and
       // reference alpha, rather than using uniforms or the like.
       // Same is done for fog mode and clip plane count.
-      set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
-      set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
+      setup.set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
+      setup.set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
     }
   }
 
@@ -119,16 +120,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(fa)) {
     Fog *fog = fa->get_fog();
     if (fog != nullptr) {
-      set_pixel_shader_combo(IN_FOG, 1);
-      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      setup.set_pixel_shader_combo(IN_FOG, 1);
+      setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
     }
   }
 
   const ClipPlaneAttrib *cpa;
   if (state->get_attrib(cpa)) {
     if (cpa->get_num_on_planes() > 0) {
-      set_pixel_shader_combo(IN_CLIPPING, 1);
-      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
+      setup.set_pixel_shader_combo(IN_CLIPPING, 1);
+      setup.set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
     }
   }
 }

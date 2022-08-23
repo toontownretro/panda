@@ -19,14 +19,17 @@
 #include "bamFile.h"
 #include "bam.h"
 #include "config_shader.h"
+#include "lightMutexHolder.h"
 
 ShaderStage::ObjectCache ShaderStage::_object_cache;
+LightMutex ShaderStage::_object_cache_lock("object-cache-lock");
 
 /**
  *
  */
 const ShaderObject *ShaderStage::
 load_shader_object(const Filename &filename) {
+  LightMutexHolder holder(_object_cache_lock);
 
   CPT(ShaderObject) &obj = _object_cache[filename];
 
@@ -84,6 +87,7 @@ load_shader_object(const Filename &filename) {
  */
 void ShaderStage::
 clear_sho_cache() {
+  LightMutexHolder holder(_object_cache_lock);
   _object_cache.clear();
 }
 

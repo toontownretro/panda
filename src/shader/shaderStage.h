@@ -17,6 +17,7 @@
 #include "config_shader.h"
 #include "filename.h"
 #include "shaderObject.h"
+#include "lightMutex.h"
 
 #include <string>
 
@@ -70,6 +71,7 @@ private:
 
   typedef pflat_hash_map<Filename, CPT(ShaderObject), string_hash> ObjectCache;
   static ObjectCache _object_cache;
+  static LightMutex _object_cache_lock;
 };
 
 #include "shaderStage.I"

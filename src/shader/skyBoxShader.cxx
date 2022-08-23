@@ -23,12 +23,13 @@ void SkyBoxShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material_base,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/skybox.vert.glsl");
-  set_pixel_shader("shaders/skybox.frag.glsl");
+  setup.set_vertex_shader("shaders/skybox.vert.glsl");
+  setup.set_pixel_shader("shaders/skybox.frag.glsl");
 
   Texture *sky_cube = nullptr;
   if (material_base != nullptr) {
@@ -41,5 +42,5 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     sky_cube = ShaderManager::get_global_ptr()->get_default_cube_map();
   }
 
-  set_input(ShaderInput("skyboxSampler", sky_cube));
+  setup.set_input(ShaderInput("skyboxSampler", sky_cube));
 }

@@ -25,6 +25,8 @@
 #include "pmap.h"
 #include "string_utils.h"
 #include "stl_compares.h"
+#include "lightMutex.h"
+#include "shaderSetup.h"
 
 class GraphicsStateGuardianBase;
 class RenderState;
@@ -36,84 +38,6 @@ class Material;
  */
 class EXPCL_PANDA_SHADER ShaderBase : public TypedObject, public Namable {
 public:
-  enum Stage {
-    S_vertex,
-    S_pixel,
-    S_geometry,
-    S_tess,
-    S_tess_eval,
-    S_COUNT,
-  };
-
-  enum StageFlags {
-    SF_none = 0,
-    SF_vertex = 1,
-    SF_pixel = 2,
-    SF_geometry = 4,
-    SF_tess = 8,
-    SF_tess_eval = 16,
-
-    SF_all = (SF_vertex | SF_pixel | SF_geometry | SF_tess | SF_tess_eval),
-  };
-
-  // Setup specific to the generated Shader object.
-  class ShaderObjectSetup {
-  public:
-    BitMask32 _stage_flags;
-    ShaderStage _stages[S_COUNT];
-    Shader::ShaderLanguage _language;
-    pmap<const InternalName *, unsigned int> _spec_constants;
-
-    INLINE ShaderObjectSetup();
-    INLINE ShaderObjectSetup(const ShaderObjectSetup &other);
-
-    INLINE void clear();
-    INLINE size_t get_hash() const;
-
-    INLINE void calc_variation_indices();
-
-    INLINE bool operator < (const ShaderObjectSetup &other) const;
-    INLINE bool operator == (const ShaderObjectSetup &other) const;
-    bool operator != (const ShaderObjectSetup &other) const {
-      return !operator ==(other);
-    }
-  };
-
-  // Setup specific to the generated ShaderAttrib.
-  class ShaderSetup {
-  public:
-    int _flags;
-    pvector<ShaderInput> _inputs;
-    int _instance_count;
-
-    INLINE ShaderSetup();
-    INLINE ShaderSetup(const ShaderSetup &other);
-
-    INLINE void clear();
-    INLINE size_t get_hash() const;
-
-    INLINE bool operator < (const ShaderSetup &other) const;
-    INLINE bool operator == (const ShaderSetup &other) const;
-    bool operator != (const ShaderSetup &other) const {
-      return !operator ==(other);
-    }
-  };
-
-  INLINE size_t get_num_inputs() const;
-  INLINE const pvector<ShaderInput> &get_inputs() const;
-
-  INLINE ShaderStage &get_stage(Stage stage);
-  INLINE bool has_stage(StageFlags flags) const;
-
-  INLINE int get_flags() const;
-
-  INLINE int get_instance_count() const;
-
-  INLINE Shader::ShaderLanguage get_language() const;
-
-  INLINE void reset();
-
-  //INLINE int get_num_defines() const;
 
   INLINE void add_alias(const std::string &alias);
   INLINE size_t get_num_aliases() const;
@@ -124,7 +48,8 @@ public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
                                Material *material,
-                               const GeomVertexAnimationSpec &anim_spec) = 0;
+                               const GeomVertexAnimationSpec &anim_spec,
+                               ShaderSetup &setup) = 0;
 
 protected:
   INLINE ShaderBase(const std::string &name);
@@ -132,63 +57,13 @@ protected:
   static void register_shader(ShaderBase *shader);
   static void register_shader(ShaderBase *shader, TypeHandle material_type);
 
-  //bool add_hardware_skinning(const GeomVertexAnimationSpec &anim_spec);
-  //bool add_fog(const RenderState *state);
-  //bool add_clip_planes(const RenderState *state);
-  //bool add_alpha_test(const RenderState *state);
-  //bool add_csm(const RenderState *state);
-  //bool add_transparency(const RenderState *state);
-  //bool add_hdr(const RenderState *state);
-  //int add_aux_attachments(const RenderState *state);
-  //void add_shader_quality(StageFlags stages = SF_all);
-
-  INLINE void set_vertex_shader(const Filename &filename);
-  INLINE void set_vertex_shader_combo(size_t n, int value);
-  INLINE void set_vertex_shader_combo(const InternalName *name, int value);
-
-  INLINE void set_pixel_shader(const Filename &filename);
-  INLINE void set_pixel_shader_combo(size_t n, int value);
-  INLINE void set_pixel_shader_combo(const InternalName *name, int value);
-
-  INLINE void set_geometry_shader(const Filename &filename);
-  INLINE void set_geometry_shader_combo(size_t n, int value);
-  INLINE void set_geometry_shader_combo(const InternalName *name, int value);
-
-  INLINE void set_tess_shader(const Filename &filename);
-  INLINE void set_tess_shader_combo(size_t n, int value);
-  INLINE void set_tess_shader_combo(const InternalName *name, int value);
-
-  INLINE void set_tess_eval_shader(const Filename &filename);
-  INLINE void set_tess_eval_shader_combo(size_t n, int value);
-  INLINE void set_tess_eval_shader_combo(const InternalName *name, int value);
-
-  INLINE void set_input(const ShaderInput &input);
-  INLINE void set_input(ShaderInput &&input);
-
-  INLINE void set_flags(int flags);
-
-  INLINE void set_instance_count(int count);
-
-  INLINE void set_language(Shader::ShaderLanguage language);
-
-  INLINE void set_spec_constant(const InternalName *name, bool value);
-  INLINE void set_spec_constant(const InternalName *name, float value);
-  INLINE void set_spec_constant(const InternalName *name, int value);
-  INLINE void set_spec_constant(const InternalName *name, unsigned int value);
-
-protected:
-  ShaderSetup _setup;
-  ShaderObjectSetup _obj_setup;
-
-  int _num_defines;
-
 private:
-  typedef pflat_hash_map<ShaderObjectSetup, PT(Shader)> ObjectSetupCache;
-  typedef pflat_hash_map<ShaderSetup, CPT(RenderAttrib)> SetupCache;
+  typedef pflat_hash_map<ShaderSetup::ShaderObjectSetup, PT(Shader)> ObjectSetupCache;
+  typedef pflat_hash_map<ShaderSetup::ShaderAttrSetup, CPT(RenderAttrib)> SetupCache;
   ObjectSetupCache _obj_cache;
   SetupCache _cache;
-
-  //int _num-
+  // This mutex protects the above caches.
+  LightMutex _lock;
 
   vector_string _aliases;
 

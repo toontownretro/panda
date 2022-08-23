@@ -36,7 +36,8 @@ void EyeRefractShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   static const CPT_InternalName IN_SKINNING("SKINNING");
   static const CPT_InternalName IN_DIRECT_LIGHT("DIRECT_LIGHT");
@@ -48,10 +49,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NUM_LIGHTS("NUM_LIGHTS");
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/eyes.vert.sho.pz");
-  set_pixel_shader("shaders/eyes.frag.sho.pz");
+  setup.set_vertex_shader("shaders/eyes.vert.sho.pz");
+  setup.set_pixel_shader("shaders/eyes.frag.sho.pz");
 
   // Toggle GPU skinning.
   const ShaderAttrib *sa;
@@ -59,9 +60,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (sa->has_hardware_skinning()) {
     if (sa->get_num_transforms() > 4) {
       // 8 transforms version.
-      set_vertex_shader_combo(IN_SKINNING, 2);
+      setup.set_vertex_shader_combo(IN_SKINNING, 2);
     } else {
-      set_vertex_shader_combo(IN_SKINNING, 1);
+      setup.set_vertex_shader_combo(IN_SKINNING, 1);
     }
   }
 
@@ -70,8 +71,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(fa)) {
     Fog *fog = fa->get_fog();
     if (fog != nullptr) {
-      set_pixel_shader_combo(IN_FOG, 1);
-      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      setup.set_pixel_shader_combo(IN_FOG, 1);
+      setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
     }
   }
 
@@ -88,40 +89,40 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     if (sa->has_shader_input("ambientProbe")) {
       // SH ambient probe.
-      set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
+      setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
 
     } else if (num_ambient_lights != 0) {
       // Flat ambient.
-      set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
+      setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
     }
   }
 
   if (num_lights > 0) {
     // We have one or more direct local light sources.
-    set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
-    set_spec_constant(IN_NUM_LIGHTS, (int)num_lights);
+    setup.set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
+    setup.set_spec_constant(IN_NUM_LIGHTS, (int)num_lights);
   }
 
   MaterialParamBase *param = eye_mat->get_param("iris_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("irisSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("irisSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
   param = eye_mat->get_param("cornea_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("corneaSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("corneaSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
   param = eye_mat->get_param("ambient_occl_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
   param = eye_mat->get_param("env_map");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
   }
 
   //Texture *envmap_tex = nullptr;
@@ -142,7 +143,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    set_input(ShaderInput("lightwarpSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("lightwarpSampler", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
   PN_stdfloat dilation = 0.5;
@@ -162,7 +163,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     cornea_bump_strength = DCAST(MaterialParamFloat, param)->get_value();
   }
   LVector4 packed_const_0(dilation, glossiness, average_ambient, cornea_bump_strength);
-  set_input(ShaderInput("packedConst0", packed_const_0));
+  setup.set_input(ShaderInput("packedConst0", packed_const_0));
 
   PN_stdfloat eyeball_radius = 0;
   PN_stdfloat parallax_strength = 1;
@@ -175,14 +176,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     parallax_strength = DCAST(MaterialParamFloat, param)->get_value();
   }
   LVector4 packed_const_1(0, eyeball_radius, 0, parallax_strength);
-  set_input(ShaderInput("packedConst1", packed_const_1));
+  setup.set_input(ShaderInput("packedConst1", packed_const_1));
 
   LVector3 ambient_occl_color(1);
   param = eye_mat->get_param("ambient_occl_color");
   if (param) {
     ambient_occl_color = DCAST(MaterialParamColor, param)->get_value().get_xyz();
   }
-  set_input(ShaderInput("ambientOcclColor", ambient_occl_color));
+  setup.set_input(ShaderInput("ambientOcclColor", ambient_occl_color));
 
   // Eye origin and iris U/V projection inputs get calculated and applied from
   // the eye node.

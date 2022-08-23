@@ -24,12 +24,13 @@ void NoMatShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/unlitNoMat.vert.sho");
-  set_pixel_shader("shaders/unlitNoMat.frag.sho");
+  setup.set_vertex_shader("shaders/unlitNoMat.vert.sho");
+  setup.set_pixel_shader("shaders/unlitNoMat.frag.sho");
 
   add_alpha_test(state);
   add_aux_attachments(state);

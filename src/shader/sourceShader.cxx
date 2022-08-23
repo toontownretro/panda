@@ -113,7 +113,8 @@ void SourceShader::
 generate_shader(GraphicsStateGuardianBase *gsg,
                 const RenderState *state,
                 Material *material,
-                const GeomVertexAnimationSpec &anim_spec) {
+                const GeomVertexAnimationSpec &anim_spec,
+                ShaderSetup &setup) {
 
   // Combo names.
   static const CPT_InternalName IN_SKINNING("SKINNING");
@@ -147,21 +148,21 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
   static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
 
-  set_language(Shader::SL_GLSL);
+  setup.set_language(Shader::SL_GLSL);
 
-  set_vertex_shader("shaders/source_vlg.vert.sho.pz");
+  setup.set_vertex_shader("shaders/source_vlg.vert.sho.pz");
   //if (use_orig_source_shader) {
   //  set_pixel_shader("shaders/source_vlg_orig.frag.glsl");
   //} else {
   //  set_pixel_shader("shaders/source_vlg.frag.glsl");
   //}
-  set_pixel_shader("shaders/source_vlg.frag.sho.pz");
+  setup.set_pixel_shader("shaders/source_vlg.frag.sho.pz");
 
   const ClipPlaneAttrib *cpa;
   if (state->get_attrib(cpa)) {
     if (cpa->get_num_on_planes() > 0) {
-      set_pixel_shader_combo(IN_CLIPPING, 1);
-      set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
+      setup.set_pixel_shader_combo(IN_CLIPPING, 1);
+      setup.set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
     }
   }
 
@@ -171,9 +172,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (sa->has_hardware_skinning()) {
     if (sa->get_num_transforms() > 4) {
       // 8 transforms version.
-      set_vertex_shader_combo(IN_SKINNING, 2);
+      setup.set_vertex_shader_combo(IN_SKINNING, 2);
     } else {
-      set_vertex_shader_combo(IN_SKINNING, 1);
+      setup.set_vertex_shader_combo(IN_SKINNING, 1);
     }
   }
 
@@ -181,12 +182,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(at)) {
     if (at->get_mode() != AlphaTestAttrib::M_none &&
         at->get_mode() != AlphaTestAttrib::M_always) {
-      set_pixel_shader_combo(IN_ALPHA_TEST, 1);
+      setup.set_pixel_shader_combo(IN_ALPHA_TEST, 1);
       // Specialize the pixel shader with the alpha test mode and
       // reference alpha, rather than using uniforms or the like.
       // Same is done for fog mode and clip plane count.
-      set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
-      set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
+      setup.set_spec_constant(IN_ALPHA_TEST_MODE, (int)at->get_mode());
+      setup.set_spec_constant(IN_ALPHA_TEST_REF, at->get_reference_alpha());
     }
   }
 
@@ -194,8 +195,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (state->get_attrib(fa)) {
     Fog *fog = fa->get_fog();
     if (fog != nullptr) {
-      set_pixel_shader_combo(IN_FOG, 1);
-      set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      setup.set_pixel_shader_combo(IN_FOG, 1);
+      setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
     }
   }
 
@@ -210,27 +211,27 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if (!la->has_all_off()) {
     if (sa->has_shader_input("ambientProbe")) {
-      set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
+      setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
       has_ambient_probe = true;
     } else {
       size_t num_ambient_lights = la->get_num_on_lights() - num_lights;
       if (num_ambient_lights != 0) {
-        set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
+        setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
       }
     }
   }
 
   if (sa->has_shader_input("bakedVertexLight")) {
-    set_spec_constant(IN_BAKED_VERTEX_LIGHT, true);
+    setup.set_spec_constant(IN_BAKED_VERTEX_LIGHT, true);
   } else {
-    set_spec_constant(IN_BAKED_VERTEX_LIGHT, false);
+    setup.set_spec_constant(IN_BAKED_VERTEX_LIGHT, false);
   }
 
   bool has_direct_light = (num_lights != 0u);
 
   if (has_direct_light) {
-    set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
-    set_spec_constant(IN_NUM_LIGHTS, (unsigned int)std::min(num_lights, (size_t)4u));
+    setup.set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
+    setup.set_spec_constant(IN_NUM_LIGHTS, (unsigned int)std::min(num_lights, (size_t)4u));
 
     // See if we have a shadow casting CascadeLight.
     for (size_t i = 0; i < num_lights; ++i) {
@@ -239,10 +240,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         CascadeLight *clight = DCAST(CascadeLight, np.node());
         if (clight->is_shadow_caster()) {
           // Sunlight shadows are enabled!
-          set_vertex_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
-          set_pixel_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
-          set_spec_constant(IN_CSM_LIGHT_ID, (int)i);
-          set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
+          setup.set_vertex_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
+          setup.set_pixel_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
+          setup.set_spec_constant(IN_CSM_LIGHT_ID, (int)i);
+          setup.set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
         }
         break;
       }
@@ -252,22 +253,22 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   MaterialParamBase *param;
 
   if ((param = src_mat->get_param("base_color")) != nullptr) {
-    set_input(ShaderInput("albedoTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("albedoTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    set_input(ShaderInput("albedoTexture", get_white_texture()));
+    setup.set_input(ShaderInput("albedoTexture", get_white_texture()));
   }
 
   if (has_direct_light && (param = src_mat->get_param("lightwarptexture")) != nullptr) {
-    set_pixel_shader_combo(IN_LIGHTWARP, 1);
-    set_input(ShaderInput("lightWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_pixel_shader_combo(IN_LIGHTWARP, 1);
+    setup.set_input(ShaderInput("lightWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
   bool has_rimlight = false;
   if ((param = src_mat->get_param("phong")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Phong enabled on material.
-    set_pixel_shader_combo(IN_PHONG, 1);
+    setup.set_pixel_shader_combo(IN_PHONG, 1);
 
-    set_input(ShaderInput("remapParams", LVecBase2(remap_param0, remap_param1)));
+    setup.set_input(ShaderInput("remapParams", LVecBase2(remap_param0, remap_param1)));
 
     bool has_phong_exponent_texture = false;
     // Phong exponent texture?  This contains per-texel phong exponent in R,
@@ -275,11 +276,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     // and an optional rim lighting mask in A.
     if ((param = src_mat->get_param("phongexponenttexture")) != nullptr) {
       has_phong_exponent_texture = true;
-      set_input(ShaderInput("phongExponentTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_input(ShaderInput("phongExponentTexture", DCAST(MaterialParamTexture, param)->get_value()));
 
     } else {
       // If it wasn't specified, just use a default white texture.
-      set_input(ShaderInput("phongExponentTexture", get_white_texture()));
+      setup.set_input(ShaderInput("phongExponentTexture", get_white_texture()));
     }
 
     // Exponent, albedo tint mask, boost
@@ -297,38 +298,38 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
     if (has_phong_exponent_texture && (param = src_mat->get_param("phongexponentfactor")) != nullptr) {
       // A factor was specified for the phong exponent map.  Use this as the phong exponent.
-      set_spec_constant(IN_PHONGEXPONENTFACTOR, true);
+      setup.set_spec_constant(IN_PHONGEXPONENTFACTOR, true);
       phong_params[0] = DCAST(MaterialParamFloat, param)->get_value();
     }
-    set_input(ShaderInput("phongParams", phong_params));
+    setup.set_input(ShaderInput("phongParams", phong_params));
 
     // Does material specify custom piece-wise fresnel?
     LVecBase3 phong_fresnel_ranges(0.0f, 0.5f, 1.0f);
     if ((param = src_mat->get_param("phongfresnelranges")) != nullptr) {
       phong_fresnel_ranges = DCAST(MaterialParamVector, param)->get_value();
     }
-    set_input(ShaderInput("phongFresnelRanges", phong_fresnel_ranges));
+    setup.set_input(ShaderInput("phongFresnelRanges", phong_fresnel_ranges));
 
     // Phong tint?
     LVecBase3 phong_tint(1.0f, 1.0f, 1.0f);
     if ((param = src_mat->get_param("phongtint")) != nullptr) {
       phong_tint = DCAST(MaterialParamVector, param)->get_value();
     }
-    set_input(ShaderInput("phongTint", phong_tint));
+    setup.set_input(ShaderInput("phongTint", phong_tint));
 
     // How about a phong warp texture?
     if (has_direct_light && (param = src_mat->get_param("phongwarptexture")) != nullptr) {
-      set_pixel_shader_combo(IN_PHONGWARP, 1);
-      set_input(ShaderInput("phongWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_pixel_shader_combo(IN_PHONGWARP, 1);
+      setup.set_input(ShaderInput("phongWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
     }
 
     if ((param = src_mat->get_param("basemapalphaphongmask")) != nullptr) {
-      set_spec_constant(IN_BASEMAPALPHAPHONGMASK, true);
+      setup.set_spec_constant(IN_BASEMAPALPHAPHONGMASK, true);
     }
 
     // Do we want rim lighting?
     if ((param = src_mat->get_param("rimlight")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-      set_pixel_shader_combo(IN_RIMLIGHT, 1);
+      setup.set_pixel_shader_combo(IN_RIMLIGHT, 1);
 
       has_rimlight = true;
 
@@ -344,31 +345,31 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         // Rim lighting mask through phong exponent alpha channel enabled.
         rimlight_params[2] = 1.0f;
       }
-      set_input(ShaderInput("rimLightParams", rimlight_params));
+      setup.set_input(ShaderInput("rimLightParams", rimlight_params));
     }
   }
 
 #if 1
   if ((param = src_mat->get_param("selfillum")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Self-illum enabled.
-    set_pixel_shader_combo(IN_SELFILLUM, 1);
+    setup.set_pixel_shader_combo(IN_SELFILLUM, 1);
 
     LVecBase3 selfillum_tint(1.0f, 1.0f, 1.0f);
     if ((param = src_mat->get_param("selfillumtint")) != nullptr) {
       selfillum_tint = DCAST(MaterialParamVector, param)->get_value();
     }
-    set_input(ShaderInput("selfIllumTint", selfillum_tint));
+    setup.set_input(ShaderInput("selfIllumTint", selfillum_tint));
 
     if ((param = src_mat->get_param("selfillummask")) != nullptr) {
-      set_pixel_shader_combo(IN_SELFILLUMMASK, 1);
-      set_input(ShaderInput("selfIllumMaskTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_pixel_shader_combo(IN_SELFILLUMMASK, 1);
+      setup.set_input(ShaderInput("selfIllumMaskTexture", DCAST(MaterialParamTexture, param)->get_value()));
     }
   }
 #endif
 
   if (has_direct_light && (param = src_mat->get_param("halflambert")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Half-lambert diffuse.
-    set_spec_constant(IN_HALFLAMBERT, true);
+    setup.set_spec_constant(IN_HALFLAMBERT, true);
   }
 
   bool has_envmap = false;
@@ -390,21 +391,21 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (envmap_tex != nullptr) {
       envmap_tex->set_wrap_u(SamplerState::WM_clamp);
       envmap_tex->set_wrap_v(SamplerState::WM_clamp);
-      set_pixel_shader_combo(IN_ENVMAP, 1);
+      setup.set_pixel_shader_combo(IN_ENVMAP, 1);
       if ((param = src_mat->get_param("basealphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-        set_spec_constant(IN_BASEMAPALPHAENVMAPMASK, true);
+        setup.set_spec_constant(IN_BASEMAPALPHAENVMAPMASK, true);
 
       } else if ((param = src_mat->get_param("normalmapalphaenvmapmask")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
-        set_spec_constant(IN_NORMALMAPALPHAENVMAPMASK, true);
+        setup.set_spec_constant(IN_NORMALMAPALPHAENVMAPMASK, true);
       }
 
       LVecBase3 envmap_tint(0.5f, 0.5f, 0.5f);
       if ((param = src_mat->get_param("envmaptint")) != nullptr) {
         envmap_tint = DCAST(MaterialParamVector, param)->get_value();
       }
-      set_input(ShaderInput("envMapTint", envmap_tint));
+      setup.set_input(ShaderInput("envMapTint", envmap_tint));
 
-      set_input(ShaderInput("envMapTexture", envmap_tex));
+      setup.set_input(ShaderInput("envMapTexture", envmap_tex));
 
       has_envmap = true;
     }
@@ -412,8 +413,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if ((has_direct_light || has_ambient_probe || has_envmap || has_rimlight) &&
       (param = src_mat->get_param("bumpmap")) != nullptr) {
-    set_pixel_shader_combo(IN_BUMPMAP, 1);
-    set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
+    setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
   }
 
 }

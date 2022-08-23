@@ -24,7 +24,8 @@ public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,
                                Material *material,
-                               const GeomVertexAnimationSpec &anim_spec) override;
+                               const GeomVertexAnimationSpec &anim_spec,
+                               ShaderSetup &setup) override;
 protected:
   INLINE CSMDepthShader();
 

@@ -30,6 +30,7 @@
 #include "shaderStage.h"
 #include "textureAttrib.h"
 #include "textureStagePool.h"
+#include "lightMutexHolder.h"
 
 #include "sourceShader.h"
 #include "sourceLightmappedMaterial.h"
@@ -219,121 +220,126 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   synthesize_source_collector.start();
-  shader->generate_shader(gsg, state, material, anim_spec);
-  shader->_obj_setup.calc_variation_indices();
+  ShaderSetup setup;
+  shader->generate_shader(gsg, state, material, anim_spec, setup);
+  setup._obj_setup.calc_variation_indices();
   synthesize_source_collector.stop();
 
   PT(Shader) shader_obj;
   CPT(RenderAttrib) generated_attr;
 
-  cache_collector.start();
-  // See if we need to create a new Shader object for the setup.
-  ShaderBase::ObjectSetupCache::const_iterator oit = shader->_obj_cache.find(shader->_obj_setup);
-  cache_collector.stop();
-  if (oit != shader->_obj_cache.end()) {
-    if (shadermgr_cat.is_debug()) {
-      shadermgr_cat.debug()
-        << "Object cache hit\n";
-    }
-    shader_obj = (*oit).second;
+  {
+    LightMutexHolder holder(shader->_lock);
 
-  } else {
-    make_shader_collector.start();
+    cache_collector.start();
+    // See if we need to create a new Shader object for the setup.
+    ShaderBase::ObjectSetupCache::const_iterator oit = shader->_obj_cache.find(setup._obj_setup);
+    cache_collector.stop();
+    if (oit != shader->_obj_cache.end()) {
+      if (shadermgr_cat.is_debug()) {
+        shadermgr_cat.debug()
+          << "Object cache hit\n";
+      }
+      shader_obj = (*oit).second;
 
-    if (shadermgr_cat.is_debug()) {
-      std::cout << "vsh:\n";
-      shader->get_stage(ShaderBase::S_vertex).spew_variation();
-      std::cout << "psh:\n";
-      shader->get_stage(ShaderBase::S_pixel).spew_variation();
-    }
+    } else {
+      make_shader_collector.start();
 
-    COWPT(ShaderModule) v_mod = shader->get_stage(ShaderBase::S_vertex).get_module();
-    COWPT(ShaderModule) p_mod = shader->get_stage(ShaderBase::S_pixel).get_module();
-    COWPT(ShaderModule) g_mod = shader->get_stage(ShaderBase::S_geometry).get_module();
-    COWPT(ShaderModule) t_mod = shader->get_stage(ShaderBase::S_tess).get_module();
-    COWPT(ShaderModule) te_mod = shader->get_stage(ShaderBase::S_tess_eval).get_module();
-    shader_obj = Shader::make(
-      shader->get_language(),
-      (ShaderModule *)v_mod.get_read_pointer(),
-      (ShaderModule *)p_mod.get_read_pointer(),
-      (ShaderModule *)g_mod.get_read_pointer(),
-      (ShaderModule *)t_mod.get_read_pointer(),
-      (ShaderModule *)te_mod.get_read_pointer());
-    nassertr(shader_obj != nullptr, nullptr);
-    if (shader_obj != nullptr) {
-      // Supply the specialization constants.
-      for (auto cit = shader->_obj_setup._spec_constants.begin(); cit != shader->_obj_setup._spec_constants.end(); ++cit) {
-        shader_obj->set_constant((*cit).first, (*cit).second);
-        if (shadermgr_cat.is_debug()) {
-          std::cout << "spec constant: " << (*cit).first->get_name() << " -> " << (*cit).second << "\n";
+      if (shadermgr_cat.is_debug()) {
+        std::cout << "vsh:\n";
+        setup.get_stage(ShaderSetup::S_vertex).spew_variation();
+        std::cout << "psh:\n";
+        setup.get_stage(ShaderSetup::S_pixel).spew_variation();
+      }
+
+      COWPT(ShaderModule) v_mod = setup.get_stage(ShaderSetup::S_vertex).get_module();
+      COWPT(ShaderModule) p_mod = setup.get_stage(ShaderSetup::S_pixel).get_module();
+      COWPT(ShaderModule) g_mod = setup.get_stage(ShaderSetup::S_geometry).get_module();
+      COWPT(ShaderModule) t_mod = setup.get_stage(ShaderSetup::S_tess).get_module();
+      COWPT(ShaderModule) te_mod = setup.get_stage(ShaderSetup::S_tess_eval).get_module();
+      shader_obj = Shader::make(
+        setup.get_language(),
+        (ShaderModule *)v_mod.get_read_pointer(),
+        (ShaderModule *)p_mod.get_read_pointer(),
+        (ShaderModule *)g_mod.get_read_pointer(),
+        (ShaderModule *)t_mod.get_read_pointer(),
+        (ShaderModule *)te_mod.get_read_pointer());
+      nassertr(shader_obj != nullptr, nullptr);
+      if (shader_obj != nullptr) {
+        // Supply the specialization constants.
+        for (auto cit = setup._obj_setup._spec_constants.begin(); cit != setup._obj_setup._spec_constants.end(); ++cit) {
+          shader_obj->set_constant((*cit).first, (*cit).second);
+          if (shadermgr_cat.is_debug()) {
+            std::cout << "spec constant: " << (*cit).first->get_name() << " -> " << (*cit).second << "\n";
+          }
         }
       }
-    }
-    make_shader_collector.stop();
+      make_shader_collector.stop();
 
-    // Throw it in the cache.
-    shader->_obj_cache.insert(
-      ShaderBase::ObjectSetupCache::value_type(shader->_obj_setup, shader_obj));
-  }
-
-  cache_collector.start();
-  // Now see if we've already created a shader attrib with the same setup.
-  ShaderBase::SetupCache::const_iterator it = shader->_cache.find(shader->_setup);
-  cache_collector.stop();
-
-  if (it != shader->_cache.end()) {
-    if (shadermgr_cat.is_debug()) {
-      shadermgr_cat.debug()
-        << "ShaderAttrib cache hit\n";
+      // Throw it in the cache.
+      shader->_obj_cache.insert(
+        ShaderBase::ObjectSetupCache::value_type(setup._obj_setup, shader_obj));
     }
 
-    // We have!  Just use that.
-    generated_attr = (*it).second;
+    cache_collector.start();
+    // Now see if we've already created a shader attrib with the same setup.
+    ShaderBase::SetupCache::const_iterator it = shader->_cache.find(setup._setup);
+    cache_collector.stop();
 
-    // Make sure the attribute uses the correct Shader object.
-    CPT(ShaderAttrib) shattr = DCAST(ShaderAttrib, generated_attr);
-    if (shattr->get_shader() != shader_obj) {
-      generated_attr = shattr->set_shader(shader_obj);
-    }
-
-  } else {
-    make_attrib_collector.start();
-
-    generated_attr = ShaderAttrib::make(shader_obj);
-
-    if (shader->get_num_inputs() > (size_t)0) {
+    if (it != shader->_cache.end()) {
       if (shadermgr_cat.is_debug()) {
         shadermgr_cat.debug()
-          << "Applying shader inputs\n";
+          << "ShaderAttrib cache hit\n";
       }
-      generated_attr = DCAST(ShaderAttrib, generated_attr)
-        ->set_shader_inputs(shader->get_inputs());
-    }
 
-    if (shader->get_flags() != 0) {
-      if (shadermgr_cat.is_debug()) {
-        shadermgr_cat.debug()
-          << "Setting shader flags\n";
+      // We have!  Just use that.
+      generated_attr = (*it).second;
+
+      // Make sure the attribute uses the correct Shader object.
+      CPT(ShaderAttrib) shattr = DCAST(ShaderAttrib, generated_attr);
+      if (shattr->get_shader() != shader_obj) {
+        generated_attr = shattr->set_shader(shader_obj);
       }
-      generated_attr = DCAST(ShaderAttrib, generated_attr)
-        ->set_flag(shader->get_flags(), true);
-    }
 
-    if (shader->get_instance_count() > 0) {
-      if (shadermgr_cat.is_debug()) {
-        shadermgr_cat.debug()
-          << "Setting shader instance count to "
-          << shader->get_instance_count() << "\n";
+    } else {
+      make_attrib_collector.start();
+
+      generated_attr = ShaderAttrib::make(shader_obj);
+
+      if (setup.get_num_inputs() > (size_t)0) {
+        if (shadermgr_cat.is_debug()) {
+          shadermgr_cat.debug()
+            << "Applying shader inputs\n";
+        }
+        generated_attr = DCAST(ShaderAttrib, generated_attr)
+          ->set_shader_inputs(setup.get_inputs());
       }
-      generated_attr = DCAST(ShaderAttrib, generated_attr)
-        ->set_instance_count(shader->get_instance_count());
+
+      if (setup.get_flags() != 0) {
+        if (shadermgr_cat.is_debug()) {
+          shadermgr_cat.debug()
+            << "Setting shader flags\n";
+        }
+        generated_attr = DCAST(ShaderAttrib, generated_attr)
+          ->set_flag(setup.get_flags(), true);
+      }
+
+      if (setup.get_instance_count() > 0) {
+        if (shadermgr_cat.is_debug()) {
+          shadermgr_cat.debug()
+            << "Setting shader instance count to "
+            << setup.get_instance_count() << "\n";
+        }
+        generated_attr = DCAST(ShaderAttrib, generated_attr)
+          ->set_instance_count(setup.get_instance_count());
+      }
+
+      make_attrib_collector.stop();
+
+      // Throw it in the cache.
+      shader->_cache.insert(
+        ShaderBase::SetupCache::value_type(setup._setup, generated_attr));
     }
-
-    make_attrib_collector.stop();
-
-    // Throw it in the cache.
-    shader->_cache.insert(
-      ShaderBase::SetupCache::value_type(shader->_setup, generated_attr));
   }
 
   make_attrib_collector.start();
@@ -356,11 +362,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     generated_attr->output(shadermgr_cat.debug(false));
     shadermgr_cat.debug(false) << "\n";
   }
-
-  reset_collector.start();
-  // Reset the shader for next time.
-  shader->reset();
-  reset_collector.stop();
 
   return generated_attr;
 }
