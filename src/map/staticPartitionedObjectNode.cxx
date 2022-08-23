@@ -38,7 +38,8 @@ IMPLEMENT_CLASS(StaticPartitionedObjectNode);
 StaticPartitionedObjectNode::
 StaticPartitionedObjectNode(const std::string &name) :
   PandaNode(name),
-  _trav_counter(-1)
+  _trav_counter(-1),
+  _cam_geoms_lock("cam-geoms-lock")
 {
   set_renderable();
   set_bounds(new OmniBoundingVolume);
@@ -112,7 +113,12 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   Camera *camera = trav->get_scene()->get_camera_node();
   int view_cluster = mtrav->_view_cluster;
 
+  // I'm not expecting the same camera to be used for different display
+  // regions being traversed in parallel, so only hold the lock on the
+  // map access.
+  _cam_geoms_lock.acquire();
   CamData &cam_data = _cam_geoms[camera];
+  _cam_geoms_lock.release();
 
   //JobSystem *jsys = JobSystem::get_global_ptr();
 
@@ -143,13 +149,15 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
 
   } else {
     // Camera changed clusters.
-    ++_trav_counter;
+    //++_trav_counter;
 
     cam_data._geoms.clear();
     cam_data._view_cluster = view_cluster;
 
     const BitArray &pvs = mtrav->_pvs;
     int num_visgroups = (int)_leaf_objects.size();
+
+    pflat_hash_set<Object *, pointer_hash> traversed;
 
     for (int i = 0; i < num_visgroups; ++i) {
       if (!pvs.get_bit(i)) {
@@ -160,8 +168,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
       const pvector<Object *> &objects = _leaf_objects[i];
 
       for (Object *obj : objects) {
-        if (obj->_last_trav_counter != _trav_counter) {
-          obj->_last_trav_counter = _trav_counter;
+        auto ret = traversed.insert(obj);
+        if (ret.second) {
           add_object_for_draw(trav, data, obj);
           cam_data._geoms.push_back(obj);
         }

@@ -272,10 +272,12 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     return false;
   }
 
-  _trav_counter++;
+  //_trav_counter++;
 
   const BitArray &pvs = mtrav->_pvs;
   //int num_visgroups = mtrav->_data->get_num_clusters();
+
+  pflat_hash_set<ChildInfo *, pointer_hash> traversed;
 
   for (int i = 0; i < (int)cdata->_visgroups.size(); ++i) {
     if (!pvs.get_bit(i)) {
@@ -289,12 +291,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
     for (auto it = children.begin(); it != children.end(); ++it) {
       ChildInfo *child = *it;
-      if (child->_last_trav_counter != _trav_counter) {
-        child->_last_trav_counter = _trav_counter;
-        // We haven't traversed this child yet.
-        // TODO: Figure out if there's a way we can store DownConnections
-        // instead of node pointers to take advantage of bounds being stored
-        // on DownConnection.
+      auto ret = traversed.insert(child);
+      if (ret.second) {
         trav->traverse_down(data, child->_node);
       }
     }

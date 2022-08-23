@@ -21,6 +21,7 @@
 #include "camera.h"
 #include "pmap.h"
 #include "weakPointerTo.h"
+#include "lightMutex.h"
 
 class SpatialPartition;
 
@@ -81,6 +82,7 @@ private:
 
   typedef pflat_hash_map<WPT(Camera), CamData> CamGeoms;
   CamGeoms _cam_geoms;
+  LightMutex _cam_geoms_lock;
 
   int _trav_counter;
 
