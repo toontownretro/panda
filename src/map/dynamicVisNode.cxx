@@ -74,12 +74,12 @@ update_dirty_children() {
 
   JobSystem *jsys = JobSystem::get_global_ptr();
 
-  Children children = get_children();
-  jsys->parallel_process(children.size(), [&children] (int i) {
-      PandaNodePipelineReader reader(children.get_child(i), Thread::get_current_thread());
-      reader.check_cached(true);
-    }
-  );
+  //Children children = get_children();
+  //jsys->parallel_process(children.size(), [&children] (int i) {
+  //    PandaNodePipelineReader reader(children.get_child(i), Thread::get_current_thread());
+  //    reader.check_cached(true);
+  // }
+  //);
 
   if (!_dirty_children.empty()) {
     CDWriter cdata(_cycler);
@@ -101,6 +101,8 @@ update_dirty_children() {
         // check for a bounding volume change.
         const GeometricBoundingVolume *bounds = (const GeometricBoundingVolume *)info->_node->get_bounds().p();
         insert_into_tree(info, bounds, _tree);
+
+        info->_dirty = false;
       }
     );
 
@@ -166,7 +168,7 @@ level_shutdown() {
 void DynamicVisNode::
 child_added(PandaNode *node, int pipeline_stage) {
   // This should not be called from Cull or Draw.
-  nassertv(pipeline_stage == 0);
+  nassertv(Thread::get_current_pipeline_stage() == 0);
 
   auto it = _children.find(node);
   if (it != _children.end()) {
@@ -195,7 +197,7 @@ child_added(PandaNode *node, int pipeline_stage) {
 void DynamicVisNode::
 child_removed(PandaNode *node, int pipeline_stage) {
   // This should not be called from Cull or Draw.
-  nassertv(pipeline_stage == 0);
+  nassertv(Thread::get_current_pipeline_stage() == 0);
 
   auto it = _children.find(node);
   if (it == _children.end()) {
@@ -224,7 +226,7 @@ child_removed(PandaNode *node, int pipeline_stage) {
  */
 void DynamicVisNode::
 child_bounds_stale(PandaNode *node, int pipeline_stage) {
-  if (pipeline_stage != 0) {
+  if (Thread::get_current_pipeline_stage() != 0) {
     return;
   }
 
@@ -261,7 +263,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
 
-  CDReader cdata(_cycler);
+  CDReader cdata(_cycler, trav->get_current_thread());
 
   if (!cdata->_enabled || mtrav->_data == nullptr) {
     // No map, invalid view cluster, or culling disabled.
