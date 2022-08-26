@@ -143,6 +143,13 @@ simulate(double frame_time) {
 
           physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
 
+          if (actor->is<physx::PxRigidBody>()) {
+            physx::PxRigidBody *rigid_body = (physx::PxRigidBody *)rigid_actor;
+            if (rigid_body->getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC)) {
+              return;
+            }
+          }
+
           PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
           if (node == nullptr) {
             return;
