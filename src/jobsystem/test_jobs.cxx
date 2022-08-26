@@ -30,41 +30,26 @@
 int
 main(int argc, char *argv[]) {
   JobSystem *sys = JobSystem::get_global_ptr();
-  AtomicAdjust::Integer count = 0;
-  int job_count = 500;
-
-  Mutex lock("print-lock");
 
   Thread::sleep(1.0);
 
+  int array[1000];
+
+  for (int i = 0; i < 1000; ++i) {
+    array[i] = rand() % 1000;
+  }
+
   TrueClock *clock = TrueClock::get_global_ptr();
 
-  double start = clock->get_long_time();
+  double start = clock->get_short_time();
+  parallel_quicksort(array, 1000, [](int a, int b) { return a < b; }, 10000);
+  double end = clock->get_short_time();
 
-  double wait_time = 0.05;
-
-  pset<Thread *> unique_threads;
-
-  std::cerr << "Start now\n";
-
-  sys->parallel_process(job_count, [&count, wait_time, &lock, &unique_threads] (int i) {
-    lock.acquire();
-    unique_threads.insert(Thread::get_current_thread());
-    lock.release();
-    AtomicAdjust::inc(count);
-    Thread::sleep(wait_time);
-  });
-  //for (int i = 0; i < job_count; ++i) {
-  //  AtomicAdjust::inc(count);
-  //  Thread::sleep(wait_time);
-  //}
-
-  double end = clock->get_long_time();
-
-  std::cout << "Count: " << AtomicAdjust::get(count) << "\n";
   std::cout << "Elapsed: " << end - start << "\n";
-  std::cout << "Estimated serial time: " << job_count * wait_time << "\n";
-  std::cout << unique_threads.size() << " / " << sys->_worker_threads.size() << " did work\n";
+
+  //for (int i = 0; i < 1000; ++i) {
+  //  std::cout << array[i] << "\n";
+  //}
 
   return 0;
 }

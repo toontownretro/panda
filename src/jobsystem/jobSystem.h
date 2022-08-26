@@ -79,6 +79,9 @@ private:
   static JobSystem *_global_ptr;
 };
 
+template<class T, class Pr>
+INLINE void parallel_quicksort(T *data, size_t size, Pr pred, int count_threshold = 10);
+
 #include "jobSystem.I"
 
 #endif // JOBSYSTEM_H
