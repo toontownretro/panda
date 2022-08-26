@@ -1477,13 +1477,14 @@ return_unique(TransformState *state) {
     return state;
   }
 
-  // Save the state in a local PointerTo so that it will be freed at the end
-  // of this function if no one else uses it.
-  CPT(TransformState) pt_state = state;
-
   int si = _states.find(state);
   if (si != -1) {
-    // There's an equivalent state already in the set.  Return it.
+    // There's an equivalent state already in the set.  Return it.  The state
+    // that was passed may be newly created and therefore may not be
+    // automatically deleted.  Do that if necessary.
+    if (state->get_ref_count() == 0) {
+      delete state;
+    }
     return _states.get_key(si);
   }
 
@@ -1498,7 +1499,7 @@ return_unique(TransformState *state) {
 
   // Save the index and return the input state.
   state->_saved_entry = si;
-  return pt_state;
+  return state;
 }
 
 /**
