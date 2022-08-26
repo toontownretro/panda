@@ -33,7 +33,9 @@
 #include "lightMutexHolder.h"
 
 #include "sourceShader.h"
+#include "sourceMaterial.h"
 #include "sourceLightmappedMaterial.h"
+#include "sourceLightmappedShader.h"
 
 static PStatCollector generate_collector("*:Munge:GenerateShader");
 static PStatCollector find_shader_collector("*:Munge:GenerateShader:FindShader");
@@ -168,12 +170,26 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
 
     // Hack until we figure out materials with idential names.
-    if (shader != nullptr && shader->is_exact_type(SourceShader::get_class_type())) {
+    if (shader != nullptr) {
+      TypeHandle shader_type = shader->get_type();
+
       const TextureAttrib *tattr;
       state->get_attrib_def(tattr);
+
       static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
-      if (tattr->has_on_stage(lm_stage)) {
-        shader = _material_shaders[SourceLightmappedMaterial::get_class_type()];
+
+      if (shader_type == SourceShader::get_class_type()) {
+        if (tattr->has_on_stage(lm_stage)) {
+          // We're using the SourceShader but we have a lightmap texture...
+          // force it to use SourceLightmapped.
+          shader = _material_shaders[SourceLightmappedMaterial::get_class_type()];
+        }
+      } else if (shader_type == SourceLightmappedShader::get_class_type()) {
+        if (!tattr->has_on_stage(lm_stage)) {
+          // We're using the SourceLightmappedShader but we don't have a
+          // lightmap texture... force it to use SourceShader.
+          shader = _material_shaders[SourceMaterial::get_class_type()];
+        }
       }
     }
 
