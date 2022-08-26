@@ -42,6 +42,8 @@ PUBLISHED:
 
   INLINE Character *get_character() const;
 
+  static void animate_characters(const NodePathCollection &characters);
+
 public:
   virtual PandaNode *make_copy() const override;
   virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;

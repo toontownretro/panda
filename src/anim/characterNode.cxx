@@ -21,6 +21,14 @@
 #include "geomNode.h"
 #include "eyeballNode.h"
 #include "characterVertexSlider.h"
+#include "configVariableBool.h"
+#include "jobSystem.h"
+
+static ConfigVariableBool cull_animation
+  ("cull-animation", true,
+   PRC_DESC("Set this true to calculate character animation during the Cull "
+            "traversal.  If this is false, the user is responsible for updating "
+            "necessary characters every frame."));
 
 TypeHandle CharacterNode::_type_handle;
 
@@ -35,7 +43,9 @@ CharacterNode() :
   _char(nullptr),
   _last_auto_update(-1.0f)
 {
-  set_cull_callback();
+  if (cull_animation) {
+    set_cull_callback();
+  }
 }
 
 /**
@@ -48,7 +58,9 @@ CharacterNode(const CharacterNode &copy) :
   _skinning_pcollector(copy._skinning_pcollector),
   _last_auto_update(-1.0f)
 {
-  set_cull_callback();
+  if (cull_animation) {
+    set_cull_callback();
+  }
 
   LightMutexHolder holder(copy._lock);
   // Copy the underlying character.
@@ -67,7 +79,9 @@ CharacterNode(const std::string &name) :
   _char(new Character(name)),
   _last_auto_update(-1.0f)
 {
-  set_cull_callback();
+  if (cull_animation) {
+    set_cull_callback();
+  }
 
   LightMutexHolder holder(_lock);
   _char->add_node(this);
@@ -615,4 +629,19 @@ fillin(DatagramIterator &scan, BamReader *manager) {
       PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Vertices");
   }
 #endif
+}
+
+/**
+ * Updates the animation for the given set of CharacterNodes, potentially
+ * in parallel.
+ */
+void CharacterNode::
+animate_characters(const NodePathCollection &node_paths) {
+  JobSystem *js = JobSystem::get_global_ptr();
+
+  js->parallel_process(node_paths.get_num_paths(), [&node_paths] (int i) {
+    CharacterNode *char_node;
+    DCAST_INTO_V(char_node, node_paths.get_path(i).node());
+    char_node->update();
+  });
 }
