@@ -261,6 +261,8 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   if (context._play_mode == AnimLayer::PM_loop ||
       context._play_mode == AnimLayer::PM_pingpong) {
     next_frame = cmod(next_frame, num_frames);
+  } else if (context._play_mode == AnimLayer::PM_pose) {
+    next_frame = std::clamp(next_frame, start_frame, std::min(end_frame + 1, num_frames - 1));
   } else {
     next_frame = std::clamp(next_frame, start_frame, end_frame);
   }
