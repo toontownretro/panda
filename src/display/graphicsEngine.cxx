@@ -48,6 +48,7 @@
 #include "callbackGraphicsWindow.h"
 #include "depthTestAttrib.h"
 #include "unionBoundingVolume.h"
+#include "jobSystem.h"
 
 #if defined(_WIN32) && defined(HAVE_THREADS) && defined(SIMPLE_THREADS)
 #include "winInputDeviceManager.h"
@@ -1526,25 +1527,31 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
   pvector<PT(SceneSetup)> shadow_passes;
   pmap<NodePath, UnionBoundingVolume> non_shadow_bounds;
 
+  JobSystem *js = JobSystem::get_global_ptr();
+
   size_t wlist_size = wlist.size();
-  for (size_t wi = 0; wi < wlist_size; ++wi) {
+  //for (size_t wi = 0; wi < wlist_size; ++wi) {
+  js->parallel_process(wlist_size, [&] (int wi) {
     GraphicsOutput *win = wlist[wi];
     if (win->is_active() && win->get_gsg()->is_active()) {
+      Thread *win_thread = Thread::get_current_thread();
       GraphicsStateGuardian *gsg = win->get_gsg();
-      PStatTimer timer(win->get_cull_window_pcollector(), current_thread);
+      PStatTimer timer(win->get_cull_window_pcollector(), win_thread);
       int num_display_regions = win->get_num_active_display_regions();
-      for (int i = 0; i < num_display_regions; ++i) {
+      js->parallel_process(num_display_regions, [&] (int i) {
+      //for (int i = 0; i < num_display_regions; ++i) {
+        Thread *dr_thread = Thread::get_current_thread();
         PT(DisplayRegion) dr = win->get_active_display_region(i);
         if (dr != nullptr) {
           PT(SceneSetup) scene_setup;
           CullResult cull_result;
           CullKey key;
           {
-            PStatTimer timer(_cull_setup_pcollector, current_thread);
-            DisplayRegionPipelineReader dr_reader(dr, current_thread);
+            PStatTimer timer(_cull_setup_pcollector, dr_thread);
+            DisplayRegionPipelineReader dr_reader(dr, dr_thread);
             scene_setup = setup_scene(gsg, &dr_reader);
             if (scene_setup == nullptr) {
-              continue;
+              return;
             }
 
             key._gsg = gsg;
@@ -1554,6 +1561,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
 
           // If this is a shadow pass, postpone culling it until we've culled
           // all the other passes, and collected their bounding volumes.
+#if 0
           Light *light = nullptr;
           if (!key._camera.is_empty()) {
             light = key._camera.node()->as_light();
@@ -1572,39 +1580,41 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
               bounds.add_component(gbv);
             }
           }
+#endif
 
-          AlreadyCulled::iterator aci = already_culled.insert(AlreadyCulled::value_type(std::move(key), nullptr)).first;
-          if ((*aci).second == nullptr) {
+          //AlreadyCulled::iterator aci = already_culled.insert(AlreadyCulled::value_type(std::move(key), nullptr)).first;
+          //if ((*aci).second == nullptr) {
             // We have not used this camera already in this thread.  Perform
             // the cull operation.
-            cull_result = dr->get_cull_result(current_thread);
+            cull_result = dr->get_cull_result(dr_thread);
             if (!cull_result.is_empty()) {
               cull_result = cull_result.make_next();
             } else {
               // This DisplayRegion has no cull results; draw it.
               cull_result = CullResult(gsg, dr->get_draw_region_pcollector());
             }
-            (*aci).second = dr;
-            cull_to_bins(win, gsg, dr, scene_setup, &cull_result, current_thread);
+            //(*aci).second = dr;
+            cull_to_bins(win, gsg, dr, scene_setup, &cull_result, dr_thread);
 
-          } else {
+          //} else {
             // We have already culled a scene using this camera in this
             // thread, and now we're being asked to cull another scene using
             // the same camera.  (Maybe this represents two different
             // DisplayRegions for the left and right channels of a stereo
             // image.)  Of course, the cull result will be the same, so just
             // use the result from the other DisplayRegion.
-            DisplayRegion *other_dr = (*aci).second;
-            cull_result = other_dr->get_cull_result(current_thread);
-          }
+            //DisplayRegion *other_dr = (*aci).second;
+            //cull_result = other_dr->get_cull_result(cull_thread);
+          //}
 
           // Save the results for next frame.
-          dr->set_cull_result(std::move(cull_result), std::move(scene_setup), current_thread);
+          dr->set_cull_result(std::move(cull_result), std::move(scene_setup), dr_thread);
         }
-      }
+      });
     }
-  }
+  });
 
+#if 0
   // Now cull all the shadow passes if their cull bounds are in view.
   // We don't bother checking the AlreadyCulled list, because we know there is
   // only one output per GSG+light combination.
@@ -1639,6 +1649,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
     // to draw this at all.
     dr->set_cull_result(std::move(cull_result), std::move(scene_setup), current_thread);
   }
+#endif
 }
 
 /**
