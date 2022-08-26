@@ -25,7 +25,8 @@
     multitexReducer.I multitexReducer.h multitexReducer.cxx \
     nodeVertexTransform.I nodeVertexTransform.h \
     pfmVizzer.I pfmVizzer.h \
-    rigidBodyCombiner.I rigidBodyCombiner.h
+    rigidBodyCombiner.I rigidBodyCombiner.h \
+    spriteGlow.I spriteGlow.h
 
   #define COMPOSITE_SOURCES \
     cardMaker.cxx \
@@ -43,7 +44,8 @@
     pfmVizzer.cxx \
     pipeOcclusionCullTraverser.cxx \
     lineSegs.cxx \
-    rigidBodyCombiner.cxx
+    rigidBodyCombiner.cxx \
+    spriteGlow.cxx
 
   #define INSTALL_HEADERS \
     cardMaker.I cardMaker.h \
@@ -60,7 +62,8 @@
     multitexReducer.I multitexReducer.h \
     nodeVertexTransform.I nodeVertexTransform.h \
     pfmVizzer.I pfmVizzer.h \
-    rigidBodyCombiner.I rigidBodyCombiner.h
+    rigidBodyCombiner.I rigidBodyCombiner.h \
+    spriteGlow.I spriteGlow.h
 
   #define IGATESCAN all
 
