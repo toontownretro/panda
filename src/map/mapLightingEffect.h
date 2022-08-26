@@ -66,7 +66,7 @@ private:
 
 private:
   // Cached data to determine if we need to recompute the node's lighting.
-  CPT(TransformState) _last_transform;
+  LPoint3 _last_pos;
   const MapData *_last_map_data;
 
   bool _has_lighting_origin;

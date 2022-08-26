@@ -44,6 +44,7 @@ MapLightingEffect() :
   _probe(nullptr),
   _probe_color(PTA_LVecBase3::empty_array(9)),
   _last_map_data(nullptr),
+  _last_pos(0.0f),
   _lighting_state(RenderState::make_empty()),
   _has_lighting_origin(false),
   _lighting_origin(0.0f, 0.0f, 0.0f)
@@ -179,10 +180,12 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
   PandaNode *node = data.node();
   PandaNodePipelineReader *node_reader = data.node_reader();
 
-  if (net_transform != _last_transform || mdata != _last_map_data) {
+  const LPoint3 &net_pos = net_transform->get_pos();
+
+  if (net_pos != _last_pos || mdata != _last_map_data) {
     // Node moved or map changed.  We need to recompute its lighting
     // state.
-    _last_transform = net_transform;
+    _last_pos = net_pos;
     _last_map_data = mdata;
 
     do_compute_lighting(net_transform, mdata, (const GeometricBoundingVolume *)node_reader->get_bounds(),
@@ -298,20 +301,13 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
     }
   }
 
-  CPT(RenderState) state = RenderState::make_empty();
+  CPT(RenderState) state = _lighting_state;
 
   if (closest != _cube_map && closest != nullptr) {
     _cube_map = closest;
     CPT(RenderAttrib) tattr = TextureAttrib::make();
     tattr = DCAST(TextureAttrib, tattr)->add_on_stage(cm_ts, closest);
     state = state->set_attrib(tattr);
-
-  } else {
-    CPT(RenderAttrib) curr_tex = _lighting_state->get_attrib(TextureAttrib::get_class_slot());
-    if (curr_tex != nullptr) {
-      state = state->set_attrib(curr_tex);
-    }
-
   }
 
   if (closest_probe != _probe && closest_probe != nullptr) {
@@ -319,14 +315,10 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
     for (int i = 0; i < 9; i++) {
       _probe_color[i] = closest_probe->_color[i];
     }
-    CPT(RenderAttrib) sattr = ShaderAttrib::make();
-    sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", _probe_color));
-    state = state->set_attrib(sattr);
-
-  } else {
-    CPT(RenderAttrib) curr_shad = _lighting_state->get_attrib(ShaderAttrib::get_class_slot());
-    if (curr_shad != nullptr) {
-      state = state->set_attrib(curr_shad);
+    if (!_lighting_state->has_attrib(ShaderAttrib::get_class_slot())) {
+      CPT(RenderAttrib) sattr = ShaderAttrib::make();
+      sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", _probe_color));
+      state = state->set_attrib(sattr);
     }
   }
 
