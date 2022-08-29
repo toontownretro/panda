@@ -77,7 +77,9 @@ schedule(Job *job) {
 
   Thread *thread = Thread::get_current_thread();
 
+#ifdef THREADED_PIPELINE
   job->set_pipeline_stage(thread->get_pipeline_stage());
+#endif
 
   if (!_worker_threads.empty()) {
 
@@ -122,7 +124,9 @@ schedule(Job **jobs, int count, bool wait) {
     }
 
     for (int i = 0; i < count; ++i) {
+#ifdef THREADED_PIPELINE
       jobs[i]->set_pipeline_stage(thread->get_pipeline_stage());
+#endif
       jobs[i]->ref();
       jobs[i]->set_state(Job::S_queued);
     }
@@ -181,7 +185,9 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
   }
 
   Thread *thread = Thread::get_current_thread();
+#ifdef THREADED_PIPELINE
   int pipeline_stage = thread->get_pipeline_stage();
+#endif
 
   // + 1 because the main thread chips in while waiting.
   int thread_count = (int)_worker_threads.size() + 1;
@@ -202,7 +208,9 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
       }
       jobs[i].local_object();
       jobs[i].ref();
+#ifdef THREADED_PIPELINE
       jobs[i].set_pipeline_stage(pipeline_stage);
+#endif
       jobs[i].set_state(Job::S_queued);
       jobs[i]._first_item = first;
       jobs[i]._num_items = count;
@@ -214,7 +222,9 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
     for (int i = 0; i < count; ++i) {
       jobs[i].local_object();
       jobs[i].ref();
+#ifdef THREADED_PIPELINE
       jobs[i].set_pipeline_stage(pipeline_stage);
+#endif
       jobs[i].set_state(Job::S_queued);
       jobs[i]._first_item = i;
       jobs[i]._num_items = 1;
@@ -258,14 +268,19 @@ wait_job(Job *job, Thread *thread) {
     return;
   }
 
+#ifdef THREADED_PIPELINE
   int orig_pipeline_stage = thread->get_pipeline_stage();
+#endif
 
   while (job->get_state() != Job::S_complete) {
     Job *job2 = pop_job(thread);
     if (job2 != nullptr) {
       exec_job_pcollector.start();
 
+#ifdef THREADED_PIPELINE
       thread->set_pipeline_stage(job2->get_pipeline_stage());
+#endif
+
       job2->set_state(Job::S_working);
       job2->execute();
       if (job2->unref()) {
@@ -278,7 +293,9 @@ wait_job(Job *job, Thread *thread) {
     }
   }
 
+#ifdef THREADED_PIPELINE
   thread->set_pipeline_stage(orig_pipeline_stage);
+#endif
 }
 
 /**

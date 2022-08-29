@@ -59,9 +59,11 @@ thread_main() {
 
       AtomicAdjust::set(_state, S_busy);
 
+#ifdef THREADED_PIPELINE
       // Operate on the pipeline stage of the thread that scheduled this
       // job.
       set_pipeline_stage(job->get_pipeline_stage());
+#endif
 
       _current_job = job;
 
