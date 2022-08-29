@@ -416,7 +416,11 @@ build() {
             PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
             if (poly_material != nullptr) {
-              if ((poly_material->_attrib_flags & Material::F_transparency) != 0u &&
+              if (poly_material->has_tag("compile_water")) {
+                // Water cuts visleaves, but doesn't block visibility.
+                hint = true;
+
+              } else if ((poly_material->_attrib_flags & Material::F_transparency) != 0u &&
                   poly_material->_transparency_mode > 0) {
                 skip = true;
 
@@ -1933,10 +1937,19 @@ build_lighting() {
       if (!is_sky) {
         NodePath geom_np(poly->_geom_node);
 
+        uint32_t contents = 0;
+        if (poly->_material != nullptr) {
+          if (poly->_material->has_tag("compile_water")) {
+            // Water don't block or reflect light, but we want a lightmap for it.
+            contents |= LightBuilder::C_dont_block_light;
+            contents |= LightBuilder::C_dont_reflect_light;
+          }
+        }
+
         builder.add_geom(poly->_geom_node->get_geom(poly->_geom_index),
                         poly->_geom_node->get_geom_state(poly->_geom_index),
                         geom_np.get_net_transform(), poly->_lightmap_size,
-                        poly->_geom_node, poly->_geom_index);
+                        poly->_geom_node, poly->_geom_index, contents);
 
       } else {
         // Add sky triangles as occluders (not lightmapped) with the sky
