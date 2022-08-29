@@ -5297,7 +5297,7 @@ do_read_ptex(CData *cdata, PDXElement *data, const Filename &fullpath, bool head
   TextureType type = ptex.get_texture_type();
   if (type == TT_cube_map) {
     z_size = 6;
-  } else if (type == TT_3d_texture) {
+  } else if (type == TT_3d_texture || type == TT_2d_texture_array) {
     z_size = ptex.get_num_pages();
   }
 
@@ -5316,7 +5316,7 @@ do_read_ptex(CData *cdata, PDXElement *data, const Filename &fullpath, bool head
                ptex.get_image_fullpath(),
                alpha_filename,
                wanted_channels,
-               0, (z_size > 1) ? z_size : 0, 0, (z_size > 1), false,
+               0, 0, 0, (z_size > 1), false,
                options, nullptr)) {
     return false;
   }
