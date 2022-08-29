@@ -133,12 +133,13 @@ simulate(double frame_time) {
       physx::PxU32 num_active_actors;
       physx::PxActor **active_actors = _scene->getActiveActors(num_active_actors);
 
-      jsys->parallel_process(num_active_actors,
-        [&] (int i) {
+      //jsys->parallel_process(num_active_actors,
+      //  [&] (int i) {
+      for (int i = 0; i < num_active_actors; ++i) {
           physx::PxActor *actor = active_actors[i];
 
           if (!actor->is<physx::PxRigidActor>()) {
-            return;
+            continue;
           }
 
           physx::PxRigidActor *rigid_actor = (physx::PxRigidActor *)actor;
@@ -146,13 +147,13 @@ simulate(double frame_time) {
           if (actor->is<physx::PxRigidBody>()) {
             physx::PxRigidBody *rigid_body = (physx::PxRigidBody *)rigid_actor;
             if (rigid_body->getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC)) {
-              return;
+              continue;
             }
           }
 
           PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
           if (node == nullptr) {
-            return;
+            continue;
           }
 
           // Disable automatic syncing with PhysX when the node's transform changes.
@@ -190,7 +191,7 @@ simulate(double frame_time) {
             }
           }
         }
-      );
+      //);
 
       _tick_count++;
 
@@ -209,12 +210,13 @@ simulate(double frame_time) {
     interp_time += _local_time;
     interp_time = std::max(0.0, interp_time);
 
-    jsys->parallel_process(_actors.size(),
-      [&] (int i) {
+    //jsys->parallel_process(_actors.size(),
+      //[&] (int i) {
+      for (int i = 0; i < _actors.size(); ++i) {
         PhysRigidActorNode *actor = _actors[i];
 
         if (!actor->_needs_interpolation) {
-          return;
+          continue;
         }
 
         int pret = actor->_iv_pos.interpolate(interp_time);
@@ -230,7 +232,7 @@ simulate(double frame_time) {
         actor->set_transform(ts);
         actor->set_sync_enabled(true);
       }
-    );
+    //);
   }
 
   return num_steps;
