@@ -30,10 +30,19 @@
 #include "directionalLight.h"
 #include "bitMask.h"
 #include "textureStagePool.h"
+#include "configVariableDouble.h"
+#include "cmath.h"
 
 IMPLEMENT_CLASS(MapLightingEffect);
 
 static PStatCollector map_lighting_coll("Cull:MapLightingEffect");
+static ConfigVariableDouble map_lighting_effect_quantize_amount
+  ("map-lighting-effect-quantize-amount", 8.0, // 8 hammer units, half a foot.
+   PRC_DESC("Specifies how much to quantize node positions when considering "
+            "whether or not to recompute the lighting for a node.  Node positions "
+            "will be rounded to the nearest multiple of the specified amount. "
+            "A higher value will make nodes have to move a further distance in "
+            "order for lighting to be recomputed."));
 
 /**
  * The MapLightingEffect cannot be constructed directly from outside code.
@@ -140,6 +149,14 @@ compare_to_impl(const RenderEffect *other) const {
 }
 
 /**
+ *
+ */
+INLINE static PN_stdfloat
+quantize(PN_stdfloat value, PN_stdfloat amount) {
+  return cfloor(value / amount + 0.5) * amount;
+}
+
+/**
  * Computes the lighting state and applies it to the running render state.
  */
 void MapLightingEffect::
@@ -180,9 +197,15 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
   PandaNode *node = data.node();
   PandaNodePipelineReader *node_reader = data.node_reader();
 
-  const LPoint3 &net_pos = net_transform->get_pos();
+  LPoint3 net_pos = net_transform->get_pos();
+  double quantize_amt = map_lighting_effect_quantize_amount;
+  if (quantize_amt > 0.0) {
+    net_pos[0] = quantize(net_pos[0], quantize_amt);
+    net_pos[1] = quantize(net_pos[1], quantize_amt);
+    net_pos[2] = quantize(net_pos[2], quantize_amt);
+  }
 
-  if (net_pos != _last_pos || mdata != _last_map_data) {
+  if (!net_pos.almost_equal(_last_pos) || mdata != _last_map_data) {
     // Node moved or map changed.  We need to recompute its lighting
     // state.
     _last_pos = net_pos;
