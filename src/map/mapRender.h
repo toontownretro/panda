@@ -16,8 +16,11 @@
 
 #include "pandabase.h"
 #include "pandaNode.h"
+#include "nodePath.h"
+#include "pmap.h"
 
 class MapData;
+class Camera;
 
 /**
  * This node is intended to be used as the root of the 3-D scene graph when
@@ -31,6 +34,9 @@ class EXPCL_PANDA_MAP MapRender : public PandaNode {
 PUBLISHED:
   MapRender(const std::string &name);
 
+  INLINE void set_pvs_center(Camera *cam, const NodePath &center);
+  INLINE void clear_pvs_center(Camera *cam);
+
   INLINE void set_map_data(MapData *data);
   INLINE void clear_map_data();
   INLINE MapData *get_map_data() const;
@@ -40,6 +46,9 @@ public:
 
 private:
   MapData *_map_data;
+
+  typedef pmap<Camera *, NodePath> CameraPVSCenters;
+  CameraPVSCenters _pvs_centers;
 };
 
 #include "mapRender.I"

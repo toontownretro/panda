@@ -34,7 +34,7 @@ PUBLISHED:
   MapCullTraverser() = delete;
   MapCullTraverser(const CullTraverser &other, MapData *data);
 
-  void determine_view_cluster();
+  void determine_view_cluster(const LPoint3 &camera_pos);
 
 public:
   // What cluster does the camera currently reside in?  Determined before

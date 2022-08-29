@@ -40,7 +40,7 @@ MapCullTraverser(const CullTraverser &copy, MapData *data) :
  *
  */
 void MapCullTraverser::
-determine_view_cluster() {
+determine_view_cluster(const LPoint3 &camera_pos) {
   _view_cluster = -1;
   _pvs.clear();
 
@@ -54,8 +54,7 @@ determine_view_cluster() {
   }
 
   if (_scene_setup->get_camera_node()->get_pvs_cull()) {
-    LPoint3 view_pos = get_camera_transform()->get_pos();
-    _view_cluster = tree->get_leaf_value_from_point(view_pos);
+    _view_cluster = tree->get_leaf_value_from_point(camera_pos);
     if (_view_cluster != -1) {
       _pvs.set_bit(_view_cluster);
       const AreaClusterPVS *pvs = _data->get_cluster_pvs(_view_cluster);

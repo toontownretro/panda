@@ -34,3 +34,22 @@ INLINE MapData *MapRender::
 get_map_data() const {
   return _map_data;
 }
+
+/**
+ *
+ */
+INLINE void MapRender::
+set_pvs_center(Camera *camera, const NodePath &center) {
+  _pvs_centers[camera] = center;
+}
+
+/**
+ *
+ */
+INLINE void MapRender::
+clear_pvs_center(Camera *camera) {
+  CameraPVSCenters::iterator it = _pvs_centers.find(camera);
+  if (it != _pvs_centers.end()) {
+    _pvs_centers.erase(it);
+  }
+}

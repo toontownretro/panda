@@ -14,6 +14,7 @@
 #include "mapRender.h"
 #include "mapData.h"
 #include "mapCullTraverser.h"
+#include "sceneSetup.h"
 
 IMPLEMENT_CLASS(MapRender);
 
@@ -33,9 +34,24 @@ MapRender(const std::string &name) :
  */
 bool MapRender::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
+
+  SceneSetup *scene = trav->get_scene();
+  LPoint3 pos;
+
+  // The user might want the PVS to be determined from a different node from
+  // the camera itself.  For instance, the reflection camera should use the
+  // same PVS as the main camera.  The reflection camera is flipped underground
+  // and most likely in solid space.
+  CameraPVSCenters::const_iterator it = _pvs_centers.find(scene->get_camera_node());
+  if (it == _pvs_centers.end()) {
+    pos = scene->get_camera_transform()->get_pos();
+  } else {
+    pos = (*it).second.get_pos(scene->get_scene_root());
+  }
+
   MapCullTraverser mtrav(*trav, _map_data);
   mtrav.local_object();
-  mtrav.determine_view_cluster();
+  mtrav.determine_view_cluster(pos);
   mtrav.traverse_below(data);
   mtrav.end_traverse();
 
