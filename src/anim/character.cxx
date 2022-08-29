@@ -717,7 +717,9 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   LMatrix4 parent_to_me;
   if (merge_char != nullptr) {
     // Make sure the parent character's animation is up-to-date.
-    merge_char->update();
+    // Update through the managing CharacterNode so the lock gets
+    // acquired.
+    merge_char->_active_owner->update();
 
     // Compute the matrix that will transform joints from the parent
     // coordinate space to my coordinate space.
@@ -821,6 +823,9 @@ remove_node(CharacterNode *node) {
 
   if (get_num_nodes() > 0) {
     update_active_owner(_active_owner, get_node(get_num_nodes() - 1));
+
+  } else {
+    update_active_owner(_active_owner, nullptr);
   }
 }
 
