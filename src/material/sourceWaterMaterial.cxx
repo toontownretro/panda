@@ -19,6 +19,8 @@
 #include "materialParamTexture.h"
 #include "materialParamVector.h"
 #include "materialParamMatrix.h"
+#include "materialParamFloat.h"
+#include "materialParamColor.h"
 
 TypeHandle SourceWaterMaterial::_type_handle;
 
@@ -52,6 +54,41 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     const PDXValue &val = params->get_attribute_value(i);
 
     PT(MaterialParamBase) param;
+
+    if (key == "normalmap") {
+      param = new MaterialParamTexture(key);
+
+    } else if (key == "reflectnormalscale" ||
+               key == "refractnormalscale" ||
+               key == "normalmapfps" ||
+               key == "fresnelexponent" ||
+               key == "fogstart" ||
+               key == "fogend") {
+      param = new MaterialParamFloat(key);
+
+    } else if (key == "animatednormalmap" ||
+               key == "interpnormalframes" ||
+               key == "fog" ||
+               key == "reflect" ||
+               key == "refract") {
+      param = new MaterialParamBool(key);
+
+    } else if (key == "reflecttint" ||
+               key == "refracttint" ||
+               key == "fogcolor") {
+      param = new MaterialParamVector(key);
+
+    } else if (key == "envmap") {
+      // Special handler for envmap.  A string means it's a texture path to an
+      // explicit cubemap, bool is whether or not to use closest cube map
+      // (or none at all).
+      if (val.get_value_type() == PDXValue::VT_string) {
+        param = new MaterialParamTexture(key);
+
+      } else {
+        param = new MaterialParamBool(key);
+      }
+    }
 
     if (param != nullptr) {
       param->from_pdx(val, search_path);
