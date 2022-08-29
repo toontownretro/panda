@@ -36,7 +36,7 @@ static ConfigVariableDouble phys_ragdoll_joint_bounce_threshold("phys-ragdoll-jo
 PhysRagdoll::
 PhysRagdoll(const NodePath &character_np) {
   _char_np = character_np;
-  _char_node = DCAST(CharacterNode, _char_np.find("**/+CharacterNode").node());
+  _char_node = DCAST(CharacterNode, _char_np.node());
   _char = _char_node->get_character();
   _enabled = false;
   _awake_joints = 0;
