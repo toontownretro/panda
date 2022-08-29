@@ -6,7 +6,7 @@
 #begin lib_target
   #define TARGET display
   #define LOCAL_LIBS \
-    cull device pgraphnodes gsgbase
+    cull device pgraphnodes gsgbase jobsystem
 
   #define BUILDING_DLL BUILDING_PANDA_DISPLAY
 
