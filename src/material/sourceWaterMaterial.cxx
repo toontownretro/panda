@@ -62,8 +62,7 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
                key == "refractnormalscale" ||
                key == "normalmapfps" ||
                key == "fresnelexponent" ||
-               key == "fogstart" ||
-               key == "fogend") {
+               key == "fogdensity") {
       param = new MaterialParamFloat(key);
 
     } else if (key == "animatednormalmap" ||

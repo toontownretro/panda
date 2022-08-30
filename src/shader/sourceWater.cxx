@@ -148,21 +148,16 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_input(ShaderInput("refractionDepthSampler", refr_depth_tex));
 
     LVecBase3 fog_color(0.5f);
-    float fog_start = 1.0f;
-    float fog_end = 100.0f;
+    float fog_density = 1.0f;
 
     if ((param = material->get_param("fogcolor")) != nullptr) {
-      fog_color = DCAST(MaterialParamVector, param)->get_value();
+      fog_color = DCAST(MaterialParamVector, param)->get_value() / 255.0f;
     }
-    if ((param = material->get_param("fogstart")) != nullptr) {
-      fog_start = DCAST(MaterialParamFloat, param)->get_value();
-    }
-    if ((param = material->get_param("fogend")) != nullptr) {
-      fog_end = DCAST(MaterialParamFloat, param)->get_value();
+    if ((param = material->get_param("fogdensity")) != nullptr) {
+      fog_density = DCAST(MaterialParamFloat, param)->get_value();
     }
 
-    setup.set_input(ShaderInput("u_fogColor", fog_color));
-    setup.set_input(ShaderInput("u_fogRange", LVecBase2(fog_start, fog_end)));
+    setup.set_input(ShaderInput("u_fogColor_density", LVecBase4(fog_color, fog_density * 0.01f)));
   }
 
   if ((param = material->get_param("normalmap")) != nullptr) {
