@@ -9847,7 +9847,7 @@ get_internal_image_format(Texture *tex, bool force_sized) const {
   case Texture::F_rgb12:
     return GL_RGB12;
   case Texture::F_rgb16:
-    if (component_type == Texture::T_half_float) {
+    if (component_type == Texture::T_half_float || component_type == Texture::T_float) {
       return GL_RGB16F;
     } else if (Texture::is_unsigned(component_type)) {
       return GL_RGB16;
