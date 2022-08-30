@@ -22,6 +22,7 @@
 #include "pmap.h"
 #include "weakPointerTo.h"
 #include "lightMutex.h"
+#include "pointerTo.h"
 
 class SpatialPartition;
 
@@ -67,7 +68,7 @@ private:
     int _last_trav_counter;
   };
 
-  class CamData {
+  class CamData : public ReferenceCount {
   public:
     CamData() = default;
 
@@ -80,7 +81,7 @@ private:
   // List of objects per visgroup/leaf.
   pvector<pvector<Object *>> _leaf_objects;
 
-  typedef pflat_hash_map<WPT(Camera), CamData> CamGeoms;
+  typedef pflat_hash_map<WPT(Camera), PT(CamData)> CamGeoms;
   CamGeoms _cam_geoms;
   LightMutex _cam_geoms_lock;
 

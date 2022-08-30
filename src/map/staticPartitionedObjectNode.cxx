@@ -117,12 +117,19 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   // regions being traversed in parallel, so only hold the lock on the
   // map access.
   _cam_geoms_lock.acquire();
-  CamData &cam_data = _cam_geoms[camera];
+  CamData *cam_data;
+  CamGeoms::const_iterator it = _cam_geoms.find(camera);
+  if (it != _cam_geoms.end()) {
+    cam_data = (*it).second;
+  } else {
+    cam_data = new CamData;
+    _cam_geoms.insert({ camera, cam_data });
+  }
   _cam_geoms_lock.release();
 
   //JobSystem *jsys = JobSystem::get_global_ptr();
 
-  if (cam_data._view_cluster == view_cluster) {
+  if (cam_data->_view_cluster == view_cluster) {
     const TransformState *trans = trav->get_scene()->get_cs_world_transform();
     Thread *current_thread = trav->get_current_thread();
     // Same view cluster as before.
@@ -131,7 +138,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     //jsys->parallel_process(cam_data._geoms.size(),
     //  [&] (int i) {
       //for (int i = 0; i < (int)cam_data._geoms.size(); ++i) {
-      for (const Object *obj : cam_data._geoms) {
+      for (const Object *obj : cam_data->_geoms) {
         //const Object *obj = cam_data._geoms[i];
         if (data._view_frustum != nullptr) {
           if (!obj->_bounds->contains(data._view_frustum)) {
@@ -151,8 +158,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     // Camera changed clusters.
     //++_trav_counter;
 
-    cam_data._geoms.clear();
-    cam_data._view_cluster = view_cluster;
+    cam_data->_geoms.clear();
+    cam_data->_view_cluster = view_cluster;
 
     const BitArray &pvs = mtrav->_pvs;
     int num_visgroups = (int)_leaf_objects.size();
@@ -171,7 +178,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
         auto ret = traversed.insert(obj);
         if (ret.second) {
           add_object_for_draw(trav, data, obj);
-          cam_data._geoms.push_back(obj);
+          cam_data->_geoms.push_back(obj);
         }
       }
     }
