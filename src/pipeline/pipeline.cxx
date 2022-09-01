@@ -24,6 +24,7 @@ Pipeline *Pipeline::_render_pipeline = nullptr;
 Pipeline::
 Pipeline(const std::string &name, int num_stages) :
   Namable(name),
+  _cycler(nullptr),
 #ifdef THREADED_PIPELINE
   _num_stages(num_stages),
   _next_cycle_seq(1),
@@ -71,6 +72,10 @@ Pipeline(const std::string &name, int num_stages) :
  */
 Pipeline::
 ~Pipeline() {
+  if (_cycler != nullptr) {
+    delete _cycler;
+  }
+
 #ifdef THREADED_PIPELINE
   nassertv(_num_cyclers == 0);
   nassertv(_num_dirty_cyclers == 0);
@@ -271,6 +276,15 @@ cycle() {
   if (pipeline_cat.is_debug()) {
     pipeline_cat.debug()
       << "Finished the pipeline cycle\n";
+  }
+
+  {
+    if (_cycler == nullptr) {
+      _cycler = new PipelineCycler<CData>;
+    }
+    // We are now working on the next version of the pipeline.
+    CDWriter cdata(*_cycler);
+    ++(cdata->_pipeline_version);
   }
 
 #endif  // THREADED_PIPELINE
@@ -523,3 +537,8 @@ inc_cycler_type(TypeCount &count, TypeHandle type, int addend) {
   nassertv((*ci).second >= 0);
 }
 #endif  // THREADED_PIPELINE && DEBUG_THREADS
+
+CycleData *Pipeline::CData::
+make_copy() const {
+  return new CData(*this);
+}

@@ -105,3 +105,53 @@ INLINE bool PreparedGraphicsObjects::BufferCacheKey::
 operator != (const PreparedGraphicsObjects::BufferCacheKey &other) const {
   return !operator == (other);
 }
+
+/**
+ *
+ */
+INLINE size_t PreparedGraphicsObjects::EnqueuedObjectKey::
+get_hash() const {
+  size_t hash = 0u;
+  hash = pointer_hash::add_hash(hash, _object.p());
+  hash = integer_hash<unsigned int>::add_hash(hash, _pipeline_version);
+  return hash;
+}
+
+/**
+ *
+ */
+INLINE bool PreparedGraphicsObjects::EnqueuedObjectKey::
+operator < (const EnqueuedObjectKey &other) const {
+  if (_object != other._object) {
+    return _object < other._object;
+  }
+  if (_pipeline_version != other._pipeline_version) {
+    return _pipeline_version < other._pipeline_version;
+  }
+  return false;
+}
+
+/**
+ *
+ */
+INLINE size_t PreparedGraphicsObjects::ReleasedObjectKey::
+get_hash() const {
+  size_t hash = 0u;
+  hash = pointer_hash::add_hash(hash, _object);
+  hash = integer_hash<unsigned int>::add_hash(hash, _pipeline_version);
+  return hash;
+}
+
+/**
+ *
+ */
+INLINE bool PreparedGraphicsObjects::ReleasedObjectKey::
+operator < (const ReleasedObjectKey &other) const {
+  if (_object != other._object) {
+    return _object < other._object;
+  }
+  if (_pipeline_version != other._pipeline_version) {
+    return _pipeline_version < other._pipeline_version;
+  }
+  return false;
+}

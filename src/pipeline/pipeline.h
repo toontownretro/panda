@@ -23,6 +23,11 @@
 #include "reMutex.h"
 #include "reMutexHolder.h"
 #include "selectThreadImpl.h"  // for THREADED_PIPELINE definition
+#include "cycleData.h"
+#include "pipelineCycler.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
+#include "thread.h"
 
 struct PipelineCyclerTrueImpl;
 
@@ -43,6 +48,8 @@ public:
   INLINE static Pipeline *get_render_pipeline();
 
   void cycle();
+
+  INLINE unsigned int get_version(Thread *current_thread = Thread::get_current_thread()) const;
 
   void set_num_stages(int num_stages);
   INLINE void set_min_stages(int min_stages);
@@ -69,6 +76,22 @@ private:
 
   static void make_render_pipeline();
   static Pipeline *_render_pipeline;
+
+  /**
+   *
+   */
+  class CData : public CycleData {
+  public:
+    INLINE CData();
+    INLINE CData(const CData &copy);
+    virtual CycleData *make_copy() const override;
+
+  public:
+    unsigned int _pipeline_version;
+  };
+  PipelineCycler<CData> *_cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
 
 #ifdef THREADED_PIPELINE
   PipelineCyclerLinks _clean;

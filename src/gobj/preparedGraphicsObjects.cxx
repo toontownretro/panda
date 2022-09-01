@@ -26,10 +26,33 @@
 #include "shaderContext.h"
 #include "config_gobj.h"
 #include "throw_event.h"
+#include "pipeline.h"
 
 TypeHandle PreparedGraphicsObjects::EnqueuedObject::_type_handle;
 
 int PreparedGraphicsObjects::_name_index = 0;
+
+/**
+ *
+ */
+static PreparedGraphicsObjects::EnqueuedObjectKey
+get_enqueue_key(TypedWritableReferenceCount *obj) {
+  PreparedGraphicsObjects::EnqueuedObjectKey key;
+  key._object = obj;
+  key._pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  return key;
+}
+
+/**
+ *
+ */
+static PreparedGraphicsObjects::ReleasedObjectKey
+get_release_key(SavedContext *obj) {
+  PreparedGraphicsObjects::ReleasedObjectKey key;
+  key._object = obj;
+  key._pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  return key;
+}
 
 /**
  *
@@ -67,9 +90,11 @@ PreparedGraphicsObjects::
   // OpenGL) require a context current.  So we just call the destructors.
   ReMutexHolder holder(_lock);
 
+  // WARNING: possible double-deletion.
+
   release_all_textures();
-  for (TextureContext *tc : _released_textures) {
-    delete tc;
+  for (const ReleasedObjectKey &key : _released_textures) {
+    delete key._object;
   }
   _released_textures.clear();
 
@@ -80,32 +105,32 @@ PreparedGraphicsObjects::
   _released_samplers.clear();
 
   release_all_geoms();
-  for (GeomContext *gc : _released_geoms) {
-    delete gc;
+  for (const ReleasedObjectKey &key : _released_geoms) {
+    delete key._object;
   }
   _released_geoms.clear();
 
   release_all_shaders();
-  for (ShaderContext *sc : _released_shaders) {
-    delete sc;
+  for (const ReleasedObjectKey &key : _released_shaders) {
+    delete key._object;
   }
   _released_shaders.clear();
 
   release_all_vertex_buffers();
-  for (BufferContext *bc : _released_vertex_buffers) {
-    delete bc;
+  for (const ReleasedObjectKey &key : _released_vertex_buffers) {
+    delete key._object;
   }
   _released_vertex_buffers.clear();
 
   release_all_index_buffers();
-  for (BufferContext *bc : _released_index_buffers) {
-    delete bc;
+  for (const ReleasedObjectKey &key : _released_index_buffers) {
+    delete key._object;
   }
   _released_index_buffers.clear();
 
   release_all_shader_buffers();
-  for (BufferContext *bc : _released_shader_buffers) {
-    delete bc;
+  for (const ReleasedObjectKey &key : _released_shader_buffers) {
+    delete key._object;
   }
   _released_shader_buffers.clear();
 
@@ -169,7 +194,7 @@ void PreparedGraphicsObjects::
 enqueue_texture(Texture *tex) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
+  _enqueued_textures.insert(EnqueuedObjects::value_type(get_enqueue_key(tex), nullptr));
 }
 
 /**
@@ -180,8 +205,8 @@ PT(PreparedGraphicsObjects::EnqueuedObject) PreparedGraphicsObjects::
 enqueue_texture_future(Texture *tex) {
   ReMutexHolder holder(_lock);
 
-  std::pair<EnqueuedTextures::iterator, bool> result =
-    _enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
+  std::pair<EnqueuedObjects::iterator, bool> result =
+    _enqueued_textures.insert(EnqueuedObjects::value_type(get_enqueue_key(tex), nullptr));
   if (result.first->second == nullptr) {
     result.first->second = new EnqueuedObject(this, tex);
   }
@@ -197,7 +222,7 @@ bool PreparedGraphicsObjects::
 is_texture_queued(const Texture *tex) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedTextures::const_iterator qi = _enqueued_textures.find((Texture *)tex);
+  EnqueuedObjects::const_iterator qi = _enqueued_textures.find(get_enqueue_key((Texture *)tex));
   return (qi != _enqueued_textures.end());
 }
 
@@ -214,7 +239,7 @@ bool PreparedGraphicsObjects::
 dequeue_texture(Texture *tex) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedTextures::iterator qi = _enqueued_textures.find(tex);
+  EnqueuedObjects::iterator qi = _enqueued_textures.find(get_enqueue_key(tex));
   if (qi != _enqueued_textures.end()) {
     if (qi->second != nullptr) {
       qi->second->notify_removed();
@@ -255,7 +280,7 @@ release_texture(TextureContext *tc) {
   bool removed = (_prepared_textures.erase(tc) != 0);
   nassertv(removed);
 
-  _released_textures.push_back(tc);
+  _released_textures.insert(get_release_key(tc));
 }
 
 /**
@@ -282,22 +307,25 @@ release_all_textures() {
     tc->get_texture()->clear_prepared(tc->get_view(), this);
     tc->_object = nullptr;
 
-    _released_textures.push_back(tc);
+    _released_textures.insert(get_release_key(tc));
   }
 
   _prepared_textures.clear();
 
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
   // Mark any futures as cancelled.
-  EnqueuedTextures::iterator qti;
+  EnqueuedObjects::iterator qti;
   for (qti = _enqueued_textures.begin();
-       qti != _enqueued_textures.end();
-       ++qti) {
-    if (qti->second != nullptr) {
-      qti->second->notify_removed();
+       qti != _enqueued_textures.end();) {
+    if (qti->first._pipeline_version == pipeline_version) {
+      if (qti->second != nullptr) {
+        qti->second->notify_removed();
+      }
+      qti = _enqueued_textures.erase(qti);
+    } else {
+      ++qti;
     }
   }
-
-  _enqueued_textures.clear();
 
   return num_textures;
 }
@@ -519,7 +547,7 @@ void PreparedGraphicsObjects::
 enqueue_geom(Geom *geom) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_geoms.insert(geom);
+  _enqueued_geoms.insert({ get_enqueue_key(geom), nullptr });
 }
 
 /**
@@ -529,7 +557,7 @@ bool PreparedGraphicsObjects::
 is_geom_queued(const Geom *geom) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedGeoms::const_iterator qi = _enqueued_geoms.find((Geom *)geom);
+  EnqueuedObjects::const_iterator qi = _enqueued_geoms.find(get_enqueue_key((Geom *)geom));
   return (qi != _enqueued_geoms.end());
 }
 
@@ -546,7 +574,7 @@ bool PreparedGraphicsObjects::
 dequeue_geom(Geom *geom) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedGeoms::iterator qi = _enqueued_geoms.find(geom);
+  EnqueuedObjects::iterator qi = _enqueued_geoms.find(get_enqueue_key(geom));
   if (qi != _enqueued_geoms.end()) {
     _enqueued_geoms.erase(qi);
     return true;
@@ -585,7 +613,7 @@ release_geom(GeomContext *gc) {
   bool removed = (_prepared_geoms.erase(gc) != 0);
   nassertv(removed);
 
-  _released_geoms.insert(gc);
+  _released_geoms.insert(get_release_key(gc));
 }
 
 /**
@@ -603,11 +631,19 @@ release_all_geoms() {
     gc->_geom->clear_prepared(this);
     gc->_geom = nullptr;
 
-    _released_geoms.insert(gc);
+    _released_geoms.insert(get_release_key(gc));
   }
 
   _prepared_geoms.clear();
-  _enqueued_geoms.clear();
+
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  for (auto it = _enqueued_geoms.begin(); it != _enqueued_geoms.end();) {
+    if (it->first._pipeline_version == pipeline_version) {
+      it = _enqueued_geoms.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   return num_geoms;
 }
@@ -670,7 +706,7 @@ void PreparedGraphicsObjects::
 enqueue_shader(Shader *shader) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
+  _enqueued_shaders.insert(EnqueuedObjects::value_type(get_enqueue_key(shader), nullptr));
 }
 
 /**
@@ -681,8 +717,8 @@ PT(PreparedGraphicsObjects::EnqueuedObject) PreparedGraphicsObjects::
 enqueue_shader_future(Shader *shader) {
   ReMutexHolder holder(_lock);
 
-  std::pair<EnqueuedShaders::iterator, bool> result =
-    _enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
+  std::pair<EnqueuedObjects::iterator, bool> result =
+    _enqueued_shaders.insert(EnqueuedObjects::value_type(get_enqueue_key(shader), nullptr));
   if (result.first->second == nullptr) {
     result.first->second = new EnqueuedObject(this, shader);
   }
@@ -698,7 +734,7 @@ bool PreparedGraphicsObjects::
 is_shader_queued(const Shader *shader) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedShaders::const_iterator qi = _enqueued_shaders.find((Shader *)shader);
+  EnqueuedObjects::const_iterator qi = _enqueued_shaders.find(get_enqueue_key((Shader *)shader));
   return (qi != _enqueued_shaders.end());
 }
 
@@ -715,7 +751,7 @@ bool PreparedGraphicsObjects::
 dequeue_shader(Shader *se) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedShaders::iterator qi = _enqueued_shaders.find(se);
+  EnqueuedObjects::iterator qi = _enqueued_shaders.find(get_enqueue_key(se));
   if (qi != _enqueued_shaders.end()) {
     if (qi->second != nullptr) {
       qi->second->notify_removed();
@@ -756,7 +792,7 @@ release_shader(ShaderContext *sc) {
   bool removed = (_prepared_shaders.erase(sc) != 0);
   nassertv(removed);
 
-  _released_shaders.insert(sc);
+  _released_shaders.insert(get_release_key(sc));
 }
 
 /**
@@ -774,22 +810,25 @@ release_all_shaders() {
     sc->_shader->clear_prepared(this);
     sc->_shader = nullptr;
 
-    _released_shaders.insert(sc);
+    _released_shaders.insert(get_release_key(sc));
   }
 
   _prepared_shaders.clear();
 
   // Mark any futures as cancelled.
-  EnqueuedShaders::iterator qsi;
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  EnqueuedObjects::iterator qsi;
   for (qsi = _enqueued_shaders.begin();
-       qsi != _enqueued_shaders.end();
-       ++qsi) {
-    if (qsi->second != nullptr) {
-      qsi->second->notify_removed();
+       qsi != _enqueued_shaders.end();) {
+    if (qsi->first._pipeline_version == pipeline_version) {
+      if (qsi->second != nullptr) {
+        qsi->second->notify_removed();
+      }
+      qsi = _enqueued_shaders.erase(qsi);
+    } else {
+      ++qsi;
     }
   }
-
-  _enqueued_shaders.clear();
 
   return num_shaders;
 }
@@ -852,7 +891,7 @@ void PreparedGraphicsObjects::
 enqueue_vertex_buffer(GeomVertexArrayData *data) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_vertex_buffers.insert(data);
+  _enqueued_vertex_buffers.insert({ get_enqueue_key(data), nullptr });
 }
 
 /**
@@ -863,7 +902,7 @@ bool PreparedGraphicsObjects::
 is_vertex_buffer_queued(const GeomVertexArrayData *data) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedVertexBuffers::const_iterator qi = _enqueued_vertex_buffers.find((GeomVertexArrayData *)data);
+  EnqueuedObjects::const_iterator qi = _enqueued_vertex_buffers.find(get_enqueue_key((GeomVertexArrayData *)data));
   return (qi != _enqueued_vertex_buffers.end());
 }
 
@@ -880,7 +919,7 @@ bool PreparedGraphicsObjects::
 dequeue_vertex_buffer(GeomVertexArrayData *data) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedVertexBuffers::iterator qi = _enqueued_vertex_buffers.find(data);
+  EnqueuedObjects::iterator qi = _enqueued_vertex_buffers.find(get_enqueue_key(data));
   if (qi != _enqueued_vertex_buffers.end()) {
     _enqueued_vertex_buffers.erase(qi);
     return true;
@@ -929,7 +968,7 @@ release_vertex_buffer(VertexBufferContext *vbc) {
                             released_vbuffer_cache_size,
                             _released_vertex_buffers);
   } else {
-    _released_vertex_buffers.push_back(vbc);
+    _released_vertex_buffers.insert(get_release_key(vbc));
   }
 }
 
@@ -949,11 +988,19 @@ release_all_vertex_buffers() {
     vbc->get_data()->clear_prepared(this);
     vbc->_object = nullptr;
 
-    _released_vertex_buffers.push_back(vbc);
+    _released_vertex_buffers.insert(get_release_key(vbc));
   }
 
   _prepared_vertex_buffers.clear();
-  _enqueued_vertex_buffers.clear();
+
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  for (auto it = _enqueued_vertex_buffers.begin(); it != _enqueued_vertex_buffers.end();) {
+    if (it->first._pipeline_version == pipeline_version) {
+      it = _enqueued_vertex_buffers.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   // Also clear the cache of recently-unprepared vertex buffers.
   BufferCache::iterator bci;
@@ -964,7 +1011,7 @@ release_all_vertex_buffers() {
     nassertr(!buffer_list.empty(), num_vertex_buffers);
     for (BufferContext *bc : buffer_list) {
       VertexBufferContext *vbc = (VertexBufferContext *)bc;
-      _released_vertex_buffers.push_back(vbc);
+      _released_vertex_buffers.insert(get_release_key(vbc));
     }
   }
   _vertex_buffer_cache.clear();
@@ -1046,7 +1093,7 @@ void PreparedGraphicsObjects::
 enqueue_index_buffer(GeomPrimitive *data) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_index_buffers.insert(data);
+  _enqueued_index_buffers.insert({ get_enqueue_key(data), nullptr });
 }
 
 /**
@@ -1057,7 +1104,7 @@ bool PreparedGraphicsObjects::
 is_index_buffer_queued(const GeomPrimitive *data) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedIndexBuffers::const_iterator qi = _enqueued_index_buffers.find((GeomPrimitive *)data);
+  EnqueuedObjects::const_iterator qi = _enqueued_index_buffers.find(get_enqueue_key((GeomPrimitive *)data));
   return (qi != _enqueued_index_buffers.end());
 }
 
@@ -1074,7 +1121,7 @@ bool PreparedGraphicsObjects::
 dequeue_index_buffer(GeomPrimitive *data) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedIndexBuffers::iterator qi = _enqueued_index_buffers.find(data);
+  EnqueuedObjects::iterator qi = _enqueued_index_buffers.find(get_enqueue_key(data));
   if (qi != _enqueued_index_buffers.end()) {
     _enqueued_index_buffers.erase(qi);
     return true;
@@ -1123,7 +1170,7 @@ release_index_buffer(IndexBufferContext *ibc) {
                             released_ibuffer_cache_size,
                             _released_index_buffers);
   } else {
-    _released_index_buffers.push_back(ibc);
+    _released_index_buffers.insert(get_release_key(ibc));
   }
 }
 
@@ -1143,11 +1190,19 @@ release_all_index_buffers() {
     ibc->get_data()->clear_prepared(this);
     ibc->_object = nullptr;
 
-    _released_index_buffers.push_back(ibc);
+    _released_index_buffers.insert(get_release_key(ibc));
   }
 
   _prepared_index_buffers.clear();
-  _enqueued_index_buffers.clear();
+
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  for (auto it = _enqueued_index_buffers.begin(); it != _enqueued_index_buffers.end();) {
+    if (it->first._pipeline_version == pipeline_version) {
+      it = _enqueued_index_buffers.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   // Also clear the cache of recently-unprepared index buffers.
   BufferCache::iterator bci;
@@ -1158,7 +1213,7 @@ release_all_index_buffers() {
     nassertr(!buffer_list.empty(), num_index_buffers);
     for (BufferContext *bc : buffer_list) {
       IndexBufferContext *ibc = (IndexBufferContext *)bc;
-      _released_index_buffers.push_back(ibc);
+      _released_index_buffers.insert(get_release_key(ibc));
     }
   }
   _index_buffer_cache.clear();
@@ -1239,7 +1294,7 @@ void PreparedGraphicsObjects::
 enqueue_shader_buffer(ShaderBuffer *data) {
   ReMutexHolder holder(_lock);
 
-  _enqueued_shader_buffers.insert(data);
+  _enqueued_shader_buffers.insert({ get_enqueue_key(data), nullptr });
 }
 
 /**
@@ -1250,7 +1305,7 @@ bool PreparedGraphicsObjects::
 is_shader_buffer_queued(const ShaderBuffer *data) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedShaderBuffers::const_iterator qi = _enqueued_shader_buffers.find((ShaderBuffer *)data);
+  EnqueuedObjects::const_iterator qi = _enqueued_shader_buffers.find(get_enqueue_key((ShaderBuffer *)data));
   return (qi != _enqueued_shader_buffers.end());
 }
 
@@ -1267,7 +1322,7 @@ bool PreparedGraphicsObjects::
 dequeue_shader_buffer(ShaderBuffer *data) {
   ReMutexHolder holder(_lock);
 
-  EnqueuedShaderBuffers::iterator qi = _enqueued_shader_buffers.find(data);
+  EnqueuedObjects::iterator qi = _enqueued_shader_buffers.find(get_enqueue_key(data));
   if (qi != _enqueued_shader_buffers.end()) {
     _enqueued_shader_buffers.erase(qi);
     return true;
@@ -1307,7 +1362,7 @@ release_shader_buffer(BufferContext *bc) {
   bool removed = (_prepared_shader_buffers.erase(bc) != 0);
   nassertv(removed);
 
-  _released_shader_buffers.push_back(bc);
+  _released_shader_buffers.insert(get_release_key(bc));
 }
 
 /**
@@ -1324,11 +1379,19 @@ release_all_shader_buffers() {
   for (BufferContext *bc : _prepared_shader_buffers) {
     ((ShaderBuffer *)bc->_object)->clear_prepared(this);
     bc->_object = nullptr;
-    _released_shader_buffers.push_back(bc);
+    _released_shader_buffers.insert(get_release_key(bc));
   }
 
   _prepared_shader_buffers.clear();
-  _enqueued_shader_buffers.clear();
+
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  for (auto it = _enqueued_shader_buffers.begin(); it != _enqueued_shader_buffers.end();) {
+    if (it->first._pipeline_version == pipeline_version) {
+      it = _enqueued_shader_buffers.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   return num_shader_buffers;
 }
@@ -1463,10 +1526,17 @@ void PreparedGraphicsObjects::
 begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   ReMutexHolder holder(_lock, current_thread);
 
+  unsigned int pipeline_version = Pipeline::get_render_pipeline()
+    ->get_version(current_thread);
+
   // First, release all the textures, geoms, and buffers awaiting release.
-  if (!_released_textures.empty()) {
-    gsg->release_textures(_released_textures);
-    _released_textures.clear();
+  for (auto it = _released_textures.begin(); it != _released_textures.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_texture((TextureContext *)it->_object);
+      it = _released_textures.erase(it);
+    } else {
+      ++it;
+    }
   }
 
   if (!_released_samplers.empty()) {
@@ -1476,33 +1546,49 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
     _released_samplers.clear();
   }
 
-  if (!_released_geoms.empty()) {
-    for (GeomContext *gc : _released_geoms) {
-      gsg->release_geom(gc);
+  for (auto it = _released_geoms.begin(); it != _released_geoms.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_geom((GeomContext *)it->_object);
+      it = _released_geoms.erase(it);
+    } else {
+      ++it;
     }
-    _released_geoms.clear();
   }
 
-  if (!_released_shaders.empty()) {
-    for (ShaderContext *sc : _released_shaders) {
-      gsg->release_shader(sc);
+  for (auto it = _released_shaders.begin(); it != _released_shaders.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_shader((ShaderContext *)it->_object);
+      it = _released_shaders.erase(it);
+    } else {
+      ++it;
     }
-    _released_shaders.clear();
   }
 
-  if (!_released_vertex_buffers.empty()) {
-    gsg->release_vertex_buffers(_released_vertex_buffers);
-    _released_vertex_buffers.clear();
+  for (auto it = _released_vertex_buffers.begin(); it != _released_vertex_buffers.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_vertex_buffer((VertexBufferContext *)it->_object);
+      it = _released_vertex_buffers.erase(it);
+    } else {
+      ++it;
+    }
   }
 
-  if (!_released_index_buffers.empty()) {
-    gsg->release_index_buffers(_released_index_buffers);
-    _released_index_buffers.clear();
+  for (auto it = _released_index_buffers.begin(); it != _released_index_buffers.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_index_buffer((IndexBufferContext *)it->_object);
+      it = _released_index_buffers.erase(it);
+    } else {
+      ++it;
+    }
   }
 
-  if (!_released_shader_buffers.empty()) {
-    gsg->release_shader_buffers(_released_shader_buffers);
-    _released_shader_buffers.clear();
+  for (auto it = _released_shader_buffers.begin(); it != _released_shader_buffers.end();) {
+    if (it->_pipeline_version == pipeline_version) {
+      gsg->release_shader_buffer((BufferContext *)it->_object);
+      it = _released_shader_buffers.erase(it);
+    } else {
+      ++it;
+    }
   }
 
   // Reset the residency trackers.
@@ -1512,23 +1598,27 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   _sbuffer_residency.begin_frame(current_thread);
 
   // Now prepare all the textures, geoms, and buffers awaiting preparation.
-  EnqueuedTextures::iterator qti;
+  EnqueuedObjects::iterator qti;
   for (qti = _enqueued_textures.begin();
-       qti != _enqueued_textures.end();
-       ++qti) {
-    Texture *tex = qti->first;
-    for (int view = 0; view < tex->get_num_views(); ++view) {
-      TextureContext *tc = tex->prepare_now(view, this, gsg);
-      if (tc != nullptr) {
-        gsg->update_texture(tc, true);
-        if (view == 0 && qti->second != nullptr) {
-          qti->second->set_result(tc);
+       qti != _enqueued_textures.end();) {
+    if (qti->first._pipeline_version == pipeline_version) {
+      Texture *tex = DCAST(Texture, qti->first._object);
+      for (int view = 0; view < tex->get_num_views(); ++view) {
+        TextureContext *tc = tex->prepare_now(view, this, gsg);
+        if (tc != nullptr) {
+          gsg->update_texture(tc, true);
+          if (view == 0 && qti->second != nullptr) {
+            qti->second->set_result(tc);
+          }
         }
       }
+
+      qti = _enqueued_textures.erase(qti);
+
+    } else {
+      ++qti;
     }
   }
-
-  _enqueued_textures.clear();
 
   EnqueuedSamplers::iterator qsmi;
   for (qsmi = _enqueued_samplers.begin();
@@ -1540,52 +1630,59 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
 
   _enqueued_samplers.clear();
 
-  EnqueuedGeoms::iterator qgi;
+  EnqueuedObjects::iterator qgi;
   for (qgi = _enqueued_geoms.begin();
-       qgi != _enqueued_geoms.end();
-       ++qgi) {
-    Geom *geom = (*qgi);
-    geom->prepare_now(this, gsg);
+       qgi != _enqueued_geoms.end();) {
+    if (qgi->first._pipeline_version == pipeline_version) {
+      Geom *geom = DCAST(Geom, qgi->first._object);
+      geom->prepare_now(this, gsg);
+      qgi = _enqueued_geoms.erase(qgi);
+    } else {
+      ++qgi;
+    }
   }
 
-  _enqueued_geoms.clear();
-
-  EnqueuedShaders::iterator qsi;
+  EnqueuedObjects::iterator qsi;
   for (qsi = _enqueued_shaders.begin();
-       qsi != _enqueued_shaders.end();
-       ++qsi) {
-    Shader *shader = qsi->first;
-    ShaderContext *sc = shader->prepare_now(this, gsg);
-    if (qsi->second != nullptr) {
-      qsi->second->set_result(sc);
+       qsi != _enqueued_shaders.end();) {
+    if (qsi->first._pipeline_version == pipeline_version) {
+      Shader *shader = DCAST(Shader, qsi->first._object);
+      ShaderContext *sc = shader->prepare_now(this, gsg);
+      if (qsi->second != nullptr) {
+        qsi->second->set_result(sc);
+      }
+      qsi = _enqueued_shaders.erase(qsi);
+    } else {
+      ++qsi;
     }
+
   }
 
-  _enqueued_shaders.clear();
-
-  EnqueuedVertexBuffers::iterator qvbi;
+  EnqueuedObjects::iterator qvbi;
   for (qvbi = _enqueued_vertex_buffers.begin();
-       qvbi != _enqueued_vertex_buffers.end();
-       ++qvbi) {
-    GeomVertexArrayData *data = (*qvbi);
-    data->prepare_now(this, gsg);
-  }
-
-  _enqueued_vertex_buffers.clear();
-
-  EnqueuedIndexBuffers::iterator qibi;
-  for (qibi = _enqueued_index_buffers.begin();
-       qibi != _enqueued_index_buffers.end();
-       ++qibi) {
-    GeomPrimitive *data = (*qibi);
-    // We need this check because the actual index data may not actually have
-    // propagated to the draw thread yet.
-    if (data->is_indexed()) {
+       qvbi != _enqueued_vertex_buffers.end();) {
+    if (qvbi->first._pipeline_version == pipeline_version) {
+      GeomVertexArrayData *data = DCAST(GeomVertexArrayData, qvbi->first._object);
       data->prepare_now(this, gsg);
+      qvbi = _enqueued_vertex_buffers.erase(qvbi);
+    } else {
+      ++qvbi;
     }
   }
 
-  _enqueued_index_buffers.clear();
+  EnqueuedObjects::iterator qibi;
+  for (qibi = _enqueued_index_buffers.begin();
+       qibi != _enqueued_index_buffers.end();) {
+    if (qibi->first._pipeline_version == pipeline_version) {
+      GeomPrimitive *data = DCAST(GeomPrimitive, qibi->first._object);
+      if (data->is_indexed()) {
+        data->prepare_now(this, gsg);
+      }
+      qibi = _enqueued_index_buffers.erase(qibi);
+    } else {
+      ++qibi;
+    }
+  }
 }
 
 /**
@@ -1627,7 +1724,7 @@ cache_unprepared_buffer(BufferContext *buffer, size_t data_size_bytes,
                         PreparedGraphicsObjects::BufferCacheLRU &buffer_cache_lru,
                         size_t &buffer_cache_size,
                         int released_buffer_cache_size,
-                        pvector<BufferContext *> &released_buffers) {
+                        ReleasedObjects &released_buffers) {
   BufferCacheKey key;
   key._data_size_bytes = data_size_bytes;
   key._usage_hint = usage_hint;
@@ -1653,7 +1750,7 @@ cache_unprepared_buffer(BufferContext *buffer, size_t data_size_bytes,
            (int)buffer_cache_size > released_buffer_cache_size) {
       BufferContext *released_buffer = buffer_list.back();
       buffer_list.pop_back();
-      released_buffers.push_back(released_buffer);
+      released_buffers.insert(get_release_key(released_buffer));
       buffer_cache_size -= release_key._data_size_bytes;
     }
 

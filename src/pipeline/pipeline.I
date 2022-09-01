@@ -23,6 +23,21 @@ get_render_pipeline() {
 }
 
 /**
+ * Returns the version of the pipeline that this thread is working on.
+ *
+ * Stage 0 works on the newest version, stage 1 works on the previous version,
+ * stage 2 works on the previous previous version, and so on.
+ */
+INLINE unsigned int Pipeline::
+get_version(Thread *current_thread) const {
+  if (_cycler == nullptr) {
+    return 0;
+  }
+  CDReader cdata(*_cycler, current_thread);
+  return cdata->_pipeline_version;
+}
+
+/**
  * Ensures that at least the indicated number of stages are in the pipeline.
  */
 INLINE void Pipeline::
@@ -62,3 +77,21 @@ get_num_dirty_cyclers() const {
   return _num_dirty_cyclers;
 }
 #endif  // THREADED_PIPELINE
+
+/**
+ *
+ */
+INLINE Pipeline::CData::
+CData() :
+  _pipeline_version(0)
+{
+}
+
+/**
+ *
+ */
+INLINE Pipeline::CData::
+CData(const CData &copy) :
+  _pipeline_version(copy._pipeline_version)
+{
+}

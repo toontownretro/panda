@@ -200,6 +200,35 @@ public:
     static TypeHandle _type_handle;
   };
 
+  /**
+   *
+   */
+  class EnqueuedObjectKey {
+  public:
+    PT(TypedWritableReferenceCount) _object;
+    // The version/frame of the pipeline at the time the object was enqueued.
+    // The Draw thread will not prepare or release the object until it is
+    // working on this version of the pipeline, to ensure that the object's
+    // data has been cycled down to Draw.
+    unsigned int _pipeline_version;
+
+    INLINE size_t get_hash() const;
+    INLINE bool operator < (const EnqueuedObjectKey &other) const;
+  };
+
+  /**
+   *
+   */
+  class ReleasedObjectKey {
+  public:
+    SavedContext *_object;
+    // See EnqueuedObjectKey for the reasoning behind this.
+    unsigned int _pipeline_version;
+
+    INLINE size_t get_hash() const;
+    INLINE bool operator < (const ReleasedObjectKey &other) const;
+  };
+
   // These are variations of enqueue_xxx that also return a future.  They are
   // used to implement texture->prepare(), etc.  They are only marked public
   // so we don't have to define a whole bunch of friend classes.
@@ -218,16 +247,13 @@ private:
   static std::string init_name();
 
 private:
+  typedef pflat_hash_map<EnqueuedObjectKey, PT(EnqueuedObject), method_hash<EnqueuedObjectKey>> EnqueuedObjects;
+  typedef pflat_hash_set<ReleasedObjectKey, method_hash<ReleasedObjectKey>> ReleasedObjects;
+
   typedef pflat_hash_set<TextureContext *, pointer_hash> Textures;
-  typedef pflat_hash_map< PT(Texture), PT(EnqueuedObject) > EnqueuedTextures;
   typedef pflat_hash_set<GeomContext *, pointer_hash> Geoms;
-  typedef pflat_hash_set< PT(Geom) > EnqueuedGeoms;
   typedef pflat_hash_set<ShaderContext *, pointer_hash> Shaders;
-  typedef pflat_hash_map< PT(Shader), PT(EnqueuedObject) > EnqueuedShaders;
   typedef pflat_hash_set<BufferContext *, pointer_hash> Buffers;
-  typedef pflat_hash_set< PT(GeomVertexArrayData) > EnqueuedVertexBuffers;
-  typedef pflat_hash_set< PT(GeomPrimitive) > EnqueuedIndexBuffers;
-  typedef pflat_hash_set< PT(ShaderBuffer) > EnqueuedShaderBuffers;
 
   // Sampler states are stored a little bit differently, as they are mapped by
   // value and can't store the list of prepared samplers.
@@ -253,7 +279,7 @@ private:
                                BufferCacheLRU &buffer_cache_lru,
                                size_t &buffer_cache_size,
                                int released_buffer_cache_size,
-                               pvector<BufferContext *> &released_buffers);
+                               ReleasedObjects &released_buffers);
   BufferContext *get_cached_buffer(size_t data_size_bytes,
                                    GeomEnums::UsageHint usage_hint,
                                    BufferCache &buffer_cache,
@@ -261,26 +287,36 @@ private:
                                    size_t &buffer_cache_size);
 
   ReMutex _lock;
+
   std::string _name;
+
   Textures _prepared_textures;
-  pvector<TextureContext *> _released_textures;
-  EnqueuedTextures _enqueued_textures;
+  ReleasedObjects _released_textures;
+  EnqueuedObjects _enqueued_textures;
+
   PreparedSamplers _prepared_samplers;
   ReleasedSamplers _released_samplers;
   EnqueuedSamplers _enqueued_samplers;
-  Geoms _prepared_geoms, _released_geoms;
-  EnqueuedGeoms _enqueued_geoms;
-  Shaders _prepared_shaders, _released_shaders;
-  EnqueuedShaders _enqueued_shaders;
+
+  Geoms _prepared_geoms;
+  EnqueuedObjects _enqueued_geoms;
+  ReleasedObjects _released_geoms;
+
+  Shaders _prepared_shaders;
+  EnqueuedObjects _enqueued_shaders;
+  ReleasedObjects _released_shaders;
+
   Buffers _prepared_vertex_buffers;
-  pvector<BufferContext *> _released_vertex_buffers;
-  EnqueuedVertexBuffers _enqueued_vertex_buffers;
+  EnqueuedObjects _enqueued_vertex_buffers;
+  ReleasedObjects _released_vertex_buffers;
+
   Buffers _prepared_index_buffers;
-  pvector<BufferContext *> _released_index_buffers;
-  EnqueuedIndexBuffers _enqueued_index_buffers;
+  EnqueuedObjects _enqueued_index_buffers;
+  ReleasedObjects _released_index_buffers;
+
   Buffers _prepared_shader_buffers;
-  pvector<BufferContext *> _released_shader_buffers;
-  EnqueuedShaderBuffers _enqueued_shader_buffers;
+  EnqueuedObjects _enqueued_shader_buffers;
+  ReleasedObjects _released_shader_buffers;
 
   BufferCache _vertex_buffer_cache;
   BufferCacheLRU _vertex_buffer_cache_lru;
