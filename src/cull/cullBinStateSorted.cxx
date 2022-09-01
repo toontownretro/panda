@@ -74,7 +74,7 @@ auto compare_objects_state = [](const CullableObject *a, const CullableObject *b
   const RenderState *sa = a->_state;
   const RenderState *sb = b->_state;
 
-#if 0
+#if 1
 
   const ShaderAttrib *sha = nullptr, *shb = nullptr;
 
@@ -239,6 +239,37 @@ auto compare_objects_state = [](const CullableObject *a, const CullableObject *b
   }
 
 #else
+
+  const ShaderAttrib *sha = nullptr, *shb = nullptr;
+
+  if (sa != sb) {
+    if (sa->_generated_shader != nullptr) {
+      sha = (const ShaderAttrib *)sa->_generated_shader.p();
+    } else {
+      sha = (const ShaderAttrib *)sa->get_attrib(ShaderAttrib::get_class_slot());
+    }
+
+    if (sb->_generated_shader != nullptr) {
+      shb = (const ShaderAttrib *)sb->_generated_shader.p();
+    } else {
+      shb = (const ShaderAttrib *)sb->get_attrib(ShaderAttrib::get_class_slot());
+    }
+
+    if (sha != shb) {
+      // Program changes are the heaviest.
+      const Shader *shader_a = nullptr;
+      const Shader *shader_b = nullptr;
+      if (sha != nullptr) {
+        shader_a = sha->get_shader();
+      }
+      if (shb != nullptr) {
+        shader_b = shb->get_shader();
+      }
+      if (shader_a != shader_b) {
+        return shader_a < shader_b;
+      }
+    }
+  }
 
   int compare = sa->compare_sort(*sb);
   if (compare != 0) {
