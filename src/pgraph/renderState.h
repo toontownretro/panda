@@ -266,6 +266,8 @@ private:
   CompositionCache _composition_cache;
   CompositionCache _invert_composition_cache;
 
+  LightReMutex _composition_cache_lock;
+
   // This is here to provide a quick cache of GSG + RenderState -> GeomMunger
   // for the cull phase.  It is here because it is faster to look up the GSG
   // in the RenderState pointer than vice-versa, since there are likely to be

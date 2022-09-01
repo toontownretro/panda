@@ -67,6 +67,7 @@ RenderState::
 RenderState() :
   _flags(0),
   _lock("RenderState"),
+  _composition_cache_lock("RenderStateCompositionCache"),
   _hash(0)
 {
   if (_states_lock == nullptr) {
@@ -91,6 +92,7 @@ RenderState(const RenderState &copy) :
   _filled_slots(copy._filled_slots),
   _flags(0),
   _lock("RenderState"),
+  _composition_cache_lock("RenderStateCompositionCache"),
   _hash(0)
 {
   // Copy over the attributes.
@@ -358,62 +360,109 @@ compose(const RenderState *other) const {
     return do_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  CPT(RenderState) result;
 
-  // Is this composition already cached?
-  int index = _composition_cache.find(other);
-  if (index != -1) {
-    Composition &comp = ((RenderState *)this)->_composition_cache.modify_data(index);
-    if (comp._result == nullptr) {
-      // Well, it wasn't cached already, but we already had an entry (probably
-      // created for the reverse direction), so use the same entry to store
-      // the new result.
-      CPT(RenderState) result = do_compose(other);
-      comp._result = result;
+  {
+    LightReMutexHolder holder(_composition_cache_lock);
 
-      if (result != (const RenderState *)this) {
-        // See the comments below about the need to up the reference count
-        // only when the result is not the same as this.
-        result->cache_ref();
+    // Is this composition already cached?
+    int index = _composition_cache.find(other);
+    if (index != -1) {
+      Composition *comp = &((RenderState *)this)->_composition_cache.modify_data(index);
+      if (comp->_result == nullptr) {
+        // Well, it wasn't cached already, but we already had an entry (probably
+        // created for the reverse direction), so use the same entry to store
+        // the new result.
+        _composition_cache_lock.release();
+        result = do_compose(other);
+        _composition_cache_lock.acquire();
+
+        // TODO: Is it possible for the entry to be removed while we're composing
+        // without the lock held?
+        assert(_composition_cache.find(other) == index);
+
+        comp = &((RenderState *)this)->_composition_cache.modify_data(index);
+
+        // Double-check that the result is still nullptr after reacquiring
+        // the lock.  It's possible that another thread performed the same
+        // composition as us and stuffed the result before we could.
+        if (comp->_result == nullptr) {
+          comp->_result = result;
+          if (result != (const RenderState *)this) {
+            // See the comments below about the need to up the reference count
+            // only when the result is not the same as this.
+            result->cache_ref();
+          }
+        }
       }
+      // Here's the cache!
+      //_cache_stats.inc_hits();
+      return comp->_result;
     }
-    // Here's the cache!
-    _cache_stats.inc_hits();
-    return comp._result;
+    //_cache_stats.inc_misses();
+
+    // We need to make a new cache entry, both in this object and in the other
+    // object.  We make both records so the other RenderState object will know
+    // to delete the entry from this object when it destructs, and vice-versa.
+
+    // The cache entry in this object is the only one that indicates the result;
+    // the other will be NULL for now.
+    _composition_cache_lock.release();
+    result = do_compose(other);
+    _composition_cache_lock.acquire();
+
+    index = _composition_cache.find(result);
+    if (index != -1) {
+      // Would you look at that.  Another thread performed the same composition
+      // while we didn't have the lock held and stuffed it into the cache before
+      // we could.
+
+      Composition *comp = &((RenderState *)this)->_composition_cache.modify_data(index);
+      if (comp->_result == nullptr) {
+        // Actually, another thread composed in the reverse direction while we
+        // were composing in this direction, so fill in the result for the
+        // direction we just computed.
+        comp->_result = result;
+
+        if (result != (const RenderState *)this) {
+          // See the comments below about the need to up the reference count
+          // only when the result is not the same as this.
+          result->cache_ref();
+        }
+      }
+
+      // Here's the cache!
+      //_cache_stats.inc_hits();
+      return comp->_result;
+    }
+
+    // We can be sure we weren't beat to this composition by another thread.
+
+    //_cache_stats.add_total_size(1);
+    //_cache_stats.inc_adds(_composition_cache.is_empty());
+
+    ((RenderState *)this)->_composition_cache[other]._result = result;
+
+    if (result != (const RenderState *)this) {
+      // If the result of compose() is something other than this, explicitly
+      // increment the reference count.  We have to be sure to decrement it
+      // again later, when the composition entry is removed from the cache.
+      result->cache_ref();
+
+      // (If the result was just this again, we still store the result, but we
+      // don't increment the reference count, since that would be a self-
+      // referential leak.)
+    }
   }
-  _cache_stats.inc_misses();
-
-  // We need to make a new cache entry, both in this object and in the other
-  // object.  We make both records so the other RenderState object will know
-  // to delete the entry from this object when it destructs, and vice-versa.
-
-  // The cache entry in this object is the only one that indicates the result;
-  // the other will be NULL for now.
-  CPT(RenderState) result = do_compose(other);
-
-  _cache_stats.add_total_size(1);
-  _cache_stats.inc_adds(_composition_cache.is_empty());
-
-  ((RenderState *)this)->_composition_cache[other]._result = result;
 
   if (other != this) {
-    _cache_stats.add_total_size(1);
-    _cache_stats.inc_adds(other->_composition_cache.is_empty());
+    LightReMutexHolder ocholder(other->_composition_cache_lock);
+    //_cache_stats.add_total_size(1);
+    //_cache_stats.inc_adds(other->_composition_cache.is_empty());
     ((RenderState *)other)->_composition_cache[this]._result = nullptr;
   }
 
-  if (result != (const RenderState *)this) {
-    // If the result of compose() is something other than this, explicitly
-    // increment the reference count.  We have to be sure to decrement it
-    // again later, when the composition entry is removed from the cache.
-    result->cache_ref();
-
-    // (If the result was just this again, we still store the result, but we
-    // don't increment the reference count, since that would be a self-
-    // referential leak.)
-  }
-
-  _cache_stats.maybe_report("RenderState");
+  //_cache_stats.maybe_report("RenderState");
 
   return result;
 }
@@ -447,7 +496,7 @@ invert_compose(const RenderState *other) const {
     return do_invert_compose(other);
   }
 
-  LightReMutexHolder holder(*_states_lock);
+  LightReMutexHolder holder(_composition_cache_lock);
 
   // Is this composition already cached?
   int index = _invert_composition_cache.find(other);
@@ -485,6 +534,7 @@ invert_compose(const RenderState *other) const {
   ((RenderState *)this)->_invert_composition_cache[other]._result = result;
 
   if (other != this) {
+    LightReMutexHolder ocholder(other->_composition_cache_lock);
     _cache_stats.add_total_size(1);
     _cache_stats.inc_adds(other->_invert_composition_cache.is_empty());
     ((RenderState *)other)->_invert_composition_cache[this]._result = nullptr;
@@ -755,6 +805,7 @@ get_num_unused_states() {
     }
 
     size_t i;
+    LightReMutexHolder cholder(state->_composition_cache_lock);
     size_t cache_size = state->_composition_cache.get_num_entries();
     for (i = 0; i < cache_size; ++i) {
       const RenderState *result = state->_composition_cache.get_data(i)._result;
@@ -850,6 +901,7 @@ clear_cache() {
       RenderState *state = (RenderState *)(*ti).p();
 
       size_t i;
+      LightReMutexHolder cholder(state->_composition_cache_lock);
       size_t cache_size = (int)state->_composition_cache.get_num_entries();
       for (i = 0; i < cache_size; ++i) {
         const RenderState *result = state->_composition_cache.get_data(i)._result;
@@ -1481,6 +1533,7 @@ r_detect_cycles(const RenderState *start_state,
   ((RenderState *)current_state)->_cycle_detect = this_seq;
 
   size_t i;
+  LightReMutexHolder cholder(current_state->_composition_cache_lock);
   size_t cache_size = current_state->_composition_cache.get_num_entries();
   for (i = 0; i < cache_size; ++i) {
     const RenderState *result = current_state->_composition_cache.get_data(i)._result;
@@ -1540,10 +1593,13 @@ r_detect_reverse_cycles(const RenderState *start_state,
   ((RenderState *)current_state)->_cycle_detect = this_seq;
 
   size_t i;
+  LightReMutexHolder cholder(current_state->_composition_cache_lock);
   size_t cache_size = current_state->_composition_cache.get_num_entries();
   for (i = 0; i < cache_size; ++i) {
     const RenderState *other = current_state->_composition_cache.get_key(i);
     if (other != current_state) {
+
+      LightReMutexHolder ocholder(other->_composition_cache_lock);
       int oi = other->_composition_cache.find(current_state);
       nassertr(oi != -1, false);
 
@@ -1567,6 +1623,7 @@ r_detect_reverse_cycles(const RenderState *start_state,
   for (i = 0; i < cache_size; ++i) {
     const RenderState *other = current_state->_invert_composition_cache.get_key(i);
     if (other != current_state) {
+      LightReMutexHolder ocholder(other->_composition_cache_lock);
       int oi = other->_invert_composition_cache.find(current_state);
       nassertr(oi != -1, false);
 
@@ -1638,6 +1695,8 @@ remove_cache_pointers() {
   PStatTimer timer(_cache_update_pcollector);
 #endif  // DO_PSTATS
 
+  LightReMutexHolder cholder(_composition_cache_lock);
+
   // There are lots of ways to do this loop wrong.  Be very careful if you
   // need to modify it for any reason.
   size_t i = 0;
@@ -1662,6 +1721,7 @@ remove_cache_pointers() {
     _cache_stats.inc_dels();
 
     if (other != this) {
+      LightReMutexHolder ocholder(other->_composition_cache_lock);
       int oi = other->_composition_cache.find(this);
 
       // We may or may not still be listed in the other's cache (it might be
@@ -1700,6 +1760,7 @@ remove_cache_pointers() {
     _cache_stats.add_total_size(-1);
     _cache_stats.inc_dels();
     if (other != this) {
+      LightReMutexHolder ocholder(other->_composition_cache_lock);
       int oi = other->_invert_composition_cache.find(this);
       if (oi != -1) {
         Composition ocomp = other->_invert_composition_cache.get_data(oi);
