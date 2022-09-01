@@ -30,10 +30,6 @@
 #include "bufferResidencyTracker.h"
 #include "adaptiveLru.h"
 #include "asyncFuture.h"
-#include "cycleData.h"
-#include "cycleDataReader.h"
-#include "cycleDataWriter.h"
-#include "pipelineCycler.h"
 
 class TextureContext;
 class SamplerContext;
@@ -163,8 +159,6 @@ PUBLISHED:
   prepare_shader_buffer_now(ShaderBuffer *data,
                             GraphicsStateGuardianBase *gsg);
 
-  void begin_frame_app(Thread *current_thread = Thread::get_current_thread());
-
 public:
   /**
    * This is a handle to an enqueued object, from which the result can be
@@ -268,14 +262,25 @@ private:
 
   ReMutex _lock;
   std::string _name;
-
   Textures _prepared_textures;
+  pvector<TextureContext *> _released_textures;
+  EnqueuedTextures _enqueued_textures;
   PreparedSamplers _prepared_samplers;
-  Geoms _prepared_geoms;
-  Shaders _prepared_shaders;
+  ReleasedSamplers _released_samplers;
+  EnqueuedSamplers _enqueued_samplers;
+  Geoms _prepared_geoms, _released_geoms;
+  EnqueuedGeoms _enqueued_geoms;
+  Shaders _prepared_shaders, _released_shaders;
+  EnqueuedShaders _enqueued_shaders;
   Buffers _prepared_vertex_buffers;
+  pvector<BufferContext *> _released_vertex_buffers;
+  EnqueuedVertexBuffers _enqueued_vertex_buffers;
   Buffers _prepared_index_buffers;
+  pvector<BufferContext *> _released_index_buffers;
+  EnqueuedIndexBuffers _enqueued_index_buffers;
   Buffers _prepared_shader_buffers;
+  pvector<BufferContext *> _released_shader_buffers;
+  EnqueuedShaderBuffers _enqueued_shader_buffers;
 
   BufferCache _vertex_buffer_cache;
   BufferCacheLRU _vertex_buffer_cache_lru;
@@ -284,42 +289,6 @@ private:
   BufferCache _index_buffer_cache;
   BufferCacheLRU _index_buffer_cache_lru;
   size_t _index_buffer_cache_size;
-
-  class CData : public CycleData {
-  public:
-    ALLOC_DELETED_CHAIN(CData);
-
-    INLINE CData() = default;
-    INLINE CData(const CData &copy) = default;
-
-    virtual CycleData *make_copy() const override;
-
-  public:
-    pvector<TextureContext *> _released_textures;
-    EnqueuedTextures _enqueued_textures;
-
-    ReleasedSamplers _released_samplers;
-    EnqueuedSamplers _enqueued_samplers;
-
-    Geoms _released_geoms;
-    EnqueuedGeoms _enqueued_geoms;
-
-    Shaders _released_shaders;
-    EnqueuedShaders _enqueued_shaders;
-
-    pvector<BufferContext *> _released_vertex_buffers;
-    EnqueuedVertexBuffers _enqueued_vertex_buffers;
-
-    pvector<BufferContext *> _released_index_buffers;
-    EnqueuedIndexBuffers _enqueued_index_buffers;
-
-    pvector<BufferContext *> _released_shader_buffers;
-    EnqueuedShaderBuffers _enqueued_shader_buffers;
-  };
-
-  typedef CycleDataReader<CData> CDReader;
-  typedef CycleDataWriter<CData> CDWriter;
-  PipelineCycler<CData> _cycler;
 
 public:
   BufferResidencyTracker _texture_residency;

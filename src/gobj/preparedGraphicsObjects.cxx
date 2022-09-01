@@ -68,49 +68,46 @@ PreparedGraphicsObjects::
   ReMutexHolder holder(_lock);
 
   release_all_textures();
-  release_all_samplers();
-  release_all_geoms();
-  release_all_shaders();
-  release_all_vertex_buffers();
-  release_all_index_buffers();
-  release_all_shader_buffers();
-
-  CDReader cdata(_cycler);
-
-  for (TextureContext *tc : cdata->_released_textures) {
+  for (TextureContext *tc : _released_textures) {
     delete tc;
   }
-  //_released_textures.clear();
+  _released_textures.clear();
 
-  for (SamplerContext *sc : cdata->_released_samplers) {
+  release_all_samplers();
+  for (SamplerContext *sc : _released_samplers) {
     delete sc;
   }
-  //_released_samplers.clear();
+  _released_samplers.clear();
 
-  for (GeomContext *gc : cdata->_released_geoms) {
+  release_all_geoms();
+  for (GeomContext *gc : _released_geoms) {
     delete gc;
   }
-  //_released_geoms.clear();
+  _released_geoms.clear();
 
-  for (ShaderContext *sc : cdata->_released_shaders) {
+  release_all_shaders();
+  for (ShaderContext *sc : _released_shaders) {
     delete sc;
   }
-  //_released_shaders.clear();
+  _released_shaders.clear();
 
-  for (BufferContext *bc : cdata->_released_vertex_buffers) {
+  release_all_vertex_buffers();
+  for (BufferContext *bc : _released_vertex_buffers) {
     delete bc;
   }
-  //_released_vertex_buffers.clear();
+  _released_vertex_buffers.clear();
 
-  for (BufferContext *bc : cdata->_released_index_buffers) {
+  release_all_index_buffers();
+  for (BufferContext *bc : _released_index_buffers) {
     delete bc;
   }
-  //_released_index_buffers.clear();
+  _released_index_buffers.clear();
 
-  for (BufferContext *bc : cdata->_released_shader_buffers) {
+  release_all_shader_buffers();
+  for (BufferContext *bc : _released_shader_buffers) {
     delete bc;
   }
-  //_released_shader_buffers.clear();
+  _released_shader_buffers.clear();
 
   _gsg = nullptr;
 }
@@ -170,13 +167,9 @@ show_residency_trackers(std::ostream &out) const {
  */
 void PreparedGraphicsObjects::
 enqueue_texture(Texture *tex) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  //std::cerr << "Enqueing texture\n";
-  //tex->write(std::cerr, 0);
-
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
+  _enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
 }
 
 /**
@@ -185,12 +178,10 @@ enqueue_texture(Texture *tex) {
  */
 PT(PreparedGraphicsObjects::EnqueuedObject) PreparedGraphicsObjects::
 enqueue_texture_future(Texture *tex) {
-  //ReMutexHolder holder(_lock);
-
-  CDWriter cdata(_cycler);
+  ReMutexHolder holder(_lock);
 
   std::pair<EnqueuedTextures::iterator, bool> result =
-    cdata->_enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
+    _enqueued_textures.insert(EnqueuedTextures::value_type(tex, nullptr));
   if (result.first->second == nullptr) {
     result.first->second = new EnqueuedObject(this, tex);
   }
@@ -204,12 +195,10 @@ enqueue_texture_future(Texture *tex) {
  */
 bool PreparedGraphicsObjects::
 is_texture_queued(const Texture *tex) const {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDReader cdata(_cycler);
-
-  EnqueuedTextures::const_iterator qi = cdata->_enqueued_textures.find((Texture *)tex);
-  return (qi != cdata->_enqueued_textures.end());
+  EnqueuedTextures::const_iterator qi = _enqueued_textures.find((Texture *)tex);
+  return (qi != _enqueued_textures.end());
 }
 
 /**
@@ -223,16 +212,14 @@ is_texture_queued(const Texture *tex) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_texture(Texture *tex) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  EnqueuedTextures::iterator qi = cdata->_enqueued_textures.find(tex);
-  if (qi != cdata->_enqueued_textures.end()) {
+  EnqueuedTextures::iterator qi = _enqueued_textures.find(tex);
+  if (qi != _enqueued_textures.end()) {
     if (qi->second != nullptr) {
       qi->second->notify_removed();
     }
-    cdata->_enqueued_textures.erase(qi);
+    _enqueued_textures.erase(qi);
     return true;
   }
   return false;
@@ -268,8 +255,7 @@ release_texture(TextureContext *tc) {
   bool removed = (_prepared_textures.erase(tc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-  cdata->_released_textures.push_back(tc);
+  _released_textures.push_back(tc);
 }
 
 /**
@@ -290,30 +276,28 @@ int PreparedGraphicsObjects::
 release_all_textures() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_textures = (int)_prepared_textures.size() + (int)cdata->_enqueued_textures.size();
+  int num_textures = (int)_prepared_textures.size() + (int)_enqueued_textures.size();
 
   for (TextureContext *tc : _prepared_textures) {
     tc->get_texture()->clear_prepared(tc->get_view(), this);
     tc->_object = nullptr;
 
-    cdata->_released_textures.push_back(tc);
+    _released_textures.push_back(tc);
   }
 
   _prepared_textures.clear();
 
   // Mark any futures as cancelled.
   EnqueuedTextures::iterator qti;
-  for (qti = cdata->_enqueued_textures.begin();
-       qti != cdata->_enqueued_textures.end();
+  for (qti = _enqueued_textures.begin();
+       qti != _enqueued_textures.end();
        ++qti) {
     if (qti->second != nullptr) {
       qti->second->notify_removed();
     }
   }
 
-  cdata->_enqueued_textures.clear();
+  _enqueued_textures.clear();
 
   return num_textures;
 }
@@ -324,8 +308,7 @@ release_all_textures() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_textures() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_textures.size();
+  return _enqueued_textures.size();
 }
 
 /**
@@ -375,9 +358,9 @@ prepare_texture_now(Texture *tex, int view, GraphicsStateGuardianBase *gsg) {
  */
 void PreparedGraphicsObjects::
 enqueue_sampler(const SamplerState &sampler) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_samplers.insert(sampler);
+  ReMutexHolder holder(_lock);
+
+  _enqueued_samplers.insert(sampler);
 }
 
 /**
@@ -385,10 +368,10 @@ enqueue_sampler(const SamplerState &sampler) {
  */
 bool PreparedGraphicsObjects::
 is_sampler_queued(const SamplerState &sampler) const {
-  //ReMutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-  EnqueuedSamplers::const_iterator qi = cdata->_enqueued_samplers.find(sampler);
-  return (qi != cdata->_enqueued_samplers.end());
+  ReMutexHolder holder(_lock);
+
+  EnqueuedSamplers::const_iterator qi = _enqueued_samplers.find(sampler);
+  return (qi != _enqueued_samplers.end());
 }
 
 /**
@@ -402,12 +385,11 @@ is_sampler_queued(const SamplerState &sampler) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_sampler(const SamplerState &sampler) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  EnqueuedSamplers::iterator qi = cdata->_enqueued_samplers.find(sampler);
-  if (qi != cdata->_enqueued_samplers.end()) {
-    cdata->_enqueued_samplers.erase(qi);
+  EnqueuedSamplers::iterator qi = _enqueued_samplers.find(sampler);
+  if (qi != _enqueued_samplers.end()) {
+    _enqueued_samplers.erase(qi);
     return true;
   }
   return false;
@@ -432,9 +414,9 @@ is_sampler_prepared(const SamplerState &sampler) const {
  */
 void PreparedGraphicsObjects::
 release_sampler(SamplerContext *sc) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  cdata->_released_samplers.insert(sc);
+  ReMutexHolder holder(_lock);
+
+  _released_samplers.insert(sc);
 }
 
 /**
@@ -445,15 +427,13 @@ void PreparedGraphicsObjects::
 release_sampler(const SamplerState &sampler) {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
   PreparedSamplers::iterator it = _prepared_samplers.find(sampler);
   if (it != _prepared_samplers.end()) {
-    cdata->_released_samplers.insert(it->second);
+    _released_samplers.insert(it->second);
     _prepared_samplers.erase(it);
   }
 
-  cdata->_enqueued_samplers.erase(sampler);
+  _enqueued_samplers.erase(sampler);
 }
 
 /**
@@ -464,19 +444,17 @@ int PreparedGraphicsObjects::
 release_all_samplers() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_samplers = (int)_prepared_samplers.size() + (int)cdata->_enqueued_samplers.size();
+  int num_samplers = (int)_prepared_samplers.size() + (int)_enqueued_samplers.size();
 
   PreparedSamplers::iterator sci;
   for (sci = _prepared_samplers.begin();
        sci != _prepared_samplers.end();
        ++sci) {
-    cdata->_released_samplers.insert(sci->second);
+    _released_samplers.insert(sci->second);
   }
 
   _prepared_samplers.clear();
-  cdata->_enqueued_samplers.clear();
+  _enqueued_samplers.clear();
 
   return num_samplers;
 }
@@ -487,8 +465,7 @@ release_all_samplers() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_samplers() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_samplers.size();
+  return _enqueued_samplers.size();
 }
 
 /**
@@ -540,9 +517,9 @@ prepare_sampler_now(const SamplerState &sampler, GraphicsStateGuardianBase *gsg)
  */
 void PreparedGraphicsObjects::
 enqueue_geom(Geom *geom) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_geoms.insert(geom);
+  ReMutexHolder holder(_lock);
+
+  _enqueued_geoms.insert(geom);
 }
 
 /**
@@ -550,10 +527,10 @@ enqueue_geom(Geom *geom) {
  */
 bool PreparedGraphicsObjects::
 is_geom_queued(const Geom *geom) const {
-  //ReMutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-  EnqueuedGeoms::const_iterator qi = cdata->_enqueued_geoms.find((Geom *)geom);
-  return (qi != cdata->_enqueued_geoms.end());
+  ReMutexHolder holder(_lock);
+
+  EnqueuedGeoms::const_iterator qi = _enqueued_geoms.find((Geom *)geom);
+  return (qi != _enqueued_geoms.end());
 }
 
 /**
@@ -567,11 +544,11 @@ is_geom_queued(const Geom *geom) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_geom(Geom *geom) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  EnqueuedGeoms::iterator qi = cdata->_enqueued_geoms.find(geom);
-  if (qi != cdata->_enqueued_geoms.end()) {
-    cdata->_enqueued_geoms.erase(qi);
+  ReMutexHolder holder(_lock);
+
+  EnqueuedGeoms::iterator qi = _enqueued_geoms.find(geom);
+  if (qi != _enqueued_geoms.end()) {
+    _enqueued_geoms.erase(qi);
     return true;
   }
   return false;
@@ -608,8 +585,7 @@ release_geom(GeomContext *gc) {
   bool removed = (_prepared_geoms.erase(gc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-  cdata->_released_geoms.insert(gc);
+  _released_geoms.insert(gc);
 }
 
 /**
@@ -621,19 +597,17 @@ int PreparedGraphicsObjects::
 release_all_geoms() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_geoms = (int)_prepared_geoms.size() + (int)cdata->_enqueued_geoms.size();
+  int num_geoms = (int)_prepared_geoms.size() + (int)_enqueued_geoms.size();
 
   for (GeomContext *gc : _prepared_geoms) {
     gc->_geom->clear_prepared(this);
     gc->_geom = nullptr;
 
-    cdata->_released_geoms.insert(gc);
+    _released_geoms.insert(gc);
   }
 
   _prepared_geoms.clear();
-  cdata->_enqueued_geoms.clear();
+  _enqueued_geoms.clear();
 
   return num_geoms;
 }
@@ -644,8 +618,7 @@ release_all_geoms() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_geoms() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_geoms.size();
+  return _enqueued_geoms.size();
 }
 
 /**
@@ -695,9 +668,9 @@ prepare_geom_now(Geom *geom, GraphicsStateGuardianBase *gsg) {
  */
 void PreparedGraphicsObjects::
 enqueue_shader(Shader *shader) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
+  ReMutexHolder holder(_lock);
+
+  _enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
 }
 
 /**
@@ -706,10 +679,10 @@ enqueue_shader(Shader *shader) {
  */
 PT(PreparedGraphicsObjects::EnqueuedObject) PreparedGraphicsObjects::
 enqueue_shader_future(Shader *shader) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
+  ReMutexHolder holder(_lock);
+
   std::pair<EnqueuedShaders::iterator, bool> result =
-    cdata->_enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
+    _enqueued_shaders.insert(EnqueuedShaders::value_type(shader, nullptr));
   if (result.first->second == nullptr) {
     result.first->second = new EnqueuedObject(this, shader);
   }
@@ -723,10 +696,10 @@ enqueue_shader_future(Shader *shader) {
  */
 bool PreparedGraphicsObjects::
 is_shader_queued(const Shader *shader) const {
-  //ReMutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-  EnqueuedShaders::const_iterator qi = cdata->_enqueued_shaders.find((Shader *)shader);
-  return (qi != cdata->_enqueued_shaders.end());
+  ReMutexHolder holder(_lock);
+
+  EnqueuedShaders::const_iterator qi = _enqueued_shaders.find((Shader *)shader);
+  return (qi != _enqueued_shaders.end());
 }
 
 /**
@@ -740,14 +713,14 @@ is_shader_queued(const Shader *shader) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_shader(Shader *se) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  EnqueuedShaders::iterator qi = cdata->_enqueued_shaders.find(se);
-  if (qi != cdata->_enqueued_shaders.end()) {
+  ReMutexHolder holder(_lock);
+
+  EnqueuedShaders::iterator qi = _enqueued_shaders.find(se);
+  if (qi != _enqueued_shaders.end()) {
     if (qi->second != nullptr) {
       qi->second->notify_removed();
     }
-    cdata->_enqueued_shaders.erase(qi);
+    _enqueued_shaders.erase(qi);
     return true;
   }
   return false;
@@ -783,8 +756,7 @@ release_shader(ShaderContext *sc) {
   bool removed = (_prepared_shaders.erase(sc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-  cdata->_released_shaders.insert(sc);
+  _released_shaders.insert(sc);
 }
 
 /**
@@ -796,30 +768,28 @@ int PreparedGraphicsObjects::
 release_all_shaders() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_shaders = (int)_prepared_shaders.size() + (int)cdata->_enqueued_shaders.size();
+  int num_shaders = (int)_prepared_shaders.size() + (int)_enqueued_shaders.size();
 
   for (ShaderContext *sc : _prepared_shaders) {
     sc->_shader->clear_prepared(this);
     sc->_shader = nullptr;
 
-    cdata->_released_shaders.insert(sc);
+    _released_shaders.insert(sc);
   }
 
   _prepared_shaders.clear();
 
   // Mark any futures as cancelled.
   EnqueuedShaders::iterator qsi;
-  for (qsi = cdata->_enqueued_shaders.begin();
-       qsi != cdata->_enqueued_shaders.end();
+  for (qsi = _enqueued_shaders.begin();
+       qsi != _enqueued_shaders.end();
        ++qsi) {
     if (qsi->second != nullptr) {
       qsi->second->notify_removed();
     }
   }
 
-  cdata->_enqueued_shaders.clear();
+  _enqueued_shaders.clear();
 
   return num_shaders;
 }
@@ -830,8 +800,7 @@ release_all_shaders() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_shaders() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_shaders.size();
+  return _enqueued_shaders.size();
 }
 
 /**
@@ -881,10 +850,9 @@ prepare_shader_now(Shader *se, GraphicsStateGuardianBase *gsg) {
  */
 void PreparedGraphicsObjects::
 enqueue_vertex_buffer(GeomVertexArrayData *data) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_vertex_buffers.insert(data);
+  _enqueued_vertex_buffers.insert(data);
 }
 
 /**
@@ -893,11 +861,10 @@ enqueue_vertex_buffer(GeomVertexArrayData *data) {
  */
 bool PreparedGraphicsObjects::
 is_vertex_buffer_queued(const GeomVertexArrayData *data) const {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDReader cdata(_cycler);
-  EnqueuedVertexBuffers::const_iterator qi = cdata->_enqueued_vertex_buffers.find((GeomVertexArrayData *)data);
-  return (qi != cdata->_enqueued_vertex_buffers.end());
+  EnqueuedVertexBuffers::const_iterator qi = _enqueued_vertex_buffers.find((GeomVertexArrayData *)data);
+  return (qi != _enqueued_vertex_buffers.end());
 }
 
 /**
@@ -911,12 +878,11 @@ is_vertex_buffer_queued(const GeomVertexArrayData *data) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_vertex_buffer(GeomVertexArrayData *data) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  EnqueuedVertexBuffers::iterator qi = cdata->_enqueued_vertex_buffers.find(data);
-  if (qi != cdata->_enqueued_vertex_buffers.end()) {
-    cdata->_enqueued_vertex_buffers.erase(qi);
+  EnqueuedVertexBuffers::iterator qi = _enqueued_vertex_buffers.find(data);
+  if (qi != _enqueued_vertex_buffers.end()) {
+    _enqueued_vertex_buffers.erase(qi);
     return true;
   }
   return false;
@@ -956,16 +922,14 @@ release_vertex_buffer(VertexBufferContext *vbc) {
   bool removed = (_prepared_vertex_buffers.erase(vbc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-
   if (_support_released_buffer_cache) {
     cache_unprepared_buffer(vbc, data_size_bytes, usage_hint,
                             _vertex_buffer_cache,
                             _vertex_buffer_cache_lru, _vertex_buffer_cache_size,
                             released_vbuffer_cache_size,
-                            cdata->_released_vertex_buffers);
+                            _released_vertex_buffers);
   } else {
-    cdata->_released_vertex_buffers.push_back(vbc);
+    _released_vertex_buffers.push_back(vbc);
   }
 }
 
@@ -978,20 +942,18 @@ int PreparedGraphicsObjects::
 release_all_vertex_buffers() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_vertex_buffers = (int)_prepared_vertex_buffers.size() + (int)cdata->_enqueued_vertex_buffers.size();
+  int num_vertex_buffers = (int)_prepared_vertex_buffers.size() + (int)_enqueued_vertex_buffers.size();
 
   for (BufferContext *bc : _prepared_vertex_buffers) {
     VertexBufferContext *vbc = (VertexBufferContext *)bc;
     vbc->get_data()->clear_prepared(this);
     vbc->_object = nullptr;
 
-    cdata->_released_vertex_buffers.push_back(vbc);
+    _released_vertex_buffers.push_back(vbc);
   }
 
   _prepared_vertex_buffers.clear();
-  cdata->_enqueued_vertex_buffers.clear();
+  _enqueued_vertex_buffers.clear();
 
   // Also clear the cache of recently-unprepared vertex buffers.
   BufferCache::iterator bci;
@@ -1002,7 +964,7 @@ release_all_vertex_buffers() {
     nassertr(!buffer_list.empty(), num_vertex_buffers);
     for (BufferContext *bc : buffer_list) {
       VertexBufferContext *vbc = (VertexBufferContext *)bc;
-      cdata->_released_vertex_buffers.push_back(vbc);
+      _released_vertex_buffers.push_back(vbc);
     }
   }
   _vertex_buffer_cache.clear();
@@ -1018,8 +980,7 @@ release_all_vertex_buffers() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_vertex_buffers() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_vertex_buffers.size();
+  return _enqueued_vertex_buffers.size();
 }
 
 /**
@@ -1083,9 +1044,9 @@ prepare_vertex_buffer_now(GeomVertexArrayData *data, GraphicsStateGuardianBase *
  */
 void PreparedGraphicsObjects::
 enqueue_index_buffer(GeomPrimitive *data) {
-  //ReMutexHolder holder(_lock);
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_index_buffers.insert(data);
+  ReMutexHolder holder(_lock);
+
+  _enqueued_index_buffers.insert(data);
 }
 
 /**
@@ -1094,11 +1055,10 @@ enqueue_index_buffer(GeomPrimitive *data) {
  */
 bool PreparedGraphicsObjects::
 is_index_buffer_queued(const GeomPrimitive *data) const {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDReader cdata(_cycler);
-  EnqueuedIndexBuffers::const_iterator qi = cdata->_enqueued_index_buffers.find((GeomPrimitive *)data);
-  return (qi != cdata->_enqueued_index_buffers.end());
+  EnqueuedIndexBuffers::const_iterator qi = _enqueued_index_buffers.find((GeomPrimitive *)data);
+  return (qi != _enqueued_index_buffers.end());
 }
 
 /**
@@ -1112,12 +1072,11 @@ is_index_buffer_queued(const GeomPrimitive *data) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_index_buffer(GeomPrimitive *data) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  EnqueuedIndexBuffers::iterator qi = cdata->_enqueued_index_buffers.find(data);
-  if (qi != cdata->_enqueued_index_buffers.end()) {
-    cdata->_enqueued_index_buffers.erase(qi);
+  EnqueuedIndexBuffers::iterator qi = _enqueued_index_buffers.find(data);
+  if (qi != _enqueued_index_buffers.end()) {
+    _enqueued_index_buffers.erase(qi);
     return true;
   }
   return false;
@@ -1157,16 +1116,14 @@ release_index_buffer(IndexBufferContext *ibc) {
   bool removed = (_prepared_index_buffers.erase(ibc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-
   if (_support_released_buffer_cache) {
     cache_unprepared_buffer(ibc, data_size_bytes, usage_hint,
                             _index_buffer_cache,
                             _index_buffer_cache_lru, _index_buffer_cache_size,
                             released_ibuffer_cache_size,
-                            cdata->_released_index_buffers);
+                            _released_index_buffers);
   } else {
-    cdata->_released_index_buffers.push_back(ibc);
+    _released_index_buffers.push_back(ibc);
   }
 }
 
@@ -1179,20 +1136,18 @@ int PreparedGraphicsObjects::
 release_all_index_buffers() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_index_buffers = (int)_prepared_index_buffers.size() + (int)cdata->_enqueued_index_buffers.size();
+  int num_index_buffers = (int)_prepared_index_buffers.size() + (int)_enqueued_index_buffers.size();
 
   for (BufferContext *bc : _prepared_index_buffers) {
     IndexBufferContext *ibc = (IndexBufferContext *)bc;
     ibc->get_data()->clear_prepared(this);
     ibc->_object = nullptr;
 
-    cdata->_released_index_buffers.push_back(ibc);
+    _released_index_buffers.push_back(ibc);
   }
 
   _prepared_index_buffers.clear();
-  cdata->_enqueued_index_buffers.clear();
+  _enqueued_index_buffers.clear();
 
   // Also clear the cache of recently-unprepared index buffers.
   BufferCache::iterator bci;
@@ -1203,7 +1158,7 @@ release_all_index_buffers() {
     nassertr(!buffer_list.empty(), num_index_buffers);
     for (BufferContext *bc : buffer_list) {
       IndexBufferContext *ibc = (IndexBufferContext *)bc;
-      cdata->_released_index_buffers.push_back(ibc);
+      _released_index_buffers.push_back(ibc);
     }
   }
   _index_buffer_cache.clear();
@@ -1219,8 +1174,7 @@ release_all_index_buffers() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_index_buffers() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_index_buffers.size();
+  return _enqueued_index_buffers.size();
 }
 
 /**
@@ -1283,10 +1237,9 @@ prepare_index_buffer_now(GeomPrimitive *data, GraphicsStateGuardianBase *gsg) {
  */
 void PreparedGraphicsObjects::
 enqueue_shader_buffer(ShaderBuffer *data) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  cdata->_enqueued_shader_buffers.insert(data);
+  _enqueued_shader_buffers.insert(data);
 }
 
 /**
@@ -1295,11 +1248,10 @@ enqueue_shader_buffer(ShaderBuffer *data) {
  */
 bool PreparedGraphicsObjects::
 is_shader_buffer_queued(const ShaderBuffer *data) const {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDReader cdata(_cycler);
-  EnqueuedShaderBuffers::const_iterator qi = cdata->_enqueued_shader_buffers.find((ShaderBuffer *)data);
-  return (qi != cdata->_enqueued_shader_buffers.end());
+  EnqueuedShaderBuffers::const_iterator qi = _enqueued_shader_buffers.find((ShaderBuffer *)data);
+  return (qi != _enqueued_shader_buffers.end());
 }
 
 /**
@@ -1313,12 +1265,11 @@ is_shader_buffer_queued(const ShaderBuffer *data) const {
  */
 bool PreparedGraphicsObjects::
 dequeue_shader_buffer(ShaderBuffer *data) {
-  //ReMutexHolder holder(_lock);
+  ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-  EnqueuedShaderBuffers::iterator qi = cdata->_enqueued_shader_buffers.find(data);
-  if (qi != cdata->_enqueued_shader_buffers.end()) {
-    cdata->_enqueued_shader_buffers.erase(qi);
+  EnqueuedShaderBuffers::iterator qi = _enqueued_shader_buffers.find(data);
+  if (qi != _enqueued_shader_buffers.end()) {
+    _enqueued_shader_buffers.erase(qi);
     return true;
   }
   return false;
@@ -1356,8 +1307,7 @@ release_shader_buffer(BufferContext *bc) {
   bool removed = (_prepared_shader_buffers.erase(bc) != 0);
   nassertv(removed);
 
-  CDWriter cdata(_cycler);
-  cdata->_released_shader_buffers.push_back(bc);
+  _released_shader_buffers.push_back(bc);
 }
 
 /**
@@ -1369,18 +1319,16 @@ int PreparedGraphicsObjects::
 release_all_shader_buffers() {
   ReMutexHolder holder(_lock);
 
-  CDWriter cdata(_cycler);
-
-  int num_shader_buffers = (int)_prepared_shader_buffers.size() + (int)cdata->_enqueued_shader_buffers.size();
+  int num_shader_buffers = (int)_prepared_shader_buffers.size() + (int)_enqueued_shader_buffers.size();
 
   for (BufferContext *bc : _prepared_shader_buffers) {
     ((ShaderBuffer *)bc->_object)->clear_prepared(this);
     bc->_object = nullptr;
-    cdata->_released_shader_buffers.push_back(bc);
+    _released_shader_buffers.push_back(bc);
   }
 
   _prepared_shader_buffers.clear();
-  cdata->_enqueued_shader_buffers.clear();
+  _enqueued_shader_buffers.clear();
 
   return num_shader_buffers;
 }
@@ -1391,8 +1339,7 @@ release_all_shader_buffers() {
  */
 int PreparedGraphicsObjects::
 get_num_queued_shader_buffers() const {
-  CDReader cdata(_cycler);
-  return cdata->_enqueued_shader_buffers.size();
+  return _enqueued_shader_buffers.size();
 }
 
 /**
@@ -1505,37 +1452,6 @@ cancel() {
 }
 
 /**
- * Should be called by the App thread at the beginning of the frame.
- *
- * This clears out the list of enqueued and released graphics objects.
- */
-void PreparedGraphicsObjects::
-begin_frame_app(Thread *current_thread) {
-  CDWriter cdata(_cycler, current_thread);
-
-  cdata->_released_textures.clear();
-  cdata->_enqueued_textures.clear();
-
-  cdata->_released_samplers.clear();
-  cdata->_enqueued_samplers.clear();
-
-  cdata->_released_geoms.clear();
-  cdata->_enqueued_geoms.clear();
-
-  cdata->_released_shaders.clear();
-  cdata->_enqueued_shaders.clear();
-
-  cdata->_released_vertex_buffers.clear();
-  cdata->_enqueued_vertex_buffers.clear();
-
-  cdata->_released_index_buffers.clear();
-  cdata->_enqueued_index_buffers.clear();
-
-  cdata->_released_shader_buffers.clear();
-  cdata->_enqueued_shader_buffers.clear();
-}
-
-/**
  * This is called by the GraphicsStateGuardian to indicate that it is about to
  * begin processing of the frame.
  *
@@ -1547,48 +1463,46 @@ void PreparedGraphicsObjects::
 begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   ReMutexHolder holder(_lock, current_thread);
 
-  CDReader cdata(_cycler);
-
   // First, release all the textures, geoms, and buffers awaiting release.
-  if (!cdata->_released_textures.empty()) {
-    gsg->release_textures(cdata->_released_textures);
-    //_released_textures.clear();
+  if (!_released_textures.empty()) {
+    gsg->release_textures(_released_textures);
+    _released_textures.clear();
   }
 
-  if (!cdata->_released_samplers.empty()) {
-    for (SamplerContext *sc : cdata->_released_samplers) {
+  if (!_released_samplers.empty()) {
+    for (SamplerContext *sc : _released_samplers) {
       gsg->release_sampler(sc);
     }
-    //_released_samplers.clear();
+    _released_samplers.clear();
   }
 
-  if (!cdata->_released_geoms.empty()) {
-    for (GeomContext *gc : cdata->_released_geoms) {
+  if (!_released_geoms.empty()) {
+    for (GeomContext *gc : _released_geoms) {
       gsg->release_geom(gc);
     }
-    //_released_geoms.clear();
+    _released_geoms.clear();
   }
 
-  if (!cdata->_released_shaders.empty()) {
-    for (ShaderContext *sc : cdata->_released_shaders) {
+  if (!_released_shaders.empty()) {
+    for (ShaderContext *sc : _released_shaders) {
       gsg->release_shader(sc);
     }
-    //_released_shaders.clear();
+    _released_shaders.clear();
   }
 
-  if (!cdata->_released_vertex_buffers.empty()) {
-    gsg->release_vertex_buffers(cdata->_released_vertex_buffers);
-    //_released_vertex_buffers.clear();
+  if (!_released_vertex_buffers.empty()) {
+    gsg->release_vertex_buffers(_released_vertex_buffers);
+    _released_vertex_buffers.clear();
   }
 
-  if (!cdata->_released_index_buffers.empty()) {
-    gsg->release_index_buffers(cdata->_released_index_buffers);
-    //_released_index_buffers.clear();
+  if (!_released_index_buffers.empty()) {
+    gsg->release_index_buffers(_released_index_buffers);
+    _released_index_buffers.clear();
   }
 
-  if (!cdata->_released_shader_buffers.empty()) {
-    gsg->release_shader_buffers(cdata->_released_shader_buffers);
-    //_released_shader_buffers.clear();
+  if (!_released_shader_buffers.empty()) {
+    gsg->release_shader_buffers(_released_shader_buffers);
+    _released_shader_buffers.clear();
   }
 
   // Reset the residency trackers.
@@ -1598,9 +1512,9 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   _sbuffer_residency.begin_frame(current_thread);
 
   // Now prepare all the textures, geoms, and buffers awaiting preparation.
-  EnqueuedTextures::const_iterator qti;
-  for (qti = cdata->_enqueued_textures.begin();
-       qti != cdata->_enqueued_textures.end();
+  EnqueuedTextures::iterator qti;
+  for (qti = _enqueued_textures.begin();
+       qti != _enqueued_textures.end();
        ++qti) {
     Texture *tex = qti->first;
     for (int view = 0; view < tex->get_num_views(); ++view) {
@@ -1614,31 +1528,31 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
     }
   }
 
-  //_enqueued_textures.clear();
+  _enqueued_textures.clear();
 
-  EnqueuedSamplers::const_iterator qsmi;
-  for (qsmi = cdata->_enqueued_samplers.begin();
-       qsmi != cdata->_enqueued_samplers.end();
+  EnqueuedSamplers::iterator qsmi;
+  for (qsmi = _enqueued_samplers.begin();
+       qsmi != _enqueued_samplers.end();
        ++qsmi) {
     const SamplerState &sampler = (*qsmi);
     sampler.prepare_now(this, gsg);
   }
 
-  //_enqueued_samplers.clear();
+  _enqueued_samplers.clear();
 
-  EnqueuedGeoms::const_iterator qgi;
-  for (qgi = cdata->_enqueued_geoms.begin();
-       qgi != cdata->_enqueued_geoms.end();
+  EnqueuedGeoms::iterator qgi;
+  for (qgi = _enqueued_geoms.begin();
+       qgi != _enqueued_geoms.end();
        ++qgi) {
     Geom *geom = (*qgi);
     geom->prepare_now(this, gsg);
   }
 
-  //_enqueued_geoms.clear();
+  _enqueued_geoms.clear();
 
-  EnqueuedShaders::const_iterator qsi;
-  for (qsi = cdata->_enqueued_shaders.begin();
-       qsi != cdata->_enqueued_shaders.end();
+  EnqueuedShaders::iterator qsi;
+  for (qsi = _enqueued_shaders.begin();
+       qsi != _enqueued_shaders.end();
        ++qsi) {
     Shader *shader = qsi->first;
     ShaderContext *sc = shader->prepare_now(this, gsg);
@@ -1647,21 +1561,21 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
     }
   }
 
-  //_enqueued_shaders.clear();
+  _enqueued_shaders.clear();
 
-  EnqueuedVertexBuffers::const_iterator qvbi;
-  for (qvbi = cdata->_enqueued_vertex_buffers.begin();
-       qvbi != cdata->_enqueued_vertex_buffers.end();
+  EnqueuedVertexBuffers::iterator qvbi;
+  for (qvbi = _enqueued_vertex_buffers.begin();
+       qvbi != _enqueued_vertex_buffers.end();
        ++qvbi) {
     GeomVertexArrayData *data = (*qvbi);
     data->prepare_now(this, gsg);
   }
 
-  //_enqueued_vertex_buffers.clear();
+  _enqueued_vertex_buffers.clear();
 
-  EnqueuedIndexBuffers::const_iterator qibi;
-  for (qibi = cdata->_enqueued_index_buffers.begin();
-       qibi != cdata->_enqueued_index_buffers.end();
+  EnqueuedIndexBuffers::iterator qibi;
+  for (qibi = _enqueued_index_buffers.begin();
+       qibi != _enqueued_index_buffers.end();
        ++qibi) {
     GeomPrimitive *data = (*qibi);
     // We need this check because the actual index data may not actually have
@@ -1671,7 +1585,7 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
     }
   }
 
-  //_enqueued_index_buffers.clear();
+  _enqueued_index_buffers.clear();
 }
 
 /**
@@ -1784,12 +1698,4 @@ get_cached_buffer(size_t data_size_bytes, GeomEnums::UsageHint usage_hint,
 
   buffer_cache_size -= data_size_bytes;
   return buffer;
-}
-
-/**
- *
- */
-CycleData *PreparedGraphicsObjects::CData::
-make_copy() const {
-  return new CData(*this);
 }
