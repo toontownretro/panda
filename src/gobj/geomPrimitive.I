@@ -510,7 +510,7 @@ INLINE GeomPrimitivePipelineReader::
 GeomPrimitivePipelineReader(const GeomPrimitive *object,
                             Thread *current_thread) :
 #ifndef CPPPARSER
-  _cdata(object->_cycler.read(current_thread)),
+  _cdata(object->_cycler.read_unlocked(current_thread)),
 #endif
   _object(std::move(object)),
   _vertices_cdata(nullptr),
@@ -526,7 +526,7 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
 
   if (!_cdata->_vertices.is_null()) {
     _vertices = _cdata->_vertices.get_read_pointer(current_thread);
-    _vertices_cdata = _vertices->_cycler.read(current_thread);
+    _vertices_cdata = _vertices->_cycler.read_unlocked(current_thread);
 //#ifdef DO_PIPELINING
 //    _vertices_cdata->ref();
 //#endif  // DO_PIPELINING
@@ -544,7 +544,7 @@ INLINE GeomPrimitivePipelineReader::
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif // _DEBUG
-  _object->_cycler.release_read(_cdata);
+  //_object->_cycler.release_read(_cdata);
 
 //#ifdef DO_PIPELINING
 //  unref_delete((CycleData *)_cdata);
@@ -555,7 +555,7 @@ INLINE GeomPrimitivePipelineReader::
     // below.
     _vertices_cdata->_rw_lock.release();
 
-    _vertices->_cycler.release_read(_vertices_cdata);
+    //_vertices->_cycler.release_read(_vertices_cdata);
 
 //#ifdef DO_PIPELINING
 //    unref_delete((CycleData *)_vertices_cdata);

@@ -360,7 +360,7 @@ GeomVertexArrayDataHandle(GeomVertexArrayData *object,
 INLINE void GeomVertexArrayDataHandle::
 assign(CPT(GeomVertexArrayData) object) {
   _object = (GeomVertexArrayData *)object.p();
-  _cdata = (GeomVertexArrayData::CData *)_object->_cycler.read(_current_thread);
+  _cdata = (GeomVertexArrayData::CData *)_object->_cycler.read_unlocked(_current_thread);
   _writable = false;
 
 #ifdef _DEBUG
@@ -381,7 +381,7 @@ assign(CPT(GeomVertexArrayData) object) {
 INLINE void GeomVertexArrayDataHandle::
 assign(const GeomVertexArrayData *object) {
   _object = (GeomVertexArrayData *)object;
-  _cdata = (GeomVertexArrayData::CData *)object->_cycler.read(_current_thread);
+  _cdata = (GeomVertexArrayData::CData *)object->_cycler.read_unlocked(_current_thread);
   _writable = false;
 
 #ifdef _DEBUG
@@ -450,7 +450,7 @@ release() {
     _object->_cycler.release_write(_cdata);
 
   } else if (!_writable && _object != nullptr && _cdata != nullptr) {
-    _object->_cycler.release_read(_cdata);
+    //_object->_cycler.release_read(_cdata);
   }
 
   if (_cdata != nullptr) {

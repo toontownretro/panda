@@ -781,7 +781,7 @@ INLINE GeomVertexDataPipelineReader::
 GeomVertexDataPipelineReader(const GeomVertexData *object,
                              Thread *current_thread) :
   GeomVertexDataPipelineBase((GeomVertexData *)object, current_thread,
-                             (GeomVertexData::CData *)object->_cycler.read(current_thread)),
+                             (GeomVertexData::CData *)object->_cycler.read_unlocked(current_thread)),
   _got_array_readers(false),
   _num_array_readers(0),
   _fast_readers(nullptr)
@@ -794,7 +794,7 @@ GeomVertexDataPipelineReader(const GeomVertexData *object,
 INLINE GeomVertexDataPipelineReader::
 ~GeomVertexDataPipelineReader() {
   if (_object != nullptr && _cdata != nullptr) {
-    _object->_cycler.release_read(_cdata);
+    //_object->_cycler.release_read(_cdata);
   }
   //if (_drawing && _got_array_readers) {
   //  for (int i = 0; i < _num_array_readers; ++i) {
@@ -810,7 +810,7 @@ INLINE void GeomVertexDataPipelineReader::
 set_object(const GeomVertexData *object) {
 #ifdef DO_PIPELINING
   if (_cdata != nullptr && _object != nullptr) {
-    _object->_cycler.release_read(_cdata);
+    //_object->_cycler.release_read(_cdata);
     //unref_delete((CycleData *)_cdata);
   }
 #endif  // DO_PIPELINING
@@ -826,7 +826,7 @@ set_object(const GeomVertexData *object) {
   //_array_readers.clear();
 
   _object = (GeomVertexData *)object;
-  _cdata = (GeomVertexData::CData *)_object->_cycler.read(_current_thread);
+  _cdata = (GeomVertexData::CData *)_object->_cycler.read_unlocked(_current_thread);
   _got_array_readers = false;
 
 //#ifdef DO_PIPELINING
