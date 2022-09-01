@@ -371,7 +371,7 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
 
     if (in_z_prepass) {
       CullableObject *z_pre_obj = new CullableObject(*object);
-      z_pre_obj->_state = get_z_prepass_state();
+      z_pre_obj->_state = object->_state->compose(get_z_prepass_state());
       if (z_pre_obj->munge_geom(_gsg, nullptr, traverser, force)) {
         int z_pre_bin_index = z_pre_obj->_state->get_bin_index();
         CullBin *bin = get_bin(z_pre_bin_index);
