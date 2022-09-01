@@ -223,8 +223,8 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       CPT(Geom) geom = obj._geoms[gi]._geom;
 
       // Munge the geom as required by the GSG.
-      PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
-      geom = transformer.premunge_geom(geom, munger);
+      //PT(GeomMunger) munger = gsg->get_geom_munger(geom_state, current_thread);
+      //geom = transformer.premunge_geom(geom, munger);
 
       // Prepare each of the vertex arrays in the munged Geom.
       CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(false, current_thread);
@@ -260,29 +260,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
         }
       }
 
-      // As well as the shaders.
-      const ShaderAttrib *sa;
-      if (geom_state->get_attrib(sa)) {
-        Shader *shader = (Shader *)sa->get_shader();
-        if (shader != nullptr) {
-          prepared_objects->enqueue_shader(shader);
-        }
-        else if (sa->auto_shader()) {
-          gsg->ensure_generated_shader(geom_state);
-        }
-
-        // Prepare the texture shader inputs.
-        for (auto it = sa->_texture_inputs.begin(); it != sa->_texture_inputs.end(); ++it) {
-          SamplerState samp;
-          Texture *tex = sa->get_shader_input_texture((*it).first, &samp);
-          if (tex != nullptr) {
-            prepared_objects->enqueue_texture(tex);
-          }
-          prepared_objects->enqueue_sampler(samp);
-        }
-      }
-
-      // And now prepare each of the textures.
+      // And textures specified through TextureAttrib.
       const TextureAttrib *ta;
       if (geom_state->get_attrib(ta)) {
         int num_stages = ta->get_num_on_stages();
@@ -293,6 +271,29 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
             prepared_objects->enqueue_sampler(texture->get_default_sampler());
           }
         }
+      }
+
+      // Determine the shader for this state, and prepare it.
+      const ShaderAttrib *sa;
+      geom_state->get_attrib_def(sa);
+      if (sa->auto_shader()) {
+        gsg->ensure_generated_shader(geom_state);
+        if (geom_state->_generated_shader != nullptr) {
+          sa = DCAST(ShaderAttrib, geom_state->_generated_shader);
+        }
+      }
+      Shader *shader = (Shader *)sa->get_shader();
+      if (shader != nullptr) {
+        prepared_objects->enqueue_shader(shader);
+      }
+      // Prepare the texture shader inputs of the shader.
+      for (auto it = sa->_texture_inputs.begin(); it != sa->_texture_inputs.end(); ++it) {
+        SamplerState samp;
+        Texture *tex = sa->get_shader_input_texture((*it).first, &samp);
+        if (tex != nullptr) {
+          prepared_objects->enqueue_texture(tex);
+        }
+        prepared_objects->enqueue_sampler(samp);
       }
     }
   }
