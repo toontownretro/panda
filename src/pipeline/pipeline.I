@@ -42,7 +42,7 @@ get_version(Thread *current_thread) const {
  */
 INLINE void Pipeline::
 set_min_stages(int min_stages) {
-  set_num_stages(std::max(min_stages, get_num_stages()));
+  set_num_stages((std::max)(min_stages, get_num_stages()));
 }
 
 /**

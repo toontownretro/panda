@@ -216,7 +216,9 @@
     virtualFileSystem_ext.cxx \
     virtualFileSystem_ext.h \
     virtualFile_ext.cxx \
-    virtualFile_ext.h
+    virtualFile_ext.h \
+    multifile_ext.h \
+    multifile_ext.I
 
   // These are extensions of classes in dtool.  We define them here because we
   // can't directly run interrogate on dtool.  See config_express.N for more
