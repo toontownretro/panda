@@ -44,9 +44,6 @@
 
 #ifdef HAVE_SLEEF
 
-#include <sleef-config.h>
-#include <sleef.h>
-
 #if defined(__AVX2__)
 #ifndef SLEEF_AVX2_128
 #define SLEEF_AVX2_128 1
@@ -58,6 +55,23 @@
 #endif
 
 #endif
+
+#ifndef PSLEEF_INLINE
+
+#include <sleef-config.h>
+#include <sleef.h>
+
+#else // PSLEEF_INLINE
+
+#include <sleefinline_sse2.h>
+#ifdef SLEEF_SSE4
+#include <sleefinline_sse4.>
+#endif
+#ifdef SLEEF_AVX2_128
+#include <sleefinline_avx2128.h>
+#endif
+
+#endif // PSLEEF_INLINE
 
 #endif // HAVE_SLEEF
 

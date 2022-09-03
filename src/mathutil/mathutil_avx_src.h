@@ -23,15 +23,24 @@
 
 #ifdef HAVE_SLEEF
 
-#include <sleef-config.h>
-#include <sleef.h>
-
 #if defined(__AVX2__)
 #ifndef SLEEF_AVX2
 #define SLEEF_AVX2 1
 #endif
-
 #endif
+
+#ifndef PSLEEF_INLINE
+#include <sleef-config.h>
+#include <sleef.h>
+
+#else // PSLEEF_INLINE
+
+#include <sleefinline_avx.h>
+#ifdef SLEEF_AVX2
+#include <sleefinline_avx2.h>
+#endif
+
+#endif // PSLEEF_INLINE
 
 #endif // HAVE_SLEEF
 
