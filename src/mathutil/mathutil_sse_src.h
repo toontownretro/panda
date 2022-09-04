@@ -71,6 +71,8 @@
 #include <sleefinline_avx2128.h>
 #endif
 
+#define Sleef___m128_2
+
 #endif // PSLEEF_INLINE
 
 #endif // HAVE_SLEEF
@@ -642,17 +644,41 @@ simd_atan(PN_vec4f a) {
 ALWAYS_INLINE void
 simd_sincos(PN_vec4f a, PN_vec4f &sin, PN_vec4f &cos) {
 #ifdef SLEEF_AVX2_128
-  Sleef___m128_2 ret = Sleef_sincosf4_u35avx2128(a);
+
+#ifdef PSLEEF_INLINE
+  vfloat2_avx2128_sleef
+#else
+  Sleef___m128_2
+#endif
+  ret = Sleef_sincosf4_u35avx2128(a);
+
   sin = ret.x;
   cos = ret.y;
+
 #elif defined(SLEEF_SSE4)
-  Sleef___m128_2 ret = Sleef_sincos4f_u35sse4(a);
+
+#ifdef PSLEEF_INLINE
+  vfloat2_sse4_sleef
+#else
+  Sleef___m128_2
+#endif
+  ret = Sleef_sincosf4_u35sse4(a);
+
   sin = ret.x;
   cos = ret.y;
+
 #elif defined(HAVE_SLEEF)
-  Sleef___m128_2 ret = Sleef_sincosf4_u35sse2(a);
+
+#ifdef PSLEEF_INLINE
+  vfloat2_sse2_sleef
+#else
+  Sleef___m128_2
+#endif
+  ret = Sleef_sincosf4_u35sse2(a);
+
   sin = ret.x;
   cos = ret.y;
+
 #else
   csincos(simd_col(a, 0), &simd_col(sin, 0), &simd_col(cos, 0));
   csincos(simd_col(a, 1), &simd_col(sin, 1), &simd_col(cos, 1));

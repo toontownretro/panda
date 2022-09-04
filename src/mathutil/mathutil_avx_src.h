@@ -621,11 +621,23 @@ simd_atan(PN_vec8f a) {
 ALWAYS_INLINE void
 simd_sincos(PN_vec8f a, PN_vec8f &sin, PN_vec8f &cos) {
 #ifdef SLEEF_AVX2
-  Sleef___m256_2 ret = Sleef_sincosf8_u35avx2(a);
+#ifdef PSLEEF_INLINE
+  vfloat2_avx2_sleef
+#else
+  Sleef___m256_2
+#endif
+  ret = Sleef_sincosf8_u35avx2(a);
+
   sin = ret.x;
   cos = ret.y;
 #elif defined(HAVE_SLEEF)
-  Sleef___m256_2 ret = Sleef_sincosf8_u35avx(a);
+#ifdef PSLEEF_INLINE
+  vfloat2_avx_sleef
+#else
+  Sleef___m256_2
+#endif
+  ret = Sleef_sincosf8_u35avx(a);
+
   sin = ret.x;
   cos = ret.y;
 #else
