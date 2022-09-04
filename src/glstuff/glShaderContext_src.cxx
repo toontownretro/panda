@@ -3370,6 +3370,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
     if (tex == nullptr) {
       // Apply a white texture in order to make it easier to use a shader that
       // takes a texture on a model that doesn't have a texture applied.
+#ifndef OPENGLES
       if (multi_bind) {
         GLuint white_tex = _glgsg->get_white_texture();
         if (white_tex != _glgsg->_bound_textures[i]) {
@@ -3382,7 +3383,9 @@ update_shader_texture_bindings(ShaderContext *prev) {
           min_samp_changed_slot = std::min(min_samp_changed_slot, i);
           _glgsg->_bound_samplers[i] = 0;
         }
-      } else {
+      } else
+#endif
+      {
         _glgsg->apply_white_texture(i);
       }
       continue;
@@ -3425,6 +3428,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
 
     CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tex->prepare_now(view, _glgsg->_prepared_objects, _glgsg));
     if (gtc == nullptr) {
+#ifndef OPENGLES
       if (multi_bind) {
         if (_glgsg->_bound_textures[i] != 0) {
           _glgsg->_bound_textures[i] = 0;
@@ -3437,6 +3441,7 @@ update_shader_texture_bindings(ShaderContext *prev) {
           samp_changed = true;
         }
       }
+#endif
       continue;
     }
 

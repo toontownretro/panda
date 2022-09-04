@@ -12,6 +12,8 @@
   #define LOCAL_LIBS \
     glgsg x11display
 
+  #define BUILDING_DLL BUILDING_PANDA_GLXDISPLAY
+
   #if $[HAVE_X11]
     #define C++FLAGS $[C++FLAGS] -DUSE_X11
   #endif

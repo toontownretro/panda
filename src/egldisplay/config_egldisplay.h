@@ -25,20 +25,20 @@
 #endif
 
 #ifdef OPENGLES_2
-  NotifyCategoryDecl(egldisplay, EXPCL_PANDAGLES2, EXPTP_PANDAGLES2);
+  NotifyCategoryDeclNoExport(egldisplay);
 
-  extern EXPCL_PANDAGLES2 void init_libegldisplay();
-  extern EXPCL_PANDAGLES2 const std::string get_egl_error_string(int error);
+  extern void init_libegldisplay();
+  extern const std::string get_egl_error_string(int error);
 #elif defined(OPENGLES_1)
-  NotifyCategoryDecl(egldisplay, EXPCL_PANDAGLES, EXPTP_PANDAGLES);
+  NotifyCategoryDeclNoExport(egldisplay);
 
-  extern EXPCL_PANDAGLES void init_libegldisplay();
-  extern EXPCL_PANDAGLES const std::string get_egl_error_string(int error);
+  extern void init_libegldisplay();
+  extern const std::string get_egl_error_string(int error);
 #else
-  NotifyCategoryDecl(egldisplay, EXPCL_PANDAGL, EXPTP_PANDAGL);
+  NotifyCategoryDeclNoExport(egldisplay);
 
-  extern EXPCL_PANDAGL void init_libegldisplay();
-  extern EXPCL_PANDAGL const std::string get_egl_error_string(int error);
+  extern void init_libegldisplay();
+  extern const std::string get_egl_error_string(int error);
 #endif
 
 #endif

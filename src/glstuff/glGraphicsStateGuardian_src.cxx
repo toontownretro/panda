@@ -5937,9 +5937,12 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
     PStatGPUTimer timer(this, _prepare_vertex_buffer_pcollector);
 
     CLP(VertexBufferContext) *gvbc = new CLP(VertexBufferContext)(this, _prepared_objects, data);
+#ifndef OPENGLES
     if (_supports_dsa) {
       _glCreateBuffers(1, &gvbc->_index);
-    } else {
+    } else
+#endif
+    {
       _glGenBuffers(1, &gvbc->_index);
     }
 
@@ -5993,6 +5996,7 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
 
       PStatGPUTimer timer(this, _load_vertex_buffer_pcollector, reader->get_current_thread());
 
+#ifndef OPENGLES
       if (_supports_dsa) {
         // We can do this without binding the buffer.
         if (gvbc->changed_size(reader) || gvbc->changed_usage_hint(reader)) {
@@ -6003,7 +6007,9 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
           _glNamedBufferSubData(gvbc->_index, 0, num_bytes, client_pointer);
         }
 
-      } else {
+      } else
+#endif
+      {
         if (_current_vbuffer_index != gvbc->_index) {
 #ifndef NDEBUG
           if (_debug_buffers && GLCAT.is_spam()) {
