@@ -1417,7 +1417,7 @@ configure_dsp(DSP *dsp_conf, FMOD::DSP *dsp) {
     {
       NormalizeDSP *norm_conf = DCAST(NormalizeDSP, dsp_conf);
       dsp->setParameterFloat(FMOD_DSP_NORMALIZE_FADETIME, norm_conf->get_fade_time());
-      dsp->setParameterFloat(FMOD_DSP_NORMALIZE_THRESHHOLD, norm_conf->get_threshold());
+      dsp->setParameterFloat(FMOD_DSP_NORMALIZE_THRESHOLD, norm_conf->get_threshold());
       dsp->setParameterFloat(FMOD_DSP_NORMALIZE_MAXAMP, norm_conf->get_max_amp());
     }
     break;
