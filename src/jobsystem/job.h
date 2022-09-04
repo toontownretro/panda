@@ -97,7 +97,6 @@ public:
   ProcessFunc _function;
 };
 
-#if 0
 /**
  *
  */
@@ -108,7 +107,7 @@ public:
 
   INLINE ParallelProcessIterJob() = default;
 
-  virtual void execute() override;
+  INLINE virtual void execute() override;
 
 public:
   T _begin;
@@ -116,7 +115,6 @@ public:
   int _count;
   ProcessFunc _function;
 };
-#endif
 
 #include "job.I"
 

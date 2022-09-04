@@ -92,3 +92,15 @@ ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
   _function(func)
 {
 }
+
+/**
+ *
+ */
+template<class T>
+void ParallelProcessIterJob<T>::
+execute() {
+  T it = std::next(_begin, _first);
+  for (int i = 0; i < _count; ++it, ++i) {
+    _function(it);
+  }
+}

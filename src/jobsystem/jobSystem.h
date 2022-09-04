@@ -41,10 +41,11 @@ PUBLISHED:
 
   void schedule(Job *job);
   void schedule(Job **jobs, int count, bool wait);
+
   void parallel_process(int count, std::function<void(int)> func, int count_threshold = 2);
 
-  //template<typename T>
-  //INLINE void parallel_process(T begin, T end, std::function<void(const T &)> func);
+  template<typename T>
+  INLINE void parallel_process(T begin, int count, std::function<void(const T &)> func, int count_threshold = 2);
 
   void wait_job(Job *job, Thread *thread = Thread::get_current_thread());
 
