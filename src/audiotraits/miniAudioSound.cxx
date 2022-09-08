@@ -23,16 +23,45 @@ IMPLEMENT_CLASS(MiniAudioSound);
  *
  */
 MiniAudioSound::
-MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr) {
+MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioManager::StreamMode mode) {
   ma_uint32 flags = 0;
-  std::streamsize file_size = file->get_file_size();
-  if (miniaudio_preload_threshold >= 0 && file_size > (std::streamsize)miniaudio_preload_threshold) {
+
+  if (miniaudio_cat.is_debug()) {
+    miniaudio_cat.debug()
+      << "creating sound: " << file->get_filename() << "\n";
+  }
+
+  bool stream = false;
+  if (mode == AudioManager::SM_stream) {
+    // The sound explicitly requests streaming.
+    stream = true;
     if (miniaudio_cat.is_debug()) {
       miniaudio_cat.debug()
-        << file->get_filename() << " is " << file_size << " bytes, streaming from disk\n";
+        << "explicitly requested streaming\n";
     }
-    flags |= MA_SOUND_FLAG_STREAM;
+
+  } else if (mode == AudioManager::SM_heuristic) {
+    // We want to stream if the size is greater than a user-configured
+    // threshold.
+    std::streamsize file_size = file->get_file_size();
+    int threshold = mgr->_preload_threshold;
+    if (threshold >= 0 && file_size > (std::streamsize)threshold) {
+      if (miniaudio_cat.is_debug()) {
+        miniaudio_cat.debug()
+          << "streaming because size of sound is greater than preload threshold\n";
+      }
+      stream = true;
+    }
   }
+
+  if (stream) {
+    flags |= MA_SOUND_FLAG_STREAM;
+
+  } else if (miniaudio_cat.is_debug()) {
+    miniaudio_cat.debug()
+      << "Preloading sound\n";
+  }
+
   if (miniaudio_load_and_decode) {
     if (miniaudio_cat.is_debug()) {
       miniaudio_cat.debug()
@@ -40,6 +69,7 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr) {
     }
     flags |= MA_SOUND_FLAG_DECODE;
   }
+
   if (!positional) {
     if (miniaudio_cat.is_debug()) {
       miniaudio_cat.debug()
@@ -47,10 +77,7 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr) {
     }
     flags |= MA_SOUND_FLAG_NO_SPATIALIZATION;
   }
-  if (miniaudio_cat.is_debug()) {
-    miniaudio_cat.debug()
-      << "init sound from file: " << file->get_filename() << ", flags " << flags << "\n";
-  }
+
   _sound = (ma_sound *)PANDA_MALLOC_SINGLE(sizeof(ma_sound));
   ma_result result = ma_sound_init_from_file(mgr->_ma_engine, file->get_filename().get_fullpath().c_str(),
     flags, mgr->_sound_group, nullptr, _sound);
@@ -63,7 +90,7 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr) {
 }
 
 /**
- *
+ * Note: This only works if the sound was preloaded and not streamed.
  */
 MiniAudioSound::
 MiniAudioSound(MiniAudioSound *other, MiniAudioManager *mgr) :

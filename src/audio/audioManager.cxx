@@ -186,6 +186,50 @@ set_speaker_setup(SpeakerModeCategory cat) {
 }
 
 /**
+ * Specifies how sounds loaded through this audio manager should be
+ * accessed from disk.  It can be overridden on a per-sound basis,
+ * but this setting determines the default stream mode.
+ */
+void AudioManager::
+set_stream_mode(StreamMode mode) {
+  // intentionally blank
+}
+
+/**
+ * Returns the default StreamMode of the audio manager.  Sounds loaded
+ * through this manager will be streamed/preloaded according to this
+ * setting, but it can be optionally overridden on a per-sound basis.
+ */
+AudioManager::StreamMode AudioManager::
+get_stream_mode() const {
+  return SM_default;
+}
+
+/**
+ * When a sound or audio manager is using SM_heuristic, this determines
+ * how big a sound must be for it to be streamed from disk, rather than
+ * preloaded.  -1 means to never stream, 0 means to always stream.
+ *
+ * Specified in bytes.
+ */
+void AudioManager::
+set_preload_threshold(int bytes) {
+  // intentionally blank
+}
+
+/**
+ * Returns the preload threshold of the audio manager.  When a sound or
+ * audio manager is using SM_heuristic, this determine how big a sound must
+ * be for it to be streamed from disk, rather than preloaded.
+ *
+ * Specified in bytes.  -1 means to never stream, 0 means to always stream.
+ */
+int AudioManager::
+get_preload_threshold() const {
+  return -1;
+}
+
+/**
  * Inserts the specified DSP filter into the DSP chain at the specified index.
  * Returns true if the DSP filter is supported by the audio implementation,
  * false otherwise.

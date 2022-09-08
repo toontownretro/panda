@@ -259,7 +259,11 @@ panda_ma_vfs_write(ma_vfs *mvfs, ma_vfs_file file, const void *src, size_t size,
  *
  */
 MiniAudioManager::
-MiniAudioManager() {
+MiniAudioManager() :
+  _stream_mode(SM_sample),
+  _sound_group(nullptr),
+  _preload_threshold(miniaudio_preload_threshold)
+{
   initialize_ma();
 
   // The design of the AudioManager is for grouping/categorizing sounds,
@@ -287,7 +291,7 @@ MiniAudioManager::
  *
  */
 PT(AudioSound) MiniAudioManager::
-get_sound(const Filename &filename, bool positional, int mode) {
+get_sound(const Filename &filename, bool positional, StreamMode mode) {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
   Filename resolved = filename;
@@ -303,7 +307,11 @@ get_sound(const Filename &filename, bool positional, int mode) {
     return get_null_sound();
   }
 
-  return new MiniAudioSound(vfile, positional, this);
+  if (mode == SM_default) {
+    mode = _stream_mode;
+  }
+
+  return new MiniAudioSound(vfile, positional, this, mode);
 }
 
 /**
@@ -323,7 +331,7 @@ get_sound(AudioSound *sound) {
  *
  */
 PT(AudioSound) MiniAudioManager::
-get_sound(MovieAudio *source, bool positional, int mode) {
+get_sound(MovieAudio *source, bool positional, StreamMode mode) {
   return get_null_sound();
 }
 
@@ -422,6 +430,50 @@ reduce_sounds_playing_to(unsigned int count) {
  */
 void MiniAudioManager::
 stop_all_sounds() {
+}
+
+/**
+ * Specifies how sounds loaded through this audio manager should be
+ * accessed from disk.  It can be overridden on a per-sound basis,
+ * but this setting determines the default stream mode.
+ */
+void MiniAudioManager::
+set_stream_mode(StreamMode mode) {
+  _stream_mode = mode;
+}
+
+/**
+ * Returns the default StreamMode of the audio manager.  Sounds loaded
+ * through this manager will be streamed/preloaded according to this
+ * setting, but it can be optionally overridden on a per-sound basis.
+ */
+AudioManager::StreamMode MiniAudioManager::
+get_stream_mode() const {
+  return _stream_mode;
+}
+
+/**
+ * When a sound or audio manager is using SM_heuristic, this determines
+ * how big a sound must be for it to be streamed from disk, rather than
+ * preloaded.  -1 means to never stream, 0 means to always stream.
+ *
+ * Specified in bytes.
+ */
+void MiniAudioManager::
+set_preload_threshold(int bytes) {
+  _preload_threshold = bytes;
+}
+
+/**
+ * Returns the preload threshold of the audio manager.  When a sound or
+ * audio manager is using SM_heuristic, this determine how big a sound must
+ * be for it to be streamed from disk, rather than preloaded.
+ *
+ * Specified in bytes.  -1 means to never stream, 0 means to always stream.
+ */
+int MiniAudioManager::
+get_preload_threshold() const {
+  return _preload_threshold;
 }
 
 /**

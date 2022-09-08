@@ -63,14 +63,33 @@ PUBLISHED:
     SPK_COUNT,
   };
 
+  // This determines how sounds should be loaded.  The AudioManager
+  // has a default setting that applies to all sounds loaded through
+  // the manager, but it can be optionally overridden on a per-sound
+  // basis.
   enum StreamMode {
+    // For sounds, use the StreamMode of the manager.
+    // The manager itself should not use SM_default.
+    SM_default,
+    // Preload the audio if it is smaller than a user-configured
+    // threshold, otherwise stream it.
     SM_heuristic,
+    // Preload entire audio buffer into memory on load.
+    // Good for sounds effects.
     SM_sample,
+    // Stream audio buffer directly from disk.
+    // Good for music.
     SM_stream,
   };
 
   virtual int get_speaker_setup();
   virtual void set_speaker_setup(SpeakerModeCategory cat);
+
+  virtual void set_stream_mode(StreamMode mode);
+  virtual StreamMode get_stream_mode() const;
+
+  virtual void set_preload_threshold(int threshold);
+  virtual int get_preload_threshold() const;
 
   // DSP methods
   INLINE bool add_dsp_to_head(DSP *dsp);
@@ -100,14 +119,14 @@ PUBLISHED:
   virtual bool is_valid() = 0;
 
   // Get a sound:
-  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, int mode=SM_heuristic) = 0;
+  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, StreamMode mode=SM_default) = 0;
   /**
    * Effectively returns a copy of the indicated AudioSound that can be
    * manipulated independently of each other.  In the FMOD implementation, this
    * shares the same sound data, but creates a different channel for playing.
    */
   virtual PT(AudioSound) get_sound(AudioSound *source) = 0;
-  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, int mode=SM_heuristic) = 0;
+  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, StreamMode mode=SM_default) = 0;
 
   PT(AudioSound) get_null_sound();
 

@@ -753,7 +753,7 @@ is_valid() {
  * This is what creates a sound instance.
  */
 PT(AudioSound) FMODAudioManager::
-get_sound(const Filename &file_name, bool positional, int) {
+get_sound(const Filename &file_name, bool positional, StreamMode) {
   ReMutexHolder holder(_lock);
 
   PStatTimer timer(get_sound_coll);
@@ -811,7 +811,7 @@ get_sound(AudioSound *source) {
  * This is what creates a sound instance.
  */
 PT(AudioSound) FMODAudioManager::
-get_sound(MovieAudio *source, bool positional, int) {
+get_sound(MovieAudio *source, bool positional, StreamMode) {
   nassert_raise("FMOD audio manager does not support MovieAudio sources");
   return nullptr;
 }

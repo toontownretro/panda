@@ -470,7 +470,7 @@ get_sound_data(MovieAudio *movie, int mode) {
  * This is what creates a sound instance.
  */
 PT(AudioSound) OpenALAudioManager::
-get_sound(MovieAudio *sound, bool positional, int mode) {
+get_sound(MovieAudio *sound, bool positional, StreamMode mode) {
   ReMutexHolder holder(_lock);
   if(!is_valid()) {
     return get_null_sound();
@@ -493,7 +493,7 @@ get_sound(MovieAudio *sound, bool positional, int mode) {
  * This is what creates a sound instance.
  */
 PT(AudioSound) OpenALAudioManager::
-get_sound(const Filename &file_name, bool positional, int mode) {
+get_sound(const Filename &file_name, bool positional, StreamMode mode) {
   ReMutexHolder holder(_lock);
   if(!is_valid()) {
     return get_null_sound();

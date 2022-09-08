@@ -51,9 +51,9 @@ class EXPCL_OPENAL_AUDIO OpenALAudioManager : public AudioManager {
 
   virtual bool is_valid();
 
-  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, StreamMode mode=SM_heuristic);
   virtual PT(AudioSound) get_sound(AudioSound *source) override;
-  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, StreamMode mode=SM_heuristic);
 
   virtual void uncache_sound(const Filename &);
   virtual void clear_cache();

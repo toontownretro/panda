@@ -28,9 +28,9 @@ public:
   MiniAudioManager();
   ~MiniAudioManager();
 
-  virtual PT(AudioSound) get_sound(const Filename &filename, bool positional, int mode) override;
+  virtual PT(AudioSound) get_sound(const Filename &filename, bool positional, StreamMode mode = SM_default) override;
   virtual PT(AudioSound) get_sound(AudioSound *source) override;
-  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional, int mode) override;
+  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional, StreamMode mode = SM_default) override;
 
   virtual void uncache_sound(const Filename &filename) override;
   virtual void clear_cache() override;
@@ -51,6 +51,12 @@ public:
 
   virtual void stop_all_sounds() override;
 
+  virtual void set_stream_mode(StreamMode mode) override;
+  virtual StreamMode get_stream_mode() const override;
+
+  virtual void set_preload_threshold(int bytes) override;
+  virtual int get_preload_threshold() const override;
+
   static bool initialize_ma();
 
 private:
@@ -62,6 +68,9 @@ private:
   static ma_resource_manager *_ma_rsrc_mgr;
 
   ma_sound_group *_sound_group;
+
+  StreamMode _stream_mode;
+  int _preload_threshold;
 
   friend class MiniAudioSound;
 };

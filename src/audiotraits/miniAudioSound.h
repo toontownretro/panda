@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "audioSound.h"
 #include "miniaudio.h"
+#include "audioManager.h"
 
 class VirtualFile;
 class MiniAudioManager;
@@ -28,7 +29,7 @@ class MiniAudioSound : public AudioSound {
   DECLARE_CLASS(MiniAudioSound, AudioSound);
 
 public:
-  MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr);
+  MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioManager::StreamMode mode);
   MiniAudioSound(MiniAudioSound *other, MiniAudioManager *mgr);
   ~MiniAudioSound();
 

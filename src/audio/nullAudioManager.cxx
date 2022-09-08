@@ -49,7 +49,7 @@ is_valid() {
  *
  */
 PT(AudioSound) NullAudioManager::
-get_sound(const Filename &, bool positional, int mode) {
+get_sound(const Filename &, bool positional, StreamMode mode) {
   return get_null_sound();
 }
 
@@ -57,7 +57,7 @@ get_sound(const Filename &, bool positional, int mode) {
  *
  */
 PT(AudioSound) NullAudioManager::
-get_sound(MovieAudio *sound, bool positional, int mode) {
+get_sound(MovieAudio *sound, bool positional, StreamMode mode) {
   return get_null_sound();
 }
 

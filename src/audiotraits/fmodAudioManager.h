@@ -115,9 +115,9 @@ public:
 
   virtual bool is_valid();
 
-  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, StreamMode mode=SM_heuristic);
   virtual PT(AudioSound) get_sound(AudioSound *source) override;
-  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, StreamMode mode=SM_heuristic);
 
   virtual int get_speaker_setup();
   virtual void set_speaker_setup(SpeakerModeCategory cat);
