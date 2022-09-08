@@ -75,6 +75,18 @@
 
 #end lib_target
 
+#begin lib_target
+  #define TARGET pminiaudio
+
+  #define LOCAL_LIBS audio event
+  #define SOURCES \
+    config_miniaudio.h config_miniaudio.cxx \
+    miniaudio.h miniaudio.cxx \
+    miniAudioManager.h miniAudioManager.I miniAudioManager.cxx \
+    miniAudioSound.h miniAudioSound.I miniAudioSound.cxx
+
+#end lib_target
+
 //#begin lib_target
 //  #define TARGET audio_linux
 //  #define BUILDING_DLL BUILDING_MISC
