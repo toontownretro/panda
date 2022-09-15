@@ -367,6 +367,10 @@ choose_pixel_format(const FrameBufferProperties &properties,
         attrib_list[n++] = GLX_CONTEXT_FLAGS_ARB;
         attrib_list[n++] = flags;
       }
+#ifndef SUPPORT_FIXED_FUNCTION
+      attrib_list[n++] = GLX_CONTEXT_PROFILE_MASK_ARB;
+      attrib_list[n++] = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+#endif
       attrib_list[n] = None;
       _context = _glXCreateContextAttribs(_display, _fbconfig, _share_context,
                                           GL_TRUE, attrib_list);
