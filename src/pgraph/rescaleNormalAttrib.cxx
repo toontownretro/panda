@@ -143,16 +143,16 @@ init_type() {
   // This is defined here, since we have otherwise no guarantee that the
   // config var has already been constructed by the time we call init_type()
   // at static init time.
-  static ConfigVariableEnum<RescaleNormalAttrib::Mode> rescale_normals
-  ("rescale-normals", RescaleNormalAttrib::M_auto,
-   PRC_DESC("Specifies the kind of RescaleNormalAttrib that should be "
-            "created for the top of the scene graph.  This can automatically "
-            "ensure that your lighting normals are unit-length, which may be "
-            "particularly necessary in the presence of scales in the scene "
-            "graph.  Turning it off ('none') may produce a small performance "
-            "benefit."));
+  //static ConfigVariableEnum<RescaleNormalAttrib::Mode> rescale_normals
+  //("rescale-normals", RescaleNormalAttrib::M_auto,
+   //PRC_DESC("Specifies the kind of RescaleNormalAttrib that should be "
+   //         "created for the top of the scene graph.  This can automatically "
+   //         "ensure that your lighting normals are unit-length, which may be "
+   //         "particularly necessary in the presence of scales in the scene "
+   //         "graph.  Turning it off ('none') may produce a small performance "
+    //        "benefit."));
 
-  Mode mode = rescale_normals;
+  Mode mode = M_none;
   RescaleNormalAttrib *attrib = new RescaleNormalAttrib(mode);
   _attrib_slot = register_slot(_type_handle, 100, attrib);
   _attribs[mode] = attrib;
