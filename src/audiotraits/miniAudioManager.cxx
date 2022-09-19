@@ -22,7 +22,6 @@
 #include "miniAudioSound.h"
 #include "nullAudioSound.h"
 #include "dcast.h"
-
 IMPLEMENT_CLASS(MiniAudioManager);
 
 bool MiniAudioManager::_ma_initialized = false;
@@ -474,6 +473,47 @@ set_preload_threshold(int bytes) {
 int MiniAudioManager::
 get_preload_threshold() const {
   return _preload_threshold;
+}
+
+/**
+ *
+ */
+void MiniAudioManager::
+audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
+                                 PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                                 PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz,
+                                 PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
+  _listener_pos.set(px, py, pz);
+  _listener_forward.set(fx, fy, fz);
+  _listener_up.set(ux, uy, uz);
+  _listener_velocity.set(vx, vy, vz);
+
+  ma_engine_listener_set_position(_ma_engine, 0, px, pz, -py);
+  ma_engine_listener_set_velocity(_ma_engine, 0, vx, vz, -vy);
+  ma_engine_listener_set_direction(_ma_engine, 0, fx, fz, -fy);
+  ma_engine_listener_set_world_up(_ma_engine, 0, ux, uz, -uy);
+}
+
+/**
+ *
+ */
+void MiniAudioManager::
+audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
+                                 PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz,
+                                 PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz,
+                                 PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz) {
+  *px = _listener_pos[0];
+  *py = _listener_pos[1];
+  *pz = _listener_pos[2];
+  *vx = _listener_velocity[0];
+  *vy = _listener_velocity[1];
+  *vz = _listener_velocity[2];
+  *fx = _listener_forward[0];
+  *fy = _listener_forward[1];
+  *fz = _listener_forward[2];
+  *ux = _listener_up[0];
+  *uy = _listener_up[1];
+  *uz = _listener_up[2];
 }
 
 /**

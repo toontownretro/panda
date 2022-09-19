@@ -57,6 +57,20 @@ public:
   virtual void set_preload_threshold(int bytes) override;
   virtual int get_preload_threshold() const override;
 
+  virtual void audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
+                                                PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                                                PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz,
+                                                PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) override;
+  virtual void audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
+                                                PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz,
+                                                PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz,
+                                                PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz) override;
+
+  INLINE const LPoint3 &get_listener_pos() const;
+  INLINE const LVector3 &get_listener_forward() const;
+  INLINE const LVector3 &get_listener_up() const;
+  INLINE const LVector3 &get_listener_velocity() const;
+
   static bool initialize_ma();
 
 private:
@@ -71,6 +85,11 @@ private:
 
   StreamMode _stream_mode;
   int _preload_threshold;
+
+  LPoint3 _listener_pos;
+  LVector3 _listener_forward;
+  LVector3 _listener_up;
+  LVector3 _listener_velocity;
 
   friend class MiniAudioSound;
 };

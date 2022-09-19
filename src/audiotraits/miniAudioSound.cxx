@@ -23,7 +23,11 @@ IMPLEMENT_CLASS(MiniAudioSound);
  *
  */
 MiniAudioSound::
-MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioManager::StreamMode mode) {
+MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioManager::StreamMode mode) :
+  _mgr(mgr),
+  _sound(nullptr),
+  _name(file->get_filename().get_fullpath())
+{
   ma_uint32 flags = 0;
 
   if (miniaudio_cat.is_debug()) {
@@ -73,7 +77,7 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioM
   if (!positional) {
     if (miniaudio_cat.is_debug()) {
       miniaudio_cat.debug()
-        << "no spatialization\n";
+        << "no built-in spatialization\n";
     }
     flags |= MA_SOUND_FLAG_NO_SPATIALIZATION;
   }
@@ -85,8 +89,6 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioM
     miniaudio_cat.error()
       << "Could not init sound from file " << file->get_filename() << ": " << result << "\n";
   }
-
-  _name = file->get_filename();
 }
 
 /**
@@ -94,7 +96,12 @@ MiniAudioSound(VirtualFile *file, bool positional, MiniAudioManager *mgr, AudioM
  */
 MiniAudioSound::
 MiniAudioSound(MiniAudioSound *other, MiniAudioManager *mgr) :
-  _name(other->_name) {
+  _name(other->_name),
+  _distance_factor(other->_distance_factor),
+  _occlusion_factor(1.0f),
+  _mgr(mgr),
+  _sound(nullptr)
+{
 
   _sound = (ma_sound *)PANDA_MALLOC_SINGLE(sizeof(ma_sound));
   ma_result result = ma_sound_init_copy(mgr->_ma_engine, other->_sound, 0, mgr->_sound_group, _sound);
@@ -283,6 +290,40 @@ set_finished_event(const std::string &event) {
 const std::string &MiniAudioSound::
 get_finished_event() const {
   return _finished_event;
+}
+
+/**
+ *
+ */
+void MiniAudioSound::
+set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, // world-space position
+                  PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz, // velocity vector
+                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, // forward vector
+                  PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz /* up vector */) {
+  _pos.set(px, py, pz);
+  _velocity.set(vx, vy, vz);
+  _forward.set(fx, fy, fz);
+  _up.set(ux, uy, uz);
+
+  // We're using default miniaudio spatialization, so apply the spatial
+  // attributes directly to the ma_sound.
+  ma_sound_set_position(_sound, px, pz, -py);
+  ma_sound_set_velocity(_sound, vx, vz, -vy);
+  ma_sound_set_direction(_sound, fx, fz, -fy);
+}
+
+/**
+ *
+ */
+void MiniAudioSound::
+get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
+                  PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz) {
+  *px = _pos[0];
+  *py = _pos[1];
+  *pz = _pos[2];
+  *vx = _velocity[0];
+  *vy = _velocity[1];
+  *vz = _velocity[2];
 }
 
 /**

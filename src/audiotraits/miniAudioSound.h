@@ -18,6 +18,7 @@
 #include "audioSound.h"
 #include "miniaudio.h"
 #include "audioManager.h"
+#include "luse.h"
 
 class VirtualFile;
 class MiniAudioManager;
@@ -62,16 +63,42 @@ public:
   virtual void set_finished_event(const std::string &event) override;
   virtual const std::string &get_finished_event() const override;
 
+  virtual void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
+                                 PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
+                                 PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f,
+                                 PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f) override;
+  virtual void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
+                                 PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz) override;
+
   virtual const std::string &get_name() const override;
 
   virtual PN_stdfloat length() const override;
 
   virtual SoundStatus status() const override;
 
+  INLINE const LPoint3 &get_pos() const;
+  INLINE const LVector3 &get_velocity() const;
+  INLINE const LVector3 &get_up() const;
+  INLINE const LVector3 &get_forward() const;
+
+  INLINE MiniAudioManager *get_manager() const;
+
 private:
   ma_sound *_sound;
   std::string _finished_event;
   std::string _name;
+
+  // World-space position of sound for spatialization.
+  LPoint3 _pos;
+
+  // Velocity of sound for doppler effect.
+  LVector3 _velocity;
+
+  // Rotation of sound.  Not currently used.
+  LVector3 _up;
+  LVector3 _forward;
+
+  MiniAudioManager *_mgr;
 };
 
 #include "miniAudioSound.I"

@@ -10,3 +10,35 @@
  * @author brian
  * @date 2022-09-06
  */
+
+/**
+ *
+ */
+INLINE const LPoint3 &MiniAudioManager::
+get_listener_pos() const {
+  return _listener_pos;
+}
+
+/**
+ *
+ */
+INLINE const LVector3 &MiniAudioManager::
+get_listener_forward() const {
+  return _listener_forward;
+}
+
+/**
+ *
+ */
+INLINE const LVector3 &MiniAudioManager::
+get_listener_up() const {
+  return _listener_up;
+}
+
+/**
+ *
+ */
+INLINE const LVector3 &MiniAudioManager::
+get_listener_velocity() const {
+  return _listener_velocity;
+}
