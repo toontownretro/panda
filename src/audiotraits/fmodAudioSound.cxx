@@ -971,7 +971,7 @@ set_speaker_mix_or_balance_on_channel() {
   result = _sound->getMode(&soundMode);
   fmod_audio_errcheck("_sound->getMode()", result);
 
-  if ((_channel != nullptr) && (soundMode & FMOD_3D) == 0) {
+  if ((_channel != nullptr) && ((soundMode & FMOD_3D) == 0) && (_sa_spatial_dsp == nullptr)) {
     if (_speakermode == FMOD_SPEAKERMODE_STEREO) {
       result = _channel->setPan(_balance);
     } else {
