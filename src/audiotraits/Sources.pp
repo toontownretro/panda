@@ -59,7 +59,7 @@
 
 #begin lib_target
   #define TARGET openal_audio
-  #define BUILD_TARGET $[HAVE_OPENAL]
+  #define BUILD_TARGET
   #define USE_PACKAGES openal
   #define BUILDING_DLL BUILDING_OPENAL_AUDIO
   #define LOCAL_LIBS audio event
@@ -76,6 +76,7 @@
 #end lib_target
 
 #begin lib_target
+  #define BUILD_TARGET
   #define TARGET pminiaudio
 
   #define LOCAL_LIBS audio event
@@ -103,3 +104,12 @@
 //    ]
 //
 //#end lib_target
+
+#begin test_bin_target
+  #define TARGET test_steam_audio_direct_fade
+  #define BUILD_TESTS 1
+  #define USE_PACKAGES steam_audio
+  #define LOCAL_LIBS putil
+  #define SOURCES test_steam_audio_direct_fade.cxx
+
+#end test_bin_target

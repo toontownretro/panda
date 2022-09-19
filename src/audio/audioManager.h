@@ -22,7 +22,7 @@
 #include "atomicAdjust.h"
 #include "rayTraceScene.h"
 
-typedef AudioManager *Create_AudioManager_proc();
+typedef AudioManager *Create_AudioManager_proc(const std::string &, AudioManager *);
 
 class DSP;
 class RayTraceScene;
@@ -105,7 +105,7 @@ PUBLISHED:
   // MySoundEffects.get_sound("neatSfx.mp3"); my_music =
   // MyMusicManager.get_sound("introTheme.mid");
 
-  static PT(AudioManager) create_AudioManager();
+  static PT(AudioManager) create_AudioManager(const std::string &name, AudioManager *parent = nullptr);
   virtual ~AudioManager();
 
   virtual void shutdown();

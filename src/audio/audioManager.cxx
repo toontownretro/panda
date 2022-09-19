@@ -32,7 +32,7 @@ TypeHandle AudioManager::_type_handle;
 
 
 namespace {
-  AudioManager *create_NullAudioManager() {
+  AudioManager *create_NullAudioManager(const std::string &, AudioManager *) {
     audio_debug("create_NullAudioManager()");
     return new NullAudioManager();
   }
@@ -47,16 +47,16 @@ register_AudioManager_creator(Create_AudioManager_proc* proc) {
 }
 
 // Factory method for getting a platform specific AudioManager:
-PT(AudioManager) AudioManager::create_AudioManager() {
+PT(AudioManager) AudioManager::create_AudioManager(const std::string &name, AudioManager *parent) {
   audio_debug("create_AudioManager()\n  audio_library_name=\""<<audio_library_name<<"\"");
 
   if (_create_AudioManager != nullptr) {
     // Someone was already so good as to register an audio manager creation function,
     // perhaps by statically linking the requested library.  Let's use that, then.
-    PT(AudioManager) am = (*_create_AudioManager)();
+    PT(AudioManager) am = (*_create_AudioManager)(name, parent);
     if (!am->is_exact_type(NullAudioManager::get_class_type()) && !am->is_valid()) {
       audio_error("  " << am->get_type() << " is not valid, will use NullAudioManager");
-      am = create_NullAudioManager();
+      am = create_NullAudioManager(name, parent);
     }
     return am;
   }
@@ -110,10 +110,10 @@ PT(AudioManager) AudioManager::create_AudioManager() {
     _create_AudioManager = create_NullAudioManager;
   }
 
-  PT(AudioManager) am = (*_create_AudioManager)();
+  PT(AudioManager) am = (*_create_AudioManager)(name, parent);
   if (!am->is_exact_type(NullAudioManager::get_class_type()) && !am->is_valid()) {
     audio_error("  " << am->get_type() << " is not valid, will use NullAudioManager");
-    am = create_NullAudioManager();
+    am = create_NullAudioManager(name, parent);
   }
   return am;
 }

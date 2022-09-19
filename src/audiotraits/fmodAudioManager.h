@@ -105,7 +105,7 @@ class EXPCL_FMOD_AUDIO FMODAudioManager : public AudioManager {
   friend class SteamAudioReflectionsThread;
 
 public:
-  FMODAudioManager();
+  FMODAudioManager(const std::string &name, AudioManager *parent);
   virtual ~FMODAudioManager();
 
   virtual bool insert_dsp(int index, DSP *dsp);
@@ -335,7 +335,7 @@ private:
   static TypeHandle _type_handle;
 };
 
-EXPCL_FMOD_AUDIO AudioManager *Create_FmodAudioManager();
+EXPCL_FMOD_AUDIO AudioManager *Create_FmodAudioManager(const std::string &name, AudioManager *parent);
 
 
 #endif /* FMODAUDIOMANAGER_H */

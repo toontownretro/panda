@@ -306,9 +306,9 @@ void _fmod_audio_errcheck(const char *context, FMOD_RESULT result) {
 /**
  * Factory Function
  */
-AudioManager *Create_FmodAudioManager() {
+AudioManager *Create_FmodAudioManager(const std::string &name, AudioManager *parent) {
   audio_debug("Create_FmodAudioManager()");
-  return new FMODAudioManager;
+  return new FMODAudioManager(name, parent);
 }
 
 
@@ -316,7 +316,7 @@ AudioManager *Create_FmodAudioManager() {
  *
  */
 FMODAudioManager::
-FMODAudioManager() :
+FMODAudioManager(const std::string &name, AudioManager *parent) :
   _sounds_playing_lock("sounds_playing_lock") {
   ReMutexHolder holder(_lock);
   FMOD_RESULT result;
@@ -605,8 +605,13 @@ FMODAudioManager() :
   }
 
   if (_is_valid) {
-    result = _system->createChannelGroup("UserGroup", &_channelgroup);
+    result = _system->createChannelGroup(name.c_str(), &_channelgroup);
     fmod_audio_errcheck("_system->createChannelGroup()", result);
+    if (parent != nullptr && parent->is_of_type(FMODAudioManager::get_class_type())) {
+      FMODAudioManager *fparent = (FMODAudioManager *)parent;
+      result = fparent->_channelgroup->addGroup(_channelgroup);
+      fmod_audio_errcheck("add channelgroup child", result);
+    }
   }
 }
 
