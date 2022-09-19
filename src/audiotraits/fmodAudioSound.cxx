@@ -1233,7 +1233,7 @@ set_dsps_on_channel() {
     // Add the head (final processed DSP node) as an input to the Steam Audio reverb.
     FMOD::DSP *head;
     _channel->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &head);
-    _manager->_reverb_dsp->addInput(head, 0, FMOD_DSPCONNECTION_TYPE_STANDARD);
+    _manager->_reverb_dsp->addInput(head, 0, FMOD_DSPCONNECTION_TYPE_SEND);
   }
 
 #endif
