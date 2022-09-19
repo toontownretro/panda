@@ -136,9 +136,6 @@ public:
   void set_3d_max_distance(PN_stdfloat dist);
   PN_stdfloat get_3d_max_distance() const;
 
-  void set_3d_distance_factor(PN_stdfloat factor);
-  PN_stdfloat get_3d_distance_factor() const;
-
   virtual PN_stdfloat get_sound_frequency() const override;
 
   AudioSound::SoundStatus status() const;
@@ -208,7 +205,6 @@ public:
 
   PN_stdfloat _min_dist;
   PN_stdfloat _max_dist;
-  PN_stdfloat _dist_factor;
 
   void start_playing();
   void set_volume_on_channel();

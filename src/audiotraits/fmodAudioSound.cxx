@@ -162,7 +162,6 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
 
   _min_dist = 1.0;
   _max_dist = 1000000000.0;
-  _dist_factor = 1.0f;
 
   // These set the speaker levels to a default if you are using a multichannel
   // setup.
@@ -258,7 +257,6 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
 
   _min_dist = copy->_min_dist;
   _max_dist = copy->_max_dist;
-  _dist_factor = copy->_dist_factor;
 
   _dsps = copy->_dsps;
 
@@ -853,27 +851,6 @@ get_3d_max_distance() const {
 }
 
 /**
- *
- */
-void FMODAudioSound::
-set_3d_distance_factor(PN_stdfloat factor) {
-  _dist_factor = factor;
-#ifdef HAVE_STEAM_AUDIO
-  if (fmod_use_steam_audio && _sa_spatial_dsp != nullptr) {
-    _sa_spatial_dsp->setParameterFloat(31, _dist_factor);
-  }
-#endif
-}
-
-/**
- *
- */
-PN_stdfloat FMODAudioSound::
-get_3d_distance_factor() const {
-  return _dist_factor;
-}
-
-/**
  * Returns the base frequency/sample rate of the audio file.
  */
 PN_stdfloat FMODAudioSound::
@@ -1441,7 +1418,6 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterFloat(29, 1.0f); // PATHING_MIXLEVEL
   // Link back to the IPLSource so the DSP can render simulation results.
   _sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
-  _sa_spatial_dsp->setParameterFloat(31, _dist_factor); // DISTANCEATTEN_DISTANCEFACTOR
 
   if (props._enable_occlusion) {
     bool calculated;

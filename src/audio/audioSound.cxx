@@ -66,17 +66,6 @@ get_3d_max_distance() const {
   return 0.0f;
 }
 
-void AudioSound::
-set_3d_distance_factor(PN_stdfloat dist) {
-  // Intentionally blank.
-}
-
-PN_stdfloat AudioSound::
-get_3d_distance_factor() const {
-  // Intentionally blank.
-  return 0.0f;
-}
-
 /**
  * Returns the default frequency/sample rate of the audio file.
  */

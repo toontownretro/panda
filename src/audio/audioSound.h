@@ -140,9 +140,6 @@ PUBLISHED:
   virtual void set_3d_max_distance(PN_stdfloat dist);
   virtual PN_stdfloat get_3d_max_distance() const;
 
-  virtual void set_3d_distance_factor(PN_stdfloat dist);
-  virtual PN_stdfloat get_3d_distance_factor() const;
-
   virtual PN_stdfloat get_sound_frequency() const;
 
   // speaker_mix is for use with FMOD.
