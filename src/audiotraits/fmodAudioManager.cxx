@@ -427,7 +427,7 @@ FMODAudioManager(const std::string &name, AudioManager *parent) :
     int nchan = fmod_number_of_sound_channels;
     int flags = FMOD_INIT_NORMAL;
     if (fmod_enable_profiling) {
-      flags |= FMOD_INIT_PROFILE_ENABLE;
+      flags |= FMOD_INIT_PROFILE_ENABLE | FMOD_INIT_PROFILE_METER_ALL;
     }
 
     result = _system->init(nchan, flags, 0);
