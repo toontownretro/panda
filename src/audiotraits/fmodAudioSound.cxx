@@ -1249,7 +1249,7 @@ set_dsps_on_channel() {
   if (fmod_use_steam_audio) {
     if (_sa_spatial_dsp != nullptr) {
       // Index 1 to spatialize before the channel fader.
-      ret = _channel->addDSP(FMOD_CHANNELCONTROL_DSP_HEAD, _sa_spatial_dsp);
+      ret = _channel->addDSP(FMOD_CHANNELCONTROL_DSP_TAIL, _sa_spatial_dsp);
       fmod_audio_errcheck("add SA spatial DSP", ret);
     }
 
