@@ -38,6 +38,13 @@ ConfigVariableInt fmod_audio_preload_threshold
           "will be streamed from disk.  Set this to -1 to preload "
           "every file."));
 
+ConfigVariableBool fmod_compressed_samples
+("fmod-compressed-samples", false,
+ PRC_DESC("Setting this true allows FMOD to play compressed audio samples "
+          "directly from memory without having to decompress and decode to "
+          "raw PCM at load time.  Trades CPU usage for less memory taken up "
+          "by compressed audio samples."));
+
 #ifdef HAVE_STEAM_AUDIO
 ConfigVariableBool fmod_use_steam_audio
 ("fmod-use-steam-audio", false,

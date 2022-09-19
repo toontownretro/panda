@@ -23,6 +23,7 @@ ConfigureDecl(config_fmodAudio, EXPCL_FMOD_AUDIO, EXPTP_FMOD_AUDIO);
 NotifyCategoryDecl(fmodAudio, EXPCL_FMOD_AUDIO, EXPTP_FMOD_AUDIO);
 
 extern ConfigVariableInt fmod_audio_preload_threshold;
+extern ConfigVariableBool fmod_compressed_samples;
 
 #ifdef HAVE_STEAM_AUDIO
 extern ConfigVariableBool fmod_use_steam_audio;
