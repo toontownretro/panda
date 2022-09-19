@@ -1775,13 +1775,14 @@ calc_sound_occlusion(FMODAudioSound *sound, bool &calculated) {
   LVector3 vsrc_forward;
   vsrc_forward = snd_point - cam_point;
   float len = vsrc_forward.length();
+  vsrc_forward.normalize();
 
   RayTraceScene *rt_scene = _rt_scene;
   RayTraceHitResult tr = rt_scene->trace_ray(cam_point, vsrc_forward, len, BitMask32::all_on());
   float frac = tr.get_hit_fraction();
   if (tr.has_hit() && frac < 0.99f && frac > 0.001f) {
     LPoint3 end_points[4];
-    float sndlvl = DIST_MULT_TO_SNDLVL(sound->_dist_factor);
+    float sndlvl = DIST_MULT_TO_SNDLVL(1.0f / (sound->_min_dist / HAMMER_UNITS_TO_METERS));
     float radius;
 
     LVector3 vsrc_right;
