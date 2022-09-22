@@ -69,7 +69,7 @@
 
 #include <stack>
 
-#define HAVE_STEAM_AUDIO
+//#define HAVE_STEAM_AUDIO
 #ifdef HAVE_STEAM_AUDIO
 #include <phonon.h>
 #endif
@@ -764,10 +764,18 @@ bake_steam_audio() {
   IPLContext context = nullptr;
   IPLContextSettings ctx_settings{};
   ctx_settings.version = STEAMAUDIO_VERSION;
-  ctx_settings.simdLevel = IPL_SIMDLEVEL_AVX512;
+  ctx_settings.allocateCallback = nullptr;
+  ctx_settings.freeCallback = nullptr;
+  ctx_settings.simdLevel = IPL_SIMDLEVEL_AVX2;
   ctx_settings.logCallback = ipl_log;
   IPLerror err = iplContextCreate(&ctx_settings, &context);
-  assert(err == IPL_STATUS_SUCCESS);
+  if (err != IPL_STATUS_SUCCESS) {
+    return EC_ok;
+  }
+  //std::cout << err << "\n";
+  //std::cout << "Version: " << STEAMAUDIO_VERSION << "\n";
+  //assert(err == IPL_STATUS_SUCCESS);
+
 
   //IPLEmbreeDeviceSettings embree_set{};
   //IPLEmbreeDevice embree_dev = nullptr;
@@ -837,10 +845,10 @@ bake_steam_audio() {
       // get this from the pmat file tags.
       std::string surfaceprop = "default";
       if (mattr->get_material() != nullptr) {
-        if (mattr->get_material()->has_tag("compile_sky")) {
+        //if (mattr->get_material()->has_tag("compile_sky")) {
           // Skip sky polygons/geoms.
-          continue;
-        }
+        //  continue;
+        //}
         if (mattr->get_material()->has_tag("surface_prop")) {
           surfaceprop = mattr->get_material()->get_tag_value("surface_prop");
           if (surface_props.find(surfaceprop) == surface_props.end()) {
@@ -1140,7 +1148,7 @@ bake_steam_audio() {
       bake_params.savedDuration = 1.0f;
       bake_params.order = 2;
       bake_params.numThreads = _options.get_num_threads();
-      bake_params.irradianceMinDistance = 5.0f;
+      bake_params.irradianceMinDistance = 1.0f;
       bake_params.rayBatchSize = 1;
       bake_params.bakeBatchSize = 64;
       bake_params.openCLDevice = ocl_dev;
