@@ -21,6 +21,7 @@
 #include "audioManager.h"
 #include "audioSound.h"
 #include "luse.h"
+#include "fmodAudioSound.h"
 #include "fmodSoundCache.h"
 #include "dsp.h"
 
