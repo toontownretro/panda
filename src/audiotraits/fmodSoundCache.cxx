@@ -101,8 +101,11 @@ get_sound(const Filename &filename, bool positional, bool stream) {
   memset(&sound_info, 0, sizeof(sound_info));
   sound_info.cbsize = sizeof(sound_info);
 
+  bool is_mid = false;
+
   std::string ext = downcase(filename.get_extension());
   if (ext == "mid") {
+    is_mid = true;
     // Get the MIDI parameters.
     const std::string &dls_name = _engine->get_dls_name();
     if (!dls_name.empty()) {
@@ -130,7 +133,14 @@ get_sound(const Filename &filename, bool positional, bool stream) {
     if (mem_buffer.size() != 0) {
       name_or_data = (const char *)&mem_buffer[0];
     }
-    flags |= FMOD_OPENMEMORY | FMOD_CREATESAMPLE;
+    flags |= FMOD_OPENMEMORY;
+    if (!is_mid) {
+      if (fmod_compressed_samples) {
+        flags |= FMOD_CREATECOMPRESSEDSAMPLE;
+      } else {
+        flags |= FMOD_CREATESAMPLE;
+      }
+    }
     if (fmodAudio_cat.is_debug()) {
       fmodAudio_cat.debug()
         << "Reading " << filename << " into memory (" << sound_info.length

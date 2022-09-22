@@ -109,6 +109,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
   FMOD_RESULT result;
 
   _is_midi = _file_name.get_extension() == "mid";
+  audio_debug("is midi: " << _is_midi);
 
   // This is just to collect the defaults of the sound, so we don't Have to
   // query FMOD everytime for the info.  It is also important we get the

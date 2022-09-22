@@ -67,9 +67,9 @@ ConfigVariableInt fmod_dsp_buffer_count
 ConfigVariableBool fmod_compressed_samples
   ("fmod-compressed-samples", false,
   PRC_DESC("Setting this true allows FMOD to play compressed audio samples "
-            "directly from memory without having to decompress and decode to "
-            "raw PCM at load time.  Trades CPU usage for less memory taken up "
-            "by compressed audio samples."));
+           "directly from memory without having to decompress and decode to "
+           "raw PCM at load time.  Trades CPU usage for less memory taken up "
+           "by compressed audio samples."));
 
 #ifdef HAVE_STEAM_AUDIO
 ConfigVariableBool fmod_use_steam_audio
