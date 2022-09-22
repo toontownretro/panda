@@ -970,18 +970,18 @@ set_dsps_on_channel() {
     fmod_audio_errcheck("_channel->addDSP()", ret);
   }
 
-#if 0//def HAVE_STEAM_AUDIO
+#ifdef HAVE_STEAM_AUDIO
   if (fmod_use_steam_audio) {
     if (_sa_spatial_dsp != nullptr) {
-      // Index 1 to spatialize before the channel fader.
+      // Add to tail to spatialize before the fader.
       ret = _channel->addDSP(FMOD_CHANNELCONTROL_DSP_TAIL, _sa_spatial_dsp);
       fmod_audio_errcheck("add SA spatial DSP", ret);
     }
 
     // Add the head (final processed DSP node) as an input to the Steam Audio reverb.
-    FMOD::DSP *head;
-    _channel->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &head);
-    _manager->_reverb_dsp->addInput(head, 0, FMOD_DSPCONNECTION_TYPE_SEND);
+    //FMOD::DSP *head;
+    //_channel->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &head);
+    //_manager->_reverb_dsp->addInput(head, 0, FMOD_DSPCONNECTION_TYPE_SEND);
   }
 
 #endif
@@ -1053,29 +1053,30 @@ get_sound_handle() const {
  */
 void FMODAudioSound::
 apply_steam_audio_properties(const SteamAudioProperties &props) {
-#if 0//def HAVE_STEAM_AUDIO
+#ifdef HAVE_STEAM_AUDIO
   if (!fmod_use_steam_audio || _sa_spatial_dsp != nullptr) {
     // Already a Steam Audio source.
     return;
   }
 
+  FMODAudioEngine *engine = _manager->_engine;
+  FMOD::System *system = engine->get_system();
+
   // Create and configure the spatialization DSP filter.
-  FMOD_RESULT result = _manager->_system->createDSPByPlugin(_manager->_sa_spatialize_handle, &_sa_spatial_dsp);
+  FMOD_RESULT result = system->createDSPByPlugin(engine->_ipl_spatialize_handle, &_sa_spatial_dsp);
   if (result != FMOD_OK) {
     fmod_audio_errcheck("create Steam Audio spatializer DSP", result);
     return;
   }
 
   _sa_spatial_dsp->setUserData(this);
-
-  FMOD_DSP_PARAMETER_3DATTRIBUTES attr;
-  attr.absolute.position = _location;
-  attr.absolute.velocity = _velocity;
-  attr.absolute.up = _up;
-  attr.absolute.forward = _forward;
-  // Steam Audio doesn't care about the relative 3D attributes.
   _sa_spatial_dsp->setActive(true);
-  _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr)); // SOURCE_POSITION
+
+  // Now that we have the spatializer DSP, this will apply the 3D attributes
+  // to the DSP (instead of the Channel).
+  set_3d_attributes_on_channel();
+
+  // Configure the DSP accordingly.
   _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(4, props._enable_directivity ? 1 : 0);
@@ -1085,7 +1086,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterBool(8, props._enable_pathing);
   _sa_spatial_dsp->setParameterInt(9, props._bilinear_hrtf ? 1 : 0);
   _sa_spatial_dsp->setParameterFloat(12, _min_dist); // DISTANCEATTEN_MINDIST
-  _sa_spatial_dsp->setParameterFloat(13, _max_dist); // DISTANCEATTEN_MAXDIST
+  _sa_spatial_dsp->setParameterFloat(13, 10000000.0f); // DISTANCEATTEN_MAXDIST
   _sa_spatial_dsp->setParameterFloat(18, props._directivity_dipole_weight);
   _sa_spatial_dsp->setParameterFloat(19, props._directivity_dipole_power);
   _sa_spatial_dsp->setParameterFloat(20, 1.0f); // OCCLUSION

@@ -417,8 +417,6 @@ initialize() {
  */
 bool FMODAudioEngine::
 init_steam_audio() {
-  fmodAudio_cat.info()
-    << "Initializing Steam Audio\n";
 
   IPLContextSettings ctx_settings{};
   ctx_settings.version = STEAMAUDIO_VERSION;
@@ -447,8 +445,13 @@ init_steam_audio() {
   sim_settings.samplingRate = fmod_mixer_sample_rate;
   sim_settings.frameSize = fmod_dsp_buffer_size;
   sim_settings.flags = (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
-  sim_settings.sceneType = IPL_SCENETYPE_EMBREE;
+  sim_settings.sceneType = IPL_SCENETYPE_DEFAULT;
   sim_settings.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
+  sim_settings.maxOrder = 2;
+  sim_settings.numThreads = 1;
+  sim_settings.maxNumSources = 8;
+  sim_settings.maxDuration = 2.0f;
+  sim_settings.maxNumRays = 16384;
   err = iplSimulatorCreate(_ipl_context, &sim_settings, &_ipl_simulator);
   if (err) {
     return false;
@@ -493,13 +496,20 @@ init_steam_audio() {
     return false;
   }
   void *init_func = get_dso_symbol(dso_handle, "iplFMODInitialize");
+  nassertr(init_func != nullptr, false);
   void *hrtf_func = get_dso_symbol(dso_handle, "iplFMODSetHRTF");
+  nassertr(hrtf_func != nullptr, false);
   void *sim_func = get_dso_symbol(dso_handle, "iplFMODSetSimulationSettings");
+  nassertr(sim_func != nullptr, false);
   void *reverb_source_func = get_dso_symbol(dso_handle, "iplFMODSetReverbSource");
+  nassertr(reverb_source_func != nullptr, false);
   ((PFNIPLFMODINITIALIZE)init_func)(_ipl_context);
   ((PFNIPLFMODSETHRTF)hrtf_func)(_ipl_hrtf);
   ((PFNIPLFMODSETSIMULATIONSETTINGS)sim_func)(sim_settings);
   ((PFNIPLFMODSETREVERBSOURCE)reverb_source_func)(_ipl_listener_source);
+
+  fmodAudio_cat.info()
+    << "Steam Audio initialized successfully\n";
 
   return true;
 }

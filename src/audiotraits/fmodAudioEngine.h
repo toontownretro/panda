@@ -121,6 +121,9 @@ private:
   unsigned int _ipl_reverb_handle;
   unsigned int _ipl_mixer_return_handle;
 #endif
+
+  friend class FMODAudioSound;
+  friend class FMODAudioManager;
 };
 
 /**
