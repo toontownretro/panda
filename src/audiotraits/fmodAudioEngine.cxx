@@ -39,10 +39,43 @@ IMPLEMENT_CLASS(FMODAudioEngine);
 
 #ifdef HAVE_STEAM_AUDIO
 
+#include <phonon/phonon.h>
+
 typedef void (*PFNIPLFMODINITIALIZE)(IPLContext);
 typedef void (*PFNIPLFMODSETHRTF)(IPLHRTF);
 typedef void (*PFNIPLFMODSETSIMULATIONSETTINGS)(IPLSimulationSettings);
 typedef void (*PFNIPLFMODSETREVERBSOURCE)(IPLSource);
+
+/**
+ *
+ */
+std::string
+_ipl_errstring(IPLerror err) {
+  switch (err) {
+  case IPL_STATUS_SUCCESS:
+    return "The operation completed successfully.";
+  case IPL_STATUS_FAILURE:
+    return "An unspecified error occurred.";
+  case IPL_STATUS_OUTOFMEMORY:
+    return "The system ran out of memory.";
+  case IPL_STATUS_INITIALIZATION:
+    return "An error occurred while initializing an external dependency.";
+  default:
+    return "Unknown error code.";
+  }
+}
+
+/**
+ *
+ */
+bool _ipl_errcheck(const std::string &context, IPLerror err) {
+  if (err != IPL_STATUS_SUCCESS) {
+    fmodAudio_cat.error() << "IPL error, context: " << context << ", error: " << _ipl_errstring(err) << "\n";
+    return false;
+  }
+  return true;
+}
+#define IPL_ERRCHECK(context, n) _ipl_errcheck(context, n)
 
 #endif
 
@@ -426,7 +459,7 @@ init_steam_audio() {
   //ctx_settings.logCallback = ipl_panda_log;
   IPLerror err;
   err = iplContextCreate(&ctx_settings, &_ipl_context);
-  if (err) {
+  if (!IPL_ERRCHECK("create context", err)) {
     return false;
   }
 
@@ -437,10 +470,9 @@ init_steam_audio() {
   IPLHRTFSettings hrtf_settings{};
   hrtf_settings.type = IPL_HRTFTYPE_DEFAULT;
   err = iplHRTFCreate(_ipl_context, &audio_settings, &hrtf_settings, &_ipl_hrtf);
-  if (err) {
+  if (!IPL_ERRCHECK("create HRTF", err)) {
     return false;
   }
-
   IPLSimulationSettings sim_settings{};
   sim_settings.samplingRate = fmod_mixer_sample_rate;
   sim_settings.frameSize = fmod_dsp_buffer_size;
@@ -453,7 +485,7 @@ init_steam_audio() {
   sim_settings.maxDuration = 2.0f;
   sim_settings.maxNumRays = 16384;
   err = iplSimulatorCreate(_ipl_context, &sim_settings, &_ipl_simulator);
-  if (err) {
+  if (!IPL_ERRCHECK("create simulator", err)) {
     return false;
   }
 
@@ -462,7 +494,7 @@ init_steam_audio() {
   IPLSourceSettings listener_source_settings{};
   listener_source_settings.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
   err = iplSourceCreate(_ipl_simulator, &listener_source_settings, &_ipl_listener_source);
-  if (err) {
+  if (!IPL_ERRCHECK("create listener source", err)) {
     return false;
   }
 
@@ -493,6 +525,9 @@ init_steam_audio() {
   // library... bleh.
   void *dso_handle = load_dso(get_plugin_path().get_value(), plugin_filename);
   if (dso_handle == nullptr) {
+    fmodAudio_cat.error()
+      << "Could not load Steam Audio FMOD plugin " << plugin_filename << " on plugin-path "
+      << get_plugin_path().get_value() << "\n";
     return false;
   }
   void *init_func = get_dso_symbol(dso_handle, "iplFMODInitialize");
