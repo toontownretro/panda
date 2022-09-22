@@ -985,6 +985,35 @@ set_dsps_on_channel() {
   }
 
 #endif
+
+  // If the manager has a reverb DSP, add a send on our head DSP to the
+  // reverb.
+  add_send_to_manager_reverb();
+}
+
+/**
+ *
+ */
+void FMODAudioSound::
+add_send_to_manager_reverb() {
+  if (_manager->_fmod_reverb_dsp == nullptr || _channel == nullptr) {
+    return;
+  }
+
+  // Add a send on our head DSP to the manager's reverb.
+  FMOD::DSP *head;
+  FMOD_RESULT ret;
+  ret = _channel->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &head);
+  if (CHANNEL_INVALID(ret)) {
+    _channel = nullptr;
+  } else {
+    if (!fmod_audio_errcheck("get channel head", ret)) {
+      return;
+    }
+    FMOD::DSPConnection *connection;
+    _manager->_fmod_reverb_dsp->addInput(head, &connection, FMOD_DSPCONNECTION_TYPE_SEND);
+    //connection->setMix(0.0001f);
+  }
 }
 
 /**

@@ -61,7 +61,8 @@ ReMutex FMODAudioManager::_lock;
  */
 FMODAudioManager::
 FMODAudioManager(const std::string &name, FMODAudioManager *parent, FMODAudioEngine *engine) :
-  _engine(engine)
+  _engine(engine),
+  _fmod_reverb_dsp(nullptr)
 {
   ReMutexHolder holder(_lock);
   FMOD_RESULT result;
@@ -92,12 +93,18 @@ FMODAudioManager::
   ReMutexHolder holder(_lock);
 
   // Be sure to delete associated sounds before deleting the manager!
-  FMOD_RESULT result;
+  //FMOD_RESULT result;
 
   // Release all of our sounds
   _sounds_playing.clear();
 
   _all_sounds.clear();
+
+  if (_fmod_reverb_dsp != nullptr) {
+    _fmod_reverb_dsp->disconnectAll(true, true);
+    _fmod_reverb_dsp->release();
+    _fmod_reverb_dsp = nullptr;
+  }
 
   // Release all DSPs
   remove_all_dsps();
@@ -373,6 +380,15 @@ update() {
   // Call finished() and release our reference to sounds that have finished
   // playing.
   update_sounds();
+
+  // If our reverb DSP is linked to a Panda DSP, make sure the properties are
+  // in sync.
+  if (_fmod_reverb_dsp != nullptr && _reverb_dsp != nullptr) {
+    if (_reverb_dsp->is_dirty()) {
+      _engine->configure_dsp(_reverb_dsp, _fmod_reverb_dsp);
+      _reverb_dsp->clear_dirty();
+    }
+  }
 }
 
 /**
@@ -542,4 +558,86 @@ update_sounds() {
   for (; i != sounds_finished.end(); ++i) {
     (**i).finished();
   }
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+set_reverb(DSP *reverb_dsp) {
+  _reverb_dsp = reverb_dsp;
+
+  FMOD::DSP *fdsp = nullptr;
+  if (reverb_dsp != nullptr) {
+    fdsp = _engine->create_fmod_dsp(reverb_dsp);
+    fdsp->setActive(true);
+  }
+
+  set_reverb_dsp(fdsp);
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+set_reverb_dsp(FMOD::DSP *dsp) {
+  if (_fmod_reverb_dsp != nullptr) {
+    _fmod_reverb_dsp->disconnectAll(true, true);
+    _fmod_reverb_dsp->release();
+  }
+
+  _fmod_reverb_dsp = dsp;
+
+  if (_fmod_reverb_dsp == nullptr) {
+    return;
+  }
+
+  FMOD_RESULT result;
+
+  FMOD::DSP *channelgroup_head;
+  result = _channelgroup->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &channelgroup_head);
+  fmod_audio_errcheck("get channelgroup head DSP", result);
+
+  result = channelgroup_head->addInput(_fmod_reverb_dsp, 0, FMOD_DSPCONNECTION_TYPE_STANDARD);
+  fmod_audio_errcheck("make reverb dsp connection to changroup head", result);
+
+  // Explicitly re-link up any sounds that are currently playing
+  // while we changed the reverb.
+  for (auto it = _sounds_playing.begin(); it != _sounds_playing.end(); ++it) {
+    FMODAudioSound *sound = (*it);
+    sound->add_send_to_manager_reverb();
+  }
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+set_steam_audio_reverb() {
+  clear_reverb();
+
+#ifdef HAVE_STEAM_AUDIO
+  if (!_engine->is_using_steam_audio()) {
+    return;
+  }
+
+  FMOD_RESULT ret;
+  FMOD::DSP *fdsp;
+  ret = _engine->_system->createDSPByPlugin(_engine->_ipl_reverb_handle, &fdsp);
+  if (!fmod_audio_errcheck("create SA reverb DSP", ret)) {
+    return;
+  }
+  fdsp->setActive(true);
+  fdsp->setParameterBool(0, true);
+
+  set_reverb_dsp(fdsp);
+#endif
+}
+
+/**
+ *
+ */
+void FMODAudioManager::
+clear_reverb() {
+  set_reverb(nullptr);
 }

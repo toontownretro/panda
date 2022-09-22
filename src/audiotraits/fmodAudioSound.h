@@ -161,6 +161,8 @@ public:
 public:
   FMODSoundHandle *get_sound_handle() const;
 
+  void add_send_to_manager_reverb();
+
 public:
   PT(FMODAudioManager) _manager;
   PT(FMODSoundHandle) _sound_handle;

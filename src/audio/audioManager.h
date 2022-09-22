@@ -163,6 +163,10 @@ PUBLISHED:
   virtual void set_trace_scene(RayTraceScene *scene);
   virtual void clear_trace_scene();
 
+  virtual void set_reverb(DSP *reverb_dsp);
+  virtual void set_steam_audio_reverb();
+  virtual void clear_reverb();
+
   virtual void output(std::ostream &out) const;
   virtual void write(std::ostream &out) const;
 

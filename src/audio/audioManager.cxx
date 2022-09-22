@@ -237,3 +237,24 @@ set_trace_scene(RayTraceScene *scene) {
 void AudioManager::
 clear_trace_scene() {
 }
+
+/**
+ *
+ */
+void AudioManager::
+set_reverb(DSP *reverb_dsp) {
+}
+
+/**
+ *
+ */
+void AudioManager::
+set_steam_audio_reverb() {
+}
+
+/**
+ *
+ */
+void AudioManager::
+clear_reverb() {
+}

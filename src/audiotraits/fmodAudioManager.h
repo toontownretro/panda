@@ -126,6 +126,10 @@ public:
   virtual void set_cache_limit(unsigned int count);
   virtual unsigned int get_cache_limit() const;
 
+  virtual void set_reverb(DSP *reverb_dsp) override;
+  virtual void set_steam_audio_reverb() override;
+  virtual void clear_reverb() override;
+
   FMOD::DSP *get_fmod_dsp(DSP *panda_dsp) const;
 
 private:
@@ -135,6 +139,8 @@ private:
   void release_sound(FMODAudioSound* sound);
 
   void update_sounds();
+
+  void set_reverb_dsp(FMOD::DSP *dsp);
 
 private:
   // This global lock protects all access to FMod library interfaces.
@@ -162,6 +168,9 @@ public:
   unsigned int _concurrent_sound_limit;
 
   FMODAudioEngine *_engine;
+
+  PT(DSP) _reverb_dsp;
+  FMOD::DSP *_fmod_reverb_dsp;
 
 public:
   static TypeHandle get_class_type() {
