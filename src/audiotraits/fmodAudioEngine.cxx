@@ -501,7 +501,11 @@ init_steam_audio() {
   // Now initialize the Steam Audio FMOD plugin.  This implements custom FMOD
   // DSPs that render the results of our simulations.
 
+#ifdef _WIN32
+  Filename plugin_filename = Filename::dso_filename("phonon_fmod.so");
+#else
   Filename plugin_filename = Filename::dso_filename("libphonon_fmod.so");
+#endif
   std::string plugin_filename_os = plugin_filename.to_os_specific();
   FMOD_RESULT result = _system->loadPlugin(plugin_filename_os.c_str(), &_ipl_plugin_handle);
   if (!fmod_audio_errcheck("Load Steam Audio FMOD plugin", result)) {
