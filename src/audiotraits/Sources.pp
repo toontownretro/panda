@@ -45,12 +45,14 @@
 
   #define SOURCES \
       config_fmodAudio.h \
+      fmodAudioEngine.h fmodAudioEngine.I \
       fmodAudioManager.h \
       fmodAudioSound.I fmodAudioSound.h \
       fmodSoundCache.I fmodSoundCache.h
 
   #define COMPOSITE_SOURCES \
       config_fmodAudio.cxx \
+      fmodAudioEngine.cxx \
       fmodAudioManager.cxx \
       fmodAudioSound.cxx \
       fmodSoundCache.cxx

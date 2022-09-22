@@ -63,34 +63,6 @@ PUBLISHED:
     SPK_COUNT,
   };
 
-  // This determines how sounds should be loaded.  The AudioManager
-  // has a default setting that applies to all sounds loaded through
-  // the manager, but it can be optionally overridden on a per-sound
-  // basis.
-  enum StreamMode {
-    // For sounds, use the StreamMode of the manager.
-    // The manager itself should not use SM_default.
-    SM_default,
-    // Preload the audio if it is smaller than a user-configured
-    // threshold, otherwise stream it.
-    SM_heuristic,
-    // Preload entire audio buffer into memory on load.
-    // Good for sounds effects.
-    SM_sample,
-    // Stream audio buffer directly from disk.
-    // Good for music.
-    SM_stream,
-  };
-
-  virtual int get_speaker_setup();
-  virtual void set_speaker_setup(SpeakerModeCategory cat);
-
-  virtual void set_stream_mode(StreamMode mode);
-  virtual StreamMode get_stream_mode() const;
-
-  virtual void set_preload_threshold(int threshold);
-  virtual int get_preload_threshold() const;
-
   // DSP methods
   INLINE bool add_dsp_to_head(DSP *dsp);
   INLINE bool add_dsp_to_tail(DSP *dsp);
@@ -105,7 +77,6 @@ PUBLISHED:
   // MySoundEffects.get_sound("neatSfx.mp3"); my_music =
   // MyMusicManager.get_sound("introTheme.mid");
 
-  static PT(AudioManager) create_AudioManager(const std::string &name, AudioManager *parent = nullptr);
   virtual ~AudioManager();
 
   virtual void shutdown();
@@ -119,14 +90,14 @@ PUBLISHED:
   virtual bool is_valid() = 0;
 
   // Get a sound:
-  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, StreamMode mode=SM_default) = 0;
+  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, bool stream = false) = 0;
   /**
    * Effectively returns a copy of the indicated AudioSound that can be
    * manipulated independently of each other.  In the FMOD implementation, this
    * shares the same sound data, but creates a different channel for playing.
    */
   virtual PT(AudioSound) get_sound(AudioSound *source) = 0;
-  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, StreamMode mode=SM_default) = 0;
+  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, bool stream = false) = 0;
 
   PT(AudioSound) get_null_sound();
 
@@ -176,39 +147,6 @@ PUBLISHED:
   // This should be called every frame.  Failure to call could cause problems.
   virtual void update();
 
-  // This controls the "set of ears" that listens to 3D spacialized sound px,
-  // py, pz are position coordinates.  vx, vy, vz are a velocity vector in
-  // UNITS PER SECOND (default: meters). fx, fy and fz are the respective
-  // components of a unit forward-vector ux, uy and uz are the respective
-  // components of a unit up-vector
-  virtual void audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
-                                                PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                                                PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz,
-                                                PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz);
-  virtual void audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
-                                                PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz,
-                                                PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz,
-                                                PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz);
-
-  // Control the "relative scale that sets the distance factor" units for 3D
-  // spacialized audio. This is a float in units-per-meter. Default value is
-  // 1.0, which means that Panda units are understood as meters; for e.g.
-  // feet, set 3.28. This factor is applied only to Fmod and OpenAL at the
-  // moment.
-  virtual void audio_3d_set_distance_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_distance_factor() const;
-
-  // Control the presence of the Doppler effect.  Default is 1.0 Exaggerated
-  // Doppler, use >1.0 Diminshed Doppler, use <1.0
-  virtual void audio_3d_set_doppler_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_doppler_factor() const;
-
-  // Exaggerate or diminish the effect of distance on sound.  Default is 1.0
-  // Valid range is 0 to 10 Faster drop off, use >1.0 Slower drop off, use
-  // <1.0
-  virtual void audio_3d_set_drop_off_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_drop_off_factor() const;
-
   static Filename get_dls_pathname();
   MAKE_PROPERTY(dls_pathname, get_dls_pathname);
 
@@ -238,7 +176,6 @@ protected:
   // base class.  This allows implementors of various sound systems the best
   // flexibility.
 
-  static Create_AudioManager_proc* _create_AudioManager;
   AtomicAdjust::Pointer _null_sound;
 
   AudioManager();

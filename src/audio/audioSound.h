@@ -20,6 +20,7 @@
 #include "pointerTo.h"
 #include "filterProperties.h"
 #include "cmath.h"
+#include "luse.h"
 
 class AudioManager;
 class DSP;
@@ -121,12 +122,10 @@ PUBLISHED:
   // Controls the position of this sound's emitter.  px, py and pz are the
   // emitter's position.  vx, vy and vz are the emitter's velocity in UNITS
   // PER SECOND (default: meters).
-  virtual void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
-                                 PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                                 PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f,
-                                 PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
-  virtual void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
-                                 PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
+  virtual void set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &vel);
+  virtual LPoint3 get_3d_position() const;
+  virtual LQuaternion get_3d_quat() const;
+  virtual LVector3 get_3d_velocity() const;
 
   // Controls the distance (in units) that this sound begins to fall off.
   // Also affects the rate it falls off.  Default is 1.0 CloserFaster, <1.0
@@ -134,21 +133,7 @@ PUBLISHED:
   virtual void set_3d_min_distance(PN_stdfloat dist);
   virtual PN_stdfloat get_3d_min_distance() const;
 
-  // Controls the maximum distance (in units) that this sound stops falling
-  // off.  The sound does not stop at that point, it just doesn't get any
-  // quieter.  You should rarely need to adjust this.  Default is 1000000000.0
-  virtual void set_3d_max_distance(PN_stdfloat dist);
-  virtual PN_stdfloat get_3d_max_distance() const;
-
   virtual PN_stdfloat get_sound_frequency() const;
-
-  // speaker_mix is for use with FMOD.
-  virtual PN_stdfloat get_speaker_mix(int speaker);
-  virtual void set_speaker_mix(int speaker, PN_stdfloat mix);
-  virtual void set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright,
-                               PN_stdfloat center, PN_stdfloat sub,
-                               PN_stdfloat backleft, PN_stdfloat backright,
-                               PN_stdfloat sideleft, PN_stdfloat sideright);
 
   virtual int get_priority();
   virtual void set_priority(int priority);

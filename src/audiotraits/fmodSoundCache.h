@@ -17,11 +17,14 @@
 #include "pandabase.h"
 #include "pmap.h"
 #include "filename.h"
-#include "virtualFile.h"
+#include "referenceCount.h"
+#include "pointerTo.h"
 
-#include "fmod.hpp"
+#include <fmod.hpp>
 
-class FMODAudioManager;
+class FMODAudioEngine;
+class VirtualFile;
+class MovieAudio;
 
 /**
  * Handle to an FMOD::Sound object that releases the sound when the last
@@ -29,12 +32,14 @@ class FMODAudioManager;
  */
 class EXPCL_FMOD_AUDIO FMODSoundHandle : public ReferenceCount {
 public:
-  INLINE FMODSoundHandle(FMOD::Sound *sound) : _sound(sound) { }
+  INLINE FMODSoundHandle(FMOD::Sound *sound, const Filename &filename) : _sound(sound), _orig_filename(filename) { }
   INLINE ~FMODSoundHandle() { if (_sound != nullptr) { _sound->release(); _sound = nullptr; } }
   INLINE FMOD::Sound *get_sound() const { return _sound; }
+  INLINE const Filename &get_orig_filename() const { return _orig_filename; }
 
 private:
   FMOD::Sound *_sound;
+  Filename _orig_filename;
 };
 
 /**
@@ -43,11 +48,14 @@ private:
  * that reference the same filename.  Each FMODAudioSound just creates a
  * different channel to play the same sound.
  */
-class EXPCL_FMOD_AUDIO FMODSoundCache {
+class EXPCL_FMOD_AUDIO FMODSoundCache : public ReferenceCount {
 public:
-  PT(FMODSoundHandle) get_sound(FMODAudioManager *mgr, VirtualFile *file, bool positional);
+  FMODSoundCache(FMODAudioEngine *engine);
 
-  INLINE static FMODSoundCache *get_global_ptr();
+  PT(FMODSoundHandle) get_sound(const Filename &filename, bool positional, bool stream);
+  PT(FMODSoundHandle) get_sound(MovieAudio *audio, bool positional, bool stream);
+
+  void initialize();
 
   INLINE void clear_sounds();
 
@@ -67,10 +75,12 @@ private:
   seek_callback(void *handle, unsigned int pos, void *user_data);
 
 private:
-  static FMODSoundCache *_ptr;
-
   typedef pflat_hash_map<Filename, PT(FMODSoundHandle)> Sounds;
   Sounds _sounds;
+
+  PT(FMODSoundHandle) _empty_sound;
+
+  FMODAudioEngine *_engine;
 };
 
 #include "fmodSoundCache.I"

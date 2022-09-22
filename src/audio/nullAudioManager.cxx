@@ -49,7 +49,7 @@ is_valid() {
  *
  */
 PT(AudioSound) NullAudioManager::
-get_sound(const Filename &, bool positional, StreamMode mode) {
+get_sound(const Filename &, bool positional, bool stream) {
   return get_null_sound();
 }
 
@@ -57,7 +57,7 @@ get_sound(const Filename &, bool positional, StreamMode mode) {
  *
  */
 PT(AudioSound) NullAudioManager::
-get_sound(MovieAudio *sound, bool positional, StreamMode mode) {
+get_sound(MovieAudio *sound, bool positional, bool stream) {
   return get_null_sound();
 }
 
@@ -180,71 +180,4 @@ reduce_sounds_playing_to(unsigned int) {
 void NullAudioManager::
 stop_all_sounds() {
   // intentionally blank.
-}
-
-/**
- *
- */
-void NullAudioManager::
-audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz, PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
-    // intentionally blank.
-}
-
-/**
- *
- */
-void NullAudioManager::
-audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz, PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz, PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz) {
-    // intentionally blank.
-}
-
-/**
- *
- */
-void NullAudioManager::
-audio_3d_set_distance_factor(PN_stdfloat factor) {
-    // intentionally blank.
-}
-
-/**
- *
- */
-PN_stdfloat NullAudioManager::
-audio_3d_get_distance_factor() const {
-    // intentionally blank.
-    return 0.0f;
-}
-
-/**
- *
- */
-void NullAudioManager::
-audio_3d_set_doppler_factor(PN_stdfloat factor) {
-    // intentionally blank.
-}
-
-/**
- *
- */
-PN_stdfloat NullAudioManager::
-audio_3d_get_doppler_factor() const {
-    // intentionally blank.
-    return 0.0f;
-}
-
-/**
- *
- */
-void NullAudioManager::
-audio_3d_set_drop_off_factor(PN_stdfloat factor) {
-    // intentionally blank.
-}
-
-/**
- *
- */
-PN_stdfloat NullAudioManager::
-audio_3d_get_drop_off_factor() const {
-    // intentionally blank.
-    return 0.0f;
 }

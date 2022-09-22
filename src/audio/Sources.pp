@@ -12,6 +12,7 @@
     config_audio.h \
     filterProperties.h filterProperties.I \
     audioLoadRequest.h audioLoadRequest.I \
+    audioEngine.h audioEngine.I \
     audioManager.h audioManager.I \
     audioSound.h audioSound.I \
     chorusDSP.h chorusDSP.I \
@@ -25,6 +26,7 @@
     limiterDSP.h limiterDSP.I \
     lowpassDSP.h lowpassDSP.I \
     normalizeDSP.h normalizeDSP.I \
+    nullAudioEngine.h nullAudioEngine.I \
     nullAudioManager.h \
     nullAudioSound.h \
     oscillatorDSP.h oscillatorDSP.I \
@@ -37,6 +39,7 @@
     config_audio.cxx \
     filterProperties.cxx \
     audioLoadRequest.cxx \
+    audioEngine.cxx \
     audioManager.cxx \
     audioSound.cxx \
     chorusDSP.cxx \
@@ -50,6 +53,7 @@
     limiterDSP.cxx \
     lowpassDSP.cxx \
     normalizeDSP.cxx \
+    nullAudioEngine.cxx \
     nullAudioManager.cxx \
     nullAudioSound.cxx \
     oscillatorDSP.cxx \
@@ -62,6 +66,7 @@
     config_audio.h \
     filterProperties.h filterProperties.I \
     audioLoadRequest.h audioLoadRequest.I \
+    audioEngine.h audioEngine.I \
     audioManager.h audioManager.I \
     audioSound.h audioSound.I \
     chorusDSP.h chorusDSP.I \
@@ -75,6 +80,7 @@
     limiterDSP.h limiterDSP.I \
     lowpassDSP.h lowpassDSP.I \
     normalizeDSP.h normalizeDSP.I \
+    nullAudioEngine.h nullAudioEngine.I \
     nullAudioManager.h \
     nullAudioSound.h \
     oscillatorDSP.h oscillatorDSP.I \

@@ -33,35 +33,51 @@ AudioSound() {
   // Intentionally blank.
 }
 
+/**
+ *
+ */
 void AudioSound::
-set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
+set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &vel) {
   // Intentionally blank.
 }
 
-void AudioSound::
-get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz) {
-  // Intentionally blank.
+/**
+ *
+ */
+LPoint3 AudioSound::
+get_3d_position() const {
+  return LPoint3();
 }
 
+/**
+ *
+ */
+LQuaternion AudioSound::
+get_3d_quat() const {
+  return LQuaternion::ident_quat();
+}
+
+/**
+ *
+ */
+LVector3 AudioSound::
+get_3d_velocity() const {
+  return LVector3();
+}
+
+/**
+ *
+ */
 void AudioSound::
 set_3d_min_distance(PN_stdfloat dist) {
   // Intentionally blank.
 }
 
+/**
+ *
+ */
 PN_stdfloat AudioSound::
 get_3d_min_distance() const {
-  // Intentionally blank.
-  return 0.0f;
-}
-
-void AudioSound::
-set_3d_max_distance(PN_stdfloat dist) {
-  // Intentionally blank.
-}
-
-PN_stdfloat AudioSound::
-get_3d_max_distance() const {
   // Intentionally blank.
   return 0.0f;
 }
@@ -72,34 +88,6 @@ get_3d_max_distance() const {
 PN_stdfloat AudioSound::
 get_sound_frequency() const {
   return 0.0f;
-}
-
-/**
- * For use only with FMOD.
- */
-PN_stdfloat AudioSound::
-get_speaker_mix(int speaker) {
-  // intentionally blank
-  return 0.0;
-}
-
-/**
- * For use only with FMOD. Sets the mix values of a speaker.
- */
-void AudioSound::
-set_speaker_mix(int speaker, PN_stdfloat mix) {
-  // intentionally blank
-}
-
-/**
- * For use only with FMOD. Sets the mix values for all speakers.
- */
-void AudioSound::
-set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright,
-                PN_stdfloat center, PN_stdfloat sub,
-                PN_stdfloat backleft, PN_stdfloat backright,
-                PN_stdfloat sideleft, PN_stdfloat sideright) {
-  // intentionally blank
 }
 
 /**

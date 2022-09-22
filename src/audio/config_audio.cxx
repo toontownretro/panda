@@ -15,6 +15,7 @@
 #include "dconfig.h"
 #include "filterProperties.h"
 #include "audioLoadRequest.h"
+#include "audioEngine.h"
 #include "audioManager.h"
 #include "audioSound.h"
 #include "chorusDSP.h"
@@ -28,6 +29,7 @@
 #include "limiterDSP.h"
 #include "lowpassDSP.h"
 #include "normalizeDSP.h"
+#include "nullAudioEngine.h"
 #include "nullAudioManager.h"
 #include "nullAudioSound.h"
 #include "oscillatorDSP.h"
@@ -131,8 +133,10 @@ ConfigVariableFilename audio_dls_file
 ConfigureFn(config_audio) {
   FilterProperties::init_type();
   AudioLoadRequest::init_type();
+  AudioEngine::init_type();
   AudioManager::init_type();
   AudioSound::init_type();
+  NullAudioEngine::init_type();
   NullAudioManager::init_type();
   NullAudioSound::init_type();
 

@@ -33,61 +33,13 @@
 #include "vector_uchar.h"
 #include "clockObject.h"
 #include "mathutil_misc.h"
+#include "fmodAudioEngine.h"
 
 TypeHandle FMODAudioSound::_type_handle;
-
-#ifndef HAMMER_UNITS_TO_METERS
-#define HAMMER_UNITS_TO_METERS 0.01905f
-#endif
 
 #define CHANNEL_INVALID(result) (result == FMOD_ERR_INVALID_HANDLE || result == FMOD_ERR_CHANNEL_STOLEN)
 
 #ifdef HAVE_STEAM_AUDIO
-
-/**
- * Implements a custom distance attenuation for Steam Audio.
- * Scales the distance by the sound's distance multiplier.
- */
-float
-ipl_distance_atten(IPLfloat32 distance, void *user_data) {
-  FMODAudioSound *sound = (FMODAudioSound *)user_data;
-
-  // Meters to hammer units.
-  distance /= HAMMER_UNITS_TO_METERS;
-
-  PN_stdfloat gain = 1.0f;
-  PN_stdfloat dist_factor = sound->get_3d_distance_factor();
-  PN_stdfloat relative_dist = distance * dist_factor;
-  if (relative_dist > 0.1f) {
-    gain *= (1.0f / relative_dist);
-  } else {
-    gain *= 10.0f;
-  }
-
-  if (gain > SND_GAIN_COMP_THRESH) {
-    PN_stdfloat snd_gain_comp_power = SND_GAIN_COMP_EXP_MAX;
-    int sndlvl = DIST_MULT_TO_SNDLVL(dist_factor);
-    PN_stdfloat y;
-
-    if (sndlvl > SND_DB_MED) {
-      snd_gain_comp_power = remap_val_clamped((float)sndlvl, SND_DB_MED, SND_DB_MAX, SND_GAIN_COMP_EXP_MAX, SND_GAIN_COMP_EXP_MIN);
-    }
-
-    y = -1.0f / (pow(SND_GAIN_COMP_THRESH, snd_gain_comp_power) * (SND_GAIN_COMP_THRESH - 1.0f));
-    gain = 1.0f - 1.0f / (y * pow(gain, snd_gain_comp_power));
-    gain *= SND_GAIN_MAX;
-  }
-
-  if (gain < SND_GAIN_MIN) {
-    gain = SND_GAIN_MIN * (2.0f - relative_dist * SND_GAIN_MIN);
-
-    if (gain <= 0.0f) {
-      gain = 0.001f;
-    }
-  }
-
-  return gain;
-}
 
 IPLVector3
 fmod_vec_to_ipl(const FMOD_VECTOR &vec) {
@@ -123,69 +75,38 @@ IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMO
 }
 #endif
 
+extern FMOD_VECTOR lvec_to_fmod(const LVecBase3 &vec);
+
 /**
  * Constructor All sound will DEFAULT load as a 2D sound unless otherwise
  * specified.
  */
 FMODAudioSound::
-FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
+FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
+  _manager(manager),
+  _sound_handle(handle),
+  _sound(handle->get_sound()),
+  _paused(false),
+  _active(manager->get_active()),
+  _balance(0.0f),
+  _start_time(0.0f),
+  _volume(1.0f),
+  _playrate(1.0f),
+  _is_midi(false),
+  _length(0),
+  _channel(nullptr),
+  _pos(0.0f),
+  _vel(0.0f),
+  _quat(LQuaternion::ident_quat()),
+  _min_dist(1.0f),
+  _file_name(handle->get_orig_filename()),
+  _sa_spatial_dsp(nullptr)
+{
   ReMutexHolder holder(FMODAudioManager::_lock);
-  audio_debug("FMODAudioSound::FMODAudioSound() Creating new sound, filename: "
-              << file->get_original_filename());
-
-  _active = manager->get_active();
-  _paused = false;
-  _start_time = 0.0;
-  _balance = 0.0;
-  _volume = 1.0;
-  _playrate = 1.0;
-  _is_midi = false;
-  _length = 0;
-  _last_update_frame = 0;
-
-  // 3D attributes of the sound.
-  _location.x = 0;
-  _location.y = 0;
-  _location.z = 0;
-
-  _velocity.x = 0;
-  _velocity.y = 0;
-  _velocity.z = 0;
-
-  _up.x = 0;
-  _up.y = 1;
-  _up.z = 0;
-
-  _forward.x = 0;
-  _forward.y = 0;
-  _forward.z = 1;
-
-  _min_dist = 1.0;
-  _max_dist = 1000000000.0;
-
-  // These set the speaker levels to a default if you are using a multichannel
-  // setup.
-  for (int i = 0; i < AudioManager::SPK_COUNT; i++) {
-    _mix[i] = 1.0;
-  }
+  audio_debug("FMODAudioSound::FMODAudioSound() Creating new sound from handle: "
+              << handle->get_orig_filename());
 
   FMOD_RESULT result;
-
-  // Assign the values we need
-  FMODAudioManager *fmanager;
-  DCAST_INTO_V(fmanager, manager);
-  _manager = fmanager;
-
-  _channel = nullptr;
-  _file_name = file->get_original_filename();
-  _file_name.set_binary();
-
-  // Get the Speaker Mode [Important for later on.]
-  result = _manager->get_speaker_mode(_speakermode);
-  fmod_audio_errcheck("_system->getSpeakerMode()", result);
-
-  _sound_handle = FMODSoundCache::get_global_ptr()->get_sound(_manager, file, positional);
-  _sound = _sound_handle->get_sound();
 
   _is_midi = _file_name.get_extension() == "mid";
 
@@ -209,10 +130,6 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
   _loop_start = 0;
   _loop_end = _length;
 
-#ifdef HAVE_STEAM_AUDIO
-  _sa_source = nullptr;
-#endif
-
   _sa_spatial_dsp = nullptr;
 }
 
@@ -221,11 +138,12 @@ FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional) {
  * sound data but creates a new channel.
  */
 FMODAudioSound::
-FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
+FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy) {
   ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::FMODAudioSound() Creating channel from existing "
               "sound handle");
 
+  _manager = manager;
   _active = manager->get_active();
   _paused = false;
   _start_time = 0.0;
@@ -236,35 +154,13 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
   _length = copy->_length;
   _loop_start = copy->_loop_start;
   _loop_end = copy->_loop_end;
-  _last_update_frame = 0;
-
-  // 3D attributes of the sound.
-  _location.x = 0;
-  _location.y = 0;
-  _location.z = 0;
-
-  _velocity.x = 0;
-  _velocity.y = 0;
-  _velocity.z = 0;
-
-  _up.x = 0;
-  _up.y = 1;
-  _up.z = 0;
-
-  _forward.x = 0;
-  _forward.y = 0;
-  _forward.z = 1;
+  _pos.set(0.0f, 0.0f, 0.0f);
+  _vel.set(0.0f, 0.0f, 0.0f);
+  _quat = LQuaternion::ident_quat();
 
   _min_dist = copy->_min_dist;
-  _max_dist = copy->_max_dist;
 
   _dsps = copy->_dsps;
-
-  // These set the speaker levels to a default if you are using a multichannel
-  // setup.
-  for (int i = 0; i < AudioManager::SPK_COUNT; i++) {
-    _mix[i] = copy->_mix[i];
-  }
 
   FMOD_RESULT result;
 
@@ -276,10 +172,6 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
   _channel = nullptr;
   _file_name = copy->_file_name;
 
-  // Get the Speaker Mode [Important for later on.]
-  result = _manager->get_speaker_mode(_speakermode);
-  fmod_audio_errcheck("_system->getSpeakerMode()", result);
-
   _sound_handle = copy->_sound_handle;
   nassertv(_sound_handle != nullptr);
 
@@ -288,10 +180,6 @@ FMODAudioSound(AudioManager *manager, FMODAudioSound *copy) {
 
   _sample_frequency = copy->_sample_frequency;
   _priority = copy->_priority;
-
-#ifdef HAVE_STEAM_AUDIO
-  _sa_source = nullptr;
-#endif
 
   _sa_spatial_dsp = nullptr;
 }
@@ -319,15 +207,6 @@ FMODAudioSound::
     fmod_audio_errcheck("release Steam Audio spatializer DSP", result);
     _sa_spatial_dsp = nullptr;
   }
-
-#ifdef HAVE_STEAM_AUDIO
-  if (_sa_source != nullptr) {
-    iplSourceRemove(_sa_source, _manager->_sa_simulator);
-    ++_manager->_next_sim_update;
-    iplSourceRelease(&_sa_source);
-    _sa_source = nullptr;
-  }
-#endif
 
   _manager->release_sound(this);
 }
@@ -361,13 +240,6 @@ stop() {
     }
     _channel = nullptr;
   }
-
-#ifdef HAVE_STEAM_AUDIO
-  //if (_sa_source != nullptr) {
-  //  iplSourceRemove(_sa_source, _manager->_sa_simulator);
-   // iplSimulatorCommit(_manager->_sa_simulator);
-  //}
-#endif
 
   _start_time = 0.0;
   _paused = false;
@@ -533,7 +405,8 @@ start_playing() {
   }
 
   if (_channel == nullptr) {
-    result = _manager->_system->playSound(_sound, _manager->_channelgroup, true, &_channel);
+    FMOD::System *sys = _manager->_engine->get_system();
+    result = sys->playSound(_sound, _manager->_channelgroup, true, &_channel);
     fmod_audio_errcheck("playSound()", result);
     nassertv(_channel != nullptr);
 
@@ -545,13 +418,6 @@ start_playing() {
     set_speaker_mix_or_balance_on_channel();
     set_dsps_on_channel();
     set_3d_attributes_on_channel();
-
-#ifdef HAVE_STEAM_AUDIO
-    if (_sa_source != nullptr) {
-      iplSourceAdd(_sa_source, _manager->_sa_simulator);
-      ++_manager->_next_sim_update;
-    }
-#endif
 
     result = _channel->setPaused(false);
     fmod_audio_errcheck("_channel->setPaused()", result);
@@ -699,38 +565,16 @@ length() const {
  * you, so you can't say I didn't.
  */
 void FMODAudioSound::
-set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                  PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
+set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &vel) {
   ReMutexHolder holder(FMODAudioManager::_lock);
 
-  // Inches to meters.
-  _location.x = px * HAMMER_UNITS_TO_METERS;
-  _location.y = pz * HAMMER_UNITS_TO_METERS;
-  _location.z = py * HAMMER_UNITS_TO_METERS;
+  FMODAudioEngine *engine = _manager->_engine;
+  PN_stdfloat unit_scale = engine->get_3d_unit_scale();
 
-  _velocity.x = vx * HAMMER_UNITS_TO_METERS;
-  _velocity.y = vz * HAMMER_UNITS_TO_METERS;
-  _velocity.z = vy * HAMMER_UNITS_TO_METERS;
-
-  _up.x = ux;
-  _up.y = uz;
-  _up.z = uy;
-
-  _forward.x = fx;
-  _forward.y = fz;
-  _forward.z = fy;
-
-#ifdef HAVE_STEAM_AUDIO
-  if (_sa_source != nullptr) {
-    // If the source is simulated, apply the new transform to the Steam Audio
-    // source as well.
-    _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
-    {
-      ReMutexHolder sa_holder(FMODAudioManager::_sa_refl_lock);
-      iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
-    }
-  }
-#endif
+  // Game units to meters.
+  _pos = pos / unit_scale;
+  _vel = vel / unit_scale;
+  _quat = quat;
 
   set_3d_attributes_on_channel();
 }
@@ -757,15 +601,21 @@ set_3d_attributes_on_channel() {
     // With Steam Audio the 3D attributes are set on the Steam Audio
     // spatializer DSP, which replaces the built-in FMOD positional audio.
     FMOD_DSP_PARAMETER_3DATTRIBUTES attr;
-    attr.absolute.position = _location;
-    attr.absolute.velocity = _velocity;
-    attr.absolute.up = _up;
-    attr.absolute.forward = _forward;
+    attr.absolute.position = lvec_to_fmod(_pos);
+    attr.absolute.velocity = lvec_to_fmod(_vel);
+    LVector3 up, fwd;
+    up = _quat.get_up();
+    fwd = _quat.get_forward();
+    attr.absolute.up = lvec_to_fmod(up);
+    attr.absolute.forward = lvec_to_fmod(fwd);
     // Steam Audio doesn't care about the relative 3D attributes.
     _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr));
 
   } else if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
-    result = _channel->set3DAttributes(&_location, &_velocity);
+    FMOD_VECTOR pos, vel;
+    pos = lvec_to_fmod(_pos);
+    vel = lvec_to_fmod(_vel);
+    result = _channel->set3DAttributes(&pos, &vel);
     if (CHANNEL_INVALID(result)) {
       _channel = nullptr;
     } else {
@@ -775,12 +625,27 @@ set_3d_attributes_on_channel() {
 }
 
 /**
- * Get position and velocity of this sound Currently unimplemented.  Get the
- * attributes of the attached object.
+ *
  */
-void FMODAudioSound::
-get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz) {
-  audio_error("get3dAttributes: Currently unimplemented. Get the attributes of the attached object.");
+LPoint3 FMODAudioSound::
+get_3d_position() const {
+  return _pos * _manager->_engine->get_3d_unit_scale();
+}
+
+/**
+ *
+ */
+LQuaternion FMODAudioSound::
+get_3d_quat() const {
+  return _quat;
+}
+
+/**
+ *
+ */
+LVector3 FMODAudioSound::
+get_3d_velocity() const {
+  return _vel * _manager->_engine->get_3d_unit_scale();
 }
 
 /**
@@ -792,7 +657,7 @@ set_3d_min_distance(PN_stdfloat dist) {
   ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
-  _min_dist = dist * HAMMER_UNITS_TO_METERS;
+  _min_dist = dist / _manager->_engine->get_3d_unit_scale();
 
 #ifdef HAVE_STEAM_AUDIO
   bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
@@ -804,7 +669,7 @@ set_3d_min_distance(PN_stdfloat dist) {
     _sa_spatial_dsp->setParameterFloat(12, _min_dist);
 
   } else {
-    result = _sound->set3DMinMaxDistance(_min_dist, _max_dist);
+    result = _sound->set3DMinMaxDistance(_min_dist, 100000000.0f);
     fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
   }
 }
@@ -814,40 +679,7 @@ set_3d_min_distance(PN_stdfloat dist) {
  */
 PN_stdfloat FMODAudioSound::
 get_3d_min_distance() const {
-  return _min_dist;
-}
-
-/**
- * Set the distance that this sound stops falling off
- */
-void FMODAudioSound::
-set_3d_max_distance(PN_stdfloat dist) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
-  FMOD_RESULT result;
-
-  _max_dist = dist * HAMMER_UNITS_TO_METERS;
-
-#ifdef HAVE_STEAM_AUDIO
-  bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
-#else
-  bool steam_audio_dsp = false;
-#endif
-
-  if (steam_audio_dsp) {
-    _sa_spatial_dsp->setParameterFloat(13, _max_dist);
-
-  } else {
-    result = _sound->set3DMinMaxDistance(_min_dist, _max_dist);
-    fmod_audio_errcheck("_sound->set3DMinMaxDistance()", result);
-  }
-}
-
-/**
- * Get the distance that this sound stops falling off
- */
-PN_stdfloat FMODAudioSound::
-get_3d_max_distance() const {
-  return _max_dist;
+  return _min_dist * _manager->_engine->get_3d_unit_scale();
 }
 
 /**
@@ -856,79 +688,6 @@ get_3d_max_distance() const {
 PN_stdfloat FMODAudioSound::
 get_sound_frequency() const {
   return _sample_frequency;
-}
-
-/**
- * In Multichannel Speaker systems [like Surround].
- *
- * Speakers which don't exist in some systems will simply be ignored.  But I
- * haven't been able to test this yet, so I am jsut letting you know.
- *
- * BTW This will also work in Stereo speaker systems, but since PANDA/FMOD has
- * a balance [pan] function what is the point?
- */
-PN_stdfloat FMODAudioSound::
-get_speaker_mix(int speaker) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
-
-  if (_channel == nullptr || speaker < 0 || speaker >= AudioManager::SPK_COUNT) {
-    return 0.0;
-  }
-
-  int in, out;
-  float mix[32][32];
-  FMOD_RESULT result;
-  // First query the number of output speakers and input channels
-  result = _channel->getMixMatrix(nullptr, &out, &in, 32);
-  if (CHANNEL_INVALID(result)) {
-    _channel = nullptr;
-    return 0.0;
-
-  } else {
-    fmod_audio_errcheck("_channel->getMixMatrix()", result);
-
-    // Now get the actual mix matrix
-    result = _channel->getMixMatrix((float *)mix, &out, &in, 32);
-    fmod_audio_errcheck("_channel->getMixMatrix()", result);
-
-    return mix[speaker][0];
-  }
-}
-
-/**
- * Sets the mix value of a speaker.
- */
-void FMODAudioSound::
-set_speaker_mix(int speaker, PN_stdfloat mix) {
-  nassertv(speaker >= 0 && speaker < AudioManager::SPK_COUNT);
-
-  ReMutexHolder holder(FMODAudioManager::_lock);
-
-  _mix[speaker] = mix;
-
-  set_speaker_mix_or_balance_on_channel();
-}
-
-/**
- * Sets the mix values for all speakers.
- */
-void FMODAudioSound::
-set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright,
-                PN_stdfloat center, PN_stdfloat sub,
-                PN_stdfloat backleft, PN_stdfloat backright,
-                PN_stdfloat sideleft, PN_stdfloat sideright) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
-
-  _mix[AudioManager::SPK_front_left] = frontleft;
-  _mix[AudioManager::SPK_front_right] = frontright;
-  _mix[AudioManager::SPK_front_center] = center;
-  _mix[AudioManager::SPK_sub] = sub;
-  _mix[AudioManager::SPK_surround_left] = sideleft;
-  _mix[AudioManager::SPK_surround_right] = sideright;
-  _mix[AudioManager::SPK_back_left] = backleft;
-  _mix[AudioManager::SPK_back_right] = backright;
-
-  set_speaker_mix_or_balance_on_channel();
 }
 
 /**
@@ -941,33 +700,21 @@ set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright,
  */
 void FMODAudioSound::
 set_speaker_mix_or_balance_on_channel() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
-  FMOD_RESULT result;
-  FMOD_MODE soundMode;
+  //ReMutexHolder holder(FMODAudioManager::_lock);
+  //FMOD_RESULT result;
+  //FMOD_MODE soundMode;
 
-  result = _sound->getMode(&soundMode);
-  fmod_audio_errcheck("_sound->getMode()", result);
+  //result = _sound->getMode(&soundMode);
+  //fmod_audio_errcheck("_sound->getMode()", result);
 
-  if ((_channel != nullptr) && ((soundMode & FMOD_3D) == 0) && (_sa_spatial_dsp == nullptr)) {
-    if (_speakermode == FMOD_SPEAKERMODE_STEREO) {
-      result = _channel->setPan(_balance);
-    } else {
-      result = _channel->setMixLevelsOutput(
-        _mix[AudioManager::SPK_front_left],
-        _mix[AudioManager::SPK_front_right],
-        _mix[AudioManager::SPK_front_center],
-        _mix[AudioManager::SPK_sub],
-        _mix[AudioManager::SPK_surround_left],
-        _mix[AudioManager::SPK_surround_right],
-        _mix[AudioManager::SPK_back_left],
-        _mix[AudioManager::SPK_back_right]);
-    }
-    if (CHANNEL_INVALID(result)) {
-      _channel = nullptr;
-    } else {
-      fmod_audio_errcheck("_channel->setSpeakerMix()/setPan()", result);
-    }
-  }
+  //if ((_channel != nullptr) && ((soundMode & FMOD_3D) == 0) && (_sa_spatial_dsp == nullptr)) {
+  //  result = _channel->setPan(_balance);
+  //  if (CHANNEL_INVALID(result)) {
+  //    _channel = nullptr;
+  //  } else {
+  //    fmod_audio_errcheck("_channel->setSpeakerMix()/setPan()", result);
+  //  }
+  //}
 }
 
 /**
@@ -1075,7 +822,7 @@ insert_dsp(int index, DSP *panda_dsp) {
   // If it's already in there, take it out and put it in the new spot.
   remove_dsp(panda_dsp);
 
-  FMOD::DSP *dsp = _manager->create_fmod_dsp(panda_dsp);
+  FMOD::DSP *dsp = _manager->_engine->create_fmod_dsp(panda_dsp);
   if (!dsp) {
     fmodAudio_cat.warning()
       << panda_dsp->get_type().get_name()
@@ -1214,7 +961,7 @@ set_dsps_on_channel() {
     ret = dsp->getUserData((void **)&panda_dsp);
     fmod_audio_errcheck("dsp->getUserData()", ret);
     if (ret == FMOD_OK && panda_dsp != nullptr && panda_dsp->is_dirty()) {
-      _manager->configure_dsp(panda_dsp, dsp);
+      _manager->_engine->configure_dsp(panda_dsp, dsp);
       panda_dsp->clear_dirty();
     }
 
@@ -1222,7 +969,7 @@ set_dsps_on_channel() {
     fmod_audio_errcheck("_channel->addDSP()", ret);
   }
 
-#ifdef HAVE_STEAM_AUDIO
+#if 0//def HAVE_STEAM_AUDIO
   if (fmod_use_steam_audio) {
     if (_sa_spatial_dsp != nullptr) {
       // Index 1 to spatialize before the channel fader.
@@ -1246,22 +993,18 @@ void FMODAudioSound::
 update() {
   // Update any DSPs that are dirty.
   FMOD_RESULT ret;
-  int current_frame = ClockObject::get_global_clock()->get_frame_count();
-  if (current_frame != _last_update_frame) {
-    for (FMODDSPs::const_iterator it = _dsps.begin(); it != _dsps.end(); ++it) {
-      FMOD::DSP *dsp = *it;
-      if (dsp == nullptr) {
-        continue;
-      }
-      DSP *panda_dsp = nullptr;
-      ret = dsp->getUserData((void **)&panda_dsp);
-      fmod_audio_errcheck("dsp->getUserData()", ret);
-      if (ret == FMOD_OK && panda_dsp != nullptr && panda_dsp->is_dirty()) {
-        _manager->configure_dsp(panda_dsp, dsp);
-        panda_dsp->clear_dirty();
-      }
+  for (FMODDSPs::const_iterator it = _dsps.begin(); it != _dsps.end(); ++it) {
+    FMOD::DSP *dsp = *it;
+    if (dsp == nullptr) {
+      continue;
     }
-    _last_update_frame = current_frame;
+    DSP *panda_dsp = nullptr;
+    ret = dsp->getUserData((void **)&panda_dsp);
+    fmod_audio_errcheck("dsp->getUserData()", ret);
+    if (ret == FMOD_OK && panda_dsp != nullptr && panda_dsp->is_dirty()) {
+      _manager->_engine->configure_dsp(panda_dsp, dsp);
+      panda_dsp->clear_dirty();
+    }
   }
 }
 
@@ -1309,76 +1052,10 @@ get_sound_handle() const {
  */
 void FMODAudioSound::
 apply_steam_audio_properties(const SteamAudioProperties &props) {
-#ifdef HAVE_STEAM_AUDIO
-  if (!fmod_use_steam_audio || _sa_source != nullptr || _sa_spatial_dsp != nullptr) {
+#if 0//def HAVE_STEAM_AUDIO
+  if (!fmod_use_steam_audio || _sa_spatial_dsp != nullptr) {
     // Already a Steam Audio source.
     return;
-  }
-
-  unsigned int flags = 0u;
-  //if (props._enable_occlusion || props._enable_transmission) {
-  //  flags |= IPL_SIMULATIONFLAGS_DIRECT;
-  //}
-  if (props._enable_reflections) {
-    flags |= IPL_SIMULATIONFLAGS_REFLECTIONS;
-  }
-  if (props._enable_pathing) {
-    flags |= IPL_SIMULATIONFLAGS_PATHING;
-  }
-
-  if (flags != 0u) {
-    // Something on the sound actually needs simulation, so we need to create
-    // an IPLSource and add it to our simulator.
-    IPLSourceSettings src_settings;
-    src_settings.flags = (IPLSimulationFlags)flags;
-    IPLerror err = iplSourceCreate(_manager->_sa_simulator, &src_settings, &_sa_source);
-    nassertv(err == IPL_STATUS_SUCCESS && _sa_source != nullptr);
-    // Not going to add it until it starts playing.
-
-    memset(&_sa_inputs, 0, sizeof(IPLSimulationInputs));
-
-    _sa_inputs.flags = src_settings.flags;
-
-    // We need a custom distance attenuation model to support the soundlevel
-    // distance multiplier system.
-    _sa_inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_CALLBACK;
-    _sa_inputs.distanceAttenuationModel.callback = ipl_distance_atten;
-    _sa_inputs.distanceAttenuationModel.userData = this;
-
-    unsigned int direct_flags = 0u;
-#if 0
-    if (props._enable_occlusion) {
-      direct_flags |= IPL_DIRECTSIMULATIONFLAGS_OCCLUSION;
-      if (props._enable_transmission) {
-        direct_flags |= IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION;
-      }
-
-      if (props._volumetric_occlusion) {
-        _sa_inputs.occlusionType = IPL_OCCLUSIONTYPE_VOLUMETRIC;
-      } else {
-        _sa_inputs.occlusionType = IPL_OCCLUSIONTYPE_RAYCAST;
-      }
-      _sa_inputs.occlusionRadius = props._volumetric_occlusion_radius;
-      _sa_inputs.numOcclusionSamples = 32;
-    }
-#endif
-    _sa_inputs.directFlags = (IPLDirectSimulationFlags)direct_flags;
-
-    if (props._enable_pathing) {
-      _sa_inputs.baked = IPL_TRUE;
-      _sa_inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
-      _sa_inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
-      _sa_inputs.pathingOrder = 1;
-      _sa_inputs.pathingProbes = _manager->_sa_probe_batch;
-      _sa_inputs.findAlternatePaths = IPL_FALSE;
-    }
-
-    _sa_inputs.source = fmod_coordinates_to_ipl(_location, _forward, _up);
-
-    {
-      ReMutexHolder holder(FMODAudioManager::_sa_refl_lock);
-      iplSourceSetInputs(_sa_source, _sa_inputs.flags, &_sa_inputs);
-    }
   }
 
   // Create and configure the spatialization DSP filter.
@@ -1398,10 +1075,10 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   // Steam Audio doesn't care about the relative 3D attributes.
   _sa_spatial_dsp->setActive(true);
   _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr)); // SOURCE_POSITION
-  _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 2 : 0);
+  _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(4, props._enable_directivity ? 1 : 0);
-  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 2 : 0);
+  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(6, props._enable_transmission ? 1 : 0);
   _sa_spatial_dsp->setParameterBool(7, props._enable_reflections);
   _sa_spatial_dsp->setParameterBool(8, props._enable_pathing);
@@ -1417,15 +1094,15 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterBool(28, props._binaural_pathing);
   _sa_spatial_dsp->setParameterFloat(29, 1.0f); // PATHING_MIXLEVEL
   // Link back to the IPLSource so the DSP can render simulation results.
-  _sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
+  //_sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
 
-  if (props._enable_occlusion) {
-    bool calculated;
-    float gain = _manager->calc_sound_occlusion(this, calculated);
-    if (calculated) {
-      _sa_spatial_dsp->setParameterFloat(20, gain);
-    }
-  }
+  //if (props._enable_occlusion) {
+  //  bool calculated;
+  //  float gain = _manager->calc_sound_occlusion(this, calculated);
+  //  if (calculated) {
+  //    _sa_spatial_dsp->setParameterFloat(20, gain);
+  //  }
+  //}
 #endif
 }
 

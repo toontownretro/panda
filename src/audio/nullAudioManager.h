@@ -29,8 +29,8 @@ public:
 
   virtual bool is_valid();
 
-  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, StreamMode mode=SM_heuristic);
-  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, StreamMode mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, bool stream = false);
+  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, bool stream = false);
   virtual PT(AudioSound) get_sound(AudioSound *sound) override;
 
   virtual void uncache_sound(const Filename &);
@@ -53,24 +53,6 @@ public:
   virtual void reduce_sounds_playing_to(unsigned int count);
 
   virtual void stop_all_sounds();
-
-  virtual void audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
-                                                PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                                                PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz,
-                                                PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz);
-  virtual void audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
-                                                PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz,
-                                                PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz,
-                                                PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz);
-
-  virtual void audio_3d_set_distance_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_distance_factor() const;
-
-  virtual void audio_3d_set_doppler_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_doppler_factor() const;
-
-  virtual void audio_3d_set_drop_off_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_drop_off_factor() const;
 
 
 public:

@@ -114,33 +114,6 @@ PN_stdfloat NullAudioSound::length() const {
   return 0;
 }
 
-void NullAudioSound::set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                                       PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz, PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz) {
-  // Intentionally blank.
-}
-
-void NullAudioSound::get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz) {
-  // Intentionally blank.
-}
-
-void NullAudioSound::set_3d_min_distance(PN_stdfloat dist) {
-  // Intentionally blank.
-}
-
-PN_stdfloat NullAudioSound::get_3d_min_distance() const {
-  // Intentionally blank.
-  return 0.0f;
-}
-
-void NullAudioSound::set_3d_max_distance(PN_stdfloat dist) {
-  // Intentionally blank.
-}
-
-PN_stdfloat NullAudioSound::get_3d_max_distance() const {
-  // Intentionally blank.
-  return 0.0f;
-}
-
 AudioSound::SoundStatus NullAudioSound::status() const {
   return AudioSound::READY;
 }

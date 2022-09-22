@@ -83,29 +83,15 @@
 #include <fmod.hpp>
 #include <fmod_errors.h>
 
-#ifdef HAVE_STEAM_AUDIO
-#include <phonon.h>
-#endif // HAVE_STEAM_AUDIO
-
 class FMODAudioSound;
-
-extern void _fmod_audio_errcheck(const char *context, FMOD_RESULT n);
-
-#ifdef NDEBUG
-#define fmod_audio_errcheck(context, n)
-#else
-#define fmod_audio_errcheck(context, n) _fmod_audio_errcheck(context, n)
-#endif // NDEBUG
-
-class RayTraceScene;
+class FMODAudioEngine;
 
 class EXPCL_FMOD_AUDIO FMODAudioManager : public AudioManager {
   friend class FMODAudioSound;
   friend class FMODSoundCache;
-  friend class SteamAudioReflectionsThread;
 
 public:
-  FMODAudioManager(const std::string &name, AudioManager *parent);
+  FMODAudioManager(const std::string &name, FMODAudioManager *parent, FMODAudioEngine *engine);
   virtual ~FMODAudioManager();
 
   virtual bool insert_dsp(int index, DSP *dsp);
@@ -115,17 +101,12 @@ public:
 
   virtual bool is_valid();
 
-  virtual PT(AudioSound) get_sound(const Filename &, bool positional = false, StreamMode mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(const Filename &filename, bool positional = false, bool stream = false);
   virtual PT(AudioSound) get_sound(AudioSound *source) override;
-  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, StreamMode mode=SM_heuristic);
-
-  virtual int get_speaker_setup();
-  virtual void set_speaker_setup(SpeakerModeCategory cat);
+  virtual PT(AudioSound) get_sound(MovieAudio *source, bool positional = false, bool stream = false);
 
   virtual void set_volume(PN_stdfloat);
   virtual PN_stdfloat get_volume() const;
-
-  virtual void set_wavwriter(bool);
 
   virtual void set_active(bool);
   virtual bool get_active() const;
@@ -133,41 +114,6 @@ public:
   virtual void stop_all_sounds();
 
   virtual void update();
-
-  // This controls the "set of ears" that listens to 3D spacialized sound px,
-  // py, pz are position coordinates.  Can be 0.0f to ignore.  vx, vy, vz are
-  // a velocity vector in UNITS PER SECOND (default: meters). fx, fy and fz
-  // are the respective components of a unit forward-vector ux, uy and uz are
-  // the respective components of a unit up-vector These changes will NOT be
-  // invoked until audio_3d_update() is called.
-  virtual void audio_3d_set_listener_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz,
-                                                PN_stdfloat vx, PN_stdfloat xy, PN_stdfloat xz,
-                                                PN_stdfloat fx, PN_stdfloat fy, PN_stdfloat fz,
-                                                PN_stdfloat ux, PN_stdfloat uy, PN_stdfloat uz);
-
-  // REMOVE THIS ONE
-  virtual void audio_3d_get_listener_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz,
-                                                PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz,
-                                                PN_stdfloat *fx, PN_stdfloat *fy, PN_stdfloat *fz,
-                                                PN_stdfloat *ux, PN_stdfloat *uy, PN_stdfloat *uz);
-
-  // Control the "relative scale that sets the distance factor" units for 3D
-  // spacialized audio. This is a float in units-per-meter. Default value is
-  // 1.0, which means that Panda units are understood as meters; for e.g.
-  // feet, set 3.28. This factor is applied only to Fmod and OpenAL at the
-  // moment.
-  virtual void audio_3d_set_distance_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_distance_factor() const;
-
-  // Control the presence of the Doppler effect.  Default is 1.0 Exaggerated
-  // Doppler, use >1.0 Diminshed Doppler, use <1.0
-  virtual void audio_3d_set_doppler_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_doppler_factor() const;
-
-  // Exaggerate or diminish the effect of distance on sound.  Default is 1.0
-  // Faster drop off, use >1.0 Slower drop off, use <1.0
-  virtual void audio_3d_set_drop_off_factor(PN_stdfloat factor);
-  virtual PN_stdfloat audio_3d_get_drop_off_factor() const;
 
   virtual void set_concurrent_sound_limit(unsigned int limit = 0);
   virtual unsigned int get_concurrent_sound_limit() const;
@@ -180,34 +126,9 @@ public:
   virtual void set_cache_limit(unsigned int count);
   virtual unsigned int get_cache_limit() const;
 
-  virtual void load_steam_audio_scene(CPTA_uchar verts, CPTA_uchar tris,
-                                      CPTA_uchar tri_materials, CPTA_uchar materials) override;
-  virtual void unload_steam_audio_scene() override;
-
-  virtual void load_steam_audio_reflection_probe_batch(CPTA_uchar data) override;
-  virtual void unload_steam_audio_reflection_probe_batch() override;
-
-  virtual void load_steam_audio_pathing_probe_batch(CPTA_uchar data) override;
-  virtual void unload_steam_audio_pathing_probe_batch() override;
-
-  FMOD_RESULT get_speaker_mode(FMOD_SPEAKERMODE &mode) const;
-
-  float calc_sound_occlusion(FMODAudioSound *sound, bool &calculated);
-  bool can_trace_sound(FMODAudioSound *sound);
-
-  virtual void set_trace_scene(RayTraceScene *scene);
-  virtual void clear_trace_scene();
+  FMOD::DSP *get_fmod_dsp(DSP *panda_dsp) const;
 
 private:
-  FMOD_DSP_TYPE get_fmod_dsp_type(DSP::DSPType panda_type);
-  FMOD::DSP *create_fmod_dsp(DSP *panda_dsp);
-  FMOD::DSP *get_fmod_dsp(DSP *panda_dsp) const;
-  void configure_dsp(DSP *panda_dsp, FMOD::DSP *dsp);
-
-  static void add_manager_to_dsp(DSP *dsp, FMODAudioManager *mgr);
-  static void remove_manager_from_dsp(DSP *dsp, FMODAudioManager *mgr);
-  static void update_dirty_dsps();
-
   void starting_sound(FMODAudioSound *sound);
   void stopping_sound(FMODAudioSound *sound);
   // Tell the manager that the sound dtor was called.
@@ -219,89 +140,18 @@ private:
   // This global lock protects all access to FMod library interfaces.
   static ReMutex _lock;
 
-  static FMOD::System *_system;
-
-  typedef pset<FMODAudioManager *> ManagerList;
-  static ManagerList _all_managers;
-
-  static bool _system_is_valid;
-
-  static PN_stdfloat _distance_factor;
-  static PN_stdfloat _doppler_factor;
-  static PN_stdfloat _drop_off_factor;
-
-  // We need this to support applying the same DSP onto multiple audio
-  // managers.  We run a once-per-frame update method that iterates over all
-  // the DSPs, and for each one, checks if the dirty flag is set.  If it is,
-  // we configure the DSP on all audio managers that it has been applied to.
-  typedef phash_map<DSP *, ManagerList, pointer_hash> DSPManagers;
-  static DSPManagers _dsp_managers;
-
-  static int _last_update_frame;
-
-  UpdateSeq _trace_seq;
-  AtomicAdjust::Integer _trace_count;
-
-#ifdef HAVE_STEAM_AUDIO
-  // All this Steam Audio related stuff is stored here in static variables to
-  // encapsulate all Steam Audio objects and API calls.  Since we're using the
-  // FMOD plugin, might as well have it all be part of the FMOD implementation.
-  static unsigned int _sa_spatialize_handle;
-  static unsigned int _sa_mixer_return_handle;
-  static unsigned int _sa_reverb_handle;
-  // This DSP renders global listener-centric reverb.
-  static FMOD::DSP *_reverb_dsp;
-  static IPLContext _sa_context;
-  static IPLHRTF _sa_hrtf;
-  static IPLSimulator _sa_simulator;
-  static IPLEmbreeDevice _sa_embree_device;
-  // It is assumed there is one scene in the world, and the scene contains
-  // one probe batch for reflections and one probe batch for pathing.
-  static IPLScene _sa_scene;
-  static IPLStaticMesh _sa_scene_mesh;
-  static IPLProbeBatch _sa_probe_batch;
-  static IPLProbeBatch _sa_pathing_probe_batch;
-  // IPLSource that represents the listener or camera.
-  // Needed for listener-centric reverb.
-  static IPLSource _sa_listener_source;
-  static IPLSimulationInputs _sa_listener_inputs;
-  static IPLSimulationSharedInputs _sa_sim_inputs;
-  static PT(Thread) _sa_refl_thread;
-  static ReMutex _sa_refl_lock;
-
-  static UpdateSeq _last_sim_update, _next_sim_update;
-
-  // These store the set of sounds that require different types of
-  // simulation, so we know whether or not we need to actually run those
-  // simulations.
-  //static pset<FMODAudioSound *> _direct_sim_sounds;
-  //static pset<FMODAudioSound *> _refl_sim_sounds;
-  //static pset<FMODAudioSound *> _path_sim_sounds;
-#endif
-
-  // Queued up calls to play that are processed during the update()
-  // method.
-  static pset<PT(FMODAudioSound)> _queued_plays;
-
 public:
   FMOD::ChannelGroup *_channelgroup;
-
-  FMOD_VECTOR _position;
-  FMOD_VECTOR _velocity;
-  FMOD_VECTOR _forward;
-  FMOD_VECTOR _up;
-
-  // DLS info for MIDI files
-  std::string _dlsname;
-  FMOD_CREATESOUNDEXINFO _midi_info;
 
   bool _is_valid;
   bool _active;
 
+  // Keeps track of sounds currently playing on the manager.
+  // We hold a reference in this list to support fire-and-forget sounds.
   typedef pflat_hash_set<PT(FMODAudioSound)> SoundsPlaying;
   SoundsPlaying _sounds_playing;
-  ReMutex _sounds_playing_lock;
 
+  // All sounds created through this manager, playing or not.
   typedef pflat_hash_set<FMODAudioSound *, pointer_hash> AllSounds;
   AllSounds _all_sounds;
 
@@ -309,11 +159,9 @@ public:
   typedef phash_map<PT(DSP), FMOD::DSP *> FMODDSPs;
   FMODDSPs _dsps;
 
-  FMOD_OUTPUTTYPE _saved_outputtype;
-
-  RayTraceScene *_rt_scene;
-
   unsigned int _concurrent_sound_limit;
+
+  FMODAudioEngine *_engine;
 
 public:
   static TypeHandle get_class_type() {
@@ -334,8 +182,5 @@ public:
 private:
   static TypeHandle _type_handle;
 };
-
-EXPCL_FMOD_AUDIO AudioManager *Create_FmodAudioManager(const std::string &name, AudioManager *parent);
-
 
 #endif /* FMODAUDIOMANAGER_H */

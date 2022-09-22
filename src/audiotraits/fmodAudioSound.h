@@ -76,79 +76,70 @@
 #include <fmod_errors.h>
 
 #ifdef HAVE_STEAM_AUDIO
-#include <phonon.h>
+#include <phonon/phonon.h>
 #endif
 
 class VirtualFile;
 
 class EXPCL_FMOD_AUDIO FMODAudioSound : public AudioSound {
 public:
-  FMODAudioSound(AudioManager *manager, VirtualFile *file, bool positional);
-  FMODAudioSound(AudioManager *manager, FMODAudioSound *source);
+  FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle);
+  FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *source);
 
   virtual ~FMODAudioSound();
 
   // For best compatibility, set the loop_count, start_time, volume, and
   // balance, prior to calling play().  You may set them while they're
   // playing, but it's implementation specific whether you get the results.
-  void play();
-  void stop();
+  virtual void play();
+  virtual void stop();
 
   // loop: false = play once; true = play forever.  inits to false.
-  void set_loop(bool loop=true);
-  bool get_loop() const;
+  virtual void set_loop(bool loop=true);
+  virtual bool get_loop() const;
 
   // loop_count: 0 = forever; 1 = play once; n = play n times.  inits to 1.
-  void set_loop_count(unsigned long loop_count=1);
-  unsigned long get_loop_count() const;
+  virtual void set_loop_count(unsigned long loop_count=1);
+  virtual unsigned long get_loop_count() const;
 
   // 0 = beginning; length() = end.  inits to 0.0.
-  void set_time(PN_stdfloat start_time=0.0);
-  PN_stdfloat get_time() const;
+  virtual void set_time(PN_stdfloat start_time=0.0);
+  virtual PN_stdfloat get_time() const;
 
   // 0 = minimum; 1.0 = maximum.  inits to 1.0.
-  void set_volume(PN_stdfloat volume=1.0);
-  PN_stdfloat get_volume() const;
+  virtual void set_volume(PN_stdfloat volume=1.0);
+  virtual PN_stdfloat get_volume() const;
 
   // -1.0 is hard left 0.0 is centered 1.0 is hard right inits to 0.0.
-  void set_balance(PN_stdfloat balance_right=0.0);
-  PN_stdfloat get_balance() const;
+  virtual void set_balance(PN_stdfloat balance_right=0.0);
+  virtual PN_stdfloat get_balance() const;
 
   // play_rate is any positive float value.  inits to 1.0.
-  void set_play_rate(PN_stdfloat play_rate=1.0f);
-  PN_stdfloat get_play_rate() const;
+  virtual void set_play_rate(PN_stdfloat play_rate=1.0f);
+  virtual PN_stdfloat get_play_rate() const;
 
-  const std::string &get_name() const;
+  virtual const std::string &get_name() const;
 
   // return: playing time in seconds.
-  PN_stdfloat length() const;
+  virtual PN_stdfloat length() const;
 
   // Controls the position of this sound's emitter.  pos is a pointer to an
   // xyz triplet of the emitter's position.  vel is a pointer to an xyz
   // triplet of the emitter's velocity.
-  void set_3d_attributes(PN_stdfloat px, PN_stdfloat py, PN_stdfloat pz, PN_stdfloat vx, PN_stdfloat vy, PN_stdfloat vz,
-                         PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f, PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
-  void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
+  virtual void set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &vel);
+  virtual LPoint3 get_3d_position() const;
+  virtual LQuaternion get_3d_quat() const;
+  virtual LVector3 get_3d_velocity() const;
 
-  void set_3d_min_distance(PN_stdfloat dist);
-  PN_stdfloat get_3d_min_distance() const;
-
-  void set_3d_max_distance(PN_stdfloat dist);
-  PN_stdfloat get_3d_max_distance() const;
+  virtual void set_3d_min_distance(PN_stdfloat dist);
+  virtual PN_stdfloat get_3d_min_distance() const;
 
   virtual PN_stdfloat get_sound_frequency() const override;
 
-  AudioSound::SoundStatus status() const;
+  virtual AudioSound::SoundStatus status() const;
 
-  virtual PN_stdfloat get_speaker_mix(int speaker);
-  virtual void set_speaker_mix(int speaker, PN_stdfloat mix);
-  virtual void set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright,
-                               PN_stdfloat center, PN_stdfloat sub,
-                               PN_stdfloat backleft, PN_stdfloat backright,
-                               PN_stdfloat sideleft, PN_stdfloat sideright);
-
-  void set_active(bool active=true);
-  bool get_active() const;
+  virtual void set_active(bool active=true);
+  virtual bool get_active() const;
 
   // DSP methods
   virtual bool insert_dsp(int index, DSP *dsp);
@@ -163,8 +154,9 @@ public:
   void update();
 
   void finished();
-  void set_finished_event(const std::string& event);
-  const std::string& get_finished_event() const;
+
+  virtual void set_finished_event(const std::string& event);
+  virtual const std::string &get_finished_event() const;
 
 public:
   FMODSoundHandle *get_sound_handle() const;
@@ -185,26 +177,21 @@ public:
   float _balance;
   float _playrate;
   int   _priority;
-  float _mix[AudioManager::SPK_COUNT];
 
   float _sample_frequency;
   unsigned int _length;
   unsigned int _loop_start;
   unsigned int _loop_end;
 
-  FMOD_SPEAKERMODE  _speakermode;
+  // 3-D attributes of sound.
+  LPoint3 _pos;
+  LQuaternion _quat;
+  LVector3 _vel;
 
-  FMOD_VECTOR _location;
-  FMOD_VECTOR _velocity;
-
-  // We also store the orientation of the audio source.
-  // Steam Audio supports directional sounds (sounds with both a position
-  // and orientation in 3D space).
-  FMOD_VECTOR _up;
-  FMOD_VECTOR _forward;
-
+  // Distance from listener at which sound begins to attenuate.
+  // Attenuation is calculated as _min_dist / dist, so the minimum
+  // distance also affects the falloff rate, to simulate larger sounds.
   PN_stdfloat _min_dist;
-  PN_stdfloat _max_dist;
 
   void start_playing();
   void set_volume_on_channel();
@@ -223,19 +210,7 @@ public:
 
   bool _is_midi;
 
-  int _last_update_frame;
-
   std::string _finished_event;
-
-  UpdateSeq _last_trace_seq;
-
-#ifdef HAVE_STEAM_AUDIO
-  // The Steam Audio source corresponding to this audio sound, used for
-  // simulating the source based on its position and orientation.
-  // Only created if the AudioSound is positional.
-  IPLSource _sa_source;
-  IPLSimulationInputs _sa_inputs;
-#endif
 
   // Custom FMOD DSPs for applying Steam Audio effects, provided by the Steam
   // Audio FMOD plugin.
@@ -244,6 +219,10 @@ public:
   // They are only created if the AudioSound is positional and the user has
   // configured these Steam Audio features on the sound.
   FMOD::DSP *_sa_spatial_dsp;
+
+#ifdef HAVE_STEAM_AUDIO
+  IPLSource _ipl_source;
+#endif
 
  public:
   static TypeHandle get_class_type() {

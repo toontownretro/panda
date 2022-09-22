@@ -19,15 +19,29 @@
 #include "dconfig.h"
 #include "audioManager.h"
 
+#include <fmod.hpp>
+
 ConfigureDecl(config_fmodAudio, EXPCL_FMOD_AUDIO, EXPTP_FMOD_AUDIO);
 NotifyCategoryDecl(fmodAudio, EXPCL_FMOD_AUDIO, EXPTP_FMOD_AUDIO);
 
 extern ConfigVariableInt fmod_audio_preload_threshold;
 extern ConfigVariableBool fmod_compressed_samples;
+extern ConfigVariableBool fmod_debug;
+extern ConfigVariableBool fmod_profile;
+extern ConfigVariableInt fmod_dsp_buffer_size;
+extern ConfigVariableInt fmod_dsp_buffer_count;
 
 #ifdef HAVE_STEAM_AUDIO
 extern ConfigVariableBool fmod_use_steam_audio;
 #endif
+
+extern bool _fmod_audio_errcheck(const char *context, FMOD_RESULT n);
+
+#ifdef NDEBUG
+#define fmod_audio_errcheck(context, n) (n == FMOD_OK)
+#else
+#define fmod_audio_errcheck(context, n) _fmod_audio_errcheck(context, n)
+#endif // NDEBUG
 
 // calculate gain based on atmospheric attenuation.
 // as gain excedes threshold, round off (compress) towards 1.0 using spline
@@ -50,7 +64,6 @@ extern ConfigVariableBool fmod_use_steam_audio;
 #define SNDLVL_TO_DIST_MULT( sndlvl ) ( sndlvl ? ((pow( 10.0f, SND_REFDB / 20 ) / pow( 10.0f, (float)sndlvl / 20 )) / SND_REFDIST) : 0 )
 #define DIST_MULT_TO_SNDLVL( dist_mult ) (int)( dist_mult ? ( 20 * log10( pow( 10.0f, SND_REFDB / 20 ) / (dist_mult * SND_REFDIST) ) ) : 0 )
 
-extern "C" EXPCL_FMOD_AUDIO void init_libFmodAudio();
-extern "C" EXPCL_FMOD_AUDIO Create_AudioManager_proc *get_audio_manager_func_fmod_audio();
+extern EXPCL_FMOD_AUDIO void init_libfmod_audio();
 
 #endif // CONFIG_FMODAUDIO_H
