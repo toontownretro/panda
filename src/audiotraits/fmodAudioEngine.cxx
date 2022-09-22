@@ -302,9 +302,10 @@ initialize() {
   int sample_rate;
   FMOD_SPEAKERMODE speaker_mode;
   int num_raw_speakers;
-  _system->getSoftwareFormat(&sample_rate,
-                             &speaker_mode,
-                             &num_raw_speakers);
+  result = _system->getSoftwareFormat(&sample_rate, &speaker_mode, &num_raw_speakers);
+  if (!fmod_audio_errcheck("get default software format (pre init)", result)) {
+    return false;
+  }
 
   audio_debug("fmod-mixer-sample-rate: " << fmod_mixer_sample_rate);
   if (fmod_mixer_sample_rate.get_value() != -1) {
@@ -330,10 +331,6 @@ initialize() {
   } else {
     speaker_mode = (FMOD_SPEAKERMODE)fmod_speaker_mode.get_value();
   }
-
-  fmodAudio_cat.info()
-    << "Using software format: " << sample_rate << " Hz, " << fmod_speaker_mode_string(speaker_mode)
-    << " speaker mode\n";
 
   // Set the mixer and speaker format.
   result = _system->setSoftwareFormat(sample_rate, speaker_mode,
@@ -373,6 +370,17 @@ initialize() {
 
   fmodAudio_cat.info()
     << "FMOD initialized successfully\n";
+
+  // Re-query the software format after initialization.  This is what is
+  // actually being used.
+  result = _system->getSoftwareFormat(&sample_rate, &speaker_mode,
+                                      &num_raw_speakers);
+  if (!fmod_audio_errcheck("get software format (post init)", result)) {
+    return false;
+  }
+  fmodAudio_cat.info()
+    << "Using software format: " << sample_rate << " Hz, " << fmod_speaker_mode_string(speaker_mode)
+    << " speaker mode\n";
 
   // Query default output device for logging purposes.
   int driver;
@@ -451,6 +459,13 @@ initialize() {
 bool FMODAudioEngine::
 init_steam_audio() {
 
+  int sample_rate;
+  FMOD_RESULT result;
+  result = _system->getSoftwareFormat(&sample_rate, nullptr, nullptr);
+  if (!fmod_audio_errcheck("get software format (steam audio init)", result)) {
+    return false;
+  }
+
   IPLContextSettings ctx_settings{};
   ctx_settings.version = STEAMAUDIO_VERSION;
   ctx_settings.simdLevel = IPL_SIMDLEVEL_AVX2;
@@ -465,7 +480,7 @@ init_steam_audio() {
 
   IPLAudioSettings audio_settings{};
   audio_settings.frameSize = fmod_dsp_buffer_size;
-  audio_settings.samplingRate = fmod_mixer_sample_rate;
+  audio_settings.samplingRate = sample_rate;
 
   IPLHRTFSettings hrtf_settings{};
   hrtf_settings.type = IPL_HRTFTYPE_DEFAULT;
@@ -474,7 +489,7 @@ init_steam_audio() {
     return false;
   }
   IPLSimulationSettings sim_settings{};
-  sim_settings.samplingRate = fmod_mixer_sample_rate;
+  sim_settings.samplingRate = sample_rate;
   sim_settings.frameSize = fmod_dsp_buffer_size;
   sim_settings.flags = (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
   sim_settings.sceneType = IPL_SCENETYPE_DEFAULT;
@@ -507,7 +522,7 @@ init_steam_audio() {
   Filename plugin_filename = Filename::dso_filename("libphonon_fmod.so");
 #endif
   std::string plugin_filename_os = plugin_filename.to_os_specific();
-  FMOD_RESULT result = _system->loadPlugin(plugin_filename_os.c_str(), &_ipl_plugin_handle);
+  result = _system->loadPlugin(plugin_filename_os.c_str(), &_ipl_plugin_handle);
   if (!fmod_audio_errcheck("Load Steam Audio FMOD plugin", result)) {
     return false;
   }
