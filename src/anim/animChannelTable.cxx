@@ -244,14 +244,20 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat cycle = data._cycle;
 
   int num_frames = get_num_frames();
-  int start_frame = std::clamp((int)cfloor(context._start_cycle * num_frames), 0, num_frames - 1);
-  int play_frames = (int)cfloor(context._play_cycles * num_frames);
+  int start_frame = std::clamp((int)(context._start_cycle * num_frames), 0, num_frames - 1);
+  int play_frames;
+  if (context._play_mode == AnimLayer::PM_pose) {
+    // To avoid floating point imprecision, posed animations always play 1 frame.
+    play_frames = 1;
+  } else {
+    play_frames = (int)((context._play_cycles * num_frames) + FLT_EPSILON);
+  }
   int end_frame = std::clamp(start_frame + play_frames - 1, 0, num_frames - 1);
 
   // Calculate the floating-point frame.
   PN_stdfloat fframe = cycle * num_frames;
   // Snap to integer frame.
-  int frame = (int)cfloor(fframe);
+  int frame = (int)fframe;
   frame = std::clamp(frame, start_frame, end_frame);
 
   // Calculate next frame.
@@ -262,7 +268,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       context._play_mode == AnimLayer::PM_pingpong) {
     next_frame = cmod(next_frame, num_frames);
   } else if (context._play_mode == AnimLayer::PM_pose) {
-    next_frame = std::clamp(next_frame, start_frame, std::min(end_frame + 1, num_frames - 1));
+    next_frame = std::clamp(next_frame, 0, num_frames - 1);
   } else {
     next_frame = std::clamp(next_frame, start_frame, end_frame);
   }
