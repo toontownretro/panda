@@ -2514,11 +2514,13 @@ denoise_lightmaps() {
   lightbuilder_cat.info()
     << "Denoising lightmaps...\n";
 
-  oidn::DeviceRef device = oidn::newDevice();
-  device.commit();
-
   // Bring the needed textures into system RAM.
   _graphics_engine->extract_texture_data(_lm_textures["reflectivity"], _gsg);
+
+#if 1
+
+  oidn::DeviceRef device = oidn::newDevice();
+  device.commit();
 
   // Get the ram image without an alpha channel.  OIDN wants a 3-channel image.
   CPTA_uchar color_data = _lm_textures["reflectivity"]->get_ram_image_as("RGB");
@@ -2565,6 +2567,8 @@ denoise_lightmaps() {
   // Now throw it back on the texture.
   _lm_textures["reflectivity"]->set_ram_image_as(new_data, "RGBA");
   _lm_textures["reflectivity"]->set_format(Texture::F_rgba32);
+
+#endif
 
   lightbuilder_cat.info()
     << "Done.\n";
