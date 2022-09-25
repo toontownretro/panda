@@ -3568,6 +3568,7 @@ finish() {
   // force the graphics card to finish drawing before it is called
   //char data[4];
   //glReadPixels(0,0,1,1,GL_RGBA,GL_UNSIGNED_BYTE,&data);
+  glFlush();
   glFinish();
 }
 
