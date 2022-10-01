@@ -679,11 +679,13 @@ public:
   class Compare {
   public:
     bool operator () (const PosNormalPair &a, const PosNormalPair &b) const {
-      if (a.pos != b.pos) {
-        return a.pos < b.pos;
+      int cmp = a.pos.compare_to(b.pos);
+      if (cmp != 0) {
+        return cmp < 0;
       }
-      if (a.normal != b.normal) {
-        return a.normal < b.normal;
+      cmp = a.normal.compare_to(b.normal);
+      if (cmp != 0) {
+        return cmp < 0;
       }
       return false;
     }
@@ -2789,7 +2791,7 @@ write_geoms() {
       // Write this to all vertex indices that share this LightmapVertex.
       for (auto it = lvert.orig_vertices.begin(); it != lvert.orig_vertices.end(); ++it) {
         lwriter.set_row(*it);
-        lwriter.set_data3f(r, g, b);
+        lwriter.set_data3f(b, g, r);
       }
     }
 
