@@ -226,6 +226,13 @@ build() {
         sprop._flags |= MapStaticProp::F_no_shadows;
       }
     }
+    if (sent->_properties.find("disablevertexlighting") != sent->_properties.end()) {
+      int disable_vertex_lighting;
+      string_to_int(sent->_properties["disablevertexlighting"], disable_vertex_lighting);
+      if (disable_vertex_lighting != 0) {
+        sprop._flags |= MapStaticProp::F_no_vertex_lighting;
+      }
+    }
 
     _out_data->_static_props.push_back(std::move(sprop));
 
@@ -1979,11 +1986,6 @@ build_lighting() {
   for (int i = 0; i < _out_data->get_num_static_props(); i++) {
     MapStaticProp *sprop = (MapStaticProp *)_out_data->get_static_prop(i);
 
-    if ((sprop->_flags & MapStaticProp::F_no_shadows) &&
-        (sprop->_flags & MapStaticProp::F_no_vertex_lighting)) {
-      continue;
-    }
-
     PT(PandaNode) prop_model_node = Loader::get_global_ptr()->load_sync(sprop->get_model_filename());
     if (prop_model_node == nullptr) {
       continue;
@@ -2010,6 +2012,10 @@ build_lighting() {
     r_collect_geoms(prop_model.node(), geoms);
 
     sprop->_geom_vertex_lighting.resize(geoms.size());
+
+    if ((sprop->_flags & MapStaticProp::F_no_vertex_lighting)) {
+      continue;
+    }
 
     // Now add the triangles from all the geoms as occluders.
     for (int j = 0; j < (int)geoms.size(); ++j) {
