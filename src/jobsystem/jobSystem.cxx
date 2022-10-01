@@ -166,7 +166,7 @@ schedule(Job **jobs, int count, bool wait) {
  *
  */
 void JobSystem::
-parallel_process(int count, std::function<void(int)> func, int count_threshold) {
+parallel_process(int count, std::function<void(int)> func, int count_threshold, bool job_per_item) {
   PStatTimer timer(parallel_proc_pcollector);
 
   if (count == 0) {
@@ -195,11 +195,11 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold) 
   int num_per_thread = count / thread_count;
   int remainder = count % thread_count;
 
-  int job_count = std::min(count, thread_count);
+  int job_count = job_per_item ? count : std::min(count, thread_count);
 
   pvector<ParallelProcessJob> jobs;
   jobs.resize(job_count);
-  if (num_per_thread > 0) {
+  if (!job_per_item && num_per_thread > 0) {
     for (size_t i = 0; i < thread_count; ++i) {
       int first = num_per_thread * i;
       int count = num_per_thread;

@@ -42,7 +42,7 @@ PUBLISHED:
   void schedule(Job *job);
   void schedule(Job **jobs, int count, bool wait);
 
-  void parallel_process(int count, std::function<void(int)> func, int count_threshold = 2);
+  void parallel_process(int count, std::function<void(int)> func, int count_threshold = 2, bool job_per_item = false);
 
   template<typename T>
   INLINE void parallel_process(T begin, int count, std::function<void(const T &)> func, int count_threshold = 2);
