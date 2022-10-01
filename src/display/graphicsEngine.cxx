@@ -1543,95 +1543,93 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
   JobSystem *js = JobSystem::get_global_ptr();
 
   size_t wlist_size = wlist.size();
-  //for (size_t wi = 0; wi < wlist_size; ++wi) {
-  js->parallel_process(wlist_size, [&] (int wi) {
+  pvector<PT(DisplayRegion)> all_regions;
+  for (size_t wi = 0; wi < wlist_size; ++wi) {
     GraphicsOutput *win = wlist[wi];
     if (win->is_active() && win->get_gsg()->is_active()) {
-      if (display_cat.is_spam()) {
-        display_cat.spam()
-          << "Culling window " << win->get_name() << "\n";
-      }
-
-      Thread *win_thread = Thread::get_current_thread();
-
-      GraphicsStateGuardian *gsg = win->get_gsg();
-      PStatTimer timer(win->get_cull_window_pcollector(), win_thread);
       int num_display_regions = win->get_num_active_display_regions();
-      js->parallel_process(num_display_regions, [&] (int i) {
-      //for (int i = 0; i < num_display_regions; ++i) {
-        Thread *dr_thread = Thread::get_current_thread();
+      for (int i = 0; i < num_display_regions; ++i) {
         PT(DisplayRegion) dr = win->get_active_display_region(i);
         if (dr != nullptr) {
-          PT(SceneSetup) scene_setup;
-          CullResult cull_result;
-          CullKey key;
-          {
-            PStatTimer timer(_cull_setup_pcollector, dr_thread);
-            DisplayRegionPipelineReader dr_reader(dr, dr_thread);
-            scene_setup = setup_scene(gsg, &dr_reader);
-            if (scene_setup == nullptr) {
-              return;
-            }
+          all_regions.push_back(dr);
+        }
+      }
+    }
+  }
 
-            key._gsg = gsg;
-            key._camera = dr_reader.get_camera();
-            key._lens_index = dr_reader.get_lens_index();
-          }
+  js->parallel_process(all_regions.size(),
+  [&] (int i) {
+    Thread *dr_thread = Thread::get_current_thread();
+    DisplayRegion *dr = all_regions[i];
+    GraphicsOutput *win = dr->get_window();
+    GraphicsStateGuardian *gsg = win->get_gsg();
+    PT(SceneSetup) scene_setup;
+    CullResult cull_result;
+    CullKey key;
+    {
+      PStatTimer timer(_cull_setup_pcollector, dr_thread);
+      DisplayRegionPipelineReader dr_reader(dr, dr_thread);
+      scene_setup = setup_scene(gsg, &dr_reader);
+      if (scene_setup == nullptr) {
+        return;
+      }
 
-          // If this is a shadow pass, postpone culling it until we've culled
-          // all the other passes, and collected their bounding volumes.
+      key._gsg = gsg;
+      key._camera = dr_reader.get_camera();
+      key._lens_index = dr_reader.get_lens_index();
+    }
+
+    // If this is a shadow pass, postpone culling it until we've culled
+    // all the other passes, and collected their bounding volumes.
 #if 0
-          Light *light = nullptr;
-          if (!key._camera.is_empty()) {
-            light = key._camera.node()->as_light();
-          }
-          if (light != nullptr) {
-            shadow_passes.push_back(std::move(scene_setup));
-            continue;
-          }
-          else if (!shadow_passes.empty()) {
-            NodePath scene_root = scene_setup->get_scene_root();
-            const GeometricBoundingVolume *gbv = scene_setup->get_view_frustum();
-            UnionBoundingVolume &bounds = non_shadow_bounds[scene_root];
-            if (gbv == nullptr || gbv->is_infinite()) {
-              bounds.set_infinite();
-            } else {
-              bounds.add_component(gbv);
-            }
-          }
+    Light *light = nullptr;
+    if (!key._camera.is_empty()) {
+      light = key._camera.node()->as_light();
+    }
+    if (light != nullptr) {
+      shadow_passes.push_back(std::move(scene_setup));
+      continue;
+    }
+    else if (!shadow_passes.empty()) {
+      NodePath scene_root = scene_setup->get_scene_root();
+      const GeometricBoundingVolume *gbv = scene_setup->get_view_frustum();
+      UnionBoundingVolume &bounds = non_shadow_bounds[scene_root];
+      if (gbv == nullptr || gbv->is_infinite()) {
+        bounds.set_infinite();
+      } else {
+        bounds.add_component(gbv);
+      }
+    }
 #endif
 
-          //AlreadyCulled::iterator aci = already_culled.insert(AlreadyCulled::value_type(std::move(key), nullptr)).first;
-          //if ((*aci).second == nullptr) {
-            // We have not used this camera already in this thread.  Perform
-            // the cull operation.
-            cull_result = dr->get_cull_result(dr_thread);
-            if (!cull_result.is_empty()) {
-              cull_result = cull_result.make_next();
-            } else {
-              // This DisplayRegion has no cull results; draw it.
-              cull_result = CullResult(gsg, dr->get_draw_region_pcollector());
-            }
-            //(*aci).second = dr;
-            cull_to_bins(win, gsg, dr, scene_setup, &cull_result, dr_thread);
+    //AlreadyCulled::iterator aci = already_culled.insert(AlreadyCulled::value_type(std::move(key), nullptr)).first;
+    //if ((*aci).second == nullptr) {
+      // We have not used this camera already in this thread.  Perform
+      // the cull operation.
+      cull_result = dr->get_cull_result(dr_thread);
+      if (!cull_result.is_empty()) {
+        cull_result = cull_result.make_next();
+      } else {
+        // This DisplayRegion has no cull results; draw it.
+        cull_result = CullResult(gsg, dr->get_draw_region_pcollector());
+      }
+      //(*aci).second = dr;
+      cull_to_bins(win, gsg, dr, scene_setup, &cull_result, dr_thread);
 
-          //} else {
-            // We have already culled a scene using this camera in this
-            // thread, and now we're being asked to cull another scene using
-            // the same camera.  (Maybe this represents two different
-            // DisplayRegions for the left and right channels of a stereo
-            // image.)  Of course, the cull result will be the same, so just
-            // use the result from the other DisplayRegion.
-            //DisplayRegion *other_dr = (*aci).second;
-            //cull_result = other_dr->get_cull_result(cull_thread);
-          //}
+    //} else {
+      // We have already culled a scene using this camera in this
+      // thread, and now we're being asked to cull another scene using
+      // the same camera.  (Maybe this represents two different
+      // DisplayRegions for the left and right channels of a stereo
+      // image.)  Of course, the cull result will be the same, so just
+      // use the result from the other DisplayRegion.
+      //DisplayRegion *other_dr = (*aci).second;
+      //cull_result = other_dr->get_cull_result(cull_thread);
+    //}
 
-          // Save the results for next frame.
-          dr->set_cull_result(std::move(cull_result), std::move(scene_setup), dr_thread);
-        }
-      });
-    }
-  });
+    // Save the results for next frame.
+    dr->set_cull_result(std::move(cull_result), std::move(scene_setup), dr_thread);
+  }, 2, true);
 
 #if 0
   // Now cull all the shadow passes if their cull bounds are in view.
