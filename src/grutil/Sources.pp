@@ -26,6 +26,7 @@
     nodeVertexTransform.I nodeVertexTransform.h \
     pfmVizzer.I pfmVizzer.h \
     rigidBodyCombiner.I rigidBodyCombiner.h \
+    spotlightBeam.I spotlightBeam.h \
     spriteGlow.I spriteGlow.h
 
   #define COMPOSITE_SOURCES \
@@ -45,6 +46,7 @@
     pipeOcclusionCullTraverser.cxx \
     lineSegs.cxx \
     rigidBodyCombiner.cxx \
+    spotlightBeam.cxx \
     spriteGlow.cxx
 
   #define INSTALL_HEADERS \
@@ -63,6 +65,7 @@
     nodeVertexTransform.I nodeVertexTransform.h \
     pfmVizzer.I pfmVizzer.h \
     rigidBodyCombiner.I rigidBodyCombiner.h \
+    spotlightBeam.I spotlightBeam.h \
     spriteGlow.I spriteGlow.h
 
   #define IGATESCAN all

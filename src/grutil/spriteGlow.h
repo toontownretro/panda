@@ -22,6 +22,9 @@
 #include "geom.h"
 #include "renderState.h"
 #include "geomPoints.h"
+#include "lightMutex.h"
+#include "referenceCount.h"
+#include "atomicAdjust.h"
 
 class CullTraverser;
 class CullTraverserData;
@@ -35,10 +38,11 @@ class EXPCL_PANDA_GRUTIL SpriteGlow : public PandaNode {
   DECLARE_CLASS(SpriteGlow, PandaNode);
 
 PUBLISHED:
-  SpriteGlow(const std::string &name, PN_stdfloat radius);
+  SpriteGlow(const std::string &name, PN_stdfloat radius, bool perspective);
+
+  PN_stdfloat get_fraction_visible(Camera *cam) const;
 
 public:
-  virtual bool cull_callback(CullTraverser *trav, CullTraverserData &data) override;
   virtual void add_for_draw(CullTraverser *trav, CullTraverserData &data) override;
 
   void draw_callback(GeomDrawCallbackData *cbdata);
@@ -46,15 +50,21 @@ public:
   void init_geoms();
 
 private:
-  struct CamQueryData {
+  class CamQueryData : public ReferenceCount {
+  public:
+    CamQueryData() = default;
+
     PT(OcclusionQueryContext) ctx = nullptr;
     PT(OcclusionQueryContext) count_ctx = nullptr;
-    int num_passed = 0;
-    int num_possible = 0;
+    AtomicAdjust::Integer num_passed = 0;
+    AtomicAdjust::Integer num_possible = 0;
   };
+  CamQueryData *find_or_create_query_data(Camera *cam);
+  CamQueryData *get_query_data(Camera *cam) const;
 
-  typedef pmap<WPT(Camera), CamQueryData> CameraContexts;
+  typedef pmap<WPT(Camera), PT(CamQueryData)> CameraContexts;
   CameraContexts _contexts;
+  LightMutex _contexts_lock;
 
   CPT(Geom) _query_point;
   CPT(RenderState) _query_state;
@@ -63,6 +73,8 @@ private:
   int _query_pixel_size;
 
   PN_stdfloat _radius;
+
+  bool _perspective;
 
 private:
   void issue_query(CamQueryData &data, GraphicsStateGuardian *gsg, const TransformState *transform);

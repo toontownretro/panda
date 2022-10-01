@@ -25,6 +25,7 @@
 //#include "pipeOcclusionCullTraverser.h"
 #include "shaderTerrainMesh.h"
 #include "spriteGlow.h"
+#include "spotlightBeam.h"
 
 #include "dconfig.h"
 
@@ -131,6 +132,7 @@ init_libgrutil() {
   SceneGraphAnalyzerMeter::init_type();
   ShaderTerrainMesh::init_type();
   SpriteGlow::init_type();
+  SpotlightBeam::init_type();
 
 #ifdef HAVE_AUDIO
   MovieTexture::init_type();

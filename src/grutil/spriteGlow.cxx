@@ -34,6 +34,9 @@
 #include "cullFaceAttrib.h"
 #include "geomTristrips.h"
 #include "cullBinAttrib.h"
+#include "renderModeAttrib.h"
+#include "cmath.h"
+#include "lightMutexHolder.h"
 
 IMPLEMENT_CLASS(SpriteGlow);
 
@@ -68,45 +71,15 @@ do_callback(CallbackData *cbdata) {
  *
  */
 SpriteGlow::
-SpriteGlow(const std::string &name, PN_stdfloat radius) :
+SpriteGlow(const std::string &name, PN_stdfloat radius, bool perspective) :
   PandaNode(name),
-  _radius(radius)
+  _radius(radius),
+  _perspective(perspective),
+  _contexts_lock("sprite-glow-contexts-lock"),
+  _query_pixel_size((int)roundf(powf(_radius, 2.0f)))
 {
   set_renderable();
-  set_cull_callback();
   init_geoms();
-}
-
-/**
- *
- */
-bool SpriteGlow::
-cull_callback(CullTraverser *trav, CullTraverserData &data) {
-  SceneSetup *scene = trav->get_scene();
-  Camera *cam = scene->get_camera_node();
-
-  CamQueryData &query_data = _contexts[cam];
-
-  std::cout << query_data.ctx << ", " << query_data.count_ctx << ", "
-    << query_data.num_passed << ", " << query_data.num_possible << "\n";
-
-  if (query_data.num_passed > 0) {
-    std::cout << query_data.num_passed << " / " << query_data.num_possible << "\n";
-    float fraction = (float)query_data.num_passed / (float)query_data.num_possible;
-    if (fraction < 1.0f) {
-      // Blend fraction.
-      data._state = data._state->compose(
-        RenderState::make(
-          ColorScaleAttrib::make(LVecBase4(fraction, fraction, fraction, 1.0f))));
-    }
-
-    // Keep traversing.
-    return true;
-
-  } else {
-    // No pixels passed query, so we are not visible at all.
-    return true;
-  }
 }
 
 /**
@@ -114,8 +87,11 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
  */
 void SpriteGlow::
 add_for_draw(CullTraverser *trav, CullTraverserData &data) {
-  std::cout << "Add for draw\n";
-  CullableObject *obj = new CullableObject(nullptr, RenderState::make_empty(), data.get_internal_transform(trav), trav->get_current_thread());
+  // Add it with the query state so it's drawn in the unsorted bin, in front
+  // of everything else.  We need the rest of the scene to be drawn so we
+  // can correctly depth test the query geometry.
+  //std::cout << "sg add for darw\n";
+  CullableObject *obj = new CullableObject(nullptr, _query_state, data.get_internal_transform(trav), trav->get_current_thread());
   obj->set_draw_callback(new SpriteGlowDrawCallback(this));
   trav->get_cull_handler()->record_object(obj, trav);
 }
@@ -125,26 +101,30 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
  */
 void SpriteGlow::
 draw_callback(GeomDrawCallbackData *cbdata) {
-  std::cout << "Draw callback\n";
+  //std::cout << "Dc\n";
   GraphicsStateGuardian *gsg = (GraphicsStateGuardian *)cbdata->get_gsg();
   CullableObject *obj = cbdata->get_object();
   SceneSetup *scene = gsg->get_scene();
   Camera *cam = scene->get_camera_node();
 
-  CamQueryData &query_data = _contexts[cam];
+  CamQueryData *query_data = find_or_create_query_data(cam);
 
-  if (query_data.ctx == nullptr || query_data.count_ctx == nullptr) {
+  if (query_data->ctx == nullptr || (_perspective && query_data->count_ctx == nullptr)) {
     // No active query context, issue a new one.
-    issue_query(query_data, gsg, obj->_internal_transform);
+    issue_query(*query_data, gsg, obj->_internal_transform);
 
   } else {
     // There is an active query, check if the answer is ready.
-    if (query_data.ctx->is_answer_ready() && query_data.count_ctx->is_answer_ready()) {
-      query_data.num_passed = query_data.ctx->get_num_fragments();
-      query_data.num_possible = query_data.count_ctx->get_num_fragments();
+    if (query_data->ctx->is_answer_ready() && (!_perspective || query_data->count_ctx->is_answer_ready())) {
+      AtomicAdjust::set(query_data->num_passed, query_data->ctx->get_num_fragments());
+      if (_perspective) {
+        AtomicAdjust::set(query_data->num_possible, query_data->count_ctx->get_num_fragments());
+      }
+
+      //std::cout  << query_data->num_passed << " / " << query_data->num_possible << "\n";
 
       // Now issue a new query.
-      issue_query(query_data, gsg, obj->_internal_transform);
+      issue_query(*query_data, gsg, obj->_internal_transform);
     }
   }
 
@@ -156,29 +136,36 @@ draw_callback(GeomDrawCallbackData *cbdata) {
  */
 void SpriteGlow::
 issue_query(CamQueryData &query_data, GraphicsStateGuardian *gsg, const TransformState *transform) {
-  gsg->ensure_generated_shader(_query_count_state);
+  const GeomVertexData *vdata = _query_point->get_vertex_data_noref();
+  Thread *current_thread = Thread::get_current_thread();
+
+  //std::cout << "isue qyery\n";
+
   gsg->ensure_generated_shader(_query_state);
-
-  // First do a query without depth-testing to see how many fragments are
-  // possible.
-  gsg->begin_occlusion_query();
-
-  // Render the query geometry with the count query state.
-  gsg->set_state_and_transform(_query_count_state, transform);
-  gsg->draw_geom(_query_point, _query_point->get_vertex_data(), 1,
-                 _query_prim, true, Thread::get_current_thread());
-
-
-  query_data.count_ctx = gsg->end_occlusion_query();
-
-  gsg->begin_occlusion_query();
-
-  // Now render the actual query.
   gsg->set_state_and_transform(_query_state, transform);
-  gsg->draw_geom(_query_point, _query_point->get_vertex_data(), 1,
-                 _query_prim, true, Thread::get_current_thread());
-
+  gsg->begin_occlusion_query();
+  // Now render the actual query.
+  gsg->draw_geom(_query_point, vdata, 1,
+                 _query_prim, true, current_thread);
   query_data.ctx = gsg->end_occlusion_query();
+
+  if (_perspective) {
+    // Render the "count" query directly in front of the camera, offset forward
+    // the same distance from the camera as the actual query.  This will give us
+    // a rough estimate of the number of "possible" fragments for the query.
+    PN_stdfloat dist = transform->get_pos().length();
+    CPT(TransformState) count_transform = TransformState::make_pos(LPoint3(0, dist, 0));
+
+    // Render the query geometry with the count query state.
+    gsg->ensure_generated_shader(_query_count_state);
+    gsg->set_state_and_transform(_query_count_state, count_transform);
+    // First do a query without depth-testing to see how many fragments are
+    // possible.
+    gsg->begin_occlusion_query();
+    gsg->draw_geom(_query_point, vdata, 1,
+                  _query_prim, true, current_thread);
+    query_data.count_ctx = gsg->end_occlusion_query();
+  }
 }
 
 /**
@@ -190,19 +177,42 @@ init_geoms() {
                                                 GeomEnums::UH_static);
 
   GeomVertexWriter vwriter(vdata, InternalName::get_vertex());
-  vwriter.add_data3f(-_radius, 0, -_radius); // ll
-  vwriter.add_data3f(_radius, 0, -_radius); // lr
-  vwriter.add_data3f(_radius, 0, _radius); // ur
-  vwriter.add_data3f(-_radius, 0, _radius); // ul
 
-  PT(GeomTristrips) prim = new GeomTristrips(GeomEnums::UH_static);
-  prim->add_next_vertices(4);
-  prim->close_primitive();
+  if (_perspective) {
+    // In perspective mode, the query geometry is a quad with a world-space
+    // radius.  In this mode, we issue two queries, one to count the possible
+    // number of fragments for the query, by rendering it directly in front of
+    // the camera (at the same distance from the camera as the regular query),
+    // and the actual query with depth-testing enabled to count the number
+    // of visible fragments from the actual query location.
+    vwriter.add_data3f(-_radius, 0, -_radius); // ll
+    vwriter.add_data3f(_radius, 0, -_radius); // lr
+    vwriter.add_data3f(_radius, 0, _radius); // ur
+    vwriter.add_data3f(-_radius, 0, _radius); // ul
 
-  _query_prim = prim;
+    PT(GeomTriangles) prim = new GeomTriangles(GeomEnums::UH_static);
+    prim->add_vertices(0, 1, 2);
+    prim->close_primitive();
+    prim->add_vertices(2, 3, 0);
+    prim->close_primitive();
+    _query_prim = prim;
+
+  } else {
+    // In non-perspective mode, the query geometry is a point with a
+    // screen-space pixel thickness.  Since it's a constant screen-space
+    // point, we can estimate the number of possible fragments without
+    // needing another "counting" query as in the perspective mode above.
+    vwriter.add_data3f(0, 0, 0);
+
+    PT(GeomPoints) prim = new GeomPoints(GeomEnums::UH_static);
+    prim->add_vertex(0);
+    prim->close_primitive();
+    _query_prim = prim;
+  }
+
 
   PT(Geom) geom = new Geom(vdata);
-  geom->add_primitive(prim);
+  geom->add_primitive(_query_prim);
   _query_point = geom;
 
   CPT(RenderState) state = RenderState::make_empty();
@@ -212,12 +222,70 @@ init_geoms() {
   state = state->set_attrib(ColorWriteAttrib::make(ColorWriteAttrib::C_off));
   state = state->set_attrib(ColorBlendAttrib::make(ColorBlendAttrib::M_none));
   state = state->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_less));
-  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_none));
+  state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_unchanged));
   state = state->set_attrib(CullBinAttrib::make("unsorted", 10));
+  if (!_perspective) {
+    // In non-perspective mode, the query is a single point with a screen-space point size.
+    state = state->set_attrib(RenderModeAttrib::make(RenderModeAttrib::M_point, _radius));
+  }
 
   _query_state = state;
 
   // Don't do depth-test when counting possible number of fragments.
   state = state->set_attrib(DepthTestAttrib::make(DepthTestAttrib::M_none));
   _query_count_state = state;
+}
+
+/**
+ * Returns a 0-1 fraction representing the number of fragments that passed the
+ * query compared to the number of possible fragments of the query geometry.
+ */
+PN_stdfloat SpriteGlow::
+get_fraction_visible(Camera *cam) const {
+  CamQueryData *data = get_query_data(cam);
+  if (data == nullptr) {
+    return 0.0f;
+  }
+
+  int num_possible;
+  if (_perspective) {
+    num_possible = AtomicAdjust::get(data->num_possible);
+  } else {
+    num_possible = _query_pixel_size;
+  }
+  if (num_possible > 0) {
+    int num_passed = AtomicAdjust::get(data->num_passed);
+    return std::min(1.0f, (float)num_passed / (float)num_possible);
+  }
+
+  return 0.0f;
+}
+
+/**
+ *
+ */
+SpriteGlow::CamQueryData *SpriteGlow::
+find_or_create_query_data(Camera *cam) {
+  LightMutexHolder holder(_contexts_lock);
+  PT(CamQueryData) &data = _contexts[cam];
+  if (data == nullptr) {
+    data = new CamQueryData;
+    if (!_perspective) {
+      data->num_possible = _query_pixel_size;
+    }
+  }
+  return data;
+}
+
+/**
+ *
+ */
+SpriteGlow::CamQueryData *SpriteGlow::
+get_query_data(Camera *cam) const {
+  LightMutexHolder holder(_contexts_lock);
+  CameraContexts::const_iterator it = _contexts.find(cam);
+  if (it != _contexts.end()) {
+    return (*it).second;
+  }
+  return nullptr;
 }
