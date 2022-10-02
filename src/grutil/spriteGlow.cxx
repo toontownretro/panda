@@ -37,6 +37,10 @@
 #include "renderModeAttrib.h"
 #include "cmath.h"
 #include "lightMutexHolder.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector sprite_glow_dc_pcollector("Draw:SpriteGlowCallback");
 
 IMPLEMENT_CLASS(SpriteGlow);
 
@@ -102,6 +106,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
 void SpriteGlow::
 draw_callback(GeomDrawCallbackData *cbdata) {
   //std::cout << "Dc\n";
+  PStatTimer timer(sprite_glow_dc_pcollector);
+
   GraphicsStateGuardian *gsg = (GraphicsStateGuardian *)cbdata->get_gsg();
   CullableObject *obj = cbdata->get_object();
   SceneSetup *scene = gsg->get_scene();

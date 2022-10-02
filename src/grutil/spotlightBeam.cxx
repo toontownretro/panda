@@ -19,6 +19,10 @@
 #include "mathutil_misc.h"
 #include "boundingSphere.h"
 #include "billboardEffect.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector sb_cull_pcollector("Cull:SpotlightBeamCullCallback");
 
 IMPLEMENT_CLASS(SpotlightBeam);
 
@@ -74,6 +78,8 @@ closest_point_on_line(const LPoint3 &p, const LPoint3 &a, const LPoint3 &b, LPoi
  */
 bool SpotlightBeam::
 cull_callback(CullTraverser *trav, CullTraverserData &data) {
+  PStatTimer timer(sb_cull_pcollector);
+
   if (data._node_reader.get_num_children() == 0) {
     return false;
   }
