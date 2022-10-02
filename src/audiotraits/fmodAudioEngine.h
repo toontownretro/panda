@@ -82,6 +82,8 @@ public:
 #ifdef HAVE_STEAM_AUDIO
   bool init_steam_audio();
   void shutdown_steam_audio();
+  void do_steam_audio_direct_sim();
+  void do_steam_audio_reflections_sim();
 #endif
 
 private:
@@ -91,6 +93,8 @@ private:
   LPoint3 _listener_pos;
   LQuaternion _listener_quat;
   LVector3 _listener_vel;
+  LightMutex _listener_transform_lock;
+  UpdateSeq _listener_transform_seq;
 
   PN_stdfloat _unit_scale;
 
@@ -111,10 +115,13 @@ private:
 
 #ifdef HAVE_STEAM_AUDIO
   // Steam Audio API objects.
+  int _num_sims;
   IPLContext _ipl_context;
   IPLHRTF _ipl_hrtf;
   IPLSimulator _ipl_simulator;
+  IPLSimulationSharedInputs _sim_inputs[3];
   IPLSource _ipl_listener_source;
+  IPLSimulationInputs _listener_inputs[3];
 
   // Handles to DSPs implemented in the Steam Audio FMOD plugin.
   unsigned int _ipl_plugin_handle;

@@ -503,6 +503,14 @@ init_steam_audio() {
   if (!IPL_ERRCHECK("create simulator", err)) {
     return false;
   }
+  for (int i = 0; i < 3; ++i) {
+    _sim_inputs[i].irradianceMinDistance = 1.0f;
+    _sim_inputs[i].duration = 1.0f;
+    _sim_inputs[i].order = 2;
+    _sim_inputs[i].numRays = 4096;
+    _sim_inputs[i].numBounces = 16;
+    iplSimulatorSetSharedInputs(_ipl_simulator, (IPLSimulationFlags)(1 << i), &_sim_inputs[i]);
+  }
 
   // Create an IPLSource representing the listener, solely for simulating
   // reflections for listener-centric reverb.
@@ -512,6 +520,7 @@ init_steam_audio() {
   if (!IPL_ERRCHECK("create listener source", err)) {
     return false;
   }
+  iplSourceAdd(_ipl_listener_source, _ipl_simulator);
 
   // Now initialize the Steam Audio FMOD plugin.  This implements custom FMOD
   // DSPs that render the results of our simulations.
