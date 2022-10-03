@@ -39,7 +39,7 @@ IMPLEMENT_CLASS(FMODAudioEngine);
 
 #ifdef HAVE_STEAM_AUDIO
 
-#include <phonon/phonon.h>
+#include <phonon.h>
 
 typedef void (*PFNIPLFMODINITIALIZE)(IPLContext);
 typedef void (*PFNIPLFMODSETHRTF)(IPLHRTF);
@@ -239,6 +239,11 @@ FMODAudioEngine::
   if (_system != nullptr) {
     _system->close();
     _system->release();
+  }
+
+  if (fmodAudio_cat.is_debug()) {
+    fmodAudio_cat.debug()
+      << "Closed FMODAudioEngine\n";
   }
 }
 

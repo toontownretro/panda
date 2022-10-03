@@ -149,6 +149,8 @@ private:
 public:
   FMOD::ChannelGroup *_channelgroup;
 
+  std::string _name;
+
   bool _is_valid;
   bool _active;
 

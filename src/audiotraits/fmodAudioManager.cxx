@@ -62,9 +62,13 @@ ReMutex FMODAudioManager::_lock;
 FMODAudioManager::
 FMODAudioManager(const std::string &name, FMODAudioManager *parent, FMODAudioEngine *engine) :
   _engine(engine),
+  _name(name),
   _fmod_reverb_dsp(nullptr)
 {
   ReMutexHolder holder(_lock);
+
+  _engine->ref();
+
   FMOD_RESULT result;
 
   FMOD::System *system = _engine->get_system();
@@ -116,6 +120,13 @@ FMODAudioManager::
     _channelgroup->release();
     _channelgroup = nullptr;
   }
+
+  if (fmodAudio_cat.is_debug()) {
+    fmodAudio_cat.debug()
+      << "Close FMODAudioManager " << _name << "\n";
+  }
+
+  unref_delete(_engine);
 }
 
 /**

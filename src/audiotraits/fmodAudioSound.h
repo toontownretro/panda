@@ -76,7 +76,7 @@
 #include <fmod_errors.h>
 
 #ifdef HAVE_STEAM_AUDIO
-#include <phonon/phonon.h>
+#include <phonon.h>
 #endif
 
 class VirtualFile;
