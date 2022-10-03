@@ -742,6 +742,14 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
 }
 
 /**
+ *
+ */
+PT(OcclusionQueryContext) GraphicsStateGuardian::
+create_occlusion_query() {
+  return nullptr;
+}
+
+/**
  * Begins a new occlusion query.  After this call, you may call
  * begin_draw_primitives() and draw_triangles()/draw_whatever() repeatedly.
  * Eventually, you should call end_occlusion_query() before the end of the
@@ -753,7 +761,7 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
  * begin_occlusion_query() .. end_occlusion_query() sequence.
  */
 void GraphicsStateGuardian::
-begin_occlusion_query() {
+begin_occlusion_query(OcclusionQueryContext *context) {
   nassertv(_current_occlusion_query == nullptr);
 }
 
@@ -763,12 +771,10 @@ begin_occlusion_query() {
  * pixels that passed the depth test between the call to
  * begin_occlusion_query() and end_occlusion_query().
  */
-PT(OcclusionQueryContext) GraphicsStateGuardian::
+void GraphicsStateGuardian::
 end_occlusion_query() {
-  nassertr(_current_occlusion_query != nullptr, nullptr);
-  PT(OcclusionQueryContext) result = _current_occlusion_query;
+  nassertv(_current_occlusion_query != nullptr);
   _current_occlusion_query = nullptr;
-  return result;
 }
 
 /**

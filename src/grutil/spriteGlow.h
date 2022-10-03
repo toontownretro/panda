@@ -58,6 +58,8 @@ private:
     PT(OcclusionQueryContext) count_ctx = nullptr;
     AtomicAdjust::Integer num_passed = 0;
     AtomicAdjust::Integer num_possible = 0;
+
+    bool valid = true;
   };
   CamQueryData *find_or_create_query_data(Camera *cam);
   CamQueryData *get_query_data(Camera *cam) const;

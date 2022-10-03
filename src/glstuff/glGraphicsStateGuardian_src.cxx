@@ -6630,6 +6630,26 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
 
 #ifndef OPENGLES
 /**
+ *
+ */
+PT(OcclusionQueryContext) CLP(GraphicsStateGuardian)::
+create_occlusion_query() {
+  nassertr(_supports_occlusion_query, nullptr);
+
+  PT(CLP(OcclusionQueryContext)) query = new CLP(OcclusionQueryContext)(this);
+  _glGenQueries(1, &query->_index);
+
+  if (GLCAT.is_debug()) {
+    GLCAT.debug()
+      << "created occlusion query index " << (int)query->_index << "\n";
+  }
+
+  report_my_gl_errors(this);
+
+  return query;
+}
+
+/**
  * Begins a new occlusion query.  After this call, you may call
  * begin_draw_primitives() and draw_triangles()/draw_whatever() repeatedly.
  * Eventually, you should call end_occlusion_query() before the end of the
@@ -6641,12 +6661,12 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
  * begin_occlusion_query() .. end_occlusion_query() sequence.
  */
 void CLP(GraphicsStateGuardian)::
-begin_occlusion_query() {
+begin_occlusion_query(OcclusionQueryContext *context) {
   nassertv(_supports_occlusion_query);
   nassertv(_current_occlusion_query == nullptr);
-  PT(CLP(OcclusionQueryContext)) query = new CLP(OcclusionQueryContext)(this);
 
-  _glGenQueries(1, &query->_index);
+  CLP(OcclusionQueryContext) *query = DCAST(CLP(OcclusionQueryContext), context);
+  nassertv(query->_index != 0);
 
   if (GLCAT.is_debug()) {
     GLCAT.debug()
@@ -6658,18 +6678,16 @@ begin_occlusion_query() {
 
   report_my_gl_errors(this);
 }
-#endif  // !OPENGLES
 
-#ifndef OPENGLES
 /**
  * Ends a previous call to begin_occlusion_query(). This call returns the
  * OcclusionQueryContext object that will (eventually) report the number of
  * pixels that passed the depth test between the call to
  * begin_occlusion_query() and end_occlusion_query().
  */
-PT(OcclusionQueryContext) CLP(GraphicsStateGuardian)::
+void CLP(GraphicsStateGuardian)::
 end_occlusion_query() {
-  nassertr(_current_occlusion_query != nullptr, nullptr);
+  nassertv(_current_occlusion_query != nullptr);
   PT(OcclusionQueryContext) result = _current_occlusion_query;
 
   GLuint index = DCAST(CLP(OcclusionQueryContext), result)->_index;
@@ -6697,8 +6715,6 @@ end_occlusion_query() {
   }
 
   report_my_gl_errors(this);
-
-  return result;
 }
 #endif  // !OPENGLES
 

@@ -30,7 +30,7 @@ public:
 
   virtual bool is_answer_ready() const;
   virtual void waiting_for_answer();
-  virtual int get_num_fragments() const;
+  virtual int get_num_fragments(bool block) const;
 
   GLuint _index;
   GraphicsStateGuardian *_gsg;

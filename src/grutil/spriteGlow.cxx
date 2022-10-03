@@ -115,22 +115,29 @@ draw_callback(GeomDrawCallbackData *cbdata) {
 
   CamQueryData *query_data = find_or_create_query_data(cam);
 
-  if (query_data->ctx == nullptr || (_perspective && query_data->count_ctx == nullptr)) {
-    // No active query context, issue a new one.
-    issue_query(*query_data, gsg, obj->_internal_transform);
-
-  } else {
-    // There is an active query, check if the answer is ready.
-    if (query_data->ctx->is_answer_ready() && (!_perspective || query_data->count_ctx->is_answer_ready())) {
-      AtomicAdjust::set(query_data->num_passed, query_data->ctx->get_num_fragments());
-      if (_perspective) {
-        AtomicAdjust::set(query_data->num_possible, query_data->count_ctx->get_num_fragments());
-      }
-
-      //std::cout  << query_data->num_passed << " / " << query_data->num_possible << "\n";
-
-      // Now issue a new query.
+  if (query_data->valid) {
+    if (query_data->ctx == nullptr || (_perspective && query_data->count_ctx == nullptr)) {
+      // No active query context, issue a new one.
       issue_query(*query_data, gsg, obj->_internal_transform);
+
+    } else {
+      // There is an active query, check if the answer is ready.
+      int ctx_passed = query_data->ctx->get_num_fragments(false);
+      int count_ctx_passed = -1;
+      if (_perspective) {
+        count_ctx_passed = query_data->count_ctx->get_num_fragments(false);
+      }
+      if ((ctx_passed != -1) && (!_perspective || (count_ctx_passed != -1))) {
+        AtomicAdjust::set(query_data->num_passed, ctx_passed);
+        if (_perspective) {
+          AtomicAdjust::set(query_data->num_possible, count_ctx_passed);
+        }
+
+        //std::cout  << query_data->num_passed << " / " << query_data->num_possible << "\n";
+
+        // Now issue a new query.
+        issue_query(*query_data, gsg, obj->_internal_transform);
+      }
     }
   }
 
@@ -147,30 +154,44 @@ issue_query(CamQueryData &query_data, GraphicsStateGuardian *gsg, const Transfor
 
   //std::cout << "isue qyery\n";
 
-  gsg->ensure_generated_shader(_query_state);
-  gsg->set_state_and_transform(_query_state, transform);
-  gsg->begin_occlusion_query();
-  // Now render the actual query.
-  gsg->draw_geom(_query_point, vdata, 1,
-                 _query_prim, true, current_thread);
-  query_data.ctx = gsg->end_occlusion_query();
-
-  if (_perspective) {
-    // Render the "count" query directly in front of the camera, offset forward
-    // the same distance from the camera as the actual query.  This will give us
-    // a rough estimate of the number of "possible" fragments for the query.
-    PN_stdfloat dist = transform->get_pos().length();
-    CPT(TransformState) count_transform = TransformState::make_pos(LPoint3(0, dist, 0));
-
-    // Render the query geometry with the count query state.
-    gsg->ensure_generated_shader(_query_count_state);
-    gsg->set_state_and_transform(_query_count_state, count_transform);
-    // First do a query without depth-testing to see how many fragments are
-    // possible.
-    gsg->begin_occlusion_query();
+  if (query_data.ctx == nullptr) {
+    query_data.ctx = gsg->create_occlusion_query();
+  }
+  if (query_data.ctx != nullptr) {
+    gsg->ensure_generated_shader(_query_state);
+    gsg->set_state_and_transform(_query_state, transform);
+    gsg->begin_occlusion_query(query_data.ctx);
+    // Now render the actual query.
     gsg->draw_geom(_query_point, vdata, 1,
                   _query_prim, true, current_thread);
-    query_data.count_ctx = gsg->end_occlusion_query();
+    gsg->end_occlusion_query();
+  } else {
+    query_data.valid = false;
+  }
+
+  if (_perspective) {
+    if (query_data.count_ctx == nullptr) {
+      query_data.count_ctx = gsg->create_occlusion_query();
+    }
+    if (query_data.count_ctx != nullptr) {
+      // Render the "count" query directly in front of the camera, offset forward
+      // the same distance from the camera as the actual query.  This will give us
+      // a rough estimate of the number of "possible" fragments for the query.
+      PN_stdfloat dist = transform->get_pos().length();
+      CPT(TransformState) count_transform = TransformState::make_pos(LPoint3(0, dist, 0));
+
+      // Render the query geometry with the count query state.
+      gsg->ensure_generated_shader(_query_count_state);
+      gsg->set_state_and_transform(_query_count_state, count_transform);
+      // First do a query without depth-testing to see how many fragments are
+      // possible.
+      gsg->begin_occlusion_query(query_data.count_ctx);
+      gsg->draw_geom(_query_point, vdata, 1,
+                    _query_prim, true, current_thread);
+      gsg->end_occlusion_query();
+    } else {
+      query_data.valid = false;
+    }
   }
 }
 

@@ -26,7 +26,7 @@ class EXPCL_PANDA_GOBJ OcclusionQueryContext : public QueryContext {
 public:
   INLINE OcclusionQueryContext();
 
-  virtual int get_num_fragments() const=0;
+  virtual int get_num_fragments(bool block) const=0;
 
 public:
   static TypeHandle get_class_type() {

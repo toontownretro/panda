@@ -407,8 +407,9 @@ public:
 #endif
 
 #ifndef OPENGLES
-  virtual void begin_occlusion_query();
-  virtual PT(OcclusionQueryContext) end_occlusion_query();
+  virtual PT(OcclusionQueryContext) create_occlusion_query();
+  virtual void begin_occlusion_query(OcclusionQueryContext *context);
+  virtual void end_occlusion_query();
 #endif
 
   virtual void issue_timer_query(int pstats_index) final;
