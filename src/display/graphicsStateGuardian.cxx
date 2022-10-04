@@ -2614,7 +2614,7 @@ draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *curre
     #if 1
     else if (object->_draw_callback != nullptr) {
       // It has a callback associated.
-      clear_before_callback();
+      //clear_before_callback();
       set_state_and_transform(object->_state, object->_internal_transform);
       GeomDrawCallbackData cbdata((CullableObject *)object, this, force);
       object->_draw_callback->do_callback(&cbdata);
