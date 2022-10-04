@@ -381,7 +381,7 @@ public:
   virtual VertexBufferContext *prepare_vertex_buffer(GeomVertexArrayData *data);
   bool update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
                             const GeomVertexArrayDataHandle *reader,
-                            bool force);
+                            bool force, bool locked = false);
   virtual void release_vertex_buffer(VertexBufferContext *vbc);
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts);
 

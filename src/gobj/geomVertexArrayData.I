@@ -278,7 +278,8 @@ INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle() :
   _current_thread(nullptr),
   _object(nullptr),
-  _cdata(nullptr)
+  _cdata(nullptr),
+  _has_lock(false)
 {
 }
 
@@ -289,7 +290,8 @@ INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(Thread *current_thread) :
   _current_thread(current_thread),
   _object(nullptr),
-  _cdata(nullptr)
+  _cdata(nullptr),
+  _has_lock(false)
 {
 }
 
@@ -315,7 +317,8 @@ GeomVertexArrayDataHandle(CPT(GeomVertexArrayData) object,
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(const GeomVertexArrayData *object,
                           Thread *current_thread) :
-  _current_thread(current_thread)
+  _current_thread(current_thread),
+  _has_lock(false)
 {
   assign(object);
 #ifdef DO_MEMORY_USAGE
@@ -345,7 +348,8 @@ GeomVertexArrayDataHandle(PT(GeomVertexArrayData) object,
 INLINE GeomVertexArrayDataHandle::
 GeomVertexArrayDataHandle(GeomVertexArrayData *object,
                           Thread *current_thread) :
-  _current_thread(current_thread)
+  _current_thread(current_thread),
+  _has_lock(false)
 {
   assign(object);
 #ifdef DO_MEMORY_USAGE
@@ -379,7 +383,7 @@ assign(CPT(GeomVertexArrayData) object) {
  * NOTE: Assumes the handle does not reference an existing object.
  */
 INLINE void GeomVertexArrayDataHandle::
-assign(const GeomVertexArrayData *object) {
+assign(const GeomVertexArrayData *object, bool lock) {
   _object = (GeomVertexArrayData *)object;
   _cdata = (GeomVertexArrayData::CData *)object->_cycler.read_unlocked(_current_thread);
   _writable = false;
@@ -392,7 +396,10 @@ assign(const GeomVertexArrayData *object) {
 //#endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  if (lock) {
+    _cdata->_rw_lock.acquire();
+    _has_lock = true;
+  }
 }
 
 #if 0
@@ -413,7 +420,10 @@ assign(PT(GeomVertexArrayData) object) {
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  if (lock) {
+    _cdata->_rw_lock.acquire();
+    _has_lock = true;
+  }
 }
 #endif
 
@@ -421,7 +431,7 @@ assign(PT(GeomVertexArrayData) object) {
  * NOTE: Assumes the handle does not reference an existing object.
  */
 INLINE void GeomVertexArrayDataHandle::
-assign(GeomVertexArrayData *object) {
+assign(GeomVertexArrayData *object, bool lock) {
   _object = object;
   _cdata = object->_cycler.write_upstream(true, _current_thread);
   _writable = true;
@@ -434,7 +444,10 @@ assign(GeomVertexArrayData *object) {
 #endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  _cdata->_rw_lock.acquire();
+  if (lock) {
+    _cdata->_rw_lock.acquire();
+    _has_lock = true;
+  }
 }
 
 /**
@@ -456,7 +469,10 @@ release() {
   if (_cdata != nullptr) {
     // We must release the lock *before* we decrement the reference count,
     // below.
-    _cdata->_rw_lock.release();
+    if (_has_lock) {
+      _cdata->_rw_lock.release();
+      _has_lock = false;
+    }
 
     if (_writable) {
 #ifdef DO_PIPELINING
@@ -621,9 +637,33 @@ get_subdata(size_t start, size_t size) const {
 /**
  * Marks the array data recently-used.
  */
-void GeomVertexArrayDataHandle::
+INLINE void GeomVertexArrayDataHandle::
 mark_used() const {
   _object->mark_used();
+}
+
+/**
+ *
+ */
+INLINE void GeomVertexArrayDataHandle::
+acquire_rw_lock() const {
+  if (_cdata != nullptr) {
+    nassertv(!_has_lock);
+    _cdata->_rw_lock.acquire();
+    ((GeomVertexArrayDataHandle *)this)->_has_lock = true;
+  }
+}
+
+/**
+ *
+ */
+INLINE void GeomVertexArrayDataHandle::
+release_rw_lock() const {
+  if (_cdata != nullptr) {
+    nassertv(_has_lock);
+    _cdata->_rw_lock.release();
+    ((GeomVertexArrayDataHandle *)this)->_has_lock = false;
+  }
 }
 
 INLINE std::ostream &

@@ -372,7 +372,7 @@ private:
  */
 class EXPCL_PANDA_GOBJ GeomPrimitivePipelineReader : public GeomEnums {
 public:
-  INLINE GeomPrimitivePipelineReader(const GeomPrimitive *object, Thread *current_thread);
+  INLINE GeomPrimitivePipelineReader(const GeomPrimitive *object, Thread *current_thread, bool lock = true);
   GeomPrimitivePipelineReader(const GeomPrimitivePipelineReader &copy) = delete;
   INLINE ~GeomPrimitivePipelineReader();
 
@@ -408,6 +408,9 @@ public:
   INLINE CPT(GeomVertexArrayData) get_mins() const;
   INLINE CPT(GeomVertexArrayData) get_maxs() const;
 
+  INLINE void acquire_rw_lock() const;
+  INLINE void release_rw_lock() const;
+
   INLINE IndexBufferContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
                                          GraphicsStateGuardianBase *gsg) const;
   INLINE bool draw(GraphicsStateGuardianBase *gsg, bool force) const;
@@ -420,6 +423,8 @@ private:
   const GeomVertexArrayData::CData *_vertices_cdata;
 
   Thread *_current_thread;
+
+  bool _has_lock;
 
 public:
   static TypeHandle get_class_type() {

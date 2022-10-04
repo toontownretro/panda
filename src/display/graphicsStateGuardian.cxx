@@ -2691,7 +2691,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   int num_handles = (int)data_reader._cdata->_arrays.size();
   for (int i = 0; i < num_handles; ++i) {
     s_handles[i]._current_thread = current_thread;
-    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread));
+    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread), false);
   }
   data_reader.set_array_readers(s_handles);
 
@@ -2715,7 +2715,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   // CullableObject and eliminates the need to read from memory stored on
   // the Geom.
   if (prim != nullptr) {
-    GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+    GeomPrimitivePipelineReader prim_reader(prim, current_thread, false);
     if (prim_reader.get_num_vertices() != 0) {
       //prim_reader.check_minmax();
 
@@ -2804,7 +2804,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
     for (size_t i = 0; i < num_prims; ++i) {
       prim = geom_reader._cdata->_primitives[i].get_read_pointer(current_thread);
 
-      GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+      GeomPrimitivePipelineReader prim_reader(prim, current_thread, false);
       if (prim_reader.get_num_vertices() != 0) {
         //prim_reader.check_minmax();
 
