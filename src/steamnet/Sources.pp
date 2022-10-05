@@ -19,6 +19,7 @@
 
   #define COMPOSITE_SOURCES \
     config_steamnet.cxx \
+    steamNetworkMessage.cxx \
     steamNetworkSystem.cxx
 
   #define INSTALL_HEADERS \
