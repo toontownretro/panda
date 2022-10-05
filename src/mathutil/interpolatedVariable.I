@@ -495,6 +495,15 @@ set_sample_value(int index, const Type &value) {
 }
 
 /**
+ * Returns the number of value samples stored.
+ */
+template<class Type>
+INLINE int InterpolatedVariable<Type>::
+get_num_samples() const {
+  return (int)_sample_points.size();
+}
+
+/**
  * Fills in the indices of the three sample points to interpolate based on the
  * provided rendering time.
  */
