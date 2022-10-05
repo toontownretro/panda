@@ -17,13 +17,14 @@
 #include "pandabase.h"
 #include "callbackData.h"
 #include "referenceCount.h"
+#include "memoryUsage.h"
 
 /**
  * Reference-counted callback data.
  */
 class EXPCL_PANDA_PPHYSICS RefCallbackData : public CallbackData, public ReferenceCount {
 PUBLISHED:
-  RefCallbackData() = default;
+  INLINE RefCallbackData();
   virtual ~RefCallbackData() = default;
 
 public:

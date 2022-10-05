@@ -15,11 +15,13 @@
 #define PHYSXALLOCATOR_H
 
 #include "physx_includes.h"
+#include "typedObject.h"
 
 /**
  * Allocator implementation for PhysX usage.  Calls into Panda's allocator.
  */
-class PhysXAllocator : public physx::PxAllocatorCallback {
+class PhysXAllocator : public physx::PxAllocatorCallback, public TypedObject {
+  DECLARE_CLASS(PhysXAllocator, TypedObject);
 public:
   virtual void *allocate(size_t size, const char *type_name, const char *filename, int line) override;
   virtual void deallocate(void *ptr) override;

@@ -10,3 +10,13 @@
  * @author brian
  * @date 2021-04-26
  */
+
+/**
+ *
+ */
+INLINE RefCallbackData::
+RefCallbackData() {
+#ifdef DO_MEMORY_USAGE
+  MemoryUsage::update_type(this, this);
+#endif
+}

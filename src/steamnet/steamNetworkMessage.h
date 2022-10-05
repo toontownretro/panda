@@ -25,6 +25,7 @@
 class EXPCL_PANDA_STEAMNET SteamNetworkMessage {
 PUBLISHED:
   INLINE SteamNetworkMessage();
+  virtual ~SteamNetworkMessage() = default;
 
   INLINE void set_datagram(const Datagram &dg);
   INLINE void set_datagram(Datagram &&dg);

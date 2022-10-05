@@ -30,7 +30,7 @@ public:
   INLINE PhysRayCastHit(const physx::PxRaycastHit *hit);
 
 PUBLISHED:
-  ~PhysRayCastHit() = default;
+  virtual ~PhysRayCastHit() = default;
 
   INLINE PhysRigidActorNode *get_actor() const;
   INLINE PhysShape *get_shape() const;
@@ -61,7 +61,7 @@ PUBLISHED:
   INLINE PhysRayCastResult();
   PhysRayCastResult(const PhysRayCastResult &copy) = delete;
 
-  ~PhysRayCastResult() = default;
+  virtual ~PhysRayCastResult() = default;
 
   void operator = (const PhysRayCastResult &copy) = delete;
 

@@ -15,13 +15,17 @@
 #include "physXAllocator.h"
 #include "dtoolbase.h"
 #include "memoryHook.h"
+#include "memoryUsage.h"
+
+IMPLEMENT_CLASS(PhysXAllocator);
 
 /**
  * Allocates some memory for PhysX.  Calls into Panda's allocator.
  */
 void *PhysXAllocator::
 allocate(size_t size, const char *type_name, const char *filename, int line) {
-  void *ptr = PANDA_MALLOC_SINGLE(size);
+  //std::cerr << "Alloc physx: " << size << ", " << std::string(type_name) << "\n";
+  void *ptr = get_class_type().allocate_array(size);
 #ifndef NDEBUG
   if (ptr == nullptr) {
     pphysics_cat.error()
@@ -38,7 +42,5 @@ allocate(size_t size, const char *type_name, const char *filename, int line) {
  */
 void PhysXAllocator::
 deallocate(void *ptr) {
-  if (ptr != nullptr) {
-    PANDA_FREE_SINGLE(ptr);
-  }
+  get_class_type().deallocate_array(ptr);
 }

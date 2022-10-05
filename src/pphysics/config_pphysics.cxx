@@ -22,6 +22,7 @@
 #include "physContactCallbackData.h"
 #include "physShape.h"
 #include "string_utils.h"
+#include "physXAllocator.h"
 
 /**
  *
@@ -278,4 +279,5 @@ init_libpphysics() {
   PhysSleepStateCallbackData::init_type();
   PhysContactCallbackData::init_type();
   PhysShape::init_type();
+  PhysXAllocator::init_type();
 }
