@@ -48,7 +48,8 @@ DynamicVisNode(const std::string &name) :
  */
 void DynamicVisNode::
 set_culling_enabled(bool flag) {
-  CDWriter cdata(_cycler);
+  //CDWriter cdata(_cycler);
+  CData *cdata = &_cdata;
   cdata->_enabled = flag;
 }
 
@@ -57,7 +58,8 @@ set_culling_enabled(bool flag) {
  */
 bool DynamicVisNode::
 get_culling_enabled() const {
-  CDReader cdata(_cycler);
+  //CDReader cdata(_cycler);
+  const CData *cdata = &_cdata;
   return cdata->_enabled;
 }
 
@@ -82,7 +84,8 @@ update_dirty_children() {
   //);
 
   if (!_dirty_children.empty()) {
-    CDWriter cdata(_cycler);
+    //CDWriter cdata(_cycler);
+    CData *cdata = &_cdata;
 
     // Re-place all the dirty children into visgroup buckets.
     for (auto it = _dirty_children.begin(); it != _dirty_children.end(); ++it) {
@@ -127,7 +130,8 @@ void DynamicVisNode::
 level_init(int num_clusters, const SpatialPartition *tree) {
   _tree = tree;
 
-  CDWriter cdata(_cycler);
+  //CDWriter cdata(_cycler);
+  CData *cdata = &_cdata;
 
   // Everything else should've been reset in level_shutdown().
   cdata->_visgroups.resize(num_clusters);
@@ -148,7 +152,8 @@ level_init(int num_clusters, const SpatialPartition *tree) {
  */
 void DynamicVisNode::
 level_shutdown() {
-  CDWriter cdata(_cycler);
+  //CDWriter cdata(_cycler);
+  CData *cdata = &_cdata;
 
   // Clear out the visgroup set for each child and any tracking info.
   for (auto it = _children.begin(); it != _children.end(); ++it) {
@@ -214,8 +219,8 @@ child_removed(PandaNode *node, int pipeline_stage) {
   }
 
   {
-    CDWriter cdata(_cycler);
-    remove_from_tree(info, cdata);
+    //CDWriter cdata(_cycler);
+    remove_from_tree(info, &_cdata);
   }
   _children.erase(it);
 }
@@ -263,7 +268,8 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
 
-  CDReader cdata(_cycler, trav->get_current_thread());
+  //CDReader cdata(_cycler, trav->get_current_thread());
+  const CData *cdata = &_cdata;
 
   if (!cdata->_enabled || mtrav->_data == nullptr) {
     // No map, invalid view cluster, or culling disabled.

@@ -118,7 +118,13 @@ private:
     bool _enabled;
   };
 
-  PipelineCycler<CData> _cycler;
+  // To avoid copying this potentially large set for cycling,
+  // we pre-allocate 2 copies and swap between them.
+  //VisGroupChildren _stage_visgroups[2];
+  //char _stage_cycle;
+
+  //PipelineCycler<CData> _cycler;
+  CData _cdata;
   typedef CycleDataReader<CData> CDReader;
   typedef CycleDataWriter<CData> CDWriter;
   typedef CycleDataStageWriter<CData> CDStageWriter;
@@ -126,6 +132,8 @@ private:
   int _trav_counter;
 
   const SpatialPartition *_tree;
+
+  friend class CData;
 
 public:
   void remove_from_tree(ChildInfo *child, CData *cdata);
