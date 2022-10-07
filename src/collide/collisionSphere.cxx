@@ -596,6 +596,7 @@ fill_viz_geom() {
     *ptr++ = offset;
   }
   ring->close_primitive();
+  ring->calc_num_vertices();
 
   PT(Geom) geom = new Geom(vdata);
   geom->add_primitive(strip);

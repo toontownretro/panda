@@ -6280,6 +6280,7 @@ apply_index_buffer(IndexBufferContext *ibc,
   }
 
   if (gibc->was_modified(reader)) {
+    reader->fetch_vertices_cdata(false);
     reader->acquire_rw_lock();
     int num_bytes = reader->get_data_size_bytes();
 #ifndef NDEBUG

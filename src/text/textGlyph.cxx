@@ -284,6 +284,8 @@ make_quad_geom() {
     index.set_data1i(3);
   }
 
+  tris->calc_num_vertices();
+
   // We create a regular Geom here, not a GeomTextGlyph, since doing so would
   // create a circular reference.  When the get_geom method makes a copy, it
   // will add in a pointer to this text glyph.

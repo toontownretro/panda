@@ -217,6 +217,8 @@ add_vertex(int vertex) {
       nassert_raise("unsupported index type");
       break;
     }
+
+    ++cdata->_num_vertices;
   }
 
   cdata->_modified = Geom::get_next_modified();
@@ -285,6 +287,7 @@ add_consecutive_vertices(int start, int num_vertices) {
     index.set_data1i(v);
   }
 
+  cdata->_num_vertices += num_vertices;
   cdata->_modified = Geom::get_next_modified();
   cdata->_got_minmax = false;
 }
@@ -690,13 +693,22 @@ make_indexed() {
 /**
  *
  */
-//void GeomPrimitive::
-//calc_num_vertices() {
-//  CDWriter cdata(_cycler, true);
-//  if (cdata->_vertices.is_null()) {
-//    cdata->_num_vertices = cdata->_first_vertex + cdata->_num
-//  }
-//}
+void GeomPrimitive::
+calc_num_vertices() {
+  CDWriter cdata(_cycler, true);
+  if (cdata->_vertices.is_null()) {
+    // We shouldn't have to recalculate this is they're non-indexed.
+    nassertv(cdata->_num_vertices != -1);
+  } else {
+    // Otherwise cache the vertex count by dividing the index buffer size
+    // by the index stride.  This is an important optimization, as it allows
+    // us to completely avoid reading from the GVAD (and its CData) when
+    // drawing the GeomPrimitive.
+    const GeomVertexArrayData *vertices = cdata->_vertices.get_read_pointer();
+    cdata->_num_vertices = vertices->get_data_size_bytes() / vertices->get_array_format()->get_stride();
+    cdata->_first_vertex = 0;
+  }
+}
 
 /**
  * Returns the element within the _vertices list at which the nth primitive
@@ -1233,7 +1245,10 @@ PT(GeomVertexArrayData) GeomPrimitive::
 modify_vertices(int num_vertices) {
   CDWriter cdata(_cycler, true);
   PT(GeomVertexArrayData) vertices = do_modify_vertices(cdata);
-  cdata->_num_vertices = num_vertices;
+  if (num_vertices != -1) {
+    cdata->_num_vertices = num_vertices;
+  }
+
   return vertices;
 }
 
@@ -1257,12 +1272,17 @@ void GeomPrimitive::
 set_vertices(const GeomVertexArrayData *vertices, int num_vertices) {
   CDWriter cdata(_cycler, true);
   cdata->_vertices = (GeomVertexArrayData *)vertices;
-  cdata->_num_vertices = num_vertices;
 
   // Validate the format and make sure to copy its numeric type.
   const GeomVertexArrayFormat *format = vertices->get_array_format();
   nassertv(format->get_num_columns() == 1);
   cdata->_index_type = format->get_column(0)->get_numeric_type();
+
+  if (num_vertices != -1) {
+    cdata->_num_vertices = num_vertices;
+  } else {
+    cdata->_num_vertices = vertices->get_data_size_bytes() / format->get_stride();
+  }
 
   cdata->_modified = Geom::get_next_modified();
   cdata->_got_minmax = false;
@@ -1985,6 +2005,8 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
 
   } else {
     int num_vertices = cdata->_vertices.get_read_pointer()->get_num_rows();
+    nassertv(num_vertices >= cdata->_num_vertices);
+    num_vertices = cdata->_num_vertices;
 
     if (num_vertices == 0) {
       // Or if we don't have any vertices, the minmax is also trivial.
@@ -2100,7 +2122,8 @@ do_make_indexed(CData *cdata) {
     for (int i = 0; i < cdata->_num_vertices; ++i) {
       index.set_data1i(i + cdata->_first_vertex);
     }
-    cdata->_num_vertices = -1;
+    cdata->_first_vertex = 0;
+    //cdata->_num_vertices = -1;
   }
 }
 
@@ -2212,6 +2235,15 @@ finalize(BamReader *manager) {
   const GeomVertexArrayData *vertices = get_vertices();
   if (vertices != nullptr) {
     set_usage_hint(vertices->get_usage_hint());
+
+    int num_vertices;
+    {
+      CDReader cdata(_cycler);
+      num_vertices = cdata->_num_vertices;
+    }
+    if (num_vertices == -1) {
+      calc_num_vertices();
+    }
   }
 }
 

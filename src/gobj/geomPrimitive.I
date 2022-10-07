@@ -509,6 +509,7 @@ CData(const GeomPrimitive::CData &copy) :
 INLINE GeomPrimitivePipelineReader::
 GeomPrimitivePipelineReader(const GeomPrimitive *object,
                             Thread *current_thread,
+                            bool fetch_vertices_cdata,
                             bool lock) :
 #ifndef CPPPARSER
   _cdata(object->_cycler.read_unlocked(current_thread)),
@@ -517,7 +518,7 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
   _vertices_cdata(nullptr),
   _vertices(nullptr),
   _current_thread(current_thread),
-  _has_lock(lock)
+  _has_lock(false)
 {
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
@@ -528,14 +529,17 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
 
   if (!_cdata->_vertices.is_null()) {
     _vertices = _cdata->_vertices.get_read_pointer(current_thread);
-    _vertices_cdata = _vertices->_cycler.read_unlocked(current_thread);
+    if (fetch_vertices_cdata) {
+      _vertices_cdata = _vertices->_cycler.read_unlocked(current_thread);
 //#ifdef DO_PIPELINING
 //    _vertices_cdata->ref();
 //#endif  // DO_PIPELINING
-    // We must grab the lock *after* we have incremented the reference count,
-    // above.
-    if (lock) {
-      _vertices_cdata->_rw_lock.acquire();
+      // We must grab the lock *after* we have incremented the reference count,
+      // above.
+      if (lock) {
+        _vertices_cdata->_rw_lock.acquire();
+        _has_lock = true;
+      }
     }
   }
 }
@@ -633,15 +637,8 @@ get_num_vertices() const {
   //}
   //return _cdata->_num_vertices;
 
-  if (_cdata->_num_vertices != -1) {
-    return _cdata->_num_vertices;
-
-  } else {
-    //nassertr(_vertices != nullptr, 0);
-    size_t stride = (_cdata->_index_type == NT_uint32) ? 4 : 2;
-    //nassertr(stride != 0, 0);
-    return get_data_size_bytes() / stride;
-  }
+  nassertr(_cdata->_num_vertices != -1, 0);
+  return _cdata->_num_vertices;
 }
 
 /**
@@ -667,6 +664,7 @@ get_max_vertex() const {
  */
 INLINE int GeomPrimitivePipelineReader::
 get_data_size_bytes() const {
+  nassertr(_vertices_cdata != nullptr, 0);
   return _vertices_cdata->_buffer.get_size();
 }
 
@@ -701,6 +699,7 @@ get_index_stride() const {
  */
 INLINE const unsigned char *GeomPrimitivePipelineReader::
 get_read_pointer(bool force) const {
+  nassertr(_vertices_cdata != nullptr, nullptr);
   ((GeomVertexArrayData *)_vertices)->mark_used();
   return _vertices_cdata->_buffer.get_read_pointer(force);
 }
@@ -762,6 +761,21 @@ release_rw_lock() const {
     nassertv(_has_lock);
     _vertices_cdata->_rw_lock.release();
     ((GeomPrimitivePipelineReader *)this)->_has_lock = false;
+  }
+}
+
+/**
+ *
+ */
+INLINE void GeomPrimitivePipelineReader::
+fetch_vertices_cdata(bool lock) const {
+  if (_vertices != nullptr && _vertices_cdata == nullptr) {
+    GeomPrimitivePipelineReader *ncthis = (GeomPrimitivePipelineReader *)this;
+    ncthis->_vertices_cdata = _vertices->_cycler.read_unlocked(_current_thread);
+    if (lock) {
+      ncthis->_vertices_cdata->_rw_lock.acquire();
+      ncthis->_has_lock = true;
+    }
   }
 }
 

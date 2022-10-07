@@ -726,6 +726,7 @@ unify_in_place(int max_indices, bool preserve_order) {
             writer.unclean_set_num_rows(num_vertices);
             memcpy(writer.get_write_pointer(), ptr, stride * (size_t)(num_vertices - num_unused_vertices_per_primitive));
           }
+          smaller->calc_num_vertices();
 
           cdata->_primitives.push_back(smaller.p());
 
@@ -1675,6 +1676,9 @@ combine_primitives(GeomPrimitive *a_prim, CPT(GeomPrimitive) b_prim,
       a_ends.push_back(b_ends[i] + orig_a_vertices);
     }
   }
+
+  a_handle = nullptr;
+  a_prim->calc_num_vertices();
 }
 
 /**
