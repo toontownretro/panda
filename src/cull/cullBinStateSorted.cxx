@@ -41,9 +41,9 @@ TypeHandle CullBinStateSorted::_type_handle;
  */
 CullBinStateSorted::
 ~CullBinStateSorted() {
-  for (CullableObject *object : _objects) {
-    delete object;
-  }
+  //for (CullableObject *object : _objects) {
+  //  delete object;
+  //}
 }
 
 /**
@@ -65,10 +65,13 @@ add_object(CullableObject *object, Thread *current_thread) {
   } else {
     object->_sort_data._format = nullptr;
   }
-  _objects.push_back(object);
+  _objects.emplace_back(std::move(*object));
 }
 
-auto compare_objects_state = [](const CullableObject *a, const CullableObject *b) -> bool {
+auto compare_objects_state = [](const CullableObject &ca, const CullableObject &cb) -> bool {
+  const CullableObject *a = &ca;
+  const CullableObject *b = &cb;
+
   // Group by state changes, in approximate order from heaviest change to
   // lightest change.
   const RenderState *sa = a->_state;
@@ -328,6 +331,6 @@ void CullBinStateSorted::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
   Objects::iterator oi;
   for (oi = _objects.begin(); oi != _objects.end(); ++oi) {
-    builder.add_object(*oi);
+    builder.add_object(&(*oi));
   }
 }

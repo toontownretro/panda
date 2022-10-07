@@ -201,7 +201,7 @@ public:
   // because it would be too inconvenient to declare each of those types to be
   // friends of this class.
 
-  virtual bool draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *current_thread)=0;
+  virtual bool draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread)=0;
   virtual bool draw_object(CullableObject *object, bool force, Thread *current_thread)=0;
 
   virtual bool begin_draw_primitives(const GeomPipelineReader *geom_reader,

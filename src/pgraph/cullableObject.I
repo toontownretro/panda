@@ -88,6 +88,37 @@ operator = (const CullableObject &copy) {
 }
 
 /**
+ *
+ */
+INLINE CullableObject::
+CullableObject(CullableObject &&other) :
+  _draw_callback(std::move(other._draw_callback)),
+  _state(std::move(other._state)),
+  _internal_transform(std::move(other._internal_transform)),
+  _geom(std::move(other._geom)),
+  _munged_data(std::move(other._munged_data)),
+  _primitive(std::move(other._primitive)),
+  _num_instances(std::move(other._num_instances))
+{
+  memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
+}
+
+/**
+ *
+ */
+INLINE void CullableObject::
+operator = (CullableObject &&other) {
+  _draw_callback = std::move(other._draw_callback);
+  _state = std::move(other._state);
+  _internal_transform = std::move(other._internal_transform);
+  _geom = std::move(other._geom);
+  _munged_data = std::move(other._munged_data);
+  _primitive = std::move(other._primitive);
+  memmove(&_sort_data, &other._sort_data, sizeof(_sort_data));
+  _num_instances = std::move(other._num_instances);
+}
+
+/**
  * Draws the cullable object on the GSG immediately, in the GSG's current
  * state.  This should only be called from the draw thread.
  */

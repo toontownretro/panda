@@ -50,7 +50,7 @@ protected:
   virtual void fill_result_graph(ResultGraphBuilder &builder);
 
 private:
-  typedef pvector<CullableObject *> Objects;
+  typedef pvector<CullableObject> Objects;
   Objects _objects;
 
 public:

@@ -24,9 +24,9 @@ TypeHandle CullBinUnsorted::_type_handle;
  */
 CullBinUnsorted::
 ~CullBinUnsorted() {
-  for (CullableObject *object : _objects) {
-    delete object;
-  }
+  //for (CullableObject *object : _objects) {
+  //  delete object;
+  //}
 }
 
 /**
@@ -43,7 +43,7 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
  */
 void CullBinUnsorted::
 add_object(CullableObject *object, Thread *current_thread) {
-  _objects.push_back(object);
+  _objects.emplace_back(std::move(*object));
 }
 
 /**
@@ -61,7 +61,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinUnsorted::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (CullableObject *object : _objects) {
-    builder.add_object(object);
+  for (CullableObject &object : _objects) {
+    builder.add_object(&object);
   }
 }

@@ -249,14 +249,14 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   // Record them without any state or transform.
   trav->_geoms_pcollector.add_level(2);
   {
-    CullableObject *object = new CullableObject(std::move(debug_lines), RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
+    CullableObject object(std::move(debug_lines), RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
                           trav->get_current_thread());
-    trav->get_cull_handler()->record_object(object, trav);
+    trav->get_cull_handler()->record_object(&object, trav);
   }
   {
-    CullableObject *object = new CullableObject(std::move(debug_triangles), RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
+    CullableObject object(std::move(debug_triangles), RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
                           trav->get_current_thread());
-    trav->get_cull_handler()->record_object(object, trav);
+    trav->get_cull_handler()->record_object(&object, trav);
   }
 }
 

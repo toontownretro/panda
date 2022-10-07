@@ -281,9 +281,9 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     PT(Geom) geom = new Geom(vdata);
     geom->add_primitive(lines);
 
-    CullableObject *obj = new CullableObject(geom, RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
+    CullableObject obj(geom, RenderState::make_empty(), trav->get_scene()->get_cs_world_transform(),
                        trav->get_current_thread());
-    trav->get_cull_handler()->record_object(obj, trav);
+    trav->get_cull_handler()->record_object(&obj, trav);
   }
 
   return true;

@@ -27,9 +27,9 @@ TypeHandle CullBinFixed::_type_handle;
  */
 CullBinFixed::
 ~CullBinFixed() {
-  for (CullableObject *object : _objects) {
-    delete object;
-  }
+  //for (CullableObject *object : _objects) {
+  //  delete object;
+  //}
 }
 
 /**
@@ -47,11 +47,11 @@ make_bin(const std::string &name, GraphicsStateGuardianBase *gsg,
 void CullBinFixed::
 add_object(CullableObject *object, Thread *current_thread) {
   object->_sort_data._draw_order = object->_state->get_draw_order();
-  _objects.push_back(object);
+  _objects.emplace_back(std::move(*object));
 }
 
-auto compare_objects_fixed = [](const CullableObject *a, const CullableObject *b) -> bool {
-  return a->_sort_data._draw_order < b->_sort_data._draw_order;
+auto compare_objects_fixed = [](const CullableObject &a, const CullableObject &b) -> bool {
+  return a._sort_data._draw_order < b._sort_data._draw_order;
 };
 
 /**
@@ -80,7 +80,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFixed::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (CullableObject *object : _objects) {
-    builder.add_object(object);
+  for (CullableObject &object : _objects) {
+    builder.add_object(&object);
   }
 }

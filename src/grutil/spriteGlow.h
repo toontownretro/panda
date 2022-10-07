@@ -45,7 +45,7 @@ PUBLISHED:
 public:
   virtual void add_for_draw(CullTraverser *trav, CullTraverserData &data) override;
 
-  void draw_callback(GeomDrawCallbackData *cbdata);
+  void draw_callback(GeomDrawCallbackData *cbdata, const TransformState *count_transform);
 
   void init_geoms();
 
@@ -53,6 +53,8 @@ private:
   class CamQueryData : public ReferenceCount {
   public:
     CamQueryData() = default;
+
+    CPT(TransformState) count_query_transform;
 
     PT(OcclusionQueryContext) ctx = nullptr;
     PT(OcclusionQueryContext) count_ctx = nullptr;
@@ -79,7 +81,7 @@ private:
   bool _perspective;
 
 private:
-  void issue_query(CamQueryData &data, GraphicsStateGuardian *gsg, const TransformState *transform);
+  void issue_query(CamQueryData &data, GraphicsStateGuardian *gsg, const TransformState *transform, const TransformState *count_transform);
 };
 
 #include "spriteGlow.I"

@@ -549,9 +549,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
 
       const RenderState *gstate = (*geoms)[0]._state;
       CPT(RenderState) state = data._state->compose(gstate);
-      CullableObject *object = new CullableObject(std::move(geom), std::move(state), std::move(internal_transform),
+      CullableObject object(std::move(geom), std::move(state), std::move(internal_transform),
                             current_thread);
-      trav->get_cull_handler()->record_object(object, trav);
+      trav->get_cull_handler()->record_object(&object, trav);
 
 #if 0
       CPT(RenderState) state = data._state->compose((*geoms)[0]._state);
@@ -624,9 +624,9 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
 
       const RenderState *gstate = (*geoms)[i]._state;
       CPT(RenderState) state = data._state->compose(gstate);
-      CullableObject *object = new CullableObject(std::move(geom), std::move(state), internal_transform,
+      CullableObject object(std::move(geom), std::move(state), internal_transform,
                             current_thread);
-      trav->get_cull_handler()->record_object(object, trav);
+      trav->get_cull_handler()->record_object(&object, trav);
 
 #if 0
       CullableObject object(std::move(geom), std::move(state), internal_transform);

@@ -2590,9 +2590,11 @@ finish_decal() {
  * Draws the given set of CullableObjects one-by-one.
  */
 bool GraphicsStateGuardian::
-draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *current_thread) {
+draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) {
   bool all_ok = true;
-  for (const CullableObject *object : objects) {
+  for (const CullableObject &obj : objects) {
+    const CullableObject *object = &obj;
+
 #ifdef RENDER_TRACK_GEOM_NODES
     _geom_node = object->_geom_node;
 #endif
@@ -2656,7 +2658,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
   #if 1
   else if (object->_draw_callback != nullptr) {
     // It has a callback associated.
-    clear_before_callback();
+    //clear_before_callback();
     set_state_and_transform(object->_state, object->_internal_transform);
     GeomDrawCallbackData cbdata(object, this, force);
     object->_draw_callback->do_callback(&cbdata);

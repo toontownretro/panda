@@ -148,8 +148,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
 
         for (const GeomEntry &geom : obj->_geoms) {
           CPT(RenderState) state = data._state->compose(geom._state);
-          CullableObject *cobj = new CullableObject(geom._geom, std::move(state), trans, current_thread);
-          trav->get_cull_handler()->record_object(cobj, trav);
+          CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
+          trav->get_cull_handler()->record_object(&cobj, trav);
         }
       }
     //);
@@ -202,8 +202,8 @@ add_object_for_draw(CullTraverser *trav, CullTraverserData &data, const Object *
 
   for (const GeomEntry &geom : obj->_geoms) {
     CPT(RenderState) state = data._state->compose(geom._state);
-    CullableObject *cobj = new CullableObject(geom._geom, std::move(state), trans, current_thread);
-    trav->get_cull_handler()->record_object(cobj, trav);
+    CullableObject cobj(geom._geom, std::move(state), trans, current_thread);
+    trav->get_cull_handler()->record_object(&cobj, trav);
   }
 }
 
