@@ -44,7 +44,7 @@ thread_main() {
   while (true) {
     PStatClient::thread_tick();
 
-    Job *job = sys->pop_job(this);
+    Job *job = sys->pop_job(this, true);
     if (job == nullptr) {
       PStatTimer timer(sleep_pcollector);
 

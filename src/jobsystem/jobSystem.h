@@ -52,8 +52,8 @@ PUBLISHED:
   INLINE static JobSystem *get_global_ptr();
 
 public:
-  Job *get_job_for_thread(Thread *thread);
-  Job *pop_job(Thread *thread);
+  ALWAYS_INLINE Job *get_job_for_thread(Thread *thread, bool is_worker);
+  ALWAYS_INLINE Job *pop_job(Thread *thread, bool is_worker);
 
 public:
   Mutex _cv_mutex;
@@ -79,6 +79,8 @@ public:
 private:
   static JobSystem *_global_ptr;
 };
+
+extern thread_local int js_steal_idx;
 
 template<class T, class Pr>
 INLINE void parallel_quicksort(T *data, size_t size, Pr pred, int count_threshold = 10);

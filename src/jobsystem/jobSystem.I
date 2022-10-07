@@ -20,7 +20,7 @@ static PStatCollector parallel_proc_iter_pcollector("JobSystem:ParallelProcessIt
  *
  */
 template<typename T>
-void JobSystem::
+INLINE void JobSystem::
 parallel_process(T begin, int count, std::function<void(const T &)> func, int count_threshold) {
   PStatTimer timer(parallel_proc_iter_pcollector);
 
@@ -219,4 +219,85 @@ r_parallel_quicksort(T *data, Pr pred, int left, int right, int cutoff, JobSyste
     Job *jobs[2] = { &left_job, &right_job };
     js->schedule(jobs, 2, true);
   }
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE Job *JobSystem::
+get_job_for_thread(Thread *thread, bool is_worker) {
+  //PStatTimer timer(get_job_pcollector);
+
+  JobWorkerThread *jthread = nullptr;
+  if (is_worker) {
+    jthread = DCAST(JobWorkerThread, thread);
+  }
+
+  if (jthread != nullptr) {
+    // This is a worker thread.  Try to pop a job from its local
+    // queue.
+    if (!jthread->_local_queue.empty()) {
+      std::optional<Job *> item = jthread->_local_queue.pop();
+      if (item.has_value()) {
+        return item.value();
+      }
+    }
+
+  } else if (!_job_queue.empty()) {
+    // A non-worker thread (like App or Cull).  Attempt to steal
+    // from the "non-worker" queue.
+    std::optional<Job *> item = _job_queue.steal();
+    if (item.has_value()) {
+      return item.value();
+    }
+  }
+
+  // We weren't able to get a job from the thread's local queue.
+  // Attempt to steal from other busy worker threads.
+
+  {
+    //PStatTimer timer2(steal_job_pcollector);
+
+    // For worker threads, attempt to steal from the non-worker queue first.
+    // This is redundant for non-worker threads.
+    if (jthread != nullptr) {
+      if (!_job_queue.empty()) {
+        std::optional<Job *> item = _job_queue.steal();
+        if (item.has_value()) {
+          return item.value();
+        }
+      }
+    }
+
+    // Finally, try to steal from worker threads that are busy with another
+    // job with outstanding work in their local queues.
+
+    if (!_worker_threads.empty()) {
+      int index = js_steal_idx++;//random.random_int((int)_worker_threads.size());
+      if (js_steal_idx >= (int)_worker_threads.size()) {
+        js_steal_idx = 0;
+      }
+      JobWorkerThread *othread = _worker_threads[index];
+      if (othread != thread && !othread->_local_queue.empty()) {
+        std::optional<Job *> item = othread->_local_queue.steal();
+        if (item.has_value()) {
+          return item.value();
+        }
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+/**
+ *
+ */
+ALWAYS_INLINE Job *JobSystem::
+pop_job(Thread *thread, bool is_worker) {
+  Job *job = get_job_for_thread(thread, is_worker);
+  if (job != nullptr) {
+    AtomicAdjust::dec(_queued_jobs);
+  }
+  return job;
 }
