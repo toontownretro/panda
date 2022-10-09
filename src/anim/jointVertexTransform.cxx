@@ -50,8 +50,10 @@ JointVertexTransform(Character *character, int joint) :
 JointVertexTransform::
 ~JointVertexTransform() {
   // Tell the joint to stop informing us about its motion.
-  nassertv(_char != nullptr);
-  _char->set_joint_vertex_transform(nullptr, _joint);
+  PT(Character) c = _char.lock();
+  if (c != nullptr) {
+    c->set_joint_vertex_transform(nullptr, _joint);
+  }
 }
 
 /**

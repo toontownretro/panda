@@ -50,7 +50,7 @@ PUBLISHED:
   MAKE_PROPERTY(character, get_character);
 
 private:
-  PT(Character) _char;
+  WPT(Character) _char;
   int _joint;
 
 public:
