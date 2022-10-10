@@ -171,6 +171,7 @@ add_vertex(int vertex) {
         do_make_indexed(cdata);
       }
       append_unused_vertices(cdata->_vertices.get_write_pointer(), vertex);
+      cdata->_num_vertices += get_num_unused_vertices_per_primitive();
     }
   }
 
@@ -252,6 +253,7 @@ add_consecutive_vertices(int start, int num_vertices) {
       do_make_indexed(cdata);
     }
     append_unused_vertices(cdata->_vertices.get_write_pointer(), start);
+    cdata->_num_vertices += get_num_unused_vertices_per_primitive();
   }
 
   if (cdata->_vertices.is_null()) {
