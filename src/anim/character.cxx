@@ -590,7 +590,11 @@ compute_attachment_transform(int index) {
     }
     transform += inf._transform;
   }
-  attach._curr_transform = TransformState::make_mat(transform);
+  if (!transform.is_nan()) {
+    attach._curr_transform = TransformState::make_mat(transform);
+  } else {
+    attach._curr_transform = TransformState::make_identity();
+  }
   if (attach._node != nullptr) {
     attach._node->set_transform(attach._curr_transform);
   }
