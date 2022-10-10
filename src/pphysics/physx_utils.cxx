@@ -93,6 +93,9 @@ phys_material_from_shape_and_face_index(PhysShape *shape, size_t face_index) {
   }
 
   physx::PxShape *pxshape = shape->get_shape();
+  if (pxshape == nullptr) {
+    return nullptr;
+  }
 
   int material_index = 0;
 
