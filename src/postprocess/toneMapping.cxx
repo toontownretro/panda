@@ -61,6 +61,10 @@ static ConfigVariableEnum<ToneMapper> tone_mapping_algorithm
 ("tone-mapping-algorithm", TM_urchima,
  PRC_DESC("Tone-mapping algorithm to use."));
 
+static ConfigVariableDouble tone_mapping_urchima_contrast
+("tone-mapping-urchima-contrast", 1.0,
+ PRC_DESC("Urchima tone-mapper contrast."));
+
 IMPLEMENT_CLASS(ToneMappingEffect);
 
 /**
@@ -99,6 +103,21 @@ ToneMappingEffect(PostProcess *pp) :
       "shaders/postprocess/base.vert.glsl",
       pixel_shader));
   quad.set_shader_input("sceneTexture", pp->get_output_pipe("scene_color"));
+
+  if (tone_mapping_algorithm == TM_urchima) {
+    ///////////////////////////////////////////////////////////////
+    // Urchima properties
+    // Math: https://www.desmos.com/calculator/gslcdxvipg
+    //
+    // max display brightness, contrast, linear section start, linear section end
+    LVecBase4 params0(1.0f, tone_mapping_urchima_contrast, 0.22f, 0.4f);
+    // black, pedestal
+    LVecBase2 params1(1.33f, 0.0f);
+    ///////////////////////////////////////////////////////////////
+
+    quad.set_shader_input("params0", params0);
+    quad.set_shader_input("params1", params1);
+  }
 
   pass->add_color_output();
   pp->push_output_pipe("scene_color", pass->get_color_texture());
