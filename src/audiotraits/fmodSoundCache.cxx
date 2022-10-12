@@ -77,6 +77,9 @@ get_sound(const Filename &filename, bool positional, bool stream) {
       << "Sound is not in cache; loading from disk\n";
   }
 
+  fmodAudio_cat.info()
+    << "Loading sound " << resolved << "\n";
+
   FMOD_RESULT result = FMOD_OK;
   FMOD::Sound *sound = nullptr;
 
