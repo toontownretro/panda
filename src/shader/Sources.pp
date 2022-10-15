@@ -17,6 +17,7 @@
     shaderEnums.h \
     shaderManager.h shaderManager.I \
     shaderObject.h shaderObject.I \
+    shaderSetup.h shaderSetup.I \
     shaderStage.h shaderStage.I \
     basicShader.h basicShader.I \
     //skyBoxShader.h skyBoxShader.I \
@@ -41,6 +42,7 @@
     shaderEnums.cxx \
     shaderManager.cxx \
     shaderObject.cxx \
+    shaderSetup.cxx \
     shaderStage.cxx \
     basicShader.cxx \
     //skyBoxShader.cxx \
