@@ -25,6 +25,7 @@
 #include "alphaTestAttrib.h"
 #include "materialParamBool.h"
 #include "shaderAttrib.h"
+#include "shaderSetup.h"
 
 TypeHandle SpriteParticleShader::_type_handle;
 
@@ -48,6 +49,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ALPHA_TEST_MODE("ALPHA_TEST_MODE");
   static const CPT_InternalName IN_ALPHA_TEST_REF("ALPHA_TEST_REF");
   static const CPT_InternalName IN_BILLBOARD_MODE("BILLBOARD_MODE");
+  static const CPT_InternalName IN_ANIMATED("ANIMATED");
+  static const CPT_InternalName IN_FRAMES_PER_ANIM("FRAMES_PER_ANIM");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -67,6 +70,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   // 0 is point-eye, 1 is point-world.
   int billboard = 0;
 
+  bool animated = false;
+  bool anim_interp = false;
+  int frames_per_anim = 1;
+
   if (material != nullptr) {
     MaterialParamFloat *x_size_p = (MaterialParamFloat *)material->get_param("x_size");
     if (x_size_p != nullptr) {
@@ -81,6 +88,21 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     MaterialParamBool *point_world_p = (MaterialParamBool *)material->get_param("point_world");
     if (point_world_p != nullptr) {
       billboard = (int)point_world_p->get_value();
+    }
+
+    MaterialParamBool *animated_p = (MaterialParamBool *)material->get_param("animated");
+    if (animated_p != nullptr) {
+      animated = animated_p->get_value();
+    }
+
+    MaterialParamBool *anim_interp_p = (MaterialParamBool *)material->get_param("anim_interp");
+    if (anim_interp_p != nullptr) {
+      anim_interp = anim_interp_p->get_value();
+    }
+
+    MaterialParamFloat *frames_per_anim_p = (MaterialParamFloat *)material->get_param("num_frames_per_anim");
+    if (frames_per_anim_p != nullptr) {
+      frames_per_anim = (int)frames_per_anim_p->get_value();
     }
   }
 
@@ -97,6 +119,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   setup.set_input(ShaderInput("sprite_size", LVecBase2(x_size, y_size)));
 
+  bool has_tex = false;
+
   // Now get the texture.
   MaterialParamTexture *tex_p = nullptr;
   if (material != nullptr) {
@@ -107,6 +131,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     // Use the texture specified in the material.
     setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
     setup.set_input(ShaderInput("baseTextureSampler", tex_p->get_value()));
+    has_tex = true;
 
   } else {
     // No texture in material, so use the first one from the TextureAttrib.
@@ -119,10 +144,18 @@ generate_shader(GraphicsStateGuardianBase *gsg,
           setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
           Texture *tex = ta->get_on_texture(stage);
           setup.set_input(ShaderInput("baseTextureSampler", tex));
+          has_tex = true;
           break;
         }
       }
     }
+  }
+
+  if (has_tex && animated) {
+    setup.set_vertex_shader_combo(IN_ANIMATED, 1);
+    setup.set_geometry_shader_combo(IN_ANIMATED, 1);
+    setup.set_pixel_shader_combo(IN_ANIMATED, anim_interp ? 2 : 1);
+    setup.set_spec_constant(IN_FRAMES_PER_ANIM, frames_per_anim);
   }
 
   const AlphaTestAttrib *at;

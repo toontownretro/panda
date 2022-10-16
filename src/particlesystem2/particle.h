@@ -79,6 +79,16 @@ public:
   size_t _id;
   bool _alive;
 
+  // For animated sprites.  The animation is stored in a texture array
+  // where each page represents a frame of the animation.  It can also
+  // store multiple animations in succession, and particles can choose
+  // one random animation to play.
+
+  // This specifies which animation the particle should use.
+  int _anim_index;
+  // The frame rate of the animation for the particle.  Can be 0 or negative.
+  PN_stdfloat _fps;
+
   LPoint3 _initial_pos;
   LVector3 _initial_vel;
   LVecBase2 _initial_scale;

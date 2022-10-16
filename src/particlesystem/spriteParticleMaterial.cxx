@@ -17,6 +17,7 @@
 #include "pdxElement.h"
 #include "materialParamTexture.h"
 #include "materialParamFloat.h"
+#include "materialParamBool.h"
 
 TypeHandle SpriteParticleMaterial::_type_handle;
 
@@ -52,8 +53,11 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     PT(MaterialParamBase) param;
     if (key == "base_texture") {
       param = new MaterialParamTexture(key);
-    } else if (key == "x_size" || key == "y_size") {
+    } else if (key == "x_size" || key == "y_size" ||
+               key == "num_frames_per_anim") {
       param = new MaterialParamFloat(key);
+    } else if (key == "animated" || "anim_interp") {
+      param = new MaterialParamBool(key);
     }
 
     if (param != nullptr) {

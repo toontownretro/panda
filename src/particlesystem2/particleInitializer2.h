@@ -538,6 +538,56 @@ private:
   int _model_root_input;
 };
 
+/**
+ *
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_AnimationIndexRandom : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_AnimationIndexRandom, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_AnimationIndexRandom(int index_min, int index_max);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_AnimationIndexRandom() = default;
+
+private:
+  int _anim_index_min;
+  int _anim_index_range;
+};
+
+/**
+ *
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 P2_INIT_AnimationFPSRandom : public ParticleInitializer2 {
+  DECLARE_CLASS(P2_INIT_AnimationFPSRandom, ParticleInitializer2);
+
+PUBLISHED:
+  P2_INIT_AnimationFPSRandom(PN_stdfloat fps_min, PN_stdfloat fps_max);
+
+public:
+  virtual void init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  P2_INIT_AnimationFPSRandom() = default;
+
+private:
+  PN_stdfloat _fps_min;
+  PN_stdfloat _fps_range;
+};
+
 #include "particleInitializer2.I"
 
 #endif // PARTICLEINITIALIZER2_H
