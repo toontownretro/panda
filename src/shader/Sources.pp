@@ -25,6 +25,7 @@
     sourceShader.h sourceShader.I \
     sourceSkyShader.h sourceSkyShader.I \
     sourceWater.h sourceWater.I \
+    spriteParticleShader.h spriteParticleShader.I \
     twoTextureShader.h twoTextureShader.I
     //vertexLitShader.h vertexLitShader.I
 
@@ -50,6 +51,7 @@
     sourceShader.cxx \
     sourceSkyShader.cxx \
     sourceWater.cxx \
+    spriteParticleShader.cxx \
     twoTextureShader.cxx
     //vertexLitShader.cxx
 

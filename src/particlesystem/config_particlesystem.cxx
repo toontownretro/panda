@@ -15,8 +15,6 @@
 #include "particleSystem.h"
 #include "geomParticleRenderer.h"
 #include "geomNode.h"
-#include "spriteParticleMaterial.h"
-#include "spriteParticleShader.h"
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_PARTICLESYSTEM)
   #error Buildsystem error: BUILDING_PANDA_PARTICLESYSTEM not defined
@@ -51,9 +49,4 @@ init_libparticlesystem() {
   initialized = true;
 
   ParticleSystem::init_type();
-
-  SpriteParticleMaterial::init_type();
-  SpriteParticleShader::init_type();
-
-  SpriteParticleMaterial::register_with_read_factory();
 }

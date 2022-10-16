@@ -21,7 +21,7 @@
 /**
  * A material for rendering point sprite particles.
  */
-class EXPCL_PANDA_PARTICLESYSTEM SpriteParticleMaterial : public Material {
+class EXPCL_PANDA_MATERIAL SpriteParticleMaterial : public Material {
 PUBLISHED:
   SpriteParticleMaterial(const std::string &name = "");
 

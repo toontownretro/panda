@@ -27,6 +27,7 @@
 #include "sourceWaterMaterial.h"
 #include "sourceLightmappedMaterial.h"
 #include "twoTextureMaterial.h"
+#include "spriteParticleMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -86,4 +87,7 @@ init_libmaterial() {
 
   TwoTextureMaterial::init_type();
   TwoTextureMaterial::register_with_read_factory();
+
+  SpriteParticleMaterial::init_type();
+  SpriteParticleMaterial::register_with_read_factory();
 }
