@@ -2535,6 +2535,12 @@ render_cube_maps() {
   return EC_ok;
 }
 
+class CollideGroupWorkingData {
+public:
+  PT(PhysTriangleMeshData) tri_mesh_data;
+  vector_string surface_props;
+};
+
 /**
  * Bakes physics meshes for each brush entity in the level.
  *
@@ -2553,9 +2559,8 @@ build_entity_physics(int mesh_index, MapModel &model) {
   // First do the triangle mesh.  Build it from all of the mesh's
   // MapPolys, which are polygons formed by clipping together the
   // brush planes, and displacement polygons.
-  PT(PhysTriangleMeshData) tri_mesh_data = new PhysTriangleMeshData;
-  vector_string surface_props;
-  int phys_polygons = 0;
+  pmap<std::string, CollideGroupWorkingData> collide_type_groups;
+
   for (MapPoly *poly : mesh->_polys) {
     Material *mat = poly->_material;
     Winding *w = &poly->_winding;
@@ -2565,21 +2570,39 @@ build_entity_physics(int mesh_index, MapModel &model) {
     }
 
     std::string surface_prop = "default";
-    if (mat != nullptr && mat->has_tag("surface_prop")) {
-      // Grab the physics surface property from the material.
-      surface_prop = mat->get_tag_value("surface_prop");
+    std::string collide_type = "";
+    if (mat != nullptr) {
+      if (mat->has_tag("surface_prop")) {
+        // Grab the physics surface property from the material.
+        surface_prop = mat->get_tag_value("surface_prop");
+      }
+      if (mat->has_tag("collide_type")) {
+        collide_type = mat->get_tag_value("collide_type");
+      }
     }
 
-    // Find or add to surface prop list for this mesh.
-    vector_string::const_iterator it = std::find(surface_props.begin(), surface_props.end(), surface_prop);
+    // Find collision group containing this collide type.
+    auto git = collide_type_groups.find(collide_type);
+    CollideGroupWorkingData *group;
+    if (git == collide_type_groups.end()) {
+      collide_type_groups[collide_type] = CollideGroupWorkingData();
+      collide_type_groups[collide_type].tri_mesh_data = new PhysTriangleMeshData;
+      group = &collide_type_groups[collide_type];
+    } else {
+      group = &(*git).second;
+    }
+
+    // Find or add to surface prop list for this collision group.
+    vector_string::const_iterator it = std::find(group->surface_props.begin(),
+      group->surface_props.end(), surface_prop);
     int mat_index;
-    if (it == surface_props.end()) {
+    if (it == group->surface_props.end()) {
       // New material.
-      mat_index = (int)surface_props.size();
-      surface_props.push_back(surface_prop);
+      mat_index = (int)group->surface_props.size();
+      group->surface_props.push_back(surface_prop);
     } else {
       // Existing index.
-      mat_index = it - surface_props.begin();
+      mat_index = it - group->surface_props.begin();
     }
 
     // Add the polygon to the physics triangle mesh.
@@ -2590,19 +2613,28 @@ build_entity_physics(int mesh_index, MapModel &model) {
       phys_verts[i] = w->get_point(i);
     }
     std::reverse(phys_verts.begin(), phys_verts.end());
-    tri_mesh_data->add_polygon(phys_verts, mat_index);
+    group->tri_mesh_data->add_polygon(phys_verts, mat_index);
   }
 
-  // Cook the triangle mesh.
-  bool ret = tri_mesh_data->cook_mesh();
-  if (!ret) {
-    mapbuilder_cat.warning()
-      << "Failed to cook triangle mesh for entity " << ent_index
-      << ", classname " << ent->_class_name << "\n";
-  }
+  // Cook a triangle mesh for each collide group, output collide group info.
+  for (auto it = collide_type_groups.begin(); it != collide_type_groups.end(); ++it) {
+    const CollideGroupWorkingData &group = (*it).second;
+    const std::string &collide_type = (*it).first;
 
-  model._tri_mesh_data = tri_mesh_data->get_mesh_data();
-  model._phys_surface_props = surface_props;
+    // Cook the triangle mesh.
+    bool ret = group.tri_mesh_data->cook_mesh();
+    if (!ret) {
+      mapbuilder_cat.warning()
+        << "Failed to cook triangle mesh for entity " << ent_index
+        << ", classname " << ent->_class_name << "\n";
+    }
+
+    MapModel::CollisionGroup mgroup;
+    mgroup._collide_type = collide_type;
+    mgroup._tri_mesh_data = group.tri_mesh_data->get_mesh_data();
+    mgroup._phys_surface_props = group.surface_props;
+    model._tri_groups.push_back(std::move(mgroup));
+  }
 
   // Now build convex mesh pieces.  One for each brush in the entity.
   // Don't do this for the world.
@@ -2631,7 +2663,7 @@ build_entity_physics(int mesh_index, MapModel &model) {
     }
 
     // Now cook the convex mesh piece.
-    ret = cm_data->cook_mesh();
+    bool ret = cm_data->cook_mesh();
     assert(ret);
 
     model._convex_mesh_data.push_back(cm_data->get_mesh_data());

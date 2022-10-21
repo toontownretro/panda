@@ -128,16 +128,20 @@ write_datagram(BamWriter *manager, Datagram &me) {
     model->_mins.write_datagram_fixed(me);
     model->_maxs.write_datagram_fixed(me);
 
-    // Write cooked physics triangle mesh.
-    me.add_uint32(model->_tri_mesh_data.size());
-    if (model->_tri_mesh_data.size() > 0u) {
-      me.append_data(model->_tri_mesh_data.v());
-    }
-
-    // Surface props used by triangles of the physics mesh.
-    me.add_uint16(model->_phys_surface_props.size());
-    for (size_t j = 0; j < model->_phys_surface_props.size(); ++j) {
-      me.add_string(model->_phys_surface_props[j]);
+    me.add_uint8(model->_tri_groups.size());
+    for (size_t j = 0; j < model->_tri_groups.size(); ++j) {
+      const MapModel::CollisionGroup *group = &model->_tri_groups[j];
+      me.add_string(group->_collide_type);
+      // Write cooked physics triangle mesh.
+      me.add_uint32(group->_tri_mesh_data.size());
+      if (group->_tri_mesh_data.size() > 0u) {
+        me.append_data(group->_tri_mesh_data.v());
+      }
+      // Surface props used by triangles of the physics mesh.
+      me.add_uint16(group->_phys_surface_props.size());
+      for (size_t k = 0; k < group->_phys_surface_props.size(); ++k) {
+        me.add_string(group->_phys_surface_props[k]);
+      }
     }
 
     // Write the cooked convex mesh pieces for volume entities.
@@ -235,16 +239,22 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     model->_mins.read_datagram_fixed(scan);
     model->_maxs.read_datagram_fixed(scan);
 
-    // Physics triangle mesh data.
-    PTA_uchar tri_mesh_data;
-    tri_mesh_data.resize(scan.get_uint32());
-    scan.extract_bytes(tri_mesh_data.p(), tri_mesh_data.size());
-    model->_tri_mesh_data = tri_mesh_data;
+    model->_tri_groups.resize(scan.get_uint8());
+    for (size_t j = 0; j < model->_tri_groups.size(); ++j) {
+      MapModel::CollisionGroup *group = &model->_tri_groups[j];
+      group->_collide_type = scan.get_string();
 
-    // Surface props.
-    model->_phys_surface_props.resize(scan.get_uint16());
-    for (size_t j = 0; j < model->_phys_surface_props.size(); ++j) {
-      model->_phys_surface_props[j] = scan.get_string();
+      // Physics triangle mesh data.
+      PTA_uchar tri_mesh_data;
+      tri_mesh_data.resize(scan.get_uint32());
+      scan.extract_bytes(tri_mesh_data.p(), tri_mesh_data.size());
+      group->_tri_mesh_data = tri_mesh_data;
+
+      // Surface props.
+      group->_phys_surface_props.resize(scan.get_uint16());
+      for (size_t k = 0; k < group->_phys_surface_props.size(); ++k) {
+        group->_phys_surface_props[k] = scan.get_string();
+      }
     }
 
     // Convex mesh pieces.
