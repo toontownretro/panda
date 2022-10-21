@@ -35,7 +35,7 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
   DECLARE_CLASS(MapLightingEffect, RenderEffect);
 
 PUBLISHED:
-  static CPT(RenderEffect) make(BitMask32 camera_mask);
+  static CPT(RenderEffect) make(BitMask32 camera_mask, bool use_position = true);
   static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin);
 
   const RenderState *get_current_lighting_state() const;
@@ -69,6 +69,10 @@ private:
   LPoint3 _last_pos;
   const MapData *_last_map_data;
 
+  // True if we should use the node's position as the lighting origin
+  // rather than the bounding volume center if an explicit lighting
+  // origin was not specified.
+  bool _use_position;
   bool _has_lighting_origin;
   LPoint3 _lighting_origin;
 
