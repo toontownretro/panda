@@ -709,14 +709,11 @@ bool Character::
 apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread) {
   PStatTimer timer(apply_pose_collector);
 
-  Character *merge_char;
-  if (cdata->_joint_merge_character.is_valid_pointer()) {
-    merge_char = cdata->_joint_merge_character.p();
+  Character *merge_char = cdata->_joint_merge_character;
+  if (merge_char != nullptr) {
     if (merge_char->_active_owner == nullptr) {
       merge_char = nullptr;
     }
-  } else {
-    merge_char = nullptr;
   }
   LMatrix4 parent_to_me;
   if (merge_char != nullptr) {
@@ -839,6 +836,13 @@ remove_node(CharacterNode *node) {
  */
 void Character::
 build_joint_merge_map(Character *merge_char) {
+  {
+    CDReader cdata(_cycler);
+    if (cdata->_joint_merge_character == merge_char) {
+      return;
+    }
+  }
+
   if (merge_char == nullptr) {
     for (size_t i = 0; i < _joint_poses.size(); i++) {
       _joint_poses[i]._merge_joint = -1;

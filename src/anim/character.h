@@ -301,7 +301,7 @@ private:
     bool _auto_advance_flag;
     bool _channel_transition_flag;
     LMatrix4 _root_xform;
-    WPT(Character) _joint_merge_character;
+    PT(Character) _joint_merge_character;
     bool _anim_changed;
     double _last_update;
   };
