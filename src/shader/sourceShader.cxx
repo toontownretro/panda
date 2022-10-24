@@ -147,6 +147,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_CSM_LIGHT_ID("CSM_LIGHT_ID");
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
   static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
+  static const CPT_InternalName IN_DO_COLOR_ADD("DO_COLOR_ADD");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -415,6 +416,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       (param = src_mat->get_param("bumpmap")) != nullptr) {
     setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
     setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
+  }
+
+  if (sa->has_shader_input("colorAdd")) {
+    setup.set_spec_constant(IN_DO_COLOR_ADD, true);
+  } else {
+    setup.set_input(ShaderInput("colorAdd", LVecBase3(0)));
+    setup.set_input(ShaderInput("colorAddFresnel", LVecBase3(0)));
   }
 
 }
