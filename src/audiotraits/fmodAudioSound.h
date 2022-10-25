@@ -102,6 +102,10 @@ public:
   virtual void set_loop_count(unsigned long loop_count=1);
   virtual unsigned long get_loop_count() const;
 
+  // loop_start: 0 = beginning.  expressed in seconds.  inits to 0.
+  void set_loop_start(PN_stdfloat loop_start=0);
+  PN_stdfloat get_loop_start() const;
+
   // 0 = beginning; length() = end.  inits to 0.0.
   virtual void set_time(PN_stdfloat start_time=0.0);
   virtual PN_stdfloat get_time() const;

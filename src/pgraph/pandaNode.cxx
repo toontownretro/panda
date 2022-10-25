@@ -1887,16 +1887,6 @@ set_bounds(const BoundingVolume *volume) {
 }
 
 /**
- * Deprecated.  Use set_bounds() instead.
- */
-void PandaNode::
-set_bound(const BoundingVolume *volume) {
-  pgraph_cat.warning()
-    << "Deprecated PandaNode::set_bound() called.  Use set_bounds() instead.\n";
-  set_bounds(volume);
-}
-
-/**
  * Returns the external bounding volume of this node: a bounding volume that
  * contains the user bounding volume, the internal bounding volume, and all of
  * the children's bounding volumes.
@@ -2983,11 +2973,21 @@ get_component(NodePathComponent *parent, PandaNode *child_node,
   // First, walk through the list of NodePathComponents we already have on the
   // child, looking for one that already exists, referencing the indicated
   // parent component.
-  Paths::const_iterator pi;
-  for (pi = child_node->_paths.begin(); pi != child_node->_paths.end(); ++pi) {
-    if ((*pi)->get_next(pipeline_stage, current_thread) == parent) {
+  for (NodePathComponent *child : child_node->_paths) {
+    if (child->get_next(pipeline_stage, current_thread) == parent) {
       // If we already have such a component, just return it.
-      return (*pi);
+      // But before we do, we have to make sure it's not in the middle of being
+      // destructed.
+#ifdef HAVE_THREADS
+      if (child->ref_if_nonzero()) {
+        PT(NodePathComponent) result;
+        result.cheat() = child;
+        return result;
+      }
+#else
+      // If we're not building with threading, increment as normal.
+      return child;
+#endif
     }
   }
 
@@ -3025,11 +3025,21 @@ get_top_component(PandaNode *child_node, bool force, int pipeline_stage,
 
   // Walk through the list of NodePathComponents we already have on the child,
   // looking for one that already exists as a top node.
-  Paths::const_iterator pi;
-  for (pi = child_node->_paths.begin(); pi != child_node->_paths.end(); ++pi) {
-    if ((*pi)->is_top_node(pipeline_stage, current_thread)) {
+  for (NodePathComponent *child : child_node->_paths) {
+    if (child->is_top_node(pipeline_stage, current_thread)) {
       // If we already have such a component, just return it.
-      return (*pi);
+      // But before we do, we have to make sure it's not in the middle of being
+      // destructed.
+#ifdef HAVE_THREADS
+      if (child->ref_if_nonzero()) {
+        PT(NodePathComponent) result;
+        result.cheat() = child;
+        return result;
+      }
+#else
+      // If we're not building with threading, increment as normal.
+      return child;
+#endif
     }
   }
 
@@ -3324,8 +3334,6 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
       off_clip_planes = ClipPlaneAttrib::make();
     }
 
-    int num_vertices = cdata->_internal_vertices;
-
     bool has_infinite = (cdata->_user_bounds != nullptr) && (cdata->_user_bounds->is_infinite());
 
     // Also get the list of the node's children.  When the cdataw destructs, it
@@ -3375,6 +3383,7 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
     }
 
     // Now expand those contents to include all of our children.
+    int child_vertices = 0;
 
     for (int i = 0; i < num_children; ++i) {
       DownConnection &connection = (*down)[i];
@@ -3474,7 +3483,7 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
           }
-          num_vertices += child_cdataw->_nested_vertices;
+          child_vertices += child_cdataw->_nested_vertices;
 
           connection._external_bounds = child_cdataw->_external_bounds->as_geometric_bounding_volume();
         }
@@ -3537,7 +3546,7 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
             nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
             child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
           }
-          num_vertices += child_cdata->_nested_vertices;
+          child_vertices += child_cdata->_nested_vertices;
 
           connection._external_bounds = child_cdata->_external_bounds->as_geometric_bounding_volume();
         }
@@ -3592,7 +3601,7 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         cdataw->_off_clip_planes = off_clip_planes;
 
         if (update_bounds) {
-          cdataw->_nested_vertices = num_vertices;
+          cdataw->_nested_vertices = cdataw->_internal_vertices + child_vertices;
 
           BoundingVolume::BoundsType btype = cdataw->_bounds_type;
           if (btype == BoundingVolume::BT_default) {

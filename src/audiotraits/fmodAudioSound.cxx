@@ -318,6 +318,25 @@ get_loop_count() const {
 }
 
 /**
+ * Sets the time at which subsequent loops will begin.
+ * A value of 0 indicates the beginning of the audio.
+ */
+void FMODAudioSound::
+set_loop_start(PN_stdfloat loop_start) {
+  set_loop_range(loop_start);
+}
+
+/**
+ * Return the time at which subsequent loops will begin.
+ * A value of 0 indicates the beginning of the audio.
+ */
+PN_stdfloat FMODAudioSound::
+get_loop_start() const {
+  ReMutexHolder holder(FMODAudioManager::_lock);
+  return (PN_stdfloat)_loop_start / 1000.0f;
+}
+
+/**
  * Sets the time at which the next play() operation will begin.  If we are
  * already playing, skips to that time immediatey.
  */
