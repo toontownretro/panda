@@ -231,9 +231,11 @@ child_removed(PandaNode *node, int pipeline_stage) {
  */
 void DynamicVisNode::
 child_bounds_stale(PandaNode *node, int pipeline_stage) {
-  if (Thread::get_current_pipeline_stage() != 0) {
-    return;
-  }
+  // Ideally this is only called from App.
+  nassertv(Thread::get_current_pipeline_stage() == 0);
+  //if (Thread::get_current_pipeline_stage() != 0) {
+  //  return;
+  //}
 
   ChildInfos::const_iterator it = _children.find(node);
   if (it != _children.end()) {
