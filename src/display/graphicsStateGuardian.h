@@ -314,8 +314,9 @@ public:
   virtual void release_shader_buffer(BufferContext *ibc);
   virtual void release_shader_buffers(const pvector<BufferContext *> &contexts);
 
-  virtual void begin_occlusion_query();
-  virtual PT(OcclusionQueryContext) end_occlusion_query();
+  virtual PT(OcclusionQueryContext) create_occlusion_query();
+  virtual void begin_occlusion_query(OcclusionQueryContext *context);
+  virtual void end_occlusion_query();
 
   virtual void issue_timer_query(int pstats_index);
   virtual void issue_latency_query(int pstats_index);
@@ -373,7 +374,7 @@ public:
   virtual CPT(RenderState) begin_decal_base_second();
   virtual void finish_decal();
 
-  virtual bool draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *current_thread) override;
+  virtual bool draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) override;
   virtual bool draw_object(CullableObject *object, bool force, Thread *current_thread) override;
   bool draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, const GeomPrimitive *primitive,
                  bool force, Thread *current_thread);

@@ -23,6 +23,6 @@ TypeHandle OcclusionQueryContext::_type_handle;
  * It is only valid to call this from the draw thread.
  */
 int OcclusionQueryContext::
-get_num_fragments() const {
+get_num_fragments(bool block) const {
   return 0;
 }

@@ -56,7 +56,8 @@ MapLightingEffect() :
   _last_pos(0.0f),
   _lighting_state(RenderState::make_empty()),
   _has_lighting_origin(false),
-  _lighting_origin(0.0f, 0.0f, 0.0f)
+  _lighting_origin(0.0f, 0.0f, 0.0f),
+  _use_position(false)
 {
 }
 
@@ -64,9 +65,10 @@ MapLightingEffect() :
  * Creates a new MapLightingEffect for applying to a unique node.
  */
 CPT(RenderEffect) MapLightingEffect::
-make(BitMask32 camera_mask) {
+make(BitMask32 camera_mask, bool use_position) {
   MapLightingEffect *effect = new MapLightingEffect;
   effect->_camera_mask = camera_mask;
+  effect->_use_position = use_position;
 
   return return_new(effect);
 }
@@ -78,6 +80,7 @@ CPT(RenderEffect) MapLightingEffect::
 make(BitMask32 camera_mask, const LPoint3 &lighting_origin) {
   MapLightingEffect *effect = new MapLightingEffect;
   effect->_camera_mask = camera_mask;
+  effect->_use_position = true;
   effect->_has_lighting_origin = true;
   effect->_lighting_origin = lighting_origin;
 
@@ -237,8 +240,13 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   // specified, the node's current net transform offset by the lighting
   // origin.
   LPoint3 pos;
-  if (_has_lighting_origin) {
-    pos = net_transform->get_mat().xform_point(_lighting_origin);
+  if (_has_lighting_origin || _use_position) {
+    if (!_has_lighting_origin) {
+      pos = net_transform->get_pos();
+    } else {
+      pos = net_transform->get_mat().xform_point(_lighting_origin);
+    }
+    pos[2] += 0.01f;
 
   } else {
     if (!bounds->is_infinite() && !bounds->is_empty()) {

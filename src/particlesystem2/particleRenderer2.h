@@ -89,6 +89,7 @@ private:
   PT(GeomVertexData) _vdata;
   PT(GeomPoints) _prim;
 
+  bool _is_animated;
   CPT(RenderState) _render_state;
 
 public:

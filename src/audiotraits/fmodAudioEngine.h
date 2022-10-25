@@ -28,7 +28,7 @@
 #include <fmod.hpp>
 
 #ifdef HAVE_STEAM_AUDIO
-#include <phonon/phonon.h>
+#include <phonon.h>
 #endif
 
 class FMODAudioManager;

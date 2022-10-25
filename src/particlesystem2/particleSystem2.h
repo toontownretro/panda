@@ -181,6 +181,7 @@ public:
   Particles _particles;
 
   double _elapsed;
+  double _start_time;
   bool _running;
   bool _soft_stopped;
   int _pool_size;

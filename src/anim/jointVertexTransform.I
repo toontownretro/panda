@@ -16,7 +16,7 @@
  */
 INLINE const Character *JointVertexTransform::
 get_character() const {
-  return _char;
+  return _char.is_valid_pointer() ? _char.p() : nullptr;
 }
 
 /**

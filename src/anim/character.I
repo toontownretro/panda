@@ -284,11 +284,7 @@ set_joint_merge_character(Character *character) {
 INLINE Character *Character::
 get_joint_merge_character() const {
   CDReader cdata(_cycler);
-  if (cdata->_joint_merge_character.is_valid_pointer()) {
-    return cdata->_joint_merge_character.p();
-  } else {
-    return nullptr;
-  }
+  return cdata->_joint_merge_character;
 }
 
 /**

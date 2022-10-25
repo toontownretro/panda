@@ -24,6 +24,7 @@
 #include "steamnet_includes.h"
 #include "steamNetworkEnums.h"
 #include "steamNetworkEvent.h"
+#include "typedObject.h"
 
 class SteamNetworkConnectionInfo;
 class SteamNetworkMessage;
@@ -31,10 +32,12 @@ class SteamNetworkMessage;
 /**
  * Main interface to the SteamNetworkingSockets implementation.
  */
-class EXPCL_PANDA_STEAMNET SteamNetworkSystem : public SteamNetworkEnums {
+class EXPCL_PANDA_STEAMNET SteamNetworkSystem : public SteamNetworkEnums, public TypedObject {
+  DECLARE_CLASS(SteamNetworkSystem, TypedObject);
+
 PUBLISHED:
   SteamNetworkSystem();
-  ~SteamNetworkSystem();
+  virtual ~SteamNetworkSystem();
 
   SteamNetworkConnectionHandle connect_by_IP_address(const NetAddress &addr);
   bool get_connection_info(SteamNetworkConnectionHandle conn, SteamNetworkConnectionInfo *info);

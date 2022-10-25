@@ -77,29 +77,39 @@ waiting_for_answer() {
  * It is only valid to call this from the draw thread.
  */
 int CLP(OcclusionQueryContext)::
-get_num_fragments() const {
+get_num_fragments(bool block) const {
   CLP(GraphicsStateGuardian) *glgsg;
   DCAST_INTO_R(glgsg, _gsg, 0);
+
+  int ret;
 
   GLuint result;
   glgsg->_glGetQueryObjectuiv(_index, GL_QUERY_RESULT_AVAILABLE, &result);
   if (result) {
     // The answer is ready now.
     glgsg->_glGetQueryObjectuiv(_index, GL_QUERY_RESULT, &result);
-  } else {
+    ret = (int)result;
+
+  } else if (block) {
     // The answer is not ready; this call will block.
     PStatTimer timer(GraphicsStateGuardian::_wait_occlusion_pcollector);
     glgsg->_glGetQueryObjectuiv(_index, GL_QUERY_RESULT, &result);
+    ret = (int)result;
+
+  } else {
+    // For a non-blocking request, return -1 to indicate the answer is not
+    // yet ready.
+    ret = -1;
   }
 
   if (GLCAT.is_debug()) {
     GLCAT.debug()
-      << "occlusion query " << (int)_index << " reports " << (int)result
+      << "occlusion query " << (int)_index << " reports " << ret
       << " fragments.\n";
   }
 
   report_my_gl_errors(glgsg);
-  return result;
+  return ret;
 }
 
 #endif  // OPENGLES

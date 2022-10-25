@@ -12,6 +12,7 @@
  */
 
 #include "config_steamnet.h"
+#include "steamNetworkSystem.h"
 
 NotifyCategoryDef(steamnet, "");
 
@@ -32,4 +33,6 @@ init_libsteamnet() {
   // SteamNetworkSystem construction.
 
   initialized = true;
+
+  SteamNetworkSystem::init_type();
 }

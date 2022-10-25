@@ -24,6 +24,8 @@ static PStatCollector steal_job_pcollector("JobSystem:GetJob:Steal");
 static PStatCollector wait_job_pcollector("JobSystem:WaitJob");
 extern PStatCollector exec_job_pcollector;
 
+thread_local int js_steal_idx = 0;
+
 JobSystem *JobSystem::_global_ptr = nullptr;
 
 /**
@@ -272,8 +274,13 @@ wait_job(Job *job, Thread *thread) {
   int orig_pipeline_stage = thread->get_pipeline_stage();
 #endif
 
+  bool is_worker = (thread->get_type() == JobWorkerThread::get_class_type());
+
   while (job->get_state() != Job::S_complete) {
-    Job *job2 = pop_job(thread);
+    //Thread::relax();
+
+#if 1
+    Job *job2 = pop_job(thread, is_worker);
     if (job2 != nullptr) {
       exec_job_pcollector.start();
 
@@ -291,89 +298,10 @@ wait_job(Job *job, Thread *thread) {
 
       exec_job_pcollector.stop();
     }
+#endif
   }
 
 #ifdef THREADED_PIPELINE
   thread->set_pipeline_stage(orig_pipeline_stage);
 #endif
-}
-
-/**
- *
- */
-Job *JobSystem::
-get_job_for_thread(Thread *thread) {
-  PStatTimer timer(get_job_pcollector);
-
-  JobWorkerThread *jthread = nullptr;
-  if (thread->get_type() == JobWorkerThread::get_class_type()) {
-    jthread = DCAST(JobWorkerThread, thread);
-  }
-
-  if (jthread != nullptr) {
-    // This is a worker thread.  Try to pop a job from its local
-    // queue.
-    if (!jthread->_local_queue.empty()) {
-      std::optional<Job *> item = jthread->_local_queue.pop();
-      if (item.has_value()) {
-        return item.value();
-      }
-    }
-
-  } else if (!_job_queue.empty()) {
-    // A non-worker thread (like App or Cull).  Attempt to steal
-    // from the "non-worker" queue.
-    std::optional<Job *> item = _job_queue.steal();
-    if (item.has_value()) {
-      return item.value();
-    }
-  }
-
-  // We weren't able to get a job from the thread's local queue.
-  // Attempt to steal from other busy worker threads.
-
-  {
-    PStatTimer timer2(steal_job_pcollector);
-
-    // For worker threads, attempt to steal from the non-worker queue first.
-    // This is redundant for non-worker threads.
-    if (jthread != nullptr) {
-      if (!_job_queue.empty()) {
-        std::optional<Job *> item = _job_queue.steal();
-        if (item.has_value()) {
-          return item.value();
-        }
-      }
-    }
-
-    // Finally, try to steal from worker threads that are busy with another
-    // job with outstanding work in their local queues.
-
-    if (!_worker_threads.empty()) {
-      static thread_local Randomizer random(Thread::get_current_thread_id());
-
-      int index = random.random_int((int)_worker_threads.size());
-      JobWorkerThread *othread = _worker_threads[index];
-      if (othread != thread && !othread->_local_queue.empty()) {
-        std::optional<Job *> item = othread->_local_queue.steal();
-        if (item.has_value()) {
-          return item.value();
-        }
-      }
-    }
-  }
-
-  return nullptr;
-}
-
-/**
- *
- */
-Job *JobSystem::
-pop_job(Thread *thread) {
-  Job *job = get_job_for_thread(thread);
-  if (job != nullptr) {
-    AtomicAdjust::dec(_queued_jobs);
-  }
-  return job;
 }

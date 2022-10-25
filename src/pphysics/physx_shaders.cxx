@@ -44,7 +44,7 @@ should_collision_groups_collide(int group0, int group1) {
 static bool
 should_contents_collide(int contents0, int solid0, int contents1, int solid1) {
   // If one of them is not solid to the other, they don't collide.
-  return ((contents0 & solid1) != 0) && ((contents1 & solid0) != 0);
+  return ((contents0 & solid1) != 0) || ((contents1 & solid0) != 0);
 }
 
 /**

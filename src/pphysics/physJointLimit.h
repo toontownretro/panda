@@ -24,6 +24,8 @@
  */
 class EXPCL_PANDA_PPHYSICS PhysJointLimit {
 PUBLISHED:
+  virtual ~PhysJointLimit() = default;
+
   INLINE void set_restitution(PN_stdfloat restitution);
   INLINE PN_stdfloat get_restitution() const;
 

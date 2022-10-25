@@ -193,7 +193,10 @@ FMODAudioSound::
   ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
-  audio_debug("Released FMODAudioSound\n");
+  if (fmodAudio_cat.is_debug()) {
+    fmodAudio_cat.debug()
+      << "Releasing FMODAudioSound " << _file_name << "\n";
+  }
 
   for (int i = 0; i < (int)_dsps.size(); i++) {
     if (_dsps[i] != nullptr) {

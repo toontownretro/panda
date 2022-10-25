@@ -25,6 +25,7 @@
 class EXPCL_PANDA_STEAMNET SteamNetworkConnectionInfo {
 PUBLISHED:
   INLINE SteamNetworkConnectionInfo();
+  virtual ~SteamNetworkConnectionInfo() = default;
 
   INLINE void set_listen_socket(SteamNetworkListenSocketHandle socket);
   INLINE SteamNetworkListenSocketHandle get_listen_socket() const;

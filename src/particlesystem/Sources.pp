@@ -26,9 +26,7 @@
      sparkleParticleRenderer.h sphereSurfaceEmitter.I  \
      sphereSurfaceEmitter.h sphereVolumeEmitter.I  \
      sphereVolumeEmitter.h spriteParticleRenderer.I  \
-     spriteParticleMaterial.h spriteParticleMaterial.I \
      spriteParticleRenderer.h \
-     spriteParticleShader.h spriteParticleShader.I \
      tangentRingEmitter.I  \
      tangentRingEmitter.h zSpinParticle.I zSpinParticle.h  \
      zSpinParticleFactory.I zSpinParticleFactory.h  \
@@ -50,7 +48,6 @@
      rectangleEmitter.cxx ringEmitter.cxx \
      sparkleParticleRenderer.cxx sphereSurfaceEmitter.cxx \
      sphereVolumeEmitter.cxx spriteParticleRenderer.cxx \
-     spriteParticleMaterial.cxx spriteParticleShader.cxx \
      tangentRingEmitter.cxx zSpinParticle.cxx \
      zSpinParticleFactory.cxx colorInterpolationManager.cxx
 
@@ -77,9 +74,7 @@
     tangentRingEmitter.I tangentRingEmitter.h zSpinParticle.I \
     zSpinParticle.h zSpinParticleFactory.I zSpinParticleFactory.h \
     particleCommonFuncs.h colorInterpolationManager.I \
-    colorInterpolationManager.h \
-    spriteParticleMaterial.h spriteParticleMaterial.I \
-    spriteParticleShader.h spriteParticleShader.I
+    colorInterpolationManager.h
 
 // orientedParticle.I orientedParticle.h \
 // orientedParticleFactory.I orientedParticleFactory.h \

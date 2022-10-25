@@ -1090,10 +1090,34 @@ build_graph() {
 
       // Create a node to contain the attachment's transform.
       PT(ModelNode) attach_node = new ModelNode(pmdl_attach->_name);
+      attach_node->set_preserve_transform(ModelNode::PT_net);
       char_node->add_child(attach_node);
 
       // Link the node up with the attachment.
       part_bundle->set_attachment_node(index, attach_node);
+    }
+
+  } else {
+    // We can still do attachments for non-animated models by creating a node
+    // at the specified attachment location.  This is essentially a hand-created
+    // locator node.  You could also create an Empty in Blender.
+
+    for (size_t i = 0; i < _data->_attachments.size(); ++i) {
+      PMDLAttachment *pmdl_attach = &_data->_attachments[i];
+      if (pmdl_attach->_influences.size() != 1u) {
+        egg2pg_cat.warning()
+          << "Attachment " << pmdl_attach->_name << " has " << pmdl_attach->_influences.size()
+          << " influences.  Attachments on non-animated models must have "
+          << "exactly one influence.\n";
+        continue;
+      }
+
+      PMDLAttachmentInfluence &inf = pmdl_attach->_influences[0];
+
+      PT(ModelNode) attach_node = new ModelNode(pmdl_attach->_name);
+      attach_node->set_preserve_transform(ModelNode::PT_net);
+      attach_node->set_transform(TransformState::make_pos_hpr(inf._local_pos, inf._local_hpr));
+      mdl_root->add_child(attach_node);
     }
   }
 

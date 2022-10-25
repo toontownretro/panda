@@ -268,9 +268,9 @@ private:
                                    Thread *current_thread);
 
   //INLINE void assign(CPT(GeomVertexArrayData) object);
-  INLINE void assign(const GeomVertexArrayData *object);
+  INLINE void assign(const GeomVertexArrayData *object, bool lock = true);
   //INLINE void assign(PT(GeomVertexArrayData) object);
-  INLINE void assign(GeomVertexArrayData *object);
+  INLINE void assign(GeomVertexArrayData *object, bool lock = true);
   INLINE void release();
 
 PUBLISHED:
@@ -338,11 +338,15 @@ PUBLISHED:
 
   INLINE void mark_used() const;
 
+  INLINE void acquire_rw_lock() const;
+  INLINE void release_rw_lock() const;
+
 private:
   GeomVertexArrayData *_object;
   GeomVertexArrayData::CData *_cdata;
   Thread *_current_thread;
   bool _writable;
+  bool _has_lock;
 
 public:
   static TypeHandle get_class_type() {

@@ -319,10 +319,10 @@ render_sheet(CullTraverser *trav, CullTraverserData &data,
     state = state->add_attrib(ColorAttrib::make_vertex());
   }
 
-  CullableObject *object = new CullableObject(geom, state,
+  CullableObject object(geom, state,
                         data.get_internal_transform(trav),
                         trav->get_current_thread());
-  trav->get_cull_handler()->record_object(object, trav);
+  trav->get_cull_handler()->record_object(&object, trav);
 }
 
 /**

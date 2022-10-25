@@ -20,6 +20,8 @@
 #include "steam/isteamnetworkingutils.h"
 #endif
 
+IMPLEMENT_CLASS(SteamNetworkSystem);
+
 static PStatCollector copy_datagram_coll("App:SteamNetworking:CopyMessageDatagram");
 
 SteamNetworkSystem *SteamNetworkSystem::_global_ptr = nullptr;
@@ -31,7 +33,7 @@ static SteamNetworkSystem *_callback_instance = nullptr;
  */
 static void *
 sns_malloc(size_t s) {
-  return memory_hook->heap_alloc_array(s);
+  return SteamNetworkSystem::get_class_type().allocate_array(s);
 }
 
 /**
@@ -39,7 +41,7 @@ sns_malloc(size_t s) {
  */
 static void
 sns_free(void *p) {
-  memory_hook->heap_free_array(p);
+  SteamNetworkSystem::get_class_type().deallocate_array(p);
 }
 
 /**
@@ -47,7 +49,7 @@ sns_free(void *p) {
  */
 static void *
 sns_realloc(void *p, size_t s) {
-  return memory_hook->heap_realloc_array(p, s);
+  return SteamNetworkSystem::get_class_type().reallocate_array(p, s);
 }
 
 /**

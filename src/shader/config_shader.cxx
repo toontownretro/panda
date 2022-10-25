@@ -27,6 +27,7 @@
 #include "sourceLightmappedShader.h"
 //#include "lightmappedShader.h"
 #include "twoTextureShader.h"
+#include "spriteParticleShader.h"
 
 #include "basicShader.h"
 
@@ -116,6 +117,7 @@ init_libshader() {
   SourceWater::init_type();
   SourceLightmappedShader::init_type();
   TwoTextureShader::init_type();
+  SpriteParticleShader::init_type();
 
   BasicShader::init_type();
 

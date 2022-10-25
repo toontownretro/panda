@@ -1560,16 +1560,19 @@ remove_unused_vertices(const GeomVertexData *vdata) {
     for (int i = 0; i < num_primitives; ++i) {
       PT(GeomPrimitive) prim = geom->modify_primitive(i);
       prim->make_indexed();
-      PT(GeomVertexArrayData) vertices = prim->modify_vertices();
-      GeomVertexRewriter rewriter(vertices, 0, current_thread);
+      {
+        PT(GeomVertexArrayData) vertices = prim->modify_vertices();
+        GeomVertexRewriter rewriter(vertices, 0, current_thread);
 
-      while (!rewriter.is_at_end()) {
-        index = rewriter.get_data1i();
-        nassertv(index >= 0 && index < num_vertices);
-        new_index = remap_array[index];
-        nassertv(new_index >= 0 && new_index < new_num_vertices);
-        rewriter.set_data1i(new_index);
+        while (!rewriter.is_at_end()) {
+          index = rewriter.get_data1i();
+          nassertv(index >= 0 && index < num_vertices);
+          new_index = remap_array[index];
+          nassertv(new_index >= 0 && new_index < new_num_vertices);
+          rewriter.set_data1i(new_index);
+        }
       }
+      prim->calc_num_vertices();
     }
 
     geom->set_vertex_data(new_vdata);

@@ -381,7 +381,7 @@ public:
   virtual VertexBufferContext *prepare_vertex_buffer(GeomVertexArrayData *data);
   bool update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
                             const GeomVertexArrayDataHandle *reader,
-                            bool force);
+                            bool force, bool locked = false);
   virtual void release_vertex_buffer(VertexBufferContext *vbc);
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts);
 
@@ -407,8 +407,9 @@ public:
 #endif
 
 #ifndef OPENGLES
-  virtual void begin_occlusion_query();
-  virtual PT(OcclusionQueryContext) end_occlusion_query();
+  virtual PT(OcclusionQueryContext) create_occlusion_query();
+  virtual void begin_occlusion_query(OcclusionQueryContext *context);
+  virtual void end_occlusion_query();
 #endif
 
   virtual void issue_timer_query(int pstats_index) final;

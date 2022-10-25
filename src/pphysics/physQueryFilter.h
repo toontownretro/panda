@@ -24,6 +24,7 @@
 class EXPCL_PANDA_PPHYSICS PhysBaseQueryFilter : public physx::PxQueryFilterCallback {
 PUBLISHED:
   PhysBaseQueryFilter();
+  virtual ~PhysBaseQueryFilter() = default;
 
 public:
   virtual physx::PxQueryHitType::Enum preFilter(

@@ -742,6 +742,14 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
 }
 
 /**
+ *
+ */
+PT(OcclusionQueryContext) GraphicsStateGuardian::
+create_occlusion_query() {
+  return nullptr;
+}
+
+/**
  * Begins a new occlusion query.  After this call, you may call
  * begin_draw_primitives() and draw_triangles()/draw_whatever() repeatedly.
  * Eventually, you should call end_occlusion_query() before the end of the
@@ -753,7 +761,7 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
  * begin_occlusion_query() .. end_occlusion_query() sequence.
  */
 void GraphicsStateGuardian::
-begin_occlusion_query() {
+begin_occlusion_query(OcclusionQueryContext *context) {
   nassertv(_current_occlusion_query == nullptr);
 }
 
@@ -763,12 +771,10 @@ begin_occlusion_query() {
  * pixels that passed the depth test between the call to
  * begin_occlusion_query() and end_occlusion_query().
  */
-PT(OcclusionQueryContext) GraphicsStateGuardian::
+void GraphicsStateGuardian::
 end_occlusion_query() {
-  nassertr(_current_occlusion_query != nullptr, nullptr);
-  PT(OcclusionQueryContext) result = _current_occlusion_query;
+  nassertv(_current_occlusion_query != nullptr);
   _current_occlusion_query = nullptr;
-  return result;
 }
 
 /**
@@ -2584,9 +2590,11 @@ finish_decal() {
  * Draws the given set of CullableObjects one-by-one.
  */
 bool GraphicsStateGuardian::
-draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *current_thread) {
+draw_objects(const pvector<CullableObject> &objects, bool force, Thread *current_thread) {
   bool all_ok = true;
-  for (const CullableObject *object : objects) {
+  for (const CullableObject &obj : objects) {
+    const CullableObject *object = &obj;
+
 #ifdef RENDER_TRACK_GEOM_NODES
     _geom_node = object->_geom_node;
 #endif
@@ -2608,7 +2616,7 @@ draw_objects(const pvector<CullableObject *> &objects, bool force, Thread *curre
     #if 1
     else if (object->_draw_callback != nullptr) {
       // It has a callback associated.
-      clear_before_callback();
+      //clear_before_callback();
       set_state_and_transform(object->_state, object->_internal_transform);
       GeomDrawCallbackData cbdata((CullableObject *)object, this, force);
       object->_draw_callback->do_callback(&cbdata);
@@ -2650,7 +2658,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
   #if 1
   else if (object->_draw_callback != nullptr) {
     // It has a callback associated.
-    clear_before_callback();
+    //clear_before_callback();
     set_state_and_transform(object->_state, object->_internal_transform);
     GeomDrawCallbackData cbdata(object, this, force);
     object->_draw_callback->do_callback(&cbdata);
@@ -2685,7 +2693,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   int num_handles = (int)data_reader._cdata->_arrays.size();
   for (int i = 0; i < num_handles; ++i) {
     s_handles[i]._current_thread = current_thread;
-    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread));
+    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread), false);
   }
   data_reader.set_array_readers(s_handles);
 
@@ -2709,7 +2717,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   // CullableObject and eliminates the need to read from memory stored on
   // the Geom.
   if (prim != nullptr) {
-    GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+    GeomPrimitivePipelineReader prim_reader(prim, current_thread, false);
     if (prim_reader.get_num_vertices() != 0) {
       //prim_reader.check_minmax();
 
@@ -2798,7 +2806,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
     for (size_t i = 0; i < num_prims; ++i) {
       prim = geom_reader._cdata->_primitives[i].get_read_pointer(current_thread);
 
-      GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+      GeomPrimitivePipelineReader prim_reader(prim, current_thread, false);
       if (prim_reader.get_num_vertices() != 0) {
         //prim_reader.check_minmax();
 

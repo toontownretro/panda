@@ -17,6 +17,7 @@
     shaderEnums.h \
     shaderManager.h shaderManager.I \
     shaderObject.h shaderObject.I \
+    shaderSetup.h shaderSetup.I \
     shaderStage.h shaderStage.I \
     basicShader.h basicShader.I \
     //skyBoxShader.h skyBoxShader.I \
@@ -24,6 +25,7 @@
     sourceShader.h sourceShader.I \
     sourceSkyShader.h sourceSkyShader.I \
     sourceWater.h sourceWater.I \
+    spriteParticleShader.h spriteParticleShader.I \
     twoTextureShader.h twoTextureShader.I
     //vertexLitShader.h vertexLitShader.I
 
@@ -41,6 +43,7 @@
     shaderEnums.cxx \
     shaderManager.cxx \
     shaderObject.cxx \
+    shaderSetup.cxx \
     shaderStage.cxx \
     basicShader.cxx \
     //skyBoxShader.cxx \
@@ -48,6 +51,7 @@
     sourceShader.cxx \
     sourceSkyShader.cxx \
     sourceWater.cxx \
+    spriteParticleShader.cxx \
     twoTextureShader.cxx
     //vertexLitShader.cxx
 

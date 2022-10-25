@@ -45,7 +45,7 @@ record_object(CullableObject *object, const CullTraverser *traverser) {
     }
 
     // Dispense with the object.
-    delete object;
+    //delete object;
   }
 }
 

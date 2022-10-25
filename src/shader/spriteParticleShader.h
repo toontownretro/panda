@@ -21,7 +21,7 @@
 /**
  * Shader that renders point sprite particles.
  */
-class EXPCL_PANDA_PARTICLESYSTEM SpriteParticleShader : public ShaderBase {
+class EXPCL_PANDA_SHADER SpriteParticleShader : public ShaderBase {
 public:
   virtual void generate_shader(GraphicsStateGuardianBase *gsg,
                                const RenderState *state,

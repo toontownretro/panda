@@ -22,6 +22,7 @@
     sourceMaterial.I sourceMaterial.h \
     sourceSkyMaterial.I sourceSkyMaterial.h \
     sourceWaterMaterial.I sourceWaterMaterial.h \
+    spriteParticleMaterial.I spriteParticleMaterial.h \
     standardMaterial.I standardMaterial.h \
     twoTextureMaterial.I twoTextureMaterial.h
 
@@ -43,6 +44,7 @@
     sourceMaterial.cxx \
     sourceSkyMaterial.cxx \
     sourceWaterMaterial.cxx \
+    spriteParticleMaterial.cxx \
     standardMaterial.cxx \
     twoTextureMaterial.cxx
 

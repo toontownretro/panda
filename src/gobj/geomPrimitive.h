@@ -114,7 +114,7 @@ PUBLISHED:
   void make_nonindexed(GeomVertexData *dest, const GeomVertexData *source);
   void pack_vertices(GeomVertexData *dest, const GeomVertexData *source);
   void make_indexed();
-  //void calc_num_vertices();
+  void calc_num_vertices();
 
   INLINE int get_num_primitives() const;
   int get_primitive_start(int n) const;
@@ -372,7 +372,8 @@ private:
  */
 class EXPCL_PANDA_GOBJ GeomPrimitivePipelineReader : public GeomEnums {
 public:
-  INLINE GeomPrimitivePipelineReader(const GeomPrimitive *object, Thread *current_thread);
+  INLINE GeomPrimitivePipelineReader(const GeomPrimitive *object, Thread *current_thread,
+                                     bool fetch_vertices_cdata = true, bool lock = true);
   GeomPrimitivePipelineReader(const GeomPrimitivePipelineReader &copy) = delete;
   INLINE ~GeomPrimitivePipelineReader();
 
@@ -408,6 +409,11 @@ public:
   INLINE CPT(GeomVertexArrayData) get_mins() const;
   INLINE CPT(GeomVertexArrayData) get_maxs() const;
 
+  INLINE void acquire_rw_lock() const;
+  INLINE void release_rw_lock() const;
+
+  INLINE void fetch_vertices_cdata(bool lock) const;
+
   INLINE IndexBufferContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
                                          GraphicsStateGuardianBase *gsg) const;
   INLINE bool draw(GraphicsStateGuardianBase *gsg, bool force) const;
@@ -420,6 +426,8 @@ private:
   const GeomVertexArrayData::CData *_vertices_cdata;
 
   Thread *_current_thread;
+
+  bool _has_lock;
 
 public:
   static TypeHandle get_class_type() {

@@ -29,7 +29,7 @@ public:
   INLINE PhysSweepHit(const physx::PxSweepHit *hit);
 
 PUBLISHED:
-  ~PhysSweepHit() = default;
+  virtual ~PhysSweepHit() = default;
 
   INLINE PhysRigidActorNode *get_actor() const;
   INLINE PhysShape *get_shape() const;
@@ -57,7 +57,7 @@ PUBLISHED:
   INLINE PhysSweepResult();
   PhysSweepResult(const PhysSweepResult &copy) = delete;
 
-  ~PhysSweepResult() = default;
+  virtual ~PhysSweepResult() = default;
 
   void operator = (const PhysSweepResult &copy) = delete;
 

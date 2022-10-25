@@ -100,15 +100,42 @@ PUBLISHED:
   MapModel() = default;
   ~MapModel() = default;
 
+  class CollisionGroup {
+  public:
+    std::string _collide_type;
+    CPTA_uchar _tri_mesh_data;
+    // The mesh data indexes into this list.
+    // When the map is loaded, we create a PhysMaterial corresponding to
+    // the surfaceprop name in show code and add them to the PhysShape
+    // created for this model phys data in the same order.
+    vector_string _phys_surface_props;
+
+  PUBLISHED:
+    INLINE const std::string &get_collide_type() const {
+      return _collide_type;
+    }
+    INLINE CPTA_uchar get_tri_mesh_data() const {
+      return _tri_mesh_data;
+    }
+    INLINE size_t get_num_surface_props() const {
+      return _phys_surface_props.size();
+    }
+    INLINE std::string get_surface_prop(size_t n) const {
+      return _phys_surface_props[n];
+    }
+  };
+
   INLINE GeomNode *get_geom_node() const { return _geom_node; }
 
   INLINE const LPoint3 &get_mins() const { return _mins; }
   INLINE const LPoint3 &get_maxs() const { return _maxs; }
 
-  INLINE int get_num_surface_props() const { return (int)_phys_surface_props.size(); }
-  INLINE std::string get_surface_prop(int n) const { return _phys_surface_props[n]; }
-
-  INLINE CPTA_uchar get_tri_mesh_data() const { return _tri_mesh_data; };
+  INLINE int get_num_tri_groups() const {
+    return (int)_tri_groups.size();
+  }
+  INLINE const CollisionGroup *get_tri_group(int n) const {
+    return &_tri_groups[n];
+  }
 
   INLINE int get_num_convex_meshes() const { return (int)_convex_mesh_data.size(); }
   INLINE CPTA_uchar get_convex_mesh_data(int n) const {
@@ -121,12 +148,10 @@ public:
 
   LPoint3 _mins, _maxs;
 
-  // The mesh data indexes into this list.
-  // When the map is loaded, we create a PhysMaterial corresponding to
-  // the surfaceprop name in show code and add them to the PhysShape
-  // created for this model phys data in the same order.
-  vector_string _phys_surface_props;
-  CPTA_uchar _tri_mesh_data;
+  // Collision triangle meshes, grouped by collide type.
+  // Allows show code to assign specific collide masks per
+  // collision group type.
+  pvector<CollisionGroup> _tri_groups;
   pvector<CPTA_uchar> _convex_mesh_data;
 };
 

@@ -64,7 +64,7 @@ get_z_prepass_state() {
   if (z_prepass_state == nullptr) {
     CullBinManager *cbm = CullBinManager::get_global_ptr();
     cbm->add_bin("z_prepass", CullBin::BT_front_to_back, 1);
-    const RenderAttrib *states[13] = {
+    const RenderAttrib *states[14] = {
       ColorWriteAttrib::make(ColorWriteAttrib::C_off),
       DepthWriteAttrib::make(DepthWriteAttrib::M_on),
       DepthTestAttrib::make(DepthTestAttrib::M_less),
@@ -77,9 +77,10 @@ get_z_prepass_state() {
       ColorScaleAttrib::make_off(),
       ColorBlendAttrib::make_off(),
       ShaderAttrib::make("Depth"),
+      RenderModeAttrib::make(RenderModeAttrib::M_filled),
       CullBinAttrib::make("z_prepass", 0)
     };
-    z_prepass_state = RenderState::make(states, 13, 10000);
+    z_prepass_state = RenderState::make(states, 14, RenderState::get_max_priority());
   }
   return z_prepass_state;
 }
@@ -229,22 +230,22 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
   const RenderModeAttrib *rmode;
   if (object->_state->get_attrib(rmode)) {
     if (rmode->get_mode() == RenderModeAttrib::M_filled_wireframe) {
-      CullableObject *wireframe_part = new CullableObject(*object);
+      CullableObject wireframe_part(*object);
       const ShaderAttrib *shader = nullptr;
       object->_state->get_attrib(shader);
-      wireframe_part->_state = get_wireframe_overlay_state(rmode, shader);
+      wireframe_part._state = get_wireframe_overlay_state(rmode, shader);
 
-      if (wireframe_part->munge_geom
+      if (wireframe_part.munge_geom
           (_gsg, /*_gsg->get_geom_munger(wireframe_part->_state, current_thread)*/nullptr,
            traverser, force)) {
         int wireframe_bin_index = bin_manager->find_bin("fixed");
         CullBin *bin = get_bin(wireframe_bin_index);
         nassertv(bin != nullptr);
-        check_flash_bin(wireframe_part->_state, bin_manager, wireframe_bin_index);
-        bin->add_object(wireframe_part, current_thread);
-      } else {
-        delete wireframe_part;
-      }
+        check_flash_bin(wireframe_part._state, bin_manager, wireframe_bin_index);
+        bin->add_object(&wireframe_part, current_thread);
+      }// else {
+      //  delete wireframe_part;
+      //}
 
       object->_state = object->_state->compose(get_wireframe_filled_state());
     }
@@ -305,20 +306,20 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
           if (m_dual_transparent)
 #endif
             {
-              CullableObject *transparent_part = new CullableObject(*object);
+              CullableObject transparent_part(*object);
               CPT(RenderState) transparent_state = get_dual_transparent_state();
-              transparent_part->_state = object->_state->compose(transparent_state);
-              if (transparent_part->munge_geom
+              transparent_part._state = object->_state->compose(transparent_state);
+              if (transparent_part.munge_geom
                   (_gsg, /*_gsg->get_geom_munger(transparent_part->_state, current_thread)*/nullptr,
                    traverser, force)) {
-                int transparent_bin_index = transparent_part->_state->get_bin_index();
+                int transparent_bin_index = transparent_part._state->get_bin_index();
                 CullBin *bin = get_bin(transparent_bin_index);
                 nassertv(bin != nullptr);
-                check_flash_bin(transparent_part->_state, bin_manager, transparent_bin_index);
-                bin->add_object(transparent_part, current_thread);
-              } else {
-                delete transparent_part;
-              }
+                check_flash_bin(transparent_part._state, bin_manager, transparent_bin_index);
+                bin->add_object(&transparent_part, current_thread);
+              }// else {
+               // delete transparent_part;
+              //}
             }
 
           // Now we can draw the opaque part.  This will end up in the opaque
@@ -326,7 +327,7 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
           object->_state = object->_state->compose(get_dual_opaque_state());
 #ifndef NDEBUG
           if (!m_dual_opaque) {
-            delete object;
+            //delete object;
             return;
           }
 #endif
@@ -370,13 +371,13 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
     }
 
     if (in_z_prepass) {
-      CullableObject *z_pre_obj = new CullableObject(*object);
-      z_pre_obj->_state = object->_state->compose(get_z_prepass_state());
-      if (z_pre_obj->munge_geom(_gsg, nullptr, traverser, force)) {
-        int z_pre_bin_index = z_pre_obj->_state->get_bin_index();
+      CullableObject z_pre_obj(*object);
+      z_pre_obj._state = object->_state->compose(get_z_prepass_state());
+      if (z_pre_obj.munge_geom(_gsg, nullptr, traverser, force)) {
+        int z_pre_bin_index = z_pre_obj._state->get_bin_index();
         CullBin *bin = get_bin(z_pre_bin_index);
         nassertv(bin != nullptr);
-        bin->add_object(z_pre_obj, current_thread);
+        bin->add_object(&z_pre_obj, current_thread);
 
         // If the object is being rendered into the Z-prepass, we don't need it to write
         // to the Z buffer during the main pass.
@@ -384,9 +385,9 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
           DepthWriteAttrib::make(DepthWriteAttrib::M_off),
           DepthTestAttrib::make(DepthTestAttrib::M_less_equal), 10000);
         object->_state = object->_state->compose(no_depth_write_state);
-      } else {
-        delete z_pre_obj;
-      }
+      } //else {
+        //delete z_pre_obj;
+      //}
     }
   }
 
@@ -402,9 +403,9 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
     // matter, since the GSG may have the necessary buffers already loaded.
     // We'll let the GSG ultimately decide whether to render it.
     bin->add_object(object, current_thread);
-  } else {
-    delete object;
-  }
+  } //else {
+    //delete object;
+  //}
 }
 
 /**

@@ -20,6 +20,10 @@
 #include "geomPoints.h"
 #include "omniBoundingVolume.h"
 #include "boundingBox.h"
+#include "renderState.h"
+#include "materialAttrib.h"
+#include "material.h"
+#include "materialParamBool.h"
 
 TypeHandle ParticleRenderer2::_type_handle;
 TypeHandle SpriteParticleRenderer2::_type_handle;
@@ -29,7 +33,8 @@ TypeHandle SpriteParticleRenderer2::_type_handle;
  */
 SpriteParticleRenderer2::
 SpriteParticleRenderer2() :
-  _render_state(RenderState::make_empty())
+  _render_state(RenderState::make_empty()),
+  _is_animated(false)
 {
 }
 
@@ -38,7 +43,8 @@ SpriteParticleRenderer2() :
  */
 SpriteParticleRenderer2::
 SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy) :
-  _render_state(copy._render_state)
+  _render_state(copy._render_state),
+  _is_animated(copy._is_animated)
 {
 }
 
@@ -63,6 +69,18 @@ set_render_state(const RenderState *state) {
  */
 void SpriteParticleRenderer2::
 initialize(const NodePath &parent, ParticleSystem2 *system) {
+  // Determine if the particle should use texture animation.
+  const MaterialAttrib *mattr;
+   _render_state->get_attrib_def(mattr);
+  Material *mat = mattr->get_material();
+  if (mat != nullptr) {
+    MaterialParamBool *animated = (MaterialParamBool *)mat->get_param("animated");
+    if (animated != nullptr && animated->get_value()) {
+      // Alright, we're animated.  We need extra vertex columns to support it.
+      _is_animated = true;
+    }
+  }
+
   // Setup vertex format.
   PT(GeomVertexArrayFormat) array_format;
   array_format = new GeomVertexArrayFormat
@@ -70,6 +88,10 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
     InternalName::get_color(), 4, Geom::NT_uint8, Geom::C_color);
   array_format->add_column(InternalName::get_size(), 2, Geom::NT_stdfloat, Geom::C_other);
   array_format->add_column(InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
+  // Add the animation data column, but only if we're actually animated.
+  if (_is_animated) {
+    array_format->add_column(InternalName::make("anim_data"), 3, Geom::NT_stdfloat, Geom::C_other);
+  }
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format
     (new GeomVertexFormat(array_format));
 
@@ -110,6 +132,7 @@ update(ParticleSystem2 *system) {
   GeomVertexWriter cwriter(_vdata, InternalName::get_color());
   GeomVertexWriter swriter(_vdata, InternalName::get_size());
   GeomVertexWriter rwriter(_vdata, InternalName::get_rotate());
+  GeomVertexWriter awriter(_vdata, InternalName::make("anim_data"));
 
   LPoint3 mins(9999999);
   LPoint3 maxs(-9999999);
@@ -125,6 +148,10 @@ update(ParticleSystem2 *system) {
     cwriter.set_data4f(p->_color);
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);
+    if (awriter.has_column()) {
+      // Write particle data needed to compute texture animation.
+      awriter.set_data3f(p->_anim_index, p->_fps, p->_spawn_time + system->_start_time);
+    }
 
     mins = mins.fmin(p->_pos - LPoint3(p->_scale[0]));
     mins = mins.fmin(p->_pos - LPoint3(p->_scale[1]));

@@ -152,6 +152,7 @@ PUBLISHED:
   INLINE Type *get_sample_value(int index);
   INLINE double get_sample_timestamp(int index) const;
   INLINE void set_sample_value(int index, const Type &value);
+  INLINE int get_num_samples() const;
 
   INLINE bool get_interpolation_info(double now, int &newer, int &older, int &oldest) const;
   INLINE bool get_interpolation_info(InterpolationInfo &info, double now) const;

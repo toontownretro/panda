@@ -32,9 +32,9 @@ TypeHandle CullBinFrontToBack::_type_handle;
  */
 CullBinFrontToBack::
 ~CullBinFrontToBack() {
-  for (CullableObject *object : _objects) {
-    delete object;
-  }
+  //for (CullableObject *object : _objects) {
+  //  delete object;
+  //}
 }
 
 /**
@@ -54,7 +54,7 @@ add_object(CullableObject *object, Thread *current_thread) {
   // Determine the center of the bounding volume.
   CPT(BoundingVolume) volume = object->_geom->get_bounds();
   if (volume->is_empty()) {
-    delete object;
+    //delete object;
     return;
   }
 
@@ -67,11 +67,11 @@ add_object(CullableObject *object, Thread *current_thread) {
 
   PN_stdfloat distance = _gsg->compute_distance_to(center);
   object->_sort_data._dist = distance;
-  _objects.push_back(object);
+  _objects.emplace_back(std::move(*object));
 }
 
-auto compare_objects_f2b = [](const CullableObject *a, const CullableObject *b) -> bool {
-  return a->_sort_data._dist < b->_sort_data._dist;
+auto compare_objects_f2b = [](const CullableObject &a, const CullableObject &b) -> bool {
+  return a._sort_data._dist < b._sort_data._dist;
 };
 
 /**
@@ -105,7 +105,7 @@ draw(bool force, Thread *current_thread) {
  */
 void CullBinFrontToBack::
 fill_result_graph(CullBin::ResultGraphBuilder &builder) {
-  for (CullableObject *object : _objects) {
-    builder.add_object(object);
+  for (CullableObject &object : _objects) {
+    builder.add_object(&object);
   }
 }

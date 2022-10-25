@@ -5958,7 +5958,7 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
 
     report_my_gl_errors(this);
     CPT(GeomVertexArrayDataHandle) handle = data->get_handle();
-    update_vertex_buffer(gvbc, handle, false);
+    update_vertex_buffer(gvbc, handle, false, true);
     return gvbc;
   }
 
@@ -5971,7 +5971,8 @@ prepare_vertex_buffer(GeomVertexArrayData *data) {
  */
 bool CLP(GraphicsStateGuardian)::
 update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
-                     const GeomVertexArrayDataHandle *reader, bool force) {
+                     const GeomVertexArrayDataHandle *reader, bool force,
+                     bool locked) {
   nassertr(_supports_buffers, false);
   if (reader->get_modified() == UpdateSeq::initial()) {
     // No need to re-apply.
@@ -5981,6 +5982,10 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
   //gvbc->set_active(true);
 
   if (gvbc->was_modified(reader)) {
+    if (!locked) {
+      reader->acquire_rw_lock();
+    }
+
     int num_bytes = reader->get_data_size_bytes();
 #ifndef NDEBUG
     if (_debug_buffers && GLCAT.is_debug()) {
@@ -5992,6 +5997,9 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
     if (num_bytes != 0) {
       const unsigned char *client_pointer = reader->get_read_pointer(force);
       if (client_pointer == nullptr) {
+        if (!locked) {
+          reader->release_rw_lock();
+        }
         return false;
       }
 
@@ -6035,6 +6043,10 @@ update_vertex_buffer(CLP(VertexBufferContext) *gvbc,
     }
 
     gvbc->mark_loaded(reader);
+
+    if (!locked) {
+      reader->release_rw_lock();
+    }
   }
   //gvbc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
@@ -6230,7 +6242,7 @@ prepare_index_buffer(GeomPrimitive *data) {
 #endif
 
     report_my_gl_errors(this);
-    GeomPrimitivePipelineReader reader(data, Thread::get_current_thread());
+    GeomPrimitivePipelineReader reader(data, Thread::get_current_thread(), false);
     apply_index_buffer(gibc, &reader, false);
     return gibc;
   }
@@ -6268,6 +6280,8 @@ apply_index_buffer(IndexBufferContext *ibc,
   }
 
   if (gibc->was_modified(reader)) {
+    reader->fetch_vertices_cdata(false);
+    reader->acquire_rw_lock();
     int num_bytes = reader->get_data_size_bytes();
 #ifndef NDEBUG
     if (_debug_buffers && GLCAT.is_debug()) {
@@ -6279,6 +6293,7 @@ apply_index_buffer(IndexBufferContext *ibc,
     if (num_bytes != 0) {
       const unsigned char *client_pointer = reader->get_read_pointer(force);
       if (client_pointer == nullptr) {
+        reader->release_rw_lock();
         return false;
       }
 
@@ -6294,6 +6309,7 @@ apply_index_buffer(IndexBufferContext *ibc,
       _data_transferred_pcollector.add_level(num_bytes);
     }
     gibc->mark_loaded(reader);
+    reader->release_rw_lock();
   }
   //gibc->enqueue_lru(&_prepared_objects->_graphics_memory_lru);
 
@@ -6630,6 +6646,26 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
 
 #ifndef OPENGLES
 /**
+ *
+ */
+PT(OcclusionQueryContext) CLP(GraphicsStateGuardian)::
+create_occlusion_query() {
+  nassertr(_supports_occlusion_query, nullptr);
+
+  PT(CLP(OcclusionQueryContext)) query = new CLP(OcclusionQueryContext)(this);
+  _glGenQueries(1, &query->_index);
+
+  if (GLCAT.is_debug()) {
+    GLCAT.debug()
+      << "created occlusion query index " << (int)query->_index << "\n";
+  }
+
+  report_my_gl_errors(this);
+
+  return query;
+}
+
+/**
  * Begins a new occlusion query.  After this call, you may call
  * begin_draw_primitives() and draw_triangles()/draw_whatever() repeatedly.
  * Eventually, you should call end_occlusion_query() before the end of the
@@ -6641,12 +6677,12 @@ release_shader_buffers(const pvector<BufferContext *> &contexts) {
  * begin_occlusion_query() .. end_occlusion_query() sequence.
  */
 void CLP(GraphicsStateGuardian)::
-begin_occlusion_query() {
+begin_occlusion_query(OcclusionQueryContext *context) {
   nassertv(_supports_occlusion_query);
   nassertv(_current_occlusion_query == nullptr);
-  PT(CLP(OcclusionQueryContext)) query = new CLP(OcclusionQueryContext)(this);
 
-  _glGenQueries(1, &query->_index);
+  CLP(OcclusionQueryContext) *query = DCAST(CLP(OcclusionQueryContext), context);
+  nassertv(query->_index != 0);
 
   if (GLCAT.is_debug()) {
     GLCAT.debug()
@@ -6658,18 +6694,16 @@ begin_occlusion_query() {
 
   report_my_gl_errors(this);
 }
-#endif  // !OPENGLES
 
-#ifndef OPENGLES
 /**
  * Ends a previous call to begin_occlusion_query(). This call returns the
  * OcclusionQueryContext object that will (eventually) report the number of
  * pixels that passed the depth test between the call to
  * begin_occlusion_query() and end_occlusion_query().
  */
-PT(OcclusionQueryContext) CLP(GraphicsStateGuardian)::
+void CLP(GraphicsStateGuardian)::
 end_occlusion_query() {
-  nassertr(_current_occlusion_query != nullptr, nullptr);
+  nassertv(_current_occlusion_query != nullptr);
   PT(OcclusionQueryContext) result = _current_occlusion_query;
 
   GLuint index = DCAST(CLP(OcclusionQueryContext), result)->_index;
@@ -6697,8 +6731,6 @@ end_occlusion_query() {
   }
 
   report_my_gl_errors(this);
-
-  return result;
 }
 #endif  // !OPENGLES
 

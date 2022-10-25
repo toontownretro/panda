@@ -1291,6 +1291,8 @@ generate_quads(GeomNode *geom_node, const QuadMap &quad_map) {
     // We can compute this value much faster than GeomPrimitive can.
     tris->set_minmax(0, vtx_count - 1, nullptr, nullptr);
 
+    tris->calc_num_vertices();
+
     PT(GeomTextGlyph) geom = new GeomTextGlyph(vdata);
     geom->_glyphs.swap(glyphs);
     geom->add_primitive(tris);
