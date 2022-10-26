@@ -244,9 +244,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       CascadeLight *clight = DCAST(CascadeLight, light.node());
       if (clight->is_shadow_caster()) {
         setup.set_vertex_shader_combo(IN_SUNLIGHT, 1);
-        setup.set_pixel_shader_combo(IN_SUNLIGHT, 1);
+        setup.set_pixel_shader_combo(IN_SUNLIGHT, 2);
         setup.set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
+      } else {
+        setup.set_pixel_shader_combo(IN_SUNLIGHT, 1);
       }
+    } else if (light.node()->get_type() == DirectionalLight::get_class_type()) {
+      setup.set_pixel_shader_combo(IN_SUNLIGHT, 1);
     }
   }
 }
