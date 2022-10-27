@@ -96,6 +96,14 @@ get_face_index() const {
 /**
  *
  */
+INLINE PN_stdfloat PhysSweepHit::
+get_distance() const {
+  return physx_length_to_panda(_hit->distance);
+}
+
+/**
+ *
+ */
 INLINE bool PhysSweepResult::
 has_block() const {
   return _buffer.hasBlock;

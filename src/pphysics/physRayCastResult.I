@@ -112,6 +112,14 @@ get_face_index() const {
 /**
  *
  */
+INLINE PN_stdfloat PhysRayCastHit::
+get_distance() const {
+  return physx_length_to_panda(_hit->distance);
+}
+
+/**
+ *
+ */
 INLINE bool PhysRayCastResult::
 has_block() const {
   return _buffer.hasBlock;
