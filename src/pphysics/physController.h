@@ -177,6 +177,8 @@ PUBLISHED:
   INLINE size_t get_num_controller_hits() const;
   INLINE const PhysControllersHitData *get_controller_hit(size_t n) const;
 
+  virtual void destroy()=0;
+
 protected:
   virtual physx::PxController *get_controller() const = 0;
 

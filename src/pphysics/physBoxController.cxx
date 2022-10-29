@@ -29,7 +29,8 @@ PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
   desc.material = material->get_material();
   desc.upDirection = panda_norm_vec_to_physx(LVector3::up());
   desc.reportCallback = PhysControllerHitCallback::get_global_ptr();
-  desc.scaleCoeff = 0.9999f;
+  desc.scaleCoeff = 0.9878f;
+  desc.position = panda_vec_to_physx_ex(node.get_pos(NodePath()));
   _controller = (physx::PxBoxController *)scene->get_controller_manager()
     ->createController(desc);
   nassertv(_controller != nullptr);
@@ -42,11 +43,7 @@ PhysBoxController(PhysScene *scene, NodePath node, const LVector3 &half_extents,
  */
 PhysBoxController::
 ~PhysBoxController() {
-  if (_controller != nullptr) {
-    _controller->setUserData(nullptr);
-    _controller->release();
-    _controller = nullptr;
-  }
+  destroy();
 }
 
 /**
@@ -55,4 +52,17 @@ PhysBoxController::
 physx::PxController *PhysBoxController::
 get_controller() const {
   return _controller;
+}
+
+/**
+ *
+ */
+void PhysBoxController::
+destroy() {
+  if (_controller != nullptr) {
+    _actor_node = nullptr;
+    _controller->setUserData(nullptr);
+    _controller->release();
+    _controller = nullptr;
+  }
 }

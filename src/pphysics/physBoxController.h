@@ -24,7 +24,7 @@ class PhysMaterial;
 /**
  *
  */
-class EXPCL_PANDA_PPHYSICS PhysBoxController : public PhysController {
+class EXPCL_PANDA_PPHYSICS PhysBoxController final : public PhysController {
 PUBLISHED:
   PhysBoxController(PhysScene *scene, NodePath node,
                     const LVector3 &half_extents,
@@ -33,6 +33,8 @@ PUBLISHED:
 
   INLINE void set_half_extents(const LVector3 &half_extents);
   INLINE LVector3 get_half_extents() const;
+
+  virtual void destroy() override final;
 
 protected:
   virtual physx::PxController *get_controller() const override;
