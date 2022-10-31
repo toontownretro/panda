@@ -62,6 +62,7 @@ update(double time, double dt, ParticleSystem2 *system) {
       p._prev_pos = p._pos;
       p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
       p._velocity += accel_vec * dt;
+      p._velocity *= (1.0f - _drag) * dt;
 
       ++force_accum;
     }
@@ -73,6 +74,8 @@ update(double time, double dt, ParticleSystem2 *system) {
       if (!p._alive) {
         continue;
       }
+
+      p._velocity *= (1.0f - _drag) * dt;
 
       p._prev_pos = p._pos;
       p._pos += p._velocity * dt;
