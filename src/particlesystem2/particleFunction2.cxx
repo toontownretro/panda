@@ -58,11 +58,11 @@ update(double time, double dt, ParticleSystem2 *system) {
       }
 
       LVector3 accel_vec = *force_accum;
+      accel_vec -= p._velocity * _drag;
 
       p._prev_pos = p._pos;
       p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
       p._velocity += accel_vec * dt;
-      p._velocity *= (1.0f - _drag) * dt;
 
       ++force_accum;
     }
@@ -75,10 +75,11 @@ update(double time, double dt, ParticleSystem2 *system) {
         continue;
       }
 
-      p._velocity *= (1.0f - _drag) * dt;
-
+      LVector3 accel_vec(0.0f);
+      accel_vec -= p._velocity * _drag;
       p._prev_pos = p._pos;
-      p._pos += p._velocity * dt;
+      p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
+      p._velocity += accel_vec * dt;
     }
   }
 
