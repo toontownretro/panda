@@ -418,7 +418,9 @@ update(double dt) {
 
   // Update children.
   for (ParticleSystem2 *child : _children) {
-    child->update(dt);
+    if (child->is_running()) {
+      child->update(dt);
+    }
   }
 
   // Accumulate time.
