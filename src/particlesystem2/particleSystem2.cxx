@@ -249,7 +249,10 @@ start(const NodePath &parent, const NodePath &follow_parent, double time) {
  */
 bool ParticleSystem2::
 priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
-  nassertr(!_running, false);
+  if (_running) {
+    return false;
+  }
+
   nassertr(_pool_size > 0, false);
 
   _parent = parent;
@@ -315,7 +318,10 @@ priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
  */
 void ParticleSystem2::
 soft_stop() {
-  nassertv(_running);
+  if (!_running) {
+    return;
+  }
+
   _soft_stopped = true;
 
   for (ParticleSystem2 *child : _children) {
@@ -330,7 +336,10 @@ soft_stop() {
  */
 void ParticleSystem2::
 stop() {
-  nassertv(_running);
+  if (!_running) {
+    return;
+  }
+
   priv_stop();
   ParticleManager2::get_global_ptr()->remove_system(this);
 }
