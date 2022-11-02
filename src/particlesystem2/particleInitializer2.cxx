@@ -66,7 +66,6 @@ IMPLEMENT_CLASS(P2_INIT_RemapAttribute);
 IMPLEMENT_CLASS(P2_INIT_PositionModelHitBoxes);
 
 IMPLEMENT_CLASS(P2_INIT_AnimationIndexRandom);
-IMPLEMENT_CLASS(P2_INIT_AnimationFPSRandom);
 
 /**
  *
@@ -943,34 +942,3 @@ BAM_READ(P2_INIT_AnimationIndexRandom) {
   _anim_index_range = scan.get_int8();
 }
 BAM_READ_FACTORY(P2_INIT_AnimationIndexRandom);
-
-/**
- *
- */
-P2_INIT_AnimationFPSRandom::
-P2_INIT_AnimationFPSRandom(PN_stdfloat fps_min, PN_stdfloat fps_max) :
-  _fps_min(fps_min),
-  _fps_range(fps_max - fps_min)
-{
-}
-
-/**
- *
- */
-void P2_INIT_AnimationFPSRandom::
-init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
-  for (int i = 0; i < num_particles; ++i) {
-    Particle *p = &system->_particles[particles[i]];
-    p->_fps = p2_random_min_range(_fps_min, _fps_range);
-  }
-}
-
-BAM_WRITE(P2_INIT_AnimationFPSRandom) {
-  me.add_stdfloat(_fps_min);
-  me.add_stdfloat(_fps_range);
-}
-BAM_READ(P2_INIT_AnimationFPSRandom) {
-  _fps_min = scan.get_stdfloat();
-  _fps_range = scan.get_stdfloat();
-}
-BAM_READ_FACTORY(P2_INIT_AnimationFPSRandom);

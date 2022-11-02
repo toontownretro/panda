@@ -34,3 +34,19 @@ INLINE const RenderState *SpriteParticleRenderer2::
 get_render_state() const {
   return _render_state;
 }
+
+/**
+ *
+ */
+INLINE bool SpriteParticleRenderer2::
+get_fit_animations_to_particle_lifespan() const {
+  return _fit_anim_to_particle_lifespan;
+}
+
+/**
+ *
+ */
+INLINE PN_stdfloat SpriteParticleRenderer2::
+get_animation_play_rate() const {
+  return _anim_play_rate;
+}

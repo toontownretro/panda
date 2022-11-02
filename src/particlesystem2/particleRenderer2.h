@@ -21,6 +21,8 @@
 #include "geomVertexData.h"
 #include "geomVertexArrayData.h"
 #include "geomPoints.h"
+#include "materialParamTexture.h"
+#include "pointerTo.h"
 
 class ParticleSystem2;
 
@@ -67,10 +69,14 @@ PUBLISHED:
   virtual PT(ParticleRenderer2) make_copy() const override;
 
   void set_render_state(const RenderState *state);
+  void set_fit_animations_to_particle_lifespan(bool flag);
+  void set_animation_play_rate(PN_stdfloat rate);
 
   INLINE NodePath get_geom_np() const;
   INLINE GeomNode *get_geom_node() const;
   INLINE const RenderState *get_render_state() const;
+  INLINE bool get_fit_animations_to_particle_lifespan() const;
+  INLINE PN_stdfloat get_animation_play_rate() const;
 
 public:
   virtual void initialize(const NodePath &parent, ParticleSystem2 *system) override;
@@ -92,6 +98,10 @@ private:
   bool _is_animated;
   bool _rgb_modulated_by_alpha;
   CPT(RenderState) _render_state;
+
+  bool _fit_anim_to_particle_lifespan;
+  PN_stdfloat _anim_play_rate;
+  PT(MaterialParamTexture) _sprite_base_texture;
 
 public:
   static TypeHandle get_class_type() {

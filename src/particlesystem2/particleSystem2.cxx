@@ -284,7 +284,6 @@ priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
     p->_color.fill(1.0f);
     p->_spawn_time = 0.0f;
     p->_anim_index = 0;
-    p->_fps = 0.0f;
     // Shouldn't be necessary, but just to be safe.
     p->_id = (size_t)i;
     p->_alive = false;
@@ -520,7 +519,6 @@ birth_particles(int count) {
     p->_color.set(1, 1, 1, 1);
     p->_spawn_time = _elapsed;
     p->_anim_index = 0;
-    p->_fps = 0.0f;
     // Shouldn't be necessary, but just to be safe.
     p->_id = (size_t)particle_index;
     p->_alive = true;

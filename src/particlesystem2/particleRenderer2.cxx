@@ -36,7 +36,9 @@ SpriteParticleRenderer2::
 SpriteParticleRenderer2() :
   _render_state(RenderState::make_empty()),
   _is_animated(false),
-  _rgb_modulated_by_alpha(false)
+  _rgb_modulated_by_alpha(false),
+  _fit_anim_to_particle_lifespan(false),
+  _anim_play_rate(1.0f)
 {
 }
 
@@ -47,7 +49,10 @@ SpriteParticleRenderer2::
 SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy) :
   _render_state(copy._render_state),
   _is_animated(copy._is_animated),
-  _rgb_modulated_by_alpha(copy._rgb_modulated_by_alpha)
+  _rgb_modulated_by_alpha(copy._rgb_modulated_by_alpha),
+  _sprite_base_texture(copy._sprite_base_texture),
+  _fit_anim_to_particle_lifespan(copy._fit_anim_to_particle_lifespan),
+  _anim_play_rate(copy._anim_play_rate)
 {
 }
 
@@ -68,6 +73,25 @@ set_render_state(const RenderState *state) {
 }
 
 /**
+ * Specifies whether or not texture animation frame rates should be adjusted
+ * so the animation ends at the same time of the particle.  If true,
+ * _anim_play_rate is ignored.
+ */
+void SpriteParticleRenderer2::
+set_fit_animations_to_particle_lifespan(bool flag) {
+  _fit_anim_to_particle_lifespan = flag;
+}
+
+/**
+ * Sets the play rate of texture animations.  This value is ignored
+ * if _fit_anim_to_particle_lifespan is true.
+ */
+void SpriteParticleRenderer2::
+set_animation_play_rate(PN_stdfloat rate) {
+  _anim_play_rate = rate;
+}
+
+/**
  *
  */
 void SpriteParticleRenderer2::
@@ -77,10 +101,12 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
    _render_state->get_attrib_def(mattr);
   Material *mat = mattr->get_material();
   if (mat != nullptr) {
-    MaterialParamBool *animated = (MaterialParamBool *)mat->get_param("animated");
-    if (animated != nullptr && animated->get_value()) {
-      // Alright, we're animated.  We need extra vertex columns to support it.
-      _is_animated = true;
+    MaterialParamTexture *base_tex_p = (MaterialParamTexture *)mat->get_param("base_texture");
+    if (base_tex_p != nullptr) {
+      _sprite_base_texture = base_tex_p;
+      if (base_tex_p->get_num_animations() > 0) {
+        _is_animated = true;
+      }
     }
   }
   CPT(RenderState) state = _render_state->compose(mattr->get_modifier_state());
@@ -99,7 +125,8 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
   array_format->add_column(InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
   // Add the animation data column, but only if we're actually animated.
   if (_is_animated) {
-    array_format->add_column(InternalName::make("anim_data"), 3, Geom::NT_stdfloat, Geom::C_other);
+    array_format->add_column(InternalName::make("anim_data"), 4, Geom::NT_stdfloat, Geom::C_other);
+    array_format->add_column(InternalName::make("anim_data2"), 3, Geom::NT_stdfloat, Geom::C_other);
   }
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format
     (new GeomVertexFormat(array_format));
@@ -142,6 +169,7 @@ update(ParticleSystem2 *system) {
   GeomVertexWriter swriter(_vdata, InternalName::get_size());
   GeomVertexWriter rwriter(_vdata, InternalName::get_rotate());
   GeomVertexWriter awriter(_vdata, InternalName::make("anim_data"));
+  GeomVertexWriter a2writer(_vdata, InternalName::make("anim_data2"));
 
   LPoint3 mins(9999999);
   LPoint3 maxs(-9999999);
@@ -161,9 +189,23 @@ update(ParticleSystem2 *system) {
     }
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);
-    if (awriter.has_column()) {
+    if (awriter.has_column() && _sprite_base_texture != nullptr) {
       // Write particle data needed to compute texture animation.
-      awriter.set_data3f(p->_anim_index, p->_fps, p->_spawn_time + system->_start_time);
+      // TODO: Texture animation data could be passed as a uniform rather
+      // than per-vertex.  Would reduce memory and CPU overhead here.
+
+      // Fit FPS of animation to particle lifespan.
+      const MaterialParamTexture::AnimData *adata = _sprite_base_texture->get_animation(p->_anim_index);
+      PN_stdfloat fps = adata->_fps;
+      if (_fit_anim_to_particle_lifespan) {
+        PN_stdfloat duration = (PN_stdfloat)adata->_num_frames / (PN_stdfloat)adata->_fps;
+        fps *= duration / p->_duration;
+      } else {
+        fps *= _anim_play_rate;
+      }
+
+      awriter.set_data4f(p->_anim_index, fps, p->_spawn_time + system->_start_time, adata->_first_frame);
+      a2writer.set_data3f(adata->_num_frames, adata->_loop, adata->_interp);
     }
 
     mins = mins.fmin(p->_pos - LPoint3(p->_scale[0]));
@@ -199,6 +241,8 @@ shutdown(ParticleSystem2 *system) {
 void SpriteParticleRenderer2::
 write_datagram(BamWriter *manager, Datagram &me) {
   manager->write_pointer(me, _render_state);
+  me.add_bool(_fit_anim_to_particle_lifespan);
+  me.add_stdfloat(_anim_play_rate);
 }
 
 /**
@@ -207,6 +251,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
 void SpriteParticleRenderer2::
 fillin(DatagramIterator &scan, BamReader *manager) {
   manager->read_pointer(scan);
+  _fit_anim_to_particle_lifespan = scan.get_bool();
+  _anim_play_rate = scan.get_stdfloat();
 }
 
 /**

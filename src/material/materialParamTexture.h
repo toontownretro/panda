@@ -22,6 +22,25 @@
  */
 class EXPCL_PANDA_MATERIAL MaterialParamTexture final : public MaterialParamBase {
 PUBLISHED:
+  /**
+   * Data for a single animation encoded in the texture.
+   * Animated textures are supported via texture arrays.
+   * Each page of the array is a frame of an animation.
+   * The texture can store multiple animations by grouping
+   * consecutive pages into this AnimData structure.
+   *
+   * There exists an AnimData entry for each animation in
+   * the texture.
+   */
+  class AnimData {
+  public:
+    int _first_frame; // texture page
+    int _num_frames;
+    int _fps;
+    bool _loop;
+    bool _interp;
+  };
+
   INLINE MaterialParamTexture(const std::string &name, Texture *default_value = nullptr);
 
   INLINE void set_value(Texture *tex, int view = 0);
@@ -38,6 +57,11 @@ PUBLISHED:
   INLINE bool has_sampler_state() const;
   MAKE_PROPERTY(sampler_state, get_sampler_state, set_sampler_state);
 
+  INLINE int get_num_animations() const;
+  INLINE const AnimData *get_animation(int n) const;
+
+  bool validate_animations() const;
+
 private:
   PT(Texture) _value;
 
@@ -49,6 +73,9 @@ private:
   // a custom one here for this parameter only.
   bool _has_sampler;
   SamplerState _sampler;
+
+  typedef pvector<AnimData> AnimDatas;
+  AnimDatas _anim_datas;
 
 public:
   virtual bool from_pdx(const PDXValue &val, const DSearchPath &search_path) override;

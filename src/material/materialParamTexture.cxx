@@ -15,6 +15,7 @@
 #include "texturePool.h"
 #include "virtualFileSystem.h"
 #include "pdxElement.h"
+#include "pdxList.h"
 
 TypeHandle MaterialParamTexture::_type_handle;
 
@@ -109,6 +110,34 @@ from_pdx(const PDXValue &val, const DSearchPath &search_path) {
       }
     }
 
+    if (element->has_attribute("anims")) {
+      PDXList *anims_list = element->get_attribute_value("anims").get_list();
+      int page = 0;
+      for (size_t i = 0; i < anims_list->size(); ++i) {
+        PDXElement *anim_data = anims_list->get(i).get_element();
+        AnimData adata;
+        adata._interp = false;
+        adata._loop = false;
+        adata._fps = 24;
+        if (anim_data->has_attribute("first_page")) {
+          page = anim_data->get_attribute_value("first_page").get_int();
+        }
+        adata._first_frame = page;
+        adata._num_frames = anim_data->get_attribute_value("num_pages").get_int();
+        if (anim_data->has_attribute("fps")) {
+          adata._fps = anim_data->get_attribute_value("fps").get_int();
+        }
+        if (anim_data->has_attribute("interpolate")) {
+          adata._interp = anim_data->get_attribute_value("interpolate").get_bool();
+        }
+        if (anim_data->has_attribute("loop")) {
+          adata._loop = anim_data->get_attribute_value("loop").get_bool();
+        }
+        _anim_datas.push_back(std::move(adata));
+        page += adata._num_frames;
+      }
+    }
+
   } else {
     // Invalid PDXValue type for a texture parameter.
     return false;
@@ -120,6 +149,10 @@ from_pdx(const PDXValue &val, const DSearchPath &search_path) {
   _value = TexturePool::load_texture(filename);
 
   if (_value == nullptr) {
+    return false;
+  }
+
+  if (!validate_animations()) {
     return false;
   }
 
@@ -149,6 +182,37 @@ to_pdx(PDXValue &val, const Filename &filename) {
 /**
  *
  */
+bool MaterialParamTexture::
+validate_animations() const {
+  if (_anim_datas.empty()) {
+    return true;
+  }
+
+  if (_value == nullptr) {
+    return false;
+  }
+
+  // We can't have animations if the texture is not a 2-D array.
+  if (_value->get_texture_type() != Texture::TT_2d_texture_array) {
+    return false;
+  }
+
+  // Validate animation ranges against texture page count.
+  for (const AnimData &adata : _anim_datas) {
+    if ((adata._first_frame < 0) || (adata._first_frame >= _value->get_num_pages())) {
+      return false;
+    }
+    if ((adata._num_frames < 0) || ((adata._first_frame + adata._num_frames) > _value->get_num_pages())) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ *
+ */
 void MaterialParamTexture::
 write_datagram(BamWriter *manager, Datagram &me) {
   MaterialParamBase::write_datagram(manager, me);
@@ -159,6 +223,14 @@ write_datagram(BamWriter *manager, Datagram &me) {
   me.add_bool(_has_sampler);
   if (_has_sampler) {
     _sampler.write_datagram(me);
+  }
+  me.add_uint8(_anim_datas.size());
+  for (const AnimData &adata : _anim_datas) {
+    me.add_uint16(adata._first_frame);
+    me.add_uint16(adata._num_frames);
+    me.add_uint8(adata._fps);
+    me.add_bool(adata._loop);
+    me.add_bool(adata._interp);
   }
 }
 
@@ -197,6 +269,15 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _has_sampler = scan.get_bool();
   if (_has_sampler) {
     _sampler.read_datagram(scan, manager);
+  }
+  _anim_datas.resize(scan.get_uint8());
+  for (size_t i = 0; i < _anim_datas.size(); ++i) {
+    AnimData &adata = _anim_datas[i];
+    adata._first_frame = scan.get_uint16();
+    adata._num_frames = scan.get_uint16();
+    adata._fps = scan.get_uint8();
+    adata._loop = scan.get_bool();
+    adata._interp = scan.get_bool();
   }
 }
 

@@ -57,7 +57,6 @@ init_libparticlesystem2() {
   P2_INIT_RemapAttribute::init_type();
   P2_INIT_PositionModelHitBoxes::init_type();
   P2_INIT_AnimationIndexRandom::init_type();
-  P2_INIT_AnimationFPSRandom::init_type();
 
   ParticleEmitter2::init_type();
   BurstParticleEmitter::init_type();
@@ -104,7 +103,6 @@ init_libparticlesystem2() {
   P2_INIT_RemapAttribute::register_with_read_factory();
   P2_INIT_PositionModelHitBoxes::register_with_read_factory();
   P2_INIT_AnimationIndexRandom::register_with_read_factory();
-  P2_INIT_AnimationFPSRandom::register_with_read_factory();
 
   LinearMotionParticleFunction::register_with_read_factory();
   AngularMotionParticleFunction::register_with_read_factory();

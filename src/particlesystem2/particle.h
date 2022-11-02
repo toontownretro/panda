@@ -86,8 +86,6 @@ public:
 
   // This specifies which animation the particle should use.
   int _anim_index;
-  // The frame rate of the animation for the particle.  Can be 0 or negative.
-  PN_stdfloat _fps;
 
   LPoint3 _initial_pos;
   LVector3 _initial_vel;

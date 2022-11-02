@@ -93,3 +93,20 @@ INLINE bool MaterialParamTexture::
 has_sampler_state() const {
   return _has_sampler;
 }
+
+/**
+ * Returns the number of animations encoded in the texture.
+ */
+INLINE int MaterialParamTexture::
+get_num_animations() const {
+  return (int)_anim_datas.size();
+}
+
+/**
+ * Returns data for the nth animation encoded in the texture.
+ */
+INLINE const MaterialParamTexture::AnimData *MaterialParamTexture::
+get_animation(int n) const {
+  nassertr(n >= 0 && n < (int)_anim_datas.size(), nullptr);
+  return &_anim_datas[n];
+}
