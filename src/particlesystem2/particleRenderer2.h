@@ -90,6 +90,7 @@ private:
   PT(GeomPoints) _prim;
 
   bool _is_animated;
+  bool _rgb_modulated_by_alpha;
   CPT(RenderState) _render_state;
 
 public:

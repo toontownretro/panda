@@ -24,6 +24,7 @@
 #include "materialAttrib.h"
 #include "material.h"
 #include "materialParamBool.h"
+#include "colorBlendAttrib.h"
 
 TypeHandle ParticleRenderer2::_type_handle;
 TypeHandle SpriteParticleRenderer2::_type_handle;
@@ -34,7 +35,8 @@ TypeHandle SpriteParticleRenderer2::_type_handle;
 SpriteParticleRenderer2::
 SpriteParticleRenderer2() :
   _render_state(RenderState::make_empty()),
-  _is_animated(false)
+  _is_animated(false),
+  _rgb_modulated_by_alpha(false)
 {
 }
 
@@ -44,7 +46,8 @@ SpriteParticleRenderer2() :
 SpriteParticleRenderer2::
 SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy) :
   _render_state(copy._render_state),
-  _is_animated(copy._is_animated)
+  _is_animated(copy._is_animated),
+  _rgb_modulated_by_alpha(copy._rgb_modulated_by_alpha)
 {
 }
 
@@ -79,6 +82,12 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
       // Alright, we're animated.  We need extra vertex columns to support it.
       _is_animated = true;
     }
+  }
+  CPT(RenderState) state = _render_state->compose(mattr->get_modifier_state());
+  if (state->has_attrib(ColorBlendAttrib::get_class_slot())) {
+    // If we have an explicit color blend equation, the RGB of
+    // particles is modulated by the alpha.
+    _rgb_modulated_by_alpha = true;
   }
 
   // Setup vertex format.
@@ -145,7 +154,11 @@ update(ParticleSystem2 *system) {
     }
 
     vwriter.set_data3f(p->_pos);
-    cwriter.set_data4f(p->_color);
+    if (_rgb_modulated_by_alpha) {
+      cwriter.set_data4f(p->_color * p->_color[3]);
+    } else {
+      cwriter.set_data4f(p->_color);
+    }
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);
     if (awriter.has_column()) {
