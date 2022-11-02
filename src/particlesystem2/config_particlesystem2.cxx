@@ -70,6 +70,7 @@ init_libparticlesystem2() {
   LerpParticleFunction::init_type();
   VelocityJitterParticleFunction::init_type();
   BounceParticleFunction::init_type();
+  FollowInputParticleFunction::init_type();
 
   ParticleRenderer2::init_type();
   SpriteParticleRenderer2::init_type();
@@ -111,6 +112,7 @@ init_libparticlesystem2() {
   LerpParticleFunction::register_with_read_factory();
   VelocityJitterParticleFunction::register_with_read_factory();
   BounceParticleFunction::register_with_read_factory();
+  FollowInputParticleFunction::register_with_read_factory();
 
   BurstParticleEmitter::register_with_read_factory();
   ContinuousParticleEmitter::register_with_read_factory();

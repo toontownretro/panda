@@ -23,6 +23,7 @@ TypeHandle LifespanKillerParticleFunction::_type_handle;
 IMPLEMENT_CLASS(LerpParticleFunction);
 IMPLEMENT_CLASS(VelocityJitterParticleFunction);
 IMPLEMENT_CLASS(BounceParticleFunction);
+IMPLEMENT_CLASS(FollowInputParticleFunction);
 
 /**
  *
@@ -597,6 +598,71 @@ make_from_bam(const FactoryParams &params) {
  *
  */
 void BounceParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+FollowInputParticleFunction::
+FollowInputParticleFunction(int input) :
+  _input(input)
+{
+}
+
+/**
+ *
+ */
+void FollowInputParticleFunction::
+update(double time, double dt, ParticleSystem2 *system) {
+  LPoint3 pos = system->get_input_value(_input)->get_pos();
+
+  for (Particle &p : system->_particles) {
+    if (!p._alive) {
+      continue;
+    }
+
+    p._prev_pos = p._pos;
+    p._pos = pos;
+  }
+}
+
+/**
+ *
+ */
+void FollowInputParticleFunction::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_int8(_input);
+}
+
+/**
+ *
+ */
+void FollowInputParticleFunction::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _input = scan.get_int8();
+}
+
+/**
+ *
+ */
+TypedWritable *FollowInputParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  FollowInputParticleFunction *obj = new FollowInputParticleFunction;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void FollowInputParticleFunction::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

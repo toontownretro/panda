@@ -312,6 +312,30 @@ private:
   PN_stdfloat _bounciness;
 };
 
+/**
+ *
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 FollowInputParticleFunction : public ParticleFunction2 {
+  DECLARE_CLASS(FollowInputParticleFunction, ParticleFunction2);
+
+PUBLISHED:
+  FollowInputParticleFunction(int input);
+
+public:
+  virtual void update(double time, double dt, ParticleSystem2 *system) override;
+
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+protected:
+  FollowInputParticleFunction() = default;
+
+private:
+  int _input;
+};
+
 #include "particleFunction2.I"
 
 #endif // PARTICLEFUNCTION2_H
