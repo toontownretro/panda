@@ -196,6 +196,7 @@ set_duration(PN_stdfloat duration) {
 int ContinuousParticleEmitter::
 update(double time) {
   if (time < (double)_start_time) {
+    _last_litter = time;
     // Not active yet.
     return 0;
 
