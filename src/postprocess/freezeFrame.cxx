@@ -52,19 +52,18 @@ on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) {
 
   double now = ClockObject::get_global_clock()->get_frame_time();
 
-  if (cdata->_take_freeze_frame) {
-    //std::cout << "Draw thread take freeze frame\n";
-    // Capture a freeze frame.  We'll start rendering it next frame.
-    gsg->framebuffer_copy_to_texture(_effect->_freeze_frame_texture, 0, -1,
-      gsg->get_current_display_region(), RenderBuffer(gsg, RenderBuffer::T_color));
+  if (now < cdata->_freeze_frame_until) {
+    if (cdata->_take_freeze_frame) {
+      // Capture a freeze frame.
+      gsg->framebuffer_copy_to_texture(_effect->_freeze_frame_texture, 0, -1,
+        gsg->get_current_display_region(), RenderBuffer(gsg, RenderBuffer::T_color));
+    }
 
-  } else if (now < cdata->_freeze_frame_until) {
-    // Draw freeze frame.
-    //std::cout << "Draw thread draw frozen frame\n";
+    // Draw frozen frame.
     PostProcessPass::on_draw(cbdata, gsg);
   }
 
-  // Otherwise draw nothing.
+  // Otherwise draw nothing, we're not freeze framing.
 }
 
 /**
