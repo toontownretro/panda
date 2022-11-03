@@ -35,8 +35,8 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
   DECLARE_CLASS(MapLightingEffect, RenderEffect);
 
 PUBLISHED:
-  static CPT(RenderEffect) make(BitMask32 camera_mask, bool use_position = true);
-  static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin);
+  static CPT(RenderEffect) make(BitMask32 camera_mask, bool use_position = true, bool force_sun = false, int max_lights = 4);
+  static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin, bool force_sun = false, int max_lights = 4);
 
   const RenderState *get_current_lighting_state() const;
 
@@ -75,6 +75,9 @@ private:
   bool _use_position;
   bool _has_lighting_origin;
   LPoint3 _lighting_origin;
+
+  bool _force_sun;
+  int _max_lights;
 
   // This is the actual lighting state.
   PT(Texture) _cube_map;

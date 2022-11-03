@@ -57,7 +57,9 @@ MapLightingEffect() :
   _lighting_state(RenderState::make_empty()),
   _has_lighting_origin(false),
   _lighting_origin(0.0f, 0.0f, 0.0f),
-  _use_position(false)
+  _use_position(false),
+  _force_sun(false),
+  _max_lights(4)
 {
 }
 
@@ -65,10 +67,12 @@ MapLightingEffect() :
  * Creates a new MapLightingEffect for applying to a unique node.
  */
 CPT(RenderEffect) MapLightingEffect::
-make(BitMask32 camera_mask, bool use_position) {
+make(BitMask32 camera_mask, bool use_position, bool force_sun, int max_lights) {
   MapLightingEffect *effect = new MapLightingEffect;
   effect->_camera_mask = camera_mask;
   effect->_use_position = use_position;
+  effect->_force_sun = force_sun;
+  effect->_max_lights = max_lights;
 
   return return_new(effect);
 }
@@ -77,12 +81,14 @@ make(BitMask32 camera_mask, bool use_position) {
  * Creates a new MapLightingEffect for applying to a unique node.
  */
 CPT(RenderEffect) MapLightingEffect::
-make(BitMask32 camera_mask, const LPoint3 &lighting_origin) {
+make(BitMask32 camera_mask, const LPoint3 &lighting_origin, bool force_sun, int max_lights) {
   MapLightingEffect *effect = new MapLightingEffect;
   effect->_camera_mask = camera_mask;
   effect->_use_position = true;
   effect->_has_lighting_origin = true;
   effect->_lighting_origin = lighting_origin;
+  effect->_force_sun = force_sun;
+  effect->_max_lights = max_lights;
 
   return return_new(effect);
 }
@@ -364,17 +370,22 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   CPT(RenderAttrib) lattr = LightAttrib::make();
   int num_added_lights = 0;
   if (!mdata->_dir_light.is_empty()) {
-    RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
     bool sees_sky = false;
-    if (ret.hit) {
-      RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
-      if ((geom->get_mask() & 2) != 0) {
-        // Hit sky, sun is visible.
+    if (_force_sun) {
+      sees_sky = true;
+
+    } else {
+      RayTraceHitResult ret = rt_scene->trace_ray(pos, -mdata->_dir_light_dir, 999999, 3);
+      if (ret.hit) {
+        RayTraceGeometry *geom = rt_scene->get_geometry(ret.geom_id);
+        if ((geom->get_mask() & 2) != 0) {
+          // Hit sky, sun is visible.
+          sees_sky = true;
+        }
+      } else {
+        // No hit = sky.
         sees_sky = true;
       }
-    } else {
-      // No hit = sky.
-      sees_sky = true;
     }
 
     if (sees_sky) {
@@ -382,7 +393,7 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
       num_added_lights++;
     }
   }
-  for (size_t i = 0; num_added_lights < 4 && i < sorted_lights.size(); i++) {
+  for (size_t i = 0; num_added_lights < _max_lights && i < sorted_lights.size(); i++) {
     lattr = DCAST(LightAttrib, lattr)->add_on_light(mdata->_lights[sorted_lights[i]]);
     num_added_lights++;
   }
