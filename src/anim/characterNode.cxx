@@ -29,6 +29,10 @@ static ConfigVariableBool cull_animation
    PRC_DESC("Set this true to calculate character animation during the Cull "
             "traversal.  If this is false, the user is responsible for updating "
             "necessary characters every frame."));
+static ConfigVariableBool parallel_animation
+  ("parallel-animation", false,
+   PRC_DESC("When cull-animation is false, this controls whether or not "
+            "animations for all characters should be computed in parallel."));
 
 TypeHandle CharacterNode::_type_handle;
 
@@ -637,11 +641,19 @@ fillin(DatagramIterator &scan, BamReader *manager) {
  */
 void CharacterNode::
 animate_characters(const NodePathCollection &node_paths) {
-  JobSystem *js = JobSystem::get_global_ptr();
+  if (parallel_animation) {
+    JobSystem *js = JobSystem::get_global_ptr();
+    js->parallel_process(node_paths.get_num_paths(), [&node_paths] (int i) {
+      CharacterNode *char_node;
+      DCAST_INTO_V(char_node, node_paths.get_path(i).node());
+      char_node->update();
+    });
 
-  js->parallel_process(node_paths.get_num_paths(), [&node_paths] (int i) {
-    CharacterNode *char_node;
-    DCAST_INTO_V(char_node, node_paths.get_path(i).node());
-    char_node->update();
-  });
+  } else {
+    for (int i = 0; i < node_paths.get_num_paths(); ++i) {
+      CharacterNode *char_node;
+      DCAST_INTO_V(char_node, node_paths.get_path(i).node());
+      char_node->update();
+    }
+  }
 }
