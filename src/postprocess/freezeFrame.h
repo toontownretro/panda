@@ -38,6 +38,9 @@ private:
   // Contains the frame that we are frozen on.
 	PT(Texture) _freeze_frame_texture;
 
+  bool _took_freeze_frame;
+  bool _request_freeze_frame;
+
   // This is the data that must be cycled between pipeline stages.
   class CData : public CycleData {
   public:

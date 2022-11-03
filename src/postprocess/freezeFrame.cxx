@@ -50,15 +50,21 @@ void FreezeFrameLayer::
 on_draw(DisplayRegionDrawCallbackData *cbdata, GraphicsStateGuardian *gsg) {
   FreezeFrameEffect::CDReader cdata(_effect->_cycler);
 
+  double now = ClockObject::get_global_clock()->get_frame_time();
+
   if (cdata->_take_freeze_frame) {
+    //std::cout << "Draw thread take freeze frame\n";
     // Capture a freeze frame.  We'll start rendering it next frame.
     gsg->framebuffer_copy_to_texture(_effect->_freeze_frame_texture, 0, -1,
       gsg->get_current_display_region(), RenderBuffer(gsg, RenderBuffer::T_color));
 
-  } else {
-    // Render the frozen frame.
+  } else if (now < cdata->_freeze_frame_until) {
+    // Draw freeze frame.
+    //std::cout << "Draw thread draw frozen frame\n";
     PostProcessPass::on_draw(cbdata, gsg);
   }
+
+  // Otherwise draw nothing.
 }
 
 /**
@@ -76,7 +82,7 @@ setup() {
   quad.set_shader_input("freezeFrameSampler", _effect->_freeze_frame_texture);
 
   // Not active until we actually need to freeze frame.
-  _region->set_active(false);
+  //_region->set_active(false);
 }
 
 /**
@@ -87,28 +93,39 @@ update() {
   PostProcessPass::update();
 
   bool turn_off_capture = false;
+  bool turn_on_capture = false;
 
   {
     FreezeFrameEffect::CDReader cdata(_effect->_cycler);
-    if (cdata->_freeze_frame_until <= ClockObject::get_global_clock()->get_frame_time()) {
-      // Not freeze framing.
-      _region->set_active(false);
+    double now = ClockObject::get_global_clock()->get_frame_time();
+    if (now < cdata->_freeze_frame_until) {
+      if (_effect->_took_freeze_frame) {
+        // We took a freeze frame last frame, so disable the
+        // freeze capture and render the frozen frame until
+        // time expires.
+        turn_off_capture = true;
+        _effect->_took_freeze_frame = false;
+        assert(cdata->_take_freeze_frame);
 
-    } else if (_region->is_active()) {
-      // If the display region is active at this point, we took a freeze frame
-      // last frame, and we can hold the current frame.
-      turn_off_capture = cdata->_take_freeze_frame;
-
-    } else if (cdata->_take_freeze_frame) {
-      // Enable the display region to capture the freeze frame and start
-      // rendering it.
-      _region->set_active(true);
+      } else if (_effect->_request_freeze_frame) {
+        // The user requested a freeze frame.  Enable freeze frame
+        // capturing and note that we took a freeze frame this frame.
+        turn_on_capture = true;
+        _effect->_request_freeze_frame = false;
+        _effect->_took_freeze_frame = true;
+      }
     }
   }
 
   if (turn_off_capture) {
+    //std::cout << "Turning off capture\n";
     FreezeFrameEffect::CDWriter cdata(_effect->_cycler);
     cdata->_take_freeze_frame = false;
+
+  } else if (turn_on_capture) {
+    //std::cout << "Turning on capture\n";
+    FreezeFrameEffect::CDWriter cdata(_effect->_cycler);
+    cdata->_take_freeze_frame = true;
   }
 }
 
@@ -119,7 +136,9 @@ IMPLEMENT_CLASS(FreezeFrameEffect);
  */
 FreezeFrameEffect::
 FreezeFrameEffect(PostProcess *pp) :
-  PostProcessEffect(pp, "freeze-frame-render")
+  PostProcessEffect(pp, "freeze-frame-render"),
+  _took_freeze_frame(false),
+  _request_freeze_frame(false)
 {
   _freeze_frame_texture = new Texture("freeze-frame");
   _freeze_frame_texture->set_match_framebuffer_format(true);
@@ -144,6 +163,8 @@ freeze_frame(double duration) {
 	if (duration == 0.0) {
 		cdata->_freeze_frame_until = 0.0;
 		cdata->_take_freeze_frame = false;
+    _took_freeze_frame = false;
+    _request_freeze_frame = false;
 
 	} else {
 		double now = ClockObject::get_global_clock()->get_frame_time();
@@ -152,7 +173,8 @@ freeze_frame(double duration) {
 
 		} else {
 			cdata->_freeze_frame_until = now + duration;
-			cdata->_take_freeze_frame = true;
+      _took_freeze_frame = false;
+      _request_freeze_frame = true;
 		}
 	}
 }
