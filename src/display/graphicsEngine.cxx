@@ -1552,6 +1552,17 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
         PT(DisplayRegion) dr = win->get_active_display_region(i);
         if (dr != nullptr) {
           all_regions.push_back(dr);
+
+          // Force the scene root to have all of it's bounding information
+          // up-to-date before we start traversing in parallel.
+          NodePath cam = dr->get_camera();
+          if (!cam.is_empty()) {
+            NodePath top = cam.get_top(current_thread);
+            if (!top.is_empty()) {
+              PandaNodePipelineReader reader(top.node(), current_thread);
+              reader.check_cached(true);
+            }
+          }
         }
       }
     }
