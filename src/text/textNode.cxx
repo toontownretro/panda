@@ -1040,6 +1040,8 @@ CData() {
  */
 TextNode::CData::
 CData(const CData &copy) :
+  _text(copy._text),
+  _wtext(copy._wtext),
   _card_texture(copy._card_texture),
   _frame_color(copy._frame_color),
   _card_color(copy._card_color),
