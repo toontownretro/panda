@@ -51,6 +51,9 @@ public:
                                const GeomVertexAnimationSpec &anim_spec,
                                ShaderSetup &setup) = 0;
 
+  bool has_additive_blend(const RenderState *state) const;
+  bool has_modulate_blend(const RenderState *state) const;
+
 protected:
   INLINE ShaderBase(const std::string &name);
 

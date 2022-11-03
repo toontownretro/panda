@@ -64,6 +64,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
+  static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -88,6 +89,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (fog != nullptr) {
       setup.set_pixel_shader_combo(IN_FOG, 1);
       setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      if (has_additive_blend(state)) {
+        setup.set_spec_constant(IN_BLEND_MODE, 2);
+      } else if (has_modulate_blend(state)) {
+        setup.set_spec_constant(IN_BLEND_MODE, 1);
+      }
     }
   }
 

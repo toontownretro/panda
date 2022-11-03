@@ -89,6 +89,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_SSBUMP("SSBUMP");
   static const CPT_InternalName IN_NUM_CASCADES("NUM_CASCADES");
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
+  static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -122,6 +123,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (fog != nullptr) {
       setup.set_pixel_shader_combo(IN_FOG, 1);
       setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
+      if (has_additive_blend(state)) {
+        setup.set_spec_constant(IN_BLEND_MODE, 2);
+      } else if (has_modulate_blend(state)) {
+        setup.set_spec_constant(IN_BLEND_MODE, 1);
+      }
     }
   }
 
