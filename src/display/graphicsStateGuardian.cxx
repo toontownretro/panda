@@ -2689,6 +2689,11 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
           bool force, Thread *current_thread) {
   static GeomVertexArrayDataHandle s_handles[max_array_handles];
 
+  const GeomVertexAnimationSpec &anim_spec = vdata->get_format()->get_animation();
+  if (anim_spec.get_animation_type() != GeomVertexAnimationSpec::AT_none) {
+    vdata = vdata->animate_vertices(true, current_thread);
+  }
+
   GeomVertexDataPipelineReader data_reader(vdata, current_thread);
   int num_handles = (int)data_reader._cdata->_arrays.size();
   for (int i = 0; i < num_handles; ++i) {

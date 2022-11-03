@@ -66,14 +66,14 @@ munge_geom(GraphicsStateGuardianBase *gsg, GeomMunger *munger,
     // hardware--then we have to calculate that animation now.
     bool cpu_animated = false;
 
-    if (anim_spec.get_animation_type() != GeomEnums::AT_none) {
-      const GeomVertexData *animated_vertices =
-        _munged_data->animate_vertices(force, current_thread);
-      if (animated_vertices != _munged_data) {
-        cpu_animated = true;
-        std::swap(_munged_data, animated_vertices);
-      }
-    }
+    //if (anim_spec.get_animation_type() != GeomEnums::AT_none) {
+    //  const GeomVertexData *animated_vertices =
+    //    _munged_data->animate_vertices(force, current_thread);
+    //  if (animated_vertices != _munged_data) {
+    //    cpu_animated = true;
+    //    std::swap(_munged_data, animated_vertices);
+    //  }
+    //}
 
 #ifndef NDEBUG
     if (show_vertex_animation) {
