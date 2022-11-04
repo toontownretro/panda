@@ -170,7 +170,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
 
     // Hack until we figure out materials with idential names.
-    if (shader != nullptr) {
+    if (shader != nullptr && material != nullptr && !material->has_tag("ignore_lightmap_hack")) {
       TypeHandle shader_type = shader->get_type();
 
       const TextureAttrib *tattr;
