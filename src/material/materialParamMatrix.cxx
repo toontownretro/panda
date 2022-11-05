@@ -63,7 +63,7 @@ from_pdx(const PDXValue &val, const DSearchPath &search_path) {
     }
 
     LVecBase3 scale(1.0f, 1.0f, 1.0f);
-    LVecBase3 shear, translate, hpr;
+    LVecBase3 shear(0.0f), translate(0.0f), hpr(0.0f);
 
     if (element->has_attribute("scale")) {
       const PDXValue &scalev = element->get_attribute_value("scale");
