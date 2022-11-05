@@ -51,7 +51,7 @@ create_modifier_state() {
   }
   if (_material->_attrib_flags & Material::F_color_scale) {
     _modifier_state = _modifier_state->set_attrib(
-      ColorScaleAttrib::make(_material->_color));
+      ColorScaleAttrib::make(_material->_color_scale));
   }
   if (_material->_attrib_flags & Material::F_alpha_test) {
     _modifier_state = _modifier_state->set_attrib(
