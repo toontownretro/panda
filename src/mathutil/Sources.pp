@@ -50,7 +50,8 @@
     triangulator.h triangulator.I \
     triangulator3.h triangulator3.I \
     triangulatorDelaunay.h triangulatorDelaunay.I \
-    unionBoundingVolume.h unionBoundingVolume.I
+    unionBoundingVolume.h unionBoundingVolume.I \
+    winding.h winding.I
 
   #define COMPOSITE_SOURCES \
     boundingHexahedron.cxx boundingLine.cxx \
@@ -87,7 +88,8 @@
     triangulator.cxx \
     triangulator3.cxx \
     triangulatorDelaunay.cxx \
-    unionBoundingVolume.cxx
+    unionBoundingVolume.cxx \
+    winding.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]

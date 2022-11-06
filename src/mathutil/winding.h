@@ -19,12 +19,9 @@
 #include "luse.h"
 #include "plane.h"
 #include "referenceCount.h"
-#include "thread.h"
 #include "vector_stdfloat.h"
 #include "vector_int.h"
 #include "mathutil_misc.h"
-#include "config_mapbuilder.h"
-#include "threadManager.h"
 
 enum PlaneSide {
   PS_cross = -2, // Crosses the plane.
@@ -101,7 +98,7 @@ private:
 
 BEGIN_PUBLISH
 typedef BaseWinding<MAX_WINDING_POINTS> Winding;
-EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_MAPBUILDER, EXPTP_PANDA_MAPBUILDER, BaseWinding<MAX_WINDING_POINTS>);
+EXPORT_TEMPLATE_CLASS(EXPCL_PANDA_MATHUTIL, EXPTP_PANDA_MATHUTIL, BaseWinding<MAX_WINDING_POINTS>);
 END_PUBLISH
 
 

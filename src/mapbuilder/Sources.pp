@@ -1,6 +1,6 @@
 #define BUILD_DIRECTORY $[and $[HAVE_MAPBUILDER], $[HAVE_OIDN]]
 
-#define LOCAL_LIBS map pgraph pphysics grutil raytrace shader putil
+#define LOCAL_LIBS map pgraph pphysics grutil raytrace shader putil mathutil
 
 #define USE_PACKAGES oidn steam_audio
 
@@ -25,8 +25,7 @@
     visClusterSampler.h visClusterSampler.I \
     //visTile.h visTile.I \
     //voxelOctree.h voxelOctree.I \
-    //voxelSpace.h voxelSpace.I \
-    winding.h winding.I
+    //voxelSpace.h voxelSpace.I
 
   #define COMPOSITE_SOURCES \
     //area.cxx \
@@ -41,8 +40,7 @@
     visClusterSampler.cxx \
     //visTile.cxx \
     //voxelOctree.cxx \
-    //voxelSpace.cxx \
-    winding.cxx
+    //voxelSpace.cxx
 
   #define INSTALL_HEADERS \
     $[SOURCES]
