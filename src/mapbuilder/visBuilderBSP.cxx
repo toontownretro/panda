@@ -16,6 +16,7 @@
 #include "mapBuilder.h"
 #include "keyValues.h"
 #include "threadManager.h"
+#include "config_mapbuilder.h"
 
 #include <stack>
 
