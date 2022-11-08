@@ -168,6 +168,7 @@ blend_triangle(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c,
     // Close enough to be fully in point B.
     weights[1] = 1.0f;
     weights[0] = weights[2] = 0.0f;
+    return;
   }
 
   if ((c - point).length_squared() < equal_epsilon) {
