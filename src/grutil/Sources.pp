@@ -4,7 +4,7 @@
 #begin lib_target
   #define TARGET grutil
   #define LOCAL_LIBS \
-    display text pgraph gobj linmath putil movies audio
+    display text pgraph gobj linmath putil movies audio mathutil
 
   #define BUILDING_DLL BUILDING_PANDA_GRUTIL
 
@@ -12,6 +12,7 @@
     pipeOcclusionCullTraverser.I pipeOcclusionCullTraverser.h \
     cardMaker.I cardMaker.h \
     config_grutil.h \
+    decalProjector.h decalProjector.I \
     movieTexture.I movieTexture.h \
     fisheyeMaker.I fisheyeMaker.h \
     frameRateMeter.I frameRateMeter.h \
@@ -34,6 +35,7 @@
     movieTexture.cxx \
     fisheyeMaker.cxx \
     config_grutil.cxx \
+    decalProjector.cxx \
     frameRateMeter.cxx \
     meshDrawer.cxx \
     meshDrawer2D.cxx \
@@ -51,6 +53,7 @@
 
   #define INSTALL_HEADERS \
     cardMaker.I cardMaker.h \
+    decalProjector.I decalProjector.h \
     movieTexture.I movieTexture.h \
     fisheyeMaker.I fisheyeMaker.h \
     frameRateMeter.I frameRateMeter.h \
