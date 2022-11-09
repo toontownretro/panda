@@ -19,6 +19,7 @@
     meshDrawer.I meshDrawer.h \
     meshDrawer2D.I meshDrawer2D.h \
     geoMipTerrain.I geoMipTerrain.h \
+    geomTriangleOctree.I geomTriangleOctree.h \
     sceneGraphAnalyzerMeter.I sceneGraphAnalyzerMeter.h \
     heightfieldTesselator.I heightfieldTesselator.h \
     shaderTerrainMesh.I shaderTerrainMesh.h \
@@ -40,6 +41,7 @@
     meshDrawer.cxx \
     meshDrawer2D.cxx \
     geoMipTerrain.cxx \
+    geomTriangleOctree.cxx \
     sceneGraphAnalyzerMeter.cxx \
     heightfieldTesselator.cxx \
     shaderTerrainMesh.cxx \
@@ -60,6 +62,7 @@
     meshDrawer.I meshDrawer.h \
     meshDrawer2D.I meshDrawer2D.h \
     geoMipTerrain.I geoMipTerrain.h \
+    geomTriangleOctree.I geomTriangleOctree.h \
     sceneGraphAnalyzerMeter.I sceneGraphAnalyzerMeter.h \
     heightfieldTesselator.I heightfieldTesselator.h \
     shaderTerrainMesh.I shaderTerrainMesh.h \

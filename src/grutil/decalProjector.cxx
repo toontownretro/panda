@@ -22,6 +22,8 @@
 #include "geomTristrips.h"
 #include "geomVertexWriter.h"
 
+DecalProjector::GeomOctrees DecalProjector::_octrees;
+
 /**
  *
  */
@@ -112,74 +114,130 @@ project(const Geom *geom, const TransformState *net_transform) {
     return false;
   }
 
-  const GeomVertexData *vdata = geom->get_vertex_data();
-  for (int i = 0; i < geom->get_num_primitives(); ++i) {
-    const GeomPrimitive *prim = geom->get_primitive(i);
-    // We can only put decals on polygons (triangles and tristrips).
-    //std::cout << prim->get_type() << "\n";
-    if (prim->get_primitive_type() != GeomEnums::PT_polygons) {
-      continue;
+  // See if we have an octree for this Geom.  If so, we can use
+  // it to quickly filter down to the set of triangles near the projector
+  // bounding box.
+  GeomOctrees::const_iterator it = _octrees.find(geom);
+  if (it != _octrees.end()) {
+    // Move the projector bounding-box into the space of the Geom, so we can
+    // use it to query the octree.
+    PT(BoundingBox) projector_geom_space_bbox = DCAST(BoundingBox, _projector_world_bbox->make_copy());
+    const LMatrix4 *inverse_mat = net_transform->get_inverse_mat();
+    if (inverse_mat != nullptr) {
+      projector_geom_space_bbox->xform(*inverse_mat);
     }
+    GeomTriangleOctree::OctreeNode *root = (*it).second->get_root();
+    pset<int> clipped_triangles;
+    return r_project_octree(geom, root, net_transform, projector_geom_space_bbox, clipped_triangles, (*it).second);
 
-    TypeHandle prim_type = prim->get_type();
+  } else {
+    // We don't have an octree acceleration structure, so we have to consider
+    // every triangle of the Geom.
 
-    if (prim_type == GeomTriangles::get_class_type()) {
-
-      for (int j = 0; j < prim->get_num_primitives(); j++) {
-        int start = prim->get_primitive_start(j);
-        if (project(vdata, prim->get_vertex(start), prim->get_vertex(start + 1), prim->get_vertex(start + 2), net_transform)) {
-          any = true;
-        }
+    const GeomVertexData *vdata = geom->get_vertex_data();
+    for (int i = 0; i < geom->get_num_primitives(); ++i) {
+      const GeomPrimitive *prim = geom->get_primitive(i);
+      // We can only put decals on polygons (triangles and tristrips).
+      //std::cout << prim->get_type() << "\n";
+      if (prim->get_primitive_type() != GeomEnums::PT_polygons) {
+        continue;
       }
 
-    } else if (prim_type == GeomTristrips::get_class_type()) {
+      TypeHandle prim_type = prim->get_type();
 
-      // Extract triangles from tristrip indices.
+      if (prim_type == GeomTriangles::get_class_type()) {
 
-      CPTA_int ends = prim->get_ends();
-      int num_vertices = prim->get_num_vertices();
-      int num_unused = prim->get_num_unused_vertices_per_primitive();
-
-      int vi = -num_unused;
-      int li = 0;
-      while (li < (int)ends.size()) {
-        vi += num_unused;
-        int end = ends[li];
-        nassertr(vi + 2 <= end, false);
-        int v0 = prim->get_vertex(vi);
-        ++vi;
-        int v1 = prim->get_vertex(vi);
-        ++vi;
-        bool reversed = false;
-        while (vi < end) {
-          int v2 = prim->get_vertex(vi);
-          ++vi;
-          if (reversed) {
-            if (v0 != v1 && v0 != v2 && v1 != v2) {
-              if (project(vdata, v0, v2, v1, net_transform)) {
-                any = true;
-              }
-            }
-
-            reversed = false;
-          } else {
-            if (v0 != v1 && v0 != v2 && v1 != v2) {
-              if (project(vdata, v0, v1, v2, net_transform)) {
-                any = true;
-              }
-            }
-            reversed = true;
+        for (int j = 0; j < prim->get_num_primitives(); j++) {
+          int start = prim->get_primitive_start(j);
+          if (project(vdata, prim->get_vertex(start), prim->get_vertex(start + 1), prim->get_vertex(start + 2), net_transform)) {
+            any = true;
           }
-          v0 = v1;
-          v1 = v2;
         }
-        ++li;
-      }
 
-      nassertr(vi == num_vertices, false);
+      } else if (prim_type == GeomTristrips::get_class_type()) {
+
+        // Extract triangles from tristrip indices.
+
+        CPTA_int ends = prim->get_ends();
+        int num_vertices = prim->get_num_vertices();
+        int num_unused = prim->get_num_unused_vertices_per_primitive();
+
+        int vi = -num_unused;
+        int li = 0;
+        while (li < (int)ends.size()) {
+          vi += num_unused;
+          int end = ends[li];
+          nassertr(vi + 2 <= end, false);
+          int v0 = prim->get_vertex(vi);
+          ++vi;
+          int v1 = prim->get_vertex(vi);
+          ++vi;
+          bool reversed = false;
+          while (vi < end) {
+            int v2 = prim->get_vertex(vi);
+            ++vi;
+            if (reversed) {
+              if (v0 != v1 && v0 != v2 && v1 != v2) {
+                if (project(vdata, v0, v2, v1, net_transform)) {
+                  any = true;
+                }
+              }
+
+              reversed = false;
+            } else {
+              if (v0 != v1 && v0 != v2 && v1 != v2) {
+                if (project(vdata, v0, v1, v2, net_transform)) {
+                  any = true;
+                }
+              }
+              reversed = true;
+            }
+            v0 = v1;
+            v1 = v2;
+          }
+          ++li;
+        }
+
+        nassertr(vi == num_vertices, false);
+      }
     }
   }
 
+  return any;
+}
+
+/**
+ *
+ */
+bool DecalProjector::
+r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
+                 const TransformState *net_transform, const BoundingBox *projector_bbox,
+                 pset<int> &clipped_triangles, const GeomTriangleOctree *tree) {
+  if (!node->_bounds->contains(projector_bbox)) {
+    return false;
+  }
+
+  if (node->is_leaf()) {
+    bool any = false;
+    for (int triangle_index : node->_triangles) {
+      if (clipped_triangles.find(triangle_index) != clipped_triangles.end()) {
+        continue;
+      }
+      const int *vertices = tree->get_triangle(triangle_index);
+      if (project(geom->get_vertex_data(), vertices[0], vertices[1], vertices[2], net_transform)) {
+        any = true;
+      }
+      clipped_triangles.insert(triangle_index);
+    }
+    return any;
+  }
+
+  bool any = false;
+  for (int i = 0; i < 8; ++i) {
+    if (r_project_octree(geom, node->_children[i], net_transform, projector_bbox, clipped_triangles, tree)) {
+      any = true;
+    }
+  }
   return any;
 }
 
@@ -195,7 +253,7 @@ project(const Geom *geom, const TransformState *net_transform) {
  */
 bool DecalProjector::
 project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformState *net_transform) {
-  Winding tri_winding;
+  DecalWinding tri_winding;
 
   bool ident_transform = net_transform->is_identity();
   const LMatrix4 &net_mat = net_transform->get_mat();
@@ -226,7 +284,7 @@ project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformStat
   tri_winding.add_point(p3);
 
   LVector3 triangle_normal = -tri_winding.get_plane().get_normal();
-  if (triangle_normal.dot(_projector_world_forward) <= 0.0f) {
+  if (triangle_normal.dot(_projector_world_forward) < 0.1f) {
     // If triangle is exactly perpendicular or facing away from decal
     // normal, don't create a fragment.
     return false;
@@ -253,7 +311,7 @@ project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformStat
   // Now clip the triangle to each plane.
   bool valid = true;
 
-  Winding fragment_winding(tri_winding);
+  DecalWinding fragment_winding(tri_winding);
 
   for (int i = 0; i < 6; ++i) {
     fragment_winding = fragment_winding.chop(_box_planes[i]);
@@ -558,4 +616,31 @@ setup_coordinate_space() {
 
   _projector_world_bbox = new BoundingBox(_projector_mins, _projector_maxs);
   _projector_world_bbox->xform(projector_net_mat);
+}
+
+/**
+ *
+ */
+void DecalProjector::
+set_geom_octree(const Geom *geom, GeomTriangleOctree *octree) {
+  _octrees.insert({ geom, octree });
+}
+
+/**
+ *
+ */
+void DecalProjector::
+clear_geom_octree(const Geom *geom) {
+  GeomOctrees::const_iterator it = _octrees.find(geom);
+  if (it != _octrees.end()) {
+    _octrees.erase(it);
+  }
+}
+
+/**
+ *
+ */
+void DecalProjector::
+clear_geom_octrees() {
+  _octrees.clear();
 }

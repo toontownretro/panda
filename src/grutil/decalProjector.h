@@ -26,6 +26,10 @@
 #include "geomVertexData.h"
 #include "geom.h"
 #include "boundingBox.h"
+#include "pmap.h"
+#include "pointerTo.h"
+#include "geomTriangleOctree.h"
+#include "pset.h"
 
 // There are multiple coordinate spaces we're dealing with
 // here.
@@ -43,6 +47,8 @@
 // transform the clipped triangles by the inverse of the decal coordinate
 // space.
 //
+
+typedef BaseWinding<9> DecalWinding;
 
 /**
  *
@@ -73,8 +79,17 @@ PUBLISHED:
 
   PT(PandaNode) generate();
 
+  static void set_geom_octree(const Geom *geom, GeomTriangleOctree *octree);
+  static void clear_geom_octree(const Geom *geom);
+  static void clear_geom_octrees();
+
 private:
   bool r_project(PandaNode *node, const TransformState *net_transform);
+
+  bool r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
+                        const TransformState *net_transform, const BoundingBox *projector_bbox,
+                        pset<int> &clipped_triangles,
+                        const GeomTriangleOctree *tree);
 
   LVecBase3 calc_barycentric_coordinates(const LPoint3 &a, const LPoint3 &b,
                                          const LPoint3 &c, const LPoint3 &pos) const;
@@ -92,7 +107,7 @@ private:
     };
     OrigVertex _orig_vertices[3];
 
-    Winding _winding;
+    DecalWinding _winding;
   };
   pvector<DecalFragment> _fragments;
 
@@ -119,6 +134,9 @@ private:
 
   LPoint3 _projector_world_center;
   LPoint3 _projector_world_extents;
+
+  typedef pflat_hash_map<const Geom *, PT(GeomTriangleOctree), pointer_hash> GeomOctrees;
+  static GeomOctrees _octrees;
 };
 
 #include "decalProjector.I"
