@@ -29,12 +29,12 @@ bool DecalProjector::
 project(const NodePath &root) {
   setup_coordinate_space();
 
-  LMatrix4 parent_net;
   NodePath parent = root.get_parent();
+  CPT(TransformState) parent_net;
   if (!parent.is_empty()) {
-    parent_net = parent.get_net_transform()->get_mat();
+    parent_net = parent.get_net_transform();
   } else {
-    parent_net = LMatrix4::ident_mat();
+    parent_net = TransformState::make_identity();
   }
 
   return r_project(root.node(), parent_net);
@@ -44,10 +44,22 @@ project(const NodePath &root) {
  *
  */
 bool DecalProjector::
-r_project(PandaNode *node, const LMatrix4 &net_transform) {
+r_project(PandaNode *node, const TransformState *net_transform) {
   bool any = false;
 
-  LMatrix4 this_net_transform = node->get_transform()->get_mat() * net_transform;
+  CPT(GeometricBoundingVolume) bounds;
+  if (!net_transform->is_identity()) {
+    PT(GeometricBoundingVolume) net_bounds = node->get_bounds()->make_copy()->as_geometric_bounding_volume();
+    net_bounds->xform(net_transform->get_mat());
+    bounds = net_bounds;
+  } else {
+    bounds = node->get_bounds()->as_geometric_bounding_volume();
+  }
+  if (!_projector_world_bbox->contains(bounds)) {
+    return false;
+  }
+
+  CPT(TransformState) this_net_transform = net_transform->compose(node->get_transform());
 
   if (node->is_geom_node()) {
     if (project(DCAST(GeomNode, node), this_net_transform)) {
@@ -60,6 +72,7 @@ r_project(PandaNode *node, const LMatrix4 &net_transform) {
       any = true;
     }
   }
+
   return any;
 }
 
@@ -67,7 +80,7 @@ r_project(PandaNode *node, const LMatrix4 &net_transform) {
  *
  */
 bool DecalProjector::
-project(GeomNode *geom_node, const LMatrix4 &net_transform) {
+project(GeomNode *geom_node, const TransformState *net_transform) {
   bool any = false;
   for (int i = 0; i < geom_node->get_num_geoms(); ++i) {
     if (project(geom_node->get_geom(i), net_transform)) {
@@ -81,10 +94,23 @@ project(GeomNode *geom_node, const LMatrix4 &net_transform) {
  *
  */
 bool DecalProjector::
-project(const Geom *geom, const LMatrix4 &net_transform) {
+project(const Geom *geom, const TransformState *net_transform) {
   bool any = false;
 
   //PT(Geom) dgeom = geom->decompose();
+
+  CPT(GeometricBoundingVolume) bounds;
+  if (!net_transform->is_identity()) {
+    PT(GeometricBoundingVolume) net_bounds = geom->get_bounds()->make_copy()->as_geometric_bounding_volume();
+    net_bounds->xform(net_transform->get_mat());
+    bounds = net_bounds;
+  } else {
+    bounds = geom->get_bounds()->as_geometric_bounding_volume();
+  }
+
+  if (!_projector_world_bbox->contains(bounds)) {
+    return false;
+  }
 
   const GeomVertexData *vdata = geom->get_vertex_data();
   for (int i = 0; i < geom->get_num_primitives(); ++i) {
@@ -168,18 +194,36 @@ project(const Geom *geom, const LMatrix4 &net_transform) {
  * decal bounding box.
  */
 bool DecalProjector::
-project(const GeomVertexData *vdata, int v1, int v2, int v3, const LMatrix4 &net_transform) {
+project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformState *net_transform) {
   Winding tri_winding;
+
+  bool ident_transform = net_transform->is_identity();
+  const LMatrix4 &net_mat = net_transform->get_mat();
 
   int vertices[3] = { v1, v2, v3 };
 
   GeomVertexReader vreader(vdata, InternalName::get_vertex());
+
   vreader.set_row(v1);
-  tri_winding.add_point(net_transform.xform_point(vreader.get_data3f()));
+  LPoint3 p1 = vreader.get_data3f();
+  if (!ident_transform) {
+    p1 = net_mat.xform_point(p1);
+  }
+  tri_winding.add_point(p1);
+
   vreader.set_row(v2);
-  tri_winding.add_point(net_transform.xform_point(vreader.get_data3f()));
+  LPoint3 p2 = vreader.get_data3f();
+  if (!ident_transform) {
+    p2 = net_mat.xform_point(p2);
+  }
+  tri_winding.add_point(p2);
+
   vreader.set_row(v3);
-  tri_winding.add_point(net_transform.xform_point(vreader.get_data3f()));
+  LPoint3 p3 = vreader.get_data3f();
+  if (!ident_transform) {
+    p3 = net_mat.xform_point(p3);
+  }
+  tri_winding.add_point(p3);
 
   LVector3 triangle_normal = -tri_winding.get_plane().get_normal();
   if (triangle_normal.dot(_projector_world_forward) <= 0.0f) {
@@ -189,7 +233,7 @@ project(const GeomVertexData *vdata, int v1, int v2, int v3, const LMatrix4 &net
   }
 
   LPoint3 tri_mins(1e9);
-  LPoint3 tri_maxs(1e9);
+  LPoint3 tri_maxs(-1e9);
   tri_mins = tri_mins.fmin(tri_winding.get_point(0));
   tri_mins = tri_mins.fmin(tri_winding.get_point(1));
   tri_mins = tri_mins.fmin(tri_winding.get_point(2));
@@ -228,31 +272,51 @@ project(const GeomVertexData *vdata, int v1, int v2, int v3, const LMatrix4 &net
   frag._orig_vertices[1]._pos = tri_winding.get_point(1);
   frag._orig_vertices[2]._pos = tri_winding.get_point(2);
 
-  for (int i = 0; i < 3; ++i) {
-    int vtx_idx = vertices[i];
-
-    vreader.set_column(InternalName::get_normal());
-    if (vreader.has_column()) {
-      vreader.set_row(vtx_idx);
-      frag._orig_vertices[i]._normal = net_transform.xform_vec(vreader.get_data3f());
-    } else {
+  vreader.set_column(InternalName::get_normal());
+  if (vreader.has_column()) {
+    for (int i = 0; i < 3; ++i) {
+      vreader.set_row(vertices[i]);
+      if (!ident_transform) {
+        frag._orig_vertices[i]._normal = net_mat.xform_vec(vreader.get_data3f());
+      } else {
+        frag._orig_vertices[i]._normal = vreader.get_data3f();
+      }
+    }
+  } else {
+    for (int i = 0; i < 3; ++i) {
       frag._orig_vertices[i]._normal = LVector3::forward();
     }
+  }
 
-    vreader.set_column(InternalName::get_tangent());
-    if (vreader.has_column()) {
-      vreader.set_row(vtx_idx);
-      frag._orig_vertices[i]._tangent = net_transform.xform_vec(vreader.get_data3f());
-    } else {
+  vreader.set_column(InternalName::get_tangent());
+  if (vreader.has_column()) {
+    for (int i = 0; i < 3; ++i) {
+      vreader.set_row(vertices[i]);
+      if (!ident_transform) {
+        frag._orig_vertices[i]._tangent = net_mat.xform_vec(vreader.get_data3f());
+      } else {
+        frag._orig_vertices[i]._tangent = vreader.get_data3f();
+      }
+    }
+  } else {
+    for (int i = 0; i < 3; ++i) {
       frag._orig_vertices[i]._tangent = LVector3::right();
     }
+  }
 
-    vreader.set_column(InternalName::get_binormal());
-    if (vreader.has_column()) {
-      vreader.set_row(vtx_idx);
-      frag._orig_vertices[i]._binormal = net_transform.xform_vec(vreader.get_data3f());
-    } else {
-      frag._orig_vertices[i]._tangent = LVector3::up();
+  vreader.set_column(InternalName::get_binormal());
+  if (vreader.has_column()) {
+    for (int i = 0; i < 3; ++i) {
+      vreader.set_row(vertices[i]);
+      if (!ident_transform) {
+        frag._orig_vertices[i]._binormal = net_mat.xform_vec(vreader.get_data3f());
+      } else {
+        frag._orig_vertices[i]._binormal = vreader.get_data3f();
+      }
+    }
+  } else {
+    for (int i = 0; i < 3; ++i) {
+      frag._orig_vertices[i]._binormal = LVector3::up();
     }
   }
 
@@ -352,13 +416,21 @@ generate() {
   GeomVertexWriter biwriter(vdata, InternalName::get_binormal());
   GeomVertexWriter tawriter(vdata, InternalName::get_tangent());
 
+  LVecBase2 projector_size = _projector_maxs.get_xz() - _projector_mins.get_xz();
+
+  bool ident_decal_mat = _decal_inv_net_mat.is_identity();
+
   for (const DecalFragment &frag : _fragments) {
     // Generate a trifan-like thing from the winding.  Each decal fragment is
     // guaranteed to be a planar polygon, because it's generated by clipping a
     // triangle.
 
     for (int i = 0; i < frag._winding.get_num_points(); ++i) {
-      vwriter.add_data3f(_decal_inv_net_mat.xform_point(frag._winding.get_point(i)));
+      if (!ident_decal_mat) {
+        vwriter.add_data3f(_decal_inv_net_mat.xform_point(frag._winding.get_point(i)));
+      } else {
+        vwriter.add_data3f(frag._winding.get_point(i));
+      }
 
       LVecBase3 bary = calc_barycentric_coordinates(
         frag._orig_vertices[0]._pos, frag._orig_vertices[1]._pos,
@@ -368,37 +440,50 @@ generate() {
                         frag._orig_vertices[1]._normal * bary[1] +
                         frag._orig_vertices[2]._normal * bary[2];
       normal.normalize();
-      nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
+      if (!ident_decal_mat) {
+        nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
+      } else {
+        nwriter.add_data3f(normal);
+      }
 
       LVector3 tangent = frag._orig_vertices[0]._tangent * bary[0] +
                          frag._orig_vertices[1]._tangent * bary[1] +
                          frag._orig_vertices[2]._tangent * bary[2];
       tangent.normalize();
-      tawriter.add_data3f(_decal_inv_net_mat.xform_vec(tangent));
+      if (!ident_decal_mat) {
+        tawriter.add_data3f(_decal_inv_net_mat.xform_vec(tangent));
+      } else {
+        tawriter.add_data3f(tangent);
+      }
 
       LVector3 binormal = frag._orig_vertices[0]._binormal * bary[0] +
                           frag._orig_vertices[1]._binormal * bary[1] +
                           frag._orig_vertices[2]._binormal * bary[2];
       binormal.normalize();
-      biwriter.add_data3f(_decal_inv_net_mat.xform_vec(binormal));
+      if (!ident_decal_mat) {
+        biwriter.add_data3f(_decal_inv_net_mat.xform_vec(binormal));
+      } else {
+        biwriter.add_data3f(binormal);
+      }
 
       // To calculate texture coordinates, we move the vertex position into
       // projector-space, and use the X and Z distances from the lower-left
       // corner of the projector bounds as texture coordinates, then
       // transform it by the user-specified UV matrix.
 
-      LVecBase2 projector_size = _projector_maxs.get_xz() - _projector_mins.get_xz();
-
       LPoint2 projector_space_pos = _projector_inv_net_mat.xform_point(frag._winding.get_point(i)).get_xz();
-      projector_space_pos += _projector_mins.get_xz();
+      projector_space_pos -= _projector_mins.get_xz();
       LVecBase2 uv = projector_space_pos;
-      uv[0] /= -projector_size[0];
-      uv[1] /= -projector_size[1];
-      uv[1] = 1.0f - uv[1];
+      uv[0] /= projector_size[0];
+      uv[0] = 1.0f - uv[0];
+      uv[1] /= projector_size[1];
+      //uv[1] = 1.0f - uv[1];
 
       //std::cout << "uv: " << uv << "\n";
 
-      uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 0, 0)).get_xy();
+      if (!_decal_uv_transform->is_identity()) {
+        uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 0, 0)).get_xy();
+      }
 
       twriter.add_data2f(uv);
     }

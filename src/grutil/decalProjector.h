@@ -63,9 +63,9 @@ PUBLISHED:
   INLINE void set_decal_render_state(const RenderState *state);
 
   bool project(const NodePath &root);
-  bool project(GeomNode *geom_node, const LMatrix4 &net_transform);
-  bool project(const Geom *geom, const LMatrix4 &net_transform);
-  bool project(const GeomVertexData *vdata, int v1, int v2, int v3, const LMatrix4 &net_transform);
+  bool project(GeomNode *geom_node, const TransformState *net_transform);
+  bool project(const Geom *geom, const TransformState *net_transform);
+  bool project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformState *net_transform);
 
   void setup_coordinate_space();
 
@@ -74,7 +74,7 @@ PUBLISHED:
   PT(PandaNode) generate();
 
 private:
-  bool r_project(PandaNode *node, const LMatrix4 &net_transform);
+  bool r_project(PandaNode *node, const TransformState *net_transform);
 
   LVecBase3 calc_barycentric_coordinates(const LPoint3 &a, const LPoint3 &b,
                                          const LPoint3 &c, const LPoint3 &pos) const;
