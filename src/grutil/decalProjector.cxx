@@ -19,6 +19,7 @@
 #include "look_at.h"
 #include "winding.h"
 #include "geomTriangles.h"
+#include "geomTristrips.h"
 #include "geomVertexWriter.h"
 
 /**
@@ -83,29 +84,73 @@ bool DecalProjector::
 project(const Geom *geom, const LMatrix4 &net_transform) {
   bool any = false;
 
-  PT(Geom) dgeom = geom->decompose();
+  //PT(Geom) dgeom = geom->decompose();
 
   const GeomVertexData *vdata = geom->get_vertex_data();
-  for (int i = 0; i < dgeom->get_num_primitives(); ++i) {
-    const GeomPrimitive *prim = dgeom->get_primitive(i);
+  for (int i = 0; i < geom->get_num_primitives(); ++i) {
+    const GeomPrimitive *prim = geom->get_primitive(i);
     // We can only put decals on polygons (triangles and tristrips).
     //std::cout << prim->get_type() << "\n";
     if (prim->get_primitive_type() != GeomEnums::PT_polygons) {
       continue;
     }
-    if (prim->get_geom_primitive_type() != GeomEnums::GPT_triangles) {
-      continue;
-    }
 
-    if (prim->get_num_vertices_per_primitive() != 3) {
-      continue;
-    }
+    TypeHandle prim_type = prim->get_type();
 
-    for (int j = 0; j < prim->get_num_primitives(); j++) {
-      int start = prim->get_primitive_start(j);
-      if (project(vdata, prim->get_vertex(start), prim->get_vertex(start + 1), prim->get_vertex(start + 2), net_transform)) {
-        any = true;
+    if (prim_type == GeomTriangles::get_class_type()) {
+
+      for (int j = 0; j < prim->get_num_primitives(); j++) {
+        int start = prim->get_primitive_start(j);
+        if (project(vdata, prim->get_vertex(start), prim->get_vertex(start + 1), prim->get_vertex(start + 2), net_transform)) {
+          any = true;
+        }
       }
+
+    } else if (prim_type == GeomTristrips::get_class_type()) {
+
+      // Extract triangles from tristrip indices.
+
+      CPTA_int ends = prim->get_ends();
+      int num_vertices = prim->get_num_vertices();
+      int num_unused = prim->get_num_unused_vertices_per_primitive();
+
+      int vi = -num_unused;
+      int li = 0;
+      while (li < (int)ends.size()) {
+        vi += num_unused;
+        int end = ends[li];
+        nassertr(vi + 2 <= end, false);
+        int v0 = prim->get_vertex(vi);
+        ++vi;
+        int v1 = prim->get_vertex(vi);
+        ++vi;
+        bool reversed = false;
+        while (vi < end) {
+          int v2 = prim->get_vertex(vi);
+          ++vi;
+          if (reversed) {
+            if (v0 != v1 && v0 != v2 && v1 != v2) {
+              if (project(vdata, v0, v2, v1, net_transform)) {
+                any = true;
+              }
+            }
+
+            reversed = false;
+          } else {
+            if (v0 != v1 && v0 != v2 && v1 != v2) {
+              if (project(vdata, v0, v1, v2, net_transform)) {
+                any = true;
+              }
+            }
+            reversed = true;
+          }
+          v0 = v1;
+          v1 = v2;
+        }
+        ++li;
+      }
+
+      nassertr(vi == num_vertices, false);
     }
   }
 
@@ -143,16 +188,20 @@ project(const GeomVertexData *vdata, int v1, int v2, int v3, const LMatrix4 &net
     return false;
   }
 
-  //LVector3 decal_extents = (_decal_mins + _decal_maxs) * 0.5f;
-  //LPoint3 abs_mins = _origin + _decal_mins;
-  //LPoint3 abs_maxs = _origin + _decal_maxs;
+  LPoint3 tri_mins(1e9);
+  LPoint3 tri_maxs(1e9);
+  tri_mins = tri_mins.fmin(tri_winding.get_point(0));
+  tri_mins = tri_mins.fmin(tri_winding.get_point(1));
+  tri_mins = tri_mins.fmin(tri_winding.get_point(2));
+  tri_maxs = tri_maxs.fmax(tri_winding.get_point(0));
+  tri_maxs = tri_maxs.fmax(tri_winding.get_point(1));
+  tri_maxs = tri_maxs.fmax(tri_winding.get_point(2));
 
-  // If triangle is outside of decal bounds, it will be entirely clipped away.
-  //if (!tri_box_overlap(_projector_world_center, _projector_world_extents,
-  //                     tri_winding.get_point(0), tri_winding.get_point(1),
-  //                     tri_winding.get_point(2))) {
-  //  return false;
-  //}
+  BoundingBox tri_bbox(tri_mins, tri_maxs);
+  tri_bbox.local_object();
+  if (!_projector_world_bbox->contains(&tri_bbox)) {
+    return false;
+  }
 
   // This triangle will definitely be part of the decal.
   // Clip the triangle to the 6 planes of the decal bounding box.
@@ -347,7 +396,7 @@ generate() {
       uv[1] /= -projector_size[1];
       uv[1] = 1.0f - uv[1];
 
-      std::cout << "uv: " << uv << "\n";
+      //std::cout << "uv: " << uv << "\n";
 
       uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 0, 0)).get_xy();
 
@@ -421,4 +470,7 @@ setup_coordinate_space() {
 
   _projector_world_center = (world_mins + world_maxs) * 0.5f;
   _projector_world_extents = (world_maxs - world_mins) * 0.5f;
+
+  _projector_world_bbox = new BoundingBox(_projector_mins, _projector_maxs);
+  _projector_world_bbox->xform(projector_net_mat);
 }

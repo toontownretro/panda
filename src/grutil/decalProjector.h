@@ -25,6 +25,7 @@
 #include "geomTriangles.h"
 #include "geomVertexData.h"
 #include "geom.h"
+#include "boundingBox.h"
 
 // There are multiple coordinate spaces we're dealing with
 // here.
@@ -106,6 +107,8 @@ private:
   NodePath _decal_parent;
   CPT(RenderState) _decal_state;
   CPT(TransformState) _decal_uv_transform;
+
+  PT(BoundingBox) _projector_world_bbox;
 
   // World-space plane for each face of the projector bounding box.
   LPlane _box_planes[6];
