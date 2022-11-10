@@ -535,12 +535,9 @@ generate() {
       uv[0] /= projector_size[0];
       uv[0] = 1.0f - uv[0];
       uv[1] /= projector_size[1];
-      //uv[1] = 1.0f - uv[1];
-
-      //std::cout << "uv: " << uv << "\n";
 
       if (!_decal_uv_transform->is_identity()) {
-        uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 0, 0)).get_xy();
+        uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 1.0f, 1.0f)).get_xy();
       }
 
       twriter.add_data2f(uv);
