@@ -18,6 +18,7 @@
 #include "materialParamVector.h"
 #include "materialParamFloat.h"
 #include "materialParamColor.h"
+#include "materialParamMatrix.h"
 #include "shaderAttrib.h"
 #include "textureAttrib.h"
 #include "texturePool.h"
@@ -34,6 +35,7 @@
 #include "renderState.h"
 #include "textureStagePool.h"
 #include "clipPlaneAttrib.h"
+#include "texMatrixAttrib.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -147,7 +149,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_CSM_LIGHT_ID("CSM_LIGHT_ID");
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
   static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
-  static const CPT_InternalName IN_DO_COLOR_ADD("DO_COLOR_ADD");
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
 
   setup.set_language(Shader::SL_GLSL);
@@ -265,6 +266,18 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_input(ShaderInput("albedoTexture", get_white_texture()));
   }
 
+  // Transform on UVs.
+  // If a transform is specified through TexMatrixAttrib, that wins.
+  // Otherwise, use the one in the material.
+  LMatrix4 base_texture_transform = LMatrix4::ident_mat();
+  const TexMatrixAttrib *tma;
+  if (state->get_attrib(tma)) {
+    base_texture_transform = tma->get_mat();
+  } else if ((param = src_mat->get_param("basetexturetransform")) != nullptr) {
+    base_texture_transform = DCAST(MaterialParamMatrix, param)->get_value();
+  }
+  setup.set_input(ShaderInput("baseTextureTransform", base_texture_transform));
+
   if (has_direct_light && (param = src_mat->get_param("lightwarptexture")) != nullptr) {
     setup.set_pixel_shader_combo(IN_LIGHTWARP, 1);
     setup.set_input(ShaderInput("lightWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
@@ -274,8 +287,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = src_mat->get_param("phong")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Phong enabled on material.
     setup.set_pixel_shader_combo(IN_PHONG, 1);
-
-    setup.set_input(ShaderInput("remapParams", LVecBase2(remap_param0, remap_param1)));
 
     bool has_phong_exponent_texture = false;
     // Phong exponent texture?  This contains per-texel phong exponent in R,
@@ -423,12 +434,4 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
     setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
   }
-
-  if (sa->has_shader_input("colorAdd")) {
-    setup.set_spec_constant(IN_DO_COLOR_ADD, true);
-  } else {
-    setup.set_input(ShaderInput("colorAdd", LVecBase3(0)));
-    setup.set_input(ShaderInput("colorAddFresnel", LVecBase3(0)));
-  }
-
 }

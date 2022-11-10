@@ -19,6 +19,7 @@
 #include "materialParamVector.h"
 #include "materialParamColor.h"
 #include "materialParamFloat.h"
+#include "materialParamMatrix.h"
 
 TypeHandle SourceMaterial::_type_handle;
 
@@ -112,6 +113,9 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
       } else {
         param = new MaterialParamBool(key);
       }
+
+    } else if (key == "basetexturetransform") {
+      param = new MaterialParamMatrix(key);
     }
 
     if (param != nullptr) {
