@@ -556,6 +556,16 @@ generate() {
   geom->add_primitive(triangles);
   node->add_geom(geom, _decal_state);
 
+  // Set the decal node to use the projector bounding box.
+  if (!ident_decal_mat) {
+    PT(BoundingBox) decal_bbox = new BoundingBox(_projector_world_bbox->get_minq(), _projector_world_bbox->get_maxq());
+    decal_bbox->xform(_decal_inv_net_mat);
+    node->set_bounds(decal_bbox);
+  } else {
+    node->set_bounds(_projector_world_bbox);
+  }
+  node->set_final(true);
+
   return node;
 }
 
