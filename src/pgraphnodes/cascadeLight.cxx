@@ -174,10 +174,15 @@ update(const NodePath &root) {
   Lens *lens = cam->get_lens();
 
   // Extract near and far points of scene camera.
-  lens->extrude(LPoint2(-1, 1), _curr_near_points[CO_ul], _curr_far_points[CO_ul]);
-  lens->extrude(LPoint2(1, 1), _curr_near_points[CO_ur], _curr_far_points[CO_ur]);
-  lens->extrude(LPoint2(-1, -1), _curr_near_points[CO_ll], _curr_far_points[CO_ll]);
-  lens->extrude(LPoint2(1, -1), _curr_near_points[CO_lr], _curr_far_points[CO_lr]);
+  bool all_good = true;
+  all_good = all_good && lens->extrude(LPoint2(-1, 1), _curr_near_points[CO_ul], _curr_far_points[CO_ul]);
+  all_good = all_good && lens->extrude(LPoint2(1, 1), _curr_near_points[CO_ur], _curr_far_points[CO_ur]);
+  all_good = all_good && lens->extrude(LPoint2(-1, -1), _curr_near_points[CO_ll], _curr_far_points[CO_ll]);
+  all_good = all_good && lens->extrude(LPoint2(1, -1), _curr_near_points[CO_lr], _curr_far_points[CO_lr]);
+
+  if (!all_good) {
+    return;
+  }
 
   // Construct matrix to project points to world space
   LMatrix4 mvp = transform * lens->get_view_mat();
