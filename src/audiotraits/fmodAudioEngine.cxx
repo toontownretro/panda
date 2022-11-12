@@ -531,7 +531,7 @@ init_steam_audio() {
   // DSPs that render the results of our simulations.
 
 #ifdef _WIN32
-  Filename plugin_filename = Filename::dso_filename("phonon_fmod.so");
+  Filename plugin_filename = Filename::dso_filename("phonon_fmod.dll");
 #else
   Filename plugin_filename = Filename::dso_filename("libphonon_fmod.so");
 #endif
