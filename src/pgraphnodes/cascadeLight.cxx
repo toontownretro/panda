@@ -74,10 +74,14 @@ CascadeLight(const std::string &name) :
  */
 void CascadeLight::
 setup_shadow_map() {
-  if (_cascades.size() != _num_cascades) {
+
+  // FIXME: Race condition if called from draw thread.
+  // Current solution is to explicitly call setup_cascades()
+  // in user code after creating the CascadeLight.
+  //if (_cascades.size() != _num_cascades) {
     // The number of cascades changed.  Need to recreate them.
-    setup_cascades();
-  }
+  //  setup_cascades();
+  //}
 
   if (_shadow_map != nullptr &&
       _shadow_map->get_x_size() == _sb_size[0] &&

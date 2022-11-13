@@ -67,6 +67,8 @@ PUBLISHED:
 
   void update(const NodePath &scene_root);
 
+  void setup_cascades();
+
 public:
   virtual void setup_shadow_map();
 
@@ -92,7 +94,6 @@ private:
     LVecBase2 atlas_mins, atlas_maxs, atlas_scale;
   };
 
-  void setup_cascades();
   void compute_pssm_splits(const LMatrix4 &transform, float distance,
                            Camera *scene_cam, const NodePath &scene_root);
   INLINE float get_split_start(int n) const;
