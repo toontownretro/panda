@@ -60,8 +60,6 @@ private:
   int _num_joints;
   int _num_sliders;
 
-  vector_stdfloat _slider_table;
-
   EggTable *_root;
 
 };

@@ -32,23 +32,6 @@ class FactoryParams;
 typedef pvector<vector_float> FrameDatas;
 
 /**
- * There is one instance of this class for each slider in an animation.  It
- * specifies the index for a slider into the animation table.
- */
-class EXPCL_PANDA_ANIM SliderEntry final {
-PUBLISHED:
-  std::string name;
-
-  int first_frame, num_frames;
-
-  bool operator == (const SliderEntry &other) const {
-    return name == other.name &&
-           first_frame == other.first_frame &&
-           num_frames == other.num_frames;
-  }
-};
-
-/**
  * This is an AnimChannel that gets its pose by sampling a static joint
  * animation table.  This corresponds directly to an animation that was
  * created in a modelling package and loaded from an Egg file.
@@ -62,6 +45,14 @@ PUBLISHED:
     MF_linear_x = 1,
     MF_linear_y = 2,
     MF_linear_z = 4,
+  };
+
+  enum TableFlags {
+    TF_none = 0,
+    // The animation table contains joint animation.
+    TF_joints = 1,
+    // The animation table contains slider animation.
+    TF_sliders = 2,
   };
 
   // Flags that indicate which transform components are specified throughout
@@ -90,17 +81,8 @@ PUBLISHED:
   INLINE void set_joint_names(vector_string &&names);
   INLINE const vector_string &get_joint_names() const;
 
-  INLINE void set_slider_table(vector_stdfloat &&table);
-  INLINE const vector_stdfloat &get_slider_table() const;
-
-  INLINE void get_scalar(int slider, int frame, PN_stdfloat &scalar) const;
-  INLINE void get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const;
-
   int find_joint_channel(const std::string &name) const;
   int find_slider_channel(const std::string &name) const;
-
-  INLINE void add_slider_entry(const SliderEntry &slider);
-  INLINE const SliderEntry &get_slider_entry(int n) const;
 
   INLINE int get_num_joint_entries() const;
   INLINE int get_num_slider_entries() const;
@@ -109,6 +91,10 @@ PUBLISHED:
                           const AnimEvalContext &context, const vector_int &joint_map) const;
   void extract_frame0_data(AnimEvalData &data,
                            const AnimEvalContext &context, const vector_int &joint_map) const;
+  void extract_frame_data_slider(int frame, AnimEvalData &data,
+                                 const AnimEvalContext &context, const vector_int &slider_map) const;
+  void extract_frame0_data_slider(AnimEvalData &data,
+                                  const AnimEvalContext &context, const vector_int &slider_map) const;
   int get_non0_joint_component_offset(int joint, JointFormat component) const;
   float extract_component_delta(int joint, JointFormat component);
   void offset_joint_component(int joint, JointFormat component, float offset);
@@ -139,12 +125,17 @@ private:
   JointFormats _joint_formats;
   FrameDatas _frames;
 
-  // Legacy storage for sliders, since we're not sampling them at the moment.
-  SliderEntry _slider_entries[max_character_joints];
-  size_t _num_slider_entries;
-  vector_stdfloat _slider_table;
+  vector_string _slider_names;
+  typedef pvector<bool> SliderFormats;
+  // For each slider, true if the slider is animated, in which case
+  // a slider value is specified for each frame.  False means there is one
+  // one value for the slider held for the entire animation.
+  SliderFormats _slider_formats;
+  FrameDatas _slider_frames;
 
   LVector3 _root_motion_vector;
+
+  unsigned int _table_flags;
 
   friend class Character;
   friend class AnimBundleMaker;

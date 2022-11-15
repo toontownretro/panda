@@ -90,8 +90,6 @@ make_bundle() {
     }
   }
 
-  bundle->set_slider_table(std::move(_slider_table));
-
   return bundle;
 }
 
@@ -226,16 +224,24 @@ build_hierarchy(EggTable *egg_table, AnimChannelTable *bundle) {
 void AnimBundleMaker::
 create_s_channel(EggSAnimData *egg_anim, const std::string &name,
                  AnimChannelTable *bundle) {
-  SliderEntry slider;
-  slider.name = name;
-  slider.first_frame = (int)_slider_table.size();
-  slider.num_frames = egg_anim->get_num_rows();
+  // Record the name of the slider.
+  bundle->_slider_names.push_back(name);
 
-  bundle->add_slider_entry(slider);
+  // Record if it is animated to optimize memory storage and
+  // table lookup during animation computation.
+  bool has_anim = egg_anim->get_num_rows() > 1;
+  bundle->_slider_formats.push_back(has_anim);
 
-  // First we have to copy the table data from PTA_double to PTA_stdfloat.
+  if (has_anim || egg_anim->get_value(0) != 0.0) {
+    // If the slider has several frames recorded (meaning it's animated),
+    // or the single held value is non-zero, mark on the table that we
+    // have slider animation.  This makes us store and compute the slider
+    // animation at runtime.
+    bundle->_table_flags |= AnimChannelTable::TF_sliders;
+  }
+
   for (int i = 0; i < egg_anim->get_num_rows(); i++) {
-    _slider_table.push_back((PN_stdfloat)egg_anim->get_value(i));
+    bundle->_slider_frames[i].push_back((float)egg_anim->get_value(i));
   }
 }
 
@@ -338,6 +344,13 @@ create_xfm_channel(EggXfmSAnim *egg_anim, const std::string &name,
         }
       }
     }
+  }
+
+  bool has_any = !(x.empty() && y.empty() && z.empty() && h.empty() &&
+                   p.empty() && r.empty() && i.empty() && j.empty() &&
+                   k.empty() && a.empty() && b.empty() && c.empty());
+  if (has_any) {
+    bundle->_table_flags |= AnimChannelTable::TF_joints;
   }
 
   if (x.empty()) {

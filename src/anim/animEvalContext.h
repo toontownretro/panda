@@ -50,6 +50,8 @@ public:
   // Number of SIMD joint groups.
   // simd_align(_num_joints, SIMD_NATIVE_WIDTH)
   int _num_joint_groups;
+  int _num_sliders;
+  int _num_slider_groups;
 
   // Should AnimChannelTables do inter-frame blending?
   bool _frame_blend;
@@ -94,6 +96,7 @@ public:
 
   // Poses of all joints.
   JointPose _pose[max_character_joints / SIMDFloatVector::num_columns];
+  SIMDFloatVector _sliders[max_character_joints / SIMDFloatVector::num_columns];
 
   PN_stdfloat _weight;
 

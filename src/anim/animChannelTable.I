@@ -16,12 +16,14 @@
  */
 INLINE AnimChannelTable::
 AnimChannelTable(const std::string &name, PN_stdfloat fps, int num_frames) :
-  AnimChannel(name) {
+  AnimChannel(name),
+  _table_flags(TF_none)
+{
   _fps = fps;
   _num_frames = num_frames;
-  _num_slider_entries = 0;
   _root_motion_vector.fill(0.0f);
   _frames.resize(num_frames);
+  _slider_frames.resize(num_frames);
   //_is_loaded = true;
 }
 
@@ -82,7 +84,9 @@ is_loaded() const {
  */
 INLINE AnimChannelTable::
 AnimChannelTable() :
-  AnimChannel("table") {
+  AnimChannel("table"),
+  _table_flags(TF_none)
+{
   //_is_loaded = false;
   _root_motion_vector.fill(0.0f);
 }
@@ -96,11 +100,12 @@ AnimChannelTable(const AnimChannelTable &copy) :
   _joint_names(copy._joint_names),
   _joint_formats(copy._joint_formats),
   _frames(copy._frames),
-  _slider_table(copy._slider_table),
-  _num_slider_entries(copy._num_slider_entries),
-  _root_motion_vector(copy._root_motion_vector)
+  _slider_names(copy._slider_names),
+  _slider_formats(copy._slider_formats),
+  _slider_frames(copy._slider_frames),
+  _root_motion_vector(copy._root_motion_vector),
+  _table_flags(copy._table_flags)
 {
-  std::copy(copy._slider_entries, copy._slider_entries + copy._num_slider_entries, _slider_entries);
 }
 
 /**
@@ -137,58 +142,6 @@ get_joint_names() const {
 }
 
 /**
- *
- */
-INLINE void AnimChannelTable::
-set_slider_table(vector_stdfloat &&table) {
-  _slider_table = std::move(table);
-}
-
-/**
- *
- */
-INLINE const vector_stdfloat &AnimChannelTable::
-get_slider_table() const {
-  return _slider_table;
-}
-
-/**
- *
- */
-INLINE void AnimChannelTable::
-get_scalar(int slider, int frame, PN_stdfloat &scalar) const {
-  get_scalar(_slider_entries[slider], frame, scalar);
-}
-
-/**
- *
- */
-INLINE void AnimChannelTable::
-get_scalar(const SliderEntry &slider, int frame, PN_stdfloat &scalar) const {
-  scalar = _slider_table[slider.first_frame + (frame % slider.num_frames)];
-}
-
-/**
- * Records the name of indicated slider channel.  This is used to aid Character
- * in binding to the animation, because we can't guarantee ordering of
- * channels.
- */
-INLINE void AnimChannelTable::
-add_slider_entry(const SliderEntry &entry) {
-  nassertv(_num_slider_entries < max_character_joints);
-  _slider_entries[_num_slider_entries++] = entry;
-}
-
-/**
- *
- */
-INLINE const SliderEntry &AnimChannelTable::
-get_slider_entry(int slider) const {
-  assert(slider >= 0 && slider < (int)_num_slider_entries);
-  return _slider_entries[slider];
-}
-
-/**
  * Returns the number of recorded joint channels.
  */
 INLINE int AnimChannelTable::
@@ -201,5 +154,5 @@ get_num_joint_entries() const {
  */
 INLINE int AnimChannelTable::
 get_num_slider_entries() const {
-  return _num_slider_entries;
+  return (int)_slider_names.size();
 }

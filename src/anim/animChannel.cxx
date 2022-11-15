@@ -259,6 +259,11 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       a._pose[i].quat = a._pose[i].quat.accumulate_scaled_rhs_source(b._pose[i].quat * delta_offsets[i], s2);
     }
 
+    // Blend in sliders.
+    for (int i = 0; i < context._num_slider_groups; ++i) {
+      a._sliders[i].madd_in_place(b._sliders[i], vweight);
+    }
+
   } else {
     SIMDFloatVector v1(1.0f);
 
@@ -277,6 +282,13 @@ blend(const AnimEvalContext &context, AnimEvalData &a,
       a._pose[i].shear.madd_in_place(b._pose[i].shear, s2);
 
       a._pose[i].quat = a._pose[i].quat.align_lerp(b._pose[i].quat, s2);
+    }
+
+    // Blend in sliders.
+    for (int i = 0; i < context._num_slider_groups; ++i) {
+      SIMDFloatVector s1 = v1 - vweight;
+      a._sliders[i] *= s1;
+      a._sliders[i].madd_in_place(b._sliders[i], vweight);
     }
   }
 }

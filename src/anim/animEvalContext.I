@@ -27,6 +27,8 @@ AnimEvalData() :
 INLINE AnimEvalData::
 AnimEvalData(const AnimEvalData &copy, int num_joint_groups) {
   std::copy(copy._pose, copy._pose + num_joint_groups, _pose);
+  // TODO: only copy used sliders.
+  std::copy(copy._sliders, copy._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 
   _weight = copy._weight;
   _cycle = copy._cycle;
@@ -38,6 +40,8 @@ AnimEvalData(const AnimEvalData &copy, int num_joint_groups) {
 INLINE AnimEvalData::
 AnimEvalData(AnimEvalData &&other, int num_joint_groups) {
   std::move(other._pose, other._pose + num_joint_groups, _pose);
+  // TODO: only move used sliders.
+  std::move(other._sliders, other._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 
   _weight = std::move(other._weight);
   _cycle = std::move(other._cycle);
@@ -49,6 +53,8 @@ AnimEvalData(AnimEvalData &&other, int num_joint_groups) {
 INLINE void AnimEvalData::
 copy_pose(const AnimEvalData &copy, int num_joint_groups) {
   std::copy(copy._pose, copy._pose + num_joint_groups, _pose);
+  // TODO: only copy used sliders.
+  std::copy(copy._sliders, copy._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 }
 
 /**
@@ -58,4 +64,6 @@ copy_pose(const AnimEvalData &copy, int num_joint_groups) {
 INLINE void AnimEvalData::
 steal_pose(AnimEvalData &other, int num_joint_groups) {
   std::move(other._pose, other._pose + num_joint_groups, _pose);
+  // TODO: only move used sliders.
+  std::move(other._sliders, other._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 }

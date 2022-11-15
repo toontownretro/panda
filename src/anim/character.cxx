@@ -158,12 +158,13 @@ bind_anim(AnimChannelTable *anim) {
   vector_int &joint_map = (*iit).second._joint_map;
   vector_int &slider_map = (*iit).second._slider_map;
 
-  int num_anim_joints = (int)anim->get_joint_names().size();
+  int num_anim_joints = anim->get_num_joint_entries();
+  int num_anim_sliders = anim->get_num_slider_entries();
   joint_map.resize(num_anim_joints);
-  slider_map.resize(get_num_sliders());
+  slider_map.resize(num_anim_sliders);
 
   for (int anim_joint = 0; anim_joint < num_anim_joints; anim_joint++) {
-    const std::string &anim_joint_name = anim->get_joint_names()[anim_joint];
+    const std::string &anim_joint_name = anim->_joint_names[anim_joint];
     int cjoint = find_joint(anim_joint_name);
     if (cjoint == -1) {
       // The character doesn't have this joint from the animation.  We can deal
@@ -174,16 +175,18 @@ bind_anim(AnimChannelTable *anim) {
     }
     joint_map[anim_joint] = cjoint;
   }
-  for (int slider = 0; slider < get_num_sliders(); slider++) {
-    const std::string &slider_name = get_slider_name(slider);
-    int anim_slider = anim->find_slider_channel(slider_name);
-    if (anim_slider == -1) {
-      // This character slider doesn't appear in the animation.  We can deal
-      // with it, but give a warning about it, because this might be a mistake.
+  for (int anim_slider = 0; anim_slider < num_anim_sliders; anim_slider++) {
+    const std::string &anim_slider_name = anim->_slider_names[anim_slider];
+    int cslider = find_slider(anim_slider_name);
+    if (cslider == -1) {
+      // The character doesn't have this slider from the animation.  We can
+      // deal with it, but give a warning about it, because this might be a
+      // mistake.
       anim_cat.warning()
-        << "Character slider " << slider_name << " does not appear in animation " << anim->get_name() << "\n";
+        << "Slider " << anim_slider_name << " in animation " << anim->get_name()
+        << " does not exist on Character " << get_name() << "\n";
     }
-    slider_map[slider] = anim_slider;
+    slider_map[anim_slider] = cslider;
   }
 
   return true;
@@ -291,6 +294,11 @@ do_update(double now, CData *cdata, Thread *current_thread) {
       << "Too many joints on character " << get_name() << "\n";
     return false;
   }
+  if ((int)_sliders.size() > max_character_joints) {
+    anim_cat.error()
+      << "Too many sliders on character " << get_name() << "\n";
+    return false;
+  }
 
   // We must have at least 1 layer at all times, even if no animations are
   // playing.
@@ -310,6 +318,8 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   // Set up number of SIMD joint groups.  Pad to ensure it is an exact multiple
   // of the SIMD vector width.
   ctx._num_joint_groups = simd_align_value(ctx._num_joints, SIMDFloatVector::num_columns) / SIMDFloatVector::num_columns;
+  ctx._num_sliders = (int)_sliders.size();
+  ctx._num_slider_groups = simd_align_value(ctx._num_sliders, SIMDFloatVector::num_columns) / SIMDFloatVector::num_columns;
   ctx._frame_blend = cdata->_frame_blend_flag;
   ctx._time = now;
 
@@ -341,6 +351,11 @@ do_update(double now, CData *cdata, Thread *current_thread) {
       _bind_pose._pose[group].scale.set_lvec(sub, _joints[i]._default_scale);
       _bind_pose._pose[group].shear.set_lvec(sub, _joints[i]._default_shear);
       _bind_pose._pose[group].quat.set_lquat(sub, _joints[i]._default_quat);
+    }
+    for (size_t i = 0; i < _sliders.size(); ++i) {
+      int group = i / SIMDFloatVector::num_columns;
+      int sub = i % SIMDFloatVector::num_columns;
+      _bind_pose._sliders[group][sub] = _sliders[i]._default_value;
     }
     _built_bind_pose = true;
   }
@@ -788,10 +803,12 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   }
   ap_update_net_transform_nodes.stop();
 
-  // Also update slider values... this is temporary.
-  //for (size_t i = 0; i < _sliders.size(); i++) {
-  //  _sliders[i].update(current_thread);
-  //}
+  // Apply computed slider values.
+  for (size_t i = 0; i < _sliders.size(); ++i) {
+    int group = i / SIMDFloatVector::num_columns;
+    int sub = i % SIMDFloatVector::num_columns;
+    _sliders[i].set_value(data._sliders[group][sub]);
+  }
 
   return true;
 }

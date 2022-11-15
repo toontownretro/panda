@@ -70,8 +70,8 @@ find_joint_channel(const std::string &name) const {
  */
 int AnimChannelTable::
 find_slider_channel(const std::string &name) const {
-  for (size_t i = 0; i < _num_slider_entries; i++) {
-    if (_slider_entries[i].name == name) {
+  for (size_t i = 0; i < _slider_names.size(); i++) {
+    if (_slider_names[i] == name) {
       return (int)i;
     }
   }
@@ -200,6 +200,55 @@ extract_frame0_data(AnimEvalData &data, const AnimEvalContext &context, const ve
 }
 
 /**
+ *
+ */
+void AnimChannelTable::
+extract_frame_data_slider(int frame, AnimEvalData &data, const AnimEvalContext &context,
+                          const vector_int &slider_map) const {
+  const vector_float &fzero = _slider_frames[0];
+  const vector_float &fdata = _slider_frames[frame];
+
+  int zero_ofs = 0;
+  int frame_ofs = 0;
+
+  for (int i = 0; i < (int)_slider_formats.size(); ++i) {
+    bool has_anim = _slider_formats[i];
+
+    float value = has_anim ? fdata[frame_ofs++] : fzero[zero_ofs];
+    ++zero_ofs;
+
+    int cslider = slider_map[i];
+    if (cslider == -1) {
+      continue;
+    }
+    int group = cslider / SIMDFloatVector::num_columns;
+    int sub = cslider % SIMDFloatVector::num_columns;
+    data._sliders[group][sub] = value;
+  }
+}
+
+/**
+ *
+ */
+void AnimChannelTable::
+extract_frame0_data_slider(AnimEvalData &data, const AnimEvalContext &context,
+                           const vector_int &slider_map) const {
+  const vector_float &fzero = _slider_frames[0];
+  int zero_ofs = 0;
+  for (int i = 0; i < (int)_slider_formats.size(); ++i) {
+    float value = fzero[zero_ofs++];
+
+    int cslider = slider_map[i];
+    if (cslider == -1) {
+      continue;
+    }
+    int group = cslider / SIMDFloatVector::num_columns;
+    int sub = cslider % SIMDFloatVector::num_columns;
+    data._sliders[group][sub] = value;
+  }
+}
+
+/**
  * Returns the offset into non-zero frames for the indicated transform
  * component of the indicated joint.
  */
@@ -228,6 +277,10 @@ get_non0_joint_component_offset(int joint, JointFormat component) const {
  */
 void AnimChannelTable::
 do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
+  if (_table_flags == TF_none) {
+    return;
+  }
+
   auto it = context._character->_channel_bindings.find(this);
   if (it == context._character->_channel_bindings.end()) {
     // There's no mapping of character joints to anim joints on the character
@@ -236,9 +289,18 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   }
 
   const vector_int &joint_map = (*it).second._joint_map;
+  const vector_int &slider_map = (*it).second._slider_map;
 
   // Every anim joint should appear in the mapping.
-  nassertv(joint_map.size() >= _joint_formats.size());
+#ifndef NDEBUG
+  if (_table_flags & TF_joints) {
+    nassertv(joint_map.size() >= _joint_formats.size());
+  }
+  if (_table_flags & TF_sliders) {
+    nassertv(slider_map.size() >= _slider_formats.size());
+  }
+#endif
+
 
   // Convert cycles to frame numbers for table lookup.
   PN_stdfloat cycle = data._cycle;
@@ -282,9 +344,19 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
     // Hold the current frame until the next one is ready.
     if (frame == 0) {
-      extract_frame0_data(data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame0_data(data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame0_data_slider(data, context, slider_map);
+      }
     } else {
-      extract_frame_data(frame, data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame_data(frame, data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame_data_slider(frame, data, context, slider_map);
+      }
     }
 
   } else {
@@ -292,19 +364,36 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
     AnimEvalData next_data;
     if (frame == 0) {
-      extract_frame0_data(data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame0_data(data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame0_data_slider(data, context, slider_map);
+      }
     } else {
-      extract_frame_data(frame, data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame_data(frame, data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame_data_slider(frame, data, context, slider_map);
+      }
     }
     if (next_frame == 0) {
-      extract_frame0_data(next_data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame0_data(next_data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame0_data_slider(next_data, context, slider_map);
+      }
     } else {
-      extract_frame_data(next_frame, next_data, context, joint_map);
+      if (_table_flags & TF_joints) {
+        extract_frame_data(next_frame, next_data, context, joint_map);
+      }
+      if (_table_flags & TF_sliders) {
+        extract_frame_data_slider(next_frame, next_data, context, slider_map);
+      }
     }
 
-    //frameblend_pcollector.start();
-
-#if 1
     // Measured this to take 75 microseconds for 500 characters with 42
     // joints each.  ~6x faster than the scalar version below.  Using slerp()
     // with sleef trig functions takes much longer than basic lerp().
@@ -312,50 +401,28 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     SIMDFloatVector vfrac = frac;
     SIMDFloatVector ve0 = SIMDFloatVector(1.0f) - vfrac;
 
-    for (int i = 0; i < context._num_joint_groups; ++i) {
-      data._pose[i].pos *= ve0;
-      data._pose[i].pos.madd_in_place(next_data._pose[i].pos, vfrac);
+    if (_table_flags & TF_joints) {
+      // We have joints so interpolate between the frames.
+      for (int i = 0; i < context._num_joint_groups; ++i) {
+        data._pose[i].pos *= ve0;
+        data._pose[i].pos.madd_in_place(next_data._pose[i].pos, vfrac);
 
-      data._pose[i].scale *= ve0;
-      data._pose[i].scale.madd_in_place(next_data._pose[i].scale, vfrac);
+        data._pose[i].scale *= ve0;
+        data._pose[i].scale.madd_in_place(next_data._pose[i].scale, vfrac);
 
-      data._pose[i].shear *= ve0;
-      data._pose[i].shear.madd_in_place(next_data._pose[i].shear, vfrac);
+        data._pose[i].shear *= ve0;
+        data._pose[i].shear.madd_in_place(next_data._pose[i].shear, vfrac);
 
-      data._pose[i].quat = data._pose[i].quat.align_lerp(next_data._pose[i].quat, vfrac);
+        data._pose[i].quat = data._pose[i].quat.align_lerp(next_data._pose[i].quat, vfrac);
+      }
     }
-
-#else
-    // Scalar version (though compiler optimizes it to use mulss/addss).
-    // Measured this to take around 450 microseconds for 500 characters with
-    // 42 joints each.
-    float e0 = 1.0f - frac;
-    for (int i = 0; i < context._num_joints; ++i) {
-      int group = i / SIMDFloatVector::num_columns;
-      int sub = i % SIMDFloatVector::num_columns;
-
-      LVecBase3f pos = data._pose[group].pos.get_lvec(sub);
-      pos *= e0;
-      LVecBase3f scale = data._pose[group].scale.get_lvec(sub);
-      scale *= e0;
-      LVecBase3f shear = data._pose[group].shear.get_lvec(sub);
-      shear *= e0;
-
-      pos += next_data._pose[group].pos.get_lvec(sub) * frac;
-      scale += next_data._pose[group].scale.get_lvec(sub) * frac;
-      shear += next_data._pose[group].shear.get_lvec(sub) * frac;
-
-      LQuaternionf quat;
-      LQuaternionf::blend(data._pose[group].quat.get_lquat(sub), next_data._pose[group].quat.get_lquat(sub), frac, quat);
-
-      data._pose[group].pos.set_lvec(sub, pos);
-      data._pose[group].scale.set_lvec(sub, scale);
-      data._pose[group].shear.set_lvec(sub, shear);
-      data._pose[group].quat.set_lquat(sub, quat);
+    if (_table_flags & TF_sliders) {
+      // We have sliders so interpolate between the frames.
+      for (int i = 0; i < context._num_slider_groups; ++i) {
+        data._sliders[i] *= ve0;
+        data._sliders[i].madd_in_place(next_data._sliders[i], vfrac);
+      }
     }
-#endif
-
-    //frameblend_pcollector.stop();
   }
 }
 
@@ -484,16 +551,34 @@ void AnimChannelTable::
 write_datagram(BamWriter *manager, Datagram &me) {
   AnimChannel::write_datagram(manager, me);
 
-  me.add_uint8(_joint_formats.size());
-  for (size_t i = 0; i < _joint_formats.size(); ++i) {
-    me.add_string(_joint_names[i]);
-    me.add_uint16(_joint_formats[i]);
+  me.add_uint8(_table_flags);
+
+  if (_table_flags & TF_joints) {
+    me.add_uint8(_joint_formats.size());
+    for (size_t i = 0; i < _joint_formats.size(); ++i) {
+      me.add_string(_joint_names[i]);
+      me.add_uint16(_joint_formats[i]);
+    }
+
+    me.add_uint16(_frames.size());
+    for (const vector_float &frame : _frames) {
+      for (const float &data : frame) {
+        me.add_float32(data);
+      }
+    }
   }
 
-  me.add_uint16(_frames.size());
-  for (const vector_float &frame : _frames) {
-    for (const float &data : frame) {
-      me.add_float32(data);
+  if (_table_flags & TF_sliders) {
+    me.add_uint8(_slider_formats.size());
+    for (size_t i = 0; i < _slider_formats.size(); ++i) {
+      me.add_string(_slider_names[i]);
+      me.add_bool(_slider_formats[i]);
+    }
+    me.add_uint16(_slider_frames.size());
+    for (const vector_float &frame : _slider_frames) {
+      for (const float &data : frame) {
+        me.add_float32(data);
+      }
     }
   }
 
@@ -507,34 +592,69 @@ void AnimChannelTable::
 fillin(DatagramIterator &scan, BamReader *manager) {
   AnimChannel::fillin(scan, manager);
 
-  unsigned int num_joints = scan.get_uint8();
-  _joint_formats.resize(num_joints);
-  _joint_names.resize(num_joints);
-  for (unsigned int i = 0; i < num_joints; ++i) {
-    _joint_names[i] = scan.get_string();
-    _joint_formats[i] = scan.get_uint16();
+  _table_flags = scan.get_uint8();
+
+  if (_table_flags & TF_joints) {
+    unsigned int num_joints = scan.get_uint8();
+    _joint_formats.resize(num_joints);
+    _joint_names.resize(num_joints);
+    for (unsigned int i = 0; i < num_joints; ++i) {
+      _joint_names[i] = scan.get_string();
+      _joint_formats[i] = scan.get_uint16();
+    }
+
+    _frames.resize(scan.get_uint16());
+
+    // Fill frame 0.  Every joint has an entry in every component.
+    for (unsigned int i = 0; i < num_joints * 12; ++i) {
+      _frames[0].push_back(scan.get_float32());
+    }
+
+    // Every non-zero frame stores the exact same number of floats, the sum
+    // of the number of floats stored for each joint.
+    int num_floats = 0;
+    for (unsigned int i = 0; i < num_joints; ++i) {
+      uint16_t format = _joint_formats[i];
+      // Each bit turned on in the format is a transform component that gets
+      // stored.
+      num_floats += count_bits_in_word(format);
+    }
+
+    for (size_t i = 1; i < _frames.size(); ++i) {
+      for (unsigned int j = 0; j < num_floats; ++j) {
+        _frames[i].push_back(scan.get_float32());
+      }
+    }
   }
 
-  _frames.resize(scan.get_uint16());
+  if (_table_flags & TF_sliders) {
+    unsigned int num_sliders = scan.get_uint8();
+    _slider_names.resize(num_sliders);
+    _slider_formats.resize(num_sliders);
+    for (unsigned int i = 0; i < num_sliders; ++i) {
+      _slider_names[i] = scan.get_string();
+      _slider_formats[i] = scan.get_bool();
+    }
 
-  // Fill frame 0.  Every joint has an entry in every component.
-  for (unsigned int i = 0; i < num_joints * 12; ++i) {
-    _frames[0].push_back(scan.get_float32());
-  }
+    _slider_frames.resize(scan.get_uint16());
 
-  // Every non-zero frame stores the exact same number of floats, the sum
-  // of the number of floats stored for each joint.
-  int num_floats = 0;
-  for (unsigned int i = 0; i < num_joints; ++i) {
-    uint16_t format = _joint_formats[i];
-    // Each bit turned on in the format is a transform component that gets
-    // stored.
-    num_floats += count_bits_in_word(format);
-  }
+    // Fill frame 0.  Every slider has an entry.
+    for (unsigned int i = 0; i < num_sliders; ++i) {
+      _frames[0].push_back(scan.get_float32());
+    }
 
-  for (size_t i = 1; i < _frames.size(); ++i) {
-    for (unsigned int j = 0; j < num_floats; ++j) {
-      _frames[i].push_back(scan.get_float32());
+    // Every non-zero frame stores the same number of floats, the number of
+    // animated sliders.
+    int num_floats = 0;
+    for (bool animated : _slider_formats) {
+      if (animated) {
+        ++num_floats;
+      }
+    }
+    for (size_t i = 1; i < _slider_frames.size(); ++i) {
+      for (int j = 0; j < num_floats; ++j) {
+        _slider_frames[i].push_back(scan.get_float32());
+      }
     }
   }
 
