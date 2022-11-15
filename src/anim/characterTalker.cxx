@@ -16,6 +16,7 @@
 #include "luse.h"
 #include "character.h"
 #include "clockObject.h"
+#include "mathutil_misc.h"
 
 static ConfigVariableDouble talker_phoneme_delay("talker-phoneme-delay", 0.0);
 static ConfigVariableDouble talker_phoneme_filter("talker-phoneme-filter", 0.08);
@@ -184,7 +185,7 @@ add_visemes_for_sentence(PN_stdfloat emphasis_intensity, PN_stdfloat t, PN_stdfl
         t1 = 0.0f;
       }
 
-      scale = (t2 - t1);
+      scale = simple_spline(t2 - t1);
 
       add_viseme(emphasis_intensity, phoneme->_phoneme_code, scale);
     }
@@ -228,7 +229,7 @@ compute_blended_setting(PN_stdfloat emphasis_intensity) {
     if (has_strong) {
       // Blend in some of the strong.
       PN_stdfloat dist_remaining = 1.0f - emphasis_intensity;
-      PN_stdfloat frac = dist_remaining / (1.0f - STRONG_CROSSFADE_START);
+      PN_stdfloat frac = simple_spline(dist_remaining / (1.0f - STRONG_CROSSFADE_START));
 
       _classes[Phonemes::PC_normal]._amount = frac * 2.0f * STRONG_CROSSFADE_START;
       _classes[Phonemes::PC_strong]._amount = 1.0f - frac;
@@ -242,7 +243,7 @@ compute_blended_setting(PN_stdfloat emphasis_intensity) {
     if (has_weak) {
       // Blend in some of the weak.
       PN_stdfloat dist_remaining = WEAK_CROSSFADE_START - emphasis_intensity;
-      PN_stdfloat frac = dist_remaining / WEAK_CROSSFADE_START;
+      PN_stdfloat frac = simple_spline(dist_remaining / WEAK_CROSSFADE_START);
 
       _classes[Phonemes::PC_normal]._amount = (1.0f - frac) * 2.0f * WEAK_CROSSFADE_START;
       _classes[Phonemes::PC_weak]._amount = frac;
