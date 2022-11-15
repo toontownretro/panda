@@ -141,7 +141,7 @@ add_visemes_for_sentence(PN_stdfloat emphasis_intensity, PN_stdfloat t, PN_stdfl
       bool cross_fade = true;
 
       if (cross_fade) {
-        if (i < count - 1) {
+        if (i < (count - 1)) {
           const SpokenSentence::WordPhoneme *next = &_sentence->_all_phonemes[i + 1];
 
           if (next->_start_time == phoneme->_end_time) {
