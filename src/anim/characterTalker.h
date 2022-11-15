@@ -15,26 +15,28 @@
 #define CHARACTERTALKER_H
 
 #include "pandabase.h"
-#include "referenceCount.h"
+#include "animChannel.h"
 #include "spokenSentence.h"
 #include "audioSound.h"
 #include "pointerTo.h"
 #include "phonemes.h"
 
 /**
- * Moves sliders around to make a character's mouth voice with speech.
+ * Moves sliders around to make a character's mouth move with speech.
  */
-class EXPCL_PANDA_ANIM CharacterTalker : public ReferenceCount {
+class EXPCL_PANDA_ANIM CharacterTalker : public AnimChannel {
 PUBLISHED:
-  CharacterTalker(Character *character, Phonemes *phonemes);
+  CharacterTalker(Phonemes *phonemes);
+  CharacterTalker(const CharacterTalker &copy);
 
   void speak(AudioSound *sound, SpokenSentence *sentence);
   void stop();
 
-  void update();
-
-  INLINE void set_character(Character *character);
-  INLINE Character *get_character() const;
+  // AnimChannel interface.
+  virtual PT(AnimChannel) make_copy() const override;
+  virtual PN_stdfloat get_length(Character *character) const override;
+  virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data) override;
+  virtual LVector3 get_root_motion_vector(Character *character) const override;
 
 private:
   PN_stdfloat get_sentence_intensity(PN_stdfloat t, PN_stdfloat length);
@@ -50,7 +52,6 @@ private:
   PT(AudioSound) _audio;
   PT(SpokenSentence) _sentence;
 
-  PT(Character) _character;
   PT(Phonemes) _phonemes;
 
   class EmphasizedPhoneme {

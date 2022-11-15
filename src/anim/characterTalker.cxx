@@ -27,14 +27,28 @@ static ConfigVariableDouble talker_phoneme_filter("talker-phoneme-filter", 0.08)
  *
  */
 CharacterTalker::
-CharacterTalker(Character *character, Phonemes *phonemes) :
-  _character(character),
+CharacterTalker(Phonemes *phonemes) :
+  AnimChannel("talker"),
   _phonemes(phonemes),
   _start_time(0.0f)
 {
   _classes[Phonemes::PC_normal]._key_weights.resize(phonemes->_class_keys[Phonemes::PC_normal].size());
   _classes[Phonemes::PC_strong]._key_weights.resize(phonemes->_class_keys[Phonemes::PC_strong].size());
   _classes[Phonemes::PC_weak]._key_weights.resize(phonemes->_class_keys[Phonemes::PC_weak].size());
+}
+
+/**
+ *
+ */
+CharacterTalker::
+CharacterTalker(const CharacterTalker &copy) :
+  AnimChannel(copy),
+  _phonemes(copy._phonemes),
+  _start_time(0.0f)
+{
+  _classes[Phonemes::PC_normal] = copy._classes[Phonemes::PC_normal];
+  _classes[Phonemes::PC_strong] = copy._classes[Phonemes::PC_strong];
+  _classes[Phonemes::PC_weak] = copy._classes[Phonemes::PC_weak];
 }
 
 /**
@@ -62,26 +76,19 @@ stop() {
  *
  */
 void CharacterTalker::
-update() {
-  // Start at silence.
-  //auto it = _phonemes->_mappings[Phonemes::PC_normal].find('_');
-  //if (it != _phonemes->_mappings[Phonemes::PC_normal].end()) {
-  //  const Phonemes::SliderInfluences &infs = (*it).second;
-  //  for (const Phonemes::SliderInfluence &inf : infs) {
-  //    if (inf._slider != -1) {
-  //      _character->set_slider_value(inf._slider, inf._setting);
-  //    }
-  //  }
+do_calc_pose(const AnimEvalContext &context, AnimEvalData &this_data) {
 
-  //} else {
-    // If there is no silence phoneme defined for the character, just set all
-    // the keys to zero.
-    for (int slider : _phonemes->_all_keys) {
-      if (slider != -1) {
-        _character->set_slider_value(slider, 0.0f);
-      }
-    }
-  //}
+  // Start at silence.
+  for (int i = 0; i < context._num_slider_groups; ++i) {
+    this_data._sliders[i] = 0.0f;
+  }
+  // We also need to zero out the joints.
+  for (int i = 0; i < context._num_joint_groups; ++i) {
+    this_data._pose[i].pos.fill(0.0f);
+    this_data._pose[i].scale.fill(0.0f);
+    this_data._pose[i].shear.fill(0.0f);
+    this_data._pose[i].quat = LQuaternion(0.0f);
+  }
 
   if (_audio == nullptr || _sentence == nullptr) {
     return;
@@ -117,11 +124,14 @@ update() {
 
   add_visemes_for_sentence(emphasis_intensity, t, dt, just_started);
 
+  // Supply computed sliders to animation.
   for (int i = 0; i < Phonemes::PC_COUNT; ++i) {
     for (int j = 0; j < _classes[i]._key_weights.size(); ++j) {
       if (_phonemes->_class_keys[i][j] != -1) {
-        _character->set_slider_value(_phonemes->_class_keys[i][j],
-          _character->get_slider_value(_phonemes->_class_keys[i][j]) + _classes[i]._key_weights[j]);
+        int cslider = _phonemes->_class_keys[i][j];
+        int group = cslider / SIMDFloatVector::num_columns;
+        int sub = cslider % SIMDFloatVector::num_columns;
+        this_data._sliders[group][sub] += _classes[i]._key_weights[j];
       }
     }
   }
@@ -402,4 +412,31 @@ get_sentence_intensity(PN_stdfloat t, PN_stdfloat length) {
   catmull_rom_spline(v_pre, v_start, v_end, v_next, f2, out);
 
   return std::clamp(out[1], 0.0f, 1.0f);
+}
+
+/**
+ *
+ */
+PT(AnimChannel) CharacterTalker::
+make_copy() const {
+  return new CharacterTalker(*this);
+}
+
+/**
+ *
+ */
+PN_stdfloat CharacterTalker::
+get_length(Character *character) const {
+  if (_audio != nullptr && _audio->status() == AudioSound::PLAYING) {
+    return _audio->length();
+  }
+  return 0.1f;
+}
+
+/**
+ *
+ */
+LVector3 CharacterTalker::
+get_root_motion_vector(Character *character) const {
+  return LVector3(0.0f);
 }
