@@ -327,7 +327,7 @@ catmull_rom_spline(const LVecBase3 &p1, const LVecBase3 &p2,
   // Matrix row 2.
   a = p1 * t_sqr * 2; // 0.5 t^2 * [ ( 2*p1) + (-5*p2) + ( 4*p3) - p4 ]
   b = p2 * t_sqr * -5;
-  c = p2 * t_sqr * 4;
+  c = p3 * t_sqr * 4;
   d = p4 * -t_sqr;
 
   out += a;
