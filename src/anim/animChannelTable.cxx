@@ -640,7 +640,7 @@ fillin(DatagramIterator &scan, BamReader *manager) {
 
     // Fill frame 0.  Every slider has an entry.
     for (unsigned int i = 0; i < num_sliders; ++i) {
-      _frames[0].push_back(scan.get_float32());
+      _slider_frames[0].push_back(scan.get_float32());
     }
 
     // Every non-zero frame stores the same number of floats, the number of
