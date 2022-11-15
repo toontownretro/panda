@@ -227,12 +227,20 @@ create_s_channel(EggSAnimData *egg_anim, const std::string &name,
   // Record the name of the slider.
   bundle->_slider_names.push_back(name);
 
+  bool has_anim = false;
+  double value_0 = egg_anim->get_value(0);
+  for (int i = 1; i < egg_anim->get_num_rows(); ++i) {
+    if (egg_anim->get_value(i) != value_0) {
+      has_anim = true;
+      break;
+    }
+  }
+
   // Record if it is animated to optimize memory storage and
   // table lookup during animation computation.
-  bool has_anim = egg_anim->get_num_rows() > 1;
   bundle->_slider_formats.push_back(has_anim);
 
-  if (has_anim || egg_anim->get_value(0) != 0.0) {
+  if (has_anim || value_0 != 0.0) {
     // If the slider has several frames recorded (meaning it's animated),
     // or the single held value is non-zero, mark on the table that we
     // have slider animation.  This makes us store and compute the slider
@@ -240,8 +248,13 @@ create_s_channel(EggSAnimData *egg_anim, const std::string &name,
     bundle->_table_flags |= AnimChannelTable::TF_sliders;
   }
 
-  for (int i = 0; i < egg_anim->get_num_rows(); i++) {
-    bundle->_slider_frames[i].push_back((float)egg_anim->get_value(i));
+  if (!has_anim) {
+    // Store the held slider value on frame 0.
+    bundle->_slider_frames[0].push_back((float)value_0);
+  } else {
+    for (int i = 0; i < egg_anim->get_num_rows(); i++) {
+      bundle->_slider_frames[i].push_back((float)egg_anim->get_value(i));
+    }
   }
 }
 
