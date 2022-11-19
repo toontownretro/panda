@@ -349,6 +349,7 @@ private:
   friend class CharacterNode;
   friend class AnimChannelTable;
   friend class IKHelper;
+  friend class PMDLLoader;
 };
 
 #include "character.I"

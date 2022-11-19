@@ -29,7 +29,7 @@ class IKChain;
  */
 class EXPCL_PANDA_ANIM IKState {
 public:
-  IKState() = default;
+  INLINE IKState();
   IKState(const IKState &copy) = default;
 
   const IKChain *_chain;
@@ -47,9 +47,11 @@ public:
  */
 class EXPCL_PANDA_ANIM IKHelper {
 public:
-  IKHelper(const AnimEvalContext *context, const AnimChannel *channel);
+  IKHelper(const AnimEvalContext *context, bool local);
 
-  void pre_ik(const AnimEvalData &pose);
+  void add_channel_events(const AnimChannel *channel, const AnimEvalData &current_pose);
+
+
   void apply_ik(AnimEvalData &pose, PN_stdfloat weight);
 
   void calc_joint_net_transform(int joint, const AnimEvalData &pose);
@@ -61,6 +63,7 @@ public:
 
 public:
   const AnimEvalContext *_context;
+  Character *_character;
 
   // Holds a bit for each joint that indicates whether or not a net transform
   // was computed for it in the _joint_net_transforms vector.
@@ -68,7 +71,10 @@ public:
   // Net transform matrix for each character joint.
   pvector<LMatrix4> _joint_net_transforms;
 
-  pvector<IKState> _ik_states;
+  // One for each chain.
+  pvector<pvector<IKState>> _ik_states;
+
+  bool _local;
 };
 
 #include "ikHelper.I"

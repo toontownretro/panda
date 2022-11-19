@@ -22,6 +22,7 @@
 #include "luse.h"
 #include "pdxElement.h"
 #include "assetBase.h"
+#include "animChannel.h"
 
 class PandaNode;
 class Character;
@@ -107,6 +108,7 @@ public:
     T_invalid = -1,
     T_lock, // Lock IK chain to pose before animation channel was applied.
     T_touch, // Lock IK chain to an offset from another joint before animation channel was applied.
+    T_release,
   };
 
   Type _type = T_invalid;
@@ -114,6 +116,9 @@ public:
   std::string _chain_name;
 
   std::string _touch_joint;
+  // Touch offsets are determined by overlaying the animation with the IK event
+  // on top of this source animation.
+  std::string _touch_source_anim;
 
   // How to blend in IK.
   float _start_frame = 0;
@@ -419,6 +424,8 @@ public:
 
   AnimChannel *find_or_load_anim(const std::string &anim_name);
   AnimChannelTable *load_anim(const std::string &name, const Filename &filename);
+
+  void calc_ik_touch_offsets(AnimChannel *chan, AnimChannel::IKEvent &ik_event, const std::string &source_anim);
 
   pmap<std::string, AnimChannelTable *> _anims_by_name;
   pmap<std::string, AnimChannel *> _chans_by_name;

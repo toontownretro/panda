@@ -105,6 +105,14 @@ PUBLISHED:
       T_touch,
       // Move chain to user-specified world-space target position.
       T_target,
+      // Remove global IK events added by channels above this one.
+      T_release,
+    };
+
+    class TouchOffset {
+    public:
+      LPoint3 _pos;
+      LVecBase3 _hpr;
     };
 
     IKEvent() = default;
@@ -113,6 +121,7 @@ PUBLISHED:
     int _chain = -1;
 
     int _touch_joint = -1;
+    pvector<TouchOffset> _touch_offsets;
 
     // Blending parameters.
     PN_stdfloat _start = 0.0f;

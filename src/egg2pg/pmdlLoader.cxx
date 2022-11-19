@@ -434,6 +434,8 @@ load(const Filename &filename, const DSearchPath &search_path) {
               event._type = PMDLIKEvent::T_lock;
             } else if (etype == "touch") {
               event._type = PMDLIKEvent::T_touch;
+            } else if (etype == "release") {
+              event._type = PMDLIKEvent::T_release;
             } else {
               egg2pg_cat.error()
                 << "Unknown IK event type: " << etype << "\n";
@@ -442,6 +444,9 @@ load(const Filename &filename, const DSearchPath &search_path) {
           }
           if (evente->has_attribute("joint")) {
             event._touch_joint = evente->get_attribute_value("joint").get_string();
+          }
+          if (evente->has_attribute("ref_anim")) {
+            event._touch_source_anim = evente->get_attribute_value("ref_anim").get_string();
           }
           if (evente->has_attribute("start")) {
             event._start_frame = evente->get_attribute_value("start").get_float();
@@ -1052,6 +1057,9 @@ build_graph() {
         case PMDLIKEvent::T_touch:
           event._type = AnimChannel::IKEvent::T_touch;
           break;
+        case PMDLIKEvent::T_release:
+          event._type = AnimChannel::IKEvent::T_release;
+          break;
         default:
           assert(false);
           break;
@@ -1066,6 +1074,9 @@ build_graph() {
           event._pose_parameter = part_bundle->find_pose_parameter(pevent->_pose_param);
         } else {
           event._pose_parameter = -1;
+        }
+        if (event._type == AnimChannel::IKEvent::T_touch && !pevent->_touch_source_anim.empty()) {
+          calc_ik_touch_offsets(chan, event, pevent->_touch_source_anim);
         }
         chan->add_ik_event(event);
       }
@@ -1771,4 +1782,98 @@ get_dependencies(vector_string &filenames) {
 PT(AssetBase) PMDLDataDesc::
 make_new() const {
   return new PMDLDataDesc;
+}
+
+/**
+ *
+ */
+void PMDLLoader::
+calc_ik_touch_offsets(AnimChannel *chan, AnimChannel::IKEvent &ik_event, const std::string &reference_anim_name) {
+  AnimChannel *source_chan = find_or_load_anim(reference_anim_name);
+  if (source_chan == nullptr) {
+    egg2pg_cat.error()
+      << "Could not find reference animation " << reference_anim_name << " to calculate IK offsets for channel "
+      << chan->get_name() << "\n";
+    assert(false);
+    return;
+  }
+
+  std::cout << "Calc ik touch offset for " << chan->get_name() << ", reference anim " << source_chan->get_name() << "\n";
+
+  if (source_chan->get_type() == AnimChannelLayered::get_class_type()) {
+    source_chan = DCAST(AnimChannelLayered, source_chan)->get_channel(0);
+  }
+
+  assert(source_chan->get_type() == AnimChannelTable::get_class_type());
+
+  AnimChannelTable *tsource_chan = DCAST(AnimChannelTable, source_chan);
+
+  AnimEvalData source_data;
+  AnimEvalContext source_context;
+  source_context._frame_blend = false;
+  source_context._ik = nullptr;
+  source_context._character = _part_bundle;
+  source_context._num_joints = _part_bundle->get_num_joints();
+  source_context._num_joint_groups = simd_align_value(source_context._num_joints) / SIMDFloatVector::num_columns;
+  tsource_chan->extract_frame0_data(source_data, source_context, _part_bundle->_channel_bindings.find(tsource_chan)->second._joint_map);
+
+  if (chan->get_type() == AnimChannelLayered::get_class_type()) {
+    chan = DCAST(AnimChannelLayered, chan)->get_channel(0);
+  }
+
+  assert(chan->get_type() == AnimChannelTable::get_class_type());
+
+  AnimChannelTable *tchan = DCAST(AnimChannelTable, chan);
+
+  LMatrix4 net_transforms[max_character_joints];
+
+  SIMDQuaternionf root_fixup(LQuaternion::ident_quat());
+  root_fixup.set_lquat(0, LQuaternion(0.707107, 0, 0, 0.707107));
+
+  AnimEvalData chan_data;
+  for (int i = 0; i < chan->get_num_frames(); ++i) {
+    if (i == 0) {
+      tchan->extract_frame0_data(chan_data, source_context, _part_bundle->_channel_bindings.find(tchan)->second._joint_map);
+    } else {
+      tchan->extract_frame_data(i, chan_data, source_context, _part_bundle->_channel_bindings.find(tchan)->second._joint_map);
+    }
+
+    // Overlay chan_data on top of source_data.
+    for (int j = 0; j < source_context._num_joint_groups; ++j) {
+      chan_data._pose[j].pos = source_data._pose[j].pos + chan_data._pose[j].pos;
+      if (j == 0) {
+        chan_data._pose[j].quat = source_data._pose[j].quat.accumulate_source(chan_data._pose[j].quat * root_fixup);
+      } else {
+        chan_data._pose[j].quat = source_data._pose[j].quat.accumulate_source(chan_data._pose[j].quat);
+      }
+
+    }
+
+    // First calculate the net transforms of all joints in the current pose.
+    for (int j = 0; j < source_context._num_joints; ++j) {
+      int group = j / SIMDFloatVector::num_columns;
+      int sub = j % SIMDFloatVector::num_columns;
+      net_transforms[j] = LMatrix4::translate_mat(chan_data._pose[group].pos.get_lvec(sub)) * chan_data._pose[group].quat.get_lquat(sub);
+      if (_part_bundle->get_joint_parent(j) != -1) {
+        net_transforms[j] *= net_transforms[_part_bundle->get_joint_parent(j)];
+      }
+    }
+
+    // Now calculate the offset of the end effector from the touch joint,
+    // relative to the touch joint.
+    LMatrix4 touch_joint_inverse = net_transforms[ik_event._touch_joint];
+    touch_joint_inverse.invert_in_place();
+
+    LMatrix4 touch_target = net_transforms[_part_bundle->get_ik_chain(ik_event._chain)->get_end_joint()] * touch_joint_inverse;
+
+    LVecBase3 target_scale, target_pos, target_hpr;
+    decompose_matrix(touch_target, target_scale, target_hpr, target_pos);
+
+    std::cout << "Touch offset frame " << i << ": pos " << target_pos << ", hpr " << target_hpr << "\n";
+
+    AnimChannel::IKEvent::TouchOffset touch_offset;
+    touch_offset._pos = target_pos;
+    touch_offset._hpr = target_hpr;
+    ik_event._touch_offsets.push_back(std::move(touch_offset));
+  }
 }

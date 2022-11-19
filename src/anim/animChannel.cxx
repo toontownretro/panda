@@ -302,12 +302,6 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     return;
   }
 
-  IKHelper ik_helper(&context, this);
-
-  if (ik_enable) {
-    ik_helper.pre_ik(data);
-  }
-
   AnimEvalData this_data(data, context._num_joint_groups);
 
   if (has_flags(F_real_time)) {
@@ -335,11 +329,23 @@ calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     //this_data._pose[0]._position[2] = 0.0f;
   }
 
+  if (ik_enable && context._ik != nullptr) {
+    // Add global IK events from this channel, such as touches.
+    context._ik->add_channel_events(this, data);
+  }
+
+  // Do a local IK pass for lock events.
+  IKHelper local_ik(&context, true);
+  if (ik_enable) {
+    local_ik.add_channel_events(this, data);
+  }
+
   // Now blend the channel onto the output using the requested weight.
   blend(context, data, this_data, data._weight);
 
   if (ik_enable) {
-    ik_helper.apply_ik(data, data._weight);
+    // Apply local IK events, such as locks.
+    local_ik.apply_ik(data, data._weight);
   }
 }
 
@@ -398,6 +404,13 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_stdfloat(event._end);
     me.add_bool(event._spline);
     me.add_int8(event._pose_parameter);
+    if (event._type == IKEvent::T_touch) {
+      me.add_uint16(event._touch_offsets.size());
+      for (size_t j = 0; j < event._touch_offsets.size(); ++j) {
+        event._touch_offsets[j]._pos.write_datagram(me);
+        event._touch_offsets[j]._hpr.write_datagram(me);
+      }
+    }
   }
 
   manager->write_pointer(me, _weights);
@@ -446,6 +459,13 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     event._end = scan.get_stdfloat();
     event._spline = scan.get_bool();
     event._pose_parameter = scan.get_int8();
+    if (event._type == IKEvent::T_touch) {
+      event._touch_offsets.resize(scan.get_uint16());
+      for (size_t j = 0; j < event._touch_offsets.size(); ++j) {
+        event._touch_offsets[j]._pos.read_datagram(scan);
+        event._touch_offsets[j]._hpr.read_datagram(scan);
+      }
+    }
   }
 
   manager->read_pointer(scan); // _weights

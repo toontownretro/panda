@@ -24,6 +24,7 @@
 #include "animChannelTable.h"
 #include "animEvalContext.h"
 #include "mathutil_simd.h"
+#include "ikHelper.h"
 
 TypeHandle Character::_type_handle;
 
@@ -322,6 +323,8 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   ctx._num_slider_groups = simd_align_value(ctx._num_sliders, SIMDFloatVector::num_columns) / SIMDFloatVector::num_columns;
   ctx._frame_blend = cdata->_frame_blend_flag;
   ctx._time = now;
+  IKHelper ik(&ctx, false);
+  ctx._ik = &ik;
 
   for (size_t i = 0; i < _joint_poses.size(); i++) {
     if (_joint_poses[i]._merge_joint == -1 && !_joint_poses[i]._has_forced_value) {
@@ -393,6 +396,8 @@ do_update(double now, CData *cdata, Thread *current_thread) {
       thelayer->calc_pose(ctx, data, cdata->_channel_transition_flag && (layer[i] == 0));
     }
   }
+
+  ik.apply_ik(data, 1.0f);
 
   // Now apply the evaluated pose to the joints.
   bool any_changed = apply_pose(cdata, cdata->_root_xform, data, current_thread);

@@ -21,6 +21,7 @@
 
 class Character;
 class CharacterJoint;
+class IKHelper;
 
 // NOTE: Avoid heap allocations during the AnimChannel evaluation.
 
@@ -69,6 +70,8 @@ public:
   PN_stdfloat _start_cycle;
   PN_stdfloat _play_cycles;
   PN_stdfloat _play_rate;
+
+  IKHelper *_ik;
 };
 
 /**

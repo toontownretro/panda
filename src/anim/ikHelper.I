@@ -10,3 +10,13 @@
  * @author brian
  * @date 2022-01-29
  */
+
+/**
+ *
+ */
+IKState::
+IKState() :
+  _chain(nullptr),
+  _event(nullptr)
+{
+}
