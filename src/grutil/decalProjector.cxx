@@ -31,6 +31,8 @@ bool DecalProjector::
 project(const NodePath &root) {
   setup_coordinate_space();
 
+  _fragments.reserve(128);
+
   NodePath parent = root.get_parent();
   CPT(TransformState) parent_net;
   if (!parent.is_empty()) {
@@ -83,9 +85,14 @@ r_project(PandaNode *node, const TransformState *net_transform) {
  */
 bool DecalProjector::
 project(GeomNode *geom_node, const TransformState *net_transform) {
+  const LMatrix4 *net_mat = nullptr;
+  if (!net_transform->is_identity()) {
+    net_mat = &(net_transform->get_mat());
+  }
+
   bool any = false;
   for (int i = 0; i < geom_node->get_num_geoms(); ++i) {
-    if (project(geom_node->get_geom(i), net_transform)) {
+    if (project(geom_node->get_geom(i), net_mat)) {
       any = true;
     }
   }
@@ -96,15 +103,15 @@ project(GeomNode *geom_node, const TransformState *net_transform) {
  *
  */
 bool DecalProjector::
-project(const Geom *geom, const TransformState *net_transform) {
+project(const Geom *geom, const LMatrix4 *net_mat) {
   bool any = false;
 
   //PT(Geom) dgeom = geom->decompose();
 
   CPT(GeometricBoundingVolume) bounds;
-  if (!net_transform->is_identity()) {
+  if (net_mat != nullptr) {
     PT(GeometricBoundingVolume) net_bounds = geom->get_bounds()->make_copy()->as_geometric_bounding_volume();
-    net_bounds->xform(net_transform->get_mat());
+    net_bounds->xform(*net_mat);
     bounds = net_bounds;
   } else {
     bounds = geom->get_bounds()->as_geometric_bounding_volume();
@@ -133,13 +140,15 @@ project(const Geom *geom, const TransformState *net_transform) {
     // Move the projector bounding-box into the space of the Geom, so we can
     // use it to query the octree.
     PT(BoundingBox) projector_geom_space_bbox = DCAST(BoundingBox, _projector_world_bbox->make_copy());
-    const LMatrix4 *inverse_mat = net_transform->get_inverse_mat();
-    if (inverse_mat != nullptr) {
-      projector_geom_space_bbox->xform(*inverse_mat);
+    if (net_mat != nullptr) {
+      LMatrix4 inverse_mat;
+      if (inverse_mat.invert_from(*net_mat)) {
+        projector_geom_space_bbox->xform(inverse_mat);
+      }
     }
     GeomTriangleOctree::OctreeNode *root = (*it).second->get_root();
     pset<int> clipped_triangles;
-    return r_project_octree(readers, root, net_transform, projector_geom_space_bbox, clipped_triangles, (*it).second);
+    return r_project_octree(readers, root, net_mat, projector_geom_space_bbox, clipped_triangles, (*it).second);
 
   } else {
     // We don't have an octree acceleration structure, so we have to consider
@@ -167,7 +176,7 @@ project(const Geom *geom, const TransformState *net_transform) {
           int start = j * 3;
           if (project(readers, get_prim_vertex(start, read_pointer, prim_reader),
                       get_prim_vertex(start + 1, read_pointer, prim_reader),
-                      get_prim_vertex(start + 2, read_pointer, prim_reader), net_transform)) {
+                      get_prim_vertex(start + 2, read_pointer, prim_reader), net_mat)) {
             any = true;
           }
         }
@@ -196,7 +205,7 @@ project(const Geom *geom, const TransformState *net_transform) {
             ++vi;
             if (reversed) {
               if (v0 != v1 && v0 != v2 && v1 != v2) {
-                if (project(readers, v0, v2, v1, net_transform)) {
+                if (project(readers, v0, v2, v1, net_mat)) {
                   any = true;
                 }
               }
@@ -204,7 +213,7 @@ project(const Geom *geom, const TransformState *net_transform) {
               reversed = false;
             } else {
               if (v0 != v1 && v0 != v2 && v1 != v2) {
-                if (project(readers, v0, v1, v2, net_transform)) {
+                if (project(readers, v0, v1, v2, net_mat)) {
                   any = true;
                 }
               }
@@ -229,7 +238,7 @@ project(const Geom *geom, const TransformState *net_transform) {
  */
 bool DecalProjector::
 r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *node,
-                 const TransformState *net_transform, const BoundingBox *projector_bbox,
+                 const LMatrix4 *net_mat, const BoundingBox *projector_bbox,
                  pset<int> &clipped_triangles, const GeomTriangleOctree *tree) {
   if (!node->_bounds->contains(projector_bbox)) {
     return false;
@@ -242,7 +251,7 @@ r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *n
         continue;
       }
       const int *vertices = tree->get_triangle(triangle_index);
-      if (project(readers, vertices[0], vertices[1], vertices[2], net_transform)) {
+      if (project(readers, vertices[0], vertices[1], vertices[2], net_mat)) {
         any = true;
       }
       clipped_triangles.insert(triangle_index);
@@ -252,7 +261,7 @@ r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *n
 
   bool any = false;
   for (int i = 0; i < 8; ++i) {
-    if (r_project_octree(readers, node->_children[i], net_transform, projector_bbox, clipped_triangles, tree)) {
+    if (r_project_octree(readers, node->_children[i], net_mat, projector_bbox, clipped_triangles, tree)) {
       any = true;
     }
   }

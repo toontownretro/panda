@@ -81,8 +81,8 @@ PUBLISHED:
 
   bool project(const NodePath &root);
   bool project(GeomNode *geom_node, const TransformState *net_transform);
-  bool project(const Geom *geom, const TransformState *net_transform);
-  ALWAYS_INLINE bool project(const Readers &readers, int v1, int v2, int v3, const TransformState *net_transform);
+  bool project(const Geom *geom, const LMatrix4 *net_mat);
+  ALWAYS_INLINE bool project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat);
 
   INLINE bool box_overlap(const LPoint3 &min_a, const LPoint3 &max_a, const LPoint3 &min_b, const LPoint3 &max_b) const;
 
@@ -102,7 +102,7 @@ private:
   bool r_project(PandaNode *node, const TransformState *net_transform);
 
   bool r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *node,
-                        const TransformState *net_transform, const BoundingBox *projector_bbox,
+                        const LMatrix4 *net_mat, const BoundingBox *projector_bbox,
                         pset<int> &clipped_triangles,
                         const GeomTriangleOctree *tree);
 

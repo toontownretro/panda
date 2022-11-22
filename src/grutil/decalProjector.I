@@ -87,11 +87,10 @@ set_decal_render_state(const RenderState *state) {
  * decal bounding box.
  */
 ALWAYS_INLINE bool DecalProjector::
-project(const Readers &readers, int v1, int v2, int v3, const TransformState *net_transform) {
+project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat) {
   DecalWinding tri_winding;
 
-  bool ident_transform = net_transform->is_identity();
-  const LMatrix4 &net_mat = net_transform->get_mat();
+  bool has_mat = (net_mat != nullptr);
 
   //int vertices[3] = { v1, v2, v3 };
 
@@ -99,22 +98,22 @@ project(const Readers &readers, int v1, int v2, int v3, const TransformState *ne
 
   vreader.set_row_unsafe(v1);
   LPoint3 p1 = vreader.get_data3f();
-  if (!ident_transform) {
-    p1 = net_mat.xform_point(p1);
+  if (has_mat) {
+    p1 = net_mat->xform_point(p1);
   }
   tri_winding.add_point(p1);
 
   vreader.set_row_unsafe(v2);
   LPoint3 p2 = vreader.get_data3f();
-  if (!ident_transform) {
-    p2 = net_mat.xform_point(p2);
+  if (has_mat) {
+    p2 = net_mat->xform_point(p2);
   }
   tri_winding.add_point(p2);
 
   vreader.set_row_unsafe(v3);
   LPoint3 p3 = vreader.get_data3f();
-  if (!ident_transform) {
-    p3 = net_mat.xform_point(p3);
+  if (has_mat) {
+    p3 = net_mat->xform_point(p3);
   }
   tri_winding.add_point(p3);
 
