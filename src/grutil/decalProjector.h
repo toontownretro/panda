@@ -97,6 +97,8 @@ PUBLISHED:
   static void clear_geom_octrees();
 
 private:
+  INLINE int get_prim_vertex(int i, const unsigned char *read_pointer, const GeomPrimitivePipelineReader &reader) const;
+
   bool r_project(PandaNode *node, const TransformState *net_transform);
 
   bool r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *node,

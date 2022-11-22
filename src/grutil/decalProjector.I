@@ -242,3 +242,25 @@ box_overlap(const LPoint3 &min_a, const LPoint3 &max_a, const LPoint3 &min_b, co
           max_a[1] >= min_b[1] && max_b[1] >= min_a[1] &&
           max_a[2] >= min_b[2] && max_b[2] >= min_a[2]);
 }
+
+/**
+ *
+ */
+INLINE int DecalProjector::
+get_prim_vertex(int i, const unsigned char *read_pointer, const GeomPrimitivePipelineReader &reader) const {
+  if (read_pointer != nullptr) {
+    switch (reader.get_index_type()) {
+    case GeomEnums::NT_uint8:
+      return ((uint8_t *)read_pointer)[i];
+    case GeomEnums::NT_uint16:
+      return ((uint16_t *)read_pointer)[i];
+    case GeomEnums::NT_uint32:
+      return ((uint32_t *)read_pointer)[i];
+    default:
+      return 0;
+    }
+
+  } else {
+    return reader.get_first_vertex() + i;
+  }
+}

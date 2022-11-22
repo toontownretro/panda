@@ -156,12 +156,18 @@ project(const Geom *geom, const TransformState *net_transform) {
       TypeHandle prim_type = prim->get_type();
 
       GeomPrimitivePipelineReader prim_reader(prim, current_thread);
+      const unsigned char *read_pointer = nullptr;
+      if (prim_reader.is_indexed()) {
+        read_pointer = prim_reader.get_read_pointer(true);
+      }
 
       if (prim_type == GeomTriangles::get_class_type()) {
-        for (int j = 0; j < prim_reader.get_num_primitives(); j++) {
+        int num_primitives = prim_reader.get_num_primitives();
+        for (int j = 0; j < num_primitives; j++) {
           int start = j * 3;
-          if (project(readers, prim_reader.get_vertex(start), prim_reader.get_vertex(start + 1),
-                      prim_reader.get_vertex(start + 2), net_transform)) {
+          if (project(readers, get_prim_vertex(start, read_pointer, prim_reader),
+                      get_prim_vertex(start + 1, read_pointer, prim_reader),
+                      get_prim_vertex(start + 2, read_pointer, prim_reader), net_transform)) {
             any = true;
           }
         }
@@ -180,13 +186,13 @@ project(const Geom *geom, const TransformState *net_transform) {
           vi += num_unused;
           int end = ends[li];
           nassertr(vi + 2 <= end, false);
-          int v0 = prim_reader.get_vertex(vi);
+          int v0 = get_prim_vertex(vi, read_pointer, prim_reader);//prim_reader.get_vertex(vi);
           ++vi;
-          int v1 = prim_reader.get_vertex(vi);
+          int v1 = get_prim_vertex(vi, read_pointer, prim_reader);//prim_reader.get_vertex(vi);
           ++vi;
           bool reversed = false;
           while (vi < end) {
-            int v2 = prim_reader.get_vertex(vi);
+            int v2 = get_prim_vertex(vi, read_pointer, prim_reader);//prim_reader.get_vertex(vi);
             ++vi;
             if (reversed) {
               if (v0 != v1 && v0 != v2 && v1 != v2) {
