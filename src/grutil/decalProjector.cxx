@@ -114,6 +114,17 @@ project(const Geom *geom, const TransformState *net_transform) {
     return false;
   }
 
+  Thread *current_thread = Thread::get_current_thread();
+
+  const GeomVertexData *vdata = geom->get_vertex_data();
+  GeomVertexDataPipelineReader data_reader(vdata, Thread::get_current_thread());
+  data_reader.check_array_readers();
+  Readers readers;
+  readers._vertex = GeomVertexReader(&data_reader, InternalName::get_vertex());
+  //readers._normal = GeomVertexReader(&data_reader, InternalName::get_normal());
+  //readers._tangent = GeomVertexReader(&data_reader, InternalName::get_tangent());
+  //readers._binormal = GeomVertexReader(&data_reader, InternalName::get_binormal());
+
   // See if we have an octree for this Geom.  If so, we can use
   // it to quickly filter down to the set of triangles near the projector
   // bounding box.
@@ -128,15 +139,14 @@ project(const Geom *geom, const TransformState *net_transform) {
     }
     GeomTriangleOctree::OctreeNode *root = (*it).second->get_root();
     pset<int> clipped_triangles;
-    return r_project_octree(geom, root, net_transform, projector_geom_space_bbox, clipped_triangles, (*it).second);
+    return r_project_octree(readers, root, net_transform, projector_geom_space_bbox, clipped_triangles, (*it).second);
 
   } else {
     // We don't have an octree acceleration structure, so we have to consider
     // every triangle of the Geom.
 
-    const GeomVertexData *vdata = geom->get_vertex_data();
-    for (int i = 0; i < geom->get_num_primitives(); ++i) {
-      const GeomPrimitive *prim = geom->get_primitive(i);
+    for (int i = 0; i < geom->get_num_primitives(current_thread); ++i) {
+      const GeomPrimitive *prim = geom->get_primitive(i, current_thread);
       // We can only put decals on polygons (triangles and tristrips).
       //std::cout << prim->get_type() << "\n";
       if (prim->get_primitive_type() != GeomEnums::PT_polygons) {
@@ -145,11 +155,13 @@ project(const Geom *geom, const TransformState *net_transform) {
 
       TypeHandle prim_type = prim->get_type();
 
-      if (prim_type == GeomTriangles::get_class_type()) {
+      GeomPrimitivePipelineReader prim_reader(prim, current_thread);
 
-        for (int j = 0; j < prim->get_num_primitives(); j++) {
-          int start = prim->get_primitive_start(j);
-          if (project(vdata, prim->get_vertex(start), prim->get_vertex(start + 1), prim->get_vertex(start + 2), net_transform)) {
+      if (prim_type == GeomTriangles::get_class_type()) {
+        for (int j = 0; j < prim_reader.get_num_primitives(); j++) {
+          int start = j * 3;
+          if (project(readers, prim_reader.get_vertex(start), prim_reader.get_vertex(start + 1),
+                      prim_reader.get_vertex(start + 2), net_transform)) {
             any = true;
           }
         }
@@ -158,8 +170,8 @@ project(const Geom *geom, const TransformState *net_transform) {
 
         // Extract triangles from tristrip indices.
 
-        CPTA_int ends = prim->get_ends();
-        int num_vertices = prim->get_num_vertices();
+        CPTA_int ends = prim_reader.get_ends();
+        int num_vertices = prim_reader.get_num_vertices();
         int num_unused = prim->get_num_unused_vertices_per_primitive();
 
         int vi = -num_unused;
@@ -168,17 +180,17 @@ project(const Geom *geom, const TransformState *net_transform) {
           vi += num_unused;
           int end = ends[li];
           nassertr(vi + 2 <= end, false);
-          int v0 = prim->get_vertex(vi);
+          int v0 = prim_reader.get_vertex(vi);
           ++vi;
-          int v1 = prim->get_vertex(vi);
+          int v1 = prim_reader.get_vertex(vi);
           ++vi;
           bool reversed = false;
           while (vi < end) {
-            int v2 = prim->get_vertex(vi);
+            int v2 = prim_reader.get_vertex(vi);
             ++vi;
             if (reversed) {
               if (v0 != v1 && v0 != v2 && v1 != v2) {
-                if (project(vdata, v0, v2, v1, net_transform)) {
+                if (project(readers, v0, v2, v1, net_transform)) {
                   any = true;
                 }
               }
@@ -186,7 +198,7 @@ project(const Geom *geom, const TransformState *net_transform) {
               reversed = false;
             } else {
               if (v0 != v1 && v0 != v2 && v1 != v2) {
-                if (project(vdata, v0, v1, v2, net_transform)) {
+                if (project(readers, v0, v1, v2, net_transform)) {
                   any = true;
                 }
               }
@@ -210,7 +222,7 @@ project(const Geom *geom, const TransformState *net_transform) {
  *
  */
 bool DecalProjector::
-r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
+r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *node,
                  const TransformState *net_transform, const BoundingBox *projector_bbox,
                  pset<int> &clipped_triangles, const GeomTriangleOctree *tree) {
   if (!node->_bounds->contains(projector_bbox)) {
@@ -224,7 +236,7 @@ r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
         continue;
       }
       const int *vertices = tree->get_triangle(triangle_index);
-      if (project(geom->get_vertex_data(), vertices[0], vertices[1], vertices[2], net_transform)) {
+      if (project(readers, vertices[0], vertices[1], vertices[2], net_transform)) {
         any = true;
       }
       clipped_triangles.insert(triangle_index);
@@ -234,155 +246,11 @@ r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
 
   bool any = false;
   for (int i = 0; i < 8; ++i) {
-    if (r_project_octree(geom, node->_children[i], net_transform, projector_bbox, clipped_triangles, tree)) {
+    if (r_project_octree(readers, node->_children[i], net_transform, projector_bbox, clipped_triangles, tree)) {
       any = true;
     }
   }
   return any;
-}
-
-/**
- * Attempts to project the decal onto the triangle defined by v1, v2, and v3,
- * which are vertex indices into the given GeomVertexData.
- *
- * Returns true if a decal fragment was made, or false otherise.
- *
- * A decal fragment will not be made if the triangle is facing away
- * from the decal normal, or if the triangle does not intersect the
- * decal bounding box.
- */
-bool DecalProjector::
-project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformState *net_transform) {
-  DecalWinding tri_winding;
-
-  bool ident_transform = net_transform->is_identity();
-  const LMatrix4 &net_mat = net_transform->get_mat();
-
-  int vertices[3] = { v1, v2, v3 };
-
-  GeomVertexReader vreader(vdata, InternalName::get_vertex());
-
-  vreader.set_row(v1);
-  LPoint3 p1 = vreader.get_data3f();
-  if (!ident_transform) {
-    p1 = net_mat.xform_point(p1);
-  }
-  tri_winding.add_point(p1);
-
-  vreader.set_row(v2);
-  LPoint3 p2 = vreader.get_data3f();
-  if (!ident_transform) {
-    p2 = net_mat.xform_point(p2);
-  }
-  tri_winding.add_point(p2);
-
-  vreader.set_row(v3);
-  LPoint3 p3 = vreader.get_data3f();
-  if (!ident_transform) {
-    p3 = net_mat.xform_point(p3);
-  }
-  tri_winding.add_point(p3);
-
-  LVector3 triangle_normal = -tri_winding.get_plane().get_normal();
-  if (triangle_normal.dot(_projector_world_forward) < 0.1f) {
-    // If triangle is exactly perpendicular or facing away from decal
-    // normal, don't create a fragment.
-    return false;
-  }
-
-  LPoint3 tri_mins(1e9);
-  LPoint3 tri_maxs(-1e9);
-  tri_mins = tri_mins.fmin(tri_winding.get_point(0));
-  tri_mins = tri_mins.fmin(tri_winding.get_point(1));
-  tri_mins = tri_mins.fmin(tri_winding.get_point(2));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(0));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(1));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(2));
-
-  BoundingBox tri_bbox(tri_mins, tri_maxs);
-  tri_bbox.local_object();
-  if (!_projector_world_bbox->contains(&tri_bbox)) {
-    return false;
-  }
-
-  // This triangle will definitely be part of the decal.
-  // Clip the triangle to the 6 planes of the decal bounding box.
-
-  // Now clip the triangle to each plane.
-  bool valid = true;
-
-  DecalWinding fragment_winding(tri_winding);
-
-  for (int i = 0; i < 6; ++i) {
-    fragment_winding = fragment_winding.chop(_box_planes[i]);
-    if (fragment_winding.get_num_points() < 3) {
-      valid = false;
-      break;
-    }
-  }
-
-  if (!valid) {
-    return false;
-  }
-
-  DecalFragment frag;
-  frag._orig_vertices[0]._pos = tri_winding.get_point(0);
-  frag._orig_vertices[1]._pos = tri_winding.get_point(1);
-  frag._orig_vertices[2]._pos = tri_winding.get_point(2);
-
-  vreader.set_column(InternalName::get_normal());
-  if (vreader.has_column()) {
-    for (int i = 0; i < 3; ++i) {
-      vreader.set_row(vertices[i]);
-      if (!ident_transform) {
-        frag._orig_vertices[i]._normal = net_mat.xform_vec(vreader.get_data3f());
-      } else {
-        frag._orig_vertices[i]._normal = vreader.get_data3f();
-      }
-    }
-  } else {
-    for (int i = 0; i < 3; ++i) {
-      frag._orig_vertices[i]._normal = LVector3::forward();
-    }
-  }
-
-  vreader.set_column(InternalName::get_tangent());
-  if (vreader.has_column()) {
-    for (int i = 0; i < 3; ++i) {
-      vreader.set_row(vertices[i]);
-      if (!ident_transform) {
-        frag._orig_vertices[i]._tangent = net_mat.xform_vec(vreader.get_data3f());
-      } else {
-        frag._orig_vertices[i]._tangent = vreader.get_data3f();
-      }
-    }
-  } else {
-    for (int i = 0; i < 3; ++i) {
-      frag._orig_vertices[i]._tangent = LVector3::right();
-    }
-  }
-
-  vreader.set_column(InternalName::get_binormal());
-  if (vreader.has_column()) {
-    for (int i = 0; i < 3; ++i) {
-      vreader.set_row(vertices[i]);
-      if (!ident_transform) {
-        frag._orig_vertices[i]._binormal = net_mat.xform_vec(vreader.get_data3f());
-      } else {
-        frag._orig_vertices[i]._binormal = vreader.get_data3f();
-      }
-    }
-  } else {
-    for (int i = 0; i < 3; ++i) {
-      frag._orig_vertices[i]._binormal = LVector3::up();
-    }
-  }
-
-  frag._winding = std::move(fragment_winding);
-
-  _fragments.push_back(std::move(frag));
-
-  return true;
 }
 
 /**
@@ -457,26 +325,33 @@ generate() {
   PT(GeomVertexArrayFormat) arr_fmt_tmp = new GeomVertexArrayFormat;
   arr_fmt_tmp->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);
   arr_fmt_tmp->add_column(InternalName::get_texcoord(), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
-  arr_fmt_tmp->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
-  arr_fmt_tmp->add_column(InternalName::get_tangent(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
-  arr_fmt_tmp->add_column(InternalName::get_binormal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
+  //arr_fmt_tmp->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
+  //arr_fmt_tmp->add_column(InternalName::get_tangent(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
+  //arr_fmt_tmp->add_column(InternalName::get_binormal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
   CPT(GeomVertexFormat) vtx_fmt = GeomVertexFormat::register_format(arr_fmt_tmp);
 
   PT(GeomNode) node = new GeomNode("decal");
   PT(GeomVertexData) vdata = new GeomVertexData("decal", vtx_fmt, GeomEnums::UH_static);
+  vdata->unclean_set_num_rows(_num_vertices);
   PT(Geom) geom = new Geom(vdata);
   PT(GeomTriangles) triangles = new GeomTriangles(GeomEnums::UH_static);
+  triangles->set_index_type(GeomEnums::NT_uint16);
+  PT(GeomVertexArrayDataHandle) vertices_handle = triangles->modify_vertices_handle(Thread::get_current_thread());
+  vertices_handle->unclean_set_num_rows(_num_indices);
+  uint16_t *vertices_ptr = (uint16_t *)vertices_handle->get_write_pointer();
 
   int start_vertex = 0;
   GeomVertexWriter vwriter(vdata, InternalName::get_vertex());
   GeomVertexWriter twriter(vdata, InternalName::get_texcoord());
-  GeomVertexWriter nwriter(vdata, InternalName::get_normal());
-  GeomVertexWriter biwriter(vdata, InternalName::get_binormal());
-  GeomVertexWriter tawriter(vdata, InternalName::get_tangent());
+  //GeomVertexWriter nwriter(vdata, InternalName::get_normal());
+  //GeomVertexWriter biwriter(vdata, InternalName::get_binormal());
+  //GeomVertexWriter tawriter(vdata, InternalName::get_tangent());
 
   LVecBase2 projector_size = _projector_maxs.get_xz() - _projector_mins.get_xz();
 
   bool ident_decal_mat = _decal_inv_net_mat.is_identity();
+
+  int num_indices_written = 0;
 
   for (const DecalFragment &frag : _fragments) {
     // Generate a trifan-like thing from the winding.  Each decal fragment is
@@ -485,44 +360,44 @@ generate() {
 
     for (int i = 0; i < frag._winding.get_num_points(); ++i) {
       if (!ident_decal_mat) {
-        vwriter.add_data3f(_decal_inv_net_mat.xform_point(frag._winding.get_point(i)));
+        vwriter.set_data3f(_decal_inv_net_mat.xform_point(frag._winding.get_point(i)));
       } else {
-        vwriter.add_data3f(frag._winding.get_point(i));
+        vwriter.set_data3f(frag._winding.get_point(i));
       }
 
-      LVecBase3 bary = calc_barycentric_coordinates(
-        frag._orig_vertices[0]._pos, frag._orig_vertices[1]._pos,
-        frag._orig_vertices[2]._pos, frag._winding.get_point(i));
+      //LVecBase3 bary = calc_barycentric_coordinates(
+      //  frag._orig_vertices[0]._pos, frag._orig_vertices[1]._pos,
+      //  frag._orig_vertices[2]._pos, frag._winding.get_point(i));
 
-      LVector3 normal = frag._orig_vertices[0]._normal * bary[0] +
-                        frag._orig_vertices[1]._normal * bary[1] +
-                        frag._orig_vertices[2]._normal * bary[2];
-      normal.normalize();
-      if (!ident_decal_mat) {
-        nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
-      } else {
-        nwriter.add_data3f(normal);
-      }
+      //LVector3 normal = frag._orig_vertices[0]._normal * bary[0] +
+      //                  frag._orig_vertices[1]._normal * bary[1] +
+      //                  frag._orig_vertices[2]._normal * bary[2];
+      //normal.normalize();
+      //if (!ident_decal_mat) {
+      //  nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
+      //} else {
+      //  nwriter.add_data3f(normal);
+      //}
 
-      LVector3 tangent = frag._orig_vertices[0]._tangent * bary[0] +
-                         frag._orig_vertices[1]._tangent * bary[1] +
-                         frag._orig_vertices[2]._tangent * bary[2];
-      tangent.normalize();
-      if (!ident_decal_mat) {
-        tawriter.add_data3f(_decal_inv_net_mat.xform_vec(tangent));
-      } else {
-        tawriter.add_data3f(tangent);
-      }
+      //LVector3 tangent = frag._orig_vertices[0]._tangent * bary[0] +
+      //                   frag._orig_vertices[1]._tangent * bary[1] +
+      //                   frag._orig_vertices[2]._tangent * bary[2];
+      //tangent.normalize();
+      //if (!ident_decal_mat) {
+      //  tawriter.add_data3f(_decal_inv_net_mat.xform_vec(tangent));
+      //} else {
+      //  tawriter.add_data3f(tangent);
+      //}
 
-      LVector3 binormal = frag._orig_vertices[0]._binormal * bary[0] +
-                          frag._orig_vertices[1]._binormal * bary[1] +
-                          frag._orig_vertices[2]._binormal * bary[2];
-      binormal.normalize();
-      if (!ident_decal_mat) {
-        biwriter.add_data3f(_decal_inv_net_mat.xform_vec(binormal));
-      } else {
-        biwriter.add_data3f(binormal);
-      }
+      //LVector3 binormal = frag._orig_vertices[0]._binormal * bary[0] +
+      //                    frag._orig_vertices[1]._binormal * bary[1] +
+      //                    frag._orig_vertices[2]._binormal * bary[2];
+      //binormal.normalize();
+      ///if (!ident_decal_mat) {
+      //  biwriter.add_data3f(_decal_inv_net_mat.xform_vec(binormal));
+      //} else {
+      //  biwriter.add_data3f(binormal);
+      //}
 
       // To calculate texture coordinates, we move the vertex position into
       // projector-space, and use the X and Z distances from the lower-left
@@ -540,18 +415,25 @@ generate() {
         uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 1.0f, 1.0f)).get_xy();
       }
 
-      twriter.add_data2f(uv);
+      twriter.set_data2f(uv);
     }
 
     for (int i = 1; i < (frag._winding.get_num_points() - 1); ++i) {
-      triangles->add_vertex(start_vertex);
-      triangles->add_vertex(start_vertex + i);
-      triangles->add_vertex(start_vertex + i + 1);
-      triangles->close_primitive();
+      *vertices_ptr++ = start_vertex;
+      *vertices_ptr++ = start_vertex + i;
+      *vertices_ptr++ = start_vertex + i + 1;
+
+      num_indices_written += 3;
     }
 
     start_vertex += frag._winding.get_num_points();
   }
+
+  assert(num_indices_written == _num_indices);
+
+  vertices_ptr = nullptr;
+  vertices_handle = nullptr;
+  triangles->calc_num_vertices();
 
   geom->add_primitive(triangles);
   node->add_geom(geom, _decal_state);

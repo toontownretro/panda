@@ -29,7 +29,9 @@
 #include "pmap.h"
 #include "pointerTo.h"
 #include "geomTriangleOctree.h"
+#include "geomVertexReader.h"
 #include "pset.h"
+#include "lightMutex.h"
 
 // There are multiple coordinate spaces we're dealing with
 // here.
@@ -54,6 +56,15 @@ typedef BaseWinding<9> DecalWinding;
  *
  */
 class EXPCL_PANDA_GRUTIL DecalProjector {
+private:
+  class Readers {
+  public:
+    GeomVertexReader _vertex;
+    GeomVertexReader _normal;
+    GeomVertexReader _tangent;
+    GeomVertexReader _binormal;
+  };
+
 PUBLISHED:
   INLINE DecalProjector();
   virtual ~DecalProjector() = default;
@@ -71,7 +82,9 @@ PUBLISHED:
   bool project(const NodePath &root);
   bool project(GeomNode *geom_node, const TransformState *net_transform);
   bool project(const Geom *geom, const TransformState *net_transform);
-  bool project(const GeomVertexData *vdata, int v1, int v2, int v3, const TransformState *net_transform);
+  ALWAYS_INLINE bool project(const Readers &readers, int v1, int v2, int v3, const TransformState *net_transform);
+
+  INLINE bool box_overlap(const LPoint3 &min_a, const LPoint3 &max_a, const LPoint3 &min_b, const LPoint3 &max_b) const;
 
   void setup_coordinate_space();
 
@@ -86,7 +99,7 @@ PUBLISHED:
 private:
   bool r_project(PandaNode *node, const TransformState *net_transform);
 
-  bool r_project_octree(const Geom *geom, const GeomTriangleOctree::OctreeNode *node,
+  bool r_project_octree(const Readers &readers, const GeomTriangleOctree::OctreeNode *node,
                         const TransformState *net_transform, const BoundingBox *projector_bbox,
                         pset<int> &clipped_triangles,
                         const GeomTriangleOctree *tree);
@@ -110,6 +123,7 @@ private:
     DecalWinding _winding;
   };
   pvector<DecalFragment> _fragments;
+  LightMutex _fragments_lock;
 
   // Defines the coordinate-space of the projector.
   NodePath _projector_parent;
@@ -137,6 +151,9 @@ private:
 
   typedef pflat_hash_map<const Geom *, PT(GeomTriangleOctree), pointer_hash> GeomOctrees;
   static GeomOctrees _octrees;
+
+  int _num_vertices;
+  int _num_indices;
 };
 
 #include "decalProjector.I"
