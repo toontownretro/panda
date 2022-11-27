@@ -181,57 +181,45 @@ collect_pmats() {
     return;
   }
 
-  ModelIndex *index = ModelIndex::get_global_ptr();
+  DSearchPath search_path = get_model_path();
+  search_path.prepend_directory(egg_dir);
 
   for (EggMaterialCollection::iterator mit = mats.begin(); mit != mats.end(); ++mit) {
     EggMaterial *mat = (*mit);
 
     std::string egg_mat_name = mat->get_name();
 
-    ModelIndex::Asset *mat_asset = index->find_asset("materials", egg_mat_name);
-    if (mat_asset != nullptr) {
-      _egg_material_pmats[mat] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
-
-    } else {
-      // If it's not in the model index, check in the directory of the egg
-      // file.
-      Filename mat_filename = Filename(_data->get_egg_filename().get_dirname()) / (egg_mat_name + ".pmat");
-      if (mat_filename.is_regular_file()) {
-        _egg_material_pmats[mat] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
-      }
+    // Search for <egg_mat_name>.pmat along the model-path + egg file directory.
+    Filename mat_filename = egg_mat_name + ".pmat";
+    if (mat_filename.resolve_filename(search_path)) {
+      _egg_material_pmats[mat] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
     }
   }
 
-  for (EggTextureCollection::iterator ti = texs.begin(); ti != texs.end(); ++ti) {
-    EggTexture *tex = (*ti);
+  for (EggTextureCollection::iterator tit = texs.begin(); tit != texs.end(); ++tit) {
+    EggTexture *tex = (*tit);
 
-    Filename tex_filename = tex->get_fullpath();
+    bool got_pmat = false;
 
-    // Try with the extension included.  It might be material.rgb.pmat
-    ModelIndex::Asset *mat_asset = index->find_asset("materials", tex_filename.get_basename());
-    if (mat_asset != nullptr) {
-      _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
+    // First, look for the texture pathname, replaced with the .pmat extension,
+    // against the search path.
+    Filename mat_filename = tex->get_filename();
+    mat_filename.set_extension("pmat");
+    if (mat_filename.resolve_filename(search_path)) {
+      got_pmat = true;
 
     } else {
-      // If it's not in the model index, check in the directory of the egg
-      // file.
-      Filename mat_filename = (tex_filename.get_fullpath() + ".pmat");
-      if (mat_filename.is_regular_file()) {
-        _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
-
-      } else {
-        // Try with just the basename.
-        mat_asset = index->find_asset("materials", tex_filename.get_basename_wo_extension());
-        if (mat_asset != nullptr) {
-          _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_asset->_src));
-
-        } else {
-          mat_filename = (tex_filename.get_fullpath_wo_extension() + ".pmat");
-          if (mat_filename.is_regular_file()) {
-            _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
-          }
-        }
+      // If we couldn't find that, search for just the basename, replaced with
+      // the .pmat extension, against the search path.
+      mat_filename = tex->get_filename().get_basename();
+      mat_filename.set_extension("pmat");
+      if (mat_filename.resolve_filename(search_path)) {
+        got_pmat = true;
       }
+    }
+
+    if (got_pmat) {
+      _egg_texture_pmats[tex] = MaterialAttrib::make(MaterialPool::load_material(mat_filename));
     }
   }
 }
@@ -956,19 +944,30 @@ bool EggLoader::
 load_texture(TextureDef &def, EggTexture *egg_tex) {
   // First check if there's a corresponding .ptex for this texture.  If there
   // is, we will load that and skip the code below.
-  ModelIndex *index = ModelIndex::get_global_ptr();
+  DSearchPath search_path = get_model_path();
+  search_path.prepend_directory(_data->get_egg_filename().get_dirname());
 
-  // First try with the extension included (in case there are multiple textures
-  // with the same basename but different extensions).
-  ModelIndex::Asset *tex_asset = index->find_asset("textures", egg_tex->get_filename().get_basename());
-  if (tex_asset == nullptr) {
-    // Didn't find it.  Try without the extension now.
-    tex_asset = index->find_asset("textures", egg_tex->get_filename().get_basename_wo_extension());
+  bool got_ptex = false;
+
+  // First try the full Egg texture filename, replaced with the .ptex
+  // extension, against the search path.
+  Filename ptex_filename = egg_tex->get_filename();
+  ptex_filename.set_extension("ptex");
+  if (ptex_filename.resolve_filename(search_path)) {
+    got_ptex = true;
+  } else {
+    // If we didn't find that, try just the texture basename, replaced with the
+    // .ptex extension, against the search path.
+    ptex_filename = egg_tex->get_filename().get_basename();
+    ptex_filename.set_extension("ptex");
+    if (ptex_filename.resolve_filename(search_path)) {
+      got_ptex = true;
+    }
   }
 
-  if (tex_asset != nullptr) {
+  if (got_ptex) {
     // We found a corresponding .ptex, use that instead.
-    PT(Texture) tex = TexturePool::load_texture(tex_asset->_src);
+    PT(Texture) tex = TexturePool::load_texture(ptex_filename);
     if (tex == nullptr) {
       return false;
     }
