@@ -1963,6 +1963,7 @@ rasterize_geoms_into_lightmap_textures() {
       LVecBase3 emission_color(0, 0, 0);
 
       bool has_transparency = (geom.contents & C_transparent) != 0;
+      bool has_emission = false;
 
       const MaterialAttrib *mattr;
       if (geom.state->get_attrib(mattr)) {
@@ -1983,16 +1984,17 @@ rasterize_geoms_into_lightmap_textures() {
           }
 
           // Check for emission.
-          //MaterialParamBase *selfillum_param = mat->get_param("selfillum");
-          //if (selfillum_param != nullptr && DCAST(MaterialParamBool, selfillum_param)->get_value()) {
-          //  MaterialParamBase *tint_param = mat->get_param("selfillumtint");
-          //  if (tint_param != nullptr) {
-          //    emission_color = DCAST(MaterialParamColor, tint_param)->get_value().get_xyz();
-          //    emission_color[0] = std::pow(emission_color[0], 2.2f);
-          //    emission_color[1] = std::pow(emission_color[1], 2.2f);
-          //    emission_color[2] = std::pow(emission_color[2], 2.2f);
-          //  }
-          //}
+          MaterialParamBase *selfillum_param = mat->get_param("selfillum");
+          if (selfillum_param != nullptr && DCAST(MaterialParamBool, selfillum_param)->get_value()) {
+            has_emission = true;
+            MaterialParamBase *tint_param = mat->get_param("selfillumtint");
+            if (tint_param != nullptr) {
+              emission_color = DCAST(MaterialParamColor, tint_param)->get_value().get_xyz();
+              emission_color[0] = std::pow(emission_color[0], 2.2f);
+              emission_color[1] = std::pow(emission_color[1], 2.2f);
+              emission_color[2] = std::pow(emission_color[2], 2.2f);
+            }
+          }
         }
       }
 
@@ -2026,7 +2028,7 @@ rasterize_geoms_into_lightmap_textures() {
       NodePath geom_np = root.attach_new_node(geom_node);
       geom_np.set_shader_input("base_texture_sampler", base_tex, 10);
       geom_np.set_shader_input("emission_color", emission_color, 10);
-      geom_np.set_shader_input("first_triangle_transparency", LVecBase2i(geom.first_triangle, has_transparency), 10);
+      geom_np.set_shader_input("first_triangle_transparency_emission", LVecBase3i(geom.first_triangle, has_transparency, has_emission), 10);
       geom_np.set_shader_input("geom_uv_mins", geom.uv_mins, 10);
       geom_np.set_shader_input("geom_uv_maxs", geom.uv_maxs, 10);
     }
