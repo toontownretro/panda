@@ -73,27 +73,16 @@ read(Filename filename, const DSearchPath &search_path) {
   _filename = filename;
   _fullpath = resolved;
 
-  PT(VirtualFile) vfile = vfs->get_file(resolved);
-  if (vfile == nullptr) {
-    return false;
-  }
+  std::string data = vfs->read_file(resolved, true);
 
-  if (tokenfile_cat.is_debug()) {
-    tokenfile_cat.debug()
-      << "Got the virtual file\n";
-  }
-
-  std::istream *stream = vfile->open_read_file(true);
-  if (stream == nullptr) {
-    return false;
-  }
+  std::istringstream the_stream(data);
 
   if (tokenfile_cat.is_debug()) {
     tokenfile_cat.debug()
       << "Successfully opened " << resolved << "\n";
   }
 
-  bool success = tokenize(*stream);
+  bool success = tokenize(the_stream);
 
   if (tokenfile_cat.is_debug()) {
     tokenfile_cat.debug()
@@ -101,8 +90,6 @@ read(Filename filename, const DSearchPath &search_path) {
     tokenfile_cat.debug()
       << "We have " << _num_tokens << " tokens\n";
   }
-
-  vfile->close_read_file(stream);
 
   return success;
 }
