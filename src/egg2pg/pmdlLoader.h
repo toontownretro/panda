@@ -374,6 +374,7 @@ public:
   pvector<PMDLAttachment> _attachments;
   pvector<PMDLEyeball> _eyeballs;
   vector_string _joint_merges; //
+  pvector<Filename> _material_paths;
 
   PMDLPhysicsModel _phy;
 

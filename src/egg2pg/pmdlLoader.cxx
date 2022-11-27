@@ -45,6 +45,7 @@
 #include "geomVertexReader.h"
 #include "transformTable.h"
 #include "jointVertexTransform.h"
+#include "config_putil.h"
 
 #ifdef HAVE_PHYSX
 #include "physConvexMeshData.h"
@@ -82,6 +83,15 @@ load(const Filename &filename, const DSearchPath &search_path) {
 
   } else {
     return false;
+  }
+
+  if (data->has_attribute("material_paths")) {
+    PDXList *mat_paths_list = data->get_attribute_value("material_paths").get_list();
+    for (size_t i = 0; i < mat_paths_list->size(); ++i) {
+      Filename path = mat_paths_list->get(i).get_string();
+      path.make_absolute(fullpath.get_dirname());
+      _material_paths.push_back(path);
+    }
   }
 
   if (data->has_attribute("joint_merges")) {
@@ -751,11 +761,19 @@ void PMDLLoader::
 build_graph() {
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
 
-  _search_path = get_model_path();
-  _search_path.append_directory(_data->_fullpath.get_dirname());
+  ConfigVariableSearchPath &model_path = get_model_path();
+  model_path.prepend_directory(_data->_fullpath.get_dirname());
+  for (const Filename &mat_path : _data->_material_paths) {
+    model_path.prepend_directory(mat_path);
+  }
+
+  if (egg2pg_cat.is_debug()) {
+    egg2pg_cat.debug()
+      << "PMDL search path: " << model_path << "\n";
+  }
 
   Filename model_filename = _data->_model_filename;
-  if (!vfs->resolve_filename(model_filename, _search_path)) {
+  if (!vfs->resolve_filename(model_filename, model_path)) {
     egg2pg_cat.error()
       << "Couldn't find pmdl model file " << model_filename << " on search path "
       << _search_path << "\n";
@@ -784,7 +802,7 @@ build_graph() {
     MaterialCollection coll;
     for (size_t j = 0; j < group->_materials.size(); j++) {
       Filename mat_fname = group->_materials[j];
-      coll.add_material(MaterialPool::load_material(mat_fname, _search_path));
+      coll.add_material(MaterialPool::load_material(mat_fname, model_path));
     }
     mdl_root->add_material_group(coll);
   }
@@ -1670,7 +1688,7 @@ load_anim(const std::string &anim_name, const Filename &filename) {
 
   Filename fullpath = filename;
   VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
-  if (!vfs->resolve_filename(fullpath, _search_path)) {
+  if (!vfs->resolve_filename(fullpath, get_model_path())) {
     egg2pg_cat.error()
       << "Could not find animation model " << filename << "\n";
     return nullptr;
