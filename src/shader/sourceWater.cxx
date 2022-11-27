@@ -160,7 +160,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_input(ShaderInput("u_fogColor_density", LVecBase4(fog_color, fog_density * 0.01f)));
   }
 
-  if ((param = material->get_param("normalmap")) != nullptr) {
+  if ((param = material->get_param("base_color")) != nullptr) {
     Texture *norm_tex = DCAST(MaterialParamTexture, param)->get_value();
     setup.set_input(ShaderInput("normalSampler", norm_tex));
 

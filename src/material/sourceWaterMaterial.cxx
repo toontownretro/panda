@@ -56,6 +56,7 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     PT(MaterialParamBase) param;
 
     if (key == "normalmap") {
+      key = "base_color";
       param = new MaterialParamTexture(key);
 
     } else if (key == "reflectnormalscale" ||
