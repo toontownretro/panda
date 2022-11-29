@@ -63,6 +63,7 @@ private:
     GeomVertexReader _normal;
     GeomVertexReader _tangent;
     GeomVertexReader _binormal;
+    GeomVertexReader _texcoord_lightmap;
   };
 
 PUBLISHED:

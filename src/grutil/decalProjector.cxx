@@ -128,7 +128,8 @@ project(const Geom *geom, const LMatrix4 *net_mat) {
   data_reader.check_array_readers();
   Readers readers;
   readers._vertex = GeomVertexReader(&data_reader, InternalName::get_vertex());
-  //readers._normal = GeomVertexReader(&data_reader, InternalName::get_normal());
+  readers._normal = GeomVertexReader(&data_reader, InternalName::get_normal());
+  readers._texcoord_lightmap = GeomVertexReader(&data_reader, InternalName::get_texcoord_name("lightmap"));
   //readers._tangent = GeomVertexReader(&data_reader, InternalName::get_tangent());
   //readers._binormal = GeomVertexReader(&data_reader, InternalName::get_binormal());
 
@@ -340,7 +341,8 @@ generate() {
   PT(GeomVertexArrayFormat) arr_fmt_tmp = new GeomVertexArrayFormat;
   arr_fmt_tmp->add_column(InternalName::get_vertex(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_point);
   arr_fmt_tmp->add_column(InternalName::get_texcoord(), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
-  //arr_fmt_tmp->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
+  arr_fmt_tmp->add_column(InternalName::get_normal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_normal);
+  arr_fmt_tmp->add_column(InternalName::get_texcoord_name("lightmap"), 2, GeomEnums::NT_stdfloat, GeomEnums::C_texcoord);
   //arr_fmt_tmp->add_column(InternalName::get_tangent(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
   //arr_fmt_tmp->add_column(InternalName::get_binormal(), 3, GeomEnums::NT_stdfloat, GeomEnums::C_vector);
   CPT(GeomVertexFormat) vtx_fmt = GeomVertexFormat::register_format(arr_fmt_tmp);
@@ -358,7 +360,8 @@ generate() {
   int start_vertex = 0;
   GeomVertexWriter vwriter(vdata, InternalName::get_vertex());
   GeomVertexWriter twriter(vdata, InternalName::get_texcoord());
-  //GeomVertexWriter nwriter(vdata, InternalName::get_normal());
+  GeomVertexWriter lmwriter(vdata, InternalName::get_texcoord_name("lightmap"));
+  GeomVertexWriter nwriter(vdata, InternalName::get_normal());
   //GeomVertexWriter biwriter(vdata, InternalName::get_binormal());
   //GeomVertexWriter tawriter(vdata, InternalName::get_tangent());
 
@@ -380,19 +383,24 @@ generate() {
         vwriter.set_data3f(frag._winding.get_point(i));
       }
 
-      //LVecBase3 bary = calc_barycentric_coordinates(
-      //  frag._orig_vertices[0]._pos, frag._orig_vertices[1]._pos,
-      //  frag._orig_vertices[2]._pos, frag._winding.get_point(i));
+      LVecBase3 bary = calc_barycentric_coordinates(
+        frag._orig_vertices[0]._pos, frag._orig_vertices[1]._pos,
+        frag._orig_vertices[2]._pos, frag._winding.get_point(i));
 
-      //LVector3 normal = frag._orig_vertices[0]._normal * bary[0] +
-      //                  frag._orig_vertices[1]._normal * bary[1] +
-      //                  frag._orig_vertices[2]._normal * bary[2];
-      //normal.normalize();
-      //if (!ident_decal_mat) {
-      //  nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
-      //} else {
-      //  nwriter.add_data3f(normal);
-      //}
+      LVector3 normal = frag._orig_vertices[0]._normal * bary[0] +
+                        frag._orig_vertices[1]._normal * bary[1] +
+                        frag._orig_vertices[2]._normal * bary[2];
+      normal.normalize();
+      if (!ident_decal_mat) {
+        nwriter.add_data3f(_decal_inv_net_mat.xform_vec(normal));
+      } else {
+        nwriter.add_data3f(normal);
+      }
+
+      LVecBase2 texcoord_lightmap = frag._orig_vertices[0]._texcoord_lightmap * bary[0] +
+                        frag._orig_vertices[1]._texcoord_lightmap * bary[1] +
+                        frag._orig_vertices[2]._texcoord_lightmap * bary[2];
+      lmwriter.add_data2f(texcoord_lightmap);
 
       //LVector3 tangent = frag._orig_vertices[0]._tangent * bary[0] +
       //                   frag._orig_vertices[1]._tangent * bary[1] +
@@ -484,10 +492,10 @@ setup_coordinate_space() {
   const LMatrix4 &projector_net_mat = projector_net_transform->get_mat();
   LPoint3 world_mins = projector_net_mat.xform_point(_projector_mins);
   LPoint3 world_maxs = projector_net_mat.xform_point(_projector_maxs);
-  LQuaternion quat = projector_net_transform->get_norm_quat();
-  LVector3 world_forward = quat.get_forward();
-  LVector3 world_up = quat.get_up();
-  LVector3 world_right = quat.get_right();
+  LQuaternion world_quat = projector_net_transform->get_norm_quat();
+  LVector3 world_right = world_quat.get_right();
+  LVector3 world_forward = world_quat.get_forward();
+  LVector3 world_up = world_quat.get_up();
 
   _projector_world_forward = world_forward;
 

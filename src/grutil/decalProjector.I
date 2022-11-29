@@ -92,7 +92,7 @@ project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat)
 
   bool has_mat = (net_mat != nullptr);
 
-  //int vertices[3] = { v1, v2, v3 };
+  int vertices[3] = { v1, v2, v3 };
 
   GeomVertexReader &vreader = ((Readers *)&readers)->_vertex;
 
@@ -167,14 +167,13 @@ project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat)
   frag._orig_vertices[1]._pos = p2;
   frag._orig_vertices[2]._pos = p3;
 
-#if 0
-  GeomVertexReader nreader(readers._normal);
+  GeomVertexReader &nreader = ((Readers *)&readers)->_normal;
   //vreader.set_column(InternalName::get_normal());
   if (nreader.has_column()) {
     for (int i = 0; i < 3; ++i) {
       nreader.set_row_unsafe(vertices[i]);
-      if (!ident_transform) {
-        frag._orig_vertices[i]._normal = net_mat.xform_vec(nreader.get_data3f());
+      if (has_mat) {
+        frag._orig_vertices[i]._normal = net_mat->xform_vec(nreader.get_data3f());
       } else {
         frag._orig_vertices[i]._normal = nreader.get_data3f();
       }
@@ -185,6 +184,19 @@ project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat)
     }
   }
 
+  GeomVertexReader &lmreader = ((Readers *)&readers)->_texcoord_lightmap;
+  if (lmreader.has_column()) {
+    for (int i = 0; i < 3; ++i) {
+      lmreader.set_row_unsafe(vertices[i]);
+      frag._orig_vertices[i]._texcoord_lightmap = lmreader.get_data2f();
+    }
+  } else {
+    for (int i = 0; i < 3; ++i) {
+      frag._orig_vertices[i]._texcoord_lightmap.set(0, 0);
+    }
+  }
+
+#if 0
   GeomVertexReader treader(readers._tangent);
   //vreader.set_column(InternalName::get_tangent());
   if (treader.has_column()) {
