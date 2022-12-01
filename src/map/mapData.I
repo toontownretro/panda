@@ -262,6 +262,31 @@ get_ambient_probe(int n) const {
 /**
  *
  */
+INLINE void MapData::
+add_overlay(PandaNode *overlay) {
+  _overlays.push_back(overlay);
+}
+
+/**
+ *
+ */
+INLINE int MapData::
+get_num_overlays() const {
+  return (int)_overlays.size();
+}
+
+/**
+ *
+ */
+INLINE PandaNode *MapData::
+get_overlay(int n) const {
+  nassertr(n >= 0 && n < (int)_overlays.size(), nullptr);
+  return _overlays[n];
+}
+
+/**
+ *
+ */
 INLINE const SteamAudioSceneData &MapData::
 get_steam_audio_scene_data() const {
   return _steam_audio_scene_data;

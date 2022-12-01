@@ -304,6 +304,10 @@ PUBLISHED:
   INLINE int get_num_ambient_probes() const;
   INLINE const MapAmbientProbe *get_ambient_probe(int n) const;
 
+  INLINE void add_overlay(PandaNode *overlay);
+  INLINE int get_num_overlays() const;
+  INLINE PandaNode *get_overlay(int n) const;
+
   INLINE const SteamAudioSceneData &get_steam_audio_scene_data() const;
   INLINE CPTA_uchar get_steam_audio_probe_data() const;
   INLINE CPTA_uchar get_steam_audio_pathing_probe_data() const;
@@ -373,6 +377,8 @@ private:
   CPTA_uchar _steam_audio_pathing_probe_data;
 
   LightDebugData _light_debug_data;
+
+  pvector<PT(PandaNode)> _overlays;
 
   friend class MapLightingEffect;
   friend class MapBuilder;

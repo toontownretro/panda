@@ -66,6 +66,9 @@
 #include "physConvexMeshData.h"
 #include "lightAttrib.h"
 #include "alphaTestAttrib.h"
+#include "decalProjector.h"
+#include "string_utils.h"
+#include "look_at.h"
 
 #include <stack>
 
@@ -705,6 +708,8 @@ build() {
       return ec;
     }
   }
+
+  build_overlays();
 
   // After building the lightmaps, we can flatten the Geoms within each mesh
   // group to reduce draw calls.  If we flattened before building lightmaps,
@@ -1517,6 +1522,8 @@ build_entity_polygons(int i) {
         poly->_material = poly_material;
         poly->_base_tex = base_tex;
 
+        _side_polys[poly->_side_id].push_back(poly);
+
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
           poly->_normals.push_back(winding_normal);
@@ -1743,6 +1750,7 @@ build_entity_polygons(int i) {
             tri0->_winding.get_bounds(tmins, tmaxs);
             tri0->_bounds = new BoundingBox(tmins, tmaxs);
             solid_polys.push_back(tri0);
+            _side_polys[tri0->_side_id].push_back(tri0);
 
             //
             // TRIANGLE 2
@@ -1810,6 +1818,7 @@ build_entity_polygons(int i) {
             tri0->_winding.get_bounds(tmins, tmaxs);
             tri0->_bounds = new BoundingBox(tmins, tmaxs);
             solid_polys.push_back(tri0);
+            _side_polys[tri0->_side_id].push_back(tri0);
           }
         }
       }
@@ -2684,5 +2693,127 @@ r_collect_geoms(PandaNode *node, pvector<std::pair<CPT(Geom), CPT(RenderState) >
 
   for (int i = 0; i < node->get_num_children(); ++i) {
     r_collect_geoms(node->get_child(i), geoms);
+  }
+}
+
+/**
+ *
+ */
+void MapBuilder::
+build_overlays() {
+
+  LVector3 face_normals[6] = {
+    LVector3::up(), // floor
+    LVector3::down(), // ceiling
+    LVector3::back(), // south-facing wall
+    LVector3::forward(), // north-facing wall
+    LVector3::left(), // west-facing wall
+    LVector3::right() // east-facing wall
+  };
+
+  for (size_t i = 0; i < _source_map->_entities.size(); ++i) {
+    MapEntitySrc *sent = _source_map->_entities[i];
+    if (sent->_class_name != "info_overlay") {
+      continue;
+    }
+
+    LPoint3 pos = KeyValues::to_3f(sent->_properties["BasisOrigin"]);
+    LVector3 basis_u = KeyValues::to_3f(sent->_properties["BasisU"]).normalized();
+    LVector3 basis_normal = KeyValues::to_3f(sent->_properties["BasisNormal"]).normalized();
+    float u_start, u_end, v_start, v_end;
+    string_to_float(sent->_properties["StartU"], u_start);
+    string_to_float(sent->_properties["EndU"], u_end);
+    string_to_float(sent->_properties["StartV"], v_start);
+    string_to_float(sent->_properties["EndV"], v_end);
+
+    // RenderOrder simply maps to a depth offset value.
+    // We increment by one so we still offset from the wall with
+    // RenderOrder 0.
+    int offset;
+    string_to_int(sent->_properties["RenderOrder"], offset);
+    offset++;
+
+    LVector3 basis_v = -basis_normal.cross(basis_u).normalized();
+
+    LMatrix4 m = LMatrix4::ident_mat();
+    m.set_row(0, basis_u);
+    m.set_row(1, basis_normal);
+    m.set_row(2, basis_v);
+    m.set_row(3, pos);
+
+    Filename mat_filename("materials/" + downcase(sent->_properties["material"]) + ".mto");
+    PT(Material) mat = MaterialPool::load_material(mat_filename);
+    if (mat == nullptr) {
+      continue;
+    }
+
+    LPoint3 ll = KeyValues::to_3f(sent->_properties["uv0"]);
+    LPoint3 ur = KeyValues::to_3f(sent->_properties["uv2"]);
+
+    LVecBase3 size = ur - ll;
+    size[2] = std::max(size[0], size[1]);
+    size *= 0.5;
+    PN_stdfloat tmp = size[1];
+    size[1] = size[2];
+    size[2] = tmp;
+
+    CPT(TransformState) ts = TransformState::make_mat(m);
+
+    std::string sides_str = sent->_properties["sides"];
+    vector_string sides_str_vec;
+    tokenize(sides_str, sides_str_vec, " ", true);
+
+    vector_int sides;
+    for (const std::string &side_str : sides_str_vec) {
+      int side;
+      string_to_int(side_str, side);
+      sides.push_back(side);
+    }
+
+    PT(GeomNode) overlay_geom_node = new GeomNode("overlay");
+    NodePath np_ident("ident");
+
+    LVecBase3 uv_scale(-(u_end - u_start), (v_end - v_start), 1);
+    LVecBase3 uv_offset(u_end, 1.0f - v_end, 0);
+    CPT(TransformState) uv_transform = TransformState::make_pos_hpr_scale(uv_offset, LVecBase3(0.0f), uv_scale);
+
+    for (int side_id : sides) {
+      for (MapPoly *poly : _side_polys[side_id]) {
+        if (poly->_geom_node == nullptr ||
+            poly->_geom_index == -1) {
+          // Poly didn't result in visible geometry, so don't try to decal it.
+          continue;
+        }
+        NodePath np("tmp");
+        np.set_state(poly->_geom_node->get_geom_state(poly->_geom_index));
+        np.set_depth_offset(offset);
+        np.set_material(mat);
+        DecalProjector proj;
+        proj.set_projector_parent(np_ident);
+        proj.set_projector_transform(ts);
+        proj.set_projector_bounds(-size, size);
+        proj.set_decal_parent(np_ident);
+        proj.set_decal_render_state(np.get_state());
+        proj.set_decal_uv_transform(uv_transform);
+
+        PT(GeomNode) tmp_geom_node = new GeomNode("tmp");
+        tmp_geom_node->add_geom(poly->_geom_node->get_geom(poly->_geom_index)->make_copy(),
+          poly->_geom_node->get_geom_state(poly->_geom_index));
+        np = NodePath(tmp_geom_node);
+        np.reparent_to(np_ident);
+
+        if (proj.project(np)) {
+          PT(PandaNode) frag = proj.generate();
+          overlay_geom_node->add_geoms_from(DCAST(GeomNode, frag));
+        }
+      }
+    }
+
+    if (overlay_geom_node->get_num_geoms() == 0) {
+      continue;
+    }
+
+    NodePath(overlay_geom_node).flatten_strong();
+    _out_data->add_overlay(overlay_geom_node);
   }
 }

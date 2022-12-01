@@ -217,6 +217,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
       manager->write_pointer(me, array);
     }
   }
+
+  me.add_uint32(_overlays.size());
+  for (PandaNode *overlay : _overlays) {
+    manager->write_pointer(me, overlay);
+  }
 }
 
 /**
@@ -334,6 +339,9 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     prop._geom_vertex_lighting.resize(scan.get_uint32());
     manager->read_pointers(scan, prop._geom_vertex_lighting.size());
   }
+
+  _overlays.resize(scan.get_uint32());
+  manager->read_pointers(scan, _overlays.size());
 }
 
 /**
@@ -365,6 +373,10 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
     for (CPT(GeomVertexArrayData) &array : prop._geom_vertex_lighting) {
       array = DCAST(GeomVertexArrayData, p_list[pi++]);
     }
+  }
+
+  for (size_t i = 0; i < _overlays.size(); ++i) {
+    _overlays[i] = DCAST(PandaNode, p_list[pi++]);
   }
 
   return pi;

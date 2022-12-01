@@ -138,6 +138,8 @@ PUBLISHED:
 
   void add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node);
 
+  void build_overlays();
+
 private:
   void build_entity_polygons(int entity);
 
@@ -146,6 +148,11 @@ private:
 public:
   PT(MapFile) _source_map;
   MapBuildOptions _options;
+
+  // This maps MapSide IDs to the list of MapPolys generated from
+  // the side.
+  typedef pmap<int, pvector<PT(MapPoly)>> SidePolys;
+  SidePolys _side_polys;
 
   pvector<PT(MapMesh)> _meshes;
   // World polygons in the 3-D skybox.  Determined by the BSP visibility
