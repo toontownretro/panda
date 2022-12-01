@@ -172,8 +172,9 @@ void MapLightingEffect::
 do_cull_callback(CullTraverser *trav, CullTraverserData &data,
                  CPT(TransformState) &node_transform,
                  CPT(RenderState) &node_state) {
-  // Assume we have a MapCullTraverser.  This will crash if it's not,
-  // but I don't want to spend time checking if it is.
+  if (trav->get_type() != MapCullTraverser::get_class_type()) {
+    return;
+  }
   MapCullTraverser *mtrav = (MapCullTraverser *)trav;
   MapData *mdata = mtrav->_data;
 
