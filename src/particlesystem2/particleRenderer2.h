@@ -72,6 +72,11 @@ PUBLISHED:
   void set_fit_animations_to_particle_lifespan(bool flag);
   void set_animation_play_rate(PN_stdfloat rate);
 
+  void set_trail(bool flag);
+  void set_trail_length_fade_in_time(PN_stdfloat time);
+  void set_trail_max_length(PN_stdfloat length);
+  void set_trail_min_length(PN_stdfloat length);
+
   INLINE NodePath get_geom_np() const;
   INLINE GeomNode *get_geom_node() const;
   INLINE const RenderState *get_render_state() const;
@@ -98,10 +103,17 @@ private:
   bool _is_animated;
   bool _rgb_modulated_by_alpha;
   CPT(RenderState) _render_state;
+  bool _computed_lighting;
 
   bool _fit_anim_to_particle_lifespan;
   PN_stdfloat _anim_play_rate;
   PT(MaterialParamTexture) _sprite_base_texture;
+
+  // Trail parameters.
+  bool _trail_enable;
+  PN_stdfloat _trail_length_fade_in_time;
+  PN_stdfloat _trail_max_length;
+  PN_stdfloat _trail_min_length;
 
 public:
   static TypeHandle get_class_type() {

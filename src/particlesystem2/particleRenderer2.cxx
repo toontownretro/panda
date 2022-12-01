@@ -25,6 +25,8 @@
 #include "material.h"
 #include "materialParamBool.h"
 #include "colorBlendAttrib.h"
+#include "shaderAttrib.h"
+#include "mapLightingEffect.h"
 
 TypeHandle ParticleRenderer2::_type_handle;
 TypeHandle SpriteParticleRenderer2::_type_handle;
@@ -38,7 +40,12 @@ SpriteParticleRenderer2() :
   _is_animated(false),
   _rgb_modulated_by_alpha(false),
   _fit_anim_to_particle_lifespan(false),
-  _anim_play_rate(1.0f)
+  _anim_play_rate(1.0f),
+  _trail_enable(false),
+  _trail_length_fade_in_time(0.0f),
+  _trail_max_length(2000.0f),
+  _trail_min_length(0.0f),
+  _computed_lighting(false)
 {
 }
 
@@ -52,7 +59,12 @@ SpriteParticleRenderer2(const SpriteParticleRenderer2 &copy) :
   _rgb_modulated_by_alpha(copy._rgb_modulated_by_alpha),
   _sprite_base_texture(copy._sprite_base_texture),
   _fit_anim_to_particle_lifespan(copy._fit_anim_to_particle_lifespan),
-  _anim_play_rate(copy._anim_play_rate)
+  _anim_play_rate(copy._anim_play_rate),
+  _trail_enable(copy._trail_enable),
+  _trail_length_fade_in_time(copy._trail_length_fade_in_time),
+  _trail_max_length(copy._trail_max_length),
+  _trail_min_length(copy._trail_min_length),
+  _computed_lighting(false)
 {
 }
 
@@ -95,6 +107,38 @@ set_animation_play_rate(PN_stdfloat rate) {
  *
  */
 void SpriteParticleRenderer2::
+set_trail(bool flag) {
+  _trail_enable = flag;
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+set_trail_length_fade_in_time(PN_stdfloat time) {
+  _trail_length_fade_in_time = time;
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+set_trail_min_length(PN_stdfloat length) {
+  _trail_min_length = length;
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
+set_trail_max_length(PN_stdfloat length) {
+  _trail_max_length = length;
+}
+
+/**
+ *
+ */
+void SpriteParticleRenderer2::
 initialize(const NodePath &parent, ParticleSystem2 *system) {
   // Determine if the particle should use texture animation.
   const MaterialAttrib *mattr;
@@ -123,10 +167,17 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
     InternalName::get_color(), 4, Geom::NT_uint8, Geom::C_color);
   array_format->add_column(InternalName::get_size(), 2, Geom::NT_stdfloat, Geom::C_other);
   array_format->add_column(InternalName::get_rotate(), 1, Geom::NT_stdfloat, Geom::C_other);
+  if (_is_animated || _trail_enable) {
+    array_format->add_column(InternalName::make("spawn_time"), 1, Geom::NT_stdfloat, Geom::C_other);
+  }
   // Add the animation data column, but only if we're actually animated.
   if (_is_animated) {
-    array_format->add_column(InternalName::make("anim_data"), 4, Geom::NT_stdfloat, Geom::C_other);
+    array_format->add_column(InternalName::make("anim_data"), 3, Geom::NT_stdfloat, Geom::C_other);
     array_format->add_column(InternalName::make("anim_data2"), 3, Geom::NT_stdfloat, Geom::C_other);
+  }
+  if (_trail_enable) {
+    array_format->add_column(InternalName::make("prev_pos"), 3, Geom::NT_stdfloat, Geom::C_point);
+    array_format->add_column(InternalName::make("initial_pos"), 3, Geom::NT_stdfloat, Geom::C_point);
   }
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format
     (new GeomVertexFormat(array_format));
@@ -143,10 +194,23 @@ initialize(const NodePath &parent, ParticleSystem2 *system) {
   //_index_buffer = new GeomVertexArrayData(GeomPrimitive::get_index_format(GeomEnums::NT_uint16), GeomEnums::UH_dynamic);
   //prim->set_vertices(_index_buffer);
   _geom_node = new GeomNode("sprite-particles");
-  _geom_node->add_geom(geom, _render_state);
+
+  state = _render_state;
+  if (_trail_enable) {
+    CPT(RenderAttrib) shattr;
+    shattr = state->get_attrib_def(ShaderAttrib::get_class_slot());
+    shattr = DCAST(ShaderAttrib, shattr)->set_shader_input(
+      ShaderInput("trailEnable", LVecBase2i(1)));
+    shattr = DCAST(ShaderAttrib, shattr)->set_shader_input(
+      ShaderInput("u_trail_data", LVecBase3(_trail_min_length, _trail_max_length, _trail_length_fade_in_time)));
+    state = state->set_attrib(shattr);
+  }
+  _geom_node->add_geom(geom, state);
   //_geom_node->set_bounds(new OmniBoundingVolume); // TEMPORARY
   _geom_np = system->_np.attach_new_node(_geom_node);
   _prim = prim;
+
+  _computed_lighting = false;
 }
 
 /**
@@ -168,8 +232,11 @@ update(ParticleSystem2 *system) {
   GeomVertexWriter cwriter(_vdata, InternalName::get_color());
   GeomVertexWriter swriter(_vdata, InternalName::get_size());
   GeomVertexWriter rwriter(_vdata, InternalName::get_rotate());
+  GeomVertexWriter stwriter(_vdata, InternalName::make("spawn_time"));
   GeomVertexWriter awriter(_vdata, InternalName::make("anim_data"));
   GeomVertexWriter a2writer(_vdata, InternalName::make("anim_data2"));
+  GeomVertexWriter trwriter(_vdata, InternalName::make("prev_pos"));
+  GeomVertexWriter ipwriter(_vdata, InternalName::make("initial_pos"));
 
   LPoint3 mins(9999999);
   LPoint3 maxs(-9999999);
@@ -182,13 +249,12 @@ update(ParticleSystem2 *system) {
     }
 
     vwriter.set_data3f(p->_pos);
-    if (_rgb_modulated_by_alpha) {
-      cwriter.set_data4f(p->_color * p->_color[3]);
-    } else {
-      cwriter.set_data4f(p->_color);
-    }
+    cwriter.set_data4f(p->_color);
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);
+    if (stwriter.has_column()) {
+      stwriter.set_data1f(p->_spawn_time + system->_start_time);
+    }
     if (awriter.has_column() && _sprite_base_texture != nullptr) {
       // Write particle data needed to compute texture animation.
       // TODO: Texture animation data could be passed as a uniform rather
@@ -204,8 +270,12 @@ update(ParticleSystem2 *system) {
         fps *= _anim_play_rate;
       }
 
-      awriter.set_data4f(p->_anim_index, fps, p->_spawn_time + system->_start_time, adata->_first_frame);
+      awriter.set_data3f(p->_anim_index, fps, adata->_first_frame);
       a2writer.set_data3f(adata->_num_frames, adata->_loop, adata->_interp);
+    }
+    if (trwriter.has_column()) {
+      trwriter.set_data3f(p->_prev_pos);
+      ipwriter.set_data3f(p->_initial_pos);
     }
 
     mins = mins.fmin(p->_pos - LPoint3(p->_scale[0]));
@@ -220,6 +290,11 @@ update(ParticleSystem2 *system) {
   _prim->set_nonindexed_vertices(0, num_alive);
 
   _geom_node->set_bounds(new BoundingBox(mins, maxs));
+
+  if (!_rgb_modulated_by_alpha && !_computed_lighting && num_alive > 0) {
+    _geom_node->set_effect(MapLightingEffect::make(BitMask32::bit(0), false));
+    _computed_lighting = true;
+  }
 }
 
 /**
@@ -243,6 +318,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
   manager->write_pointer(me, _render_state);
   me.add_bool(_fit_anim_to_particle_lifespan);
   me.add_stdfloat(_anim_play_rate);
+  me.add_bool(_trail_enable);
+  me.add_stdfloat(_trail_length_fade_in_time);
+  me.add_stdfloat(_trail_min_length);
+  me.add_stdfloat(_trail_max_length);
 }
 
 /**
@@ -253,6 +332,10 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   manager->read_pointer(scan);
   _fit_anim_to_particle_lifespan = scan.get_bool();
   _anim_play_rate = scan.get_stdfloat();
+  _trail_enable = scan.get_bool();
+  _trail_length_fade_in_time = scan.get_stdfloat();
+  _trail_min_length = scan.get_stdfloat();
+  _trail_max_length = scan.get_stdfloat();
 }
 
 /**
