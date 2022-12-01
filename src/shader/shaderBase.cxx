@@ -86,6 +86,6 @@ has_modulate_blend(const RenderState *state) const {
   state->get_attrib_def(cba);
 
   return (cba->get_mode() == ColorBlendAttrib::M_add) &&
-    (cba->get_operand_a() == ColorBlendAttrib::O_fbuffer_alpha) &&
+    (cba->get_operand_a() == ColorBlendAttrib::O_fbuffer_color) &&
     (cba->get_operand_b() == ColorBlendAttrib::O_incoming_color);
 }
