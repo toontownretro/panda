@@ -780,10 +780,14 @@ P2_INIT_RemapAttribute(Attribute src, int src_component, float src_min, float sr
  */
 void P2_INIT_RemapAttribute::
 init_particles(double time, int *particles, int num_particles, ParticleSystem2 *system) {
+  const LMatrix4 &emission_xform = system->get_input_value(0)->get_mat();
+  const LMatrix4 *inv_emission = system->get_input_value(0)->get_inverse_mat();
+
   for (int i = 0; i < num_particles; ++i) {
     Particle *p = &system->_particles[particles[i]];
 
     float src;
+    LPoint3 emission_pos;
     switch (_src_attrib) {
     case A_rgb:
       src = p->_color[_src_component];
@@ -792,7 +796,8 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
       src = p->_color[3];
       break;
     case A_pos:
-      src = p->_pos[_src_component];
+      emission_pos = inv_emission->xform_point(p->_pos);
+      src = emission_pos[_src_component];
       break;
     case A_scale:
       src = p->_pos[_src_component];
@@ -831,7 +836,9 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
       p->_color[3] = dest;
       break;
     case A_pos:
-      p->_pos[_dest_component] = dest;
+      emission_pos = inv_emission->xform_point(p->_pos);
+      emission_pos[_dest_component] = dest;
+      p->_pos = emission_xform.xform_point(emission_pos);
       break;
     case A_scale:
       p->_scale[_dest_component] = dest;
