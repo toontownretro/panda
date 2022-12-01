@@ -2719,6 +2719,7 @@ build_overlays() {
 
     LPoint3 pos = KeyValues::to_3f(sent->_properties["BasisOrigin"]);
     LVector3 basis_u = KeyValues::to_3f(sent->_properties["BasisU"]).normalized();
+    LVector3 basis_v = KeyValues::to_3f(sent->_properties["BasisV"]).normalized();
     LVector3 basis_normal = KeyValues::to_3f(sent->_properties["BasisNormal"]).normalized();
     float u_start, u_end, v_start, v_end;
     string_to_float(sent->_properties["StartU"], u_start);
@@ -2733,7 +2734,7 @@ build_overlays() {
     string_to_int(sent->_properties["RenderOrder"], offset);
     offset++;
 
-    LVector3 basis_v = -basis_normal.cross(basis_u).normalized();
+    //LVector3 basis_v = -basis_normal.cross(basis_u).normalized();
 
     LMatrix4 m = LMatrix4::ident_mat();
     m.set_row(0, basis_u);
@@ -2747,15 +2748,17 @@ build_overlays() {
       continue;
     }
 
-    LPoint3 ll = KeyValues::to_3f(sent->_properties["uv0"]);
-    LPoint3 ur = KeyValues::to_3f(sent->_properties["uv2"]);
+    LPoint2 ll = KeyValues::to_3f(sent->_properties["uv0"]).get_xy();
+    LPoint2 ul = KeyValues::to_3f(sent->_properties["uv1"]).get_xy();
+    LPoint2 ur = KeyValues::to_3f(sent->_properties["uv2"]).get_xy();
+    LPoint2 lr = KeyValues::to_3f(sent->_properties["uv3"]).get_xy();
 
-    LVecBase3 size = ur - ll;
-    size[2] = std::max(size[0], size[1]);
-    size *= 0.5;
-    PN_stdfloat tmp = size[1];
-    size[1] = size[2];
-    size[2] = tmp;
+    //LVecBase3 size = ur - ll;
+    //size[2] = std::max(size[0], size[1]);
+    //size *= 0.5;
+    //PN_stdfloat tmp = size[1];
+    //size[1] = size[2];
+    //size[2] = tmp;
 
     CPT(TransformState) ts = TransformState::make_mat(m);
 
@@ -2773,8 +2776,8 @@ build_overlays() {
     PT(GeomNode) overlay_geom_node = new GeomNode("overlay");
     NodePath np_ident("ident");
 
-    LVecBase3 uv_scale(-(u_end - u_start), (v_end - v_start), 1);
-    LVecBase3 uv_offset(u_end, 1.0f - v_end, 0);
+    LVecBase3 uv_scale((u_end - u_start), -(v_end - v_start), 1);
+    LVecBase3 uv_offset(u_start, 1.0f - v_start, 0);
     CPT(TransformState) uv_transform = TransformState::make_pos_hpr_scale(uv_offset, LVecBase3(0.0f), uv_scale);
 
     for (int side_id : sides) {
@@ -2791,7 +2794,8 @@ build_overlays() {
         DecalProjector proj;
         proj.set_projector_parent(np_ident);
         proj.set_projector_transform(ts);
-        proj.set_projector_bounds(-size, size);
+        proj.set_projector_frame(ll, ul, ur, lr, -10000.0f, 10000.0f);
+        //proj.set_projector_bounds(-size, size);
         proj.set_decal_parent(np_ident);
         proj.set_decal_render_state(np.get_state());
         proj.set_decal_uv_transform(uv_transform);
