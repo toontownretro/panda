@@ -618,6 +618,10 @@ setup_coordinate_space() {
   // The right clipping plane.
   _box_planes[5] = -LPlane(_projector_maxs, _projector_frame[2], _projector_frame[3]);
 
+  for (int i = 0; i < 6; ++i) {
+    _box_planes[i].xform(projector_net_mat);
+  }
+
   CPT(TransformState) decal_net_transform = _decal_parent.get_net_transform();
   const LMatrix4 *decal_inv_net_transform = decal_net_transform->get_inverse_mat();
   if (decal_inv_net_transform == nullptr) {
