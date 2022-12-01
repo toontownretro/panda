@@ -2044,14 +2044,14 @@ rasterize_geoms_into_lightmap_textures() {
 
   _gsg->finish();
 
-  _graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
-  _lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
-  _graphics_engine->extract_texture_data(_lm_textures["emission"], _gsg);
-  _lm_textures["emission"]->write("lm_emission_#.png", 0, 0, true, false);
-  _graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
-  _lm_textures["position"]->write("lm_position_#.pfm", 0, 0, true, false);
-  _graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
-  _lm_textures["normal"]->write("lm_normal_#.pfm", 0, 0, true, false);
+  //_graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
+  //_lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
+  //_graphics_engine->extract_texture_data(_lm_textures["emission"], _gsg);
+  //_lm_textures["emission"]->write("lm_emission_#.png", 0, 0, true, false);
+  //_graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
+  //_lm_textures["position"]->write("lm_position_#.pfm", 0, 0, true, false);
+  //_graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
+  //_lm_textures["normal"]->write("lm_normal_#.pfm", 0, 0, true, false);
 
   _graphics_engine->remove_window(buffer);
 
@@ -2282,8 +2282,8 @@ compute_direct() {
   lightbuilder_cat.info()
     << "Done.\n";
 
-  _graphics_engine->extract_texture_data(_lm_textures["direct"], _gsg);
-  _lm_textures["direct"]->write("lm_direct_#.png", 0, 0, true, false);
+  //_graphics_engine->extract_texture_data(_lm_textures["direct"], _gsg);
+  //_lm_textures["direct"]->write("lm_direct_#.png", 0, 0, true, false);
 
   return true;
 }
