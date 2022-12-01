@@ -26,6 +26,7 @@
 #include "materialParamBool.h"
 #include "shaderAttrib.h"
 #include "shaderSetup.h"
+#include "lightAttrib.h"
 
 TypeHandle SpriteParticleShader::_type_handle;
 
@@ -51,6 +52,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BILLBOARD_MODE("BILLBOARD_MODE");
   static const CPT_InternalName IN_ANIMATED("ANIMATED");
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
+  static const CPT_InternalName IN_TRAIL("TRAIL");
+  static const CPT_InternalName IN_DIRECT_LIGHT("DIRECT_LIGHT");
+  static const CPT_InternalName IN_NUM_LIGHTS("NUM_LIGHTS");
+  static const CPT_InternalName IN_AMBIENT_LIGHT("AMBIENT_LIGHT");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -94,6 +99,10 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     LVecBase4 value;
     value = sha->get_shader_input_vector(IN_BILLBOARD_MODE);
     billboard = (int)value[0];
+  }
+  if (sha->has_shader_input("trailEnable")) {
+    setup.set_vertex_shader_combo(IN_TRAIL, 1);
+    setup.set_geometry_shader_combo(IN_TRAIL, 1);
   }
 
   setup.set_geometry_shader_combo(IN_BILLBOARD_MODE, billboard);
@@ -153,12 +162,13 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (fog != nullptr) {
       setup.set_pixel_shader_combo(IN_FOG, 1);
       setup.set_spec_constant(IN_FOG_MODE, (int)fog->get_mode());
-      if (has_additive_blend(state)) {
-        setup.set_spec_constant(IN_BLEND_MODE, 2);
-      } else if (has_modulate_blend(state)) {
-        setup.set_spec_constant(IN_BLEND_MODE, 1);
-      }
     }
+  }
+
+  if (has_additive_blend(state)) {
+    setup.set_spec_constant(IN_BLEND_MODE, 2);
+  } else if (has_modulate_blend(state)) {
+    setup.set_spec_constant(IN_BLEND_MODE, 1);
   }
 
   const ClipPlaneAttrib *cpa;
@@ -167,5 +177,36 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       setup.set_pixel_shader_combo(IN_CLIPPING, 1);
       setup.set_spec_constant(IN_NUM_CLIP_PLANES, cpa->get_num_on_planes());
     }
+  }
+
+  // Break out the lights by type.
+  const LightAttrib *la;
+  state->get_attrib_def(la);
+  size_t num_lights = 0;
+  size_t num_ambient_lights = 0;
+  if (!la->has_all_off()) {
+    num_lights = la->get_num_non_ambient_lights();
+    num_ambient_lights = la->get_num_on_lights() - num_lights;
+
+    if (sha->has_shader_input("ambientProbe")) {
+      // SH ambient probe.
+      setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 2);
+      setup.set_vertex_shader_combo(IN_AMBIENT_LIGHT, 2);
+      setup.set_geometry_shader_combo(IN_AMBIENT_LIGHT, 2);
+
+    } else if (num_ambient_lights != 0) {
+      // Flat ambient.
+      setup.set_pixel_shader_combo(IN_AMBIENT_LIGHT, 1);
+      setup.set_vertex_shader_combo(IN_AMBIENT_LIGHT, 1);
+      setup.set_geometry_shader_combo(IN_AMBIENT_LIGHT, 1);
+    }
+  }
+
+  if (num_lights > 0) {
+    // We have one or more direct local light sources.
+    setup.set_vertex_shader_combo(IN_DIRECT_LIGHT, 1);
+    setup.set_geometry_shader_combo(IN_DIRECT_LIGHT, 1);
+    setup.set_pixel_shader_combo(IN_DIRECT_LIGHT, 1);
+    setup.set_spec_constant(IN_NUM_LIGHTS, (int)num_lights);
   }
 }
