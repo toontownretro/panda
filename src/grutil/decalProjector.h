@@ -73,6 +73,9 @@ PUBLISHED:
   // Associated with the decal projector.
   INLINE void set_projector_parent(const NodePath &parent);
   INLINE void set_projector_transform(const TransformState *transform);
+  INLINE void set_projector_frame(const LPoint2 &ll, const LPoint2 &ul,
+                                  const LPoint2 &ur, const LPoint2 &lr,
+                                  PN_stdfloat min_depth, PN_stdfloat max_depth);
   INLINE void set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs);
 
   // Associated with the generated decal geometry.
@@ -109,6 +112,8 @@ private:
 
   LVecBase3 calc_barycentric_coordinates(const LPoint3 &a, const LPoint3 &b,
                                          const LPoint3 &c, const LPoint3 &pos) const;
+  LVecBase3 calc_barycentric_coordinates(const LPoint2 &a, const LPoint2 &b,
+                                         const LPoint2 &c, const LPoint2 &pos) const;
 
 private:
   class DecalFragment {
@@ -133,6 +138,9 @@ private:
   CPT(TransformState) _projector_transform;
   // Relative to _projector_transform.
   LPoint3 _projector_mins, _projector_maxs;
+  // ll, ul, ur, lr
+  LPoint3 _projector_frame[4];
+  LPoint3 _projector_frame_world[4];
 
   // Defines the coordinate-space of the generated decal
   // geometry.

@@ -329,6 +329,65 @@ calc_barycentric_coordinates(const LPoint3 &a, const LPoint3 &b, const LPoint3 &
 }
 
 /**
+ *
+ */
+LVecBase3 DecalProjector::
+calc_barycentric_coordinates(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c, const LPoint2 &point) const {
+  LVecBase3 weights(0.0f);
+  static constexpr float equal_epsilon = 0.01f;
+
+  if ((a - point).length_squared() < equal_epsilon) {
+    // Close enough to be fully in point A.
+    weights[0] = 1.0f;
+    weights[1] = weights[2] = 0.0f;
+    return weights;
+  }
+
+  if ((b - point).length_squared() < equal_epsilon) {
+    // Close enough to be fully in point B.
+    weights[1] = 1.0f;
+    weights[0] = weights[2] = 0.0f;
+    return weights;
+  }
+
+  if ((c - point).length_squared() < equal_epsilon) {
+    // Close enough to be fully in point C.
+    weights[2] = 1.0f;
+    weights[0] = weights[1] = 0.0f;
+    return weights;
+  }
+
+  // Need to blend between the points.
+  LVector2 v0 = b - a;
+  LVector2 v1 = c - a;
+  LVector2 v2 = point - a;
+
+  PN_stdfloat d00 = v0.dot(v0);
+  PN_stdfloat d01 = v0.dot(v1);
+  PN_stdfloat d11 = v1.dot(v1);
+  PN_stdfloat d20 = v2.dot(v0);
+  PN_stdfloat d21 = v2.dot(v1);
+  PN_stdfloat denom = (d00 * d11 - d01 * d01);
+
+  if (denom < equal_epsilon) {
+    weights[0] = 1.0f;
+    weights[1] = weights[2] = 0.0f;
+    return weights;
+  }
+
+  PN_stdfloat oo_denom = 1.0f / denom;
+
+  PN_stdfloat v = (d11 * d20 - d01 * d21) * oo_denom;
+  PN_stdfloat w = (d00 * d21 - d01 * d20) * oo_denom;
+  PN_stdfloat u = 1.0f - v - w;
+
+  weights[0] = u;
+  weights[1] = v;
+  weights[2] = w;
+  return weights;
+}
+
+/**
  * Generates and returns geometry for the decal, using the fragments
  * previously created during projection.
  */
@@ -368,6 +427,20 @@ generate() {
   LVecBase2 projector_size = _projector_maxs.get_xz() - _projector_mins.get_xz();
 
   bool ident_decal_mat = _decal_inv_net_mat.is_identity();
+
+
+  LVecBase2 frame_uv[4] = {
+    LVecBase2(0, 0),
+    LVecBase2(0, 1),
+    LVecBase2(1, 1),
+    LVecBase2(1, 0)
+  };
+
+  if (!_decal_uv_transform->is_identity()) {
+    for (int i = 0; i < 4; ++i) {
+      frame_uv[i] = _decal_uv_transform->get_mat().xform(LVecBase4(frame_uv[i][0], frame_uv[i][1], 1.0f, 1.0f)).get_xy();
+    }
+  }
 
   int num_indices_written = 0;
 
@@ -428,15 +501,37 @@ generate() {
       // transform it by the user-specified UV matrix.
 
       LPoint2 projector_space_pos = _projector_inv_net_mat.xform_point(frag._winding.get_point(i)).get_xz();
-      projector_space_pos -= _projector_mins.get_xz();
-      LVecBase2 uv = projector_space_pos;
-      uv[0] /= projector_size[0];
-      uv[0] = 1.0f - uv[0];
-      uv[1] /= projector_size[1];
-
-      if (!_decal_uv_transform->is_identity()) {
-        uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 1.0f, 1.0f)).get_xy();
+      // Test barycentric coordinates.
+      int frame_tri[3];
+      LVecBase3 uv_bary;
+      uv_bary = calc_barycentric_coordinates(_projector_frame[0].get_xz(), _projector_frame[1].get_xz(),
+                                             _projector_frame[2].get_xz(), projector_space_pos);
+      if (uv_bary[0] < 0.0f || uv_bary[1] < 0.0f || uv_bary[2] < 0.0f) {
+        // Try triangle 2.
+        uv_bary = calc_barycentric_coordinates(_projector_frame[0].get_xz(), _projector_frame[2].get_xz(),
+                                               _projector_frame[3].get_xz(), projector_space_pos);
+        frame_tri[0] = 0;
+        frame_tri[1] = 2;
+        frame_tri[2] = 3;
+      } else {
+        frame_tri[0] = 0;
+        frame_tri[1] = 1;
+        frame_tri[2] = 2;
       }
+
+      LVecBase2 uv = frame_uv[frame_tri[0]] * uv_bary[0] +
+                     frame_uv[frame_tri[1]] * uv_bary[1] +
+                     frame_uv[frame_tri[2]] * uv_bary[2];
+
+      //projector_space_pos -= _projector_mins.get_xz();
+      //LVecBase2 uv = projector_space_pos;
+      //uv[0] /= projector_size[0];
+      //uv[0] = 1.0f - uv[0];
+      //uv[1] /= projector_size[1];
+
+      //if (!_decal_uv_transform->is_identity()) {
+      //  uv = _decal_uv_transform->get_mat().xform(LVecBase4(uv[0], uv[1], 1.0f, 1.0f)).get_xy();
+      //}
 
       twriter.set_data2f(uv);
     }
@@ -490,23 +585,38 @@ setup_coordinate_space() {
   CPT(TransformState) projector_net_transform = _projector_parent.get_net_transform()
     ->compose(_projector_transform);
   const LMatrix4 &projector_net_mat = projector_net_transform->get_mat();
-  LPoint3 world_mins = projector_net_mat.xform_point(_projector_mins);
-  LPoint3 world_maxs = projector_net_mat.xform_point(_projector_maxs);
-  LQuaternion world_quat = projector_net_transform->get_norm_quat();
-  LVector3 world_right = world_quat.get_right();
-  LVector3 world_forward = world_quat.get_forward();
-  LVector3 world_up = world_quat.get_up();
+  const LMatrix4 &projector_mat = _projector_transform->get_mat();
+  //LPoint3 world_mins = projector_net_mat.xform_point(_projector_mins);
+  //LPoint3 world_maxs = projector_net_mat.xform_point(_projector_maxs);
+  //LQuaternion world_quat = projector_net_transform->get_norm_quat();
+  //LVector3 world_right = world_quat.get_right();
+  //LVector3 world_forward = world_quat.get_forward();
+  //LVector3 world_up = world_quat.get_up();
 
-  _projector_world_forward = world_forward;
+  _projector_world_forward = projector_net_mat.get_row3(1);
 
-  // Flip the plane, because we want to keep what is on the back side.
+  //_projector_frame_world[0] = projector_net_mat.xform_point(_projector_frame[0]);
+  //_projector_frame_world[1] = projector_net_mat.xform_point(_projector_frame[1]);
+  //_projector_frame_world[2] = projector_net_mat.xform_point(_projector_frame[2]);
+  //_projector_frame_world[3] = projector_net_mat.xform_point(_projector_frame[3]);
+  //LPoint3 *world_frame = _projector_frame_world;
+
+  // Build the projector clipping planes.
+  // Flip the planes, because we want to keep what is on the back side.
   // Winding::chop() returns what is in front of the plane.
-  _box_planes[0] = -LPlane(world_forward, world_maxs);
-  _box_planes[1] = -LPlane(-world_forward, world_mins);
-  _box_planes[2] = -LPlane(world_right, world_maxs);
-  _box_planes[3] = -LPlane(-world_right, world_mins);
-  _box_planes[4] = -LPlane(world_up, world_maxs);
-  _box_planes[5] = -LPlane(-world_up, world_mins);
+  //
+  // The front clipping plane.
+  _box_planes[0] = -LPlane(LVector3::forward(), _projector_maxs);
+  // The back clipping plane.
+  _box_planes[1] = -LPlane(LVector3::back(), _projector_mins);
+  // The top clipping plane.
+  _box_planes[2] = LPlane(_projector_maxs, _projector_frame[2], _projector_frame[1]);
+  // The bottom clipping plane.
+  _box_planes[3] = LPlane(_projector_mins, _projector_frame[3], _projector_frame[0]);
+  // The left clipping plane.
+  _box_planes[4] = -LPlane(_projector_mins, _projector_frame[1], _projector_frame[0]);
+  // The right clipping plane.
+  _box_planes[5] = -LPlane(_projector_maxs, _projector_frame[2], _projector_frame[3]);
 
   CPT(TransformState) decal_net_transform = _decal_parent.get_net_transform();
   const LMatrix4 *decal_inv_net_transform = decal_net_transform->get_inverse_mat();
@@ -523,8 +633,8 @@ setup_coordinate_space() {
     _projector_inv_net_mat = *projector_inv_net_mat;
   }
 
-  _projector_world_center = (world_mins + world_maxs) * 0.5f;
-  _projector_world_extents = (world_maxs - world_mins) * 0.5f;
+  //_projector_world_center = (world_mins + world_maxs) * 0.5f;
+  //_projector_world_extents = (world_maxs - world_mins) * 0.5f;
 
   _projector_world_bbox = new BoundingBox(_projector_mins, _projector_maxs);
   _projector_world_bbox->xform(projector_net_mat);

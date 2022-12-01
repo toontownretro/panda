@@ -47,7 +47,25 @@ set_projector_transform(const TransformState *transform) {
  *
  */
 INLINE void DecalProjector::
+set_projector_frame(const LPoint2 &ll, const LPoint2 &ul, const LPoint2 &ur, const LPoint2 &lr,
+                    PN_stdfloat min_depth, PN_stdfloat max_depth) {
+  _projector_frame[0] = LPoint3(ll[0], 0.0f, ll[1]);
+  _projector_frame[1] = LPoint3(ul[0], 0.0f, ul[1]);
+  _projector_frame[2] = LPoint3(ur[0], 0.0f, ur[1]);
+  _projector_frame[3] = LPoint3(lr[0], 0.0f, lr[1]);
+  _projector_mins = LPoint3(ll[0], min_depth, ll[1]);
+  _projector_maxs = LPoint3(ur[0], max_depth, ur[1]);
+}
+
+/**
+ *
+ */
+INLINE void DecalProjector::
 set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs) {
+  _projector_frame[0] = LPoint3(mins[0], 0.0f, mins[2]);
+  _projector_frame[1] = LPoint3(mins[0], 0.0f, maxs[2]);
+  _projector_frame[2] = LPoint3(maxs[0], 0.0f, maxs[2]);
+  _projector_frame[3] = LPoint3(maxs[0], 0.0f, mins[2]);
   _projector_mins = mins;
   _projector_maxs = maxs;
 }
