@@ -733,6 +733,11 @@ build() {
     analyzer.write(mapbuilder_cat.debug(false));
   }
 
+  // Don't adjust texture or material pathnames when writing them
+  // to the Bam file.  We want to keep them relative to the model tree
+  // install root (which is how they are specified).
+  bam_texture_mode = BamWriter::BTM_unchanged;
+  bam_material_mode = BamWriter::BTM_unchanged;
   NodePath(_out_top).write_bam_file(_options._output_filename);
 
   return EC_ok;
