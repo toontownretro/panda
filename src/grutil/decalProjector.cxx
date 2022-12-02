@@ -506,7 +506,7 @@ generate() {
       LVecBase3 uv_bary;
       uv_bary = calc_barycentric_coordinates(_projector_frame[0].get_xz(), _projector_frame[1].get_xz(),
                                              _projector_frame[2].get_xz(), projector_space_pos);
-      if (uv_bary[0] < 0.0f || uv_bary[1] < 0.0f || uv_bary[2] < 0.0f) {
+      if (uv_bary[0] < -0.0001f || uv_bary[1] < -0.0001f || uv_bary[2] < -0.0001f) {
         // Try triangle 2.
         uv_bary = calc_barycentric_coordinates(_projector_frame[0].get_xz(), _projector_frame[2].get_xz(),
                                                _projector_frame[3].get_xz(), projector_space_pos);
