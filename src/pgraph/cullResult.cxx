@@ -35,6 +35,7 @@
 #include "cullBinManager.h"
 #include "depthTestAttrib.h"
 #include "depthPrepassAttrib.h"
+#include "depthBiasAttrib.h"
 
 TypeHandle CullResult::_type_handle;
 
@@ -383,7 +384,13 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
         // to the Z buffer during the main pass.
         static CPT(RenderState) no_depth_write_state = RenderState::make(
           DepthWriteAttrib::make(DepthWriteAttrib::M_off),
-          DepthTestAttrib::make(DepthTestAttrib::M_less_equal), 10000);
+          DepthTestAttrib::make(DepthTestAttrib::M_less_equal),
+          // Also apply a slight depth offset to account for Z-buffer
+          // imprecision.  Polygons part of the Z-prepass sometimes
+          // Z-fight with themselves without this.  We use 0.25, so
+          // other geometry with a depth offset of 1 isn't affected
+          // by this.
+          DepthBiasAttrib::make(-0.25f, -0.25f), 10000);
         object->_state = object->_state->compose(no_depth_write_state);
       } //else {
         //delete z_pre_obj;
