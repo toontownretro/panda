@@ -22,6 +22,7 @@
 #include "material.h"
 #include "light.h"
 #include "directionalLight.h"
+#include "config_map.h"
 
 IMPLEMENT_CLASS(MapData);
 
@@ -107,15 +108,21 @@ register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
 
+#define NUM_BYTES_WRITTEN (me.get_length() - pre_length)
+
 /**
  *
  */
 void MapData::
 write_datagram(BamWriter *manager, Datagram &me) {
+  size_t pre_length;
+
   me.add_uint16(_entities.size());
   for (size_t i = 0; i < _entities.size(); i++) {
     manager->write_pointer(me, _entities[i]);
   }
+
+  size_t total_phys_mesh_size = 0;
 
   me.add_uint32(_models.size());
   for (size_t i = 0; i < _models.size(); ++i) {
@@ -127,6 +134,8 @@ write_datagram(BamWriter *manager, Datagram &me) {
 
     model->_mins.write_datagram_fixed(me);
     model->_maxs.write_datagram_fixed(me);
+
+    pre_length = me.get_length();
 
     me.add_uint8(model->_tri_groups.size());
     for (size_t j = 0; j < model->_tri_groups.size(); ++j) {
@@ -153,12 +162,20 @@ write_datagram(BamWriter *manager, Datagram &me) {
         me.append_data(cm_data.v());
       }
     }
+
+    total_phys_mesh_size += me.get_length() - pre_length;
+  }
+
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << total_phys_mesh_size << " bytes for model physics data\n";
   }
 
   me.add_int32(_3d_sky_model);
 
   manager->write_pointer(me, _cluster_tree);
 
+  pre_length = me.get_length();
   me.add_uint32(_cluster_pvs.size());
   for (size_t i = 0; i < _cluster_pvs.size(); i++) {
     const AreaClusterPVS &pvs = _cluster_pvs[i];
@@ -171,6 +188,10 @@ write_datagram(BamWriter *manager, Datagram &me) {
     for (size_t j = 0; j < pvs._box_bounds.size(); ++j) {
       pvs._box_bounds[j].write_datagram(me);
     }
+  }
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << NUM_BYTES_WRITTEN << " bytes for area cluster PVS data\n";
   }
 
   me.add_uint16(_cube_maps.size());
@@ -186,6 +207,7 @@ write_datagram(BamWriter *manager, Datagram &me) {
     _lights[i].write_datagram(manager, me);
   }
 
+  pre_length = me.get_length();
   me.add_uint32(_ambient_probes.size());
   for (size_t i = 0; i < _ambient_probes.size(); i++) {
     const MapAmbientProbe &probe = _ambient_probes[i];
@@ -194,16 +216,36 @@ write_datagram(BamWriter *manager, Datagram &me) {
       probe._color[j].write_datagram(me);
     }
   }
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << NUM_BYTES_WRITTEN << " bytes for ambient probe data\n";
+  }
 
+  pre_length = me.get_length();
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.verts);
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.tris);
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.tri_materials);
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_scene_data.materials);
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << NUM_BYTES_WRITTEN << " bytes for steam audio scene data\n";
+  }
+  pre_length = me.get_length();
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_probe_data);
   WRITE_PTA(manager, me, IPD_uchar::write_datagram, _steam_audio_pathing_probe_data);
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << NUM_BYTES_WRITTEN << " bytes for steam audio probe data\n";
+  }
 
+  pre_length = me.get_length();
   _light_debug_data.write_datagram(me);
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << NUM_BYTES_WRITTEN << " bytes for light debug data\n";
+  }
 
+  size_t prop_vtx_light_length = 0;
   me.add_uint32(_static_props.size());
   for (const MapStaticProp &prop : _static_props) {
     me.add_string(prop._model_filename.get_fullpath());
@@ -215,7 +257,14 @@ write_datagram(BamWriter *manager, Datagram &me) {
     me.add_uint32(prop._geom_vertex_lighting.size());
     for (const CPT(GeomVertexArrayData) &array : prop._geom_vertex_lighting) {
       manager->write_pointer(me, array);
+      if (array != nullptr) {
+        prop_vtx_light_length += array->get_data_size_bytes();
+      }
     }
+  }
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Static prop vertex lighting totals " << prop_vtx_light_length << " bytes\n";
   }
 
   me.add_uint32(_overlays.size());

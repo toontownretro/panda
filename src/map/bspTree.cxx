@@ -14,6 +14,7 @@
 #include "bspTree.h"
 #include <stack>
 #include "bamReader.h"
+#include "config_map.h"
 
 IMPLEMENT_CLASS(BSPTree);
 
@@ -148,6 +149,8 @@ void BSPTree::
 write_datagram(BamWriter *manager, Datagram &me) {
   SpatialPartition::write_datagram(manager, me);
 
+  size_t pre_length = me.get_length();
+
   me.add_uint32(_nodes.size());
   for (size_t i = 0; i < _nodes.size(); ++i) {
     me.add_int32(_nodes[i].children[0]);
@@ -159,6 +162,11 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _leaves.size(); ++i) {
     me.add_int32(_leaves[i].value);
     me.add_bool(_leaves[i].solid);
+  }
+
+  if (map_cat.is_debug()) {
+    map_cat.debug()
+      << "Wrote " << me.get_length() - pre_length << " bytes for the BSP tree\n";
   }
 }
 
