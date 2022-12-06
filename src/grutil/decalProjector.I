@@ -23,7 +23,8 @@ DecalProjector() :
   _decal_uv_transform(TransformState::make_identity()),
   _fragments_lock("fragments-lock"),
   _num_vertices(0),
-  _num_indices(0)
+  _num_indices(0),
+  _test_bounds(true)
 {
 }
 
@@ -68,6 +69,14 @@ set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs) {
   _projector_frame[3] = LPoint3(maxs[0], 0.0f, mins[2]);
   _projector_mins = mins;
   _projector_maxs = maxs;
+}
+
+/**
+ *
+ */
+INLINE void DecalProjector::
+set_test_bounds(bool flag) {
+  _test_bounds = flag;
 }
 
 /**

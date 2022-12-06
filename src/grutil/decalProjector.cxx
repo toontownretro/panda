@@ -51,16 +51,18 @@ bool DecalProjector::
 r_project(PandaNode *node, const TransformState *net_transform) {
   bool any = false;
 
-  CPT(GeometricBoundingVolume) bounds;
-  if (!net_transform->is_identity()) {
-    PT(GeometricBoundingVolume) net_bounds = node->get_bounds()->make_copy()->as_geometric_bounding_volume();
-    net_bounds->xform(net_transform->get_mat());
-    bounds = net_bounds;
-  } else {
-    bounds = node->get_bounds()->as_geometric_bounding_volume();
-  }
-  if (!_projector_world_bbox->contains(bounds)) {
-    return false;
+  if (_test_bounds) {
+    CPT(GeometricBoundingVolume) bounds;
+    if (!net_transform->is_identity()) {
+      PT(GeometricBoundingVolume) net_bounds = node->get_bounds()->make_copy()->as_geometric_bounding_volume();
+      net_bounds->xform(net_transform->get_mat());
+      bounds = net_bounds;
+    } else {
+      bounds = node->get_bounds()->as_geometric_bounding_volume();
+    }
+    if (!_projector_world_bbox->contains(bounds)) {
+      return false;
+    }
   }
 
   CPT(TransformState) this_net_transform = net_transform->compose(node->get_transform());
@@ -108,17 +110,19 @@ project(const Geom *geom, const LMatrix4 *net_mat) {
 
   //PT(Geom) dgeom = geom->decompose();
 
-  CPT(GeometricBoundingVolume) bounds;
-  if (net_mat != nullptr) {
-    PT(GeometricBoundingVolume) net_bounds = geom->get_bounds()->make_copy()->as_geometric_bounding_volume();
-    net_bounds->xform(*net_mat);
-    bounds = net_bounds;
-  } else {
-    bounds = geom->get_bounds()->as_geometric_bounding_volume();
-  }
+  if (_test_bounds) {
+    CPT(GeometricBoundingVolume) bounds;
+    if (net_mat != nullptr) {
+      PT(GeometricBoundingVolume) net_bounds = geom->get_bounds()->make_copy()->as_geometric_bounding_volume();
+      net_bounds->xform(*net_mat);
+      bounds = net_bounds;
+    } else {
+      bounds = geom->get_bounds()->as_geometric_bounding_volume();
+    }
 
-  if (!_projector_world_bbox->contains(bounds)) {
-    return false;
+    if (!_projector_world_bbox->contains(bounds)) {
+      return false;
+    }
   }
 
   Thread *current_thread = Thread::get_current_thread();
@@ -427,7 +431,6 @@ generate() {
   LVecBase2 projector_size = _projector_maxs.get_xz() - _projector_mins.get_xz();
 
   bool ident_decal_mat = _decal_inv_net_mat.is_identity();
-
 
   LVecBase2 frame_uv[4] = {
     LVecBase2(0, 0),

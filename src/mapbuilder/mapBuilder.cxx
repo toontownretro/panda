@@ -2801,6 +2801,7 @@ build_overlays() {
         proj.set_projector_transform(ts);
         proj.set_projector_frame(ll, ul, ur, lr, -10000.0f, 10000.0f);
         //proj.set_projector_bounds(-size, size);
+        proj.set_test_bounds(false);
         proj.set_decal_parent(np_ident);
         proj.set_decal_render_state(np.get_state());
         proj.set_decal_uv_transform(uv_transform);

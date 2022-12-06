@@ -78,6 +78,8 @@ PUBLISHED:
                                   PN_stdfloat min_depth, PN_stdfloat max_depth);
   INLINE void set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs);
 
+  INLINE void set_test_bounds(bool flag);
+
   // Associated with the generated decal geometry.
   INLINE void set_decal_parent(const NodePath &parent);
   INLINE void set_decal_uv_transform(const TransformState *state);
@@ -165,6 +167,8 @@ private:
 
   int _num_vertices;
   int _num_indices;
+
+  bool _test_bounds;
 };
 
 #include "decalProjector.I"
