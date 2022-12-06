@@ -2506,6 +2506,8 @@ format_compression_mode(CompressionMode cm) {
     return "etc2";
   case CM_eac:
     return "eac";
+  case CM_bptc:
+    return "bptc";
   }
 
   return "**invalid**";
@@ -2547,6 +2549,8 @@ string_compression_mode(const string &str) {
     return CM_etc2;
   } else if (cmp_nocase_uh(str, "eac") == 0) {
     return CM_eac;
+  } else if (cmp_nocase_uh(str, "bptc") == 0) {
+    return CM_bptc;
   }
 
   gobj_cat->error()

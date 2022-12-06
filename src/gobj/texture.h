@@ -221,6 +221,7 @@ PUBLISHED:
     CM_etc1,
     CM_etc2,
     CM_eac, // EAC: 1 or 2 channels.
+    CM_bptc,
   };
 
   enum QualityLevel {

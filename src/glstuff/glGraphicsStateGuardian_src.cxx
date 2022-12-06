@@ -1183,6 +1183,12 @@ reset() {
         break;
 #endif
 
+      case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+      case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB:
+      case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+      case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB:
+        _compressed_texture_formats.set_bit(Texture::CM_bptc);
+
       default:
         break;
       }
@@ -1195,6 +1201,11 @@ reset() {
         has_extension("GL_ARB_texture_compression_rgtc") ||
         has_extension("GL_EXT_texture_compression_rgtc")) {
       _compressed_texture_formats.set_bit(Texture::CM_rgtc);
+    }
+
+    if (is_at_least_gl_version(4, 6) ||
+        has_extension("GL_ARB_texture_compression_bptc")) {
+      _compressed_texture_formats.set_bit(Texture::CM_bptc);
     }
 #endif
   }
@@ -9180,6 +9191,17 @@ get_external_image_format(Texture *tex) const {
       }
       break;
 
+    case Texture::CM_bptc:
+      if (format == Texture::F_srgb || format == Texture::F_srgb_alpha) {
+        return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB;
+      } else if (format == Texture::F_rgb16) {
+        // FIXME: Support signed as well.
+        return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB;
+      } else {
+        return GL_COMPRESSED_RGBA_BPTC_UNORM_ARB;
+      }
+      break;
+
     case Texture::CM_default:
     case Texture::CM_off:
     case Texture::CM_dxt2:
@@ -9695,6 +9717,17 @@ get_internal_image_format(Texture *tex, bool force_sized) const {
       }
       break;
 
+    case Texture::CM_bptc:
+      if (format == Texture::F_srgb || format == Texture::F_srgb_alpha) {
+        return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB;
+      } else if (format == Texture::F_rgb16) {
+        // FIXME: Support signed as well.
+        return GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB;
+      } else {
+        return GL_COMPRESSED_RGBA_BPTC_UNORM_ARB;
+      }
+      break;
+
     case Texture::CM_default:
     case Texture::CM_off:
     case Texture::CM_dxt2:
@@ -10164,6 +10197,11 @@ is_compressed_format(GLenum format) {
   case GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT:
   case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
   case GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT:
+
+  case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+  case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB:
+  case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB:
+  case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
 
   case GL_COMPRESSED_RGB:
   case GL_COMPRESSED_SRGB_EXT:
@@ -13061,6 +13099,21 @@ do_extract_texture_data(CLP(TextureContext) *gtc) {
     type = Texture::T_byte;
     format = Texture::F_rg;
     compression = Texture::CM_rgtc;
+    break;
+  case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+    type = Texture::T_unsigned_byte;
+    format = Texture::F_rgba;
+    compression = Texture::CM_bptc;
+    break;
+  case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB:
+    type = Texture::T_unsigned_byte;
+    format = Texture::F_srgb_alpha;
+    compression = Texture::CM_bptc;
+    break;
+  case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB:
+    type = Texture::T_half_float;
+    format = Texture::F_rgb16;
+    compression = Texture::CM_bptc;
     break;
 #endif
   default:
