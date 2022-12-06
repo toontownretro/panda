@@ -2636,6 +2636,12 @@ denoise_lightmaps() {
         l1p1[2] += 0.5f;
         //l1p1[2] = cpow(l1p1[2], 1.0f / 2.2f);
 
+        // Also avoid 0s in L0.  It causes weird artifacts in the
+        // compression.
+        l0[0] = std::max(l0[0], 0.001f);
+        l0[1] = std::max(l0[1], 0.001f);
+        l0[2] = std::max(l0[2], 0.001f);
+
         pos += 4;
       }
     }
