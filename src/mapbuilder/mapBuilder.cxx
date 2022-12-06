@@ -627,7 +627,7 @@ build() {
   CPT(GeomVertexFormat) format = GeomVertexFormat::register_format(arr);
 
   PT(GeomVertexArrayFormat) blend_arr = new GeomVertexArrayFormat(*arr);
-  blend_arr->add_column(InternalName::make("blend"), 1, GeomEnums::NT_stdfloat, GeomEnums::C_other);
+  blend_arr->add_column(InternalName::make("blend"), 1, GeomEnums::NT_uint8, GeomEnums::C_other);
   CPT(GeomVertexFormat) blend_format = GeomVertexFormat::register_format(blend_arr);
 
   // Now write out the meshes to GeomNodes.
@@ -1301,7 +1301,7 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
     twriter.add_data2f(poly->_uvs[k]);
     lwriter.add_data2f(poly->_lightmap_uvs[k]);
     if (bwriter.has_column()) {
-      bwriter.add_data1f(poly->_blends[k]);
+      bwriter.add_data1i((unsigned char)poly->_blends[k]);
     }
 
     // Calculate tangent and binormal from the normal.
