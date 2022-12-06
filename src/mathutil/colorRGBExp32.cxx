@@ -13,13 +13,57 @@
 
 #include "colorRGBExp32.h"
 #include "mathutil_misc.h"
+#include "cmath.h"
 
+INLINE static int
+calc_exponent(float in) {
+  int power = 0;
+  if (in != 0.0f) {
+    while (in > 255.0f) {
+      ++power;
+      in *= 0.5f;
+    }
+    while (in < 128.0f) {
+      --power;
+      in *= 2.0f;
+    }
+  }
+  return power;
+}
+
+ColorRGBExp32::
+ColorRGBExp32(const LVecBase3 &vin) {
+  nassertv(vin[0] >= 0.0f && vin[1] >= 0.0f && vin[1] >= 0.0f);
+
+  LVecBase3 v = vin;
+
+  float max = v[0];
+  for (int i = 1; i < 3; ++i) {
+    max = std::max(max, v[i]);
+  }
+
+  int exponent = calc_exponent(max);
+  exponent = std::clamp(exponent, -128, 127);
+
+  float scalar = cpow(2.0f, (float)-exponent);
+  for (int i = 0; i < 3; ++i) {
+    v[i] *= scalar;
+    v[i] = std::min(v[i], 255.0f);
+  }
+
+  _r = (unsigned char)v[0];
+  _g = (unsigned char)v[1];
+  _b = (unsigned char)v[2];
+  _exponent = (signed char)exponent;
+}
+
+#if 0
 // given a floating point number  f, return an exponent e such that
 // for f' = f * 2^e,  f is on [128..255].
 // Uses IEEE 754 representation to directly extract this information
 // from the float.
 INLINE static int
-calc_exponent(float *pin) {
+calc_exponent(const float *pin) {
   // The thing we will take advantage of here is that the exponent component
   // is stored in the float itself, and because we want to map to 128..255, we
   // want an "ideal" exponent of 2^7. So, we compute the difference between the
@@ -76,6 +120,11 @@ ColorRGBExp32(const LVecBase3 &vin) {
     scalar = *reinterpret_cast<float *>(&fbits);
   }
 
+  std::cout << "scalar: " << scalar << "\n";
+  std::cout << "vin[0] * scalar: " << vin[0] * scalar << "\n";
+  std::cout << "vin[1] * scalar: " << vin[1] * scalar << "\n";
+  std::cout << "vin[2] * scalar: " << vin[2] * scalar << "\n";
+
   // we should never need to clamp:
   nassertv(vin[0] * scalar <= 255.0f &&
            vin[1] * scalar <= 255.0f &&
@@ -95,6 +144,7 @@ ColorRGBExp32(const LVecBase3 &vin) {
 
   _exponent = (signed char)exponent;
 }
+#endif
 
 LVecBase3 ColorRGBExp32::
 as_linear_color() const {
