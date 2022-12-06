@@ -47,6 +47,7 @@
 #include "antialiasAttrib.h"
 #include "colorBlendAttrib.h"
 #include "indent.h"
+#include "colorRGBExp32.h"
 
 #ifndef CPPPARSER
 #include "OpenImageDenoise/oidn.hpp"
@@ -56,6 +57,14 @@
 NotifyCategoryDef(lightbuilder, "");
 
 CPT(InternalName) LightBuilder::_lightmap_uv_name = nullptr;
+
+/**
+ *
+ */
+static int
+align_to_next_multiple(int offset, int alignment) {
+  return ((offset + alignment - 1) / alignment) * alignment;
+}
 
 /**
  *
@@ -371,7 +380,11 @@ make_palette() {
   // width and height of all palettes.
   for (size_t i = 0; i < _pages.size(); i++) {
     LVecBase2i size = _pages[i].packer.get_minimum_dimensions_npot();
+    // Align dimensions to next multiple of four for DXT compression.
+    size[0] = align_to_next_multiple(size[0], 4);
+    size[1] = align_to_next_multiple(size[1], 4);
     std::cout << "Page " << i << " size: " << size << "\n";
+    _pages[i].dim = size;
     _lightmap_size[0] = std::max(_lightmap_size[0], size[0]);
     _lightmap_size[1] = std::max(_lightmap_size[1], size[1]);
   }
@@ -2568,6 +2581,66 @@ denoise_lightmaps() {
     new_datap[i * 4 + 3] = alpha_datap[i];
   }
 
+  page_size = 4 * _lightmap_size[0] * _lightmap_size[1];
+
+  // Bring the L1 coefficients into 0..1 range.
+  for (int page = 0; page < (int)_pages.size(); ++page) {
+    int pos = 0;
+    for (int x = 0; x < _lightmap_size[0]; x++) {
+      for (int y = 0; y < _lightmap_size[1]; y++) {
+        float *l0 = &new_datap[page_size * page * 4 + pos];
+        float *l1n1 = &new_datap[page_size * (page * 4 + 1) + pos];
+        float *l1n0 = &new_datap[page_size * (page * 4 + 2) + pos];
+        float *l1p1 = &new_datap[page_size * (page * 4 + 3) + pos];
+
+        if (l0[0] > FLT_EPSILON) {
+          l1n1[0] /= (l0[0] / 0.282095f) * 0.488603f;
+          l1n0[0] /= (l0[0] / 0.282095f) * 0.488603f;
+          l1p1[0] /= (l0[0] / 0.282095f) * 0.488603f;
+        }
+        l1n1[0] *= 0.5f;
+        l1n1[0] += 0.5f;
+        //l1n1[0] = cpow(l1n1[0], 1.0f / 2.2f);
+        l1n0[0] *= 0.5f;
+        l1n0[0] += 0.5f;
+        //l1n0[0] = cpow(l1n0[0], 1.0f / 2.2f);
+        l1p1[0] *= 0.5f;
+        l1p1[0] += 0.5f;
+        //l1p1[0] = cpow(l1p1[0], 1.0f / 2.2f);
+        if (l0[1] > FLT_EPSILON) {
+          l1n1[1] /= (l0[1] / 0.282095f) * 0.488603f;
+          l1n0[1] /= (l0[1] / 0.282095f) * 0.488603f;
+          l1p1[1] /= (l0[1] / 0.282095f) * 0.488603f;
+        }
+        l1n1[1] *= 0.5f;
+        l1n1[1] += 0.5f;
+        //l1n1[1] = cpow(l1n1[1], 1.0f / 2.2f);
+        l1n0[1] *= 0.5f;
+        l1n0[1] += 0.5f;
+        //l1n0[1] = cpow(l1n0[1], 1.0f / 2.2f);
+        l1p1[1] *= 0.5f;
+        l1p1[1] += 0.5f;
+        //l1p1[1] = cpow(l1p1[1], 1.0f / 2.2f);
+        if (l0[2] > FLT_EPSILON) {
+          l1n1[2] /= (l0[2] / 0.282095f) * 0.488603f;
+          l1n0[2] /= (l0[2] / 0.282095f) * 0.488603f;
+          l1p1[2] /= (l0[2] / 0.282095f) * 0.488603f;
+        }
+        l1n1[2] *= 0.5f;
+        l1n1[2] += 0.5f;
+        //l1n1[2] = cpow(l1n1[2], 1.0f / 2.2f);
+        l1n0[2] *= 0.5f;
+        l1n0[2] += 0.5f;
+        //l1n0[2] = cpow(l1n0[2], 1.0f / 2.2f);
+        l1p1[2] *= 0.5f;
+        l1p1[2] += 0.5f;
+        //l1p1[2] = cpow(l1p1[2], 1.0f / 2.2f);
+
+        pos += 4;
+      }
+    }
+  }
+
   // Now throw it back on the texture.
   _lm_textures["reflectivity"]->set_ram_image_as(new_data, "RGBA");
   _lm_textures["reflectivity"]->set_format(Texture::F_rgba32);
@@ -2647,6 +2720,11 @@ write_geoms() {
   // Lightmaps are identified in the shader generator by a texture stage
   // named "lightmap".
   PT(TextureStage) stage = new TextureStage("lightmap");
+  PT(TextureStage) stage_l1y = new TextureStage("lightmap_l1y");
+  PT(TextureStage) stage_l1z = new TextureStage("lightmap_l1z");
+  PT(TextureStage) stage_l1x = new TextureStage("lightmap_l1x");
+  TextureStage *l1_stages[3] = { stage_l1y, stage_l1z, stage_l1x };
+  PT(Texture) l1_textures[3];
 
   pvector<CPT(RenderState)> page_texture_states;
   // Extract each page from the lightmap array texture into individual textures.
@@ -2660,41 +2738,77 @@ write_geoms() {
     // pages) because of how the pages are stored in a single texture array.
     // However, since the output pages are separate textures, we can store
     // each page at a different size, saving on memory.
-    LVecBase2i page_dim = page.packer.get_minimum_dimensions_npot();
+    LVecBase2i page_dim = page.dim;
 
     // The geoms in this page need their lightmap UV's offset again.
     float u_scale = (float)_lightmap_size[0] / (float)page_dim[0];
     float v_scale = (float)_lightmap_size[1] / (float)page_dim[1];
 
     std::ostringstream ss;
-    ss << "lm_page_" << i;
+    ss << "lm_page_" << i << "_l0";
     PT(Texture) tex = new Texture(ss.str());
-    tex->setup_2d_texture_array(page_dim[0], page_dim[1], 4, Texture::T_half_float,
+    tex->setup_2d_texture(page_dim[0], page_dim[1], Texture::T_half_float,
                           Texture::F_rgb16);
     tex->set_minfilter(SamplerState::FT_linear);
     tex->set_magfilter(SamplerState::FT_linear);
     tex->set_wrap_u(SamplerState::WM_clamp);
     tex->set_wrap_v(SamplerState::WM_clamp);
     tex->set_keep_ram_image(false);
+    tex->set_compression(Texture::CM_off);
 
     size_t chopped_page_size = sizeof(unsigned short) * page_dim[0] * page_dim[1] * 3;
     PTA_uchar ram_image;
-    ram_image.resize(chopped_page_size * 4);
+    ram_image.resize(chopped_page_size);
     unsigned char *ram_image_datap = ram_image.p();
-    for (int j = 0; j < 4; ++j) {
-      convert_rgba32_to_rgb16(page_data, page_size, _lightmap_size, page_dim, ram_image_datap);
-      page_data += page_size;
-      ram_image_datap += chopped_page_size;
-    }
+    convert_rgba32_to_rgb16(page_data, page_size, _lightmap_size, page_dim, ram_image_datap);
+    page_data += page_size;
 
     tex->set_ram_image(ram_image);
 
+    compress_rgb16_to_bc6h(tex);
+
     lightbuilder_cat.info()
-      << "Output lightmap page " << i << ":\n";
+      << "Output lightmap page " << i << " L0:\n";
     tex->write(lightbuilder_cat.info(false), 0);
+
+    chopped_page_size = sizeof(unsigned char) * page_dim[0] * page_dim[1] * 3;
+    for (int j = 0; j < 3; ++j) {
+      std::ostringstream l1ss;
+      l1ss << "lm_page_" << i << "_l1_" << j;
+      PT(Texture) tmp = new Texture(l1ss.str());
+      tmp->setup_2d_texture(page_dim[0], page_dim[1], Texture::T_unsigned_byte, Texture::F_rgb8);
+      tmp->set_minfilter(SamplerState::FT_linear);
+      tmp->set_magfilter(SamplerState::FT_linear);
+      tmp->set_wrap_u(SamplerState::WM_clamp);
+      tmp->set_wrap_v(SamplerState::WM_clamp);
+      tmp->set_keep_ram_image(false);
+      tmp->set_compression(Texture::CM_off);
+      PTA_uchar tmpram_image;
+      tmpram_image.resize(chopped_page_size);
+      ram_image_datap = tmpram_image.p();
+      convert_rgba32_to_rgb8(page_data, page_size, _lightmap_size, page_dim, ram_image_datap);
+      page_data += page_size;
+      tmp->set_ram_image_as(tmpram_image, "RGB");
+      if (tmp->compress_ram_image(Texture::CM_dxt1)) {
+        tmp->set_compression(Texture::CM_dxt1);
+        lightbuilder_cat.info()
+          << "Successfully compressed L1 ram image " << j << "\n";
+      } else {
+        lightbuilder_cat.warning()
+          << "Failed to compress ram image for L1 " << j << "\n";
+      }
+      l1_textures[j] = tmp;
+
+      lightbuilder_cat.info()
+        << "Output lightmap page " << i << " L1 " << j << ":\n";
+      tmp->write(lightbuilder_cat.info(false), 0);
+    }
 
     CPT(RenderAttrib) tattr = TextureAttrib::make();
     tattr = DCAST(TextureAttrib, tattr)->add_on_stage(stage, tex);
+    for (int j = 0; j < 3; ++j) {
+      tattr = DCAST(TextureAttrib, tattr)->add_on_stage(l1_stages[j], l1_textures[j]);
+    }
     page_texture_states.push_back(RenderState::make(tattr));
 
     if (page_dim != _lightmap_size) {
@@ -2760,7 +2874,7 @@ write_geoms() {
 
 #if 1
   PT(GeomVertexArrayFormat) arr = new GeomVertexArrayFormat;
-  arr->add_column(InternalName::make("vertex_lighting"), 3, GeomEnums::NT_float16, GeomEnums::C_other);
+  arr->add_column(InternalName::make("vertex_lighting"), 4, GeomEnums::NT_uint8, GeomEnums::C_other);
   CPT(GeomVertexArrayFormat) vtx_light_format = GeomVertexArrayFormat::register_format(arr);
 
   pmap<CPT(GeomVertexData), PT(GeomVertexArrayData)> light_arrays;
@@ -2790,10 +2904,12 @@ write_geoms() {
       float g = vtx_light_data[palette_offset * 4 + 1];
       float b = vtx_light_data[palette_offset * 4 + 2];
 
+      ColorRGBExp32 rgbe(LVecBase3(b, g, r));
+
       // Write this to all vertex indices that share this LightmapVertex.
       for (auto it = lvert.orig_vertices.begin(); it != lvert.orig_vertices.end(); ++it) {
         lwriter.set_row(*it);
-        lwriter.set_data3f(b, g, r);
+        lwriter.set_data4i(rgbe.get_r(), rgbe.get_g(), rgbe.get_b(), (int)rgbe.get_exponent() + 128);
       }
     }
 
@@ -3152,3 +3268,96 @@ convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
   }
 }
 
+/**
+ * Converts the given RAM image, assumed to be in RGBA32 format, to RGB8
+ * unsigned byte.  The given image is expected to be a single page of a single
+ * mipmap level.
+ */
+void LightBuilder::
+convert_rgba32_to_rgb8(const unsigned char *image, size_t image_size,
+                        const LVecBase2i &orig_size, const LVecBase2i &new_size,
+                        unsigned char *out) {
+
+  int y_diff = orig_size[1] - new_size[1];
+  int x_diff = orig_size[0] - new_size[0];
+
+  // New size should be same or smaller.
+  assert(y_diff >= 0 && x_diff >= 0);
+
+  const float *fp32_data = (const float *)image;
+  unsigned char *u8_data = out;
+
+  for (int y = 0; y < orig_size[1] - y_diff; ++y) {
+    for (int x = 0; x < orig_size[0] - x_diff; ++x) {
+
+      int orig_pos = y * orig_size[0] * 4;
+      orig_pos += x * 4;
+
+      // Convert to unsigned byte and store in new image.
+      *u8_data++ = (unsigned char)std::clamp((int)lroundf(fp32_data[orig_pos] * 255.0f), 0, 255);
+      *u8_data++ = (unsigned char)std::clamp((int)lroundf(fp32_data[orig_pos + 1] * 255.0f), 0, 255);
+      *u8_data++ = (unsigned char)std::clamp((int)lroundf(fp32_data[orig_pos + 2] * 255.0f), 0, 255);
+    }
+  }
+}
+
+/**
+ *
+ */
+bool LightBuilder::
+compress_rgb16_to_bc6h(Texture *tex) {
+
+  SamplerState::FilterType orig_minfilter = tex->get_minfilter();
+  SamplerState::FilterType orig_magfilter = tex->get_magfilter();
+
+  // We don't want to do any interpolation of the texture colors
+  // when sampling for compression.
+  tex->set_minfilter(SamplerState::FT_nearest);
+  tex->set_magfilter(SamplerState::FT_nearest);
+
+  int width = tex->get_x_size();
+  int height = tex->get_y_size();
+
+  int block_width = (width + 3) >> 2;
+  int block_height = (height + 3) >> 2;
+
+  PT(Texture) dst_tex = new Texture("bc6h-dst");
+  dst_tex->setup_2d_texture(block_width, block_height, Texture::T_unsigned_int, Texture::F_rgba32i);
+  dst_tex->set_compression(Texture::CM_off);
+  dst_tex->set_minfilter(SamplerState::FT_nearest);
+  dst_tex->set_magfilter(SamplerState::FT_nearest);
+  dst_tex->set_wrap_u(SamplerState::WM_clamp);
+  dst_tex->set_wrap_v(SamplerState::WM_clamp);
+  dst_tex->clear_image();
+
+  NodePath tmp("tmp");
+  tmp.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/compress_bc6h.compute.glsl"));
+  tmp.set_shader_input("srcTexture", tex);
+  tmp.set_shader_input("dstTexture", dst_tex, false, true);
+  tmp.set_shader_input("p_textureSizeRcp", LVecBase2(1.0f / width, 1.0f / height));
+
+  lightbuilder_cat.info()
+    << "Compressing " << tex->get_name() << " to BC6H..\n";
+
+  _gsg->set_state_and_transform(tmp.get_state(), TransformState::make_identity());
+  _gsg->dispatch_compute(align_to_next_multiple(width, 32) / 32,
+                         align_to_next_multiple(height, 32) / 32, 1, true);
+
+  lightbuilder_cat.info()
+    << "Done.\n";
+
+  // Store original filter settings.
+  tex->set_minfilter(orig_minfilter);
+  tex->set_magfilter(orig_magfilter);
+
+  if (!_gsg->extract_texture_data(dst_tex)) {
+    lightbuilder_cat.warning()
+      << "Failed to extract compressed texture data\n";
+    return false;
+  }
+
+  tex->set_ram_image(dst_tex->get_ram_image(), Texture::CM_bptc);
+  tex->set_compression(Texture::CM_bptc);
+
+  return true;
+}

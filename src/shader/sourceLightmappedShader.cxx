@@ -177,12 +177,27 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   state->get_attrib_def(tattr);
 
   static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
+  static TextureStage *lm_stage_l1y = TextureStagePool::get_stage(new TextureStage("lightmap_l1y"));
+  static TextureStage *lm_stage_l1z = TextureStagePool::get_stage(new TextureStage("lightmap_l1z"));
+  static TextureStage *lm_stage_l1x = TextureStagePool::get_stage(new TextureStage("lightmap_l1x"));
   static TextureStage *envmap_stage = TextureStagePool::get_stage(new TextureStage("envmap"));
   static TextureStage *planar_stage = TextureStagePool::get_stage(new TextureStage("reflection"));
 
   Texture *lm_tex = tattr->get_on_texture(lm_stage);
   if (lm_tex != nullptr) {
-    setup.set_input(ShaderInput("lightmapTexture", lm_tex));
+    setup.set_input(ShaderInput("lightmapTextureL0", lm_tex));
+  }
+  Texture *lm_tex_l1y = tattr->get_on_texture(lm_stage_l1y);
+  if (lm_tex_l1y != nullptr) {
+    setup.set_input(ShaderInput("lightmapTextureL1y", lm_tex_l1y));
+  }
+  Texture *lm_tex_l1z = tattr->get_on_texture(lm_stage_l1z);
+  if (lm_tex_l1z != nullptr) {
+    setup.set_input(ShaderInput("lightmapTextureL1z", lm_tex_l1z));
+  }
+  Texture *lm_tex_l1x = tattr->get_on_texture(lm_stage_l1x);
+  if (lm_tex_l1x != nullptr) {
+    setup.set_input(ShaderInput("lightmapTextureL1x", lm_tex_l1x));
   }
   if (env_cubemap) {
     envmap_tex = tattr->get_on_texture(envmap_stage);

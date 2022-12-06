@@ -259,6 +259,7 @@ public:
     // The object used to pack the individual geom lightmaps into
     // the palette.
     ImagePacker packer;
+    LVecBase2i dim;
 
     // The page's palette index.
     int index = 0;
@@ -471,6 +472,9 @@ private:
 
   void convert_rgba32_to_rgb16(const unsigned char *image, size_t image_size,
     const LVecBase2i &orig_size, const LVecBase2i &new_size, unsigned char *out);
+  void convert_rgba32_to_rgb8(const unsigned char *image, size_t image_size,
+    const LVecBase2i &orig_size, const LVecBase2i &new_size, unsigned char *out);
+  bool compress_rgb16_to_bc6h(Texture *tex);
 };
 
 #include "lightBuilder.I"
