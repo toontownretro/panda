@@ -2707,15 +2707,6 @@ r_collect_geoms(PandaNode *node, pvector<std::pair<CPT(Geom), CPT(RenderState) >
 void MapBuilder::
 build_overlays() {
 
-  LVector3 face_normals[6] = {
-    LVector3::up(), // floor
-    LVector3::down(), // ceiling
-    LVector3::back(), // south-facing wall
-    LVector3::forward(), // north-facing wall
-    LVector3::left(), // west-facing wall
-    LVector3::right() // east-facing wall
-  };
-
   for (size_t i = 0; i < _source_map->_entities.size(); ++i) {
     MapEntitySrc *sent = _source_map->_entities[i];
     if (sent->_class_name != "info_overlay") {
@@ -2739,8 +2730,6 @@ build_overlays() {
     string_to_int(sent->_properties["RenderOrder"], offset);
     offset++;
 
-    //LVector3 basis_v = -basis_normal.cross(basis_u).normalized();
-
     LMatrix4 m = LMatrix4::ident_mat();
     m.set_row(0, basis_u);
     m.set_row(1, basis_normal);
@@ -2757,13 +2746,6 @@ build_overlays() {
     LPoint2 ul = KeyValues::to_3f(sent->_properties["uv1"]).get_xy();
     LPoint2 ur = KeyValues::to_3f(sent->_properties["uv2"]).get_xy();
     LPoint2 lr = KeyValues::to_3f(sent->_properties["uv3"]).get_xy();
-
-    //LVecBase3 size = ur - ll;
-    //size[2] = std::max(size[0], size[1]);
-    //size *= 0.5;
-    //PN_stdfloat tmp = size[1];
-    //size[1] = size[2];
-    //size[2] = tmp;
 
     CPT(TransformState) ts = TransformState::make_mat(m);
 
@@ -2800,8 +2782,8 @@ build_overlays() {
         proj.set_projector_parent(np_ident);
         proj.set_projector_transform(ts);
         proj.set_projector_frame(ll, ul, ur, lr, -10000.0f, 10000.0f);
-        //proj.set_projector_bounds(-size, size);
         proj.set_test_bounds(false);
+        proj.set_dot_threshold(0.001f);
         proj.set_decal_parent(np_ident);
         proj.set_decal_render_state(np.get_state());
         proj.set_decal_uv_transform(uv_transform);
