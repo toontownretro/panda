@@ -24,7 +24,8 @@ DecalProjector() :
   _fragments_lock("fragments-lock"),
   _num_vertices(0),
   _num_indices(0),
-  _test_bounds(true)
+  _test_bounds(true),
+  _dot_threshold(0.1f)
 {
 }
 
@@ -77,6 +78,14 @@ set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs) {
 INLINE void DecalProjector::
 set_test_bounds(bool flag) {
   _test_bounds = flag;
+}
+
+/**
+ *
+ */
+INLINE void DecalProjector::
+set_dot_threshold(PN_stdfloat threshold) {
+  _dot_threshold = threshold;
 }
 
 /**
@@ -144,32 +153,28 @@ project(const Readers &readers, int v1, int v2, int v3, const LMatrix4 *net_mat)
   }
   tri_winding.add_point(p3);
 
-  LPoint3 tri_mins(1e9);
-  LPoint3 tri_maxs(-1e9);
-  tri_mins = tri_mins.fmin(tri_winding.get_point(0));
-  tri_mins = tri_mins.fmin(tri_winding.get_point(1));
-  tri_mins = tri_mins.fmin(tri_winding.get_point(2));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(0));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(1));
-  tri_maxs = tri_maxs.fmax(tri_winding.get_point(2));
+  if (_test_bounds) {
+    LPoint3 tri_mins(1e9);
+    LPoint3 tri_maxs(-1e9);
+    tri_mins = tri_mins.fmin(tri_winding.get_point(0));
+    tri_mins = tri_mins.fmin(tri_winding.get_point(1));
+    tri_mins = tri_mins.fmin(tri_winding.get_point(2));
+    tri_maxs = tri_maxs.fmax(tri_winding.get_point(0));
+    tri_maxs = tri_maxs.fmax(tri_winding.get_point(1));
+    tri_maxs = tri_maxs.fmax(tri_winding.get_point(2));
 
-  if (!box_overlap(_projector_world_bbox->get_minq(), _projector_world_bbox->get_maxq(),
-                   tri_mins, tri_maxs)) {
-    return false;
+    if (!box_overlap(_projector_world_bbox->get_minq(), _projector_world_bbox->get_maxq(),
+                    tri_mins, tri_maxs)) {
+      return false;
+    }
   }
 
   LVector3 triangle_normal = -tri_winding.get_plane().get_normal();
-  if (triangle_normal.dot(_projector_world_forward) < 0.1f) {
+  if (triangle_normal.dot(_projector_world_forward) <= _dot_threshold) {
     // If triangle is exactly perpendicular or facing away from decal
     // normal, don't create a fragment.
     return false;
   }
-
-  //BoundingBox tri_bbox(tri_mins, tri_maxs);
-  //tri_bbox.local_object();
-  //if (!_projector_world_bbox->contains(&tri_bbox)) {
-  //  return false;
-  //}
 
   // This triangle will definitely be part of the decal.
   // Clip the triangle to the 6 planes of the decal bounding box.

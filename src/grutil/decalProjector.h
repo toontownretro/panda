@@ -79,6 +79,7 @@ PUBLISHED:
   INLINE void set_projector_bounds(const LPoint3 &mins, const LPoint3 &maxs);
 
   INLINE void set_test_bounds(bool flag);
+  INLINE void set_dot_threshold(PN_stdfloat threshold);
 
   // Associated with the generated decal geometry.
   INLINE void set_decal_parent(const NodePath &parent);
@@ -169,6 +170,7 @@ private:
   int _num_indices;
 
   bool _test_bounds;
+  PN_stdfloat _dot_threshold;
 };
 
 #include "decalProjector.I"
