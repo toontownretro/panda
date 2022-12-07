@@ -2523,6 +2523,14 @@ compute_indirect() {
   return true;
 }
 
+#define PrintVec(v) v[0] << " " << v[1] << " " << v[2]
+#define VectorClamp(v, a, b) \
+  { \
+    v[0] = std::clamp(v[0], a, b); \
+    v[1] = std::clamp(v[1], a, b); \
+    v[2] = std::clamp(v[2], a, b); \
+  }
+
 /**
  * Uses Intel OpenImageDenoise to denoise the computed lightmaps.
  */
@@ -2542,37 +2550,77 @@ denoise_lightmaps() {
   // Get the ram image without an alpha channel.  OIDN wants a 3-channel image.
   CPTA_uchar color_data = _lm_textures["reflectivity"]->get_ram_image_as("RGB");
   CPTA_uchar alpha_data = _lm_textures["reflectivity"]->get_ram_image_as("A");
-  size_t page_size = sizeof(float) * 3 * _lightmap_size[0] * _lightmap_size[1];
+  float *color_datap = (float *)color_data.p();
+  const float *alpha_datap = (const float *)alpha_data.p();
+
+  size_t page_size = 3 * _lightmap_size[0] * _lightmap_size[1];
+
+  // Normalize the L1 coefficients.
+  for (int page = 0; page < (int)_pages.size(); ++page) {
+    int pos = 0;
+    for (int y = 0; y < _lightmap_size[1]; y++) {
+      for (int x = 0; x < _lightmap_size[0]; x++) {
+        float *l0 = &color_datap[page_size * page * 4 + pos];
+        float *l1n1 = &color_datap[page_size * (page * 4 + 1) + pos];
+        float *l1n0 = &color_datap[page_size * (page * 4 + 2) + pos];
+        float *l1p1 = &color_datap[page_size * (page * 4 + 3) + pos];
+
+        float l0_factor[3] = {
+          1.0f / ((l0[0] / 0.282095f) * 0.488603f),
+          1.0f / ((l0[1] / 0.282095f) * 0.488603f),
+          1.0f / ((l0[2] / 0.282095f) * 0.488603f),
+        };
+
+        VectorMultiply(l1n1, l0_factor, l1n1);
+        VectorMultiply(l1n0, l0_factor, l1n0);
+        VectorMultiply(l1p1, l0_factor, l1p1);
+        VectorClamp(l1n1, -1.0f, 1.0f);
+        VectorClamp(l1n0, -1.0f, 1.0f);
+        VectorClamp(l1p1, -1.0f, 1.0f);
+
+        pos += 3;
+      }
+    }
+  }
+
+  page_size = sizeof(float) * 3 * _lightmap_size[0] * _lightmap_size[1];
 
   oidn::FilterRef filter = device.newFilter("RTLightmap");
-  filter.set("directional", true);
-  filter.set("hdr", true);
   // Denoise each page.
-  for (size_t i = 0; i < _pages.size() * 4; i++) {
-    void *page_ptr = (void *)(color_data.p() + i * page_size);
+  for (size_t i = 0; i < _pages.size(); i++) {
 
-    filter.setImage("color", page_ptr,
+    for (size_t j = 0; j < 4; ++j) {
+      void *page_ptr = (void *)(color_data.p() + page_size * (i * 4 + j));
+      if (j == 0) {
+        // The first page is the L0 constant term (0..inf).
+        filter.set("directional", false);
+      } else {
+        // The remaining 3 are normalized L1 coefficients, we normalized them
+        // to range from -1..1 above, which is what OIDN expects.
+        filter.set("directional", true);
+      }
+
+      filter.setImage("color", page_ptr,
                     oidn::Format::Float3, _lightmap_size[0], _lightmap_size[1]);
-    filter.setImage("output", page_ptr,
-                    oidn::Format::Float3, _lightmap_size[0], _lightmap_size[1]);
-    filter.commit();
+      filter.setImage("output", page_ptr,
+                      oidn::Format::Float3, _lightmap_size[0], _lightmap_size[1]);
+      filter.commit();
 
-    filter.execute();
+      filter.execute();
 
-    const char *error;
-    if (device.getError(error) != oidn::Error::None) {
-      lightbuilder_cat.error()
-        << "OIDN error when denoising lightmap page " << i << ": "
-        << std::string(error) << "\n";
-      return false;
+      const char *error;
+      if (device.getError(error) != oidn::Error::None) {
+        lightbuilder_cat.error()
+          << "OIDN error when denoising lightmap page " << i << ": "
+          << std::string(error) << "\n";
+        return false;
+      }
     }
   }
 
   PTA_uchar new_data;
   new_data.resize(_lm_textures["reflectivity"]->get_expected_ram_image_size());
   float *new_datap = (float *)new_data.p();
-  const float *color_datap = (const float *)color_data.p();
-  const float *alpha_datap = (const float *)alpha_data.p();
 
   for (int i = 0; i < _lightmap_size[0] * _lightmap_size[1] * _pages.size() * 4; i++) {
     new_datap[i * 4] = color_datap[i * 3];
@@ -2583,69 +2631,34 @@ denoise_lightmaps() {
 
   page_size = 4 * _lightmap_size[0] * _lightmap_size[1];
 
-  // Bring the L1 coefficients into 0..1 range.
+#if 1
+  // Now, after denoising, scale and bias the L1 coefficients to
+  // range from 0..1, so we can store the textures as RGB8 and compress
+  // as DXT1.
   for (int page = 0; page < (int)_pages.size(); ++page) {
     int pos = 0;
-    for (int x = 0; x < _lightmap_size[0]; x++) {
-      for (int y = 0; y < _lightmap_size[1]; y++) {
-        float *l0 = &new_datap[page_size * page * 4 + pos];
+    for (int y = 0; y < _lightmap_size[1]; y++) {
+      for (int x = 0; x < _lightmap_size[0]; x++) {
         float *l1n1 = &new_datap[page_size * (page * 4 + 1) + pos];
         float *l1n0 = &new_datap[page_size * (page * 4 + 2) + pos];
         float *l1p1 = &new_datap[page_size * (page * 4 + 3) + pos];
 
-        if (l0[0] > FLT_EPSILON) {
-          l1n1[0] /= (l0[0] / 0.282095f) * 0.488603f;
-          l1n0[0] /= (l0[0] / 0.282095f) * 0.488603f;
-          l1p1[0] /= (l0[0] / 0.282095f) * 0.488603f;
-        }
-        l1n1[0] *= 0.5f;
-        l1n1[0] += 0.5f;
-        //l1n1[0] = cpow(l1n1[0], 1.0f / 2.2f);
-        l1n0[0] *= 0.5f;
-        l1n0[0] += 0.5f;
-        //l1n0[0] = cpow(l1n0[0], 1.0f / 2.2f);
-        l1p1[0] *= 0.5f;
-        l1p1[0] += 0.5f;
-        //l1p1[0] = cpow(l1p1[0], 1.0f / 2.2f);
-        if (l0[1] > FLT_EPSILON) {
-          l1n1[1] /= (l0[1] / 0.282095f) * 0.488603f;
-          l1n0[1] /= (l0[1] / 0.282095f) * 0.488603f;
-          l1p1[1] /= (l0[1] / 0.282095f) * 0.488603f;
-        }
-        l1n1[1] *= 0.5f;
-        l1n1[1] += 0.5f;
-        //l1n1[1] = cpow(l1n1[1], 1.0f / 2.2f);
-        l1n0[1] *= 0.5f;
-        l1n0[1] += 0.5f;
-        //l1n0[1] = cpow(l1n0[1], 1.0f / 2.2f);
-        l1p1[1] *= 0.5f;
-        l1p1[1] += 0.5f;
-        //l1p1[1] = cpow(l1p1[1], 1.0f / 2.2f);
-        if (l0[2] > FLT_EPSILON) {
-          l1n1[2] /= (l0[2] / 0.282095f) * 0.488603f;
-          l1n0[2] /= (l0[2] / 0.282095f) * 0.488603f;
-          l1p1[2] /= (l0[2] / 0.282095f) * 0.488603f;
-        }
-        l1n1[2] *= 0.5f;
-        l1n1[2] += 0.5f;
-        //l1n1[2] = cpow(l1n1[2], 1.0f / 2.2f);
-        l1n0[2] *= 0.5f;
-        l1n0[2] += 0.5f;
-        //l1n0[2] = cpow(l1n0[2], 1.0f / 2.2f);
-        l1p1[2] *= 0.5f;
-        l1p1[2] += 0.5f;
-        //l1p1[2] = cpow(l1p1[2], 1.0f / 2.2f);
+        VectorScale(l1n1, 0.5f, l1n1);
+        VectorAddVec(l1n1, 0.5f, l1n1);
+        VectorScale(l1n0, 0.5f, l1n0);
+        VectorAddVec(l1n0, 0.5f, l1n0);
+        VectorScale(l1p1, 0.5f, l1p1);
+        VectorAddVec(l1p1, 0.5f, l1p1);
 
-        // Also avoid 0s in L0.  It causes weird artifacts in the
-        // compression.
-        l0[0] = std::max(l0[0], 0.001f);
-        l0[1] = std::max(l0[1], 0.001f);
-        l0[2] = std::max(l0[2], 0.001f);
+        VectorClamp(l1n1, 0.0f, 1.0f);
+        VectorClamp(l1n0, 0.0f, 1.0f);
+        VectorClamp(l1p1, 0.0f, 1.0f);
 
         pos += 4;
       }
     }
   }
+#endif
 
   // Now throw it back on the texture.
   _lm_textures["reflectivity"]->set_ram_image_as(new_data, "RGBA");
@@ -3320,6 +3333,8 @@ compress_rgb16_to_bc6h(Texture *tex) {
   // when sampling for compression.
   tex->set_minfilter(SamplerState::FT_nearest);
   tex->set_magfilter(SamplerState::FT_nearest);
+  tex->set_wrap_u(SamplerState::WM_clamp);
+  tex->set_wrap_v(SamplerState::WM_clamp);
 
   int width = tex->get_x_size();
   int height = tex->get_y_size();
