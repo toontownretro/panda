@@ -390,7 +390,7 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
           // Z-fight with themselves without this.  We use 0.25, so
           // other geometry with a depth offset of 1 isn't affected
           // by this.
-          DepthBiasAttrib::make(-0.25f, -0.25f), 10000);
+          DepthBiasAttrib::make(-0.1f, -0.1f), 10000);
         object->_state = object->_state->compose(no_depth_write_state);
       } //else {
         //delete z_pre_obj;
