@@ -268,7 +268,7 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       &default_filter);
 
@@ -279,7 +279,7 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       filter);
   }
@@ -337,7 +337,7 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       &default_filter);
 
@@ -348,7 +348,7 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       filter);
   }
@@ -395,7 +395,7 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       &default_filter);
 
@@ -406,7 +406,7 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
       panda_norm_vec_to_physx(direction),
       panda_length_to_physx(distance),
       result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT),
+      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
       data,
       filter);
   }
