@@ -136,7 +136,7 @@ set_collision_group(unsigned int group) {
  */
 PhysController::CollisionFlags PhysController::
 move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
-     PhysBaseQueryFilter *filter) {
+     CallbackObject *filter) {
 
   // Clear out existing hits.
   _shape_hits.clear();
@@ -151,13 +151,9 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
   fdata.word3 = _actor_node->get_collision_group();
 
   physx::PxControllerFilters filters;
-  PhysBaseQueryFilter default_filter;
+  PhysBaseQueryFilter pfilter(filter);
+  filters.mFilterCallback = &pfilter;
   PhysControllerFilterCallback controller_filter;
-  if (filter == nullptr) {
-    filters.mFilterCallback = &default_filter;
-  } else {
-    filters.mFilterCallback = filter;
-  }
   filters.mCCTFilterCallback = &controller_filter;
   filters.mFilterData = &fdata;
 

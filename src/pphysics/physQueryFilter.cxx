@@ -16,11 +16,14 @@
 #include "config_pphysics.h"
 #include "physx_shaders.h"
 
+IMPLEMENT_CLASS(PhysQueryFilterCallbackData);
+
 /**
  *
  */
 PhysBaseQueryFilter::
-PhysBaseQueryFilter()
+PhysBaseQueryFilter(CallbackObject *filter_callback) :
+  _filter_callback(filter_callback)
 {
 }
 
@@ -61,13 +64,15 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
       << "\n";
   }
 
+  physx::PxQueryHitType::Enum ret;
+
   if ((filter_data.word1 & shape_data.word0) != 0) {
     // Blocking intersection.
     if (pphysics_cat.is_debug()) {
       pphysics_cat.debug()
         << "Blocking\n";
     }
-    return physx::PxQueryHitType::eBLOCK;
+    ret = physx::PxQueryHitType::eBLOCK;
 
   } else if ((filter_data.word2 & shape_data.word0) != 0) {
     if (pphysics_cat.is_debug()) {
@@ -75,7 +80,7 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
         << "Touching\n";
     }
     // Touching/passthrough intersection.
-    return physx::PxQueryHitType::eTOUCH;
+    ret = physx::PxQueryHitType::eTOUCH;
 
   } else {
     // Nothing.
@@ -85,54 +90,26 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
     }
     return physx::PxQueryHitType::eNONE;
   }
+
+  // If we got here, we passed our built-in tests.
+  // If there's a user-provided callback filter, invoke that.
+  if (_filter_callback != nullptr && actor->userData != nullptr) {
+    PhysQueryFilterCallbackData cbdata;
+    cbdata._actor = (PhysRigidActorNode *)actor->userData;
+    cbdata._shape = (PhysShape *)shape->userData;
+    cbdata._shape_collision_group = shape_data.word1;
+    cbdata._shape_contents_mask = shape_data.word0;
+    cbdata._solid_mask = filter_data.word1;
+    cbdata._collision_group = filter_data.word3;
+    cbdata._result = (int)ret;
+    _filter_callback->do_callback(&cbdata);
+    ret = (physx::PxQueryHitType::Enum)cbdata.get_result();
+  }
+
+  return ret;
 }
 
 physx::PxQueryHitType::Enum PhysBaseQueryFilter::
 postFilter(const physx::PxFilterData &filter_data, const physx::PxQueryHit &hit) {
   return physx::PxQueryHitType::eNONE;
-}
-
-/**
- *
- */
-PhysQueryNodeFilter::
-PhysQueryNodeFilter(const NodePath &parent_node, FilterType filter_type) :
-  _filter_type(filter_type),
-  _parent_node(parent_node)
-{
-}
-
-physx::PxQueryHitType::Enum PhysQueryNodeFilter::
-preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
-          const physx::PxRigidActor *actor, physx::PxHitFlags &query_flags) {
-
-  // Let the base filter determine the hit type.
-  physx::PxQueryHitType::Enum hit_type = PhysBaseQueryFilter::
-    preFilter(filter_data, shape, actor, query_flags);
-
-  if (hit_type == physx::PxQueryHitType::eNONE) {
-    // Base filter didn't pass, so we don't have to go any further.
-    return hit_type;
-  }
-
-  if (actor->userData != nullptr) {
-    PhysRigidActorNode *node = (PhysRigidActorNode *)actor->userData;
-    NodePath np(node);
-    if (_parent_node.is_ancestor_of(np)) {
-      if (_filter_type == FT_exclude) {
-        return physx::PxQueryHitType::eNONE;
-      }
-    } else if (_filter_type == FT_exclusive_include) {
-      // We only want descendents of the parent node, and this node is not a
-      // descendant, so exclude it.
-      return physx::PxQueryHitType::eNONE;
-    }
-
-  } else if (_filter_type == FT_exclusive_include) {
-    // If we are only including descendants and this actor was not associated
-    // with a PandaNode, it gets filtered out.
-    return physx::PxQueryHitType::eNONE;
-  }
-
-  return hit_type;
 }

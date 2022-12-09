@@ -23,6 +23,7 @@
 #include "physShape.h"
 #include "string_utils.h"
 #include "physXAllocator.h"
+#include "physQueryFilter.h"
 
 /**
  *
@@ -280,4 +281,5 @@ init_libpphysics() {
   PhysContactCallbackData::init_type();
   PhysShape::init_type();
   PhysXAllocator::init_type();
+  PhysQueryFilterCallbackData::init_type();
 }

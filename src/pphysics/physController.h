@@ -162,7 +162,7 @@ PUBLISHED:
 
   CollisionFlags move(double dt, const LVector3 &move_vector,
                       PN_stdfloat min_distance,
-                      PhysBaseQueryFilter *filter = nullptr);
+                      CallbackObject *filter = nullptr);
 
   //
   // Methods to retrieve collision state after a move() call.

@@ -250,7 +250,7 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
         const LVector3 &direction, PN_stdfloat distance,
         CollideMask block_mask, CollideMask touch_mask,
         unsigned int collision_group,
-        PhysBaseQueryFilter *filter) const {
+        CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
@@ -260,29 +260,15 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
   data.data.word2 = touch_mask.get_word();
   data.data.word3 = collision_group;
 
-  if (filter == nullptr) {
-    // Use the base filter that just checks for common block or touch bits.
-    PhysBaseQueryFilter default_filter;
-    return _scene->raycast(
-      panda_vec_to_physx(origin),
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      &default_filter);
-
-  } else {
-    // Explicit filter was specified.
-    return _scene->raycast(
-      panda_vec_to_physx(origin),
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      filter);
-  }
+  PhysBaseQueryFilter pfilter(filter);
+  return _scene->raycast(
+    panda_vec_to_physx(origin),
+    panda_norm_vec_to_physx(direction),
+    panda_length_to_physx(distance),
+    result.get_buffer(),
+    physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
+    data,
+    &pfilter);
 }
 
 /**
@@ -299,7 +285,7 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
         const LVector3 &direction, PN_stdfloat distance,
         const LVecBase3 &hpr,
         CollideMask solid_mask, CollideMask touch_mask,
-        unsigned int collision_group, PhysBaseQueryFilter *filter) const {
+        unsigned int collision_group, CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
@@ -329,29 +315,15 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
   quat.set_hpr(hpr);
   trans.q = panda_quat_to_physx(quat);
 
-  if (filter == nullptr) {
-    // Use the base filter that just checks for common block or touch bits.
-    PhysBaseQueryFilter default_filter;
-    return _scene->sweep(
-      box, trans,
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      &default_filter);
-
-  } else {
-    // Explicit filter was specified.
-    return _scene->sweep(
-      box, trans,
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      filter);
-  }
+  PhysBaseQueryFilter pfilter(filter);
+  return _scene->sweep(
+    box, trans,
+    panda_norm_vec_to_physx(direction),
+    panda_length_to_physx(distance),
+    result.get_buffer(),
+    physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
+    data,
+    &pfilter);
 }
 
 /**
@@ -369,7 +341,7 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
       const LPoint3 &pos, const LVecBase3 &hpr,
       const LVector3 &direction, PN_stdfloat distance,
       CollideMask solid_mask, CollideMask touch_mask,
-      unsigned int collision_group, PhysBaseQueryFilter *filter) const {
+      unsigned int collision_group, CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
@@ -387,29 +359,15 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
   quat.set_hpr(hpr);
   trans.q = panda_quat_to_physx(quat);
 
-  if (filter == nullptr) {
-    // Use the base filter that just checks for common block or touch bits.
-    PhysBaseQueryFilter default_filter;
-    return _scene->sweep(
-      *geometry.get_geometry(), trans,
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      &default_filter);
-
-  } else {
-    // Explicit filter was specified.
-    return _scene->sweep(
-      *geometry.get_geometry(), trans,
-      panda_norm_vec_to_physx(direction),
-      panda_length_to_physx(distance),
-      result.get_buffer(),
-      physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
-      data,
-      filter);
-  }
+  PhysBaseQueryFilter pfilter(filter);
+  return _scene->sweep(
+    *geometry.get_geometry(), trans,
+    panda_norm_vec_to_physx(direction),
+    panda_length_to_physx(distance),
+    result.get_buffer(),
+    physx::PxHitFlags(physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD | physx::PxHitFlag::eMESH_BOTH_SIDES),
+    data,
+    &pfilter);
 }
 
 /**

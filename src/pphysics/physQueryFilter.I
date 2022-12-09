@@ -11,37 +11,67 @@
  * @date 2021-05-22
  */
 
+
 /**
- * Sets the parent node for the filter.  If the filter type is FT_exclude, any
- * actor nodes that are descendants of this node will be filtered out.  If the
- * filter type is FT_exclusive_include, actor nodes that are not descendants of
- * this node will be filtered out.
+ *
  */
-INLINE void PhysQueryNodeFilter::
-set_parent(const NodePath &parent) {
-  _parent_node = parent;
+INLINE PhysRigidActorNode *PhysQueryFilterCallbackData::
+get_actor() const {
+  return _actor;
 }
 
 /**
- * Returns the parent node for the filter.  See set_parent().
+ *
  */
-INLINE NodePath PhysQueryNodeFilter::
-get_parent() const {
-  return _parent_node;
+INLINE PhysShape *PhysQueryFilterCallbackData::
+get_shape() const {
+  return _shape;
 }
 
 /**
- * Sets how to filter actor nodes that are descendants of the parent.
+ *
  */
-INLINE void PhysQueryNodeFilter::
-set_filter_type(FilterType filter_type) {
-  _filter_type = filter_type;
+INLINE unsigned int PhysQueryFilterCallbackData::
+get_shape_contents_mask() const {
+  return _shape_contents_mask;
 }
 
 /**
- * Returns how to filter actor nodes that are descendants of the parent.
+ *
  */
-INLINE PhysQueryNodeFilter::FilterType PhysQueryNodeFilter::
-get_filter_type() const {
-  return _filter_type;
+INLINE unsigned int PhysQueryFilterCallbackData::
+get_shape_collision_group() const {
+  return _shape_collision_group;
+}
+
+/**
+ *
+ */
+INLINE unsigned int PhysQueryFilterCallbackData::
+get_solid_mask() const {
+  return _solid_mask;
+}
+
+/**
+ *
+ */
+INLINE unsigned int PhysQueryFilterCallbackData::
+get_collision_group() const {
+  return _collision_group;
+}
+
+/**
+ *
+ */
+INLINE void PhysQueryFilterCallbackData::
+set_result(int flag) {
+  _result = flag;
+}
+
+/**
+ *
+ */
+INLINE int PhysQueryFilterCallbackData::
+get_result() const {
+  return _result;
 }

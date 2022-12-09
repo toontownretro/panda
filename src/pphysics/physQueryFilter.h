@@ -17,56 +17,81 @@
 #include "pandabase.h"
 #include "physx_includes.h"
 #include "nodePath.h"
+#include "callbackData.h"
+#include "callbackObject.h"
+#include "pointerTo.h"
+
+class PhysRigidActorNode;
+class PhysShape;
 
 /**
  * Base query filter that checks for common block or touch bits.
  */
 class EXPCL_PANDA_PPHYSICS PhysBaseQueryFilter : public physx::PxQueryFilterCallback {
-PUBLISHED:
-  PhysBaseQueryFilter();
-  virtual ~PhysBaseQueryFilter() = default;
-
 public:
+  PhysBaseQueryFilter(CallbackObject *filter_callback = nullptr);
+
   virtual physx::PxQueryHitType::Enum preFilter(
     const physx::PxFilterData &filter_data, const physx::PxShape *shape,
     const physx::PxRigidActor *actor, physx::PxHitFlags &query_flags) override;
 
   virtual physx::PxQueryHitType::Enum postFilter(
     const physx::PxFilterData &filter_data, const physx::PxQueryHit &hit) override;
+
+private:
+  PT(CallbackObject) _filter_callback;
 };
 
 /**
- * A query filter that either excludes or exclusively includes actor nodes who
- * are descendants of a particular parent node.  Also takes into account the
- * blocking and touching bitmasks.
+ *
  */
-class EXPCL_PANDA_PPHYSICS PhysQueryNodeFilter : public PhysBaseQueryFilter {
+class EXPCL_PANDA_PPHYSICS PhysQueryFilterCallbackData : public CallbackData {
+  DECLARE_CLASS(PhysQueryFilterCallbackData, CallbackData);
+
 PUBLISHED:
-  enum FilterType {
-    // Exclude actor nodes who are descendants of the parent node.
-    FT_exclude,
-    // Only include actor nodes who are descendants of the parent node.
-    FT_exclusive_include,
-  };
+  // Actor/shape we are considering testing intersection with.
+  INLINE PhysRigidActorNode *get_actor() const;
+  INLINE PhysShape *get_shape() const;
+  INLINE unsigned int get_shape_contents_mask() const;
+  INLINE unsigned int get_shape_collision_group() const;
+  MAKE_PROPERTY(actor, get_actor);
+  MAKE_PROPERTY(shape, get_shape);
+  MAKE_PROPERTY(shape_contents_mask, get_shape_contents_mask);
+  MAKE_PROPERTY(shape_collision_group, get_shape_collision_group);
 
-  PhysQueryNodeFilter(const NodePath &parent_node, FilterType filter_type);
+  // Filtering properties of the query geometry.
+  INLINE unsigned int get_solid_mask() const;
+  INLINE unsigned int get_collision_group() const;
+  MAKE_PROPERTY(solid_mask, get_solid_mask);
+  MAKE_PROPERTY(collision_group, get_collision_group);
 
-  INLINE void set_parent(const NodePath &parent);
-  INLINE NodePath get_parent() const;
-
-  INLINE void set_filter_type(FilterType type);
-  INLINE FilterType get_filter_type() const;
-
-public:
-  virtual physx::PxQueryHitType::Enum preFilter(
-    const physx::PxFilterData &filter_data, const physx::PxShape *shape,
-    const physx::PxRigidActor *actor, physx::PxHitFlags &query_flags) override;
+  // Filter callback should set the result to indicate if the filter
+  // passes or fails.
+  INLINE void set_result(int flag);
+  INLINE int get_result() const;
+  MAKE_PROPERTY(result, get_result, set_result);
 
 private:
-  NodePath _parent_node;
+  PhysQueryFilterCallbackData() = default;
 
-  // How to filter nodes that are descendants of the parent.
-  FilterType _filter_type;
+private:
+  // Filtering properties of the geometry used for the query
+  // (the ray, box, etc).
+  unsigned int _solid_mask;
+  unsigned int _collision_group;
+
+  // The actor we are considering intersection with.
+  PhysRigidActorNode *_actor;
+  PhysShape *_shape;
+  unsigned int _shape_contents_mask;
+  unsigned int _shape_collision_group;
+
+  // Holds the result of the filter callback.
+  // False means to ignore the actor, true means to test for intersection
+  // and report it.
+  int _result;
+
+  friend class PhysBaseQueryFilter;
 };
 
 #include "physQueryFilter.I"
