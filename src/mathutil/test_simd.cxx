@@ -12,7 +12,6 @@
  */
 
 #include "pandabase.h"
-#define HAVE_SLEEF 1
 #include "mathutil_simd.h"
 #include "clockObject.h"
 

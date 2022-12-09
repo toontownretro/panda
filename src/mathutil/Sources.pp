@@ -125,7 +125,6 @@
 #end test_bin_target
 
 #begin test_bin_target
-  #define BUILD_TESTS 1
   #define TARGET test_simd
   #define LOCAL_LIBS mathutil
   #define SOURCES \
