@@ -40,7 +40,7 @@ TypeHandle SourceLightmappedShader::_type_handle;
  * Returns a dummy four-channel 1x1 white texture.
  */
 static Texture *
-get_white_texture() {
+sls_get_white_texture() {
   static PT(Texture) tex = nullptr;
   if (tex == nullptr) {
     tex = new Texture("white");
@@ -136,7 +136,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = material->get_param("base_color")) != nullptr) {
     setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    setup.set_input(ShaderInput("baseTexture", get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture", sls_get_white_texture()));
   }
 
   if ((param = material->get_param("basetexture2")) != nullptr) {

@@ -25,7 +25,7 @@
  * Returns a dummy four-channel 1x1 white texture.
  */
 static Texture *
-get_white_texture() {
+sks_get_white_texture() {
   static PT(Texture) tex = nullptr;
   if (tex == nullptr) {
     tex = new Texture("white");
@@ -74,7 +74,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     sky_sampler = DCAST(MaterialParamTexture, param)->get_sampler_state();
 
   } else {
-    sky_tex = get_white_texture();
+    sky_tex = sks_get_white_texture();
     sky_sampler = sky_tex->get_default_sampler();
   }
 

@@ -49,7 +49,7 @@ TypeHandle SourceShader::_type_handle;
  * Returns a dummy four-channel 1x1 white texture.
  */
 static Texture *
-get_white_texture() {
+ss_get_white_texture() {
   static PT(Texture) tex = nullptr;
   if (tex == nullptr) {
     tex = new Texture("white");
@@ -263,7 +263,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = src_mat->get_param("base_color")) != nullptr) {
     setup.set_input(ShaderInput("albedoTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    setup.set_input(ShaderInput("albedoTexture", get_white_texture()));
+    setup.set_input(ShaderInput("albedoTexture", ss_get_white_texture()));
   }
 
   // Transform on UVs.
@@ -298,7 +298,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     } else {
       // If it wasn't specified, just use a default white texture.
-      setup.set_input(ShaderInput("phongExponentTexture", get_white_texture()));
+      setup.set_input(ShaderInput("phongExponentTexture", ss_get_white_texture()));
     }
 
     // Exponent, albedo tint mask, boost

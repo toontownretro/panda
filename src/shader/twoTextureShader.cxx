@@ -30,7 +30,7 @@ TypeHandle TwoTextureShader::_type_handle;
  * Returns a dummy four-channel 1x1 white texture.
  */
 static Texture *
-get_white_texture() {
+tts_get_white_texture() {
   static PT(Texture) tex = nullptr;
   if (tex == nullptr) {
     tex = new Texture("white");
@@ -102,7 +102,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = material->get_param("base_color")) != nullptr) {
     setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    setup.set_input(ShaderInput("baseTexture", get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture", tts_get_white_texture()));
   }
   if ((param = material->get_param("basetexturetransform")) != nullptr) {
     setup.set_input(ShaderInput("baseTextureTransform", DCAST(MaterialParamMatrix, param)->get_value()));
@@ -113,7 +113,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = material->get_param("texture2")) != nullptr) {
     setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    setup.set_input(ShaderInput("baseTexture2", get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture2", tts_get_white_texture()));
   }
   if ((param = material->get_param("texture2transform")) != nullptr) {
     setup.set_input(ShaderInput("baseTexture2Transform", DCAST(MaterialParamMatrix, param)->get_value()));
