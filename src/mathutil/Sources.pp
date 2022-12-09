@@ -67,11 +67,8 @@
     intersectionBoundingVolume.cxx \
     look_at.cxx \
     linmath_events.cxx \
-    mathutil_avx_src.cxx \
-    mathutil_avx512_src.cxx \
     mathutil_misc.cxx \
     mathutil_simd.cxx \
-    mathutil_sse_src.cxx \
     mersenne.cxx \
     omniBoundingVolume.cxx \
     parabola.cxx \
