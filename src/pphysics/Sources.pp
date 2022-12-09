@@ -108,8 +108,5 @@
     $[SOURCES]
 
   #define IGATESCAN all
-  #define IGATEEXT \
-    pythonPhysQueryFilter.h \
-    pythonPhysQueryFilter.cxx
 
 #end lib_target
