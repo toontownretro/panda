@@ -162,6 +162,7 @@ PUBLISHED:
 
   CollisionFlags move(double dt, const LVector3 &move_vector,
                       PN_stdfloat min_distance,
+                      BitMask32 collide_mask,
                       CallbackObject *filter = nullptr);
 
   //

@@ -136,6 +136,7 @@ set_collision_group(unsigned int group) {
  */
 PhysController::CollisionFlags PhysController::
 move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
+     BitMask32 collide_mask,
      CallbackObject *filter) {
 
   // Clear out existing hits.
@@ -145,7 +146,7 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
 
   // Lay out the filter data the way that PhysBaseQueryFilter expects.
   physx::PxFilterData fdata;
-  fdata.word0 = _actor_node->get_solid_mask().get_word();
+  fdata.word0 = collide_mask.get_word();
   fdata.word1 = fdata.word0;
   fdata.word2 = 0;
   fdata.word3 = _actor_node->get_collision_group();
