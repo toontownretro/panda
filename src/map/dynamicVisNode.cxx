@@ -22,6 +22,11 @@
 #include "boundingBox.h"
 #include "omniBoundingVolume.h"
 #include "jobSystem.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector dvn_trav_pcollector("DynamicVisNode:Traverse");
+static PStatCollector dvn_trav_node_pcollector("DynamicVisNode:TraverseNode");
 
 IMPLEMENT_CLASS(DynamicVisNode);
 
@@ -114,7 +119,7 @@ update_dirty_children() {
       // Now insert the child into all the buckets.
       for (size_t i = 0; i < info->_visgroups.size(); ++i) {
         int visgroup = info->_visgroups[i];
-        cdata->_visgroups[visgroup].insert(info);
+        cdata->_visgroups[visgroup].store(info, nullptr);
       }
     }
 
@@ -284,12 +289,24 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
 
   //_trav_counter++;
 
+  PStatTimer timer(dvn_trav_pcollector);
+
   const BitArray &pvs = mtrav->_pvs;
   //int num_visgroups = mtrav->_data->get_num_clusters();
 
-  pflat_hash_set<ChildInfo *, pointer_hash> traversed;
+  SimpleHashMap<ChildInfo *, std::nullptr_t, pointer_hash> traversed;
+  //traversed.resize_table()
+  //traversed.clear();
 
-  for (int i = 0; i < (int)cdata->_visgroups.size(); ++i) {
+  // Iterate over the subset of visgroups in the PVS.
+  int first = pvs.get_lowest_on_bit();
+  if (first == -1) {
+    return false;
+  }
+  int last = pvs.get_highest_on_bit();
+  nassertr(last != -1, false);
+
+  for (int i = first; i <= last; ++i) {
     if (!pvs.get_bit(i)) {
       // Not in PVS.
       continue;
@@ -299,13 +316,24 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
     // bucket corresponding to this visgroup.
     const DynamicVisNode::ChildSet &children = cdata->_visgroups[i];
 
-    for (auto it = children.begin(); it != children.end(); ++it) {
-      ChildInfo *child = *it;
-      auto ret = traversed.insert(child);
-      if (ret.second) {
-        trav->traverse_down(data, child->_node);
+    for (size_t j = 0; j < children.size(); ++j) {
+      ChildInfo *child = children.get_key(j);
+      if (traversed.find(child) == -1) {
+        {
+          //PStatTimer timer2(dvn_trav_node_pcollector);
+          trav->traverse_down(data, child->_node);
+        }
+        traversed.store(child, nullptr);
       }
     }
+
+    //for (auto it = children.begin(); it != children.end(); ++it) {
+    //  ChildInfo *child = *it;
+    // / auto ret = traversed.insert(child);
+    //  if (ret.second) {
+
+     // }
+    //}
   }
 
   // We've handled the traversal for everything below this node.
@@ -320,7 +348,7 @@ remove_from_tree(ChildInfo *info, CData *cdata) {
   // Iterate over all the visgroup indices and remove the child from that
   // visgroup's bucket.
   for (size_t i = 0; i < info->_visgroups.size(); ++i) {
-    cdata->_visgroups[info->_visgroups[i]].erase(info);
+    cdata->_visgroups[info->_visgroups[i]].remove(info);
   }
   info->_visgroups.clear();
 }

@@ -28,6 +28,7 @@
 #include "cycleDataWriter.h"
 #include "cycleDataStageWriter.h"
 #include "pipelineCycler.h"
+#include "simpleHashMap.h"
 
 class CullTraverser;
 class CullTraverserData;
@@ -91,7 +92,7 @@ public:
   };
 
 private:
-  typedef pflat_hash_set<PT(ChildInfo)> ChildSet;
+  typedef SimpleHashMap<ChildInfo *, std::nullptr_t, pointer_hash> ChildSet;
 
   // This maps visgroups to a list of children for quick iteration over the
   // children in a visgroup.
