@@ -158,6 +158,54 @@ get_material(int n) const {
 }
 
 /**
+ * Sets the "from" collide mask of the shape.  This represents the collision
+ * groups that the shape is assigned to.  During simulation, the "from" mask
+ * is AND'd with the "into" mask of other shapes to determine if collisions
+ * should occur between two shapes.
+ */
+INLINE void PhysShape::
+set_from_collide_mask(CollideMask mask) {
+  // Set it directly on the PxShape's filter data.
+  // We don't store anything on our shape instance itself.
+  physx::PxFilterData data = _shape->getSimulationFilterData();
+  physx::PxFilterData qdata = _shape->getQueryFilterData();
+  data.word1 = mask.get_word();
+  qdata.word0 = mask.get_word();
+  _shape->setSimulationFilterData(data);
+  _shape->setQueryFilterData(qdata);
+}
+
+/**
+ * Returns the "from" collide mask of the shape.  This represents the
+ * collision groups that the shape is assigned to.
+ */
+INLINE CollideMask PhysShape::
+get_from_collide_mask() const {
+  return _shape->getSimulationFilterData().word1;
+}
+
+/**
+ * Sets the "into" collide mask of the shape.  This represents the set of
+ * collision groups that the shape should collide with.
+ */
+INLINE void PhysShape::
+set_into_collide_mask(CollideMask mask) {
+  physx::PxFilterData fdata;
+  fdata = _shape->getSimulationFilterData();
+  fdata.word2 = mask.get_word();
+  _shape->setSimulationFilterData(fdata);
+}
+
+/**
+ * Returns the "into" collide mask of the shape.  This represents the set of
+ * collision groups that the shape should collide with.
+ */
+INLINE CollideMask PhysShape::
+get_into_collide_mask() const {
+  return _shape->getSimulationFilterData().word2;
+}
+
+/**
  *
  */
 INLINE physx::PxShape *PhysShape::

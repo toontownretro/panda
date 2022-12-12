@@ -26,9 +26,8 @@ PhysRigidActorNode::
 PhysRigidActorNode(const std::string &name) :
   PandaNode(name),
   _sync_enabled(true),
-  _collision_group(0),
-  _contents_mask(BitMask32::all_on()),
-  _solid_mask(BitMask32::all_on()),
+  _from_collide_mask(BitMask32::all_on()),
+  _into_collide_mask(BitMask32::all_on()),
   _needs_interpolation(false)
 {
   _iv_pos.set_interpolation_amount(0.0f);
@@ -73,30 +72,15 @@ set_collide_with(PhysRigidActorNode *other, bool flag) {
 }
 
 /**
- * Changes the collision group of the node.
- */
-void PhysRigidActorNode::
-set_collision_group(unsigned int collision_group) {
-  if (_collision_group == collision_group) {
-    return;
-  }
-
-  _collision_group = collision_group;
-
-  // Update all shapes to use the new collision group.
-  update_shape_filter_data();
-}
-
-/**
  * Changes the contents mask of the node.
  */
 void PhysRigidActorNode::
-set_contents_mask(BitMask32 contents_mask) {
-  if (_contents_mask == contents_mask) {
+set_from_collide_mask(BitMask32 contents_mask) {
+  if (_from_collide_mask == contents_mask) {
     return;
   }
 
-  _contents_mask = contents_mask;
+  _from_collide_mask = contents_mask;
 
   // Update all shapes to use the new contents mask.
   update_shape_filter_data();
@@ -106,12 +90,12 @@ set_contents_mask(BitMask32 contents_mask) {
  * Sets the mask of contents that are solid to the node.
  */
 void PhysRigidActorNode::
-set_solid_mask(BitMask32 solid_mask) {
-  if (_solid_mask == solid_mask) {
+set_into_collide_mask(BitMask32 solid_mask) {
+  if (_into_collide_mask == solid_mask) {
     return;
   }
 
-  _solid_mask = solid_mask;
+  _into_collide_mask = solid_mask;
 
   // Update all shapes to use the new solid mask.
   update_shape_filter_data();
@@ -132,18 +116,8 @@ update_shape_filter_data() {
  */
 void PhysRigidActorNode::
 update_shape_filter_data(size_t n) {
-  physx::PxShape *shape = _shapes[n]->get_shape();
-  physx::PxFilterData data = shape->getSimulationFilterData();
-  physx::PxFilterData qdata = shape->getQueryFilterData();
-  data.word0 = _collision_group;
-  data.word1 = _contents_mask.get_word();
-  data.word2 = _solid_mask.get_word();
-  // For queries, the collision group goes on word1.  The contents mask needs
-  // to go on word0 for PhysX's fixed-function filtering.
-  qdata.word0 = _contents_mask.get_word();
-  qdata.word1 = _collision_group;
-  shape->setSimulationFilterData(data);
-  shape->setQueryFilterData(qdata);
+  _shapes[n]->set_from_collide_mask(_from_collide_mask);
+  _shapes[n]->set_into_collide_mask(_into_collide_mask);
 }
 
 /**

@@ -221,9 +221,9 @@ resize(PN_stdfloat size) {
  * are solid to the controller.
  */
 INLINE void PhysController::
-set_solid_mask(BitMask32 mask) {
+set_into_collide_mask(BitMask32 mask) {
   nassertv(_actor_node != nullptr);
-  _actor_node->set_solid_mask(mask);
+  _actor_node->set_into_collide_mask(mask);
 }
 
 /**
@@ -231,27 +231,18 @@ set_solid_mask(BitMask32 mask) {
  * that are solid to the controller.
  */
 INLINE BitMask32 PhysController::
-get_solid_mask() const {
+get_into_collide_mask() const {
   nassertr(_actor_node != nullptr, 0)
-  return _actor_node->get_solid_mask();
+  return _actor_node->get_into_collide_mask();
 }
 
 /**
- * Returns the mask of contents of the controller.  See set_contents_mask().
+ * Returns the mask of contents of the controller.  See set_from_collide_mask().
  */
 INLINE BitMask32 PhysController::
-get_contents_mask() const {
+get_from_collide_mask() const {
   nassertr(_actor_node != nullptr, 0)
-  return _actor_node->get_contents_mask();
-}
-
-/**
- * Returns the collision group of the controller.  See set_collision_group().
- */
-INLINE unsigned int PhysController::
-get_collision_group() const {
-  nassertr(_actor_node != nullptr, 0)
-  return _actor_node->get_collision_group();
+  return _actor_node->get_from_collide_mask();
 }
 
 /**

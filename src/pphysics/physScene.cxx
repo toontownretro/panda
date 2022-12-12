@@ -249,7 +249,6 @@ bool PhysScene::
 raycast(PhysRayCastResult &result, const LPoint3 &origin,
         const LVector3 &direction, PN_stdfloat distance,
         CollideMask block_mask, CollideMask touch_mask,
-        unsigned int collision_group,
         CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
@@ -258,7 +257,6 @@ raycast(PhysRayCastResult &result, const LPoint3 &origin,
   data.data.word0 = (block_mask | touch_mask).get_word();
   data.data.word1 = block_mask.get_word();
   data.data.word2 = touch_mask.get_word();
-  data.data.word3 = collision_group;
 
   PhysBaseQueryFilter pfilter(filter);
   return _scene->raycast(
@@ -285,7 +283,7 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
         const LVector3 &direction, PN_stdfloat distance,
         const LVecBase3 &hpr,
         CollideMask solid_mask, CollideMask touch_mask,
-        unsigned int collision_group, CallbackObject *filter) const {
+        CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
@@ -293,7 +291,6 @@ boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
   data.data.word0 = (solid_mask | touch_mask).get_word();
   data.data.word1 = solid_mask.get_word();
   data.data.word2 = touch_mask.get_word();
-  data.data.word3 = collision_group;
 
   PN_stdfloat hx, hy, hz, cx, cy, cz;
   hx = panda_length_to_physx((maxs[0] - mins[0]) / 2.0f);
@@ -341,7 +338,7 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
       const LPoint3 &pos, const LVecBase3 &hpr,
       const LVector3 &direction, PN_stdfloat distance,
       CollideMask solid_mask, CollideMask touch_mask,
-      unsigned int collision_group, CallbackObject *filter) const {
+      CallbackObject *filter) const {
 
   physx::PxQueryFilterData data;
   data.flags |= physx::PxQueryFlag::ePREFILTER;
@@ -349,7 +346,6 @@ sweep(PhysSweepResult &result, PhysGeometry &geometry,
   data.data.word0 = (solid_mask | touch_mask).get_word();
   data.data.word1 = solid_mask.get_word();
   data.data.word2 = touch_mask.get_word();
-  data.data.word3 = collision_group;
 
   physx::PxTransform trans;
   trans.p.x = panda_length_to_physx(pos[0]);

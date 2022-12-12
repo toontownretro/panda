@@ -84,23 +84,6 @@ get_max_substeps() const {
 }
 
 /**
- * Enables or disables collisions between the two indicated collision groups.
- */
-INLINE void PhysScene::
-set_group_collision_flag(int a, int b, bool enable) {
-  PandaSimulationFilterShader::set_group_collision_flag(a, b, enable);
-}
-
-/**
- * Returns whether or not collisions are enabled between the two indicated
- * collision groups.
- */
-INLINE bool PhysScene::
-get_group_collision_flag(int a, int b) const {
-  return PandaSimulationFilterShader::get_group_collision_flag(a, b);
-}
-
-/**
  * Returns true if there is a global contact event from the last simulation
  * run that is awaiting processing.
  */

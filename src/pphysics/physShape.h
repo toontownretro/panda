@@ -20,6 +20,7 @@
 #include "physGeometry.h"
 #include "physMaterial.h"
 #include "pointerTo.h"
+#include "collideMask.h"
 
 #include "physx_includes.h"
 #include "physx_utils.h"
@@ -50,6 +51,12 @@ PUBLISHED:
   INLINE void set_material(PhysMaterial *mat);
   INLINE void add_material(PhysMaterial *mat);
   INLINE PhysMaterial *get_material(int n = 0) const;
+
+  INLINE void set_from_collide_mask(CollideMask mask);
+  INLINE CollideMask get_from_collide_mask() const;
+
+  INLINE void set_into_collide_mask(CollideMask mask);
+  INLINE CollideMask get_into_collide_mask() const;
 
 public:
   PhysShape(physx::PxShape *shape);

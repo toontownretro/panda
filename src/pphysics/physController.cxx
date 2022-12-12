@@ -95,17 +95,9 @@ filter(const physx::PxController &a, const physx::PxController &b) {
   PhysRigidDynamicNode *aa = pa->get_actor_node();
   PhysRigidDynamicNode *ab = pb->get_actor_node();
 
-  // If they both belong to a collision group, check that first.
-  if (aa->get_collision_group() != 0 && ab->get_collision_group() != 0) {
-    if (!(PandaSimulationFilterShader::_collision_table[aa->get_collision_group()][ab->get_collision_group()]._enable_collisions)) {
-      // The groups don't collide with each other.
-      return false;
-    }
-  }
-
   // If one of them is not solid to the other, they don't collide.
-  return ((aa->get_contents_mask() & ab->get_solid_mask()) != 0) &&
-         ((ab->get_contents_mask() & aa->get_solid_mask()) != 0);
+  return ((aa->get_from_collide_mask() & ab->get_into_collide_mask()) != 0) &&
+         ((ab->get_from_collide_mask() & aa->get_into_collide_mask()) != 0);
 }
 
 /**
@@ -114,21 +106,9 @@ filter(const physx::PxController &a, const physx::PxController &b) {
  * collide or pass through each other.
  */
 void PhysController::
-set_contents_mask(BitMask32 mask) {
+set_from_collide_mask(BitMask32 mask) {
   nassertv(_actor_node != nullptr);
-  _actor_node->set_contents_mask(mask);
-}
-
-/**
- * Sets the collision group of the controller.  If two controllers, or a
- * controller and a shape, both belong to a collision group, they will not
- * collide if the two groups do not have collisions enabled between them,
- * regardless of the solid mask.
- */
-void PhysController::
-set_collision_group(unsigned int group) {
-  nassertv(_actor_node != nullptr);
-  _actor_node->set_collision_group(group);
+  _actor_node->set_from_collide_mask(mask);
 }
 
 /**
@@ -149,7 +129,6 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
   fdata.word0 = collide_mask.get_word();
   fdata.word1 = fdata.word0;
   fdata.word2 = 0;
-  fdata.word3 = _actor_node->get_collision_group();
 
   physx::PxControllerFilters filters;
   PhysBaseQueryFilter pfilter(filter);

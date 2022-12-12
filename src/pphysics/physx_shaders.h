@@ -34,15 +34,6 @@ public:
     physx::PxPairFlags &pair_flags,
     const void *constant_block,
     physx::PxU32 constant_block_size);
-
-  class CollisionGroupPair {
-  public:
-    bool _enable_collisions = true;
-  };
-  static CollisionGroupPair _collision_table[32][32];
-
-  INLINE static void set_group_collision_flag(int group1, int group2, bool enable);
-  INLINE static bool get_group_collision_flag(int group1, int group2);
 };
 
 /**

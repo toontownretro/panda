@@ -148,14 +148,11 @@ PUBLISHED:
 
   INLINE void resize(PN_stdfloat size);
 
-  INLINE void set_solid_mask(BitMask32 mask);
-  INLINE BitMask32 get_solid_mask() const;
+  INLINE void set_into_collide_mask(BitMask32 mask);
+  INLINE BitMask32 get_into_collide_mask() const;
 
-  void set_contents_mask(BitMask32 mask);
-  INLINE BitMask32 get_contents_mask() const;
-
-  void set_collision_group(unsigned int group);
-  INLINE unsigned int get_collision_group() const;
+  void set_from_collide_mask(BitMask32 mask);
+  INLINE BitMask32 get_from_collide_mask() const;
 
   INLINE PhysRigidDynamicNode *get_actor_node() const;
   INLINE PhysShape *get_actor_shape() const;

@@ -43,15 +43,6 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
   // word0: contents mask
   // word1: collision group
 
-  // If the query and shape are assigned to a collision group, check that the
-  // group has collisions enabled with the shape's group.
-  if (filter_data.word3 != 0 && shape_data.word1 != 0) {
-    if (!(PandaSimulationFilterShader::_collision_table[filter_data.word3][shape_data.word1]._enable_collisions)) {
-      // Collisions not enabled between the groups.  Filter it out.
-      return physx::PxQueryHitType::eNONE;
-    }
-  }
-
   // word1 is the block mask, word2 is the touch mask.
 
   if (pphysics_cat.is_debug()) {
@@ -97,10 +88,8 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
     PhysQueryFilterCallbackData cbdata;
     cbdata._actor = (PhysRigidActorNode *)actor->userData;
     cbdata._shape = (PhysShape *)shape->userData;
-    cbdata._shape_collision_group = shape_data.word1;
-    cbdata._shape_contents_mask = shape_data.word0;
-    cbdata._solid_mask = filter_data.word1;
-    cbdata._collision_group = filter_data.word3;
+    cbdata._shape_from_collide_mask = shape_data.word0;
+    cbdata._into_collide_mask = filter_data.word1;
     cbdata._result = (int)ret;
     _filter_callback->do_callback(&cbdata);
     ret = (physx::PxQueryHitType::Enum)cbdata.get_result();

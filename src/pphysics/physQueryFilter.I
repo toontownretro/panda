@@ -32,32 +32,16 @@ get_shape() const {
  *
  */
 INLINE unsigned int PhysQueryFilterCallbackData::
-get_shape_contents_mask() const {
-  return _shape_contents_mask;
+get_shape_from_collide_mask() const {
+  return _shape_from_collide_mask;
 }
 
 /**
  *
  */
 INLINE unsigned int PhysQueryFilterCallbackData::
-get_shape_collision_group() const {
-  return _shape_collision_group;
-}
-
-/**
- *
- */
-INLINE unsigned int PhysQueryFilterCallbackData::
-get_solid_mask() const {
-  return _solid_mask;
-}
-
-/**
- *
- */
-INLINE unsigned int PhysQueryFilterCallbackData::
-get_collision_group() const {
-  return _collision_group;
+get_into_collide_mask() const {
+  return _into_collide_mask;
 }
 
 /**

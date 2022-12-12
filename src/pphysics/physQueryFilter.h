@@ -52,18 +52,14 @@ PUBLISHED:
   // Actor/shape we are considering testing intersection with.
   INLINE PhysRigidActorNode *get_actor() const;
   INLINE PhysShape *get_shape() const;
-  INLINE unsigned int get_shape_contents_mask() const;
-  INLINE unsigned int get_shape_collision_group() const;
+  INLINE unsigned int get_shape_from_collide_mask() const;
   MAKE_PROPERTY(actor, get_actor);
   MAKE_PROPERTY(shape, get_shape);
-  MAKE_PROPERTY(shape_contents_mask, get_shape_contents_mask);
-  MAKE_PROPERTY(shape_collision_group, get_shape_collision_group);
+  MAKE_PROPERTY(shape_from_collide_mask, get_shape_from_collide_mask);
 
   // Filtering properties of the query geometry.
-  INLINE unsigned int get_solid_mask() const;
-  INLINE unsigned int get_collision_group() const;
-  MAKE_PROPERTY(solid_mask, get_solid_mask);
-  MAKE_PROPERTY(collision_group, get_collision_group);
+  INLINE unsigned int get_into_collide_mask() const;
+  MAKE_PROPERTY(into_collide_mask, get_into_collide_mask);
 
   // Filter callback should set the result to indicate if the filter
   // passes or fails.
@@ -77,14 +73,12 @@ private:
 private:
   // Filtering properties of the geometry used for the query
   // (the ray, box, etc).
-  unsigned int _solid_mask;
-  unsigned int _collision_group;
+  unsigned int _into_collide_mask;
 
   // The actor we are considering intersection with.
   PhysRigidActorNode *_actor;
   PhysShape *_shape;
-  unsigned int _shape_contents_mask;
-  unsigned int _shape_collision_group;
+  unsigned int _shape_from_collide_mask;
 
   // Holds the result of the filter callback.
   // False means to ignore the actor, true means to test for intersection

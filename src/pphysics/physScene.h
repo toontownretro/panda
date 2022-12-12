@@ -57,28 +57,22 @@ PUBLISHED:
   INLINE void set_max_substeps(int count);
   INLINE int get_max_substeps() const;
 
-  INLINE void set_group_collision_flag(int a, int b, bool enable);
-  INLINE bool get_group_collision_flag(int a, int b) const;
-
   bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
                const LVector3 &direction, PN_stdfloat distance,
                CollideMask solid_mask = CollideMask::all_on(),
                CollideMask touch_mask = CollideMask::all_off(),
-               unsigned int collision_group = 0,
                CallbackObject *filter = nullptr) const;
   bool boxcast(PhysSweepResult &result, const LPoint3 &mins, const LPoint3 &maxs,
                const LVector3 &direction, PN_stdfloat distance,
                const LVecBase3 &hpr = LVecBase3(0),
                CollideMask solid_mask = CollideMask::all_on(),
                CollideMask touch_mask = CollideMask::all_off(),
-               unsigned int collision_group = 0,
                CallbackObject *filter = nullptr) const;
   bool sweep(PhysSweepResult &result, PhysGeometry &geometry,
              const LPoint3 &pos, const LVecBase3 &hpr,
              const LVector3 &direction, PN_stdfloat distance,
              CollideMask solid_mask = CollideMask::all_on(),
              CollideMask touch_mask = CollideMask::all_off(),
-             unsigned int collision_group = 0,
              CallbackObject *filter = nullptr) const;
 
   INLINE bool has_contact_event() const;

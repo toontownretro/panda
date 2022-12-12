@@ -58,17 +58,18 @@ PUBLISHED:
   INLINE void set_advance_callback(CallbackObject *callback);
   INLINE CallbackObject *get_advance_callback() const;
 
+  INLINE void set_contact_filter(CallbackObject *filter);
+  INLINE void clear_contact_filter();
+  INLINE CallbackObject *get_contact_filter() const;
+
   void set_collide_with(PhysRigidActorNode *other, bool flag);
   INLINE bool has_no_collide_with(PhysRigidActorNode *other) const;
 
-  void set_collision_group(unsigned int collision_group);
-  INLINE unsigned int get_collision_group() const;
+  void set_from_collide_mask(BitMask32 contents_mask);
+  INLINE BitMask32 get_from_collide_mask() const;
 
-  void set_contents_mask(BitMask32 contents_mask);
-  INLINE BitMask32 get_contents_mask() const;
-
-  void set_solid_mask(BitMask32 solid_mask);
-  INLINE BitMask32 get_solid_mask() const;
+  void set_into_collide_mask(BitMask32 solid_mask);
+  INLINE BitMask32 get_into_collide_mask() const;
 
   INLINE void set_simulation_disabled(bool flag);
   INLINE bool get_simulation_disabled() const;
@@ -112,12 +113,13 @@ protected:
   PT(CallbackObject) _contact_callback;
   PT(CallbackObject) _advance_callback;
 
+  PT(CallbackObject) _contact_filter;
+
   typedef pvector<PhysRigidActorNode *> Actors;
   Actors _no_collisions;
 
-  unsigned int _collision_group;
-  BitMask32 _contents_mask;
-  BitMask32 _solid_mask;
+  BitMask32 _from_collide_mask;
+  BitMask32 _into_collide_mask;
 
   pvector<PT(PhysShape)> _shapes;
 

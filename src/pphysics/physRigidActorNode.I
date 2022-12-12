@@ -149,6 +149,33 @@ get_advance_callback() const {
 }
 
 /**
+ * Sets the callback that should be invoked to perform custom filtering
+ * logic for contact generation between this actor and other actors in
+ * the scene.
+ */
+INLINE void PhysRigidActorNode::
+set_contact_filter(CallbackObject *filter) {
+  _contact_filter = filter;
+}
+
+/**
+ * Clears the contact filter.  See set_contact_filter().
+ */
+INLINE void PhysRigidActorNode::
+clear_contact_filter() {
+  _contact_filter = nullptr;
+}
+
+/**
+ * Returns the callback that should perform custom filtering logic for
+ * contact generation between this actor and other actors in the scene.
+ */
+INLINE CallbackObject *PhysRigidActorNode::
+get_contact_filter() const {
+  return _contact_filter;
+}
+
+/**
  *
  */
 INLINE bool PhysRigidActorNode::
@@ -157,19 +184,11 @@ has_no_collide_with(PhysRigidActorNode *other) const {
 }
 
 /**
- * Returns the collision group of the actor node.
- */
-INLINE unsigned int PhysRigidActorNode::
-get_collision_group() const {
-  return _collision_group;
-}
-
-/**
  * Returns the contents mask of the actor node.
  */
 INLINE BitMask32 PhysRigidActorNode::
-get_contents_mask() const {
-  return _contents_mask;
+get_from_collide_mask() const {
+  return _from_collide_mask;
 }
 
 /**
@@ -177,8 +196,8 @@ get_contents_mask() const {
  * that are solid to the actor.
  */
 INLINE BitMask32 PhysRigidActorNode::
-get_solid_mask() const {
-  return _solid_mask;
+get_into_collide_mask() const {
+  return _into_collide_mask;
 }
 
 /**

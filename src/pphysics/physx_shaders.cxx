@@ -17,26 +17,6 @@
 
 #include "bitMask.h"
 
-PandaSimulationFilterShader::CollisionGroupPair PandaSimulationFilterShader::_collision_table[32][32];
-
-/**
- * Returns true if the two collision groups have collisions enabled, false
- * otherwise.
- */
-static bool
-should_collision_groups_collide(int group0, int group1) {
-  if (group0 == 0 || group1 == 0) {
-    // One or both of the shapes are not assigned to any collision groups.
-    // Collisions will always occur.
-    return true;
-
-  } else {
-    // Both shapes are assigned to a collision group.  Check the collision
-    // table to see if the groups the shapes belong to have collisions enabled.
-    return PandaSimulationFilterShader::_collision_table[group0][group1]._enable_collisions;
-  }
-}
-
 /**
  * Returns true if the two shapes should collide based on the contents and
  * solid masks of each shape.
@@ -101,10 +81,6 @@ filter(physx::PxFilterObjectAttributes attributes0,
     }
   }
 
-  if (!should_collision_groups_collide(filter_data0.word0, filter_data1.word0)) {
-    return physx::PxFilterFlag::eSUPPRESS;
-  }
-
   if (!should_contents_collide(filter_data0.word1, filter_data0.word2,
                                filter_data1.word1, filter_data1.word2)) {
     return physx::PxFilterFlag::eSUPPRESS;
@@ -115,7 +91,7 @@ filter(physx::PxFilterObjectAttributes attributes0,
                physx::PxPairFlag::eNOTIFY_TOUCH_FOUND |
                physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 
-  return physx::PxFilterFlag::eCALLBACK;
+  return physx::PxFilterFlag::eDEFAULT;
 }
 
 PandaSimulationFilterCallback *PandaSimulationFilterCallback::_ptr = nullptr;
@@ -142,6 +118,10 @@ pairFound(physx::PxU32 pair_id, physx::PxFilterObjectAttributes attributes0,
   if (node0->has_no_collide_with(node1)) {
     return physx::PxFilterFlag::eSUPPRESS;
   }
+
+  //if (node0->get_contact_filter() != nullptr) {
+
+  //}
 
   return physx::PxFilterFlag::eDEFAULT;
 }

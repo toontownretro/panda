@@ -10,21 +10,3 @@
  * @author brian
  * @date 2021-04-18
  */
-
-/**
- * Enables or disables collisions between the two indicated groups.
- */
-INLINE void PandaSimulationFilterShader::
-set_group_collision_flag(int group1, int group2, bool enable) {
-  _collision_table[group1][group2]._enable_collisions = enable;
-  _collision_table[group2][group1]._enable_collisions = enable;
-}
-
-/**
- * Returns whether or not the indicated collision groups have collisions
- * enabled between them.
- */
-INLINE bool PandaSimulationFilterShader::
-get_group_collision_flag(int group1, int group2) {
-  return _collision_table[group1][group2]._enable_collisions;
-}
