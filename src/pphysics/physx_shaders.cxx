@@ -47,14 +47,16 @@ filter(physx::PxFilterObjectAttributes attributes0,
   PX_UNUSED(constant_block);
   PX_UNUSED(constant_block_size);
 
-  if (pphysics_cat.is_debug()) {
-    pphysics_cat.debug()
+#ifndef NDEBUG
+  if (pphysics_cat.is_spam()) {
+    pphysics_cat.spam()
       << "Running filter shader\n";
-    pphysics_cat.debug()
+    pphysics_cat.spam()
       << "Mask0: " << BitMask32(filter_data0.word0) << "\n";
-    pphysics_cat.debug()
+    pphysics_cat.spam()
       << "Mask1: " << BitMask32(filter_data1.word0) << "\n";
   }
+#endif
 
   // Handle triggers.
   if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1)) {

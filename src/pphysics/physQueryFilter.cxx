@@ -45,40 +45,48 @@ preFilter(const physx::PxFilterData &filter_data, const physx::PxShape *shape,
 
   // word1 is the block mask, word2 is the touch mask.
 
-  if (pphysics_cat.is_debug()) {
-    pphysics_cat.debug()
+#ifndef NDEBUG
+  if (pphysics_cat.is_spam()) {
+    pphysics_cat.spam()
       << "Prefilter\n";
-    pphysics_cat.debug()
+    pphysics_cat.spam()
       << "block mask: " << BitMask32(filter_data.word1)
       << "\ntouch mask: " << BitMask32(filter_data.word2)
       << "\nshape mask: " << BitMask32(shape_data.word0)
       << "\n";
   }
+#endif
 
   physx::PxQueryHitType::Enum ret;
 
   if ((filter_data.word1 & shape_data.word0) != 0) {
     // Blocking intersection.
-    if (pphysics_cat.is_debug()) {
-      pphysics_cat.debug()
+#ifndef NDEBUG
+    if (pphysics_cat.is_spam()) {
+      pphysics_cat.spam()
         << "Blocking\n";
     }
+#endif
     ret = physx::PxQueryHitType::eBLOCK;
 
   } else if ((filter_data.word2 & shape_data.word0) != 0) {
-    if (pphysics_cat.is_debug()) {
-      pphysics_cat.debug()
+#ifndef NDEBUG
+    if (pphysics_cat.is_spam()) {
+      pphysics_cat.spam()
         << "Touching\n";
     }
+#endif
     // Touching/passthrough intersection.
     ret = physx::PxQueryHitType::eTOUCH;
 
   } else {
     // Nothing.
-    if (pphysics_cat.is_debug()) {
-      pphysics_cat.debug()
+#ifndef NDEBUG
+    if (pphysics_cat.is_spam()) {
+      pphysics_cat.spam()
         << "Nothing\n";
     }
+#endif
     return physx::PxQueryHitType::eNONE;
   }
 
