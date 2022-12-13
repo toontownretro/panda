@@ -180,8 +180,12 @@ write_datagram(BamWriter *manager, Datagram &me) {
   for (size_t i = 0; i < _cluster_pvs.size(); i++) {
     const AreaClusterPVS &pvs = _cluster_pvs[i];
     me.add_uint32(pvs._pvs.size());
-    for (size_t j = 0; j < pvs._pvs.size(); j++) {
-      me.add_int32(pvs._pvs[j]);
+    for (int cluster : pvs._pvs) {
+      me.add_int32(cluster);
+    }
+    me.add_uint32(pvs._phs.size());
+    for (int cluster : pvs._phs) {
+      me.add_int32(cluster);
     }
     me.add_bool(pvs._3d_sky_cluster);
     me.add_uint32(pvs._box_bounds.size());
@@ -331,6 +335,10 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     pvs._pvs.resize(scan.get_uint32());
     for (size_t j = 0; j < pvs._pvs.size(); j++) {
       pvs._pvs[j] = scan.get_int32();
+    }
+    pvs._phs.resize(scan.get_uint32());
+    for (size_t j = 0; j < pvs._phs.size(); ++j) {
+      pvs._phs[j] = scan.get_int32();
     }
     pvs._3d_sky_cluster = scan.get_bool();
     pvs._box_bounds.resize(scan.get_uint32());

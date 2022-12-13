@@ -47,6 +47,10 @@ PUBLISHED:
   INLINE size_t get_num_visible_clusters() const;
   INLINE int get_visible_cluster(size_t n) const;
 
+  INLINE void add_hearable_cluster(int cluster);
+  INLINE size_t get_num_hearable_clusters() const;
+  INLINE int get_hearable_cluster(size_t n) const;
+
   INLINE size_t get_num_boxes() const;
   INLINE void get_box_bounds(size_t n, LPoint3 &mins, LPoint3 &maxs) const;
 
@@ -54,6 +58,7 @@ PUBLISHED:
 
 public:
   vector_int _pvs;
+  vector_int _phs;
 
   // Cluster bounds for visualization purposes.
   pvector<LPoint3> _box_bounds;

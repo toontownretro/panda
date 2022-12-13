@@ -184,6 +184,7 @@ public:
   pvector<PT(BSPPortal)> _portals;
   pvector<BSPVisPortal *> _vis_portals;
   pset<int> _pvs;
+  pset<int> _phs;
   int _leaf_index = -1;
   // Not -1 if empty leaf.
   int _leaf_id = -1;
@@ -278,6 +279,7 @@ private:
   void base_portal_vis(int i);
   void simple_flood(BSPVisPortal *portal, BSPNode *node);
   void final_leaf_pvs(int i);
+  void calc_phs(int i);
   Winding clip_to_seperators(const Winding &source, const Winding &pass,
                              const Winding &target, bool flip_clip, BSPPFStack *stack);
 

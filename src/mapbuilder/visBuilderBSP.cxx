@@ -294,6 +294,10 @@ bake() {
       "FinalLeafPVS", _empty_leaf_list.size(), false,
       std::bind(&VisBuilderBSP::final_leaf_pvs, this, std::placeholders::_1));
 
+    ThreadManager::run_threads_on_individual(
+      "CalcPHS", _empty_leaf_list.size(), false,
+      std::bind(&VisBuilderBSP::calc_phs, this, std::placeholders::_1));
+
     // Store PVS data on the output map.
     for (size_t i = 0; i < _empty_leaf_list.size(); ++i) {
       AreaClusterPVS pvs;
@@ -301,6 +305,10 @@ bake() {
 
       for (int leaf_id : _empty_leaf_list[i]->_pvs) {
         pvs.add_visible_cluster(leaf_id);
+      }
+
+      for (int leaf_id : _empty_leaf_list[i]->_phs) {
+        pvs.add_hearable_cluster(leaf_id);
       }
 
       // Store the AABB of the leaf for debug visualization in the show.
@@ -1639,7 +1647,7 @@ clip_to_seperators(const Winding &source, const Winding &pass,
 void VisBuilderBSP::
 final_leaf_pvs(int i) {
   BSPNode *cluster = _empty_leaf_list[i];
-  assert(cluster->_leaf_id >= 0);
+  assert(cluster->_leaf_id == i);
 
   unsigned char *portalvector = (unsigned char *)alloca(_portal_bytes);
   memset(portalvector, 0, _portal_bytes);
@@ -1663,6 +1671,30 @@ final_leaf_pvs(int i) {
       }
     }
   }
+}
+
+/**
+ *
+ */
+void VisBuilderBSP::
+calc_phs(int i) {
+  BSPNode *leaf = _empty_leaf_list[i];
+  assert(leaf->_leaf_id == i);
+
+  for (int cluster : leaf->_pvs) {
+    // Add this leaf to the PHS.
+    leaf->_phs.insert(cluster);
+
+    // Now add every leaf in the PVS of this leaf.
+    BSPNode *vis_leaf = _empty_leaf_list[cluster];
+    if (vis_leaf == leaf) {
+      continue;
+    }
+    for (int cluster2 : vis_leaf->_pvs) {
+      leaf->_phs.insert(cluster2);
+    }
+  }
+
 }
 
 /**

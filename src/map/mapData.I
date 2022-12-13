@@ -37,6 +37,31 @@ get_visible_cluster(size_t n) const {
 }
 
 /**
+ *
+ */
+INLINE void AreaClusterPVS::
+add_hearable_cluster(int cluster) {
+  _phs.push_back(cluster);
+}
+
+/**
+ *
+ */
+INLINE size_t AreaClusterPVS::
+get_num_hearable_clusters() const {
+  return _phs.size();
+}
+
+/**
+ *
+ */
+INLINE int AreaClusterPVS::
+get_hearable_cluster(size_t n) const {
+  nassertr(n < _phs.size(), 0);
+  return _phs[n];
+}
+
+/**
  * Returns the number of area boxes that make up the cluster.
  */
 INLINE size_t AreaClusterPVS::
