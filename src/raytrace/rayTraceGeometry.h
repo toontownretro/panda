@@ -15,8 +15,8 @@
 
 #include "config_raytrace.h"
 #include "pandaNode.h"
-
-class RayTraceScene;
+#include "rayTraceScene.h"
+#include "pointerTo.h"
 
 class EXPCL_PANDA_RAYTRACE RayTraceGeometry : public PandaNode
 {
@@ -67,7 +67,7 @@ protected:
         RTCGeometry _geometry;
         unsigned int _geom_id;
         unsigned int _mask;
-        RayTraceScene *_rtscene;
+        PT(RayTraceScene) _rtscene;
 
         CPT(TransformState) _last_trans;
 
