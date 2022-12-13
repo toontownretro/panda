@@ -14,3 +14,11 @@
 #include "physSleepStateCallbackData.h"
 
 TypeHandle PhysSleepStateCallbackData::_type_handle;
+
+/**
+ *
+ */
+bool PhysSleepStateCallbackData::
+is_valid() const {
+  return _node.is_valid_pointer();
+}

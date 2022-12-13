@@ -14,3 +14,11 @@
 #include "physTriggerCallbackData.h"
 
 TypeHandle PhysTriggerCallbackData::_type_handle;
+
+/**
+ *
+ */
+bool PhysTriggerCallbackData::
+is_valid() const {
+  return _trigger_node.is_valid_pointer() && _other_node.is_valid_pointer();
+}

@@ -18,6 +18,8 @@ INLINE PhysTriggerCallbackData::
 PhysTriggerCallbackData(const physx::PxTriggerPair &pair)
 {
   _pair = pair;
+  _trigger_node = (PhysRigidActorNode *)pair.triggerActor->userData;
+  _other_node = (PhysRigidActorNode *)pair.otherActor->userData;
 }
 
 /**
@@ -38,13 +40,9 @@ get_touch_type() const {
 /**
  *
  */
-INLINE PhysRigidActorNode *PhysTriggerCallbackData::
+INLINE PT(PhysRigidActorNode) PhysTriggerCallbackData::
 get_trigger_node() const {
-  if (_pair.triggerActor->userData == nullptr) {
-    return nullptr;
-  }
-
-  return (PhysRigidActorNode *)_pair.triggerActor->userData;
+  return _trigger_node.lock();
 }
 
 /**
@@ -62,13 +60,9 @@ get_trigger_shape() const {
 /**
  *
  */
-INLINE PhysRigidActorNode *PhysTriggerCallbackData::
+INLINE PT(PhysRigidActorNode) PhysTriggerCallbackData::
 get_other_node() const {
-  if (_pair.otherActor->userData == nullptr) {
-    return nullptr;
-  }
-
-  return (PhysRigidActorNode *)_pair.otherActor->userData;
+  return _other_node.lock();
 }
 
 /**

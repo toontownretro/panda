@@ -18,6 +18,8 @@
 #include "refCallbackData.h"
 #include "physRigidActorNode.h"
 #include "physx_utils.h"
+#include "weakPointerTo.h"
+#include "pointerTo.h"
 
 class EXPCL_PANDA_PPHYSICS PhysContactPoint {
 PUBLISHED:
@@ -73,16 +75,18 @@ PUBLISHED:
   PhysContactCallbackData(const physx::PxContactPairHeader &header);
   ~PhysContactCallbackData() = default;
 
-  INLINE PhysRigidActorNode *get_actor_a() const;
-  INLINE PhysRigidActorNode *get_actor_b() const;
+  INLINE PT(PhysRigidActorNode) get_actor_a() const;
+  INLINE PT(PhysRigidActorNode) get_actor_b() const;
 
   INLINE const PhysContactPair *get_contact_pair(size_t n) const;
   INLINE size_t get_num_contact_pairs() const;
 
+  virtual bool is_valid() const override;
+
 private:
   // The two actors in contact.
-  PhysRigidActorNode *_a;
-  PhysRigidActorNode *_b;
+  WPT(PhysRigidActorNode) _a;
+  WPT(PhysRigidActorNode) _b;
 
   typedef pvector<PhysContactPair> Pairs;
   Pairs _contact_pairs;

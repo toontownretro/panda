@@ -119,17 +119,17 @@ get_num_contact_points() const {
 /**
  *
  */
-INLINE PhysRigidActorNode *PhysContactCallbackData::
+INLINE PT(PhysRigidActorNode) PhysContactCallbackData::
 get_actor_a() const {
-  return _a;
+  return _a.lock();
 }
 
 /**
  *
  */
-INLINE PhysRigidActorNode *PhysContactCallbackData::
+INLINE PT(PhysRigidActorNode) PhysContactCallbackData::
 get_actor_b() const {
-  return _b;
+  return _b.lock();
 }
 
 /**

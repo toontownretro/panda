@@ -195,6 +195,8 @@ simulate(double frame_time) {
 
       _tick_count++;
 
+      // TODO: Should we wait until after the simulation to run the callbacks,
+      // so time is restored correctly?
       run_callbacks();
     }
 
@@ -374,6 +376,17 @@ run_callbacks() {
   for (CallbackQueue::const_iterator it = _callbacks.begin();
        it != _callbacks.end(); ++it) {
     const Callback &clbk = *it;
+    if (!clbk._data->is_valid()) {
+      // A previous callback may have deleted the nodes pertaining
+      // to this callback.  Guard against that.
+#ifndef NDEBUG
+      if (pphysics_cat.is_debug()) {
+        pphysics_cat.debug()
+          << "Aborting callback with deleted nodes\n";
+      }
+#endif
+      continue;
+    }
     clbk._callback->do_callback(clbk._data);
   }
 

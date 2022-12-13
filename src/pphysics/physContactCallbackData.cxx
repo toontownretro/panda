@@ -78,3 +78,11 @@ PhysContactCallbackData(const physx::PxContactPairHeader &header) {
     pxpair.extractContacts(pair._contact_points.data(), pxpair.contactCount);
   }
 }
+
+/**
+ *
+ */
+bool PhysContactCallbackData::
+is_valid() const {
+  return _a.is_valid_pointer() && _b.is_valid_pointer();
+}

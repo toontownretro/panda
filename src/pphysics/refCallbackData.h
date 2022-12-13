@@ -27,6 +27,8 @@ PUBLISHED:
   INLINE RefCallbackData();
   virtual ~RefCallbackData() = default;
 
+  virtual bool is_valid() const=0;
+
 public:
   static TypeHandle get_class_type() {
     return _type_handle;

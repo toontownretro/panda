@@ -17,7 +17,8 @@
 INLINE PhysSleepStateCallbackData::
 PhysSleepStateCallbackData(physx::PxActor *actor, State state) :
   _actor(actor),
-  _state(state)
+  _state(state),
+  _node((PhysRigidActorNode *)actor->userData)
 {
 }
 
@@ -48,7 +49,7 @@ is_asleep() const {
 /**
  * Returns the actor node that woke up or went to sleep.
  */
-INLINE PhysRigidActorNode *PhysSleepStateCallbackData::
+INLINE PT(PhysRigidActorNode) PhysSleepStateCallbackData::
 get_node() const {
-  return (PhysRigidActorNode *)_actor->userData;
+  return _node.lock();
 }

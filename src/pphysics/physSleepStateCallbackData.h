@@ -16,10 +16,11 @@
 
 #include "pandabase.h"
 #include "refCallbackData.h"
+#include "weakPointerTo.h"
+#include "physRigidActorNode.h"
+#include "pointerTo.h"
 
 #include "physx_includes.h"
-
-class PhysRigidActorNode;
 
 /**
  * Callback data for when an wakes up or goes to sleep.
@@ -36,13 +37,16 @@ PUBLISHED:
   INLINE bool is_awake() const;
   INLINE bool is_asleep() const;
 
-  INLINE PhysRigidActorNode *get_node() const;
+  INLINE PT(PhysRigidActorNode) get_node() const;
+
+  virtual bool is_valid() const override;
 
 public:
   INLINE PhysSleepStateCallbackData(physx::PxActor *actor, State state);
 
 private:
   physx::PxActor *_actor;
+  WPT(PhysRigidActorNode) _node;
   State _state;
 
 public:

@@ -16,10 +16,12 @@
 
 #include "pandabase.h"
 #include "refCallbackData.h"
+#include "weakPointerTo.h"
+#include "physRigidActorNode.h"
+#include "pointerTo.h"
 
 #include "physx_includes.h"
 
-class PhysRigidActorNode;
 class PhysShape;
 
 /**
@@ -39,14 +41,18 @@ PUBLISHED:
 
   INLINE Touch get_touch_type() const;
 
-  INLINE PhysRigidActorNode *get_trigger_node() const;
+  INLINE PT(PhysRigidActorNode) get_trigger_node() const;
   INLINE PhysShape *get_trigger_shape() const;
 
-  INLINE PhysRigidActorNode *get_other_node() const;
+  INLINE PT(PhysRigidActorNode) get_other_node() const;
   INLINE PhysShape *get_other_shape() const;
+
+  virtual bool is_valid() const override;
 
 private:
   physx::PxTriggerPair _pair;
+  WPT(PhysRigidActorNode) _trigger_node;
+  WPT(PhysRigidActorNode) _other_node;
 
 public:
   static TypeHandle get_class_type() {
