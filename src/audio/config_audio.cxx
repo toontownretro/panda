@@ -35,6 +35,7 @@
 #include "oscillatorDSP.h"
 #include "paramEQDSP.h"
 #include "pitchShiftDSP.h"
+#include "proxyAudioSound.h"
 #include "sfxReverbDSP.h"
 #include "string_utils.h"
 
@@ -139,6 +140,7 @@ ConfigureFn(config_audio) {
   NullAudioEngine::init_type();
   NullAudioManager::init_type();
   NullAudioSound::init_type();
+  ProxyAudioSound::init_type();
 
   ChorusDSP::init_type();
   CompressorDSP::init_type();

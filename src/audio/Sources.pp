@@ -32,6 +32,7 @@
     oscillatorDSP.h oscillatorDSP.I \
     paramEQDSP.h paramEQDSP.I \
     pitchShiftDSP.h pitchShiftDSP.I \
+    proxyAudioSound.h proxyAudioSound.I \
     sfxReverbDSP.h sfxReverbDSP.I \
     steamAudioProperties.h steamAudioProperties.I
 
@@ -59,6 +60,7 @@
     oscillatorDSP.cxx \
     paramEQDSP.cxx \
     pitchShiftDSP.cxx \
+    proxyAudioSound.cxx \
     sfxReverbDSP.cxx \
     steamAudioProperties.cxx
 
@@ -86,6 +88,7 @@
     oscillatorDSP.h oscillatorDSP.I \
     paramEQDSP.h paramEQDSP.I \
     pitchShiftDSP.h pitchShiftDSP.I \
+    proxyAudioSound.h proxyAudioSound.I \
     sfxReverbDSP.h sfxReverbDSP.I \
     steamAudioProperties.h steamAudioProperties.I
 
