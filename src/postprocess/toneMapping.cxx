@@ -78,7 +78,6 @@ ToneMappingEffect(PostProcess *pp) :
 
   FrameBufferProperties fbprops = pass->get_framebuffer_properties();
   fbprops.set_rgba_bits(8, 8, 8, 0); // output is LDR
-  fbprops.set_srgb_color(true);
   pass->set_framebuffer_properties(fbprops);
 
   pass->setup();

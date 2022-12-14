@@ -26,7 +26,6 @@ public:
 		PostProcessPass(pp, "fxaa-pass")
 	{
 		_fbprops.set_rgba_bits(8, 8, 8, 0);
-		_fbprops.set_srgb_color(true);
 	}
 
 	virtual void setup() {
