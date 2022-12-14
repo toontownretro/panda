@@ -42,8 +42,8 @@ clear() {
   _wrap_u = SamplerState::WM_repeat;
   _wrap_v = SamplerState::WM_repeat;
   _wrap_w = SamplerState::WM_repeat;
-  _min_filter = SamplerState::FT_linear;
-  _mag_filter = SamplerState::FT_linear;
+  _min_filter = SamplerState::FT_default;
+  _mag_filter = SamplerState::FT_default;
   _border_color.set(0, 0, 0, 0);
   _min_lod = 0.0;
   _max_lod = 0.0;
