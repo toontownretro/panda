@@ -14,19 +14,20 @@
 #ifndef FXAA_H
 #define FXAA_H
 
+#include "pandabase.h"
 #include "postProcessEffect.h"
 
 class Texture;
 class PostProcess;
 
-class EXPCL_PANDA_POSTPROCESS FXAA_Effect : public PostProcessEffect
-{
-	DECLARE_CLASS( FXAA_Effect, PostProcessEffect );
+/**
+ *
+ */
+class EXPCL_PANDA_POSTPROCESS FXAA_Effect : public PostProcessEffect {
+	DECLARE_CLASS(FXAA_Effect, PostProcessEffect);
 
 PUBLISHED:
-	FXAA_Effect( PostProcess *pp );
-
-	virtual Texture *get_final_texture();
+	FXAA_Effect(PostProcess *pp);
 };
 
 #endif // FXAA_H
