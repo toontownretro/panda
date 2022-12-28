@@ -419,6 +419,33 @@ get_pixel_size(int i) const {
 }
 
 /**
+ *
+ */
+INLINE void DisplayRegion::
+set_light_culler(qpLightCuller *culler) {
+  CDWriter cdata(_cycler);
+  cdata->_light_culler = culler;
+}
+
+/**
+ *
+ */
+INLINE void DisplayRegion::
+clear_light_culler() {
+  CDWriter cdata(_cycler);
+  cdata->_light_culler = nullptr;
+}
+
+/**
+ *
+ */
+INLINE qpLightCuller *DisplayRegion::
+get_light_culler() const {
+  CDReader cdata(_cycler);
+  return cdata->_light_culler;
+}
+
+/**
  * Retrieves the coordinates of the DisplayRegion within its window, in
  * pixels.
  */
@@ -903,6 +930,14 @@ get_lens_index() const {
 INLINE int DisplayRegionPipelineReader::
 get_pixel_height(int i) const {
   return _cdata->_regions[i]._pixels[3] - _cdata->_regions[i]._pixels[2];
+}
+
+/**
+ *
+ */
+INLINE qpLightCuller *DisplayRegionPipelineReader::
+get_light_culler() const {
+  return _cdata->_light_culler;
 }
 
 INLINE std::ostream &

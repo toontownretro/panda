@@ -723,6 +723,11 @@ void DisplayRegion::
 do_cull(CullHandler *cull_handler, SceneSetup *scene_setup,
         GraphicsStateGuardian *gsg, Thread *current_thread) {
 
+  qpLightCuller *culler = get_light_culler();
+  if (culler != nullptr) {
+    culler->bin_lights(scene_setup->get_camera_path(), scene_setup->get_lens());
+  }
+
   GraphicsEngine::do_cull(cull_handler, scene_setup, gsg, current_thread);
 }
 
@@ -759,7 +764,10 @@ CData(const DisplayRegion::CData &copy) :
   _stereo_channel(copy._stereo_channel),
   _tex_view_offset(copy._tex_view_offset),
   _target_tex_page(copy._target_tex_page),
-  _scissor_enabled(copy._scissor_enabled)
+  _scissor_enabled(copy._scissor_enabled),
+  _light_culler(copy._light_culler),
+  _cull_callback(copy._cull_callback),
+  _draw_callback(copy._draw_callback)
 {
 }
 

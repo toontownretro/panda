@@ -357,7 +357,8 @@ cp_dependency(ShaderMatInput inp) {
       (inp == SMO_frame_number) ||
       (inp == SMO_frame_time) ||
       (inp == SMO_frame_delta) ||
-      (inp == SMO_lens_exposure_scale)) {
+      (inp == SMO_lens_exposure_scale) ||
+      (inp == SMO_lens_near_far)) {
     dep |= SSD_frame;
   }
   if ((inp == SMO_clip_to_view) ||
@@ -1814,6 +1815,48 @@ bind_parameter(const Parameter &param) {
       return true;
     }
 
+    if (pieces[1] == "StaticLightBuffer") {
+      if (type->as_sampler() != nullptr) {
+        return report_parameter_error(name, type, "expected samplerBuffer");
+      }
+
+      ShaderTexSpec bind;
+      bind._id = param;
+      bind._part = STO_static_light_buffer;
+      bind._desired_type = Texture::TT_buffer_texture;
+      bind._stage = 0;
+      _tex_spec.push_back(bind);
+      return true;
+    }
+
+    if (pieces[1] == "DynamicLightBuffer") {
+      if (type->as_sampler() != nullptr) {
+        return report_parameter_error(name, type, "expected samplerBuffer");
+      }
+
+      ShaderTexSpec bind;
+      bind._id = param;
+      bind._part = STO_dynamic_light_buffer;
+      bind._desired_type = Texture::TT_buffer_texture;
+      bind._stage = 0;
+      _tex_spec.push_back(bind);
+      return true;
+    }
+
+    if (pieces[1] == "LightListBuffer") {
+      if (type->as_sampler() != nullptr) {
+        return report_parameter_error(name, type, "expected samplerBuffer");
+      }
+
+      ShaderTexSpec bind;
+      bind._id = param;
+      bind._part = STO_light_list_buffer;
+      bind._desired_type = Texture::TT_buffer_texture;
+      bind._stage = 0;
+      _tex_spec.push_back(bind);
+      return true;
+    }
+
     if (pieces[1] == "ExposureScale") {
       if (!expect_float_vector(name, type, 1, 1)) {
         return false;
@@ -1827,6 +1870,63 @@ bind_parameter(const Parameter &param) {
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._piece = SMP_row3x1;
+
+      cp_add_mat_spec(bind);
+
+      return true;
+    }
+
+    if (pieces[1] == "LensNearFar") {
+      if (!expect_float_vector(name, type, 2, 2)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_lens_near_far;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._piece = SMP_row3x2;
+
+      cp_add_mat_spec(bind);
+
+      return true;
+    }
+
+    if (pieces[1] == "LightLensDiv") {
+      if (!expect_float_vector(name, type, 3, 3)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_light_lens_div;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._piece = SMP_row3x3;
+
+      cp_add_mat_spec(bind);
+
+      return true;
+    }
+
+    if (pieces[1] == "LightLensZScaleBias") {
+      if (!expect_float_vector(name, type, 2, 2)) {
+        return false;
+      }
+
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_light_lens_z_scale_bias;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._piece = SMP_row3x2;
 
       cp_add_mat_spec(bind);
 

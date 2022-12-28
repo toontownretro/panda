@@ -1724,6 +1724,33 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, scale, scale, scale, scale);
     return;
   }
+  case Shader::SMO_lens_near_far: {
+    into[0] = LMatrix4::translate_mat(_current_lens->get_near(), _current_lens->get_far(), 0);
+    return;
+  }
+  case Shader::SMO_light_lens_div: {
+    qpLightCuller *culler = _current_display_region->get_light_culler();
+    if (culler == nullptr) {
+      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0);
+    } else {
+      LVecBase3i div = culler->get_frustum_div();
+      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, div[0], div[1], div[2], 0);
+    }
+    return;
+  }
+  case Shader::SMO_light_lens_z_scale_bias: {
+    qpLightCuller *culler = _current_display_region->get_light_culler();
+    if (culler == nullptr) {
+      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    } else {
+      const Lens *lens = _current_lens;
+      LVecBase3i div = culler->get_frustum_div();
+      PN_stdfloat scale = (float)div[2] / log2f(lens->get_far() / lens->get_near());
+      PN_stdfloat bias = -((float)div[2] * log2f(lens->get_near()) / log2f(lens->get_far() / lens->get_near()));
+      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, scale, bias, 0, 0);
+    }
+    return;
+  }
   default:
     nassertv(false /*should never get here*/);
     return;
@@ -2040,6 +2067,24 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         }
         return tex;
       }
+    }
+    break;
+
+  case Shader::STO_static_light_buffer:
+    {
+      return _current_display_region->get_light_culler()->get_light_mgr()->get_static_light_buffer();
+    }
+    break;
+
+  case Shader::STO_dynamic_light_buffer:
+    {
+      return _current_display_region->get_light_culler()->get_light_mgr()->get_dynamic_light_buffer();
+    }
+    break;
+
+  case Shader::STO_light_list_buffer:
+    {
+      return _current_display_region->get_light_culler()->get_light_list_buffer();
     }
     break;
 

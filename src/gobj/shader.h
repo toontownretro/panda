@@ -241,6 +241,10 @@ public:
     SMO_texcolor_i,
 
     SMO_lens_exposure_scale,
+    SMO_lens_near_far,
+
+    SMO_light_lens_div,
+    SMO_light_lens_z_scale_bias,
 
     SMO_INVALID
   };
@@ -267,6 +271,10 @@ public:
 
     // Textures for materials that need to be sampled in the shader.
     STO_material_texture,
+
+    STO_static_light_buffer,
+    STO_dynamic_light_buffer,
+    STO_light_list_buffer,
   };
 
   enum ShaderArgClass {

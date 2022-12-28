@@ -38,6 +38,7 @@
 #include "callbackObject.h"
 #include "luse.h"
 #include "epvector.h"
+#include "qpLightCuller.h"
 
 class GraphicsOutput;
 class GraphicsPipe;
@@ -153,6 +154,11 @@ PUBLISHED:
   INLINE LVecBase2i get_pixel_size(int i = 0) const;
   MAKE_PROPERTY(pixel_size, get_pixel_size);
 
+  INLINE void set_light_culler(qpLightCuller *culler);
+  INLINE void clear_light_culler();
+  INLINE qpLightCuller *get_light_culler() const;
+  MAKE_PROPERTY(light_culler, get_light_culler, set_light_culler);
+
   virtual void output(std::ostream &out) const;
 
   static Filename make_screenshot_filename(
@@ -252,6 +258,8 @@ private:
 
     PT(CallbackObject) _cull_callback;
     PT(CallbackObject) _draw_callback;
+
+    PT(qpLightCuller) _light_culler;
   };
 
   PipelineCycler<CData> _cycler;
@@ -363,6 +371,8 @@ public:
   INLINE int get_pixel_height(int i = 0) const;
 
   INLINE int get_lens_index() const;
+
+  INLINE qpLightCuller *get_light_culler() const;
 
 private:
   DisplayRegion *_object;

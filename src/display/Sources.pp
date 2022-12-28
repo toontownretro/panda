@@ -46,7 +46,10 @@
     displayInformation.h \
     subprocessWindow.h subprocessWindow.I \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.h subprocessWindowBuffer.I] \
-    touchInfo.h
+    touchInfo.h \
+    qpLightCuller.h qpLightCuller.I \
+    qpLight.I qpLight.h \
+    qpLightManager.I qpLightManager.h
 
 
  #define COMPOSITE_SOURCES  \
@@ -78,7 +81,10 @@
     stereoDisplayRegion.cxx \
     subprocessWindow.cxx \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.cxx] \
-    touchInfo.cxx
+    touchInfo.cxx \
+    qpLightCuller.cxx \
+    qpLight.cxx \
+    qpLightManager.cxx
 
   #define INSTALL_HEADERS \
     standardMunger.I standardMunger.h \
@@ -115,7 +121,10 @@
     stereoDisplayRegion.I stereoDisplayRegion.h \
     subprocessWindow.h subprocessWindow.I \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.h subprocessWindowBuffer.I] \
-    touchInfo.h
+    touchInfo.h \
+    qpLightCuller.h qpLightCuller.I \
+    qpLight.I qpLight.h \
+    qpLightManager.I qpLightManager.h
 
   #define IGATESCAN all
 
