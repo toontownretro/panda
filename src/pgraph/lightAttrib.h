@@ -68,6 +68,7 @@ PUBLISHED:
 
   // The following is the new, more general interface to the LightAttrib.
   static CPT(RenderAttrib) make();
+  static CPT(RenderAttrib) make(ov_set<NodePath> &&lights);
   static CPT(RenderAttrib) make_all_off();
 
   INLINE size_t get_num_on_lights() const;
@@ -88,6 +89,7 @@ PUBLISHED:
   INLINE bool is_identity() const;
 
   CPT(RenderAttrib) add_on_light(const NodePath &light) const;
+  //CPT(RenderAttrib) set_on_lights(const ov_set<NodePath> &lights) const;
   CPT(RenderAttrib) remove_on_light(const NodePath &light) const;
   CPT(RenderAttrib) replace_on_light(const NodePath &source, const NodePath &dest) const;
   CPT(RenderAttrib) add_off_light(const NodePath &light) const;

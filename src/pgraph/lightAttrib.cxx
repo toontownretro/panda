@@ -419,6 +419,24 @@ make() {
 }
 
 /**
+ * Constructs a new LightAttrib turning on the given set of lights
+ * built up by the user before hand.  This is an optimization to set
+ * all the lights you need at once in bulk.
+ */
+CPT(RenderAttrib) LightAttrib::
+make(ov_set<NodePath> &&on_lights) {
+  LightAttrib *attrib = new LightAttrib;
+  attrib->_on_lights = std::move(on_lights);
+  attrib->_sort_seq = UpdateSeq::old();
+  for (const NodePath &np : attrib->_on_lights) {
+    Light *light = np.node()->as_light();
+    assert(light != nullptr);
+    light->attrib_ref();
+  }
+  return return_new(attrib);
+}
+
+/**
  * Constructs a new LightAttrib object that turns off all lights (and hence
  * disables lighting).
  */
