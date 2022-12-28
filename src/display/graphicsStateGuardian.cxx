@@ -1731,7 +1731,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
   case Shader::SMO_light_lens_div: {
     qpLightCuller *culler = _current_display_region->get_light_culler();
     if (culler == nullptr) {
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0);
+      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     } else {
       LVecBase3i div = culler->get_frustum_div();
       into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, div[0], div[1], div[2], 0);
@@ -2072,18 +2072,32 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
   case Shader::STO_static_light_buffer:
     {
+      if (_current_display_region == nullptr ||
+          _current_display_region->get_light_culler() == nullptr ||
+          _current_display_region->get_light_culler()->get_light_mgr() == nullptr) {
+        return get_dummy_shadow_map(Texture::TT_buffer_texture);
+      }
       return _current_display_region->get_light_culler()->get_light_mgr()->get_static_light_buffer();
     }
     break;
 
   case Shader::STO_dynamic_light_buffer:
     {
+      if (_current_display_region == nullptr ||
+          _current_display_region->get_light_culler() == nullptr ||
+          _current_display_region->get_light_culler()->get_light_mgr() == nullptr) {
+        return get_dummy_shadow_map(Texture::TT_buffer_texture);
+      }
       return _current_display_region->get_light_culler()->get_light_mgr()->get_dynamic_light_buffer();
     }
     break;
 
   case Shader::STO_light_list_buffer:
     {
+      if (_current_display_region == nullptr ||
+          _current_display_region->get_light_culler() == nullptr) {
+        return get_dummy_shadow_map(Texture::TT_buffer_texture);
+      }
       return _current_display_region->get_light_culler()->get_light_list_buffer();
     }
     break;
@@ -3991,6 +4005,17 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
       }
     }
     return dummy_cube;
+  } else if (texture_type == Texture::TT_buffer_texture) {
+    static PT(Texture) dummy_buffer;
+    if (dummy_buffer == nullptr) {
+      dummy_buffer = new Texture("dummy-buffer");
+      dummy_buffer->setup_buffer_texture(1, Texture::T_unsigned_byte, Texture::F_r8i, GeomEnums::UH_static);
+      PTA_uchar image;
+      image.push_back(0);
+      dummy_buffer->set_ram_image(image);
+      dummy_buffer->set_keep_ram_image(false);
+    }
+    return dummy_buffer;
   }
 
   return nullptr;
