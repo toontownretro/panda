@@ -21,6 +21,7 @@
 #include "pta_LVecBase3.h"
 #include "renderAttrib.h"
 #include "texture.h"
+#include "nodePath.h"
 
 class MapAmbientProbe;
 class CullTraverser;
@@ -35,18 +36,37 @@ class EXPCL_PANDA_MAP MapLightingEffect : public RenderEffect {
   DECLARE_CLASS(MapLightingEffect, RenderEffect);
 
 PUBLISHED:
-  static CPT(RenderEffect) make(BitMask32 camera_mask, bool use_position = true, bool force_sun = false, int max_lights = 4);
-  static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin, bool force_sun = false, int max_lights = 4);
+  enum Flags {
+    F_probe = 1,
+    F_cube_map = 2,
+    F_static_lights = 4,
+    F_dynamic_lights = 8,
+    F_force_sun = 16,
+    F_no_sun = 32,
+
+    F_default_dynamic = F_probe|F_cube_map|F_static_lights|F_dynamic_lights,
+    F_default_baked = F_cube_map|F_dynamic_lights|F_force_sun,
+    F_default_baked_3d_sky = F_cube_map|F_no_sun,
+  };
+
+  static CPT(RenderEffect) make(BitMask32 camera_mask, bool use_position = true, unsigned int flags = F_default_dynamic, int max_lights = 4);
+  static CPT(RenderEffect) make(BitMask32 camera_mask, const LPoint3 &lighting_origin, unsigned int flags = F_default_dynamic, int max_lights = 4);
 
   const RenderState *get_current_lighting_state() const;
 
   void compute_lighting(const TransformState *net_transform, MapData *map_data,
                         const GeometricBoundingVolume *node_bounds,
-                        const TransformState *parent_net_transform, bool baked = false) const;
+                        const TransformState *parent_net_transform) const;
 
   void do_compute_lighting(const TransformState *net_transform, MapData *map_data,
                            const GeometricBoundingVolume *node_bounds,
-                           const TransformState *parent_net_transform, bool baked = false);
+                           const TransformState *parent_net_transform);
+
+  static void mark_stale();
+  static void set_dynamic_light_root(NodePath np);
+  static void clear_dynamic_light_root();
+
+  ~MapLightingEffect();
 
 public:
   virtual bool has_cull_callback() const override;
@@ -57,12 +77,16 @@ public:
 protected:
   MapLightingEffect();
 
+
   virtual int compare_to_impl(const RenderEffect *other) const;
 
 private:
   void do_cull_callback(CullTraverser *trav, CullTraverserData &data,
                         CPT(TransformState) &node_transform,
                         CPT(RenderState) &node_state);
+
+  void add_to_linked_list();
+  void remove_from_linked_list();
 
 private:
   // Cached data to determine if we need to recompute the node's lighting.
@@ -76,7 +100,8 @@ private:
   bool _has_lighting_origin;
   LPoint3 _lighting_origin;
 
-  bool _force_sun;
+  unsigned int _flags;
+
   int _max_lights;
 
   // This is the actual lighting state.
@@ -84,10 +109,16 @@ private:
   CPT(RenderState) _lighting_state;
   PTA_LVecBase3 _probe_color;
   const MapAmbientProbe *_probe;
-  CPT(RenderAttrib) _light_attrib;
-  CPT(RenderAttrib) _modified_light_attrib;
 
   BitMask32 _camera_mask;
+
+  const MapLightingEffect *_next;
+
+  UpdateSeq _last_update;
+
+  static const MapLightingEffect *_list;
+  static UpdateSeq _next_update;
+  static NodePath _dynamic_light_root;
 };
 
 #include "mapLightingEffect.I"
