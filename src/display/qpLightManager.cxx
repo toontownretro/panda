@@ -50,8 +50,8 @@ update_light_buffer(Texture *buffer, PT(qpLight) *lights, int num_lights) {
   for (int i = 0; i < num_lights; ++i) {
     qpLight *light = lights[i];
 
-    PN_stdfloat stopdot = ccos(light->get_outer_cone());
-    PN_stdfloat stopdot2 = ccos(light->get_inner_cone());
+    PN_stdfloat stopdot = ccos(light->get_inner_cone());
+    PN_stdfloat stopdot2 = ccos(light->get_outer_cone());
     PN_stdfloat oodot = (stopdot > stopdot2) ? 1.0f / (stopdot - stopdot2) : 0.0f;
 
     // Texel 0: light type, atten coefficients
