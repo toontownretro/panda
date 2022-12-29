@@ -11130,6 +11130,7 @@ do_assign(const Texture::CData *copy) {
   _simple_y_size = copy->_simple_y_size;
   _simple_ram_image = copy->_simple_ram_image;
   _render_to_texture = copy->_render_to_texture;
+  _post_load_store_cache = copy->_post_load_store_cache;
 }
 
 /**
