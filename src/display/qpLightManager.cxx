@@ -12,6 +12,10 @@
  */
 
 #include "qpLightManager.h"
+#include "pStatTimer.h"
+#include "pStatCollector.h"
+
+static PStatCollector update_buffer_pcollector("LightManager:UpdateBuffer");
 
 /**
  *
@@ -41,6 +45,8 @@ initialize() {
  */
 void qpLightManager::
 update_light_buffer(Texture *buffer, PT(qpLight) *lights, int num_lights) {
+  PStatTimer timer(update_buffer_pcollector);
+
   if (buffer->get_x_size() < num_lights * 5) {
     buffer->set_x_size(num_lights * 5);
   }

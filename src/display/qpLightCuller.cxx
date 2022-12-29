@@ -12,6 +12,10 @@
  */
 
 #include "qpLightCuller.h"
+#include "pStatCollector.h"
+#include "pStatTimer.h"
+
+static PStatCollector bin_lights_pcollector("LightCuller:BinLights");
 
 /**
  *
@@ -65,6 +69,8 @@ initialize() {
  */
 void qpLightCuller::
 bin_lights(const NodePath &camera, const Lens *lens) {
+  PStatTimer timer(bin_lights_pcollector);
+
   if (_light_mgr == nullptr) {
     return;
   }
