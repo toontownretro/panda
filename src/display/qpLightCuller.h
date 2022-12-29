@@ -25,6 +25,10 @@
 #include "nodePath.h"
 #include "updateSeq.h"
 #include "qpLightManager.h"
+#include "cycleData.h"
+#include "pipelineCycler.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
 
 /**
  * This is an object that sectors the view frustum of a camera into a set of
@@ -107,7 +111,7 @@ PUBLISHED:
 
   INLINE TreeNode *get_sector_tree() const { return _sector_tree; }
 
-  INLINE Texture *get_light_list_buffer() const { return _light_list_buffer; }
+  INLINE Texture *get_light_list_buffer() const;
   INLINE qpLightManager *get_light_mgr() const { return _light_mgr; }
 
 private:
@@ -116,7 +120,21 @@ private:
   // of 64 light indices, and the list is 0-terminated.  A negative index
   // indicates a light from the dynamic buffer, and a >0 index indicates
   // a light from the static buffer.
-  PT(Texture) _light_list_buffer;
+  static constexpr int num_buffers = 2;
+  PT(Texture) _light_list_buffers[num_buffers];
+  unsigned char _buffer_index;
+
+  class CData : public CycleData {
+  public:
+    CData();
+    CData(const CData &copy);
+    virtual CycleData *make_copy() const override;
+
+    Texture *_light_list_buffer;
+  };
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
 
   // How the lens is divided to create sectors.
   int _x_div, _y_div, _z_div;

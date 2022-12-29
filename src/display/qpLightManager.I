@@ -10,3 +10,12 @@
  * @author brian
  * @date 2022-12-21
  */
+
+/**
+ *
+ */
+INLINE Texture *qpLightManager::
+get_dynamic_light_buffer() const {
+  CDReader cdata(_cycler);
+  return cdata->_dynamic_light_buffer;
+}

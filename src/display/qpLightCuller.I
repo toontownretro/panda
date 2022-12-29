@@ -20,3 +20,12 @@ set_frustum_div(int x, int y, int z) {
   _y_div = y;
   _z_div = z;
 }
+
+/**
+ *
+ */
+INLINE Texture *qpLightCuller::
+get_light_list_buffer() const {
+  CDReader cdata(_cycler);
+  return cdata->_light_list_buffer;
+}

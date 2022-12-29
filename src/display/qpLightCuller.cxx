@@ -28,7 +28,8 @@ qpLightCuller(qpLightManager *light_mgr) :
   _num_sectors(16 * 8 * 24),
   _last_lens_seq(UpdateSeq::initial()),
   _lens(nullptr),
-  _light_mgr(light_mgr)
+  _light_mgr(light_mgr),
+  _buffer_index(0)
 {
 }
 
@@ -56,10 +57,12 @@ initialize() {
   _sector_tree->_div_maxs.set(_x_div, _y_div, _z_div);
   tree_static_subdiv(_sector_tree);
 
-  _light_list_buffer = new Texture("light-list-buffer");
-  _light_list_buffer->setup_buffer_texture(_num_sectors * 64, Texture::T_int, Texture::F_r32i, GeomEnums::UH_dynamic);
-  _light_list_buffer->set_compression(Texture::CM_off);
-  _light_list_buffer->set_keep_ram_image(true);
+  for (int i = 0; i < num_buffers; ++i) {
+    _light_list_buffers[i] = new Texture("light-list-buffer");
+    _light_list_buffers[i]->setup_buffer_texture(_num_sectors * 64, Texture::T_int, Texture::F_r32i, GeomEnums::UH_dynamic);
+    _light_list_buffers[i]->set_compression(Texture::CM_off);
+    _light_list_buffers[i]->set_keep_ram_image(true);
+  }
 
   _last_lens_seq = UpdateSeq::initial();
 }
@@ -96,7 +99,13 @@ bin_lights(const NodePath &camera, const Lens *lens) {
     return;
   }
 
-  PTA_uchar light_list_img = _light_list_buffer->modify_ram_image();
+  Texture *light_list_buffer = _light_list_buffers[_buffer_index];
+  {
+    CDWriter cdata(_cycler);
+    cdata->_light_list_buffer = light_list_buffer;
+  }
+
+  PTA_uchar light_list_img = light_list_buffer->modify_ram_image();
   int *light_list_data = (int *)light_list_img.p();
   memset(light_list_data, 0, light_list_img.size());
 
@@ -115,6 +124,9 @@ bin_lights(const NodePath &camera, const Lens *lens) {
     LPoint3 pos = world_to_view->xform_point(light->get_pos());
     r_bin_light(_sector_tree, pos, radius * radius, i, true, light_list_data);
   }
+
+  ++_buffer_index;
+  _buffer_index %= num_buffers;
 }
 
 /**
@@ -328,4 +340,30 @@ tree_static_subdiv(TreeNode *parent) {
     tree_static_subdiv(child);
     parent->_children[i] = child;
   }
+}
+
+/**
+ *
+ */
+qpLightCuller::CData::
+CData() :
+  _light_list_buffer(nullptr)
+{
+}
+
+/**
+ *
+ */
+qpLightCuller::CData::
+CData(const CData &copy) :
+  _light_list_buffer(copy._light_list_buffer)
+{
+}
+
+/**
+ *
+ */
+CycleData *qpLightCuller::CData::
+make_copy() const {
+  return new CData(*this);
 }

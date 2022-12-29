@@ -25,6 +25,10 @@
 #include "texture.h"
 #include "qpLight.h"
 #include "ordered_vector.h"
+#include "cycleData.h"
+#include "pipelineCycler.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
 
 /**
  *
@@ -45,7 +49,7 @@ PUBLISHED:
   void update();
 
   INLINE Texture *get_static_light_buffer() const { return _static_light_buffer; }
-  INLINE Texture *get_dynamic_light_buffer() const { return _dynamic_light_buffer; }
+  INLINE Texture *get_dynamic_light_buffer() const;
 
   INLINE int get_num_static_lights() const { return (int)_static_lights.size(); }
   INLINE qpLight *get_static_light(int n) const { return _static_lights[n]; }
@@ -58,7 +62,22 @@ public:
 
 private:
   PT(Texture) _static_light_buffer;
-  PT(Texture) _dynamic_light_buffer;
+
+  static constexpr int num_buffers = 2;
+  PT(Texture) _dynamic_light_buffers[num_buffers];
+  unsigned char _dynamic_buffer_index;
+
+  class CData : public CycleData {
+  public:
+    CData();
+    CData(const CData &copy);
+    virtual CycleData *make_copy() const override;
+
+    Texture *_dynamic_light_buffer;
+  };
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
 
   typedef pvector<PT(qpLight)> LightList;
   typedef ov_set<PT(qpLight)> LightSet;

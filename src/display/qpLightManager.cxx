@@ -21,7 +21,9 @@ static PStatCollector update_buffer_pcollector("LightManager:UpdateBuffer");
  *
  */
 qpLightManager::
-qpLightManager() {
+qpLightManager() :
+  _dynamic_buffer_index(0)
+{
 }
 
 /**
@@ -34,10 +36,13 @@ initialize() {
   _static_light_buffer->set_compression(Texture::CM_off);
   _static_light_buffer->set_keep_ram_image(false);
 
-  _dynamic_light_buffer = new Texture("dynamic-light-buffer");
-  _dynamic_light_buffer->setup_buffer_texture(1, Texture::T_float, Texture::F_rgba32, GeomEnums::UH_dynamic);
-  _dynamic_light_buffer->set_compression(Texture::CM_off);
-  _dynamic_light_buffer->set_keep_ram_image(true);
+  for (int i = 0; i < num_buffers; ++i) {
+    PT(Texture) dynamic_light_buffer = new Texture("dynamic-light-buffer");
+    dynamic_light_buffer->setup_buffer_texture(1, Texture::T_float, Texture::F_rgba32, GeomEnums::UH_dynamic);
+    dynamic_light_buffer->set_compression(Texture::CM_off);
+    dynamic_light_buffer->set_keep_ram_image(true);
+    _dynamic_light_buffers[i] = dynamic_light_buffer;
+  }
 }
 
 /**
@@ -137,5 +142,35 @@ clear_dynamic_lights() {
  */
 void qpLightManager::
 update() {
-  update_light_buffer(_dynamic_light_buffer, &_dynamic_lights.front(), _dynamic_lights.size());
+  CDWriter cdata(_cycler);
+  cdata->_dynamic_light_buffer = _dynamic_light_buffers[_dynamic_buffer_index];
+  update_light_buffer(cdata->_dynamic_light_buffer, &_dynamic_lights.front(), _dynamic_lights.size());
+  ++_dynamic_buffer_index;
+  _dynamic_buffer_index %= num_buffers;
+}
+
+/**
+ *
+ */
+qpLightManager::CData::
+CData() :
+  _dynamic_light_buffer(nullptr)
+{
+}
+
+/**
+ *
+ */
+qpLightManager::CData::
+CData(const CData &copy) :
+  _dynamic_light_buffer(copy._dynamic_light_buffer)
+{
+}
+
+/**
+ *
+ */
+CycleData *qpLightManager::CData::
+make_copy() const {
+  return new CData(*this);
 }
