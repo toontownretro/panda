@@ -16,6 +16,7 @@
     animChannelBundle.h animChannelBundle.I \
     animChannelLayered.h animChannelLayered.I \
     animChannelTable.h animChannelTable.I \
+    animChannelUser.h animChannelUser.I \
     animEvalContext.h animEvalContext.I \
     animEvent.h \
     animEventQueue.h animEventQueue.I \
@@ -53,6 +54,7 @@
     animChannelBundle.cxx \
     animChannelLayered.cxx \
     animChannelTable.cxx \
+    animChannelUser.cxx \
     animEvent.cxx \
     animLayer.cxx \
     character.cxx \
