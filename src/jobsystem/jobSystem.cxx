@@ -63,7 +63,7 @@ initialize() {
     std::ostringstream ss;
     ss << "job-worker-" << i;
     PT(JobWorkerThread) thread = new JobWorkerThread(ss.str());
-    thread->start(TP_urgent, true);
+    thread->start(TP_normal, true);
     _worker_threads.push_back(thread);
   }
 
