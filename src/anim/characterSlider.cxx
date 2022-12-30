@@ -14,6 +14,7 @@
 #include "characterSlider.h"
 #include "characterVertexSlider.h"
 #include "thread.h"
+#include "luse.h"
 
 /**
  *
@@ -99,7 +100,8 @@ set_value(PN_stdfloat value) {
   // We set it directly on the VertexSlider as it is properly
   // cycled.
   nassertv(_vertex_slider != nullptr);
-  if (_vertex_slider->get_slider() != value) {
+  PN_stdfloat current_value = _vertex_slider->get_slider();
+  if (!IS_THRESHOLD_EQUAL(current_value, value, NEARLY_ZERO(PN_stdfloat))) {
     _vertex_slider->set_slider(value);
   }
 }
