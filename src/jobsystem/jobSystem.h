@@ -52,7 +52,7 @@ PUBLISHED:
   INLINE static JobSystem *get_global_ptr();
 
 public:
-  ALWAYS_INLINE Job *get_job_for_thread(Thread *thread, bool is_worker);
+  Job *get_job_for_thread(Thread *thread, bool is_worker);
   ALWAYS_INLINE Job *pop_job(Thread *thread, bool is_worker);
 
 public:
