@@ -102,7 +102,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
   _file_name(handle->get_orig_filename()),
   _sa_spatial_dsp(nullptr)
 {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::FMODAudioSound() Creating new sound from handle: "
               << handle->get_orig_filename());
 
@@ -140,7 +140,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
  */
 FMODAudioSound::
 FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::FMODAudioSound() Creating channel from existing "
               "sound handle");
 
@@ -190,7 +190,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy) {
  */
 FMODAudioSound::
 ~FMODAudioSound() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
   if (fmodAudio_cat.is_debug()) {
@@ -229,7 +229,7 @@ play() {
  */
 void FMODAudioSound::
 stop() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   if (!get_finished_event().empty()) {
     throw_event(get_finished_event(), EventParameter(this));
@@ -275,7 +275,7 @@ get_loop() const {
  */
 void FMODAudioSound::
 set_loop_count(unsigned long loop_count) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::set_loop_count()   Setting the sound's loop count to: " << loop_count);
 
   // LOCALS
@@ -306,7 +306,7 @@ set_loop_count(unsigned long loop_count) {
  */
 unsigned long FMODAudioSound::
 get_loop_count() const {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
   int loop_count;
 
@@ -335,7 +335,7 @@ set_loop_start(PN_stdfloat loop_start) {
  */
 PN_stdfloat FMODAudioSound::
 get_loop_start() const {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   return (PN_stdfloat)_loop_start / 1000.0f;
 }
 
@@ -345,7 +345,7 @@ get_loop_start() const {
  */
 void FMODAudioSound::
 set_time(PN_stdfloat start_time) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   _start_time = start_time;
 
   if (status() == PLAYING) {
@@ -360,7 +360,7 @@ set_time(PN_stdfloat start_time) {
  */
 PN_stdfloat FMODAudioSound::
 get_time() const {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
   unsigned int current_time_ms;
 
@@ -384,7 +384,7 @@ get_time() const {
  */
 void FMODAudioSound::
 set_volume(PN_stdfloat vol) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   _volume = vol;
   set_volume_on_channel();
 }
@@ -402,7 +402,7 @@ get_volume() const {
  */
 void FMODAudioSound::
 start_playing() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
   if (!_active) {
@@ -460,7 +460,7 @@ start_playing() {
  */
 void FMODAudioSound::
 set_volume_on_channel() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
   if (_channel != nullptr) {
@@ -478,7 +478,7 @@ set_volume_on_channel() {
  */
 void FMODAudioSound::
 set_balance(PN_stdfloat bal) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   _balance = bal;
   set_speaker_mix_or_balance_on_channel();
 }
@@ -501,7 +501,7 @@ get_balance() const {
  */
 void FMODAudioSound::
 set_play_rate(PN_stdfloat rate) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   _playrate = rate;
   set_play_rate_on_channel();
 }
@@ -519,7 +519,7 @@ get_play_rate() const {
  */
 void FMODAudioSound::
 set_play_rate_on_channel() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
   if (_is_midi) {
@@ -561,7 +561,7 @@ get_name() const {
  */
 PN_stdfloat FMODAudioSound::
 length() const {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   if (_playrate == 0.0f) {
     return 0.0f;
@@ -589,7 +589,7 @@ length() const {
  */
 void FMODAudioSound::
 set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &vel) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   FMODAudioEngine *engine = _manager->_engine;
   PN_stdfloat unit_scale = engine->get_3d_unit_scale();
@@ -607,12 +607,9 @@ set_3d_attributes(const LPoint3 &pos, const LQuaternion &quat, const LVector3 &v
  */
 void FMODAudioSound::
 set_3d_attributes_on_channel() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
   FMOD_MODE soundMode;
-
-  result = _sound->getMode(&soundMode);
-  fmod_audio_errcheck("_sound->getMode()", result);
 
 #ifdef HAVE_STEAM_AUDIO
   bool steam_audio_dsp = fmod_use_steam_audio && _sa_spatial_dsp != nullptr;
@@ -635,6 +632,8 @@ set_3d_attributes_on_channel() {
     _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr));
 
   } else if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
+    result = _sound->getMode(&soundMode);
+    fmod_audio_errcheck("_sound->getMode()", result);
     FMOD_VECTOR pos, vel;
     pos = lvec_to_fmod(_pos);
     vel = lvec_to_fmod(_vel);
@@ -677,7 +676,7 @@ get_3d_velocity() const {
  */
 void FMODAudioSound::
 set_3d_min_distance(PN_stdfloat dist) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
 
   _min_dist = dist / _manager->_engine->get_3d_unit_scale();
@@ -756,7 +755,7 @@ get_priority() {
  */
 void FMODAudioSound::
 set_priority(int priority) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   audio_debug("FMODAudioSound::set_priority()");
 
@@ -773,7 +772,7 @@ set_priority(int priority) {
  */
 AudioSound::SoundStatus FMODAudioSound::
 status() const {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   FMOD_RESULT result;
   bool playingState;
 
@@ -799,7 +798,7 @@ status() const {
  */
 void FMODAudioSound::
 set_active(bool active) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
   if (_active != active) {
     _active = active;
     if (_active) {
@@ -840,7 +839,7 @@ get_active() const {
  */
 bool FMODAudioSound::
 insert_dsp(int index, DSP *panda_dsp) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   // If it's already in there, take it out and put it in the new spot.
   remove_dsp(panda_dsp);
@@ -867,7 +866,7 @@ insert_dsp(int index, DSP *panda_dsp) {
  */
 bool FMODAudioSound::
 remove_dsp(DSP *panda_dsp) {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   FMOD_RESULT ret;
   FMOD::DSP *dsp = nullptr;
@@ -901,7 +900,7 @@ remove_dsp(DSP *panda_dsp) {
  */
 void FMODAudioSound::
 remove_all_dsps() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   FMOD_RESULT ret;
 
@@ -936,7 +935,7 @@ get_num_dsps() const {
  */
 void FMODAudioSound::
 set_dsps_on_channel() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   if (_channel == nullptr) {
     return;
@@ -1065,7 +1064,7 @@ update() {
  */
 void FMODAudioSound::
 finished() {
-  ReMutexHolder holder(FMODAudioManager::_lock);
+  //ReMutexHolder holder(FMODAudioManager::_lock);
 
   stop();
 }

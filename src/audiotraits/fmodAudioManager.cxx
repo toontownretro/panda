@@ -65,7 +65,7 @@ FMODAudioManager(const std::string &name, FMODAudioManager *parent, FMODAudioEng
   _name(name),
   _fmod_reverb_dsp(nullptr)
 {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   _engine->ref();
 
@@ -94,7 +94,7 @@ FMODAudioManager(const std::string &name, FMODAudioManager *parent, FMODAudioEng
  */
 FMODAudioManager::
 ~FMODAudioManager() {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Be sure to delete associated sounds before deleting the manager!
   //FMOD_RESULT result;
@@ -136,7 +136,7 @@ FMODAudioManager::
  */
 bool FMODAudioManager::
 insert_dsp(int index, DSP *panda_dsp) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // If it's already in there, take it out and put it in the new spot.
   remove_dsp(panda_dsp);
@@ -166,7 +166,7 @@ insert_dsp(int index, DSP *panda_dsp) {
  */
 bool FMODAudioManager::
 remove_dsp(DSP *panda_dsp) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   auto itr = _dsps.find(panda_dsp);
   if (itr == _dsps.end()) {
@@ -193,7 +193,7 @@ remove_dsp(DSP *panda_dsp) {
  */
 void FMODAudioManager::
 remove_all_dsps() {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   for (auto itr = _dsps.begin(); itr != _dsps.end(); itr++) {
     DSP *panda_dsp = itr->first;
@@ -316,7 +316,7 @@ get_sound(MovieAudio *source, bool positional, bool stream) {
  */
 void FMODAudioManager::
 set_volume(PN_stdfloat volume) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   FMOD_RESULT result;
   result = _channelgroup->setVolume(volume);
   fmod_audio_errcheck("_channelgroup->setVolume()", result);
@@ -327,7 +327,7 @@ set_volume(PN_stdfloat volume) {
  */
 PN_stdfloat FMODAudioManager::
 get_volume() const {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   float volume;
   FMOD_RESULT result;
   result = _channelgroup->getVolume(&volume);
@@ -340,7 +340,7 @@ get_volume() const {
  */
 void FMODAudioManager::
 set_active(bool active) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   if (_active != active) {
     _active = active;
 
@@ -366,7 +366,7 @@ get_active() const {
  */
 void FMODAudioManager::
 stop_all_sounds() {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   // We have to walk through this list with some care, since stopping a sound
   // may also remove it from the set (if there are no other references to the
   // sound).
@@ -386,7 +386,7 @@ stop_all_sounds() {
  */
 void FMODAudioManager::
 update() {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Call finished() and release our reference to sounds that have finished
   // playing.
@@ -407,7 +407,7 @@ update() {
  */
 void FMODAudioManager::
 set_concurrent_sound_limit(unsigned int limit) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   _concurrent_sound_limit = limit;
   reduce_sounds_playing_to(_concurrent_sound_limit);
 }
@@ -425,7 +425,7 @@ get_concurrent_sound_limit() const {
  */
 void FMODAudioManager::
 reduce_sounds_playing_to(unsigned int count) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // first give all sounds that have finished a chance to stop, so that these
   // get stopped first
@@ -498,7 +498,7 @@ get_fmod_dsp(DSP *panda_dsp) const {
  */
 void FMODAudioManager::
 starting_sound(FMODAudioSound *sound) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // If the sound is already in there, don't do anything.
   if (_sounds_playing.find(sound) != _sounds_playing.end()) {
@@ -522,7 +522,7 @@ starting_sound(FMODAudioSound *sound) {
  */
 void FMODAudioManager::
 stopping_sound(FMODAudioSound *sound) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   _sounds_playing.erase(sound); // This could case the sound to destruct.
 }
 
@@ -531,7 +531,7 @@ stopping_sound(FMODAudioSound *sound) {
  */
 void FMODAudioManager::
 release_sound(FMODAudioSound *sound) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
   AllSounds::iterator ai = _all_sounds.find(sound);
   if (ai != _all_sounds.end()) {
     _all_sounds.erase(ai);
@@ -543,7 +543,7 @@ release_sound(FMODAudioSound *sound) {
  */
 void FMODAudioManager::
 update_sounds() {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Update any dirty DSPs applied to our sounds.
   for (AllSounds::iterator it = _all_sounds.begin(); it != _all_sounds.end();
