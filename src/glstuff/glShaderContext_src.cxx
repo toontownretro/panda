@@ -2769,6 +2769,8 @@ void CLP(ShaderContext)::
 update_transform_table(const TransformTable *table) {
   size_t num_matrices = (size_t)_transform_table_size;
 
+  Thread *current_thread = Thread::get_current_thread();
+
   if (table != nullptr) {
     num_matrices = min(num_matrices, table->get_num_transforms());
   }
@@ -2779,9 +2781,9 @@ update_transform_table(const TransformTable *table) {
     if (table != nullptr) {
       for (size_t i = 0; i < num_matrices; ++i) {
 #ifdef STDFLOAT_DOUBLE
-        matrices[i] = LCAST(float, table->get_transform(i)->get_matrixq());
+        matrices[i] = LCAST(float, table->get_transform(i)->get_matrix(current_thread));
 #else
-        matrices[i] = table->get_transform(i)->get_matrixq();
+        matrices[i] = table->get_transform(i)->get_matrix(current_thread);
 #endif
       }
     } else {
@@ -2804,10 +2806,10 @@ update_transform_table(const TransformTable *table) {
       for (; i < num_transforms; ++i) {
 #ifdef STDFLOAT_DOUBLE
         LMatrix4f matrix;
-        const LMatrix4d &matrixd = table->get_transform(i)->get_matrixq(matrixd);
+        const LMatrix4d &matrixd = table->get_transform(i)->get_matrix(current_thread);
         matrix = LCAST(float, table->get_transform(i));
 #else
-        const LMatrix4f &matrix = table->get_transform(i)->get_matrixq();
+        const LMatrix4f &matrix = table->get_transform(i)->get_matrix(current_thread);
 #endif
         vectors[i * 3 + 0] = matrix.get_row(0);
         vectors[i * 3 + 1] = matrix.get_row(1);

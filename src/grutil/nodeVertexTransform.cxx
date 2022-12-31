@@ -26,20 +26,19 @@ NodeVertexTransform(const PandaNode *node,
 {
 }
 
-#if 0
+#if 1
 /**
  * Returns the transform of the associated node, composed with the previous
  * VertexTransform if any, expressed as a matrix.
  */
-void NodeVertexTransform::
-get_matrix(LMatrix4 &matrix) const {
+LMatrix4 NodeVertexTransform::
+get_matrix(Thread *current_thread) const {
   if (_prev != nullptr) {
-    LMatrix4 prev_matrix;
-    _prev->get_matrix(prev_matrix);
-    matrix.multiply(_node->get_transform()->get_mat(), prev_matrix);
+    LMatrix4 prev_matrix = _prev->get_matrix(current_thread);
+    return _node->get_transform()->get_mat() * prev_matrix;
 
   } else {
-    matrix = _node->get_transform()->get_mat();
+    return _node->get_transform()->get_mat();
   }
 }
 #endif

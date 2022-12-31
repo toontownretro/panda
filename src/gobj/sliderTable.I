@@ -122,7 +122,7 @@ get_modified(Thread *current_thread) const {
  */
 INLINE void SliderTable::
 update_modified(UpdateSeq modified, Thread *current_thread) {
-  CDWriter cdata(_cycler, true, current_thread);
+  CDWriter cdata(_cycler, current_thread);
   cdata->_modified = modified;
 }
 

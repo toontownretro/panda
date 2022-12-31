@@ -34,10 +34,32 @@ PUBLISHED:
 
   INLINE const std::string &get_name() const;
 
+  INLINE void set_matrix(const LMatrix4 &matrix);
+  virtual LMatrix4 get_matrix(Thread *current_thread = Thread::get_current_thread()) const override;
+
   virtual void output(std::ostream &out) const;
 
 private:
   std::string _name;
+
+  // This is the data that must be cycled between pipeline stages.
+  class EXPCL_PANDA_GOBJ CData : public CycleData {
+  public:
+    INLINE CData();
+    INLINE CData(const CData &copy);
+    virtual CycleData *make_copy() const;
+    virtual void write_datagram(BamWriter *manager, Datagram &dg) const;
+    virtual void fillin(DatagramIterator &scan, BamReader *manager);
+    virtual TypeHandle get_parent_type() const {
+      return UserVertexTransform::get_class_type();
+    }
+
+    LMatrix4 _matrix;
+  };
+
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
 
 public:
   static void register_with_read_factory();

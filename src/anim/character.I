@@ -223,8 +223,10 @@ get_num_sliders() const {
 INLINE void Character::
 set_slider_value(int n, PN_stdfloat value) {
   nassertv(n >= 0 && n < (int)_sliders.size());
+  RenderCDWriter cdata(_render_cycler);
+  cdata->_slider_values[n] = value;
 
-  _sliders[n].set_value(value);
+  //_sliders[n].set_value(value);
 }
 
 /**
@@ -246,8 +248,9 @@ find_slider(const std::string &name) const {
  * Returns the current value of the indicated slider.
  */
 INLINE PN_stdfloat Character::
-get_slider_value(int n) const {
-  return _sliders[n].get_value();
+get_slider_value(int n, Thread *current_thread) const {
+  RenderCDReader cdata(_render_cycler);
+  return cdata->_slider_values[n];
 }
 
 /**
@@ -353,13 +356,9 @@ get_joint_child(int joint, int child) const {
  * Returns the current skinning matrix of the specified joint.
  */
 INLINE LMatrix4 Character::
-get_joint_skinning_matrix(int n) const {
-  nassertr(n >= 0 && n < (int)_joint_poses.size(), LMatrix4::ident_mat());
-  const CharacterJointPoseData &pose = _joint_poses[n];
-  nassertr(pose._vertex_transform != nullptr, LMatrix4::ident_mat());
-  LMatrix4 mat;
-  pose._vertex_transform->get_matrix(mat);
-  return mat;
+get_joint_skinning_matrix(int n, Thread *current_thread) const {
+  RenderCDReader cdata(_render_cycler, current_thread);
+  return cdata->_joint_skinning_matrices[n];
 }
 
 /**

@@ -37,6 +37,8 @@ PUBLISHED:
   INLINE const Character *get_character() const;
   INLINE int get_char_slider() const;
 
+  virtual PN_stdfloat get_slider(Thread *current_thread = Thread::get_current_thread()) const override;
+
 private:
   WPT(Character) _char;
   int _slider;

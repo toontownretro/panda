@@ -38,12 +38,10 @@ PUBLISHED:
   VertexTransform();
   virtual ~VertexTransform();
 
-  INLINE void set_matrix(const LMatrix4 &matrix, Thread *current_thread = Thread::get_current_thread());
-  INLINE void get_matrix(LMatrix4 &matrix) const;
+  virtual LMatrix4 get_matrix(Thread *current_thread = Thread::get_current_thread()) const=0;
+
   INLINE void mult_matrix(LMatrix4 &result, const LMatrix4 &previous) const;
   INLINE void accumulate_matrix(LMatrix4 &accum, PN_stdfloat weight) const;
-
-  INLINE const LMatrix4 &get_matrixq() const;
 
   INLINE UpdateSeq get_modified(Thread *current_thread = Thread::get_current_thread()) const;
   MAKE_PROPERTY(modified, get_modified);
@@ -75,7 +73,6 @@ private:
       return VertexTransform::get_class_type();
     }
 
-    LMatrix4 _matrix;
     UpdateSeq _modified;
   };
 
@@ -87,11 +84,11 @@ private:
   static UpdateSeq _next_modified;
 
 public:
-  static void register_with_read_factory();
+  //static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &dg);
 
 protected:
-  static TypedWritable *make_from_bam(const FactoryParams &params);
+  //static TypedWritable *make_from_bam(const FactoryParams &params);
   void fillin(DatagramIterator &scan, BamReader *manager);
 
 public:

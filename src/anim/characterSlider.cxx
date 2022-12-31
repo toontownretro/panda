@@ -92,6 +92,7 @@ read_datagram(DatagramIterator &dgi) {
   _default_value = dgi.get_stdfloat();
 }
 
+#if 0
 /**
  *
  */
@@ -116,3 +117,4 @@ get_value() const {
   nassertr(_vertex_slider != nullptr, 0.0f);
   return _vertex_slider->get_slider();
 }
+#endif

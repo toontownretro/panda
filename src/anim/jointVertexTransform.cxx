@@ -59,6 +59,14 @@ JointVertexTransform::
 /**
  *
  */
+LMatrix4 JointVertexTransform::
+get_matrix(Thread *current_thread) const {
+  return _char->get_joint_skinning_matrix(_joint, current_thread);
+}
+
+/**
+ *
+ */
 void JointVertexTransform::
 output(std::ostream &out) const {
   nassertv(_char != nullptr);

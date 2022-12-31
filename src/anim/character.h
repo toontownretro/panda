@@ -89,7 +89,7 @@ PUBLISHED:
   INLINE int get_num_sliders() const;
   INLINE void set_slider_value(int n, PN_stdfloat value);
   INLINE int find_slider(const std::string &name) const;
-  INLINE PN_stdfloat get_slider_value(int n) const;
+  INLINE PN_stdfloat get_slider_value(int n, Thread *current_thread = Thread::get_current_thread()) const;
   INLINE const std::string &get_slider_name(int n) const;
   INLINE void set_vertex_slider(int n, CharacterVertexSlider *slider);
 
@@ -102,7 +102,7 @@ PUBLISHED:
   INLINE int get_joint_parent(int n) const;
   INLINE int get_joint_num_children(int n) const;
   INLINE int get_joint_child(int joint, int child) const;
-  INLINE LMatrix4 get_joint_skinning_matrix(int n) const;
+  INLINE LMatrix4 get_joint_skinning_matrix(int n, Thread *current_thread = Thread::get_current_thread()) const;
   INLINE LMatrix4 get_joint_net_transform(int n) const;
   INLINE LMatrix4 get_joint_transform(int n) const;
   INLINE LMatrix4 get_joint_initial_net_transform_inverse(int n) const;
@@ -306,11 +306,29 @@ private:
     double _last_update;
   };
 
+  // Contains data that is used to render the results of computed animation.
+  // Contains the skinning matrix of each joint and slider values.
+  // This data changes often and needs to be properly cycled for the Draw thread,
+  // which uploads these matrices to the GPU to perform GPU vertex animation.
+  class RenderCData : public CycleData {
+  public:
+    RenderCData() = default;
+    RenderCData(const RenderCData &copy) = default;
+    virtual CycleData *make_copy() const override;
+
+    Matrices _joint_skinning_matrices;
+    vector_float _slider_values;
+  };
+
   PipelineCycler<CData> _cycler;
   typedef CycleDataLockedReader<CData> CDLockedReader;
   typedef CycleDataReader<CData> CDReader;
   typedef CycleDataWriter<CData> CDWriter;
   typedef CycleDataStageWriter<CData> CDStageWriter;
+
+  PipelineCycler<RenderCData> _render_cycler;
+  typedef CycleDataReader<RenderCData> RenderCDReader;
+  typedef CycleDataWriter<RenderCData> RenderCDWriter;
 
   // This is only used during Bam reading.
   pvector<ChannelBinding> _read_bindings;

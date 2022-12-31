@@ -41,6 +41,8 @@ PUBLISHED:
   JointVertexTransform(Character *character, int joint);
   virtual ~JointVertexTransform();
 
+  virtual LMatrix4 get_matrix(Thread *current_thread = Thread::get_current_thread()) const override;
+
   INLINE const Character *get_character() const;
   INLINE int get_joint() const;
 

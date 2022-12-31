@@ -22,27 +22,6 @@ get_name() const {
 }
 
 /**
- *
- */
-INLINE void VertexSlider::
-set_slider(PN_stdfloat slider, Thread *current_thread) {
-  {
-    CDWriter cdata(_cycler, current_thread);
-    cdata->_slider = slider;
-  }
-  mark_modified(current_thread);
-}
-
-/**
- *
- */
-INLINE PN_stdfloat VertexSlider::
-get_slider() const {
-  CDReader cdata(_cycler);
-  return cdata->_slider;
-}
-
-/**
  * Returns a sequence number that's guaranteed to change at least every time
  * the value reported by get_slider() changes.
  */
@@ -56,8 +35,7 @@ get_modified(Thread *current_thread) const {
  *
  */
 INLINE VertexSlider::CData::
-CData() :
-  _slider(0.0f)
+CData()
 {
 }
 
@@ -66,7 +44,6 @@ CData() :
  */
 INLINE VertexSlider::CData::
 CData(const VertexSlider::CData &copy) :
-  _slider(copy._slider),
   _modified(copy._modified)
 {
 }

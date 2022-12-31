@@ -193,7 +193,7 @@ write(std::ostream &out, int indent_level) const {
     indent(out, indent_level)
       << *(*ei)._transform << ":" << (*ei)._weight << "\n";
     LMatrix4 mat;
-    (*ei)._transform->get_matrix(mat);
+    mat = (*ei)._transform->get_matrix(current_thread);
     mat.write(out, indent_level + 4);
   }
   LMatrix4 blend;

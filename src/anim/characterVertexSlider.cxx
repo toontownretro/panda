@@ -56,6 +56,14 @@ CharacterVertexSlider::
 }
 
 /**
+ *
+ */
+PN_stdfloat CharacterVertexSlider::
+get_slider(Thread *current_thread) const {
+  return _char->get_slider_value(_slider, current_thread);
+}
+
+/**
  * Tells the BamReader how to create objects of type CharacterVertexSlider.
  */
 void CharacterVertexSlider::

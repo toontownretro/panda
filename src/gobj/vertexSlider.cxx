@@ -60,7 +60,7 @@ write(std::ostream &out, int indent_level) const {
  */
 void VertexSlider::
 mark_modified(Thread *current_thread) {
-  CDWriter cdata(_cycler, true, current_thread);
+  CDWriter cdata(_cycler, current_thread);
   cdata->_modified = VertexTransform::get_next_modified(current_thread);
 
   Tables::iterator ti;
@@ -103,7 +103,6 @@ make_copy() const {
  */
 void VertexSlider::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  dg.add_stdfloat(_slider);
 }
 
 /**
@@ -123,5 +122,4 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void VertexSlider::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _slider = scan.get_stdfloat();
 }

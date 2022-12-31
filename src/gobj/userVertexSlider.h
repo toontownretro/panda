@@ -33,6 +33,29 @@ PUBLISHED:
   explicit UserVertexSlider(const std::string &name);
   explicit UserVertexSlider(const InternalName *name);
 
+  INLINE void set_slider(PN_stdfloat slider);
+  virtual PN_stdfloat get_slider(Thread *current_thread = Thread::get_current_thread()) const override;
+
+private:
+  // This is the data that must be cycled between pipeline stages.
+  class EXPCL_PANDA_GOBJ CData : public CycleData {
+  public:
+    INLINE CData();
+    INLINE CData(const CData &copy);
+    virtual CycleData *make_copy() const;
+    virtual void write_datagram(BamWriter *manager, Datagram &dg) const;
+    virtual void fillin(DatagramIterator &scan, BamReader *manager);
+    virtual TypeHandle get_parent_type() const {
+      return UserVertexSlider::get_class_type();
+    }
+
+    PN_stdfloat _slider;
+  };
+
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
+
 public:
   static void register_with_read_factory();
   virtual void write_datagram(BamWriter *manager, Datagram &dg);

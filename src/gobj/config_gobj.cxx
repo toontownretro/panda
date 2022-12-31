@@ -719,5 +719,5 @@ init_libgobj() {
   TransformTable::register_with_read_factory();
   UserVertexSlider::register_with_read_factory();
   UserVertexTransform::register_with_read_factory();
-  VertexTransform::register_with_read_factory();
+  //VertexTransform::register_with_read_factory();
 }

@@ -122,6 +122,11 @@ make_joint(const std::string &name, int parent, const LMatrix4 &default_value) {
 
   _joint_poses[index]._initial_net_transform_inverse = invert(_joint_poses[index]._net_transform);
 
+  {
+    RenderCDWriter rcdata(_render_cycler);
+    rcdata->_joint_skinning_matrices.push_back(LMatrix4::ident_mat());
+  }
+
   return index;
 }
 
@@ -135,6 +140,10 @@ make_slider(const std::string &name, PN_stdfloat default_value) {
   slider._default_value = default_value;
   size_t slider_index = _sliders.size();
   _sliders.push_back(slider);
+  {
+    RenderCDWriter rcdata(_render_cycler);
+    rcdata->_slider_values.push_back(default_value);
+  }
   return slider_index;
 }
 
@@ -719,6 +728,13 @@ copy_subgraph() const {
   copy->_attachments = _attachments;
   copy->_ik_chains = _ik_chains;
 
+  {
+    RenderCDWriter rcdata(copy->_render_cycler);
+    RenderCDReader rcdata_other(_render_cycler);
+    rcdata->_joint_skinning_matrices = rcdata_other->_joint_skinning_matrices;
+    rcdata->_slider_values = rcdata_other->_slider_values;
+  }
+
   return copy;
 }
 
@@ -793,13 +809,19 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         joint._value = joint._net_transform;
       }
     }
-
-    // Compute the skinning matrix to transform the vertices.
-    if (joint._vertex_transform != nullptr) {
-      joint._vertex_transform->set_matrix(joint._initial_net_transform_inverse * joint._net_transform, current_thread);
-    }
   }
   ap_compose_collector.stop();
+
+  {
+    // Update data required to apply the computed animation to vertices.
+    RenderCDWriter rcdata(_render_cycler, current_thread);
+    for (size_t i = 0; i < joint_count; ++i) {
+      rcdata->_joint_skinning_matrices[i] = _joint_poses[i]._initial_net_transform_inverse * _joint_poses[i]._net_transform;
+    }
+    for (size_t i = 0; i < _sliders.size(); ++i) {
+      rcdata->_slider_values[i] = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
+    }
+  }
 
   ap_update_net_transform_nodes.start();
   // Compute attachment transforms from the updated character pose.
@@ -807,13 +829,6 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     compute_attachment_transform(i);
   }
   ap_update_net_transform_nodes.stop();
-
-  // Apply computed slider values.
-  for (size_t i = 0; i < _sliders.size(); ++i) {
-    int group = i / SIMDFloatVector::num_columns;
-    int sub = i % SIMDFloatVector::num_columns;
-    _sliders[i].set_value(data._sliders[group][sub]);
-  }
 
   return true;
 }
@@ -1067,6 +1082,18 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   _sliders.resize(scan.get_int16());
   for (size_t i = 0; i < _sliders.size(); i++) {
     _sliders[i].read_datagram(scan);
+  }
+
+  {
+    RenderCDWriter cdata(_render_cycler);
+    cdata->_joint_skinning_matrices.resize(_joints.size());
+    cdata->_slider_values.resize(_sliders.size());
+    for (size_t i = 0; i < _joints.size(); ++i) {
+      cdata->_joint_skinning_matrices[i] = LMatrix4::ident_mat();
+    }
+    for (size_t i = 0; i < _sliders.size(); ++i) {
+      cdata->_slider_values[i] = 0.0f;
+    }
   }
 
   _pose_parameters.resize(scan.get_uint8());
@@ -1434,4 +1461,12 @@ advance() {
   Thread *current_thread = Thread::get_current_thread();
   double now = ClockObject::get_global_clock()->get_frame_time();
   do_advance(now, cdata, current_thread);
+}
+
+/**
+ *
+ */
+CycleData *Character::RenderCData::
+make_copy() const {
+  return new RenderCData(*this);
 }

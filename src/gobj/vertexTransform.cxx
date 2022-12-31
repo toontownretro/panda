@@ -53,7 +53,7 @@ void VertexTransform::
 write(std::ostream &out, int indent_level) const {
   indent(out, indent_level)
     << *this << ":\n";
-  get_matrixq().write(out, indent_level + 2);
+  get_matrix().write(out, indent_level + 2);
 }
 
 /**
@@ -90,6 +90,7 @@ mark_modified(Thread *current_thread) {
   //}
 }
 
+#if 0
 /**
  *
  */
@@ -97,6 +98,7 @@ void VertexTransform::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }
+#endif
 
 /**
  * Writes the contents of this object to the datagram for shipping out to a
@@ -109,6 +111,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
   manager->write_cdata(dg, _cycler);
 }
 
+#if 0
 /**
  *
  */
@@ -122,6 +125,7 @@ make_from_bam(const FactoryParams &params) {
   tform->fillin(scan, manager);
   return tform;
 }
+#endif
 
 /**
  * This internal function is called by make_from_bam to read in all of the
@@ -147,7 +151,6 @@ make_copy() const {
  */
 void VertexTransform::CData::
 write_datagram(BamWriter *manager, Datagram &dg) const {
-  _matrix.write_datagram(dg);
 }
 
 /**
@@ -167,5 +170,4 @@ complete_pointers(TypedWritable **p_list, BamReader *manager) {
  */
 void VertexTransform::CData::
 fillin(DatagramIterator &scan, BamReader *manager) {
-  _matrix.read_datagram(scan);
 }

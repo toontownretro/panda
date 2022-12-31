@@ -49,6 +49,8 @@ register_with_read_factory() {
 void UserVertexTransform::
 write_datagram(BamWriter *manager, Datagram &dg) {
   VertexTransform::write_datagram(manager, dg);
+
+  manager->write_cdata(dg, _cycler);
 }
 
 /**
@@ -75,4 +77,41 @@ make_from_bam(const FactoryParams &params) {
 void UserVertexTransform::
 fillin(DatagramIterator &scan, BamReader *manager) {
   VertexTransform::fillin(scan, manager);
+
+  manager->read_cdata(scan, _cycler);
+}
+
+/**
+ * Returns the transform's matrix.
+ */
+LMatrix4 UserVertexTransform::
+get_matrix(Thread *current_thread) const {
+  CDReader cdata(_cycler, current_thread);
+  return cdata->_matrix;
+}
+
+/**
+ *
+ */
+CycleData *UserVertexTransform::CData::
+make_copy() const {
+  return new CData(*this);
+}
+
+/**
+ * Writes the contents of this object to the datagram for shipping out to a
+ * Bam file.
+ */
+void UserVertexTransform::CData::
+write_datagram(BamWriter *manager, Datagram &dg) const {
+  _matrix.write_datagram(dg);
+}
+
+/**
+ * This internal function is called by make_from_bam to read in all of the
+ * relevant data from the BamFile for the new UserVertexTransform.
+ */
+void UserVertexTransform::CData::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _matrix.read_datagram(scan);
 }

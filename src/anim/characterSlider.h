@@ -42,8 +42,8 @@ private:
   void write_datagram(Datagram &dg);
   void read_datagram(DatagramIterator &dgi);
 
-  void set_value(PN_stdfloat value);
-  PN_stdfloat get_value() const;
+  //void set_value(PN_stdfloat value);
+  //PN_stdfloat get_value() const;
 
 public:
   PN_stdfloat _default_value;
