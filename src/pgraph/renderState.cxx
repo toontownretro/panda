@@ -57,6 +57,8 @@ CacheStats RenderState::_cache_stats;
 
 TypeHandle RenderState::_type_handle;
 
+static ConfigVariableDouble garbage_collect_render_states_rate("garbage-collect-render-states-rate", 1.0);
+
 
 /**
  * Actually, this could be a private constructor, since no one inherits from
@@ -957,7 +959,7 @@ garbage_collect() {
 
   // How many elements to process this pass?
   size_t size = orig_size;
-  size_t num_this_pass = std::max(0, int(size * garbage_collect_states_rate));
+  size_t num_this_pass = std::max(0, int(size * garbage_collect_render_states_rate));
   if (num_this_pass <= 0) {
     return num_attribs;
   }

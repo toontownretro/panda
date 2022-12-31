@@ -50,6 +50,8 @@ CacheStats TransformState::_cache_stats;
 
 TypeHandle TransformState::_type_handle;
 
+static ConfigVariableDouble garbage_collect_transform_states_rate("garbage-collect-transform-states-rate", 1.0);
+
 /**
  *
  */
@@ -1143,7 +1145,7 @@ garbage_collect() {
 
   // How many elements to process this pass?
   size_t size = orig_size;
-  size_t num_this_pass = std::max(0, int(size * garbage_collect_states_rate));
+  size_t num_this_pass = std::max(0, int(size * garbage_collect_transform_states_rate));
   if (num_this_pass <= 0) {
     return 0;
   }
