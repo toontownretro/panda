@@ -2459,7 +2459,7 @@ void PandaNode::
 r_copy_children(const PandaNode *from, PandaNode::InstanceMap &inst_map,
                 Thread *current_thread) {
   CDReader from_cdata(from->_cycler, current_thread);
-  CPT(Down) from_down = from_cdata->get_down();
+  const Down *from_down = from_cdata->get_down();
   Down::const_iterator di;
   for (di = from_down->begin(); di != from_down->end(); ++di) {
     int sort = (*di).get_sort();
@@ -4204,7 +4204,7 @@ check_cached(bool update_bounds) const {
     // We'll need to get a fresh read pointer, since another thread might
     // already have modified the pointer on the object since we queried it.
 #ifdef DO_PIPELINING
-    node_unref_delete((CycleData *)_cdata);
+    //node_unref_delete((CycleData *)_cdata);
 #endif  // DO_PIPELINING
     ((PandaNodePipelineReader *)this)->_cdata = nullptr;
     int pipeline_stage = _current_thread->get_pipeline_stage();
@@ -4216,7 +4216,7 @@ check_cached(bool update_bounds) const {
       if (_cdata != (const PandaNode::CData *)fresh_cdata) {
         ((PandaNodePipelineReader *)this)->_cdata = fresh_cdata;
 #ifdef DO_PIPELINING
-        _cdata->node_ref();
+        //_cdata->node_ref();
 #endif  // DO_PIPELINING
       }
 
@@ -4231,7 +4231,7 @@ check_cached(bool update_bounds) const {
       if (_cdata != (const PandaNode::CData *)cdataw) {
         ((PandaNodePipelineReader *)this)->_cdata = cdataw;
 #ifdef DO_PIPELINING
-        _cdata->node_ref();
+        //_cdata->node_ref();
 #endif  // DO_PIPELINING
       }
     }

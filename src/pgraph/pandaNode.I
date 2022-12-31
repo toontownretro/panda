@@ -65,7 +65,7 @@ get_num_children(Thread *current_thread) const {
 INLINE PandaNode *PandaNode::
 get_child(int n, Thread *current_thread) const {
   CDReader cdata(_cycler, current_thread);
-  CPT(Down) down = cdata->get_down();
+  const Down *down = cdata->get_down();
   nassertr(n >= 0 && n < (int)down->size(), nullptr);
   return (*down)[n].get_child();
 }
@@ -77,7 +77,7 @@ get_child(int n, Thread *current_thread) const {
 INLINE int PandaNode::
 get_child_sort(int n, Thread *current_thread) const {
   CDReader cdata(_cycler, current_thread);
-  CPT(Down) down = cdata->get_down();
+  const Down *down = cdata->get_down();
   nassertr(n >= 0 && n < (int)down->size(), -1);
   return (*down)[n].get_sort();
 }
@@ -916,7 +916,7 @@ set_fancy_bit(int bits, bool value) {
 /**
  * Returns a read-only pointer to the _down list.
  */
-INLINE CPT(PandaNode::Down) PandaNode::CData::
+INLINE const PandaNode::Down *PandaNode::CData::
 get_down() const {
   return _down.get_read_pointer();
 }
@@ -932,7 +932,7 @@ modify_down() {
 /**
  * Returns a read-only pointer to the _stashed list.
  */
-INLINE CPT(PandaNode::Down) PandaNode::CData::
+INLINE const PandaNode::Down *PandaNode::CData::
 get_stashed() const {
   return _stashed.get_read_pointer();
 }
@@ -948,7 +948,7 @@ modify_stashed() {
 /**
  * Returns a read-only pointer to the _up list.
  */
-INLINE CPT(PandaNode::Up) PandaNode::CData::
+INLINE const PandaNode::Up *PandaNode::CData::
 get_up() const {
   return _up.get_read_pointer();
 }
@@ -1207,7 +1207,7 @@ PandaNodePipelineReader(const PandaNode *node, Thread *current_thread) :
   // We node_ref the CData pointer, so that if anyone makes changes to the
   // PandaNode while we hold this pointer, it will force a copy--so that this
   // object will remain unchanged (if out-of-date).
-  _cdata->node_ref();
+  //_cdata->node_ref();
 #endif  // DO_PIPELINING
 }
 
@@ -1221,7 +1221,7 @@ PandaNodePipelineReader(const PandaNodePipelineReader &copy) :
   _cdata(copy._cdata)
 {
 #ifdef DO_PIPELINING
-  _cdata->node_ref();
+  //_cdata->node_ref();
 #endif  // DO_PIPELINING
 
   /*
@@ -1245,14 +1245,14 @@ operator = (const PandaNodePipelineReader &copy) {
   */
 
 #ifdef DO_PIPELINING
-  node_unref_delete((CycleData *)_cdata);
+  //node_unref_delete((CycleData *)_cdata);
 #endif  // DO_PIPELINING
 
   _node = copy._node;
   _cdata = copy._cdata;
 
 #ifdef DO_PIPELINING
-  _cdata->node_ref();
+  //_cdata->node_ref();
 #endif  // DO_PIPELINING
 
   /*
@@ -1274,7 +1274,7 @@ INLINE PandaNodePipelineReader::
   */
 
 #ifdef DO_PIPELINING
-  node_unref_delete((CycleData *)_cdata);
+  //node_unref_delete((CycleData *)_cdata);
 #endif  // DO_PIPELINING
 
 #ifdef _DEBUG
@@ -1411,7 +1411,7 @@ get_num_children() const {
  */
 INLINE PandaNode *PandaNodePipelineReader::
 get_child(int n) const {
-  CPT(PandaNode::Down) down = _cdata->get_down();
+  const PandaNode::Down *down = _cdata->get_down();
   nassertr(n >= 0 && n < (int)down->size(), nullptr);
   return (*down)[n].get_child();
 }
@@ -1423,7 +1423,7 @@ get_child(int n) const {
  */
 INLINE const PandaNode::DownConnection &PandaNodePipelineReader::
 get_child_connection(int n) const {
-  CPT(PandaNode::Down) down = _cdata->get_down();
+  const PandaNode::Down *down = _cdata->get_down();
   //nassertr(n >= 0 && n < (int)down->size(), nullptr);
   return (*down)[n];
 }
@@ -1434,7 +1434,7 @@ get_child_connection(int n) const {
  */
 INLINE int PandaNodePipelineReader::
 get_child_sort(int n) const {
-  CPT(PandaNode::Down) down = _cdata->get_down();
+  const PandaNode::Down *down = _cdata->get_down();
   nassertr(n >= 0 && n < (int)down->size(), -1);
   return (*down)[n].get_sort();
 }

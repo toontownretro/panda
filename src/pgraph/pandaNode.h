@@ -696,11 +696,11 @@ private:
     void fillin_down_list(Down &down_list, const std::string &tag,
                           DatagramIterator &scan, BamReader *manager);
 
-    INLINE CPT(Down) get_down() const;
+    INLINE const Down *get_down() const;
     INLINE PT(Down) modify_down();
-    INLINE CPT(Down) get_stashed() const;
+    INLINE const Down *get_stashed() const;
     INLINE PT(Down) modify_stashed();
-    INLINE CPT(Up) get_up() const;
+    INLINE const Up *get_up() const;
     INLINE PT(Up) modify_up();
 
   private:
@@ -750,6 +750,7 @@ PUBLISHED:
     INLINE Children(const CData *cdata);
     INLINE Children(const Children &copy);
     INLINE Children(Children &&from) noexcept;
+    INLINE ~Children() = default;
 
     INLINE void operator = (const Children &copy);
     INLINE void operator = (Children &&from) noexcept;
@@ -767,7 +768,7 @@ PUBLISHED:
     INLINE size_t size() const { return get_num_children(); }
 
   private:
-    CPT(Down) _down;
+    const Down *_down;
   };
 
   // Similarly for stashed children.
@@ -777,6 +778,7 @@ PUBLISHED:
     INLINE Stashed(const CData *cdata);
     INLINE Stashed(const Stashed &copy);
     INLINE Stashed(Stashed &&from) noexcept;
+    INLINE ~Stashed() = default;
 
     INLINE void operator = (const Stashed &copy);
     INLINE void operator = (Stashed &&from) noexcept;
@@ -790,7 +792,7 @@ PUBLISHED:
     INLINE size_t size() const { return get_num_stashed(); }
 
   private:
-    CPT(Down) _stashed;
+    const Down *_stashed;
   };
 
   // This class is returned from get_parents().
@@ -800,6 +802,7 @@ PUBLISHED:
     INLINE Parents(const CData *cdata);
     INLINE Parents(const Parents &copy);
     INLINE Parents(Parents &&from) noexcept;
+    INLINE ~Parents() = default;
 
     INLINE void operator = (const Parents &copy);
     INLINE void operator = (Parents &&from) noexcept;
@@ -812,7 +815,7 @@ PUBLISHED:
     INLINE size_t size() const { return get_num_parents(); }
 
   private:
-    CPT(Up) _up;
+    const Up *_up;
   };
 
 public:
