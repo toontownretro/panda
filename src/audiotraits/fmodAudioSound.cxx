@@ -631,17 +631,19 @@ set_3d_attributes_on_channel() {
     // Steam Audio doesn't care about the relative 3D attributes.
     _sa_spatial_dsp->setParameterData(0, &attr, sizeof(attr));
 
-  } else if ((_channel != nullptr) && (soundMode & FMOD_3D) != 0) {
+  } else if (_channel != nullptr) {
     result = _sound->getMode(&soundMode);
     fmod_audio_errcheck("_sound->getMode()", result);
-    FMOD_VECTOR pos, vel;
-    pos = lvec_to_fmod(_pos);
-    vel = lvec_to_fmod(_vel);
-    result = _channel->set3DAttributes(&pos, &vel);
-    if (CHANNEL_INVALID(result)) {
-      _channel = nullptr;
-    } else {
-      fmod_audio_errcheck("_channel->set3DAttributes()", result);
+    if ((soundMode & FMOD_3D) != 0) {
+      FMOD_VECTOR pos, vel;
+      pos = lvec_to_fmod(_pos);
+      vel = lvec_to_fmod(_vel);
+      result = _channel->set3DAttributes(&pos, &vel);
+      if (CHANNEL_INVALID(result)) {
+        _channel = nullptr;
+      } else {
+        fmod_audio_errcheck("_channel->set3DAttributes()", result);
+      }
     }
   }
 }
