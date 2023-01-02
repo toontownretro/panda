@@ -491,6 +491,7 @@ init_libpgraph() {
   NodePath::init_type();
   NodePathComponent::init_type();
   PandaNode::init_type();
+  PandaNode::DetectCallbackData::init_type();
   PandaNodePipelineReader::init_type();
   ParamNodePath::init_type();
   PlaneNode::init_type();
