@@ -75,22 +75,22 @@ PUBLISHED:
   // published so that characters can be combined.
   virtual PandaNode *combine_with(PandaNode *other);
 
-  void set_name(const string &name);
+  void set_name(const std::string &name);
   static void set_detect_callback(CallbackObject *object);
 
   // callback object triggered when this node is named something particular
   // added for inappropriate scene graph hacking
   class EXPCL_PANDA_PGRAPH DetectCallbackData : public CallbackData {
   public:
-    INLINE DetectCallbackData(const string &action, PandaNode *node) :
+    INLINE DetectCallbackData(const std::string &action, PandaNode *node) :
       _action(action), _node(node) { }
 
   PUBLISHED:
-    INLINE const string &get_action() const { return _action; }
+    INLINE const std::string &get_action() const { return _action; }
     INLINE PandaNode *get_node() const { return _node; }
 
   private:
-    string _action;
+    std::string _action;
     PT(PandaNode) _node;
 
   public:
@@ -112,8 +112,8 @@ PUBLISHED:
 
 protected:
   // flagged name found for this node
-  void hacker_detect(const string &action);
-  
+  void hacker_detect(const std::string &action);
+
   PandaNode(const PandaNode &copy);
 
   PandaNode &operator = (const PandaNode &copy) = delete;

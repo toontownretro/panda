@@ -30,6 +30,7 @@
 #include "graphicsStateGuardianBase.h"
 #include "decalEffect.h"
 #include "showBoundsEffect.h"
+#include "globPattern.h"
 
 using std::ostream;
 using std::ostringstream;
@@ -100,7 +101,7 @@ PandaNode(const string &name) :
 //  Description: Temporary hack to detect hacker activity.
 ////////////////////////////////////////////////////////////////////
 void PandaNode::
-set_name(const string &name) {
+set_name(const std::string &name) {
   Namable::set_name(name);
   // name check enabled
   GlobPattern hnn_glob(hacker_node_name.get_value());
@@ -125,7 +126,7 @@ set_detect_callback(CallbackObject *object) {
 //  Description: Temporary hack to detect hacker activity.
 ////////////////////////////////////////////////////////////////////
 void PandaNode::
-hacker_detect(const string &action) {
+hacker_detect(const std::string &action) {
   // Trigger the in-place Python callback if we have that set.  This
   // will call immediately into Python for a prompt backtrace.
   if (_detect_callback) {
