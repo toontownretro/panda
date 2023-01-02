@@ -49,6 +49,7 @@ DrawMask PandaNode::_overall_bit = DrawMask::bit(31);
 PStatCollector PandaNode::_update_bounds_pcollector("*:Bounds");
 
 TypeHandle PandaNode::_type_handle;
+TypeHandle PandaNode::DetectCallbackData::_type_handle;
 TypeHandle PandaNode::CData::_type_handle;
 TypeHandle PandaNodePipelineReader::_type_handle;
 
@@ -70,6 +71,9 @@ TypeHandle PandaNodePipelineReader::_type_handle;
  * that the particular NodePath calling it is kept appropriately up-to-date.
  */
 
+// Temporary hacks to detect hacker activity.
+PT(CallbackObject) PandaNode::_detect_callback;
+ConfigVariableString hacker_node_name("callback-node-name", "pPlane*");
 
 /**
  *
@@ -88,6 +92,51 @@ PandaNode(const string &name) :
 #ifdef DO_MEMORY_USAGE
   MemoryUsage::update_type(this, this);
 #endif
+}
+
+////////////////////////////////////////////////////////////////////
+//     Function: PandaNode::set_name
+//       Access: Published
+//  Description: Temporary hack to detect hacker activity.
+////////////////////////////////////////////////////////////////////
+void PandaNode::
+set_name(const string &name) {
+  Namable::set_name(name);
+  // name check enabled
+  GlobPattern hnn_glob(hacker_node_name.get_value());
+  if (hnn_glob.matches(get_name())) {
+    hacker_detect("rename");
+  }
+}
+
+////////////////////////////////////////////////////////////////////
+//     Function: PandaNode::set_name
+//       Access: Published
+//  Description: Temporary hack to detect hacker activity.
+////////////////////////////////////////////////////////////////////
+void PandaNode::
+set_detect_callback(CallbackObject *object) {
+  _detect_callback = object;
+}
+
+////////////////////////////////////////////////////////////////////
+//     Function: PandaNode::hacker_detect
+//       Access: Protected
+//  Description: Temporary hack to detect hacker activity.
+////////////////////////////////////////////////////////////////////
+void PandaNode::
+hacker_detect(const string &action) {
+  // Trigger the in-place Python callback if we have that set.  This
+  // will call immediately into Python for a prompt backtrace.
+  if (_detect_callback) {
+    DetectCallbackData cbdata(action, this);
+    _detect_callback->do_callback(&cbdata);
+  }
+
+  // Could throw an event, which we can also easily detect in Python,
+  // but it won't be detected until the end of the frame so we'll lose
+  // the backtrace.
+  //throw_event("hacker_detect", action, EventParameter(new EventStorePandaNode(this)));
 }
 
 /**
@@ -2345,6 +2394,11 @@ compute_external_bounds(CPT(BoundingVolume) &external_bounds,
 void PandaNode::
 parents_changed() {
   nassertv((_unexpected_change_flags & UC_parents) == 0);
+  // name check enabled
+  GlobPattern hnn_glob(hacker_node_name.get_value());
+  if (hnn_glob.matches(get_name())) {
+    hacker_detect("reparent");
+  }
 }
 
 /**

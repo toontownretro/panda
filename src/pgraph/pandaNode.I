@@ -236,6 +236,16 @@ clear_attrib(TypeHandle type) {
   clear_attrib(slot);
 }
 
+////////////////////////////////////////////////////////////////////
+//     Function: NodePath::set_name
+//       Access: Published
+//  Description: Changes the name of the referenced node.
+////////////////////////////////////////////////////////////////////
+INLINE void NodePath::
+set_name(const string &name) {
+  nassertv_always(!is_empty());
+  node()->set_name(name);
+
 /**
  * Returns the render effect of the indicated type, if it is defined on the
  * node, or NULL if it is not.
