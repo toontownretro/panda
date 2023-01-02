@@ -95,11 +95,9 @@ PandaNode(const string &name) :
 #endif
 }
 
-////////////////////////////////////////////////////////////////////
-//     Function: PandaNode::set_name
-//       Access: Published
-//  Description: Temporary hack to detect hacker activity.
-////////////////////////////////////////////////////////////////////
+/**
+ * Temporary hack to detect hacker activity.
+ */
 void PandaNode::
 set_name(const std::string &name) {
   Namable::set_name(name);
@@ -110,21 +108,17 @@ set_name(const std::string &name) {
   }
 }
 
-////////////////////////////////////////////////////////////////////
-//     Function: PandaNode::set_name
-//       Access: Published
-//  Description: Temporary hack to detect hacker activity.
-////////////////////////////////////////////////////////////////////
+/**
+ * Temporary hack to detect hacker activity.
+ */
 void PandaNode::
 set_detect_callback(CallbackObject *object) {
   _detect_callback = object;
 }
 
-////////////////////////////////////////////////////////////////////
-//     Function: PandaNode::hacker_detect
-//       Access: Protected
-//  Description: Temporary hack to detect hacker activity.
-////////////////////////////////////////////////////////////////////
+/**
+ * Temporary hack to detect hacker activity.
+ */
 void PandaNode::
 hacker_detect(const std::string &action) {
   // Trigger the in-place Python callback if we have that set.  This
