@@ -47,6 +47,9 @@ UpdateSeq PandaNode::_reset_prev_transform_seq;
 DrawMask PandaNode::_overall_bit = DrawMask::bit(31);
 
 PStatCollector PandaNode::_update_bounds_pcollector("*:Bounds");
+PStatCollector PandaNode::_update_masks_pcollector("*:Bounds:Masks");
+PStatCollector PandaNode::_update_clipping_pcollector("*:Bounds:Clipping");
+PStatCollector PandaNode::_update_cache_pcollector("*:Bounds:Cache");
 
 TypeHandle PandaNode::_type_handle;
 TypeHandle PandaNode::CData::_type_handle;
@@ -1593,7 +1596,7 @@ get_net_draw_control_mask() const {
   CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
   if (cdata->_last_update != cdata->_next_update) {
     // The cache is stale; it needs to be rebuilt.
-    PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_masks_pcollector);
     CDStageWriter cdataw =
       ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
     return cdataw->_net_draw_control_mask;
@@ -1620,7 +1623,7 @@ get_net_draw_show_mask() const {
   CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
   if (cdata->_last_update != cdata->_next_update) {
     // The cache is stale; it needs to be rebuilt.
-    PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_masks_pcollector);
     CDStageWriter cdataw =
       ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
     return cdataw->_net_draw_show_mask;
@@ -1684,7 +1687,7 @@ get_net_collide_mask(Thread *current_thread) const {
   CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
   if (cdata->_last_update != cdata->_next_update) {
     // The cache is stale; it needs to be rebuilt.
-    PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_masks_pcollector);
     CDStageWriter cdataw =
       ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
     return cdataw->_net_collide_mask;
@@ -1702,7 +1705,7 @@ get_off_clip_planes(Thread *current_thread) const {
   CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
   if (cdata->_last_update != cdata->_next_update) {
     // The cache is stale; it needs to be rebuilt.
-    PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_clipping_pcollector);
     CDStageWriter cdataw =
       ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
     return cdataw->_off_clip_planes;
@@ -4223,7 +4226,7 @@ check_cached(bool update_bounds) const {
     } else {
       // No, the cache is still stale.  We have to do the work of freshening
       // it.
-      PStatTimer timer(PandaNode::_update_bounds_pcollector);
+      PStatTimer timer(PandaNode::_update_cache_pcollector);
       PandaNode::CDStageWriter cdataw = ((PandaNode *)_node)->update_cached(update_bounds, pipeline_stage, fresh_cdata);
       nassertv(cdataw->_last_update == cdataw->_next_update);
       // As above, we save the new pointer, and then let the lock release

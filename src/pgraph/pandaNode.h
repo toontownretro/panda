@@ -736,6 +736,9 @@ private:
   static DrawMask _overall_bit;
 
   static PStatCollector _update_bounds_pcollector;
+  static PStatCollector _update_masks_pcollector;
+  static PStatCollector _update_clipping_pcollector;
+  static PStatCollector _update_cache_pcollector;
 
 PUBLISHED:
   // This class is returned from get_children().  Use it to walk through the
