@@ -128,7 +128,7 @@ cull_callback(CullTraverser *trav, CullTraverserData &data) {
   // We may need a better way to do this optimization later, to handle
   // characters that might animate themselves in front of the view frustum.
 
-  update();
+  update(false);
   return true;
 }
 
@@ -528,7 +528,7 @@ redirect_slider(const VertexSlider *vs, CharacterNode::GeomSliderMap &gsmap) {
  * called explicitly.
  */
 void CharacterNode::
-update() {
+update(bool update_attachment_nodes) {
   LightMutexHolder holder(_lock);
   double now = ClockObject::get_global_clock()->get_frame_time();
   if (now != _last_auto_update) {
@@ -541,7 +541,7 @@ update() {
     }
 
     PStatTimer timer(_joints_pcollector);
-    do_update();
+    do_update(update_attachment_nodes);
   }
 }
 
@@ -549,13 +549,13 @@ update() {
  * Recalculates the character even if we think it doesn't need it.
  */
 void CharacterNode::
-force_update() {
+force_update(bool update_attachment_nodes) {
   LightMutexHolder holder(_lock);
 
   // Statistics
   PStatTimer timer(_joints_pcollector);
 
-  _char->force_update();
+  _char->force_update(update_attachment_nodes);
 }
 
 /**
@@ -563,12 +563,12 @@ force_update() {
  * PStatCollector has already been started, and that the lock is held.
  */
 void CharacterNode::
-do_update() {
+do_update(bool update_attachment_nodes) {
   // Update all the joints and sliders.
   if (even_animation) {
-    _char->force_update();
+    _char->force_update(update_attachment_nodes);
   } else {
-    _char->update();
+    _char->update(update_attachment_nodes);
   }
 }
 
@@ -646,14 +646,14 @@ animate_characters(const NodePathCollection &node_paths) {
     js->parallel_process(node_paths.get_num_paths(), [&node_paths] (int i) {
       CharacterNode *char_node;
       DCAST_INTO_V(char_node, node_paths.get_path(i).node());
-      char_node->update();
+      char_node->update(false);
     });
 
   } else {
     for (int i = 0; i < node_paths.get_num_paths(); ++i) {
       CharacterNode *char_node;
       DCAST_INTO_V(char_node, node_paths.get_path(i).node());
-      char_node->update();
+      char_node->update(false);
     }
   }
 }
