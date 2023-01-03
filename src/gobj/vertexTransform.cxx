@@ -67,7 +67,7 @@ write(std::ostream &out, int indent_level) const {
  */
 UpdateSeq VertexTransform::
 get_next_modified(Thread *current_thread) {
-  CDWriter cdatag(_global_cycler, true, current_thread);
+  CDWriter cdatag(_global_cycler, current_thread);
   ++_next_modified;
   cdatag->_modified = _next_modified;
 

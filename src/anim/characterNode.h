@@ -37,8 +37,8 @@ public:
 
 PUBLISHED:
 
-  void update();
-  void force_update();
+  void update(bool update_attachment_nodes = true);
+  void force_update(bool update_attachment_nodes = true);
 
   INLINE Character *get_character() const;
 
@@ -61,7 +61,7 @@ protected:
                                Thread *current_thread) override;
 
 private:
-  void do_update();
+  void do_update(bool update_attachment_nodes);
 
   typedef phash_map<const PandaNode *, PandaNode *, pointer_hash> NodeMap;
   typedef phash_map<const GeomVertexData *, GeomVertexData *, pointer_hash> GeomVertexMap;

@@ -25,6 +25,7 @@
 #include "animEvalContext.h"
 #include "mathutil_simd.h"
 #include "ikHelper.h"
+#include "characterVertexSlider.h"
 
 TypeHandle Character::_type_handle;
 
@@ -210,13 +211,13 @@ bind_anim(AnimChannelTable *anim) {
  * false otherwise.
  */
 bool Character::
-update() {
+update(bool update_attachment_nodes) {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
 
   double now = ClockObject::get_global_clock()->get_frame_time();
   if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
-    return do_update(now, cdata, current_thread);
+    return do_update(now, cdata, current_thread, update_attachment_nodes);
 
   } else {
     return false;
@@ -298,7 +299,7 @@ do_advance(double now, CData *cdata, Thread *current_thread) {
  * Internal method that actually computes the animation for the character.
  */
 bool Character::
-do_update(double now, CData *cdata, Thread *current_thread) {
+do_update(double now, CData *cdata, Thread *current_thread, bool update_attachment_nodes) {
   if ((int)_joints.size() > max_character_joints) {
     anim_cat.error()
       << "Too many joints on character " << get_name() << "\n";
@@ -409,7 +410,7 @@ do_update(double now, CData *cdata, Thread *current_thread) {
   ik.apply_ik(data, 1.0f);
 
   // Now apply the evaluated pose to the joints.
-  bool any_changed = apply_pose(cdata, cdata->_root_xform, data, current_thread);
+  bool any_changed = apply_pose(cdata, cdata->_root_xform, data, current_thread, update_attachment_nodes);
 
   cdata->_anim_changed = false;
   cdata->_last_update = now;
@@ -422,12 +423,12 @@ do_update(double now, CData *cdata, Thread *current_thread) {
  * animation for the current frame, regardless of whether we think it needs to.
  */
 bool Character::
-force_update() {
+force_update(bool update_attachment_nodes) {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
   double now = ClockObject::get_global_clock()->get_frame_time();
 
-  return do_update(now, cdata, current_thread);
+  return do_update(now, cdata, current_thread, update_attachment_nodes);
 }
 
 /**
@@ -488,7 +489,7 @@ add_attachment_parent(int n, int parent, const LPoint3 &local_pos,
   //}
   attach._parents.push_back(std::move(inf));
 
-  compute_attachment_transform(n);
+  compute_attachment_transform(n, true);
 }
 
 /**
@@ -604,7 +605,7 @@ find_attachment(const std::string &name) const {
  * Computes the indicated attachment's net transform from the root.
  */
 void Character::
-compute_attachment_transform(int index) {
+compute_attachment_transform(int index, bool force_update_node) {
   nassertv(index >= 0 && index < (int)_attachments.size());
 
   CharacterAttachment &attach = _attachments[index];
@@ -624,7 +625,11 @@ compute_attachment_transform(int index) {
   } else {
     attach._curr_transform = TransformState::make_identity();
   }
-  if (attach._node != nullptr) {
+
+  // Only apply the new attachment transform to the node if the attachment
+  // node has children.  This allows us to avoid wastefully invalidating
+  // bounding volumes up the scene graph.
+  if (attach._node != nullptr && (force_update_node || attach._node->get_num_children() > 0)) {
     attach._node->set_transform(attach._curr_transform);
   }
 }
@@ -742,7 +747,8 @@ copy_subgraph() const {
  * Applies the final pose computed by the animation graph to each joint.
  */
 bool Character::
-apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread) {
+apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread,
+           bool update_attachment_nodes) {
   PStatTimer timer(apply_pose_collector);
 
   Character *merge_char = cdata->_joint_merge_character;
@@ -818,15 +824,22 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     for (size_t i = 0; i < joint_count; ++i) {
       rcdata->_joint_skinning_matrices[i] = _joint_poses[i]._initial_net_transform_inverse * _joint_poses[i]._net_transform;
     }
+    bool marked = false;
     for (size_t i = 0; i < _sliders.size(); ++i) {
-      rcdata->_slider_values[i] = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
+      float value = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
+      if (!IS_THRESHOLD_EQUAL(value, rcdata->_slider_values[i], NEARLY_ZERO(float))) {
+        rcdata->_slider_values[i] = value;
+        if (!marked && _sliders[i].mark_tables_modified(current_thread)) {
+          marked = true;
+        }
+      }
     }
   }
 
   ap_update_net_transform_nodes.start();
   // Compute attachment transforms from the updated character pose.
   for (size_t i = 0; i < _attachments.size(); i++) {
-    compute_attachment_transform(i);
+    compute_attachment_transform(i, update_attachment_nodes);
   }
   ap_update_net_transform_nodes.stop();
 

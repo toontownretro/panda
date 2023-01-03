@@ -39,6 +39,9 @@ PUBLISHED:
 
   virtual PN_stdfloat get_slider(Thread *current_thread = Thread::get_current_thread()) const override;
 
+public:
+  void mark_tables_modified(Thread *current_thread);
+
 private:
   WPT(Character) _char;
   int _slider;

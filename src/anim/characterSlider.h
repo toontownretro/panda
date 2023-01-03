@@ -36,6 +36,8 @@ public:
 
   void operator = (const CharacterSlider &other);
 
+  bool mark_tables_modified(Thread *current_thread);
+
 private:
   CharacterSlider(const std::string &name);
 

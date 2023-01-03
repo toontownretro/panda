@@ -124,8 +124,8 @@ PUBLISHED:
 
   void set_joint_vertex_transform(JointVertexTransform *transform, int joint);
 
-  bool update();
-  bool force_update();
+  bool update(bool update_attachment_nodes = true);
+  bool force_update(bool update_attachment_nodes = true);
 
   void recompute_joint_net_transforms();
   void recompute_joint_net_transform(int joint);
@@ -141,7 +141,7 @@ PUBLISHED:
   CPT(TransformState) get_attachment_net_transform(int attachment) const;
   int get_num_attachments() const;
   int find_attachment(const std::string &name) const;
-  void compute_attachment_transform(int index);
+  void compute_attachment_transform(int index, bool force_update_node);
   void remove_attachment(int attachment);
   void remove_all_attachments();
 
@@ -221,9 +221,10 @@ private:
   void update_active_owner(CharacterNode *old_owner, CharacterNode *new_owner);
 
   bool apply_pose(CData *cdata, const LMatrix4 &root_xform,
-                  const AnimEvalData &data, Thread *current_thread);
+                  const AnimEvalData &data, Thread *current_thread,
+                  bool update_attachment_nodes);
 
-  bool do_update(double now, CData *cdata, Thread *current_thread);
+  bool do_update(double now, CData *cdata, Thread *current_thread, bool update_attachment_nodes);
   void do_advance(double now, CData *cdata, Thread *current_thread);
 
 private:

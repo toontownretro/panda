@@ -60,12 +60,14 @@ write(std::ostream &out, int indent_level) const {
  */
 void VertexSlider::
 mark_modified(Thread *current_thread) {
-  CDWriter cdata(_cycler, current_thread);
-  cdata->_modified = VertexTransform::get_next_modified(current_thread);
+  //CDWriter cdata(_cycler, current_thread);
+  //cdata->_modified = VertexTransform::get_next_modified(current_thread);
+
+  UpdateSeq modified = VertexTransform::get_next_modified(current_thread);
 
   Tables::iterator ti;
   for (ti = _tables.begin(); ti != _tables.end(); ++ti) {
-    (*ti)->update_modified(cdata->_modified, current_thread);
+    (*ti)->update_modified(modified, current_thread);
   }
 }
 
