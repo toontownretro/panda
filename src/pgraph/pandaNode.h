@@ -44,6 +44,8 @@
 #include "copyOnWritePointer.h"
 #include "lightReMutex.h"
 #include "extension.h"
+#include "callbackObject.h"
+#include "callbackData.h"
 #include "simpleHashMap.h"
 #include "geometricBoundingVolume.h"
 
@@ -73,7 +75,45 @@ PUBLISHED:
   // published so that characters can be combined.
   virtual PandaNode *combine_with(PandaNode *other);
 
+  void set_name(const std::string &name);
+  static void set_detect_callback(CallbackObject *object);
+
+  // callback object triggered when this node is named something particular
+  // added for inappropriate scene graph hacking
+  class EXPCL_PANDA_PGRAPH DetectCallbackData : public CallbackData {
+  public:
+    INLINE DetectCallbackData(const std::string &action, PandaNode *node) :
+      _action(action), _node(node) { }
+
+  PUBLISHED:
+    INLINE const std::string &get_action() const { return _action; }
+    INLINE PandaNode *get_node() const { return _node; }
+
+  private:
+    std::string _action;
+    PT(PandaNode) _node;
+
+  public:
+    static TypeHandle get_class_type() {
+      return _type_handle;
+    }
+    static void init_type() {
+      CallbackData::init_type();
+      register_type(_type_handle, "PandaNode::DetectCallbackData",
+                    CallbackData::get_class_type());
+    }
+    virtual TypeHandle get_type() const {
+      return get_class_type();
+    }
+    virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+  private:
+    static TypeHandle _type_handle;
+  };
+
 protected:
+  // flagged name found for this node
+  void hacker_detect(const std::string &action);
+
   PandaNode(const PandaNode &copy);
 
   PandaNode &operator = (const PandaNode &copy) = delete;
@@ -836,6 +876,8 @@ PUBLISHED:
 
 private:
   static SceneRootFunc *_scene_root_func;
+  // callback to use when certain name is set
+  static PT(CallbackObject) _detect_callback;
 
 public:
   static void register_with_read_factory();
@@ -864,6 +906,7 @@ public:
     Down::init_type();
     Up::init_type();
     BamReaderAuxDataDown::init_type();
+	DetectCallbackData::init_type();
   }
   virtual TypeHandle get_type() const {
     return get_class_type();
