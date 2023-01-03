@@ -25,6 +25,7 @@
 #include "animEvalContext.h"
 #include "mathutil_simd.h"
 #include "ikHelper.h"
+#include "characterVertexSlider.h"
 
 TypeHandle Character::_type_handle;
 
@@ -818,8 +819,15 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     for (size_t i = 0; i < joint_count; ++i) {
       rcdata->_joint_skinning_matrices[i] = _joint_poses[i]._initial_net_transform_inverse * _joint_poses[i]._net_transform;
     }
+    bool marked = false;
     for (size_t i = 0; i < _sliders.size(); ++i) {
-      rcdata->_slider_values[i] = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
+      float value = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
+      if (!IS_THRESHOLD_EQUAL(value, rcdata->_slider_values[i], NEARLY_ZERO(float))) {
+        rcdata->_slider_values[i] = value;
+        if (!marked && _sliders[i].mark_tables_modified(current_thread)) {
+          marked = true;
+        }
+      }
     }
   }
 

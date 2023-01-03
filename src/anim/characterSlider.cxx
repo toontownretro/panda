@@ -118,3 +118,15 @@ get_value() const {
   return _vertex_slider->get_slider();
 }
 #endif
+
+/**
+ *
+ */
+bool CharacterSlider::
+mark_tables_modified(Thread *current_thread) {
+  if (_vertex_slider != nullptr) {
+    _vertex_slider->mark_tables_modified(current_thread);
+    return true;
+  }
+  return false;
+}

@@ -126,3 +126,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   manager->read_pointer(scan);
   _slider = scan.get_int16();
 }
+
+/**
+ *
+ */
+void CharacterVertexSlider::
+mark_tables_modified(Thread *current_thread) {
+  mark_modified(current_thread);
+}
