@@ -12,6 +12,7 @@
     physBox.h physBox.I \
     physBoxController.h physBoxController.I \
     physCapsule.h physCapsule.I \
+    physCapsuleController.h physCapsuleController.I \
     physContactCallbackData.h physContactCallbackData.I \
     physController.h physController.I \
     physConvexMesh.h physConvexMesh.I \
@@ -62,6 +63,7 @@
     physBox.cxx \
     physBoxController.cxx \
     physCapsule.cxx \
+    physCapsuleController.cxx \
     physContactCallbackData.cxx \
     physController.cxx \
     physConvexMesh.cxx \
