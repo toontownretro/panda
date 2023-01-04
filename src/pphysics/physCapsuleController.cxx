@@ -30,6 +30,7 @@ PhysCapsuleController(PhysScene *scene, NodePath node, PN_stdfloat radius,
   desc.reportCallback = PhysControllerHitCallback::get_global_ptr();
   desc.scaleCoeff = 0.9878f;
   desc.position = panda_vec_to_physx_ex(node.get_pos(NodePath()));
+  desc.climbingMode = physx::PxCapsuleClimbingMode::eCONSTRAINED;
   _controller = (physx::PxCapsuleController *)scene->get_controller_manager()
     ->createController(desc);
   nassertv(_controller != nullptr);
