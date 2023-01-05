@@ -2401,6 +2401,7 @@ upload_texture(TinyTextureContext *gtc, bool force, bool uses_mipmaps) {
       case Texture::F_rgb8:
       case Texture::F_rgb12:
       case Texture::F_rgb332:
+      case Texture::F_srgb:
         copy_rgb_image(dest, xsize, ysize, gtc, level);
         break;
 
@@ -2412,10 +2413,12 @@ upload_texture(TinyTextureContext *gtc, bool force, bool uses_mipmaps) {
       case Texture::F_rgba12:
       case Texture::F_rgba16:
       case Texture::F_rgba32:
+      case Texture::F_srgb_alpha:
         copy_rgba_image(dest, xsize, ysize, gtc, level);
         break;
 
       case Texture::F_luminance:
+      case Texture::F_sluminance;
         copy_lum_image(dest, xsize, ysize, gtc, level);
         break;
 
@@ -2437,6 +2440,7 @@ upload_texture(TinyTextureContext *gtc, bool force, bool uses_mipmaps) {
 
       case Texture::F_luminance_alphamask:
       case Texture::F_luminance_alpha:
+      case Texture::F_sluminance_alpha:
         copy_la_image(dest, xsize, ysize, gtc, level);
         break;
 
