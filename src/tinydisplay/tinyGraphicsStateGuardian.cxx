@@ -2418,7 +2418,7 @@ upload_texture(TinyTextureContext *gtc, bool force, bool uses_mipmaps) {
         break;
 
       case Texture::F_luminance:
-      case Texture::F_sluminance;
+      case Texture::F_sluminance:
         copy_lum_image(dest, xsize, ysize, gtc, level);
         break;
 
