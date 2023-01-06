@@ -992,7 +992,8 @@ flood_entities() {
   for (size_t i = 1; i < src_map->_entities.size(); ++i) {
     MapEntitySrc *ent = src_map->_entities[i];
     if (ent->_class_name == "env_cubemap" ||
-        ent->_class_name == "prop_static") {
+        ent->_class_name == "prop_static" ||
+        ent->_class_name == "info_overlay") {
       // Ignore these.
       continue;
     }
