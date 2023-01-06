@@ -3875,13 +3875,14 @@ attach_shader(const ShaderModule *module, Shader::ModuleSpecConstants &consts) {
       spirv_cross::CompilerGLSL compiler(std::vector<uint32_t>(spv->get_data(), spv->get_data() + spv->get_data_size()));
       spirv_cross::CompilerGLSL::Options options;
 
-      options.version = _glgsg->_glsl_version;
+      options.version = 410;
 #ifdef OPENGLES
       options.es = true;
 #else
       options.es = false;
 #endif
       options.vertex.support_nonzero_base_instance = false;
+      options.enable_420pack_extension = false;
       compiler.set_common_options(options);
 
       // At this time, SPIRV-Cross doesn't add this extension automatically.
