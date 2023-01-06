@@ -888,7 +888,9 @@ remove_unused_variables() {
   for (uint32_t id = 0; id < _instructions.get_id_bound(); ++id) {
     Definition &def = modify_definition(id);
 
-    if (def._dtype == DT_variable && !def.is_used()) {
+    if (def._dtype == DT_variable && !def.is_used() &&
+        // Hack for Intel driver crash.
+        def._name != "gl_VertexID" && def._name != "gl_InstanceID") {
       delete_ids.insert(id);
       if (shader_cat.is_debug() && !def._name.empty()) {
         shader_cat.debug()
