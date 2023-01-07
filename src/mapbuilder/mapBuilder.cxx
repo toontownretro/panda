@@ -2420,7 +2420,7 @@ build_lighting() {
   if (!dlnp.is_empty()) {
     for (size_t i = 0; i < _meshes[0]->_polys.size(); ++i) {
       MapPoly *poly = _meshes[0]->_polys[i];
-      if (poly->_sees_sky && poly->_geom_node != nullptr) {
+      if ((poly->_sees_sky || !poly->_blends.empty()) && poly->_geom_node != nullptr) {
         CPT(RenderState) state = poly->_geom_node->get_geom_state(poly->_geom_index);
         CPT(LightAttrib) lattr;
         state->get_attrib_def(lattr);

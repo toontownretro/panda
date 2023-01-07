@@ -202,6 +202,11 @@ bake() {
     MapMesh *world_mesh = _builder->_meshes[0];
     for (size_t j = 0; j < world_mesh->_polys.size(); ++j) {
       MapPoly *poly = world_mesh->_polys[j];
+      if (!poly->_blends.empty()) {
+        // This is a displacement polygon.  Do not clip it into the BSP.
+        poly->_visible = true;
+        continue;
+      }
       // Set true if the polygon resides somewhat or completely in
       // a non-solid leaf.  If the polygon is completely in solid space,
       // the polygon will not be written out for rendering.
