@@ -219,7 +219,7 @@ get_sound(const Filename &filename, bool positional, bool stream) {
     sound->setLoopCount(1);
     sound->setMode(FMOD_LOOP_OFF);
 
-    handle = new FMODSoundHandle(sound, resolved);
+    handle = new FMODSoundHandle(sound, resolved, positional);
   }
 
   return handle;
@@ -308,7 +308,7 @@ get_sound(MovieAudio *audio, bool positional, bool stream) {
     // Override it.
     sound->setLoopCount(1);
     sound->setMode(FMOD_LOOP_OFF);
-    handle = new FMODSoundHandle(sound, filename);
+    handle = new FMODSoundHandle(sound, filename, positional);
   }
   delete[] data;
 

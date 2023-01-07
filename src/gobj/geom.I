@@ -407,6 +407,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
  */
 INLINE void Geom::
 mark_internal_bounds_stale(CData *cdata) {
+  cdata->_nested_vertices_stale = true;
   cdata->_internal_bounds_stale = true;
 }
 
@@ -540,6 +541,7 @@ CData() :
   _shade_model(SM_uniform),
   _geom_rendering(0),
   _nested_vertices(0),
+  _nested_vertices_stale(true),
   _internal_bounds_stale(true),
   _bounds_type(BoundingVolume::BT_default),
   _fast_primitives{ nullptr, nullptr, nullptr },
@@ -557,6 +559,7 @@ CData(GeomVertexData *data) :
   _shade_model(SM_uniform),
   _geom_rendering(0),
   _nested_vertices(0),
+  _nested_vertices_stale(true),
   _internal_bounds_stale(true),
   _bounds_type(BoundingVolume::BT_default),
   _fast_primitives{ nullptr, nullptr, nullptr },

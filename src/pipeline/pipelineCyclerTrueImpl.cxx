@@ -28,6 +28,8 @@ PipelineCyclerTrueImpl(CycleData *initial_data, Pipeline *pipeline) :
   _lock(this),
   _data{ CycleDataNode() }
 {
+  clear_dirty();
+
   if (_pipeline == nullptr) {
     _pipeline = Pipeline::get_render_pipeline();
   }
@@ -51,6 +53,8 @@ PipelineCyclerTrueImpl(const PipelineCyclerTrueImpl &copy) :
   _lock(this),
   _data{ CycleDataNode() }
 {
+  clear_dirty();
+
   ReMutexHolder holder(_lock);
   ReMutexHolder holder2(copy._lock);
 
@@ -71,10 +75,7 @@ PipelineCyclerTrueImpl(const PipelineCyclerTrueImpl &copy) :
     _data[i]._cdata = new_pt.p();
   }
 
-  _pipeline->add_cycler(this);
-  if (copy._dirty) {
-    _pipeline->add_dirty_cycler(this);
-  }
+  _pipeline->add_cycler(this, copy.is_dirty());
 }
 
 /**
@@ -97,7 +98,7 @@ operator = (const PipelineCyclerTrueImpl &copy) {
     _data[i]._cdata = new_pt.p();
   }
 
-  if (copy._dirty && !_dirty) {
+  if (copy.is_dirty() && !is_dirty()) {
     _pipeline->add_dirty_cycler(this);
   }
 }
@@ -124,12 +125,12 @@ CycleData *PipelineCyclerTrueImpl::
 write_stage(int pipeline_stage, Thread *current_thread) {
   _lock.acquire(current_thread);
 
-#ifndef NDEBUG
-  nassertd(pipeline_stage >= 0 && pipeline_stage < _num_stages) {
+#ifdef _DEBUG
+  nassertd(pipeline_stage >= 0 && pipeline_stage < get_num_stages()) {
     _lock.release();
     return nullptr;
   }
-#endif  // NDEBUG
+#endif
 
   CycleData *old_data = _data[pipeline_stage]._cdata;
 
@@ -154,7 +155,7 @@ write_stage(int pipeline_stage, Thread *current_thread) {
 
       // Now we have differences between some of the data pointers, so we're
       // "dirty".  Mark it so.
-      if (!_dirty && _num_stages != 1) {
+      if (!is_dirty()) {
         _pipeline->add_dirty_cycler(this);
       }
     }
@@ -172,12 +173,12 @@ CycleData *PipelineCyclerTrueImpl::
 write_stage_upstream(int pipeline_stage, bool force_to_0, Thread *current_thread) {
   _lock.acquire(current_thread);
 
-#ifndef NDEBUG
-  nassertd(pipeline_stage >= 0 && pipeline_stage < _num_stages) {
+#ifdef _DEBUG
+  nassertd(pipeline_stage >= 0 && pipeline_stage < get_num_stages()) {
     _lock.release();
     return nullptr;
   }
-#endif  // NDEBUG
+#endif
 
   CycleData *old_data = _data[pipeline_stage]._cdata;
 
@@ -215,15 +216,15 @@ write_stage_upstream(int pipeline_stage, bool force_to_0, Thread *current_thread
 
       _data[pipeline_stage]._cdata = new_data;
 
-      if (k >= 0 || pipeline_stage + 1 < _num_stages) {
+      if (k >= 0 || pipeline_stage + 1 < get_num_stages()) {
         // Now we have differences between some of the data pointers, which
         // makes us "dirty".
-        if (!_dirty) {
+        if (!is_dirty()) {
           _pipeline->add_dirty_cycler(this);
         }
       }
-
-    } else if (k >= 0 && force_to_0) {
+    }
+    else if (k >= 0 && force_to_0) {
       // There are no external pointers, so no need to copy-on-write, but the
       // current pointer doesn't go all the way back.  Make it do so.
       while (k >= 0) {
@@ -256,20 +257,21 @@ PT(CycleData) PipelineCyclerTrueImpl::
 cycle() {
   // This trick moves an NPT into a PT without unnecessarily incrementing and
   // subsequently decrementing the regular reference count.
+  int num_stages = get_num_stages();
   PT(CycleData) last_val;
-  last_val.swap(_data[_num_stages - 1]._cdata);
+  last_val.swap(_data[num_stages - 1]._cdata);
   last_val->node_unref_only();
 
   nassertr(_lock.debug_is_locked(), last_val);
-  nassertr(_dirty, last_val);
+  nassertr(is_dirty(), last_val);
 
   int i;
-  for (i = _num_stages - 1; i > 0; --i) {
+  for (i = num_stages - 1; i > 0; --i) {
     nassertr(_data[i]._writes_outstanding == 0, last_val);
     _data[i]._cdata = _data[i - 1]._cdata;
   }
 
-  for (i = 1; i < _num_stages; ++i) {
+  for (i = 1; i < num_stages; ++i) {
     if (_data[i]._cdata != _data[i - 1]._cdata) {
       // Still dirty.
       return last_val;
@@ -277,7 +279,7 @@ cycle() {
   }
 
   // No longer dirty.
-  _dirty = 0;
+  clear_dirty();
   return last_val;
 }
 

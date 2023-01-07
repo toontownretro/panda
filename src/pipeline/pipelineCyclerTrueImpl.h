@@ -66,7 +66,12 @@ public:
   INLINE void increment_write(CycleData *pointer) const;
   INLINE void release_write(CycleData *pointer);
 
-  INLINE int get_num_stages();
+  ALWAYS_INLINE bool is_dirty() const;
+  INLINE bool is_dirty(unsigned int seq) const;
+  INLINE void mark_dirty(unsigned int seq);
+  INLINE void clear_dirty();
+
+  INLINE int get_num_stages() const;
   INLINE const CycleData *read_stage_unlocked(int pipeline_stage) const;
   INLINE const CycleData *read_stage(int pipeline_stage, Thread *current_thread) const;
   INLINE void release_read_stage(int pipeline_stage, const CycleData *pointer) const;
@@ -110,9 +115,9 @@ private:
 
   // An array of PT(CycleData) objects representing the different copies of
   // the cycled data, one for each stage.
-  class CycleDataNode : public MemoryBase {
+  class CycleDataNode {
   public:
-    INLINE CycleDataNode();
+    CycleDataNode() = default;
     INLINE CycleDataNode(const CycleDataNode &copy);
     INLINE ~CycleDataNode();
     INLINE void operator = (const CycleDataNode &copy);
@@ -125,9 +130,6 @@ private:
   // to avoid the extra indirection.
   CycleDataNode _data[3];
   int _num_stages;
-
-  // This is 0 if it's clean, or set to Pipeline::_next_cycle_seq if it's
-  // scheduled to be cycled during the next cycle() call.
   unsigned int _dirty;
 
   CyclerMutex _lock;

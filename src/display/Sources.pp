@@ -49,7 +49,8 @@
     touchInfo.h \
     qpLightCuller.h qpLightCuller.I \
     qpLight.I qpLight.h \
-    qpLightManager.I qpLightManager.h
+    qpLightManager.I qpLightManager.h \
+    screenshotRequest.I screenshotRequest.h
 
 
  #define COMPOSITE_SOURCES  \
@@ -84,7 +85,8 @@
     touchInfo.cxx \
     qpLightCuller.cxx \
     qpLight.cxx \
-    qpLightManager.cxx
+    qpLightManager.cxx \
+    screenshotRequest.cxx
 
   #define INSTALL_HEADERS \
     standardMunger.I standardMunger.h \
@@ -124,7 +126,8 @@
     touchInfo.h \
     qpLightCuller.h qpLightCuller.I \
     qpLight.I qpLight.h \
-    qpLightManager.I qpLightManager.h
+    qpLightManager.I qpLightManager.h \
+    screenshotRequest.I screenshotRequest.h
 
   #define IGATESCAN all
 

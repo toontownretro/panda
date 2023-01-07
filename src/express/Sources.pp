@@ -230,6 +230,8 @@
     globPattern_ext.h \
     iostream_ext.cxx \
     iostream_ext.h \
+    notify_ext.cxx \
+    notify_ext.h \
     streamReader_ext.cxx \
     streamReader_ext.h \
     streamWriter_ext.cxx \

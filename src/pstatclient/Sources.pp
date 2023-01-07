@@ -45,6 +45,9 @@
 
   #define IGATESCAN all
 
+  #define IGATEEXT \
+    pStatClient_ext.h pStatClient_ext.I pStatClient_ext.cxx
+
 #end lib_target
 
 #begin test_bin_target

@@ -16,11 +16,6 @@
 
 TypeHandle NullAudioManager::_type_handle;
 
-// namespace { static const string blank=""; static PN_stdfloat
-// no_listener_attributes [] = {0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f,
-// 0.0f,0.0f,0.0f, 0.0f,0.0f,0.0f}; }
-
-
 /**
  *
  */
