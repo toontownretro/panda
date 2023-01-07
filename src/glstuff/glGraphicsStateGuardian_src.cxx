@@ -156,7 +156,7 @@ static const string default_vshader =
   "in vec4 p3d_Vertex;\n"
   "in vec4 p3d_Color;\n"
   "in vec4 p3d_MultiTexCoord0;\n"
-  "out vec3 texcoord;\n"
+  "out vec2 texcoord;\n"
   "out vec4 color;\n"
   "uniform mat4 p3d_ModelViewProjectionMatrix;\n"
   "uniform mat4 p3d_TextureTransform;\n"
@@ -174,7 +174,7 @@ static const string default_vshader_fp64 =
   "in dvec3 p3d_Vertex;\n"
   "in vec4 p3d_Color;\n"
   "in dvec4 p3d_MultiTexCoord0;\n"
-  "out vec3 texcoord;\n"
+  "out vec2 texcoord;\n"
   "out vec4 color;\n"
 #ifdef STDFLOAT_DOUBLE
   "uniform dmat3x4 p3d_ModelViewMatrixTranspose;\n"
