@@ -32,21 +32,17 @@ class MovieAudio;
  */
 class EXPCL_FMOD_AUDIO FMODSoundHandle : public ReferenceCount {
 public:
-  INLINE FMODSoundHandle(FMOD::Sound *sound, const Filename &filename, bool positional) :
+  INLINE FMODSoundHandle(FMOD::Sound *sound, const Filename &filename) :
     _sound(sound),
-    _orig_filename(filename),
-    _positional(positional) { }
+    _orig_filename(filename) { }
 
   INLINE ~FMODSoundHandle() { if (_sound != nullptr) { _sound->release(); _sound = nullptr; } }
   INLINE FMOD::Sound *get_sound() const { return _sound; }
   INLINE const Filename &get_orig_filename() const { return _orig_filename; }
-  INLINE bool is_positional() const { return _positional; }
 
 private:
   FMOD::Sound *_sound;
   Filename _orig_filename;
-
-  bool _positional;
 };
 
 /**

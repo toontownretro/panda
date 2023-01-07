@@ -120,8 +120,6 @@ PUBLISHED:
   // There is no set_name(), this is intentional.
   virtual const std::string& get_name() const = 0;
 
-  INLINE bool is_positional() const;
-
   // return: playing time in seconds.
   virtual PN_stdfloat length() const = 0;
 
@@ -169,12 +167,9 @@ PUBLISHED:
   MAKE_PROPERTY(play_rate, get_play_rate, set_play_rate);
   MAKE_PROPERTY(active, get_active, set_active);
   MAKE_PROPERTY(name, get_name);
-  MAKE_PROPERTY(positional, is_positional);
 
 protected:
-  AudioSound(bool positional);
-
-  const bool _positional = false;
+  AudioSound();
 
   friend class AudioManager;
 

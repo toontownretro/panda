@@ -83,7 +83,6 @@ extern FMOD_VECTOR lvec_to_fmod(const LVecBase3 &vec);
  */
 FMODAudioSound::
 FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
-  AudioSound(handle->is_positional()),
   _manager(manager),
   _sound_handle(handle),
   _sound(handle->get_sound()),
@@ -140,8 +139,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
  * sound data but creates a new channel.
  */
 FMODAudioSound::
-FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy) :
-  AudioSound(copy->is_positional())
+FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy)
 {
   //ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::FMODAudioSound() Creating channel from existing "

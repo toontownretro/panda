@@ -26,7 +26,7 @@ namespace {
 /**
  * All of these functions are just stubs.
  */
-NullAudioSound::NullAudioSound() : AudioSound(false) {
+NullAudioSound::NullAudioSound() {
   // Intentionally blank.
 }
 

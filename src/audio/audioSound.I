@@ -86,11 +86,3 @@ bool AudioSound::
 add_dsp_to_tail(DSP *dsp) {
   return insert_dsp(get_num_dsps() - 1, dsp);
 }
-
-/**
- * Returns true if this was created as a positional sound.
- */
-INLINE bool AudioSound::
-is_positional() const {
-  return _positional;
-}
