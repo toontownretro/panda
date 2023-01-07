@@ -2073,19 +2073,6 @@ reset() {
   }
 #endif
 
-#ifndef OPENGLES
-  _supports_fence_objects = false;
-  if (is_at_least_gl_version(3, 2) || has_extension("GL_ARB_sync")) {
-    _glFenceSync = (PFNGLFENCESYNCPROC)
-      get_extension_func("glFenceSync");
-    _glDeleteSync = (PFNGLDELETESYNCPROC)
-      get_extension_func("glDeleteSync");
-    _glClientWaitSync = (PFNGLCLIENTWAITSYNCPROC)
-      get_extension_func("glClientWaitSync");
-    _supports_fence_objects = true;
-  }
-#endif
-
   // We need to have a default shader to apply in case something didn't happen
   // to have a shader applied, or if it failed to compile.  This default
   // shader just outputs a red color, indicating that something went wrong.
