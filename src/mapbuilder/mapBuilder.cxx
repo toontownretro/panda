@@ -2071,6 +2071,7 @@ build_lighting() {
   }
 
   NodePath dlnp;
+  bool got_directional = false;
 
   // Now add the lights.
   for (size_t i = 0; i < _source_map->_entities.size(); i++) {
@@ -2080,6 +2081,16 @@ build_lighting() {
         ent->_class_name != "light_environment") {
       // Not a light entity.
       continue;
+    }
+
+    if (ent->_class_name == "light_environment") {
+      if (got_directional) {
+        // Only one light_environment allowed.
+        lightbuilder_cat.warning()
+          << "Multiple light_environments found, ignoring all but first\n";
+        continue;
+      }
+      got_directional = true;
     }
 
     LightBuilder::LightmapLight light;
