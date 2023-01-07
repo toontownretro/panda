@@ -909,6 +909,28 @@ remove_unused_variables() {
     Instruction op = *it;
 
     switch (op.opcode) {
+    case spv::OpEntryPoint:
+      {
+        // Skip the string literal by skipping words until we have a zero byte.
+        uint32_t i = 2;
+        while (i < op.nargs
+            && (op.args[i] & 0x000000ff) != 0
+            && (op.args[i] & 0x0000ff00) != 0
+            && (op.args[i] & 0x00ff0000) != 0
+            && (op.args[i] & 0xff000000) != 0) {
+          ++i;
+        }
+        // Remove the deleted IDs from the entry point interface.
+        while (i < (*it).nargs) {
+          if (delete_ids.count((*it).args[i])) {
+            it = _instructions.erase_arg(it, i);
+          } else {
+            ++i;
+          }
+        }
+      }
+      break;
+
     case spv::OpName:
     case spv::OpMemberName:
     case spv::OpDecorate:
@@ -923,6 +945,7 @@ remove_unused_variables() {
     case spv::OpVariable:
       if (op.nargs >= 2 && delete_ids.count(op.args[1])) {
         it = _instructions.erase(it);
+        continue;
       }
       break;
 
@@ -936,6 +959,7 @@ remove_unused_variables() {
       if (delete_ids.count(op.args[2])) {
         delete_ids.insert(op.args[1]);
         it = _instructions.erase(it);
+        continue;
       }
       break;
 
@@ -1922,7 +1946,7 @@ r_define_type(InstructionIterator &it, const ShaderType *type) {
 
     it = _instructions.insert(it, spv::OpTypeImage, args, nargs);
   }
-  else if (const ShaderType::Sampler *sampler_type = type->as_sampler()) {
+  else if (type->as_sampler() != nullptr) {
     it = _instructions.insert(it, spv::OpTypeSampler, {id});
   }
   else if (const ShaderType::SampledImage *sampled_image_type = type->as_sampled_image()) {

@@ -479,11 +479,9 @@ ConfigVariableInt shadow_depth_bits
           "shadow maps.  Set this to 32 for more depth resolution in shadow "
           "maps."));
 ConfigVariableBool shadow_cube_map_filter
-("shadow-cube-map-filter", false,
+("shadow-cube-map-filter", true,
  PRC_DESC("If true, Panda enables hardware depth map comparison mode for "
-          "point lights, if supported.  If false, does not.  Keep this set to "
-          "false if you want the shader generator to work correctly for point "
-          "light shadows."));
+          "point lights, if supported.  This should rarely be changed."));
 
 ConfigVariableColor background_color
 ("background-color", "0.41 0.41 0.41 0.0",

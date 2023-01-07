@@ -3997,10 +3997,7 @@ get_dummy_shadow_map(Texture::TextureType texture_type) const {
       dummy_cube = new Texture("dummy-shadow-cube");
       dummy_cube->setup_cube_map(1, Texture::T_unsigned_byte, Texture::F_depth_component);
       dummy_cube->set_clear_color(1);
-      // Note: cube map shadow filtering doesn't seem to work in Cg.
-      // That is why it is currently disabled by default, but it can be
-      // overridden in Config.prc for apps that have custom GLSL shaders.
-      if (shadow_cube_map_filter && get_supports_shadow_filter()) {
+      if (get_supports_shadow_filter()) {
         dummy_cube->set_minfilter(SamplerState::FT_shadow);
         dummy_cube->set_magfilter(SamplerState::FT_shadow);
       } else {

@@ -1755,10 +1755,6 @@ reset() {
   else {
     _glFramebufferTexture = nullptr;
   }
-
-  //if (_supports_geometry_shaders) {
-  //  _supported_geom_rendering |= Geom::GR_adjacency;
-  //}
 #endif
 
 #ifndef OPENGLES_1
