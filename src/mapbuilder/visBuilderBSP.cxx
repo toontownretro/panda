@@ -202,15 +202,19 @@ bake() {
     MapMesh *world_mesh = _builder->_meshes[0];
     for (size_t j = 0; j < world_mesh->_polys.size(); ++j) {
       MapPoly *poly = world_mesh->_polys[j];
-      if (!poly->_blends.empty()) {
-        // This is a displacement polygon.  Do not clip it into the BSP.
-        poly->_visible = true;
-        continue;
-      }
       // Set true if the polygon resides somewhat or completely in
       // a non-solid leaf.  If the polygon is completely in solid space,
       // the polygon will not be written out for rendering.
-      poly->_visible = false;
+      if (!poly->_blends.empty()) {
+        // Don't get rid of displacement polygons in solid space, that
+        // is incorrect.
+        // We still have to clip it into the tree, because we need to know if
+        // it's in the 3-D skybox.
+        poly->_visible = true;
+      } else {
+        poly->_visible = false;
+      }
+
       std::stack<MGFilterStack> node_stack;
       node_stack.push({ _tree_root, poly->_winding });
       while (!node_stack.empty()) {
