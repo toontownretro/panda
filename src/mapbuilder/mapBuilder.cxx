@@ -1648,7 +1648,7 @@ build_entity_polygons(int i) {
 
             LPoint3 dpoint = (end_pts[0] * (1.0f - icol * ooint)) + (end_pts[1] * icol * ooint);
             dpoint += winding_normal * side->_displacement->_elevation;
-            dpoint += (dvert._normal + dvert._offset_normal).normalized() * dvert._distance;
+            dpoint += dvert._normal.normalized() * dvert._distance;
             dpoint += dvert._offset;
 
             disp_points.push_back(dpoint);
