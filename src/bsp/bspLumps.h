@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file bspLumps.h
- * @author lachbr
+ * @author brian
  * @date 2020-12-31
  */
 

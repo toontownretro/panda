@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file pTexture.cxx
- * @author lachbr
+ * @author brian
  * @date 2021-01-17
  */
 

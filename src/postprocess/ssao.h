@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file ssao.h
- * @author lachbr
+ * @author brian
  */
 
 #ifndef SSAO_H

@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file load_bsp_file.cxx
- * @author lachbr
+ * @author brian
  * @date 2021-01-02
  */
 

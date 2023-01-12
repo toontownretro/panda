@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file rayTraceHitResult.h
- * @author lachbr
+ * @author brian
  */
 
 #ifndef RAYTRACEHITRESULT_H

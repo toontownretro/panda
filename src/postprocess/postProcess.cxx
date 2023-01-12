@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file postProcess.cxx
- * @author lachbr
+ * @author brian
  * @date 2019-07-22
  */
 

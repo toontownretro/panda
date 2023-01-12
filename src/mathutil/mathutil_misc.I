@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file mathutil_misc.I
- * @author lachbr
+ * @author brian
  * @date 2020-10-19
  *
  * Miscellaneous math utility functions.

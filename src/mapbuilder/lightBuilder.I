@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file lightBuilder.I
- * @author lachbr
+ * @author brian
  * @date 2021-09-18
  */
 

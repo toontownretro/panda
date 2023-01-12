@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file config_raytrace.cxx
- * @author lachbr
+ * @author brian
  * @date 2020-09-21
  */
 

@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file standardMaterial.h
- * @author lachbr
+ * @author brian
  * @date 2021-03-06
  */
 

@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file ssao.cxx
- * @author lachbr
+ * @author brian
  */
 
 #include "ssao.h"

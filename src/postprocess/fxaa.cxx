@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file fxaa.cxx
- * @author lachbr
+ * @author brian
  * @date 2019-12-07
  */
 

@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file characterSlider.h
- * @author lachbr
+ * @author brian
  * @date 2021-02-22
  */
 

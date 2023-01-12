@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file config_pphysics.h
- * @author lachbr
+ * @author brian
  * @date 2021-04-13
  */
 

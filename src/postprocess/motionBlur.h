@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file motionBlur.h
- * @author lachbr
+ * @author brian
  * @date 2020-09-03
  *
  * Image-space motion blur.

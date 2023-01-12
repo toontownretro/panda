@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file rayTraceTriangleMesh.h
- * @author lachbr
+ * @author brian
  */
 
 #ifndef RAYTRACETRIANGLEMESH_H

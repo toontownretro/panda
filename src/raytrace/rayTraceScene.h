@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file rayTraceScene.h
- * @author lachbr
+ * @author brian
  */
 
 #ifndef RAYTRACESCENE_H

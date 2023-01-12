@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file blurPasses.h
- * @author lachbr
+ * @author brian
  */
 
 #ifndef BLURPASSES_H

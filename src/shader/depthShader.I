@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file depthShader.I
- * @author lachbr
+ * @author brian
  * @date 2020-12-16
  */
 

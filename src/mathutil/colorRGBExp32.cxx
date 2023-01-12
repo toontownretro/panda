@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file colorRGBExp32.cxx
- * @author lachbr
+ * @author brian
  * @date 2020-10-19
  */
 

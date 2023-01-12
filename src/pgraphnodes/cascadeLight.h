@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file cascadeLight.h
- * @author lachbr
+ * @author brian
  * @date 2020-10-26
  */
 

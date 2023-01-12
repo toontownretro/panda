@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file steamNetworkMessage.cxx
- * @author lachbr
+ * @author brian
  * @date 2022-10-04
  */
 

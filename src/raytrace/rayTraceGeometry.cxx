@@ -7,7 +7,7 @@
  * with this source code in a file named "LICENSE."
  *
  * @file rayTraceGeometry.cxx
- * @author lachbr
+ * @author brian
  */
 
 #include "rayTraceGeometry.h"
