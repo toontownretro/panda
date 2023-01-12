@@ -75,7 +75,7 @@ LightBuilder() :
   _bias(0.01f),
   _bounces(5), // 5
   _rays_per_luxel(256),
-  _ray_region_size(512),
+  _ray_region_size(8192),
   _rays_per_region(32),
   _graphics_engine(GraphicsEngine::get_global_ptr()),
   _host_output(nullptr),
@@ -499,6 +499,9 @@ make_textures() {
   sampler.set_min_lod(0);
   sampler.set_max_lod(0);
   sampler.set_anisotropic_degree(0);
+  sampler.set_wrap_u(SamplerState::WM_clamp);
+  sampler.set_wrap_v(SamplerState::WM_clamp);
+  sampler.set_wrap_w(SamplerState::WM_clamp);
 
   // Color of direct lighting reaching a luxel.
   PT(Texture) direct = new Texture("lm_direct");
@@ -541,6 +544,14 @@ make_textures() {
   indirect_accum->set_compression(Texture::CM_off);
   indirect_accum->clear_image();
   _lm_textures["indirect_accum"] = indirect_accum;
+  PT(Texture) indirect_sh_accum = new Texture("lm_indirect_sh_accum");
+  indirect_sh_accum->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size() * 4,
+                                         Texture::T_float, Texture::F_rgba32);
+  indirect_sh_accum->set_clear_color(LColor(0, 0, 0, 0));
+  indirect_sh_accum->set_default_sampler(sampler);
+  indirect_sh_accum->set_compression(Texture::CM_off);
+  indirect_sh_accum->clear_image();
+  _lm_textures["indirect_sh_accum"] = indirect_sh_accum;
 
   // Reflectivity = direct light * albedo + emission.  Color of light
   // being reflected off of a luxel.  Used during the bounce pass.
@@ -1012,7 +1023,7 @@ make_gpu_buffers() {
     tri_datap[i * 12] = tri.indices[0];
     tri_datap[i * 12 + 1] = tri.indices[1];
     tri_datap[i * 12 + 2] = tri.indices[2];
-    tri_datap[i * 12 + 3] = tri.palette;
+    tri_datap[i * 12 + 3] = 0.0f;
 
     // Texel 1: minx, miny, minz, contents
     tri_datap[i * 12 + 4] = tri.mins[0];
@@ -1024,7 +1035,7 @@ make_gpu_buffers() {
     tri_datap[i * 12 + 8] = tri.maxs[0];
     tri_datap[i * 12 + 9] = tri.maxs[1];
     tri_datap[i * 12 + 10] = tri.maxs[2];
-    tri_datap[i * 12 + 11] = 0.0f;
+    tri_datap[i * 12 + 11] = tri.palette;
   }
   triangles->set_ram_image(tri_data);
   _gpu_buffers["triangles"] = triangles;
@@ -1112,55 +1123,51 @@ make_gpu_buffers() {
     << "Probe position buffer is " << (float)probe_data.size() / 1000000.0f << " MB\n";
   total_buffer_size += probe_data.size();
 
-  // Now build the triangle acceleration stucture for ray tracing.  Currently
-  // it is a uniform grid of cells.  Each cell contains a list of triangles
-  // that overlap with the cell.  Would like to eventually do a K-D tree using
-  // the stackless traversal algorithm.
 
   lightbuilder_cat.info()
-    << "K-D tree buffer texture is " << _kd_node_count * 3 << " RGBA32 texels\n";
+    << "K-D tree buffer texture is " << _kd_node_count * 5 << " RGBA32 texels\n";
 
-  int num_leaves = 0;
+  // Count number of non-leaf nodes.
+  int node_count = 0;
+  int leaf_count = 0;
+  KDNode *pnode;
+  for (pnode = _kd_tree_head; pnode != nullptr; pnode = pnode->next) {
+    if (pnode->is_leaf()) {
+      pnode->index = ~leaf_count;
+      ++leaf_count;
+    } else {
+      pnode->index = node_count + 1;
+      ++node_count;
+    }
+  }
 
   PT(Texture) kd_tree = new Texture("kd_tree");
-  kd_tree->setup_buffer_texture(_kd_node_count * 3, Texture::T_float,
+  kd_tree->setup_buffer_texture(node_count, Texture::T_float,
                                 Texture::F_rgba32, GeomEnums::UH_static);
   kd_tree->set_compression(Texture::CM_off);
   kd_tree->set_keep_ram_image(false);
   PTA_uchar kd_tree_data;
-  kd_tree_data.resize(sizeof(float) * _kd_node_count * 12);
+  kd_tree_data.resize(sizeof(float) * node_count * 4);
   nassertr(kd_tree_data.size() == kd_tree->get_expected_ram_image_size(), false);
   float *kd_tree_datap = (float *)kd_tree_data.p();
 
-  KDNode *pnode;
-  size_t ki;
-  for (ki = 0, pnode = _kd_tree_head; pnode != nullptr; pnode = pnode->next, ++ki) {
+  size_t node_num = 0;
+  for (pnode = _kd_tree_head; pnode != nullptr; pnode = pnode->next) {
     const KDNode &node = *pnode;
 
-    size_t i = ki;
-
-    int leaf_num = -1;
     if (node.is_leaf()) {
-      leaf_num = num_leaves++;
+      continue;
     }
 
+    assert(node.index == (node_num + 1));
+
     // Texel 0: Children indices, splitting plane.
-    kd_tree_datap[i * 12] = node.get_child_node_index(0);
-    kd_tree_datap[i * 12 + 1] = node.get_child_node_index(1);
-    kd_tree_datap[i * 12 + 2] = node.axis;
-    kd_tree_datap[i * 12 + 3] = node.dist;
+    kd_tree_datap[node_num * 4] = node.get_child_node_index(0);
+    kd_tree_datap[node_num * 4 + 1] = node.get_child_node_index(1);
+    kd_tree_datap[node_num * 4 + 2] = node.axis;
+    kd_tree_datap[node_num * 4 + 3] = node.dist;
 
-    // Texel 1: mins, leaf num
-    kd_tree_datap[i * 12 + 4] = node.mins[0];
-    kd_tree_datap[i * 12 + 5] = node.mins[1];
-    kd_tree_datap[i * 12 + 6] = node.mins[2];
-    kd_tree_datap[i * 12 + 7] = leaf_num;
-
-    // Texel 2: maxs, unused
-    kd_tree_datap[i * 12 + 8] = node.maxs[0];
-    kd_tree_datap[i * 12 + 9] = node.maxs[1];
-    kd_tree_datap[i * 12 + 10] = node.maxs[2];
-    kd_tree_datap[i * 12 + 11] = 0.0f;
+    ++node_num;
   }
   kd_tree->set_ram_image(kd_tree_data);
   _gpu_buffers["kd_tree"] = kd_tree;
@@ -1170,15 +1177,15 @@ make_gpu_buffers() {
   total_buffer_size += kd_tree_data.size();
 
   lightbuilder_cat.info()
-    << "K-D leaves buffer texture is " << num_leaves * 2 << " RGBA32 texels\n";
+    << "K-D leaves buffer texture is " << leaf_count * 4 << " RGBA32 texels\n";
 
   PT(Texture) kd_leaves = new Texture("kd_leaves");
-  kd_leaves->setup_buffer_texture(num_leaves * 2, Texture::T_float,
+  kd_leaves->setup_buffer_texture(leaf_count * 4, Texture::T_float,
                                   Texture::F_rgba32, GeomEnums::UH_static);
   kd_leaves->set_compression(Texture::CM_off);
   kd_leaves->set_keep_ram_image(false);
   PTA_uchar kd_leaves_data;
-  kd_leaves_data.resize(sizeof(float) * num_leaves * 8);
+  kd_leaves_data.resize(sizeof(float) * leaf_count * 16);
   nassertr(kd_leaves_data.size() == kd_leaves->get_expected_ram_image_size(), false);
   float *kd_leaves_datap = (float *)kd_leaves_data.p();
   int leaf_num = 0;
@@ -1188,17 +1195,31 @@ make_gpu_buffers() {
       continue;
     }
 
-    // Texel 0: left, right, front, back neighbors
-    kd_leaves_datap[leaf_num * 8] = node.get_neighbor_node_index(0);
-    kd_leaves_datap[leaf_num * 8 + 1] = node.get_neighbor_node_index(1);
-    kd_leaves_datap[leaf_num * 8 + 2] = node.get_neighbor_node_index(2);
-    kd_leaves_datap[leaf_num * 8 + 3] = node.get_neighbor_node_index(3);
+    assert(node.index == ~leaf_num);
 
-    // Texel 1: bottom, top neighbors, first tri, num tris
-    kd_leaves_datap[leaf_num * 8 + 4] = node.get_neighbor_node_index(4);
-    kd_leaves_datap[leaf_num * 8 + 5] = node.get_neighbor_node_index(5);
-    kd_leaves_datap[leaf_num * 8 + 6] = node.first_triangle;
-    kd_leaves_datap[leaf_num * 8 + 7] = node.num_triangles;
+    // Texel 1: mins, unused
+    kd_leaves_datap[leaf_num * 16] = node.mins[0];
+    kd_leaves_datap[leaf_num * 16 + 1] = node.mins[1];
+    kd_leaves_datap[leaf_num * 16 + 2] = node.mins[2];
+    kd_leaves_datap[leaf_num * 16 + 3] = 0.0f;
+
+    // Texel 2: maxs, unused
+    kd_leaves_datap[leaf_num * 16 + 4] = node.maxs[0];
+    kd_leaves_datap[leaf_num * 16 + 5] = node.maxs[1];
+    kd_leaves_datap[leaf_num * 16 + 6] = node.maxs[2];
+    kd_leaves_datap[leaf_num * 16 + 7] = 0.0f;
+
+    // Texel 3: left, right, front, back neighbors
+    kd_leaves_datap[leaf_num * 16 + 8] = node.get_neighbor_node_index(0);
+    kd_leaves_datap[leaf_num * 16 + 9] = node.get_neighbor_node_index(1);
+    kd_leaves_datap[leaf_num * 16 + 10] = node.get_neighbor_node_index(2);
+    kd_leaves_datap[leaf_num * 16 + 11] = node.get_neighbor_node_index(3);
+
+    // Texel 4: bottom, top neighbors, first tri, num tris
+    kd_leaves_datap[leaf_num * 16 + 12] = node.get_neighbor_node_index(4);
+    kd_leaves_datap[leaf_num * 16 + 13] = node.get_neighbor_node_index(5);
+    kd_leaves_datap[leaf_num * 16 + 14] = node.first_triangle;
+    kd_leaves_datap[leaf_num * 16 + 15] = node.num_triangles;
 
     leaf_num++;
   }
@@ -1211,6 +1232,7 @@ make_gpu_buffers() {
 
   free_kd_tree();
 
+#if 1
   lightbuilder_cat.info()
     << "K-D triangle list buffer texture is " << _kd_tri_list.size() << " R32I texels\n";
   PT(Texture) kd_tri_list = new Texture("kd_tri_list");
@@ -1228,6 +1250,48 @@ make_gpu_buffers() {
   lightbuilder_cat.info()
     << "K-D triangle list buffer is " << (float)kd_tri_data.size() / 1000000.0f << " MB\n";
   total_buffer_size += kd_tri_data.size();
+#else
+
+  PT(Texture) kd_tri_list = new Texture("kd_tri_list");
+  kd_tri_list->setup_buffer_texture(_kd_tri_list.size() * 3, Texture::T_float,
+                                    Texture::F_rgba32, GeomEnums::UH_static);
+  kd_tri_list->set_compression(Texture::CM_off);
+  kd_tri_list->set_keep_ram_image(false);
+  PTA_uchar kd_tri_data;
+  kd_tri_data.resize(sizeof(float) * _kd_tri_list.size() * 3 * 4);
+  nassertr(kd_tri_data.size() == kd_tri_list->get_expected_ram_image_size(), false);
+
+  size_t li = 0;
+  for (unsigned int tri_index : _kd_tri_list) {
+    const LightmapTri &tri = _triangles[tri_index];
+    const LightmapVertex &va = _vertices[tri.indices[0]];
+    const LightmapVertex &vb = _vertices[tri.indices[1]];
+    const LightmapVertex &vc = _vertices[tri.indices[2]];
+
+    kd_tri_data[li++] = va.pos[0];
+    kd_tri_data[li++] = va.pos[1];
+    kd_tri_data[li++] = va.pos[2];
+    kd_tri_data[li++] = tri_index;
+
+    kd_tri_data[li++] = vb.pos[0];
+    kd_tri_data[li++] = vb.pos[1];
+    kd_tri_data[li++] = vb.pos[2];
+    kd_tri_data[li++] = tri.contents;
+
+    kd_tri_data[li++] = vc.pos[0];
+    kd_tri_data[li++] = vc.pos[1];
+    kd_tri_data[li++] = vc.pos[2];
+    kd_tri_data[li++] = tri.palette;
+  }
+
+  kd_tri_list->set_ram_image(kd_tri_data);
+  _gpu_buffers["kd_tri_list"] = kd_tri_list;
+
+  lightbuilder_cat.info()
+    << "K-D triangle list buffer is " << (float)kd_tri_data.size() / 1000000.0f << " MB\n";
+  total_buffer_size += kd_tri_data.size();
+
+#endif
 
   lightbuilder_cat.info()
     << "Total size of all buffers: " << (float)total_buffer_size / 1000000.0f << " MB\n";
@@ -1567,10 +1631,10 @@ split_triangles(const KDSplits *splits, int num_tris, unsigned char &axis, int &
       float left_delta = cand_dist - mins[j];
       float right_delta = maxs[j] - cand_dist;
 
-      if (left_delta <= 0.01 || right_delta <= 0.01) {
-        ++i;
-        continue;
-      }
+      //if (left_delta <= 0.01 || right_delta <= 0.01) {
+      //  ++i;
+      //  continue;
+      //}
 
       if (cand_dist <= mins[j]) {
         ++i;
@@ -1922,12 +1986,7 @@ rasterize_geoms_into_lightmap_textures() {
     //root.set_render_mode_filled_wireframe()
 
     root.set_shader(Shader::load(Shader::SL_GLSL, "shaders/lm_raster.vert.glsl", "shaders/lm_raster.frag.glsl"), 10);
-    root.set_shader_input("vertices", _gpu_buffers["vertices"], 10);
-    root.set_shader_input("triangles", _gpu_buffers["triangles"], 10);
-    root.set_shader_input("lights", _gpu_buffers["lights"], 10);
-    root.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"], 10);
-    root.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"], 10);
-    root.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"], 10);
+    apply_kd_uniforms(root, 10);
     root.set_shader_input("u_lm_palette_luxel_size", LVecBase2(1.0f / (float)_lightmap_size[0],
                                                                1.0f / (float)_lightmap_size[1]));
 
@@ -2212,12 +2271,7 @@ compute_unocclude() {
 
   np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_unocclude.compute.glsl"));
 
-  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(np, 0);
 
   np.set_shader_input("position", _lm_textures["position"]);
   np.set_shader_input("unocclude", _lm_textures["unocclude"]);
@@ -2260,12 +2314,7 @@ compute_direct() {
 
   np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_direct.compute.glsl"));
 
-  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(np, 0);
 
   np.set_shader_input("luxel_direct", _lm_textures["direct"]);
   np.set_shader_input("luxel_direct_dynamic", _lm_textures["direct_dynamic"]);
@@ -2317,12 +2366,7 @@ compute_vtx_reflectivity() {
 
   np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_vtx_direct.compute.glsl"));
 
-  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(np, 0);
 
   np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
   np.set_shader_input("vtx_albedo", _lm_textures["vtx_albedo"]);
@@ -2343,8 +2387,8 @@ compute_vtx_reflectivity() {
 
   _gsg->finish();
 
-  free_texture(_lm_textures["vtx_albedo"]);
-  _graphics_engine->render_frame();
+  //free_texture(_lm_textures["vtx_albedo"]);
+  //_graphics_engine->render_frame();
 
   lightbuilder_cat.info()
     << "Done.\n";
@@ -2368,17 +2412,14 @@ compute_indirect() {
 
   np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_indirect.compute.glsl"));
 
-  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(np, 0);
 
   np.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
+  np.set_shader_input("vtx_albedo", _lm_textures["vtx_albedo"]);
   np.set_shader_input("luxel_position", _lm_textures["position"]);
   np.set_shader_input("luxel_normal", _lm_textures["normal"]);
   np.set_shader_input("luxel_light", _lm_textures["direct"]);
+  np.set_shader_input("luxel_sh_gathered", _lm_textures["indirect_sh_accum"]);
 
   np.set_shader_input("u_vtx_lit_info", LVecBase2i(_first_vertex_lit_vertex, _vertex_palette_width));
 
@@ -2388,14 +2429,10 @@ compute_indirect() {
 
   NodePath vnp("vstate");
   vnp.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_vtx_indirect.compute.glsl"));
-  vnp.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  vnp.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  vnp.set_shader_input("lights", _gpu_buffers["lights"]);
-  vnp.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  vnp.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  vnp.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(vnp, 0);
 
   vnp.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
+  vnp.set_shader_input("vtx_albedo", _lm_textures["vtx_albedo"]);
   vnp.set_shader_input("vtx_light", _lm_textures["vtx_light"]);
 
   vnp.set_shader_input("u_sky_color", _sky_color.get_xyz());
@@ -2405,15 +2442,25 @@ compute_indirect() {
               _first_vertex_lit_vertex, _num_vertex_lit_vertices));
   vnp.set_shader_input("_u_bias", LVecBase2f(_bias));
 
-  int x_regions = (_lightmap_size[0] - 1) / _ray_region_size + 1;
-  int y_regions = (_lightmap_size[1] - 1) / _ray_region_size + 1;
-  int ray_iters = (_rays_per_luxel - 1) / _rays_per_region + 1;
+  //int num_ray_iters = 16;
+  int rays_per_iter = 16;//_rays_per_luxel / num_ray_iters;
+  int num_ray_iters = _rays_per_luxel / rays_per_iter;
 
-  int total_regions = _pages.size() * x_regions * y_regions;
+  PT(Texture) total_added = new Texture("lm-indirect-total-bounce-added");
+  total_added->setup_1d_texture(1, Texture::T_unsigned_int, Texture::F_r32i);
+  total_added->set_compression(Texture::CM_off);
+  total_added->set_clear_color(LColor(0));
+  total_added->clear_image();
 
-  for (int b = 0; b < _bounces; b++) {
+  np.set_shader_input("feedback_total_add", total_added);
+  vnp.set_shader_input("feedback_total_add", total_added);
+
+  for (int b = 0; b < 10000; b++) {
     lightbuilder_cat.info()
       << "Bounce " << b + 1 << "...\n";
+
+    total_added->clear_image();
+    _lm_textures["indirect_sh_accum"]->clear_image();
 
     // It works like this:
     // Bounce 0 gathers direct light * albedo.
@@ -2431,6 +2478,12 @@ compute_indirect() {
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["reflectivity"]);
 
+      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
+      vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl"]);
+      vnp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
+
+      _lm_textures["reflectivity"]->clear_image();
+
       //out_tex = _lm_textures["reflectivity"];
 
     } else {
@@ -2441,63 +2494,160 @@ compute_indirect() {
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["indirect_accum"]);
 
+      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
+      vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl_accum"]);
+      vnp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
+
+      _lm_textures["indirect_accum"]->clear_image();
+
       //out_tex = _lm_textures["indirect_accum"];
     }
 
-    for (size_t i = 0; i < _pages.size(); i++) {
-      const LightmapPage &page = _pages[i];
+    //lightbuilder_cat.info()
+    //  << "Lightmapped...\n";
 
-      np.set_shader_input("u_palette_size_page_bounce", LVecBase4i(_lightmap_size[0], _lightmap_size[1], i, b));
+#if 0
 
-      //for (int j = 0; j < x_regions; j++) {
-      //  for (int k = 0; k < y_regions; k++) {
-      //    int x = j * _ray_region_size;
-      //    int y = k * _ray_region_size;
-      //    int w = std::min((j + 1) * _ray_region_size, _lightmap_size[0]) - x;
-      //    int h = std::min((k + 1) * _ray_region_size, _lightmap_size[1]) - y;
+    int max_region_size = _ray_region_size;
+    int max_rays = _rays_per_region;
 
-          np.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
+    int x_regions = (_lightmap_size[0] - 1) / max_region_size + 1;
+    int y_regions = (_lightmap_size[1] - 1) / max_region_size + 1;
+    int ray_iterations = (_rays_per_luxel - 1) / max_rays + 1;
 
-          LVecBase3i group_size((_lightmap_size[0] - 1) / 8 + 1, (_lightmap_size[1] - 1) / 8 + 1, 1);
+    double start = ClockObject::get_global_clock()->get_real_time();
 
-     //     for (int l = 0; l < ray_iters; l++) {
-     //       int ray_from = l * _rays_per_region;
-     //       int ray_to = std::min((l + 1) * _rays_per_region, _rays_per_luxel);
+    int num_steps = x_regions * y_regions * ray_iterations * (int)_pages.size();
+    int count = 0;
 
-            np.set_shader_input("u_ray_params", LVecBase3i(0, _rays_per_luxel, _rays_per_luxel));
+    for (size_t p = 0; p < _pages.size(); ++p) {
+      np.set_shader_input("u_palette_size_page_bounce", LVecBase4i(_lightmap_size[0], _lightmap_size[1], p, b));
 
+      for (int i = 0; i < x_regions; ++i) {
+        for (int j = 0; j < y_regions; ++j) {
+          int x = i * max_region_size;
+          int y = j * max_region_size;
+          int w = std::min((i + 1) * max_region_size, _lightmap_size[0]) - x;
+          int h = std::min((j + 1) * max_region_size, _lightmap_size[1]) - y;
+          np.set_shader_input("u_region_ofs", LVecBase2i(x, y));
+
+          LVecBase3i group_size((w - 1) / 8 + 1, (h - 1) / 8 + 1, 1);
+          for (int k = 0; k < ray_iterations; ++k) {
+            lightbuilder_cat.info(false)
+              << (int)(((float)(count + 1) / num_steps) * 100.0f) << "%";
+            if (count != (num_steps - 1)) {
+              lightbuilder_cat.info(false) << "\r";
+            } else {
+              lightbuilder_cat.info(false) << "\n";
+            }
+            np.set_shader_input("u_ray_params", LVecBase3i(k * max_rays, std::min((k + 1) * max_rays, _rays_per_luxel), _rays_per_luxel));
             _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
             _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
-      //    }
-      //  }
-      //}
-    }
+            _gsg->finish();
 
-    //_graphics_engine->extract_texture_data(out_tex, _gsg);
-    //std::ostringstream lss;
-    //lss << "gathered-lm-bounce-" << b << "-#.png";
-    //out_tex->write(lss.str(), 0, 0, true, false);
+            ++count;
+          }
+        }
+      }
+    }
 
     if (_num_vertex_lit_vertices > 0) {
-      // Now run indirect pass over vertex-lit stuff.
-      LVecBase3i group_size((_vertex_palette_width - 1) / 64 + 1, _vertex_palette_height, 1);
-      if (b & 1) {
-        vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
-        vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl"]);
-        vnp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
-        //out_tex = _lm_textures["vtx_refl"];
-      } else {
-        vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
-        vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl_accum"]);
-        vnp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
-        //out_tex = _lm_textures["vtx_refl_accum"];
+      count = 0;
+      x_regions = std::max(1, (_vertex_palette_width - 1) / max_region_size + 1);
+      y_regions = std::max(1, (_vertex_palette_height - 1) / max_region_size + 1);
+
+      num_steps = x_regions * y_regions * ray_iterations;
+
+      for (int i = 0; i < x_regions; ++i) {
+        for (int j = 0; j < y_regions; ++j) {
+          int x = i * max_region_size;
+          int y = j * max_region_size;
+          int w = std::min((i + 1) * max_region_size, _vertex_palette_width) - x;
+          int h = std::min((j + 1) * max_region_size, _vertex_palette_height) - y;
+          vnp.set_shader_input("u_region_ofs", LVecBase2i(x, y));
+
+          LVecBase3i group_size((w - 1) / 8 + 1, (h - 1) / 8 + 1, 1);
+          for (int k = 0; k < ray_iterations; ++k) {
+            lightbuilder_cat.info(false)
+              << (int)(((float)(count + 1) / num_steps) * 100.0f) << "%";
+            if (count != (num_steps - 1)) {
+              lightbuilder_cat.info(false) << "\r";
+            } else {
+              lightbuilder_cat.info(false) << "\n";
+            }
+            vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(k * max_rays, std::min((k + 1) * max_rays, _rays_per_luxel), _rays_per_luxel, b));
+            _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
+            _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+            _gsg->finish();
+
+            ++count;
+          }
+        }
       }
-      vnp.set_shader_input("u_ray_count_bounce", LVecBase2i(_rays_per_luxel, b));
-      _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
-      _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
     }
 
-    _gsg->finish();
+    double end = ClockObject::get_global_clock()->get_real_time();
+
+    lightbuilder_cat.info(false)
+      << " [ " << (int)(end - start) << " seconds ]";
+#endif
+
+#if 1
+    int ray_start = 0;
+
+    double start = ClockObject::get_global_clock()->get_real_time();
+
+    for (int i = 0; i < num_ray_iters; ++i) {
+      lightbuilder_cat.info(false)
+        << (int)(((float)(i + 1) / num_ray_iters) * 100.0f) << "%";
+      if (i != (num_ray_iters - 1)) {
+        lightbuilder_cat.info(false) << "\r";
+      } else {
+        lightbuilder_cat.info(false) << "\n";
+      }
+
+      // Lightmapped stuff.
+      for (size_t j = 0; j < _pages.size(); ++j) {
+        np.set_shader_input("u_palette_size_page_bounce", LVecBase4i(_lightmap_size[0], _lightmap_size[1], j, b));
+        np.set_shader_input("u_ray_params", LVecBase3i(ray_start, ray_start + rays_per_iter, _rays_per_luxel));
+        np.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
+        LVecBase3i group_size((_lightmap_size[0] - 1) / 8 + 1, (_lightmap_size[1] - 1) / 8 + 1, 1);
+        _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
+        _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+        _gsg->finish();
+      }
+
+      if (_num_vertex_lit_vertices > 0) {
+        LVecBase3i group_size((_vertex_palette_width - 1) / 64 + 1, _vertex_palette_height, 1);
+        //LVecBase3i group_size((_vertex_palette_width - 1) / 8 + 1, (_vertex_palette_height - 1) / 8 + 1, 1);
+        vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(ray_start, ray_start + rays_per_iter, _rays_per_luxel, b));
+        vnp.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
+        _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
+        _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+        _gsg->finish();
+      }
+
+      ray_start += rays_per_iter;
+    }
+
+    double end = ClockObject::get_global_clock()->get_real_time();
+
+    lightbuilder_cat.info(false)
+      << " [ " << (int)(end - start) << " seconds ]";
+#endif
+
+    //_gsg->finish();
+
+    _graphics_engine->extract_texture_data(total_added, _gsg);
+    CPTA_uchar added_ram_image = total_added->get_ram_image();
+    uint32_t added_fixed_point = *((const uint32_t *)added_ram_image.p());
+    float added = (float)added_fixed_point / 10000.0f;
+    lightbuilder_cat.info(false)
+      << " [ Added max " << added << " ]\n";
+    if (added <= 0.001f) {
+      // Stabilized.  We're done bouncing.
+      break;
+    }
 
     //_graphics_engine->extract_texture_data(out_tex, _gsg);
     //std::ostringstream ss;
@@ -2513,6 +2663,7 @@ compute_indirect() {
   free_texture(_lm_textures["vtx_refl"]);
   free_texture(_lm_textures["position"]);
   free_texture(_lm_textures["normal"]);
+  free_texture(_lm_textures["indirect_sh_accum"]);
   // Freeing a texture is actually queued up and not actually
   // freed until we flush the queue by rendering a frame.
   _graphics_engine->render_frame();
@@ -2952,12 +3103,7 @@ compute_probes() {
 
   np.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_probes.compute.glsl"));
 
-  np.set_shader_input("vertices", _gpu_buffers["vertices"]);
-  np.set_shader_input("triangles", _gpu_buffers["triangles"]);
-  np.set_shader_input("lights", _gpu_buffers["lights"]);
-  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"]);
-  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"]);
-  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"]);
+  apply_kd_uniforms(np, 0);
 
   // Probe positions.
   np.set_shader_input("probes", _gpu_buffers["probes"]);
@@ -3381,4 +3527,19 @@ compress_rgb16_to_bc6h(Texture *tex) {
   tex->set_compression(Texture::CM_bptc);
 
   return true;
+}
+
+/**
+ *
+ */
+void LightBuilder::
+apply_kd_uniforms(NodePath np, int override) {
+  np.set_shader_input("vertices", _gpu_buffers["vertices"], override);
+  np.set_shader_input("triangles", _gpu_buffers["triangles"], override);
+  np.set_shader_input("lights", _gpu_buffers["lights"], override);
+  np.set_shader_input("kd_nodes", _gpu_buffers["kd_tree"], override);
+  np.set_shader_input("kd_leaves", _gpu_buffers["kd_leaves"], override);
+  np.set_shader_input("kd_triangles", _gpu_buffers["kd_tri_list"], override);
+  np.set_shader_input("scene_mins", _scene_mins, override);
+  np.set_shader_input("scene_maxs", _scene_maxs, override);
 }

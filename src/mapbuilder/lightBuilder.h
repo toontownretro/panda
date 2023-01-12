@@ -341,12 +341,12 @@ public:
   class KDNode : public MemoryBase {
   public:
     enum Face {
-      F_left,
-      F_right,
-      F_back,
-      F_front,
-      F_bottom,
-      F_top,
+      F_left = 1,
+      F_right = 0,
+      F_back = 3,
+      F_front = 2,
+      F_bottom = 5,
+      F_top = 4,
     };
 
     static constexpr int nil = -1;
@@ -363,6 +363,7 @@ public:
       children[1] = nullptr;
       next = nullptr;
       id = -1;
+      index = 0;
       for (int i = 0; i < 6; ++i) {
         neighbors[i] = nullptr;
       }
@@ -389,18 +390,20 @@ public:
     KDNode *next;
     int id;
 
+    int index;
+
     INLINE int get_child_node_index(int child) const {
       if (children[child] != nullptr) {
-        return children[child]->id;
+        return children[child]->index;
       }
-      return -1;
+      return 0;
     }
 
     INLINE int get_neighbor_node_index(int neighbor) const {
       if (neighbors[neighbor] != nullptr) {
-        return neighbors[neighbor]->id;
+        return neighbors[neighbor]->index;
       }
-      return -1;
+      return 0;
     }
 
     INLINE bool is_leaf() const { return children[0] == nullptr && children[1] == nullptr; }
@@ -475,6 +478,8 @@ private:
   void convert_rgba32_to_rgb8(const unsigned char *image, size_t image_size,
     const LVecBase2i &orig_size, const LVecBase2i &new_size, unsigned char *out);
   bool compress_rgb16_to_bc6h(Texture *tex);
+
+  void apply_kd_uniforms(NodePath np, int override);
 };
 
 #include "lightBuilder.I"
