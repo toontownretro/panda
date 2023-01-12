@@ -370,13 +370,13 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
         PN_stdfloat dist = (pos - map->_pos).length_squared();
         if (dist < closest_dist) {
           // Check that we can actually trace to the probe.
-          //RayTraceHitResult ret;
-          //ret = rt_scene->trace_line(pos, map->_pos, 3);
-          //if (!ret.hit) {
+          RayTraceHitResult ret;
+          ret = rt_scene->trace_line(pos, map->_pos, 3);
+          if (!ret.hit) {
             // Probe is visible from sample point, we can use it.
             closest_probe = map;
             closest_dist = dist;
-          //}
+          }
         }
       }
     } else {
