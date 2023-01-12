@@ -1937,6 +1937,8 @@ MapBuilder::ErrorCode MapBuilder::
 build_lighting() {
   LightBuilder builder;
 
+  builder.set_num_rays_per_luxel(_options.get_light_num_rays_per_sample());
+
   // Make the lights 5000 times as bright as the original .vmf lights.
   // Works better with the physically based camera.
   static constexpr PN_stdfloat light_scale_factor = 1.0f;//5000.0f;

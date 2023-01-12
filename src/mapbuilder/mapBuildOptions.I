@@ -30,6 +30,7 @@ MapBuildOptions() {
   _vis_max_cell_size.set(1e+9, 1e+9, 1e+9);
   _vis_tile_size.set(128, 128, 128);
   _mesh_group_size = 256.0f;
+  _light_num_rays_per_sample = 256;
 }
 
 /**
@@ -111,6 +112,25 @@ set_light(bool flag) {
 INLINE bool MapBuildOptions::
 get_light() const {
   return _do_light;
+}
+
+/**
+ * Specifies the number of rays to shoot for each lighting sample for indirect
+ * bounces.  Each bounce will fire N rays from each sample.  A higher value
+ * will make the indirect lighting better, but can increase compile times
+ * significantly.
+ */
+INLINE void MapBuildOptions::
+set_light_num_rays_per_sample(int count) {
+  _light_num_rays_per_sample = count;
+}
+
+/**
+ *
+ */
+INLINE int MapBuildOptions::
+get_light_num_rays_per_sample() const {
+  return _light_num_rays_per_sample;
 }
 
 /**

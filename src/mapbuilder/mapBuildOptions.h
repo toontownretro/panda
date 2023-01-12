@@ -55,6 +55,9 @@ PUBLISHED:
   INLINE void set_light(bool flag);
   INLINE bool get_light() const;
 
+  INLINE void set_light_num_rays_per_sample(int count);
+  INLINE int get_light_num_rays_per_sample() const;
+
   INLINE void set_num_threads(int count);
   INLINE int get_num_threads() const;
 
@@ -109,6 +112,8 @@ public:
   LVecBase3 _vis_max_cell_size;
 
   PN_stdfloat _mesh_group_size;
+
+  int _light_num_rays_per_sample;
 };
 
 #include "mapBuildOptions.I"
