@@ -75,7 +75,7 @@ LightBuilder() :
   _bias(0.01f),
   _bounces(5), // 5
   _rays_per_luxel(256),
-  _ray_region_size(8192),
+  _ray_region_size(128),
   _rays_per_region(32),
   _graphics_engine(GraphicsEngine::get_global_ptr()),
   _host_output(nullptr),
@@ -544,14 +544,6 @@ make_textures() {
   indirect_accum->set_compression(Texture::CM_off);
   indirect_accum->clear_image();
   _lm_textures["indirect_accum"] = indirect_accum;
-  PT(Texture) indirect_sh_accum = new Texture("lm_indirect_sh_accum");
-  indirect_sh_accum->setup_2d_texture_array(_lightmap_size[0], _lightmap_size[1], _pages.size() * 4,
-                                         Texture::T_float, Texture::F_rgba32);
-  indirect_sh_accum->set_clear_color(LColor(0, 0, 0, 0));
-  indirect_sh_accum->set_default_sampler(sampler);
-  indirect_sh_accum->set_compression(Texture::CM_off);
-  indirect_sh_accum->clear_image();
-  _lm_textures["indirect_sh_accum"] = indirect_sh_accum;
 
   // Reflectivity = direct light * albedo + emission.  Color of light
   // being reflected off of a luxel.  Used during the bounce pass.
@@ -1301,7 +1293,7 @@ make_gpu_buffers() {
   return true;
 }
 
-static constexpr int kd_max_triangles = 20;
+static constexpr int kd_max_triangles = 10;
 static constexpr int kd_max_depth = 28;
 
 /**
@@ -1631,10 +1623,10 @@ split_triangles(const KDSplits *splits, int num_tris, unsigned char &axis, int &
       float left_delta = cand_dist - mins[j];
       float right_delta = maxs[j] - cand_dist;
 
-      //if (left_delta <= 0.01 || right_delta <= 0.01) {
-      //  ++i;
-      //  continue;
-      //}
+      if (left_delta <= 0.01f || right_delta <= 0.01f) {
+        ++i;
+        continue;
+      }
 
       if (cand_dist <= mins[j]) {
         ++i;
@@ -2419,7 +2411,6 @@ compute_indirect() {
   np.set_shader_input("luxel_position", _lm_textures["position"]);
   np.set_shader_input("luxel_normal", _lm_textures["normal"]);
   np.set_shader_input("luxel_light", _lm_textures["direct"]);
-  np.set_shader_input("luxel_sh_gathered", _lm_textures["indirect_sh_accum"]);
 
   np.set_shader_input("u_vtx_lit_info", LVecBase2i(_first_vertex_lit_vertex, _vertex_palette_width));
 
@@ -2444,10 +2435,10 @@ compute_indirect() {
 
   //int num_ray_iters = 16;
   int rays_per_iter = 16;//_rays_per_luxel / num_ray_iters;
-  int num_ray_iters = _rays_per_luxel / rays_per_iter;
+  int num_ray_iters = (_rays_per_luxel - 1) / rays_per_iter + 1;
 
   PT(Texture) total_added = new Texture("lm-indirect-total-bounce-added");
-  total_added->setup_1d_texture(1, Texture::T_unsigned_int, Texture::F_r32i);
+  total_added->setup_1d_texture(3, Texture::T_unsigned_int, Texture::F_r32i);
   total_added->set_compression(Texture::CM_off);
   total_added->set_clear_color(LColor(0));
   total_added->clear_image();
@@ -2455,12 +2446,11 @@ compute_indirect() {
   np.set_shader_input("feedback_total_add", total_added);
   vnp.set_shader_input("feedback_total_add", total_added);
 
-  for (int b = 0; b < 10000; b++) {
+  for (int b = 0; b < 100; b++) {
     lightbuilder_cat.info()
       << "Bounce " << b + 1 << "...\n";
 
     total_added->clear_image();
-    _lm_textures["indirect_sh_accum"]->clear_image();
 
     // It works like this:
     // Bounce 0 gathers direct light * albedo.
@@ -2468,129 +2458,49 @@ compute_indirect() {
     // Bounce 2 gathers bounce 1
     // ...and so on.
 
-    //Texture *out_tex;
+    Texture *out_tex;
+    Texture *out_vtx_tex;
 
     if (b & 1) {
       // Reflected light read from here.
       np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
+      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
       np.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
+      vnp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
 
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["reflectivity"]);
-
-      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
       vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl"]);
-      vnp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
 
-      _lm_textures["reflectivity"]->clear_image();
+      // Gathered light on this bounce is stored in this texture, accumulated
+      // over several ray iterations.  We need to be sure to clear out data
+      // from the previous bounce.
+      //_lm_textures["reflectivity"]->clear_image();
+      //_lm_textures["vtx_refl"]->clear_image();
 
-      //out_tex = _lm_textures["reflectivity"];
+      out_tex = _lm_textures["reflectivity"];
+      out_vtx_tex = _lm_textures["vtx_refl"];
 
     } else {
       // Reflected light read from here.
       np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
+      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
       np.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
+      vnp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
 
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["indirect_accum"]);
-
-      vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
       vnp.set_shader_input("vtx_gathered", _lm_textures["vtx_refl_accum"]);
-      vnp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
 
-      _lm_textures["indirect_accum"]->clear_image();
+      // Gathered light on this bounce is stored in this texture, accumulated
+      // over several ray iterations.  We need to be sure to clear out data
+      // from the previous bounce.
+      //_lm_textures["indirect_accum"]->clear_image();
+      //_lm_textures["vtx_refl_accum"]->clear_image();
 
-      //out_tex = _lm_textures["indirect_accum"];
+      out_tex = _lm_textures["indirect_accum"];
+      out_vtx_tex = _lm_textures["vtx_refl_accum"];
     }
-
-    //lightbuilder_cat.info()
-    //  << "Lightmapped...\n";
-
-#if 0
-
-    int max_region_size = _ray_region_size;
-    int max_rays = _rays_per_region;
-
-    int x_regions = (_lightmap_size[0] - 1) / max_region_size + 1;
-    int y_regions = (_lightmap_size[1] - 1) / max_region_size + 1;
-    int ray_iterations = (_rays_per_luxel - 1) / max_rays + 1;
-
-    double start = ClockObject::get_global_clock()->get_real_time();
-
-    int num_steps = x_regions * y_regions * ray_iterations * (int)_pages.size();
-    int count = 0;
-
-    for (size_t p = 0; p < _pages.size(); ++p) {
-      np.set_shader_input("u_palette_size_page_bounce", LVecBase4i(_lightmap_size[0], _lightmap_size[1], p, b));
-
-      for (int i = 0; i < x_regions; ++i) {
-        for (int j = 0; j < y_regions; ++j) {
-          int x = i * max_region_size;
-          int y = j * max_region_size;
-          int w = std::min((i + 1) * max_region_size, _lightmap_size[0]) - x;
-          int h = std::min((j + 1) * max_region_size, _lightmap_size[1]) - y;
-          np.set_shader_input("u_region_ofs", LVecBase2i(x, y));
-
-          LVecBase3i group_size((w - 1) / 8 + 1, (h - 1) / 8 + 1, 1);
-          for (int k = 0; k < ray_iterations; ++k) {
-            lightbuilder_cat.info(false)
-              << (int)(((float)(count + 1) / num_steps) * 100.0f) << "%";
-            if (count != (num_steps - 1)) {
-              lightbuilder_cat.info(false) << "\r";
-            } else {
-              lightbuilder_cat.info(false) << "\n";
-            }
-            np.set_shader_input("u_ray_params", LVecBase3i(k * max_rays, std::min((k + 1) * max_rays, _rays_per_luxel), _rays_per_luxel));
-            _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
-            _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
-            _gsg->finish();
-
-            ++count;
-          }
-        }
-      }
-    }
-
-    if (_num_vertex_lit_vertices > 0) {
-      count = 0;
-      x_regions = std::max(1, (_vertex_palette_width - 1) / max_region_size + 1);
-      y_regions = std::max(1, (_vertex_palette_height - 1) / max_region_size + 1);
-
-      num_steps = x_regions * y_regions * ray_iterations;
-
-      for (int i = 0; i < x_regions; ++i) {
-        for (int j = 0; j < y_regions; ++j) {
-          int x = i * max_region_size;
-          int y = j * max_region_size;
-          int w = std::min((i + 1) * max_region_size, _vertex_palette_width) - x;
-          int h = std::min((j + 1) * max_region_size, _vertex_palette_height) - y;
-          vnp.set_shader_input("u_region_ofs", LVecBase2i(x, y));
-
-          LVecBase3i group_size((w - 1) / 8 + 1, (h - 1) / 8 + 1, 1);
-          for (int k = 0; k < ray_iterations; ++k) {
-            lightbuilder_cat.info(false)
-              << (int)(((float)(count + 1) / num_steps) * 100.0f) << "%";
-            if (count != (num_steps - 1)) {
-              lightbuilder_cat.info(false) << "\r";
-            } else {
-              lightbuilder_cat.info(false) << "\n";
-            }
-            vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(k * max_rays, std::min((k + 1) * max_rays, _rays_per_luxel), _rays_per_luxel, b));
-            _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
-            _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
-            _gsg->finish();
-
-            ++count;
-          }
-        }
-      }
-    }
-
-    double end = ClockObject::get_global_clock()->get_real_time();
-
-    lightbuilder_cat.info(false)
-      << " [ " << (int)(end - start) << " seconds ]";
-#endif
 
 #if 1
     int ray_start = 0;
@@ -2609,7 +2519,7 @@ compute_indirect() {
       // Lightmapped stuff.
       for (size_t j = 0; j < _pages.size(); ++j) {
         np.set_shader_input("u_palette_size_page_bounce", LVecBase4i(_lightmap_size[0], _lightmap_size[1], j, b));
-        np.set_shader_input("u_ray_params", LVecBase3i(ray_start, ray_start + rays_per_iter, _rays_per_luxel));
+        np.set_shader_input("u_ray_params", LVecBase3i(ray_start, std::min(ray_start + rays_per_iter, _rays_per_luxel), _rays_per_luxel));
         np.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
         LVecBase3i group_size((_lightmap_size[0] - 1) / 8 + 1, (_lightmap_size[1] - 1) / 8 + 1, 1);
         _gsg->set_state_and_transform(np.get_state(), TransformState::make_identity());
@@ -2620,7 +2530,7 @@ compute_indirect() {
       if (_num_vertex_lit_vertices > 0) {
         LVecBase3i group_size((_vertex_palette_width - 1) / 64 + 1, _vertex_palette_height, 1);
         //LVecBase3i group_size((_vertex_palette_width - 1) / 8 + 1, (_vertex_palette_height - 1) / 8 + 1, 1);
-        vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(ray_start, ray_start + rays_per_iter, _rays_per_luxel, b));
+        vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(ray_start, std::min(ray_start + rays_per_iter, _rays_per_luxel), _rays_per_luxel, b));
         vnp.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
         _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
         _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
@@ -2638,21 +2548,30 @@ compute_indirect() {
 
     //_gsg->finish();
 
+#if 0
+    _graphics_engine->extract_texture_data(out_tex, _gsg);
+    std::ostringstream ss;
+    ss << "gathered-bounce-" << b << "-lm.png";
+    out_tex->write(ss.str());
+
+    //_graphics_engine->extract_texture_data(out_vtx_tex, _gsg);
+    //std::ostringstream ss2;
+    //ss2 << "gathered-bounce-" << b << "-vtx.png";
+    //out_vtx_tex->write(ss2.str());
+#endif
+
     _graphics_engine->extract_texture_data(total_added, _gsg);
     CPTA_uchar added_ram_image = total_added->get_ram_image();
-    uint32_t added_fixed_point = *((const uint32_t *)added_ram_image.p());
-    float added = (float)added_fixed_point / 10000.0f;
+    const uint32_t *added_datap = (const uint32_t *)added_ram_image.p();
+    float max_r = (float)added_datap[0] / 10000.0f;
+    float max_g = (float)added_datap[1] / 10000.0f;
+    float max_b = (float)added_datap[2] / 10000.0f;
     lightbuilder_cat.info(false)
-      << " [ Added max " << added << " ]\n";
-    if (added <= 0.001f) {
+      << " [ Added max RGB " << max_r << " " << max_g << " " << max_b << " ]\n";
+    if (max_r <= 0.0001f && max_g <= 0.0001f && max_b <= 0.0001f) {
       // Stabilized.  We're done bouncing.
       break;
     }
-
-    //_graphics_engine->extract_texture_data(out_tex, _gsg);
-    //std::ostringstream ss;
-    //ss << "gathered-vtx-bounce-" << b << ".png";
-    //out_tex->write(ss.str());
   }
 
   // Free up memory.
@@ -2663,7 +2582,6 @@ compute_indirect() {
   free_texture(_lm_textures["vtx_refl"]);
   free_texture(_lm_textures["position"]);
   free_texture(_lm_textures["normal"]);
-  free_texture(_lm_textures["indirect_sh_accum"]);
   // Freeing a texture is actually queued up and not actually
   // freed until we flush the queue by rendering a frame.
   _graphics_engine->render_frame();
