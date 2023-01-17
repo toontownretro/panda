@@ -1878,6 +1878,7 @@ rasterize_geoms_into_lightmap_textures() {
   fbprops.set_aux_float(4);
   fbprops.set_rgba_bits(8, 8, 8, 8);
   fbprops.set_force_hardware(true);
+  fbprops.set_srgb_color(false);
   //fbprops.set_multisamples(16);
 
   unsigned int flags = GraphicsPipe::BF_refuse_window;
@@ -2142,6 +2143,7 @@ rasterize_vertex_lit_geoms() {
   fbprops.clear();
   fbprops.set_rgba_bits(8, 8, 8, 8);
   fbprops.set_force_hardware(true);
+  fbprops.set_srgb_color(false);
 
   unsigned int flags = GraphicsPipe::BF_refuse_window;
 
@@ -2433,6 +2435,19 @@ compute_indirect() {
               _first_vertex_lit_vertex, _num_vertex_lit_vertices));
   vnp.set_shader_input("_u_bias", LVecBase2f(_bias));
 
+  NodePath anp("astate");
+  anp.set_shader(Shader::load_compute(Shader::SL_GLSL, "shaders/lm_probes.compute.glsl"));
+  apply_kd_uniforms(anp, 0);
+  // Probe positions.
+  anp.set_shader_input("probes", _gpu_buffers["probes"]);
+  // Probe output data.
+  anp.set_shader_input("probe_output", _lm_textures["probes"]);
+  anp.set_shader_input("u_bias_", LVecBase2(_bias));
+  anp.set_shader_input("_u_probe_count", LVecBase2i((int)_probes.size()));
+  anp.set_shader_input("u_sky_color", _sky_color.get_xyz());
+  anp.set_shader_input("luxel_albedo", _lm_textures["albedo"]);
+  anp.set_shader_input("u_vtx_lit_info", LVecBase2i(_first_vertex_lit_vertex, _vertex_palette_width));
+
   //int num_ray_iters = 16;
   int rays_per_iter = 16;//_rays_per_luxel / num_ray_iters;
   int num_ray_iters = (_rays_per_luxel - 1) / rays_per_iter + 1;
@@ -2465,8 +2480,10 @@ compute_indirect() {
       // Reflected light read from here.
       np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
       vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
+      anp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl_accum"]);
       np.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
       vnp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
+      anp.set_shader_input("luxel_reflectivity", _lm_textures["indirect_accum"]);
 
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["reflectivity"]);
@@ -2485,8 +2502,10 @@ compute_indirect() {
       // Reflected light read from here.
       np.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
       vnp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
+      anp.set_shader_input("vtx_reflectivity", _lm_textures["vtx_refl"]);
       np.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
       vnp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
+      anp.set_shader_input("luxel_reflectivity", _lm_textures["reflectivity"]);
 
       // Gathered light stored here.
       np.set_shader_input("luxel_gathered", _lm_textures["indirect_accum"]);
@@ -2527,12 +2546,23 @@ compute_indirect() {
         _gsg->finish();
       }
 
+      // Vertex lit stuff.
       if (_num_vertex_lit_vertices > 0) {
         LVecBase3i group_size((_vertex_palette_width - 1) / 64 + 1, _vertex_palette_height, 1);
         //LVecBase3i group_size((_vertex_palette_width - 1) / 8 + 1, (_vertex_palette_height - 1) / 8 + 1, 1);
         vnp.set_shader_input("u_ray_count_bounce", LVecBase4i(ray_start, std::min(ray_start + rays_per_iter, _rays_per_luxel), _rays_per_luxel, b));
         vnp.set_shader_input("u_region_ofs", LVecBase2i(0, 0));
         _gsg->set_state_and_transform(vnp.get_state(), TransformState::make_identity());
+        _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
+        _gsg->finish();
+      }
+
+      // Ambient probes.
+      if (!_probes.empty()) {
+        // Gather ambient probe lighting.
+        LVecBase3i group_size((_probes.size() - 1) / 64 + 1, 1, 1);
+        anp.set_shader_input("u_ray_params", LVecBase4i(ray_start, std::min(ray_start + rays_per_iter, _rays_per_luxel), _rays_per_luxel, b));
+        _gsg->set_state_and_transform(anp.get_state(), TransformState::make_identity());
         _gsg->dispatch_compute(group_size[0], group_size[1], group_size[2]);
         _gsg->finish();
       }
@@ -2574,6 +2604,31 @@ compute_indirect() {
     }
   }
 
+  if (!_probes.empty()) {
+    // Retrieve probe data back onto CPU.
+    _graphics_engine->extract_texture_data(_lm_textures["probes"], _gsg);
+    CPTA_uchar probe_data = _lm_textures["probes"]->get_ram_image();
+    const float *probe_datap = (const float *)probe_data.p();
+
+    // Now output the data to a friendly format.
+    for (size_t i = 0; i < _probes.size(); i++) {
+      if (lightbuilder_cat.is_debug()) {
+        lightbuilder_cat.debug()
+          << "Probe " << i << ":\n";
+      }
+      LightmapAmbientProbe &probe = _probes[i];
+      for (int j = 0; j < 9; j++) {
+        probe.data[j][0] = probe_datap[i * 36 + j * 4];
+        probe.data[j][1] = probe_datap[i * 36 + j * 4 + 1];
+        probe.data[j][2] = probe_datap[i * 36 + j * 4 + 2];
+        if (lightbuilder_cat.is_debug()) {
+          lightbuilder_cat.debug(false)
+            << "\t" << probe.data[j] << "\n";
+        }
+      }
+    }
+  }
+
   // Free up memory.
   free_texture(_lm_textures["indirect_accum"]);
   free_texture(_lm_textures["indirect"]);
@@ -2582,6 +2637,9 @@ compute_indirect() {
   free_texture(_lm_textures["vtx_refl"]);
   free_texture(_lm_textures["position"]);
   free_texture(_lm_textures["normal"]);
+  free_texture(_lm_textures["probes"]);
+  free_texture(_lm_textures["albedo"]);
+  free_texture(_lm_textures["vtx_albedo"]);
   // Freeing a texture is actually queued up and not actually
   // freed until we flush the queue by rendering a frame.
   _graphics_engine->render_frame();
@@ -3238,10 +3296,10 @@ solve() {
     return false;
   }
 
-  if (!compute_probes()) {
-    lightbuilder_cat.error()
-      << "Failed to compute ambient probes\n";
-  }
+  //if (!compute_probes()) {
+  //  lightbuilder_cat.error()
+  //    << "Failed to compute ambient probes\n";
+ // }
 
   if (!dialate_lightmaps()) {
     lightbuilder_cat.error()
