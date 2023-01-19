@@ -1150,7 +1150,7 @@ Character::CData::
 CData() :
   _frame_blend_flag(interpolate_frames),
   _auto_advance_flag(true),
-  _channel_transition_flag(true),
+  _channel_transition_flag(transition_channels),
   _anim_changed(false),
   _last_update(0.0),
   _root_xform(LMatrix4::ident_mat()),

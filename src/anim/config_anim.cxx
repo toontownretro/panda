@@ -84,6 +84,14 @@ PRC_DESC("Set this true to interpolate character animations between frames, "
          "also be changed on a per-character basis with "
          "PartBundle::set_frame_blend_flag()."));
 
+ConfigVariableBool transition_channels
+("transition-channels", true,
+PRC_DESC("Set this true to enable smooth transitions between animation channel "
+         "changes on a character's animation layer, or false to snap all "
+         "channel changes.  This can also be changed on a per-character basis "
+         "with Character::set_channel_transition_flag().  Furthermore, AnimChannels "
+         "can be set to always snap with the AnimChannel::F_snap flag."));
+
 ConfigVariableBool restore_initial_pose
 ("restore-initial-pose", true,
 PRC_DESC("When this is true, setting all control effects on an Actor to 0 "
