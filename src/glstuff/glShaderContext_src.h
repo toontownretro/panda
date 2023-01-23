@@ -87,6 +87,7 @@ private:
   bool _needs_reflection = false;
   bool _needs_query_uniform_locations = false;
   bool _remap_uniform_locations = false;
+  bool _emulate_float_attribs = false;
 
   CPT(RenderState) _state_rs;
   CPT(TransformState) _modelview_transform;

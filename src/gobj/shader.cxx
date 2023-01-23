@@ -2276,10 +2276,134 @@ bind_parameter(const Parameter &param) {
         bind._part[1] = SMO_identity;
         bind._arg[1] = nullptr;
       }
+      else if (pieces[1].compare(0, 5, "light") == 0) {
+        if (!expect_float_matrix(name, type, 4, 4)) {
+          return false;
+        }
+        bind._piece = SMP_transpose;
+        bind._func = SMF_first;
+        bind._part[0] = SMO_light_source_i_packed;
+        bind._arg[0] = nullptr;
+        bind._part[1] = SMO_identity;
+        bind._arg[1] = nullptr;
+        bind._index = atoi(pieces[1].c_str() + 5);
+        bind._scalar_type = type->as_matrix()->get_scalar_type();
+      }
+      else if (pieces[1].compare(0, 5, "lspec") == 0) {
+        if (!expect_float_vector(name, type, 3, 4)) {
+          return false;
+        }
+        bind._piece = SMP_row3;
+        bind._func = SMF_first;
+        bind._part[0] = SMO_light_source_i_attrib;
+        bind._arg[0] = InternalName::make("specular");
+        bind._part[1] = SMO_identity;
+        bind._arg[1] = nullptr;
+        bind._index = atoi(pieces[1].c_str() + 5);
+      }
+      else if (pieces[1] == "pointparams") {
+        if (!expect_float_vector(name, type, 3, 4)) {
+          return false;
+        }
+        bind._func = SMF_first;
+        bind._part[0] = SMO_attr_pointparams;
+        bind._arg[0] = nullptr;
+        bind._part[1] = SMO_identity;
+        bind._arg[1] = nullptr;
+
+        if (type->as_vector()->get_num_components() == 3) {
+          bind._piece = Shader::SMP_row3x3;
+        } else {
+          bind._piece = Shader::SMP_row3;
+        }
+      }
       else {
         return report_parameter_error(name, type, "unrecognized parameter name");
       }
 
+      cp_add_mat_spec(bind);
+      return true;
+    }
+
+    // Keywords to access light properties.
+    if (pieces[0] == "alight") {
+      if (!expect_num_words(name, type, 2) ||
+          !expect_float_vector(name, type, 3, 4)) {
+        return false;
+      }
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_alight_x;
+      bind._arg[0] = InternalName::make(pieces[1]);
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+
+      if (type->as_vector()->get_num_components() == 3) {
+        bind._piece = Shader::SMP_row3x3;
+      } else {
+        bind._piece = Shader::SMP_row3;
+      }
+
+      cp_add_mat_spec(bind);
+      return true;
+    }
+
+    if (pieces[0] == "satten") {
+      if (!expect_num_words(name, type, 2)||
+          !expect_float_vector(name, type, 4, 4)) {
+        return false;
+      }
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = SMP_row3;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_satten_x;
+      bind._arg[0] = InternalName::make(pieces[1]);
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+
+      cp_add_mat_spec(bind);
+      return true;
+    }
+
+    if (pieces[0] == "dlight" || pieces[0] == "plight" || pieces[0] == "slight") {
+      if (!expect_float_matrix(name, type, 4, 4)) {
+        return false;
+      }
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._piece = SMP_transpose;
+      int next = 1;
+      pieces.push_back("");
+      if (pieces[next] == "") {
+        return report_parameter_error(name, type, "expected light input name");
+      }
+      if (pieces[0] == "dlight") {
+        bind._func = SMF_transform_dlight;
+        bind._part[0] = SMO_dlight_x;
+      }
+      else if (pieces[0] == "plight") {
+        bind._func = SMF_transform_plight;
+        bind._part[0] = SMO_plight_x;
+      }
+      else if (pieces[0] == "slight") {
+        bind._func = SMF_transform_slight;
+        bind._part[0] = SMO_slight_x;
+      }
+      bind._arg[0] = InternalName::make(pieces[next]);
+      bind._scalar_type = type->as_matrix()->get_scalar_type();
+      next += 1;
+      if (pieces[next] != "to" && pieces[next] != "rel") {
+        return report_parameter_error(name, type, "expected 'to' or 'rel'");
+      }
+      if (!expect_coordinate_system(name, type, pieces, next, bind, false)) {
+        return false;
+      }
+      if (pieces.size() > next) {
+        return report_parameter_error(name, type,
+          "unexpected extra words after parameter name");
+      }
       cp_add_mat_spec(bind);
       return true;
     }
@@ -2311,13 +2435,18 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
       bind._func = SMF_first;
       bind._part[0] = SMO_texscale_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._index = atoi(pieces[1].c_str());
+
+      if (type->as_vector()->get_num_components() == 3) {
+        bind._piece = Shader::SMP_row3x3;
+      } else {
+        bind._piece = Shader::SMP_row3;
+      }
 
       cp_add_mat_spec(bind);
       return true;
@@ -2330,13 +2459,42 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
       bind._func = SMF_first;
       bind._part[0] = SMO_texcolor_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._index = atoi(pieces[1].c_str());
+
+      if (type->as_vector()->get_num_components() == 3) {
+        bind._piece = Shader::SMP_row3x3;
+      } else {
+        bind._piece = Shader::SMP_row3;
+      }
+
+      cp_add_mat_spec(bind);
+      return true;
+    }
+
+    if (pieces[0] == "texconst") {
+      if (!expect_num_words(name, type, 2) ||
+          !expect_float_vector(name, type, 3, 4)) {
+        return false;
+      }
+      ShaderMatSpec bind;
+      bind._id = param;
+      bind._func = SMF_first;
+      bind._part[0] = SMO_texconst_i;
+      bind._arg[0] = nullptr;
+      bind._part[1] = SMO_identity;
+      bind._arg[1] = nullptr;
+      bind._index = atoi(pieces[1].c_str());
+
+      if (type->as_vector()->get_num_components() == 3) {
+        bind._piece = Shader::SMP_row3x3;
+      } else {
+        bind._piece = Shader::SMP_row3;
+      }
 
       cp_add_mat_spec(bind);
       return true;
@@ -2475,12 +2633,18 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
       bind._func = SMF_first;
       bind._part[0] = SMO_texpad_x;
       bind._arg[0] = InternalName::make(pieces[1]);
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
+
+      if (type->as_vector()->get_num_components() == 3) {
+        bind._piece = Shader::SMP_row3x3;
+      } else {
+        bind._piece = Shader::SMP_row3;
+      }
+
       cp_add_mat_spec(bind);
       return true;
     }
@@ -2498,6 +2662,21 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = InternalName::make(pieces[1]);
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
+
+      switch (type->as_vector()->get_num_components()) {
+      case 2:
+        bind._piece = Shader::SMP_row3x2;
+        break;
+
+      case 3:
+        bind._piece = Shader::SMP_row3x3;
+        break;
+
+      case 4:
+        bind._piece = Shader::SMP_row3;
+        break;
+      }
+
       cp_add_mat_spec(bind);
       return true;
     }
@@ -3132,18 +3311,26 @@ add_module(PT(ShaderModule) module) {
 
   int used_caps = module->get_used_capabilities();
 
-  // Make sure we have a unique copy.
+  // Make sure that any modifications made to the module will not affect other
+  // Shader objects, by storing it as copy-on-write.
   COWPT(ShaderModule) cow_module = std::move(module);
 
-  // Link its inputs up with the previous stage.
   if (!_modules.empty()) {
-    //TODO: Check whether it's already linked properly to possibly avoid cloning
-    // the module.
-    PT(ShaderModule) module = cow_module.get_write_pointer();
-    if (!module->link_inputs(_modules.back()._module.get_read_pointer())) {
-      shader_cat.error()
-        << "Unable to match shader module interfaces.\n";
-      return false;
+    // Link its inputs up with the previous stage.
+    pmap<int, int> location_remap;
+    {
+      CPT(ShaderModule) module = cow_module.get_read_pointer();
+      if (!module->link_inputs(_modules.back()._module.get_read_pointer(), location_remap)) {
+        shader_cat.error()
+          << "Unable to match shader module interfaces.\n";
+        return false;
+      }
+    }
+
+    if (!location_remap.empty()) {
+      // Make sure we have a unique copy so that we can do the remappings.
+      PT(ShaderModule) module = cow_module.get_write_pointer();
+      module->remap_input_locations(location_remap);
     }
   }
   else if (stage == Stage::vertex) {

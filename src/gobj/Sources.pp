@@ -73,6 +73,7 @@
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \
     shaderContext.h shaderContext.I \
+    shaderEnums.h \
     shaderModule.h shaderModule.I \
     shaderModuleGlsl.h \
     shaderModuleSpirV.h shaderModuleSpirV.I \
@@ -166,6 +167,7 @@
     shaderCompilerGlslPreProc.cxx \
     shaderCompilerRegistry.cxx \
     shaderContext.cxx \
+    shaderEnums.cxx \
     shaderModule.cxx \
     shaderModuleGlsl.cxx \
     shaderModuleSpirV.cxx \
@@ -260,6 +262,7 @@
     shaderCompilerGlslPreProc.h \
     shaderCompilerRegistry.h \
     shaderContext.h shaderContext.I \
+    shaderEnums.h \
     shaderModule.h shaderModule.I \
     shaderModuleGlsl.h \
     shaderModuleSpirV.h shaderModuleSpirV.I \

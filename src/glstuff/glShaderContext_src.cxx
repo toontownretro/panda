@@ -2944,14 +2944,18 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
             // It requires us to pass GL_TRUE for normalized.
             _glgsg->_glVertexAttribPointer(p, GL_BGRA, GL_UNSIGNED_BYTE,
                                            GL_TRUE, stride, client_pointer);
-          } else if (bind._scalar_type == ShaderType::ST_float ||
-                     numeric_type == GeomEnums::NT_float32) {
+          }
+          else if (_emulate_float_attribs ||
+                   bind._scalar_type == ShaderType::ST_float ||
+                   numeric_type == GeomEnums::NT_float32) {
             _glgsg->_glVertexAttribPointer(p, num_values, type,
                                            normalized, stride, client_pointer);
-          } else if (bind._scalar_type == ShaderType::ST_double) {
+          }
+          else if (bind._scalar_type == ShaderType::ST_double) {
             _glgsg->_glVertexAttribLPointer(p, num_values, type,
                                             stride, client_pointer);
-          } else {
+          }
+          else {
             _glgsg->_glVertexAttribIPointer(p, num_values, type,
                                             stride, client_pointer);
           }
@@ -3888,18 +3892,39 @@ attach_shader(const ShaderModule *module, Shader::ModuleSpecConstants &consts) {
 #ifdef OPENGLES
       options.es = true;
 #else
-      options.es = false;
+      options.es = _glgsg->_glsl_version == 100
+                || _glgsg->_glsl_version == 300
+                || _glgsg->_glsl_version == 310
+                || _glgsg->_glsl_version == 320;
 #endif
       options.vertex.support_nonzero_base_instance = false;
+      options.enable_420pack_extension = false;
       compiler.set_common_options(options);
 
-      // At this time, SPIRV-Cross doesn't add this extension automatically.
-      if (!options.es && options.version < 140 &&
-          (module->get_used_capabilities() & ShaderModule::C_instance_id) != 0) {
-        if (_glgsg->has_extension("GL_ARB_draw_instanced")) {
-          compiler.require_extension("GL_ARB_draw_instanced");
-        } else {
+      if (options.version < 130) {
+        _emulate_float_attribs = true;
+      }
+
+      // At this time, SPIRV-Cross doesn't always add these automatically.
+      uint64_t used_caps = module->get_used_capabilities();
+#ifndef OPENGLES
+      if (!options.es) {
+        if (options.version < 140 && (used_caps & Shader::C_instance_id) != 0) {
+          if (_glgsg->has_extension("GL_ARB_draw_instanced")) {
+            compiler.require_extension("GL_ARB_draw_instanced");
+          } else {
+            compiler.require_extension("GL_EXT_gpu_shader4");
+          }
+        }
+        if (options.version < 130 && (used_caps & Shader::C_unified_model) != 0) {
           compiler.require_extension("GL_EXT_gpu_shader4");
+        }
+      }
+      else
+#endif
+      {
+        if (options.version < 300 && (used_caps & Shader::C_non_square_matrices) != 0) {
+          compiler.require_extension("GL_NV_non_square_matrices");
         }
       }
 
