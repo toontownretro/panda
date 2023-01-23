@@ -6,20 +6,20 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file shaderEnums.h
+ * @file shaderManagerEnums.h
  * @author brian
  * @date 2020-11-02
  */
 
-#ifndef SHADERENUMS_H
-#define SHADERENUMS_H
+#ifndef SHADERMANAGERENUMS_H
+#define SHADERMANAGERENUMS_H
 
 #include "pandabase.h"
 
 /**
  * Various enumerations relating to shader things.
  */
-class ShaderEnums {
+class ShaderManagerEnums {
 PUBLISHED:
   enum ShaderQuality {
     SQ_low,
@@ -28,7 +28,7 @@ PUBLISHED:
   };
 };
 
-EXPCL_PANDA_SHADER std::ostream &operator << (std::ostream &out, ShaderEnums::ShaderQuality sm);
-EXPCL_PANDA_SHADER std::istream &operator >> (std::istream &in, ShaderEnums::ShaderQuality &sm);
+EXPCL_PANDA_SHADER std::ostream &operator << (std::ostream &out, ShaderManagerEnums::ShaderQuality sm);
+EXPCL_PANDA_SHADER std::istream &operator >> (std::istream &in, ShaderManagerEnums::ShaderQuality &sm);
 
-#endif // SHADERENUMS_H
+#endif // SHADERMANAGERENUMS_H

@@ -50,12 +50,12 @@ get_shader_libraries() {
   return *load_shader_library;
 }
 
-ConfigVariableEnum<ShaderEnums::ShaderQuality> &
+ConfigVariableEnum<ShaderManagerEnums::ShaderQuality> &
 config_get_shader_quality() {
-  static ConfigVariableEnum<ShaderEnums::ShaderQuality> *shader_quality = nullptr;
+  static ConfigVariableEnum<ShaderManagerEnums::ShaderQuality> *shader_quality = nullptr;
   if (!shader_quality) {
-    shader_quality = new ConfigVariableEnum<ShaderEnums::ShaderQuality>
-      ("shader-quality", ShaderEnums::SQ_high,
+    shader_quality = new ConfigVariableEnum<ShaderManagerEnums::ShaderQuality>
+      ("shader-quality", ShaderManagerEnums::SQ_high,
       PRC_DESC("Sets the default quality level for all shaders.  This may not have "
                "any meaning to certain shaders.  It is up to the shader "
                "implementation to respect the chosen quality level."));

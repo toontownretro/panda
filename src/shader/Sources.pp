@@ -14,7 +14,7 @@
     //lightmappedShader.h lightmappedShader.I \
     //noMatShader.h noMatShader.I \
     shaderBase.h shaderBase.I \
-    shaderEnums.h \
+    shaderManagerEnums.h \
     shaderManager.h shaderManager.I \
     shaderObject.h shaderObject.I \
     shaderSetup.h shaderSetup.I \
@@ -40,7 +40,7 @@
     //lightmappedShader.cxx \
     //noMatShader.cxx \
     shaderBase.cxx \
-    shaderEnums.cxx \
+    shaderManagerEnums.cxx \
     shaderManager.cxx \
     shaderObject.cxx \
     shaderSetup.cxx \

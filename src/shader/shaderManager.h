@@ -20,7 +20,7 @@
 #include "geomVertexAnimationSpec.h"
 #include "graphicsStateGuardianBase.h"
 #include "renderAttrib.h"
-#include "shaderEnums.h"
+#include "shaderManagerEnums.h"
 #include "internalName.h"
 #include "texture.h"
 
@@ -32,7 +32,7 @@ class GraphicsStateGuardianBase;
  * This class is responsible for the registry of available shaders and calling
  * upon a shader to generate a shader for a given RenderState.
  */
-class EXPCL_PANDA_SHADER ShaderManager : public ShaderEnums, public ShaderManagerBase {
+class EXPCL_PANDA_SHADER ShaderManager : public ShaderManagerEnums, public ShaderManagerBase {
 private:
   INLINE ShaderManager();
 
