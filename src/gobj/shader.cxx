@@ -372,6 +372,12 @@ cp_dependency(ShaderMatInput inp) {
   if (inp == SMO_tex_is_alpha_i || inp == SMO_texcolor_i) {
     dep |= SSD_texture | SSD_frame;
   }
+  if (inp == SMO_texconst_i) {
+    dep |= SSD_tex_gen;
+  }
+  if (inp == SMO_attr_pointparams) {
+    dep |= SSD_render_mode | SSD_transform | SSD_frame;
+  }
 
   return dep;
 }

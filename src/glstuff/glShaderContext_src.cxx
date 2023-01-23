@@ -24,6 +24,7 @@
 #include "fogAttrib.h"
 #include "lightAttrib.h"
 #include "clipPlaneAttrib.h"
+#include "renderModeAttrib.h"
 #include "bamCache.h"
 #include "shaderModuleGlsl.h"
 #include "shaderModuleSpirV.h"
@@ -2212,6 +2213,16 @@ set_state_and_transform(const RenderState *target_rs,
     if (_shader_attrib != _glgsg->_target_shader) {
       altered |= Shader::SSD_shaderinputs;
       _shader_attrib = _glgsg->_target_shader;
+    }
+    slot = TexGenAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
+      altered |= Shader::SSD_tex_gen;
+    }
+    slot = RenderModeAttrib::get_class_slot();
+    if (state_rs->get_attrib(slot) !=
+        target_rs->get_attrib(slot)) {
+      altered |= Shader::SSD_render_mode;
     }
     _state_rs = target_rs;
   }
