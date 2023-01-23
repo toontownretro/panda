@@ -1199,11 +1199,13 @@ reset() {
         break;
 #endif
 
+#ifndef OPENGLES
       case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
       case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB:
       case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
       case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB:
         _compressed_texture_formats.set_bit(Texture::CM_bptc);
+#endif
 
       default:
         break;
@@ -9571,6 +9573,7 @@ get_external_image_format(Texture *tex) const {
       break;
 
     case Texture::CM_bptc:
+#ifndef OPENGLES
       if (format == Texture::F_srgb || format == Texture::F_srgb_alpha) {
         return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB;
       } else if (format == Texture::F_rgb16) {
@@ -9579,6 +9582,7 @@ get_external_image_format(Texture *tex) const {
       } else {
         return GL_COMPRESSED_RGBA_BPTC_UNORM_ARB;
       }
+#endif
       break;
 
     case Texture::CM_default:
@@ -10097,6 +10101,7 @@ get_internal_image_format(Texture *tex, bool force_sized) const {
       break;
 
     case Texture::CM_bptc:
+#ifndef OPENGLES
       if (format == Texture::F_srgb || format == Texture::F_srgb_alpha) {
         return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB;
       } else if (format == Texture::F_rgb16) {
@@ -10105,6 +10110,7 @@ get_internal_image_format(Texture *tex, bool force_sized) const {
       } else {
         return GL_COMPRESSED_RGBA_BPTC_UNORM_ARB;
       }
+#endif
       break;
 
     case Texture::CM_default:
