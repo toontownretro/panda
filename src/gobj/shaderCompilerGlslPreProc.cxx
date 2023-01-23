@@ -43,6 +43,8 @@ static struct ExtensionCaps { const char *ext; uint64_t caps; } _extension_caps[
   {"GL_OES_sample_variables", ShaderEnums::C_sample_variables},
   {"GL_OES_standard_derivatives", ShaderEnums::C_standard_derivatives},
   {"GL_OES_texture_buffer", ShaderEnums::C_texture_buffer},
+  {"GL_ARB_shader_viewport_layer_array", ShaderEnums::C_viewport_layer_array},
+  {"GL_AMD_vertex_shader_layer", ShaderEnums::C_viewport_layer_array},
   {nullptr, 0},
 };
 
@@ -80,6 +82,7 @@ get_languages() const {
  */
 PT(ShaderModule) ShaderCompilerGlslPreProc::
 compile_now(Stage stage, std::istream &in, const Filename &fullpath,
+            const Options &options,
             BamCacheRecord *record) const {
   // Create a name that's easier to read in error messages.
   std::string filename;

@@ -55,7 +55,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   //
   // If we don't have it, we have to use the geometry shader.
   bool can_write_gl_layer_from_vertex_shader =
-    (gsg->get_supported_shader_capabilities() & ShaderModule::C_viewport_layer_array) != 0;
+    (gsg->get_supported_shader_capabilities() & Shader::C_viewport_layer_array) != 0;
   nassertv(can_write_gl_layer_from_vertex_shader);
   // TODO: Fallback to geometry shader or texture atlas if not supported.
 

@@ -126,6 +126,11 @@ PUBLISHED:
     C_cull_distance = 1ull << 39,
     C_derivative_control = 1ull << 40,
     C_texture_query_samples = 1ull << 41,
+
+    // ARB_shader_viewport_layer_array/AMD_vertex_shader_layer, allows writing
+    // gl_ViewportIndex/gl_Layer from vertex and tessellation
+    // evaluation stages.
+    C_viewport_layer_array = 1ull << 42,
   };
 
   static std::string format_stage(Stage stage);

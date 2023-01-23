@@ -1845,11 +1845,11 @@ reset() {
     // extension or the AMD extension.
     if (is_at_least_gl_version(4, 1) &&
         has_extension("GL_ARB_shader_viewport_layer_array")) {
-      _supported_shader_caps |= ShaderModule::C_viewport_layer_array;
+      _supported_shader_caps |= Shader::C_viewport_layer_array;
     } else if ((is_at_least_gl_version(3, 0) ||
                has_extension("GL_EXT_texture_array")) &&
                has_extension("GL_AMD_vertex_shader_layer")) {
-      _supported_shader_caps |= ShaderModule::C_viewport_layer_array;
+      _supported_shader_caps |= Shader::C_viewport_layer_array;
     }
   }
 
