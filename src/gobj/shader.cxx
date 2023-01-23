@@ -2276,6 +2276,7 @@ bind_parameter(const Parameter &param) {
         bind._part[1] = SMO_identity;
         bind._arg[1] = nullptr;
       }
+#if 0
       else if (pieces[1].compare(0, 5, "light") == 0) {
         if (!expect_float_matrix(name, type, 4, 4)) {
           return false;
@@ -2301,6 +2302,7 @@ bind_parameter(const Parameter &param) {
         bind._arg[1] = nullptr;
         bind._index = atoi(pieces[1].c_str() + 5);
       }
+#endif
       else if (pieces[1] == "pointparams") {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
@@ -2325,6 +2327,7 @@ bind_parameter(const Parameter &param) {
       return true;
     }
 
+#if 0
     // Keywords to access light properties.
     if (pieces[0] == "alight") {
       if (!expect_num_words(name, type, 2) ||
@@ -2407,6 +2410,7 @@ bind_parameter(const Parameter &param) {
       cp_add_mat_spec(bind);
       return true;
     }
+#endif
 
     if (pieces[0] == "texmat") {
       if (!expect_num_words(name, type, 2) ||
