@@ -59,8 +59,21 @@ get_controller() const {
  */
 void PhysBoxController::
 destroy() {
-  if (_controller != nullptr) {
+  if (_actor_node != nullptr) {
+    // Manually remove the actor associated with the character
+    // from the physics scene.  For some reason, it does not appear
+    // that this is done automatically when the controller is
+    // released.
+    physx::PxRigidActor *actor = _actor_node->get_rigid_actor();
+    if (actor != nullptr) {
+      physx::PxScene *scene = actor->getScene();
+      if (scene != nullptr) {
+        scene->removeActor(*actor);
+      }
+    }
     _actor_node = nullptr;
+  }
+  if (_controller != nullptr) {
     _controller->setUserData(nullptr);
     _controller->release();
     _controller = nullptr;
