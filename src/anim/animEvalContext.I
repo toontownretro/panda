@@ -17,6 +17,7 @@
 INLINE AnimEvalData::
 AnimEvalData() :
   _weight(1.0f),
+  _net_weight(1.0f),
   _cycle(0.0f)
 {
 }
@@ -31,6 +32,7 @@ AnimEvalData(const AnimEvalData &copy, int num_joint_groups) {
   std::copy(copy._sliders, copy._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 
   _weight = copy._weight;
+  _net_weight = copy._net_weight;
   _cycle = copy._cycle;
 }
 
@@ -44,6 +46,7 @@ AnimEvalData(AnimEvalData &&other, int num_joint_groups) {
   std::move(other._sliders, other._sliders + (max_character_joints / SIMDFloatVector::num_columns), _sliders);
 
   _weight = std::move(other._weight);
+  _net_weight = std::move(other._net_weight);
   _cycle = std::move(other._cycle);
 }
 

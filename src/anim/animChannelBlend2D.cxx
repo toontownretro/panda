@@ -315,19 +315,24 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     return;
   }
 
+  PN_stdfloat this_net_weight = data._net_weight;
+
   float orig_weight = data._weight;
   data._weight = 1.0f;
+  data._net_weight = this_net_weight * w0;
   c0._channel->calc_pose(context, data);
   data._weight = orig_weight;
 
   AnimEvalData c1_data;
   c1_data._weight = 1.0f;
   c1_data._cycle = data._cycle;
+  c1_data._net_weight = this_net_weight * w1;
   c1._channel->calc_pose(context, c1_data);
 
   AnimEvalData c2_data;
   c2_data._weight = 1.0f;
   c2_data._cycle = data._cycle;
+  c2_data._net_weight = this_net_weight * w2;
   c2._channel->calc_pose(context, c2_data);
 
   SIMDFloatVector vw0 = w0;
@@ -363,6 +368,8 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
       data._pose[i].quat = data._pose[i].quat.align_lerp(c2_data._pose[i].quat, vw2);
     }
   }
+
+  data._net_weight = this_net_weight;
 }
 
 /**

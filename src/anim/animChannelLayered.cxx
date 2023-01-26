@@ -110,6 +110,8 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat cycle = data._cycle;
   PN_stdfloat weight = 1.0f;
 
+  PN_stdfloat this_net_weight = data._net_weight;
+
   for (size_t i = 0; i < _channels.size(); i++) {
     const Channel &layer = _channels[i];
 
@@ -178,8 +180,11 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
     data._cycle = layer_cycle;
     data._weight = layer_weight;
+    data._net_weight = this_net_weight * layer_weight;
     layer._channel->calc_pose(context, data);
   }
+
+  data._net_weight = this_net_weight;
 }
 
 /**

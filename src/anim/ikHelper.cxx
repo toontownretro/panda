@@ -76,7 +76,7 @@ add_channel_events(const AnimChannel *channel, const AnimEvalData &pose) {
 
     PN_stdfloat blend_val = 1.0f;
 
-    if (start != end) {
+    if (!_local && start != end) {
       PN_stdfloat index;
 
       if (event->_pose_parameter == -1) {
@@ -112,7 +112,9 @@ add_channel_events(const AnimChannel *channel, const AnimEvalData &pose) {
       }
     }
 
-    //blend_val *= pose._net_weight;
+    if (!_local) {
+      blend_val *= pose._net_weight;
+    }
 
     if (blend_val <= IK_WEIGHT_EPSILON) {
       // Negligible weight.
@@ -229,12 +231,23 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
   memset(chain_weight, 0, sizeof(chain_weight));
   // Targets
   LPoint3 chain_pos[32];
-  memset(chain_pos, 0, sizeof(chain_pos));
+  //memset(chain_pos, 0, sizeof(chain_pos));
   LQuaternion chain_rot[32];
-  memset(chain_rot, 0, sizeof(chain_rot));
+  //memset(chain_rot, 0, sizeof(chain_rot));
+
+  // Start at the current non-IK'd position for each chain.
+  for (int i = 0; i < _character->get_num_ik_chains(); ++i) {
+    const IKChain *chain = _character->get_ik_chain(i);
+    calc_joint_net_transform(chain->get_end_joint(), data);
+    chain_pos[i] = _joint_net_transforms[chain->get_end_joint()].get_row3(3);
+    chain_rot[i].set_from_matrix(_joint_net_transforms[chain->get_end_joint()]);
+  }
 
   for (size_t i = 0; i < _ik_states.size(); ++i) {
-    for (size_t j = 0; j < _ik_states[i].size(); ++j) {
+    PN_stdfloat remainder = 1.0f;
+
+    for (int j = (int)_ik_states[i].size() - 1; j >= 0 && remainder > 0.0f; --j) {
+
       const IKState *state = &_ik_states[i][j];
       const AnimChannel::IKEvent *event = state->_event;
       if (event == nullptr) {
@@ -243,6 +256,9 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
       int chain_index = event->_chain;
 
       PN_stdfloat state_weight = state->_blend_val * weight;
+      state_weight = std::min(remainder, state_weight);
+
+      remainder -= state_weight;
 
       switch (event->_type) {
       case AnimChannel::IKEvent::T_lock:
@@ -269,17 +285,19 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
           chain_weight[chain_index] = chain_weight[chain_index] * (1.0f - state_weight) + state_weight;
           chain_pos[chain_index] = chain_pos[chain_index] * (1.0f - state_weight) + target_pos * state_weight;
           LQuaternion::slerp(chain_rot[chain_index], target_rot, state_weight, chain_rot[chain_index]);
+          //std::cout << "touch with weight " << state_weight << "\n";
         }
         break;
       case AnimChannel::IKEvent::T_release:
         {
-          calc_joint_net_transform(state->_chain->get_end_joint(), data);
+          //calc_joint_net_transform(state->_chain->get_end_joint(), data);
           LPoint3 target_pos = _joint_net_transforms[state->_chain->get_end_joint()].get_row3(3);
           LQuaternion target_rot;
           target_rot.set_from_matrix(_joint_net_transforms[state->_chain->get_end_joint()]);
 
           chain_pos[chain_index] = chain_pos[chain_index] * (1.0f - state_weight) + target_pos * state_weight;
           LQuaternion::slerp(chain_rot[chain_index], target_rot, state_weight, chain_rot[chain_index]);
+          //std::cout << "Release with weight " << state_weight << "\n";
         }
       default:
         break;
@@ -288,13 +306,13 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
   }
 
   for (int i = 0; i < _character->get_num_ik_chains(); ++i) {
-    if (chain_weight[i] <= 0.0f) {
-      continue;
-    }
+    //if (chain_weight[i] <= 0.0f) {
+    //  continue;
+    //}
 
     const IKChain *chain = _character->get_ik_chain(i);
 
-    calc_joint_net_transform(chain->get_end_joint(), data);
+    //calc_joint_net_transform(chain->get_end_joint(), data);
     if (!solve_ik(i, _character, chain_pos[i], _joint_net_transforms.data())) {
       continue;
     }
@@ -306,9 +324,9 @@ apply_ik(AnimEvalData &data, PN_stdfloat weight) {
     _joint_net_transforms[end_joint] = LMatrix4::translate_mat(pos) * chain_rot[i];
 
     // Convert back to local space, apply to output pose.
-    joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, chain_weight[i]);
-    joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, chain_weight[i]);
-    joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, chain_weight[i]);
+    joint_net_to_local(chain->get_end_joint(), _joint_net_transforms.data(), data, *_context, 1.0f);//chain_weight[i]);
+    joint_net_to_local(chain->get_middle_joint(), _joint_net_transforms.data(), data, *_context, 1.0f);//chain_weight[i]);
+    joint_net_to_local(chain->get_top_joint(), _joint_net_transforms.data(), data, *_context, 1.0f);//chain_weight[i]);
   }
 }
 

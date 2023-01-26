@@ -102,6 +102,7 @@ public:
   SIMDFloatVector _sliders[max_character_joints / SIMDFloatVector::num_columns];
 
   PN_stdfloat _weight;
+  PN_stdfloat _net_weight;
 
   PN_stdfloat _cycle;
 };

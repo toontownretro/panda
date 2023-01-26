@@ -183,13 +183,17 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   } else {
     // Evaluate both at full weight and blend between them.
 
+    float this_net_weight = data._net_weight;
+
     float orig_weight = data._weight;
     data._weight = 1.0f;
+    data._net_weight = this_net_weight * (1.0f - frac);
     from->_channel->calc_pose(context, data);
 
     AnimEvalData to_data;
     to_data._cycle = data._cycle;
     to_data._weight = 1.0f;
+    to_data._net_weight = this_net_weight * frac;
     to->_channel->calc_pose(context, to_data);
 
     SIMDFloatVector vfrac = frac;
@@ -209,6 +213,7 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
     }
 
     data._weight = orig_weight;
+    data._net_weight = this_net_weight;
   }
 }
 

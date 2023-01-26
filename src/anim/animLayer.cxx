@@ -233,6 +233,7 @@ calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition) {
 
   data._cycle = _cycle;
   data._weight = _weight;
+  data._net_weight = _weight;
   channel->calc_pose(context, data);
 
   if (transition) {
@@ -319,6 +320,7 @@ calc_pose(AnimEvalContext &context, AnimEvalData &data, bool transition) {
 
       data._cycle = cycle;
       data._weight = blend->_weight;
+      data._net_weight = blend->_weight;
       blend_channel->calc_pose(context, data);
     }
 
