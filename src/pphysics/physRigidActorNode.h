@@ -43,6 +43,8 @@ PUBLISHED:
   void add_to_scene(PhysScene *scene);
   void remove_from_scene(PhysScene *scene);
 
+  INLINE PhysScene *get_scene() const;
+
   INLINE void set_wake_callback(CallbackObject *callback);
   INLINE CallbackObject *get_wake_callback() const;
 

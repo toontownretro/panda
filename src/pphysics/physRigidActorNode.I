@@ -57,6 +57,19 @@ get_shape(size_t n) const {
 }
 
 /**
+ * Returns the PhysScene that the actor is assigned to, or nullptr
+ * if the actor is not currently in any scene.
+ */
+INLINE PhysScene *PhysRigidActorNode::
+get_scene() const {
+  physx::PxScene *px_scene = get_rigid_actor()->getScene();
+  if (px_scene == nullptr || px_scene->userData == nullptr) {
+    return nullptr;
+  }
+  return (PhysScene *)px_scene->userData;
+}
+
+/**
  * Sets the callback to be executed when this node wakes up.
  */
 INLINE void PhysRigidActorNode::
