@@ -51,19 +51,19 @@ DXShaderContext11(Shader *shader, DXGraphicsStateGuardian11 *gsg) :
     size_t byte_code_size = module_blob->GetBufferSize();
 
     switch (dx_module->get_stage()) {
-    case ShaderModule::Stage::vertex:
+    case ShaderEnums::Stage::vertex:
       {
         HRESULT hr = device->CreateVertexShader(byte_code, byte_code_size, nullptr, &_vshader);
         nassertv(SUCCEEDED(hr) && _vshader != nullptr);
       }
       break;
-    case ShaderModule::Stage::geometry:
+    case ShaderEnums::Stage::geometry:
       {
         HRESULT hr = device->CreateGeometryShader(byte_code, byte_code_size, nullptr, &_gshader);
         nassertv(SUCCEEDED(hr) && _gshader != nullptr);
       }
       break;
-    case ShaderModule::Stage::fragment:
+    case ShaderEnums::Stage::fragment:
       {
         HRESULT hr = device->CreatePixelShader(byte_code, byte_code_size, nullptr, &_pshader);
         nassertv(SUCCEEDED(hr) && _pshader != nullptr);

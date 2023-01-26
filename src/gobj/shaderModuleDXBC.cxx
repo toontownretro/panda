@@ -40,37 +40,39 @@ ShaderModuleDXBC(Stage stage, ID3DBlob *byte_code) :
 {
   reflect_module();
 
+#if 0 // FIXME if/when D3D11 is returned to.
   _used_caps = (
-    ShaderModule::C_basic_shader |
-    ShaderModule::C_vertex_texture |
-    ShaderModule::C_sampler_shadow |
-    ShaderModule::C_invariant |
-    ShaderModule::C_matrix_non_square |
-    ShaderModule::C_integer |
-    ShaderModule::C_texture_lod |
-    ShaderModule::C_texture_fetch |
-    ShaderModule::C_sampler_cube_shadow |
-    ShaderModule::C_vertex_id |
-    ShaderModule::C_round_even |
-    ShaderModule::C_instance_id |
-    ShaderModule::C_buffer_texture |
-    ShaderModule::C_geometry_shader |
-    ShaderModule::C_primitive_id |
-    ShaderModule::C_bit_encoding |
-    ShaderModule::C_texture_gather |
-    ShaderModule::C_double |
-    ShaderModule::C_cube_map_array |
-    ShaderModule::C_tessellation_shader |
-    ShaderModule::C_sample_variables |
-    ShaderModule::C_extended_arithmetic |
-    ShaderModule::C_texture_query_lod |
-    ShaderModule::C_image_load_store |
-    ShaderModule::C_compute_shader |
-    ShaderModule::C_texture_query_levels |
-    ShaderModule::C_enhanced_layouts |
-    ShaderModule::C_derivative_control |
-    ShaderModule::C_texture_query_samples
+    Shader::C_basic_shader |
+    Shader::C_vertex_texture |
+    Shader::C_shadow_samplers |
+    Shader::C_invariant |
+    Shader::C_matrix_non_square |
+    Shader::C_integer |
+    Shader::C_texture_lod |
+    Shader::C_texture_fetch |
+    Shader::C_sampler_cube_shadow |
+    Shader::C_vertex_id |
+    Shader::C_round_even |
+    Shader::C_instance_id |
+    Shader::C_buffer_texture |
+    Shader::C_geometry_shader |
+    Shader::C_primitive_id |
+    Shader::C_bit_encoding |
+    Shader::C_texture_gather |
+    Shader::C_double |
+    Shader::C_cube_map_array |
+    Shader::C_tessellation_shader |
+    Shader::C_sample_variables |
+    Shader::C_extended_arithmetic |
+    Shader::C_texture_query_lod |
+    Shader::C_image_load_store |
+    Shader::C_compute_shader |
+    Shader::C_texture_query_levels |
+    Shader::C_enhanced_layouts |
+    Shader::C_derivative_control |
+    Shader::C_texture_query_samples
   );
+#endif
 
   spew_module();
 }

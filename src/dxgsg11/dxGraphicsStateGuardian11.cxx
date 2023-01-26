@@ -175,6 +175,7 @@ determine_capabilities() {
 
   _shader_model = SM_50;
 
+#if 0 // FIXME if/when D3D11 is returned to.
   _supported_shader_caps = (
     ShaderModule::C_basic_shader |
     ShaderModule::C_vertex_texture |
@@ -206,6 +207,7 @@ determine_capabilities() {
     ShaderModule::C_derivative_control |
     ShaderModule::C_texture_query_samples
   );
+#endif
 
   _supported_geom_rendering = (
     GeomEnums::GR_indexed_point |
