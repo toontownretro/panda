@@ -51,6 +51,14 @@ void PhysRigidActorNode::
 add_to_scene(PhysScene *scene) {
   scene->get_scene()->addActor(*get_rigid_actor());
   scene->add_actor(this);
+  on_new_scene();
+}
+
+/**
+ * Callback hook when the actor is added to a new scene.
+ */
+void PhysRigidActorNode::
+on_new_scene() {
 }
 
 /**

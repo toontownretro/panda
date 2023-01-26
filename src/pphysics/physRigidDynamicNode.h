@@ -45,6 +45,7 @@ PUBLISHED:
 
 protected:
   virtual void do_transform_changed() override;
+  virtual void on_new_scene() override;
 
 public:
   PhysRigidDynamicNode(physx::PxRigidDynamic *actor);

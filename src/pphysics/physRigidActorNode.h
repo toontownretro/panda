@@ -102,6 +102,8 @@ protected:
 
   virtual void do_transform_changed();
 
+  virtual void on_new_scene();
+
 protected:
   void do_set_collide_with(PhysRigidActorNode *other, bool flag);
 

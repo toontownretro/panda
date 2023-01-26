@@ -74,10 +74,13 @@ do_transform_changed() {
     return;
   }
 
-  NodePath np = NodePath::any_path((PandaNode *)this);
-
-  CPT(TransformState) net_transform = np.get_net_transform();
-  _rigid_dynamic->setKinematicTarget(panda_trans_to_physx(net_transform));
+  // NOTE: It is invalid to call setKinematicTarget if the actor is
+  // not in a scene.
+  if (_rigid_dynamic->getScene() != nullptr) {
+    NodePath np = NodePath::any_path((PandaNode *)this);
+    CPT(TransformState) net_transform = np.get_net_transform();
+    _rigid_dynamic->setKinematicTarget(panda_trans_to_physx(net_transform));
+  }
 }
 
 /**
@@ -111,4 +114,18 @@ PhysRigidDynamicNode(physx::PxRigidDynamic *actor) :
 physx::PxRigidBody *PhysRigidDynamicNode::
 get_rigid_body() const {
   return _rigid_dynamic;
+}
+
+/**
+ *
+ */
+void PhysRigidDynamicNode::
+on_new_scene() {
+  // The actor just got added to the scene.
+  // If we're kinematic, synchronize the kinematic target to the node
+  // position immediately.  We can't update the kinematic target while
+  // the actor is not in a scene.
+  if (is_kinematic()) {
+    sync_transform();
+  }
 }
