@@ -32,12 +32,20 @@ r_set_active_material_group(PandaNode *node, size_t n) {
   const MaterialCollection &group = _material_groups[_active_material_group];
   const MaterialCollection &new_group = _material_groups[n];
 
-  for (size_t i = 0; i < group.get_num_materials(); i++) {
+  for (size_t i = 0; i < group.get_num_materials(); ++i) {
     NodePath(node).replace_material(group.get_material(i), new_group.get_material(i));
   }
 
-  for (int i = 0; i < node->get_num_children(); i++) {
-    PandaNode *child = node->get_child(i);
+  PandaNode::Children children = node->get_children();
+  for (size_t i = 0; i < children.get_num_children(); ++i) {
+    PandaNode *child = children.get_child(i);
+    r_set_active_material_group(child, n);
+  }
+
+  // Also do stashed children.
+  PandaNode::Stashed stashed = node->get_stashed();
+  for (size_t i = 0; i < stashed.get_num_stashed(); ++i) {
+    PandaNode *child = stashed.get_stashed(i);
     r_set_active_material_group(child, n);
   }
 }
