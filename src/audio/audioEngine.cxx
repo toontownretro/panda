@@ -79,3 +79,17 @@ void AudioEngine::
 register_engine_proxy(AudioEngineProxy *proxy) {
   _engine_proxy = proxy;
 }
+
+/**
+ *
+ */
+void AudioEngine::
+set_tracer(AudioTracer *tracer) {
+}
+
+/**
+ *
+ */
+void AudioEngine::
+clear_tracer() {
+}

@@ -15,6 +15,7 @@
     audioEngine.h audioEngine.I \
     audioManager.h audioManager.I \
     audioSound.h audioSound.I \
+    audioTracer.h audioTracer.I \
     chorusDSP.h chorusDSP.I \
     compressorDSP.h compressorDSP.I \
     distortionDSP.h distortionDSP.I \
@@ -43,6 +44,7 @@
     audioEngine.cxx \
     audioManager.cxx \
     audioSound.cxx \
+    audioTracer.cxx \
     chorusDSP.cxx \
     compressorDSP.cxx \
     distortionDSP.cxx \
@@ -71,6 +73,7 @@
     audioEngine.h audioEngine.I \
     audioManager.h audioManager.I \
     audioSound.h audioSound.I \
+    audioTracer.h audioTracer.I \
     chorusDSP.h chorusDSP.I \
     compressorDSP.h compressorDSP.I \
     distortionDSP.h distortionDSP.I \

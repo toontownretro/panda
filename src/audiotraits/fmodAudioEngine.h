@@ -20,6 +20,7 @@
 #include "audioEngine.h"
 #include "audioManager.h"
 #include "audioSound.h"
+#include "audioTracer.h"
 #include "luse.h"
 #include "fmodAudioSound.h"
 #include "fmodSoundCache.h"
@@ -51,6 +52,9 @@ public:
   virtual void set_3d_unit_scale(PN_stdfloat factor) override;
   virtual PN_stdfloat get_3d_unit_scale() const override;
 
+  virtual void set_tracer(AudioTracer *tracer) override;
+  virtual void clear_tracer() override;
+
   virtual void update() override;
 
   void add_manager(FMODAudioManager *mgr);
@@ -73,6 +77,8 @@ public:
 
   INLINE bool is_using_steam_audio() const;
 
+  bool calc_sound_occlusion(FMODAudioSound *sound, float *transmission);
+
 public:
   FMODAudioEngine();
   ~FMODAudioEngine();
@@ -89,6 +95,8 @@ public:
 private:
   FMOD::System *_system;
   FMOD::ChannelGroup *_master_channel_group;
+
+  PT(AudioTracer) _tracer;
 
   LPoint3 _listener_pos;
   LQuaternion _listener_quat;

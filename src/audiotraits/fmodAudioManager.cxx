@@ -52,6 +52,7 @@ static PStatCollector get_sound_resolve_coll("App:FMOD:GetSound:ResolveFilename"
 static PStatCollector get_sound_get_file("App:FMOD:GetSound:GetFile");
 static PStatCollector get_sound_create_coll("App:FMOD:GetSound:CreateSound");
 static PStatCollector get_sound_insert_coll("App:FMOD:GetSound:InsertSound");
+static PStatCollector sound_occlusion_coll("App:FMOD:SoundOcclusion");
 
 TypeHandle FMODAudioManager::_type_handle;
 ReMutex FMODAudioManager::_lock;
@@ -400,6 +401,20 @@ update() {
       _reverb_dsp->clear_dirty();
     }
   }
+
+#ifdef HAVE_STEAM_AUDIO
+  if (fmod_use_steam_audio) {
+    // Now calculate occlusion for positional sounds with occlusion enabled.
+    PStatTimer timer(sound_occlusion_coll);
+    for (FMODAudioSound *sound : _sounds_playing) {
+      if (sound->_do_occlusion) {
+        float transmission[3];
+        _engine->calc_sound_occlusion(sound, transmission);
+        sound->set_transmission_factors(transmission);
+      }
+    }
+  }
+#endif
 }
 
 /**

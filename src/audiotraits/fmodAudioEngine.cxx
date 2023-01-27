@@ -31,11 +31,22 @@
 #include "sfxReverbDSP.h"
 #include "dcast.h"
 #include "load_dso.h"
+#include "configVariableDouble.h"
 
 IMPLEMENT_CLASS(FMODAudioEngine);
 
 #define FMOD_MIN_SAMPLE_RATE 8000
 #define FMOD_MAX_SAMPLE_RATE 192000
+
+static ConfigVariableDouble fmod_occlusion_db_loss_low
+("fmod-occlusion-db-loss-low", -3.0f,
+ PRC_DESC("Decibel loss for low frequencies of occluded sounds."));
+static ConfigVariableDouble fmod_occlusion_db_loss_mid
+("fmod-occlusion-db-loss-mid", -6.0f,
+ PRC_DESC("Decibel loss for middle frequencies of occluded sounds."));
+static ConfigVariableDouble fmod_occlusion_db_loss_high
+("fmod-occlusion-db-loss-high", -12.0f,
+ PRC_DESC("Decibel loss for high frequencies of occluded sounds."));
 
 #ifdef HAVE_STEAM_AUDIO
 
@@ -989,4 +1000,89 @@ remove_manager(FMODAudioManager *mgr) {
 PT(AudioEngine) FMODAudioEngineProxy::
 make_engine() const {
   return new FMODAudioEngine;
+}
+
+/**
+ *
+ */
+static float
+db_to_gain(float db) {
+  return powf(10.0f, db / 20.0f);
+}
+
+/**
+ * Returns true if the direct path between the sound and the listener is
+ * occluded, in which case the 3-band occlusion factors are filled in
+ * appropriately.  If the sound is not occluded, false is returned and
+ * the occlusion factors are set to 1.
+ */
+bool FMODAudioEngine::
+calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
+  // Smaller sounds get more occlusion (transmit less), bigger sounds
+  // get less occlusion (transmit more).  The band ratios are constant
+  // no matter the sound size, we simply scale the band factors by the
+  // occlusion + sound size.
+
+  if (_tracer == nullptr) {
+    return false;
+  }
+
+  PN_stdfloat min_dist = sound->get_3d_min_distance();
+  LPoint3 sound_pos = sound->get_3d_position();
+  LPoint3 cam_pos = get_3d_listener_pos();
+  LVector3 to_listener = cam_pos - sound_pos;
+  PN_stdfloat length = to_listener.length();
+  to_listener.normalize();
+  bool occluded = _tracer->trace_ray(sound_pos + to_listener * 0.001f, to_listener, std::max(0.0f, length - 0.001f));
+  if (occluded) {
+    // There's something in the way between the sound source and the
+    // listener (camera).
+
+    float gain_loss = db_to_gain(fmod_occlusion_db_loss_low);
+    float gain_loss_mid = db_to_gain(fmod_occlusion_db_loss_mid);
+    float gain_loss_high = db_to_gain(fmod_occlusion_db_loss_high);
+
+    // These are the band factors for the largest sound
+    // with a 50 meter min distance.
+    transmission[0] = gain_loss;
+    transmission[1] = gain_loss_mid;
+    transmission[2] = gain_loss_high;
+
+    // Scale the band factors down linearly for sounds smaller
+    // than 50 meters.
+    //PN_stdfloat ratio = std::min(min_dist, 50.0f * _unit_scale) / (50.0f * _unit_scale);
+    //transmission[0] *= ratio;
+    //transmission[1] *= ratio;
+    //transmission[2] *= ratio;
+
+    //std::cout << "occluded sound, min dist " << min_dist << ", ratio " << ratio << "\n";
+    //std::cout << "transmission " << transmission[0] << " " << transmission[1] << " " << transmission[2] << "\n";
+
+    return true;
+
+  } else {
+    // Sound not occluded.
+
+    transmission[0] = 1.0f;
+    transmission[1] = 1.0f;
+    transmission[2] = 1.0f;
+
+    return false;
+  }
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+set_tracer(AudioTracer *tracer) {
+  _tracer = tracer;
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+clear_tracer() {
+  _tracer = nullptr;
 }

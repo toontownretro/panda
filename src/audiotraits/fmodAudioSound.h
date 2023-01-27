@@ -162,6 +162,8 @@ public:
   virtual void set_finished_event(const std::string& event);
   virtual const std::string &get_finished_event() const;
 
+  void set_transmission_factors(float *transmission);
+
 public:
   FMODSoundHandle *get_sound_handle() const;
 
@@ -225,6 +227,8 @@ public:
   // They are only created if the AudioSound is positional and the user has
   // configured these Steam Audio features on the sound.
   FMOD::DSP *_sa_spatial_dsp;
+
+  bool _do_occlusion;
 
 #ifdef HAVE_STEAM_AUDIO
   IPLSource _ipl_source;

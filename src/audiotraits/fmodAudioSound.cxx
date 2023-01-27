@@ -100,7 +100,8 @@ FMODAudioSound(FMODAudioManager *manager, FMODSoundHandle *handle) :
   _quat(LQuaternion::ident_quat()),
   _min_dist(1.0f),
   _file_name(handle->get_orig_filename()),
-  _sa_spatial_dsp(nullptr)
+  _sa_spatial_dsp(nullptr),
+  _do_occlusion(false)
 {
   //ReMutexHolder holder(FMODAudioManager::_lock);
   audio_debug("FMODAudioSound::FMODAudioSound() Creating new sound from handle: "
@@ -149,6 +150,7 @@ FMODAudioSound(FMODAudioManager *manager, FMODAudioSound *copy)
   _active = manager->get_active();
   _paused = false;
   _start_time = 0.0;
+  _do_occlusion = false;
   _balance = copy->_balance;
   _volume = copy->_volume;
   _playrate = copy->_playrate;
@@ -410,6 +412,14 @@ start_playing() {
     _paused = true;
     return;
   }
+
+#ifdef HAVE_STEAM_AUDIO
+  if (_do_occlusion) {
+    float transmission[3];
+    _manager->_engine->calc_sound_occlusion(this, transmission);
+    set_transmission_factors(transmission);
+  }
+#endif
 
   _manager->starting_sound(this);
 
@@ -1129,12 +1139,14 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   // to the DSP (instead of the Channel).
   set_3d_attributes_on_channel();
 
+  _do_occlusion = props._enable_occlusion || props._enable_transmission;
+
   // Configure the DSP accordingly.
   _sa_spatial_dsp->setParameterInt(2, props._enable_distance_atten ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(3, props._enable_air_absorption ? 1 : 0);
   _sa_spatial_dsp->setParameterInt(4, props._enable_directivity ? 1 : 0);
-  _sa_spatial_dsp->setParameterInt(5, props._enable_occlusion ? 1 : 0);
-  _sa_spatial_dsp->setParameterInt(6, props._enable_transmission ? 1 : 0);
+  _sa_spatial_dsp->setParameterInt(5, _do_occlusion ? 2 : 0);
+  _sa_spatial_dsp->setParameterInt(6, _do_occlusion  ? 2 : 0);
   _sa_spatial_dsp->setParameterBool(7, props._enable_reflections);
   _sa_spatial_dsp->setParameterBool(8, props._enable_pathing);
   _sa_spatial_dsp->setParameterInt(9, props._bilinear_hrtf ? 1 : 0);
@@ -1151,13 +1163,11 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   // Link back to the IPLSource so the DSP can render simulation results.
   //_sa_spatial_dsp->setParameterData(30, &_sa_source, sizeof(&_sa_source)); // SIMULATION_OUTPUTS
 
-  //if (props._enable_occlusion) {
-  //  bool calculated;
-  //  float gain = _manager->calc_sound_occlusion(this, calculated);
-  //  if (calculated) {
-  //    _sa_spatial_dsp->setParameterFloat(20, gain);
-  //  }
-  //}
+  if (_do_occlusion && status() == PLAYING) {
+    float transmission[3];
+    _manager->_engine->calc_sound_occlusion(this, transmission);
+    set_transmission_factors(transmission);
+  }
 #endif
 }
 
@@ -1195,4 +1205,20 @@ set_loop_range(PN_stdfloat start, PN_stdfloat end) {
     hr = _sound->setLoopPoints(_loop_start, FMOD_TIMEUNIT_MS, _loop_end, FMOD_TIMEUNIT_MS);
   }
   fmod_audio_errcheck("_sound->setLoopPoints()", hr);
+}
+
+/**
+ *
+ */
+void FMODAudioSound::
+set_transmission_factors(float *transmission) {
+#ifdef HAVE_STEAM_AUDIO
+  if (!fmod_use_steam_audio || _sa_spatial_dsp == nullptr) {
+    return;
+  }
+  _sa_spatial_dsp->setParameterFloat(20, 0.0f);
+  _sa_spatial_dsp->setParameterFloat(22, transmission[0]);
+  _sa_spatial_dsp->setParameterFloat(23, transmission[1]);
+  _sa_spatial_dsp->setParameterFloat(24, transmission[2]);
+#endif
 }

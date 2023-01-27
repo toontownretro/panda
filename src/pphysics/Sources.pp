@@ -9,6 +9,7 @@
 
   #define SOURCES \
     config_pphysics.h \
+    physAudioTracer.h physAudioTracer.I \
     physBox.h physBox.I \
     physBoxController.h physBoxController.I \
     physCapsule.h physCapsule.I \
@@ -60,6 +61,7 @@
 
   #define COMPOSITE_SOURCES \
     config_pphysics.cxx \
+    physAudioTracer.cxx \
     physBox.cxx \
     physBoxController.cxx \
     physCapsule.cxx \
