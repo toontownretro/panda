@@ -789,16 +789,13 @@ bake_steam_audio() {
   if (err != IPL_STATUS_SUCCESS) {
     return EC_ok;
   }
-  //std::cout << err << "\n";
-  //std::cout << "Version: " << STEAMAUDIO_VERSION << "\n";
-  //assert(err == IPL_STATUS_SUCCESS);
 
-
-  //IPLEmbreeDeviceSettings embree_set{};
-  //IPLEmbreeDevice embree_dev = nullptr;
-  //err = iplEmbreeDeviceCreate(context, &embree_set, &embree_dev);
-  //assert(err == IPL_STATUS_SUCCESS);
-
+#ifndef _WIN32
+  IPLEmbreeDeviceSettings embree_set{};
+  IPLEmbreeDevice embree_dev = nullptr;
+  err = iplEmbreeDeviceCreate(context, &embree_set, &embree_dev);
+  assert(err == IPL_STATUS_SUCCESS);
+#else
   IPLOpenCLDeviceList ocl_d_list;
   IPLOpenCLDeviceSettings cl_settings{};
   cl_settings.type = IPL_OPENCLDEVICETYPE_GPU;
@@ -818,12 +815,18 @@ bake_steam_audio() {
   IPLRadeonRaysDevice rr_dev;
   err = iplRadeonRaysDeviceCreate(ocl_dev, &rr_settings, &rr_dev);
   assert(err == IPL_STATUS_SUCCESS);
+#endif
 
   IPLScene scene = nullptr;
   IPLSceneSettings scene_settings{};
   memset(&scene_settings, 0, sizeof(IPLSceneSettings));
+#ifdef _WIN32
   scene_settings.type = IPL_SCENETYPE_RADEONRAYS;
   scene_settings.radeonRaysDevice = rr_dev;
+#else
+  scene_settings.type = IPL_SCENETYPE_EMBREE;
+  scene_settings.embreeDevice = embree_dev;
+#endif
   err = iplSceneCreate(context, &scene_settings, &scene);
   assert(err == IPL_STATUS_SUCCESS);
 
@@ -1153,7 +1156,11 @@ bake_steam_audio() {
       identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
       IPLReflectionsBakeParams bake_params{};
       bake_params.scene = scene;
+#ifdef _WIN32
       bake_params.sceneType = IPL_SCENETYPE_RADEONRAYS;
+#else
+      bake_params.sceneType = IPL_SCENETYPE_EMBREE;
+#endif
       bake_params.identifier = identifier;
       int flags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION;
       bake_params.bakeFlags = (IPLReflectionsBakeFlags)flags;
@@ -1165,11 +1172,13 @@ bake_steam_audio() {
       bake_params.savedDuration = 1.0f;
       bake_params.order = 2;
       bake_params.numThreads = _options.get_num_threads();
-      bake_params.irradianceMinDistance = 1.0f;
+      bake_params.irradianceMinDistance = 3.0f;
       bake_params.rayBatchSize = 1;
       bake_params.bakeBatchSize = 64;
+#ifdef _WIN32
       bake_params.openCLDevice = ocl_dev;
       bake_params.radeonRaysDevice = rr_dev;
+#endif
       iplReflectionsBakerBake(context, &bake_params, ipl_progress_callback, nullptr);
     }
 
@@ -1232,9 +1241,12 @@ bake_steam_audio() {
   // Clean up our work.
   iplStaticMeshRelease(&static_mesh);
   iplSceneRelease(&scene);
-  //iplEmbreeDeviceRelease(&embree_dev);
+#ifndef _WIN32
+  iplEmbreeDeviceRelease(&embree_dev);
+#else
   iplRadeonRaysDeviceRelease(&rr_dev);
   iplOpenCLDeviceRelease(&ocl_dev);
+#endif
   iplContextRelease(&context);
 
   return EC_ok;
