@@ -34,6 +34,7 @@
 #include "nullAudioSound.h"
 #include "memoryHook.h"
 #include "look_at.h"
+#include "configVariableDouble.h"
 
 // Panda DSP types.
 #include "load_dso.h"
@@ -52,6 +53,10 @@ static PStatCollector get_sound_get_file("App:FMOD:GetSound:GetFile");
 static PStatCollector get_sound_create_coll("App:FMOD:GetSound:CreateSound");
 static PStatCollector get_sound_insert_coll("App:FMOD:GetSound:InsertSound");
 static PStatCollector sound_occlusion_coll("App:FMOD:SoundOcclusion");
+
+static ConfigVariableDouble fmod_reverb_mix
+("fmod-reverb-mix", 0.5f,
+ PRC_DESC("Specifies the volume of global reverb applied to an FMODAudioManager."));
 
 TypeHandle FMODAudioManager::_type_handle;
 ReMutex FMODAudioManager::_lock;
@@ -628,7 +633,9 @@ set_reverb_dsp(FMOD::DSP *dsp) {
 
   FMOD::DSP *group_head;
   result = _channelgroup->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &group_head);
-  result = _fmod_reverb_dsp->addInput(group_head, 0, FMOD_DSPCONNECTION_TYPE_SEND);
+  FMOD::DSPConnection *connection;
+  result = _fmod_reverb_dsp->addInput(group_head, &connection, FMOD_DSPCONNECTION_TYPE_SEND);
+  connection->setMix(fmod_reverb_mix);
 
   // Explicitly re-link up any sounds that are currently playing
   // while we changed the reverb.
