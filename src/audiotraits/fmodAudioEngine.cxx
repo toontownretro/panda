@@ -302,6 +302,10 @@ FMODAudioEngine::
 FMODAudioEngine() :
   _system(nullptr),
   _master_channel_group(nullptr),
+#ifdef HAVE_STEAM_AUDIO
+  _sim_inputs{},
+  _listener_inputs{},
+#endif
   _unit_scale(1.0f)
 {
 #ifdef HAVE_STEAM_AUDIO
@@ -579,7 +583,7 @@ init_steam_audio() {
 
   IPLAudioSettings audio_settings{};
   audio_settings.frameSize = fmod_dsp_buffer_size;
-  audio_settings.samplingRate = 44100;
+  audio_settings.samplingRate = sample_rate;
 
   IPLHRTFSettings hrtf_settings{};
   hrtf_settings.type = IPL_HRTFTYPE_DEFAULT;
@@ -588,7 +592,7 @@ init_steam_audio() {
     return false;
   }
   IPLSimulationSettings sim_settings{};
-  sim_settings.samplingRate = 44100;
+  sim_settings.samplingRate = sample_rate;
   sim_settings.frameSize = fmod_dsp_buffer_size;
   sim_settings.flags = (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
   sim_settings.sceneType = IPL_SCENETYPE_DEFAULT;
@@ -606,13 +610,13 @@ init_steam_audio() {
   }
   //for (int i = 0; i < 3; ++i) {
     //memset(&_sim_inputs[0], 0, sizeof(IPLSimulationSharedInputs));
-    _sim_inputs[0] = IPLSimulationSharedInputs{};
-    _sim_inputs[0].irradianceMinDistance = 1.0f;
-    _sim_inputs[0].duration = 1.0f;
-    _sim_inputs[0].order = 2;
-    _sim_inputs[0].numRays = 1024;
-    _sim_inputs[0].numBounces = 16;
-    iplSimulatorSetSharedInputs(_ipl_simulator, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sim_inputs[0]);
+    //_sim_inputs = IPLSimulationSharedInputs{};
+    _sim_inputs.irradianceMinDistance = 1.0f;
+    _sim_inputs.duration = 1.0f;
+    _sim_inputs.order = 2;
+    _sim_inputs.numRays = 1024;
+    _sim_inputs.numBounces = 16;
+    iplSimulatorSetSharedInputs(_ipl_simulator, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sim_inputs);
   //}
 
   // Create an IPLSource representing the listener, solely for simulating
@@ -628,16 +632,16 @@ init_steam_audio() {
   // reflections.
   //for (int i = 0; i < 3; ++i) {
     //memset(&_listener_inputs[0], 0, sizeof(IPLSimulationInputs));
-    _listener_inputs[0] = IPLSimulationInputs{};
-    _listener_inputs[0].flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
+    //_listener_inputs = IPLSimulationInputs{};
+    _listener_inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
     //_listener_inputs[0].distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_DEFAULT;
-    _listener_inputs[0].baked = IPL_TRUE;
-    _listener_inputs[0].reverbScale[0] = 1.0f;
-    _listener_inputs[0].reverbScale[1] = 1.0f;
-    _listener_inputs[0].reverbScale[2] = 1.0f;
-    _listener_inputs[0].bakedDataIdentifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
-    _listener_inputs[0].bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
-    iplSourceSetInputs(_ipl_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_REFLECTIONS), &_listener_inputs[0]);
+    _listener_inputs.baked = IPL_TRUE;
+    _listener_inputs.reverbScale[0] = 1.0f;
+    _listener_inputs.reverbScale[1] = 1.0f;
+    _listener_inputs.reverbScale[2] = 1.0f;
+    _listener_inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+    _listener_inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+    iplSourceSetInputs(_ipl_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_PATHING|IPL_SIMULATIONFLAGS_REFLECTIONS), &_listener_inputs);
   //}
 
   IPLSceneSettings scene_set{};
@@ -775,13 +779,13 @@ do_steam_audio_reflections_sim() {
   LVector3 fwd = _listener_quat.get_forward();
   LVector3 right = _listener_quat.get_right();
   LVector3 up = _listener_quat.get_up();
-  lvec_to_ipl_vec(_listener_pos, _listener_inputs[0].source.origin);
-  lvec_to_ipl_vec(fwd, _listener_inputs[0].source.ahead);
-  lvec_to_ipl_vec(right, _listener_inputs[0].source.right);
-  lvec_to_ipl_vec(up, _listener_inputs[0].source.up);
-  _sim_inputs[0].listener = _listener_inputs[0].source;
-  iplSourceSetInputs(_ipl_listener_source, IPL_SIMULATIONFLAGS_REFLECTIONS, &_listener_inputs[0]);
-  iplSimulatorSetSharedInputs(_ipl_simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &_sim_inputs[0]);
+  lvec_to_ipl_vec(_listener_pos, _listener_inputs.source.origin);
+  lvec_to_ipl_vec(fwd, _listener_inputs.source.ahead);
+  lvec_to_ipl_vec(right, _listener_inputs.source.right);
+  lvec_to_ipl_vec(up, _listener_inputs.source.up);
+  _sim_inputs.listener = _listener_inputs.source;
+  iplSourceSetInputs(_ipl_listener_source, IPL_SIMULATIONFLAGS_REFLECTIONS, &_listener_inputs);
+  iplSimulatorSetSharedInputs(_ipl_simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &_sim_inputs);
 
   //iplSimulatorCommit(_ipl_simulator);
 
@@ -1325,7 +1329,6 @@ clear_audio_probe_data() {
 void FMODAudioEngine::
 set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris, CPTA_uchar tri_materials, CPTA_uchar materials) {
 #ifdef HAVE_STEAM_AUDIO
-#if 1
   if (_ipl_scene_mesh != nullptr) {
     iplStaticMeshRemove(_ipl_scene_mesh, _ipl_scene);
     iplStaticMeshRelease(&_ipl_scene_mesh);
@@ -1345,7 +1348,6 @@ set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris, CPTA_uchar tri_materials
   iplStaticMeshAdd(_ipl_scene_mesh, _ipl_scene);
   iplSceneCommit(_ipl_scene);
   iplSimulatorCommit(_ipl_simulator);
-#endif
 #endif
 }
 

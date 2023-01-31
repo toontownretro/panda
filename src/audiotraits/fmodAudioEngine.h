@@ -135,9 +135,9 @@ private:
   IPLContext _ipl_context;
   IPLHRTF _ipl_hrtf;
   IPLSimulator _ipl_simulator;
-  IPLSimulationSharedInputs _sim_inputs[3];
+  IPLSimulationSharedInputs _sim_inputs;
   IPLSource _ipl_listener_source;
-  IPLSimulationInputs _listener_inputs[3];
+  IPLSimulationInputs _listener_inputs;
   IPLProbeBatch _ipl_probe_batch;
   IPLScene _ipl_scene;
   IPLStaticMesh _ipl_scene_mesh;
