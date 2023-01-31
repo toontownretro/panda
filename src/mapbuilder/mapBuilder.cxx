@@ -1222,21 +1222,21 @@ bake_steam_audio() {
   }
 
   // Chuck it into the MapData.
-  PTA_uchar pverts, ptris, ptri_materials, pmaterials;
-  pverts.resize(verts.size() * sizeof(IPLVector3));
-  ptris.resize(tris.size() * sizeof(IPLTriangle));
-  pmaterials.resize(materials.size() * sizeof(IPLMaterial));
-  ptri_materials.resize(tri_materials.size() * sizeof(IPLint32));
-  memcpy(pverts.p(), (unsigned char *)verts.data(), pverts.size());
-  memcpy(ptris.p(), (unsigned char *)tris.data(), ptris.size());
-  memcpy(ptri_materials.p(), (unsigned char *)tri_materials.data(), ptri_materials.size());
-  memcpy(pmaterials.p(), (unsigned char *)materials.data(), pmaterials.size());
-  _out_data->_steam_audio_scene_data.verts = pverts;
-  _out_data->_steam_audio_scene_data.tris = ptris;
-  _out_data->_steam_audio_scene_data.tri_materials = ptri_materials;
-  _out_data->_steam_audio_scene_data.materials = pmaterials;
-  mapbuilder_cat.info()
-    << "IPL scene data size: " << pverts.size() + ptris.size() + ptri_materials.size() + pmaterials.size() << " bytes\n";
+  //PTA_uchar pverts, ptris, ptri_materials, pmaterials;
+  //pverts.resize(verts.size() * sizeof(IPLVector3));
+  //ptris.resize(tris.size() * sizeof(IPLTriangle));
+  //pmaterials.resize(materials.size() * sizeof(IPLMaterial));
+  //ptri_materials.resize(tri_materials.size() * sizeof(IPLint32));
+  //memcpy(pverts.p(), (unsigned char *)verts.data(), pverts.size());
+  //memcpy(ptris.p(), (unsigned char *)tris.data(), ptris.size());
+  //memcpy(ptri_materials.p(), (unsigned char *)tri_materials.data(), ptri_materials.size());
+  //memcpy(pmaterials.p(), (unsigned char *)materials.data(), pmaterials.size());
+  //_out_data->_steam_audio_scene_data.verts = pverts;
+  //_out_data->_steam_audio_scene_data.tris = ptris;
+  //_out_data->_steam_audio_scene_data.tri_materials = ptri_materials;
+  //_out_data->_steam_audio_scene_data.materials = pmaterials;
+  //mapbuilder_cat.info()
+  //  << "IPL scene data size: " << pverts.size() + ptris.size() + ptri_materials.size() + pmaterials.size() << " bytes\n";
 
   // Clean up our work.
   iplStaticMeshRelease(&static_mesh);
