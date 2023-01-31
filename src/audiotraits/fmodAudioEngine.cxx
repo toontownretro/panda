@@ -32,6 +32,9 @@
 #include "dcast.h"
 #include "load_dso.h"
 #include "configVariableDouble.h"
+#include "luse.h"
+#include "config_putil.h"
+#include "pStatClient.h"
 
 IMPLEMENT_CLASS(FMODAudioEngine);
 
@@ -41,12 +44,20 @@ IMPLEMENT_CLASS(FMODAudioEngine);
 static ConfigVariableDouble fmod_occlusion_db_loss_low
 ("fmod-occlusion-db-loss-low", -3.0f,
  PRC_DESC("Decibel loss for low frequencies of occluded sounds."));
+
 static ConfigVariableDouble fmod_occlusion_db_loss_mid
 ("fmod-occlusion-db-loss-mid", -6.0f,
  PRC_DESC("Decibel loss for middle frequencies of occluded sounds."));
+
 static ConfigVariableDouble fmod_occlusion_db_loss_high
 ("fmod-occlusion-db-loss-high", -12.0f,
  PRC_DESC("Decibel loss for high frequencies of occluded sounds."));
+
+static ConfigVariableBool fmod_steam_audio_reflections
+("fmod-steam-audio-reflections", true,
+ PRC_DESC("Set this true to enable audio reflection simulation through "
+          "Steam Audio in the FMOD system.  This relies on baked reflection "
+          "data probes being provided.  It does not do real-time reflections."));
 
 #ifdef HAVE_STEAM_AUDIO
 
@@ -87,6 +98,63 @@ bool _ipl_errcheck(const std::string &context, IPLerror err) {
   return true;
 }
 #define IPL_ERRCHECK(context, n) _ipl_errcheck(context, n)
+
+/**
+ *
+ */
+void
+lvec_to_ipl_vec(const LVecBase3 &lvec, IPLVector3 &ipl_vec) {
+  ipl_vec.x = lvec[0];
+  ipl_vec.y = lvec[2];
+  ipl_vec.z = -lvec[1];
+}
+
+class SteamAudioThread : public Thread {
+public:
+  enum SimFlags {
+    SF_direct = 1,
+    SF_reflections = 2,
+    SF_pathing = 4,
+  };
+  SteamAudioThread(FMODAudioEngine *engine, unsigned int flags);
+
+  virtual void thread_main() override;
+
+private:
+  unsigned int _flags;
+  FMODAudioEngine *_engine;
+};
+
+/**
+ *
+ */
+SteamAudioThread::
+SteamAudioThread(FMODAudioEngine *engine, unsigned int flags) :
+  Thread("steam-audio-thread", "steam-audio-thread"),
+  _engine(engine),
+  _flags(flags)
+{
+}
+
+/**
+ *
+ */
+void SteamAudioThread::
+thread_main() {
+  while (_engine->_steam_audio_initialized) {
+    PStatClient::thread_tick();
+
+    //if (_flags & SF_direct) {
+    //  _engine->do_steam_audio_direct_sim();
+    //}
+    //if (_flags & SF_reflections) {
+      _engine->do_steam_audio_reflections_sim();
+    //}
+    //if (_flags & SF_pathing) {
+    //  _engine->do_steam_audio_pathing_sim();
+    //}
+  }
+}
 
 #endif
 
@@ -236,6 +304,21 @@ FMODAudioEngine() :
   _master_channel_group(nullptr),
   _unit_scale(1.0f)
 {
+#ifdef HAVE_STEAM_AUDIO
+  _steam_audio_initialized = false;
+  _num_sims = 0;
+  _ipl_context = nullptr;
+  _ipl_scene = nullptr;
+  _ipl_hrtf = nullptr;
+  _ipl_simulator = nullptr;
+  _ipl_listener_source = nullptr;
+  _ipl_probe_batch = nullptr;
+  _ipl_scene_mesh = nullptr;
+  _ipl_plugin_handle = 0;
+  _ipl_spatialize_handle = 0;
+  _ipl_reverb_handle = 0;
+  _ipl_mixer_return_handle = 0;
+#endif
 }
 
 /**
@@ -496,7 +579,7 @@ init_steam_audio() {
 
   IPLAudioSettings audio_settings{};
   audio_settings.frameSize = fmod_dsp_buffer_size;
-  audio_settings.samplingRate = sample_rate;
+  audio_settings.samplingRate = 44100;
 
   IPLHRTFSettings hrtf_settings{};
   hrtf_settings.type = IPL_HRTFTYPE_DEFAULT;
@@ -505,28 +588,32 @@ init_steam_audio() {
     return false;
   }
   IPLSimulationSettings sim_settings{};
-  sim_settings.samplingRate = sample_rate;
+  sim_settings.samplingRate = 44100;
   sim_settings.frameSize = fmod_dsp_buffer_size;
   sim_settings.flags = (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS);
   sim_settings.sceneType = IPL_SCENETYPE_DEFAULT;
   sim_settings.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
   sim_settings.maxOrder = 2;
-  sim_settings.numThreads = 1;
+  sim_settings.numThreads = 0;
   sim_settings.maxNumSources = 8;
   sim_settings.maxDuration = 2.0f;
   sim_settings.maxNumRays = 16384;
+  sim_settings.numDiffuseSamples = 1024;
+  sim_settings.maxNumOcclusionSamples = 16;
   err = iplSimulatorCreate(_ipl_context, &sim_settings, &_ipl_simulator);
   if (!IPL_ERRCHECK("create simulator", err)) {
     return false;
   }
-  for (int i = 0; i < 3; ++i) {
-    _sim_inputs[i].irradianceMinDistance = 1.0f;
-    _sim_inputs[i].duration = 1.0f;
-    _sim_inputs[i].order = 2;
-    _sim_inputs[i].numRays = 4096;
-    _sim_inputs[i].numBounces = 16;
-    iplSimulatorSetSharedInputs(_ipl_simulator, (IPLSimulationFlags)(1 << i), &_sim_inputs[i]);
-  }
+  //for (int i = 0; i < 3; ++i) {
+    //memset(&_sim_inputs[0], 0, sizeof(IPLSimulationSharedInputs));
+    _sim_inputs[0] = IPLSimulationSharedInputs{};
+    _sim_inputs[0].irradianceMinDistance = 1.0f;
+    _sim_inputs[0].duration = 1.0f;
+    _sim_inputs[0].order = 2;
+    _sim_inputs[0].numRays = 1024;
+    _sim_inputs[0].numBounces = 16;
+    iplSimulatorSetSharedInputs(_ipl_simulator, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_REFLECTIONS), &_sim_inputs[0]);
+  //}
 
   // Create an IPLSource representing the listener, solely for simulating
   // reflections for listener-centric reverb.
@@ -537,6 +624,32 @@ init_steam_audio() {
     return false;
   }
   iplSourceAdd(_ipl_listener_source, _ipl_simulator);
+  // Set up the listener IPLSource to use baked data for reverb
+  // reflections.
+  //for (int i = 0; i < 3; ++i) {
+    //memset(&_listener_inputs[0], 0, sizeof(IPLSimulationInputs));
+    _listener_inputs[0] = IPLSimulationInputs{};
+    _listener_inputs[0].flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
+    //_listener_inputs[0].distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_DEFAULT;
+    _listener_inputs[0].baked = IPL_TRUE;
+    _listener_inputs[0].reverbScale[0] = 1.0f;
+    _listener_inputs[0].reverbScale[1] = 1.0f;
+    _listener_inputs[0].reverbScale[2] = 1.0f;
+    _listener_inputs[0].bakedDataIdentifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+    _listener_inputs[0].bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+    iplSourceSetInputs(_ipl_listener_source, (IPLSimulationFlags)(IPL_SIMULATIONFLAGS_DIRECT|IPL_SIMULATIONFLAGS_REFLECTIONS), &_listener_inputs[0]);
+  //}
+
+  IPLSceneSettings scene_set{};
+  scene_set.type = IPL_SCENETYPE_DEFAULT;
+  err = iplSceneCreate(_ipl_context, &scene_set, &_ipl_scene);
+  if (!IPL_ERRCHECK("create scene", err)) {
+    return false;
+  }
+  //iplSceneCommit(_ipl_scene);
+  iplSimulatorSetScene(_ipl_simulator, _ipl_scene);
+
+  iplSimulatorCommit(_ipl_simulator);
 
   // Now initialize the Steam Audio FMOD plugin.  This implements custom FMOD
   // DSPs that render the results of our simulations.
@@ -587,6 +700,14 @@ init_steam_audio() {
   ((PFNIPLFMODSETSIMULATIONSETTINGS)sim_func)(sim_settings);
   ((PFNIPLFMODSETREVERBSOURCE)reverb_source_func)(_ipl_listener_source);
 
+  _steam_audio_initialized = true;
+
+  if (fmod_steam_audio_reflections) {
+    PT(SteamAudioThread) thread = new SteamAudioThread(this, SteamAudioThread::SF_reflections);
+    thread->start(TP_normal, true);
+    _ipl_reflections_thread = thread;
+  }
+
   fmodAudio_cat.info()
     << "Steam Audio initialized successfully\n";
 
@@ -598,9 +719,25 @@ init_steam_audio() {
  */
 void FMODAudioEngine::
 shutdown_steam_audio() {
+  _steam_audio_initialized = false;
+
+  if (_ipl_reflections_thread != nullptr) {
+    // The thread will break out of its loop from us setting
+    // _steam_audio_initialized to false, above.
+    _ipl_reflections_thread->join();
+    _ipl_reflections_thread = nullptr;
+  }
+
+  clear_audio_probe_data();
+
   if (_ipl_listener_source != nullptr) {
     iplSourceRelease(&_ipl_listener_source);
     _ipl_listener_source = nullptr;
+  }
+
+  if (_ipl_scene != nullptr) {
+    iplSceneRelease(&_ipl_scene);
+    _ipl_scene = nullptr;
   }
 
   if (_ipl_simulator != nullptr) {
@@ -617,6 +754,45 @@ shutdown_steam_audio() {
     iplContextRelease(&_ipl_context);
     _ipl_context = nullptr;
   }
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+do_steam_audio_direct_sim() {
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+do_steam_audio_reflections_sim() {
+  // Update Steam Audio with the current listener position.
+  // This is the only changing data necessary for listener-centric
+  // reverb.
+
+  LVector3 fwd = _listener_quat.get_forward();
+  LVector3 right = _listener_quat.get_right();
+  LVector3 up = _listener_quat.get_up();
+  lvec_to_ipl_vec(_listener_pos, _listener_inputs[0].source.origin);
+  lvec_to_ipl_vec(fwd, _listener_inputs[0].source.ahead);
+  lvec_to_ipl_vec(right, _listener_inputs[0].source.right);
+  lvec_to_ipl_vec(up, _listener_inputs[0].source.up);
+  _sim_inputs[0].listener = _listener_inputs[0].source;
+  iplSourceSetInputs(_ipl_listener_source, IPL_SIMULATIONFLAGS_REFLECTIONS, &_listener_inputs[0]);
+  iplSimulatorSetSharedInputs(_ipl_simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &_sim_inputs[0]);
+
+  //iplSimulatorCommit(_ipl_simulator);
+
+  iplSimulatorRunReflections(_ipl_simulator);
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+do_steam_audio_pathing_sim() {
 }
 
 #endif
@@ -1085,4 +1261,107 @@ set_tracer(AudioTracer *tracer) {
 void FMODAudioEngine::
 clear_tracer() {
   _tracer = nullptr;
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+set_audio_probe_data(CPTA_uchar data) {
+#ifdef HAVE_STEAM_AUDIO
+  if (!fmod_use_steam_audio) {
+    return;
+  }
+
+  if (_ipl_probe_batch != nullptr) {
+    iplSimulatorRemoveProbeBatch(_ipl_simulator, _ipl_probe_batch);
+    iplProbeBatchRelease(&_ipl_probe_batch);
+    _ipl_probe_batch = nullptr;
+  }
+
+  if (data != nullptr) {
+    IPLSerializedObjectSettings ser_set{};
+    ser_set.data = (IPLbyte *)data.p();
+    ser_set.size = (IPLsize)data.size();
+    IPLSerializedObject obj = nullptr;
+    IPLerror err = iplSerializedObjectCreate(_ipl_context, &ser_set, &obj);
+    IPL_ERRCHECK("iplSerializedObjectCreate (probe data)", err);
+    err = iplProbeBatchLoad(_ipl_context, obj, &_ipl_probe_batch);
+    IPL_ERRCHECK("iplProbeBatchLoad", err);
+    iplSerializedObjectRelease(&obj);
+    iplProbeBatchCommit(_ipl_probe_batch);
+    iplSimulatorAddProbeBatch(_ipl_simulator, _ipl_probe_batch);
+    fmodAudio_cat.info()
+      << "Steam Audio probe batch loaded\n";
+  }
+
+  iplSimulatorCommit(_ipl_simulator);
+#endif
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+clear_audio_probe_data() {
+#ifdef HAVE_STEAM_AUDIO
+  if (!fmod_use_steam_audio) {
+    return;
+  }
+
+  if (_ipl_probe_batch != nullptr) {
+    iplSimulatorRemoveProbeBatch(_ipl_simulator, _ipl_probe_batch);
+    iplProbeBatchRelease(&_ipl_probe_batch);
+    _ipl_probe_batch = nullptr;
+  }
+
+  iplSimulatorCommit(_ipl_simulator);
+#endif
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris, CPTA_uchar tri_materials, CPTA_uchar materials) {
+#ifdef HAVE_STEAM_AUDIO
+#if 1
+  if (_ipl_scene_mesh != nullptr) {
+    iplStaticMeshRemove(_ipl_scene_mesh, _ipl_scene);
+    iplStaticMeshRelease(&_ipl_scene_mesh);
+    _ipl_scene_mesh = nullptr;
+  }
+
+  IPLStaticMeshSettings mesh_settings{};
+  mesh_settings.numVertices = verts.size() / sizeof(IPLVector3);
+  mesh_settings.vertices = (IPLVector3 *)verts.p();
+  mesh_settings.numTriangles = tris.size() / sizeof(IPLTriangle);
+  mesh_settings.triangles = (IPLTriangle *)tris.p();
+  mesh_settings.materialIndices = (IPLint32 *)tri_materials.p();
+  mesh_settings.numMaterials = materials.size() / sizeof(IPLMaterial);
+  mesh_settings.materials = (IPLMaterial *)materials.p();
+  IPLerror err = iplStaticMeshCreate(_ipl_scene, &mesh_settings, &_ipl_scene_mesh);
+  IPL_ERRCHECK("iplStaticMeshCreate", err);
+  iplStaticMeshAdd(_ipl_scene_mesh, _ipl_scene);
+  iplSceneCommit(_ipl_scene);
+  iplSimulatorCommit(_ipl_simulator);
+#endif
+#endif
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+clear_audio_scene_data() {
+#ifdef HAVE_STEAM_AUDIO
+
+  if (_ipl_scene_mesh != nullptr) {
+    iplStaticMeshRemove(_ipl_scene_mesh, _ipl_scene);
+    iplStaticMeshRelease(&_ipl_scene_mesh);
+    _ipl_scene_mesh = nullptr;
+  }
+  iplSceneCommit(_ipl_scene);
+  iplSimulatorCommit(_ipl_simulator);
+#endif
 }

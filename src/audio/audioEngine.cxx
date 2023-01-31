@@ -93,3 +93,31 @@ set_tracer(AudioTracer *tracer) {
 void AudioEngine::
 clear_tracer() {
 }
+
+/**
+ *
+ */
+void AudioEngine::
+set_audio_probe_data(CPTA_uchar data) {
+}
+
+/**
+ *
+ */
+void AudioEngine::
+clear_audio_probe_data() {
+}
+
+/**
+ *
+ */
+void AudioEngine::
+set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris, CPTA_uchar tri_materials, CPTA_uchar materials) {
+}
+
+/**
+ *
+ */
+void AudioEngine::
+clear_audio_scene_data() {
+}

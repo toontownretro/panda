@@ -33,7 +33,6 @@
 #include "pStatTimer.h"
 #include "nullAudioSound.h"
 #include "memoryHook.h"
-#include "rayTraceScene.h"
 #include "look_at.h"
 
 // Panda DSP types.
@@ -620,19 +619,23 @@ set_reverb_dsp(FMOD::DSP *dsp) {
 
   FMOD_RESULT result;
 
-  FMOD::DSP *channelgroup_head;
-  result = _channelgroup->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &channelgroup_head);
+  FMOD::DSP *master_tail;
+  result = _engine->_master_channel_group->getDSP(FMOD_CHANNELCONTROL_DSP_TAIL, &master_tail);
   fmod_audio_errcheck("get channelgroup head DSP", result);
 
-  result = channelgroup_head->addInput(_fmod_reverb_dsp, 0, FMOD_DSPCONNECTION_TYPE_STANDARD);
+  result = master_tail->addInput(_fmod_reverb_dsp);
   fmod_audio_errcheck("make reverb dsp connection to changroup head", result);
+
+  FMOD::DSP *group_head;
+  result = _channelgroup->getDSP(FMOD_CHANNELCONTROL_DSP_HEAD, &group_head);
+  result = _fmod_reverb_dsp->addInput(group_head, 0, FMOD_DSPCONNECTION_TYPE_SEND);
 
   // Explicitly re-link up any sounds that are currently playing
   // while we changed the reverb.
-  for (auto it = _sounds_playing.begin(); it != _sounds_playing.end(); ++it) {
-    FMODAudioSound *sound = (*it);
-    sound->add_send_to_manager_reverb();
-  }
+  //for (auto it = _sounds_playing.begin(); it != _sounds_playing.end(); ++it) {
+  //  FMODAudioSound *sound = (*it);
+  //  sound->add_send_to_manager_reverb();
+  //}
 }
 
 /**
@@ -653,8 +656,9 @@ set_steam_audio_reverb() {
   if (!fmod_audio_errcheck("create SA reverb DSP", ret)) {
     return;
   }
-  fdsp->setActive(true);
   fdsp->setParameterBool(0, true);
+  fdsp->setUserData(this);
+  fdsp->setActive(true);
 
   set_reverb_dsp(fdsp);
 #endif

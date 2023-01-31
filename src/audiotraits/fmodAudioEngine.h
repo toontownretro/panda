@@ -79,6 +79,13 @@ public:
 
   bool calc_sound_occlusion(FMODAudioSound *sound, float *transmission);
 
+  virtual void set_audio_probe_data(CPTA_uchar data) override;
+  virtual void clear_audio_probe_data() override;
+
+  virtual void set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris,
+          CPTA_uchar tri_materials, CPTA_uchar materials);
+  virtual void clear_audio_scene_data();
+
 public:
   FMODAudioEngine();
   ~FMODAudioEngine();
@@ -90,6 +97,7 @@ public:
   void shutdown_steam_audio();
   void do_steam_audio_direct_sim();
   void do_steam_audio_reflections_sim();
+  void do_steam_audio_pathing_sim();
 #endif
 
 private:
@@ -130,6 +138,13 @@ private:
   IPLSimulationSharedInputs _sim_inputs[3];
   IPLSource _ipl_listener_source;
   IPLSimulationInputs _listener_inputs[3];
+  IPLProbeBatch _ipl_probe_batch;
+  IPLScene _ipl_scene;
+  IPLStaticMesh _ipl_scene_mesh;
+
+  PT(Thread) _ipl_reflections_thread;
+
+  bool _steam_audio_initialized;
 
   // Handles to DSPs implemented in the Steam Audio FMOD plugin.
   unsigned int _ipl_plugin_handle;
@@ -140,6 +155,7 @@ private:
 
   friend class FMODAudioSound;
   friend class FMODAudioManager;
+  friend class SteamAudioThread;
 };
 
 /**

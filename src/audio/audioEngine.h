@@ -50,6 +50,13 @@ PUBLISHED:
 
   virtual void update() = 0;
 
+  virtual void set_audio_probe_data(CPTA_uchar data);
+  virtual void clear_audio_probe_data();
+
+  virtual void set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris,
+          CPTA_uchar tri_materials, CPTA_uchar materials);
+  virtual void clear_audio_scene_data();
+
 public:
   static void register_engine_proxy(AudioEngineProxy *proxy);
 

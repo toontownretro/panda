@@ -1030,6 +1030,7 @@ set_dsps_on_channel() {
  */
 void FMODAudioSound::
 add_send_to_manager_reverb() {
+#if 0
   if (_manager->_fmod_reverb_dsp == nullptr || _channel == nullptr) {
     return;
   }
@@ -1048,6 +1049,7 @@ add_send_to_manager_reverb() {
     _manager->_fmod_reverb_dsp->addInput(head, &connection, FMOD_DSPCONNECTION_TYPE_SEND);
     //connection->setMix(0.0001f);
   }
+#endif
 }
 
 /**
