@@ -1168,7 +1168,7 @@ bake_steam_audio() {
       bake_params.numRays = 32768;
       bake_params.numDiffuseSamples = 2048;
       bake_params.numBounces = 100;
-      bake_params.simulatedDuration = 1.0f;
+      bake_params.simulatedDuration = 2.0f;
       bake_params.savedDuration = 1.0f;
       bake_params.order = 2;
       bake_params.numThreads = _options.get_num_threads();
