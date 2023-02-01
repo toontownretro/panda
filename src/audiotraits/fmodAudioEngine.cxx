@@ -1218,15 +1218,30 @@ calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
     // There's something in the way between the sound source and the
     // listener (camera).
 
-    float gain_loss = db_to_gain(fmod_occlusion_db_loss_low);
-    float gain_loss_mid = db_to_gain(fmod_occlusion_db_loss_mid);
-    float gain_loss_high = db_to_gain(fmod_occlusion_db_loss_high);
+    // Render occlusion by making the sound attenuate faster, with a different
+    // attenuation rate for each frequency band.  Higher frequencies should
+    // attenuate faster than lower frequencies.  This seems to match better
+    // with how occlusion really works, rather than just doing a constant
+    // gain reduction.  However, this doubles up with the normal distance
+    // attenuation factor.
+
+    float dist_mult_low = db_to_gain(fmod_occlusion_db_loss_low);
+    float dist_mult_mid = db_to_gain(fmod_occlusion_db_loss_mid);
+    float dist_mult_high = db_to_gain(fmod_occlusion_db_loss_high);
+
+    float dist_gain_low = std::min(1.0f, (min_dist * dist_mult_low) / length);
+    float dist_gain_mid = std::min(1.0f, (min_dist * dist_mult_mid) / length);
+    float dist_gain_high = std::min(1.0f, (min_dist * dist_mult_high) / length);
+
+    //float gain_loss = db_to_gain(fmod_occlusion_db_loss_low);
+    //float gain_loss_mid = db_to_gain(fmod_occlusion_db_loss_mid);
+    //float gain_loss_high = db_to_gain(fmod_occlusion_db_loss_high);
 
     // These are the band factors for the largest sound
     // with a 50 meter min distance.
-    transmission[0] = gain_loss;
-    transmission[1] = gain_loss_mid;
-    transmission[2] = gain_loss_high;
+    transmission[0] = dist_gain_low;
+    transmission[1] = dist_gain_mid;
+    transmission[2] = dist_gain_high;
 
     // Scale the band factors down linearly for sounds smaller
     // than 50 meters.
