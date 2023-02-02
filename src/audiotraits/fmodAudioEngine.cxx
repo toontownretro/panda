@@ -1229,9 +1229,9 @@ calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
     float dist_mult_mid = db_to_gain(fmod_occlusion_db_loss_mid);
     float dist_mult_high = db_to_gain(fmod_occlusion_db_loss_high);
 
-    float dist_gain_low = std::min(1.0f, (min_dist * dist_mult_low) / length);
-    float dist_gain_mid = std::min(1.0f, (min_dist * dist_mult_mid) / length);
-    float dist_gain_high = std::min(1.0f, (min_dist * dist_mult_high) / length);
+    //float dist_gain_low = std::min(1.0f, (min_dist * dist_mult_low) / length);
+    //float dist_gain_mid = std::min(1.0f, (min_dist * dist_mult_mid) / length);
+    //float dist_gain_high = std::min(1.0f, (min_dist * dist_mult_high) / length);
 
     //float gain_loss = db_to_gain(fmod_occlusion_db_loss_low);
     //float gain_loss_mid = db_to_gain(fmod_occlusion_db_loss_mid);
@@ -1239,9 +1239,9 @@ calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
 
     // These are the band factors for the largest sound
     // with a 50 meter min distance.
-    transmission[0] = dist_gain_low;
-    transmission[1] = dist_gain_mid;
-    transmission[2] = dist_gain_high;
+    transmission[0] = dist_mult_low;
+    transmission[1] = dist_mult_mid;
+    transmission[2] = dist_mult_high;
 
     // Scale the band factors down linearly for sounds smaller
     // than 50 meters.
