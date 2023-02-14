@@ -35,7 +35,8 @@
     pitchShiftDSP.h pitchShiftDSP.I \
     proxyAudioSound.h proxyAudioSound.I \
     sfxReverbDSP.h sfxReverbDSP.I \
-    steamAudioProperties.h steamAudioProperties.I
+    steamAudioProperties.h steamAudioProperties.I \
+    threeEQDSP.h threeEQDSP.I \
 
   #define COMPOSITE_SOURCES \
     config_audio.cxx \
@@ -64,7 +65,8 @@
     pitchShiftDSP.cxx \
     proxyAudioSound.cxx \
     sfxReverbDSP.cxx \
-    steamAudioProperties.cxx
+    steamAudioProperties.cxx \
+    threeEQDSP.cxx
 
   #define INSTALL_HEADERS \
     config_audio.h \
@@ -93,7 +95,8 @@
     pitchShiftDSP.h pitchShiftDSP.I \
     proxyAudioSound.h proxyAudioSound.I \
     sfxReverbDSP.h sfxReverbDSP.I \
-    steamAudioProperties.h steamAudioProperties.I
+    steamAudioProperties.h steamAudioProperties.I \
+    threeEQDSP.h threeEQDSP.I
 
   #define IGATESCAN all
 #end lib_target

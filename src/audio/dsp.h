@@ -39,6 +39,7 @@ PUBLISHED:
     DT_parameq,
     DT_pitchshift,
     DT_sfxreverb,
+    DT_3eq,
   };
 
   INLINE DSPType get_dsp_type() const;

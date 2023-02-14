@@ -29,6 +29,7 @@
 #include "paramEQDSP.h"
 #include "pitchShiftDSP.h"
 #include "sfxReverbDSP.h"
+#include "threeEQDSP.h"
 #include "dcast.h"
 #include "load_dso.h"
 #include "configVariableDouble.h"
@@ -993,6 +994,8 @@ get_fmod_dsp_type(DSP::DSPType panda_type) {
     return FMOD_DSP_TYPE_SFXREVERB;
   case DSP::DT_normalize:
     return FMOD_DSP_TYPE_NORMALIZE;
+  case DSP::DT_3eq:
+    return FMOD_DSP_TYPE_THREE_EQ;
   default:
     return FMOD_DSP_TYPE_UNKNOWN;
   }
@@ -1153,6 +1156,17 @@ configure_dsp(DSP *dsp_conf, FMOD::DSP *dsp) {
       dsp->setParameterFloat(FMOD_DSP_SFXREVERB_EARLYLATEMIX, sfx_conf->get_early_late_mix());
       dsp->setParameterFloat(FMOD_DSP_SFXREVERB_WETLEVEL, sfx_conf->get_wetlevel());
       dsp->setParameterFloat(FMOD_DSP_SFXREVERB_DRYLEVEL, sfx_conf->get_drylevel());
+    }
+    break;
+  case DSP::DT_3eq:
+    {
+      ThreeEQDSP *teq_conf = DCAST(ThreeEQDSP, dsp_conf);
+      dsp->setParameterFloat(FMOD_DSP_THREE_EQ_LOWGAIN, teq_conf->get_low_gain());
+      dsp->setParameterFloat(FMOD_DSP_THREE_EQ_MIDGAIN, teq_conf->get_mid_gain());
+      dsp->setParameterFloat(FMOD_DSP_THREE_EQ_HIGHGAIN, teq_conf->get_high_gain());
+      dsp->setParameterFloat(FMOD_DSP_THREE_EQ_LOWCROSSOVER, teq_conf->get_low_mid_crossover_frequency());
+      dsp->setParameterFloat(FMOD_DSP_THREE_EQ_HIGHCROSSOVER, teq_conf->get_mid_high_crossover_frequency());
+      dsp->setParameterInt(FMOD_DSP_THREE_EQ_CROSSOVERSLOPE, teq_conf->get_crossover_slope());
     }
     break;
   }

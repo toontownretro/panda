@@ -37,6 +37,7 @@
 #include "pitchShiftDSP.h"
 #include "proxyAudioSound.h"
 #include "sfxReverbDSP.h"
+#include "threeEQDSP.h"
 #include "string_utils.h"
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_AUDIO)
@@ -157,6 +158,7 @@ ConfigureFn(config_audio) {
   ParamEQDSP::init_type();
   PitchShiftDSP::init_type();
   SFXReverbDSP::init_type();
+  ThreeEQDSP::init_type();
 }
 
 ostream &
