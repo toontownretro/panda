@@ -34,6 +34,8 @@ PUBLISHED:
   INLINE PN_stdfloat get_radius() const;
   INLINE PN_stdfloat get_height() const;
 
+  virtual void resize(PN_stdfloat height) override final;
+
   virtual void destroy() override final;
 
 protected:

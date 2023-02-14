@@ -209,14 +209,6 @@ get_slope_limit() const {
 }
 
 /**
- *
- */
-INLINE void PhysController::
-resize(PN_stdfloat size) {
-  get_controller()->resize(panda_length_to_physx(size));
-}
-
-/**
  * Sets the solid mask of the controller.  This is a bitmask of contents that
  * are solid to the controller.
  */

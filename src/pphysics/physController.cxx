@@ -143,3 +143,11 @@ move(double dt, const LVector3 &move_vector, PN_stdfloat min_distance,
   _collision_flags = flags;
   return (CollisionFlags)flags;
 }
+
+/**
+ *
+ */
+void PhysController::
+resize(PN_stdfloat size) {
+  get_controller()->resize(panda_length_to_physx(size));
+}

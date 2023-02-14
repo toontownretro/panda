@@ -79,3 +79,11 @@ destroy() {
     _controller = nullptr;
   }
 }
+
+/**
+ *
+ */
+void PhysCapsuleController::
+resize(PN_stdfloat size) {
+  get_controller()->resize(panda_length_to_physx(size) - _controller->getRadius() * 2);
+}

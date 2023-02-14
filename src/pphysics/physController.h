@@ -146,7 +146,7 @@ PUBLISHED:
   INLINE void set_slope_limit(PN_stdfloat limit);
   INLINE PN_stdfloat get_slope_limit() const;
 
-  INLINE void resize(PN_stdfloat size);
+  virtual void resize(PN_stdfloat size);
 
   INLINE void set_into_collide_mask(BitMask32 mask);
   INLINE BitMask32 get_into_collide_mask() const;
