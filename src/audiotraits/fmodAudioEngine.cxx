@@ -709,7 +709,7 @@ init_steam_audio() {
 
   if (fmod_steam_audio_reflections) {
     PT(SteamAudioThread) thread = new SteamAudioThread(this, SteamAudioThread::SF_reflections);
-    thread->start(TP_normal, true);
+    thread->start(TP_low, true);
     _ipl_reflections_thread = thread;
   }
 
