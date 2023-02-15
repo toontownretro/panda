@@ -43,11 +43,13 @@ reportError(physx::PxErrorCode::Enum code, const char *message,
   case physx::PxErrorCode::eINVALID_OPERATION:
   case physx::PxErrorCode::eINTERNAL_ERROR:
     do_report(pphysics_cat.error(), message, file, line);
+    nassert_raise("PhysX error");
     break;
 
   case physx::PxErrorCode::eOUT_OF_MEMORY:
   case physx::PxErrorCode::eABORT:
     do_report(pphysics_cat.fatal(), message, file, line);
+    nassert_raise("PhysX error");
     break;
 
   default:
