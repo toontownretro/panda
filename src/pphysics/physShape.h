@@ -50,6 +50,7 @@ PUBLISHED:
 
   INLINE void set_material(PhysMaterial *mat);
   INLINE void add_material(PhysMaterial *mat);
+  INLINE void submit_materials();
   INLINE PhysMaterial *get_material(int n = 0) const;
 
   INLINE void set_from_collide_mask(CollideMask mask);

@@ -139,12 +139,21 @@ set_material(PhysMaterial *mat) {
 }
 
 /**
- * Appends a new material to the shape.
+ * Appends a new material to the shape.  You must follow up with a call
+ * to submit_materials() after all desired materials have been added.
  */
 INLINE void PhysShape::
 add_material(PhysMaterial *mat) {
   _phys_materials.push_back(mat);
   _materials.push_back(mat->get_material());
+}
+
+/**
+ * After adding all materials to the shape, this submits the material list
+ * to the actual underlying shape.
+ */
+INLINE void PhysShape::
+submit_materials() {
   _shape->setMaterials(_materials.data(), _materials.size());
 }
 
