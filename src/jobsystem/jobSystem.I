@@ -232,3 +232,11 @@ pop_job(Thread *thread, bool is_worker) {
   }
   return job;
 }
+
+/**
+ * Returns the number of worker threads.
+ */
+INLINE int JobSystem::
+get_num_threads() const {
+  return (int)_worker_threads.size();
+}

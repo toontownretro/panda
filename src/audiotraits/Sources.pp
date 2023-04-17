@@ -33,7 +33,7 @@
   #define BUILD_TARGET $[HAVE_FMOD]
   #define USE_PACKAGES fmod
   #define BUILDING_DLL BUILDING_FMOD_AUDIO
-  #define LOCAL_LIBS audio event
+  #define LOCAL_LIBS audio event jobsystem
   #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
 
   #if $[HAVE_STEAM_AUDIO]

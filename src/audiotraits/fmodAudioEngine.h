@@ -25,6 +25,7 @@
 #include "fmodAudioSound.h"
 #include "fmodSoundCache.h"
 #include "dsp.h"
+#include "job.h"
 
 #include <fmod.hpp>
 
@@ -143,6 +144,7 @@ private:
   IPLStaticMesh _ipl_scene_mesh;
 
   PT(Thread) _ipl_reflections_thread;
+  PT(Job) _ipl_reflections_job;
 
   bool _steam_audio_initialized;
 

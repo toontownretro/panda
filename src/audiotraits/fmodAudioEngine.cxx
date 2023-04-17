@@ -36,6 +36,7 @@
 #include "luse.h"
 #include "config_putil.h"
 #include "pStatClient.h"
+#include "jobSystem.h"
 
 IMPLEMENT_CLASS(FMODAudioEngine);
 
@@ -59,6 +60,11 @@ static ConfigVariableBool fmod_steam_audio_reflections
  PRC_DESC("Set this true to enable audio reflection simulation through "
           "Steam Audio in the FMOD system.  This relies on baked reflection "
           "data probes being provided.  It does not do real-time reflections."));
+
+static ConfigVariableBool fmod_steam_audio_reflection_job
+("fmod-steam-audio-reflection-job", true,
+ PRC_DESC("Set true to schedule the Steam Audio reflection update as a job in "
+          "the worker thread pool, or false to use a dedicated thread for it."));
 
 #ifdef HAVE_STEAM_AUDIO
 
@@ -154,6 +160,8 @@ thread_main() {
     //if (_flags & SF_pathing) {
     //  _engine->do_steam_audio_pathing_sim();
     //}
+
+    Thread::sleep(0.05f);
   }
 }
 
@@ -708,9 +716,21 @@ init_steam_audio() {
   _steam_audio_initialized = true;
 
   if (fmod_steam_audio_reflections) {
-    PT(SteamAudioThread) thread = new SteamAudioThread(this, SteamAudioThread::SF_reflections);
-    thread->start(TP_low, true);
-    _ipl_reflections_thread = thread;
+    JobSystem *js = JobSystem::get_global_ptr();
+    if (!fmod_steam_audio_reflection_job || js->get_num_threads() == 0) {
+      // Use a dedicated thread if we're not using job threads
+      // or they don't wnant a job.
+      PT(SteamAudioThread) thread = new SteamAudioThread(this, SteamAudioThread::SF_reflections);
+      thread->start(TP_low, true);
+      _ipl_reflections_thread = thread;
+
+    } else {
+      PT(GenericJob) job = new GenericJob([this]() {
+        do_steam_audio_reflections_sim();
+      });
+      _ipl_reflections_job = job;
+    }
+
   }
 
   fmodAudio_cat.info()
@@ -892,6 +912,17 @@ update() {
   FMOD_RESULT result;
   result = _system->update();
   fmod_audio_errcheck("_system->update()", result);
+
+#ifdef HAVE_STEAM_AUDIO
+  if (is_using_steam_audio() && _ipl_reflections_job != nullptr) {
+    Job::State state = (Job::State)_ipl_reflections_job->get_state();
+    if (state == Job::S_fresh || state == Job::S_complete) {
+      // Schedule next update.
+      JobSystem *js = JobSystem::get_global_ptr();
+      js->schedule(_ipl_reflections_job);
+    }
+  }
+#endif
 }
 
 /**
