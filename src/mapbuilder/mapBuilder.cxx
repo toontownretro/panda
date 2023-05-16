@@ -1258,8 +1258,8 @@ bake_steam_audio() {
  * indicated GeomNode.
  */
 void MapBuilder::
-add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node) {
-  if (!poly->_visible) {
+add_poly_to_geom_node(MapGeom *poly, GeomVertexData *vdata, GeomNode *geom_node) {
+  if (!poly->is_visible()) {
     // Polygon was determined to be in solid space by the BSP preprocessor.
     // Don't write a Geom for it.
     return;
@@ -1281,10 +1281,7 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   bwriter.set_row(start);
   tanwriter.set_row(start);
   binwriter.set_row(start);
-
-  const Winding *w = &(poly->_winding);
-
-  Material *mat = poly->_material;
+  Material *mat = poly->get_material();
 
   // Fill up the render state for the polygon.
   CPT(RenderState) state = RenderState::make_empty();
@@ -1305,18 +1302,18 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
     }
   }
 
-  for (size_t k = 0; k < w->get_num_points(); k++) {
-    LPoint3 point = w->get_point(k);
-    vwriter.add_data3f(point);
-    LPoint3 normal = poly->_normals[k].normalized();
+  for (int i = 0; i < poly->get_num_vertex_rows(); ++i) {
+    LVector3 normal = poly->get_normal(i).normalized();
+    vwriter.add_data3f(poly->get_pos(i));
     nwriter.add_data3f(normal);
-    twriter.add_data2f(poly->_uvs[k]);
-    lwriter.add_data2f(poly->_lightmap_uvs[k]);
-    if (bwriter.has_column()) {
-      bwriter.add_data1i((unsigned char)poly->_blends[k]);
+    twriter.add_data2f(poly->get_uv(i));
+    lwriter.add_data2f(poly->get_lightmap_uv(i));
+    if (bwriter.has_column() && poly->has_alpha()) {
+      bwriter.add_data1i((unsigned char)poly->get_alpha(i));
     }
 
     // Calculate tangent and binormal from the normal.
+    // FIXME: This isn't the greatest.
     LVector3 x;
     if (cabs(normal[0]) >= cabs(normal[1]) && cabs(normal[0]) >= cabs(normal[2])) {
       x = LVector3::unit_x();
@@ -1333,14 +1330,25 @@ add_poly_to_geom_node(MapPoly *poly, GeomVertexData *vdata, GeomNode *geom_node)
   }
 
   PT(GeomTriangles) tris = new GeomTriangles(GeomEnums::UH_static);
-  for (size_t k = 1; k < (w->get_num_points() - 1); k++) {
-    tris->add_vertices(start + k + 1, start + k, start);
-    tris->close_primitive();
+  if (poly->has_index()) {
+    // Indexed geom = displacement.
+    assert((poly->get_num_vertices() % 3) == 0);
+    int num_tris = poly->get_num_vertices() / 3;
+    for (int i = 0; i < num_tris; ++i) {
+      tris->add_vertices(start + poly->get_index(i * 3 + 2), start + poly->get_index(i * 3 + 1), start + poly->get_index(i * 3));
+      tris->close_primitive();
+    }
+
+  } else {
+    // Non-indexed = brush face.
+    for (int i = 1; i < (poly->get_num_vertices() - 1); ++i) {
+      tris->add_vertices(start + i + 1, start + i, start);
+      tris->close_primitive();
+    }
   }
 
   // Keep track of this for when we compute lightmaps.
-  poly->_geom_index = geom_node->get_num_geoms();
-  poly->_geom_node = geom_node;
+  poly->set_geom(geom_node, geom_node->get_num_geoms());
 
   PT(Geom) geom = new Geom(vdata);
   geom->add_primitive(tris);
@@ -1525,96 +1533,62 @@ build_entity_polygons(int i) {
       lightmap_vecs[0][3] = shift_scale_u * side->_uv_shift[0] + origin.dot(lightmap_vecs[0].get_xyz());
       lightmap_vecs[1][3] = shift_scale_v * side->_uv_shift[1] + origin.dot(lightmap_vecs[1].get_xyz());
 
+      // Calc lightmap size and mins.
+      LVecBase2 lmins(1e24);
+      LVecBase2 lmaxs(-1e24);
+
+      LVecBase2i lightmap_mins;
+      LVecBase2i lightmap_size;
+
+      for (int ivert = 0; ivert < w.get_num_points(); ivert++) {
+        LPoint3 wpt = w.get_point(ivert);
+        for (int l = 0; l < 2; l++) {
+          PN_stdfloat val = wpt[0] * lightmap_vecs[l][0] +
+                            wpt[1] * lightmap_vecs[l][1] +
+                            wpt[2] * lightmap_vecs[l][2] +
+                            lightmap_vecs[l][3];
+          lmins[l] = std::min(val, lmins[l]);
+          lmaxs[l] = std::max(val, lmaxs[l]);
+        }
+      }
+
+      for (int l = 0; l < 2; l++) {
+          lmins[l] = std::floor(lmins[l]);
+          lmaxs[l] = std::ceil(lmaxs[l]);
+          lightmap_mins[l] = (int)lmins[l];
+          lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+        }
+
       if (side->_displacement == nullptr) {
         // A regular non-displacement brush face.
-        PT(MapPoly) poly = new MapPoly;
-        poly->_visible = true;
-        poly->_side_id = side->_editor_id;
-        poly->_winding = w;
-        poly->_in_group = false;
-        poly->_is_mesh = false;
+        PT(MapGeom) poly = new MapGeom(side->_editor_id, poly_material, base_tex);
         LPoint3 polymin, polymax;
         w.get_bounds(polymin, polymax);
-        poly->_bounds = new BoundingBox(polymin, polymax);
-        poly->_material = poly_material;
-        poly->_base_tex = base_tex;
 
-        _side_polys[poly->_side_id].push_back(poly);
+        _side_polys[poly->get_side_id()].push_back(poly);
 
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
-          poly->_normals.push_back(winding_normal);
-        }
-
-        poly->_vis_occluder = true;
-
-        if (side->_displacement != nullptr) {
-          poly->_vis_occluder = false;
-
-        } else if (base_tex != nullptr && Texture::has_alpha(base_tex->get_format())) {
-          poly->_vis_occluder = false;
-
-        } else if (poly_material != nullptr &&
-                   (poly_material->has_tag("compile_clip") ||
-                    poly_material->has_tag("compile_trigger"))) {
-          poly->_vis_occluder = false;
-        }
-
-        for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
           const LPoint3 &point = w.get_point(ivert);
+
+          // Calc texture uv.
           LVecBase2 uv(
             texture_vecs[0].get_xyz().dot(point) + texture_vecs[0][3],
             texture_vecs[1].get_xyz().dot(point) + texture_vecs[1][3]
           );
           uv[0] /= tex_dim[0];
           uv[1] /= -tex_dim[1];
-          poly->_uvs.push_back(uv);
-        }
 
-        // Calc lightmap size and mins.
-        LVecBase2 lmins(1e24);
-        LVecBase2 lmaxs(-1e24);
-
-        LVecBase2i lightmap_mins;
-
-        for (int ivert = 0; ivert < w.get_num_points(); ivert++) {
-          LPoint3 wpt = w.get_point(ivert);
-          for (int l = 0; l < 2; l++) {
-            PN_stdfloat val = wpt[0] * lightmap_vecs[l][0] +
-                              wpt[1] * lightmap_vecs[l][1] +
-                              wpt[2] * lightmap_vecs[l][2] +
-                              lightmap_vecs[l][3];
-            lmins[l] = std::min(val, lmins[l]);
-            lmaxs[l] = std::max(val, lmaxs[l]);
-          }
-        }
-
-        //std::cout << "Face\n";
-
-        for (int l = 0; l < 2; l++) {
-          lmins[l] = std::floor(lmins[l]);
-          lmaxs[l] = std::ceil(lmaxs[l]);
-          lightmap_mins[l] = (int)lmins[l];
-          poly->_lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
-        }
-
-        //std::cout << "lmins " << lightmap_mins << ", extents " << poly->_lightmap_size << "\n";
-
-        for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
-          const LPoint3 &point = w.get_point(ivert);
+          // Calc lightmap uv.
           LVecBase2 lightcoord;
           lightcoord[0] = point.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
           lightcoord[0] -= lmins[0];
-          //lightcoord[0] += 0.5;
-          lightcoord[0] /= poly->_lightmap_size[0];
-
+          lightcoord[0] /= lightmap_size[0];
           lightcoord[1] = point.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
           lightcoord[1] -= lmins[1];
-          //lightcoord[1] += 0.5;
-          lightcoord[1] /= poly->_lightmap_size[1];
+          lightcoord[1] /= lightmap_size[1];
 
-          poly->_lightmap_uvs.push_back(lightcoord);
-          //std::cout << "luv " << lightcoord << "\n";
+          poly->add_vertex_data(point, winding_normal, uv, lightcoord);
         }
 
         solid_polys.push_back(poly);
@@ -1622,6 +1596,8 @@ build_entity_polygons(int i) {
       } else {
         // This is a displacement brush face.  Build up a set of MapPolys
         // for each displacement triangle.
+
+        PT(MapGeom) geom = new MapGeom(side->_editor_id, poly_material, base_tex);
 
         int start_index = w.get_closest_point(side->_displacement->_start_position);
         int ul = start_index;
@@ -1634,11 +1610,11 @@ build_entity_polygons(int i) {
         //LVector3 ad = w.get_point((start_index + 3) % w.get_num_points()) - w.get_point(start_index);
         //LVector3 ab = w.get_point((start_index + 1) % w.get_num_points()) - w.get_point(start_index);
 
-        pvector<LPoint3> disp_points;
-        pvector<LVector3> disp_normals;
-        pvector<LVecBase2> disp_uvs;
-        pvector<LVecBase2> disp_lightmap_uvs;
-        vector_stdfloat disp_blends;
+        //pvector<LPoint3> disp_points;
+        //pvector<LVector3> disp_normals;
+        //pvector<LVecBase2> disp_uvs;
+        //pvector<LVecBase2> disp_lightmap_uvs;
+        //vector_stdfloat disp_blends;
 
         size_t num_rows = side->_displacement->_rows.size();
         size_t num_cols = side->_displacement->_rows[0]._vertices.size();
@@ -1648,9 +1624,9 @@ build_entity_polygons(int i) {
           for (size_t icol = 0; icol < num_cols; icol++) {
             const MapDisplacementVertex &dvert = side->_displacement->_rows[irow]._vertices[icol];
 
-            disp_normals.push_back(winding_normal);
+            //disp_normals.push_back(winding_normal);
 
-            disp_blends.push_back(dvert._alpha);
+            //disp_blends.push_back(dvert._alpha);
 
             PN_stdfloat ooint = 1.0f / (PN_stdfloat)(num_rows - 1);
 
@@ -1663,7 +1639,7 @@ build_entity_polygons(int i) {
             dpoint += dvert._normal.normalized() * dvert._distance;
             dpoint += dvert._offset;
 
-            disp_points.push_back(dpoint);
+            //disp_points.push_back(dpoint);
 
             LVecBase2 duv(
               texture_vecs[0].get_xyz().dot(dpoint) + texture_vecs[0][3],
@@ -1671,12 +1647,23 @@ build_entity_polygons(int i) {
             );
             duv[0] /= tex_dim[0];
             duv[1] /= -tex_dim[1];
-            disp_uvs.push_back(duv);
+            //disp_uvs.push_back(duv);
+
+            LVecBase2 luv(
+              lightmap_vecs[0].get_xyz().dot(dpoint) + lightmap_vecs[0][3],
+              lightmap_vecs[1].get_xyz().dot(dpoint) + lightmap_vecs[1][3]
+            );
+            luv[0] -= lightmap_mins[0];
+            luv[1] -= lightmap_mins[1];
+            luv[0] /= lightmap_size[0];
+            luv[1] /= lightmap_size[1];
+            //disp_lightmap_uvs.push_back(luv);
+
+            geom->add_vertex_data(dpoint, winding_normal, duv, luv, dvert._alpha);
           }
         }
 
-        // Now build a MapPoly for each displacement triangle.
-
+        // Build triangles.
         for (size_t irow = 0; irow < num_rows - 1; irow++) {
           for (size_t icol = 0; icol < num_cols - 1; icol++) {
 
@@ -1700,140 +1687,37 @@ build_entity_polygons(int i) {
               tri_verts[1][0] = { irow + 1, icol + 1 };
             }
 
-            LVecBase2 lmins(1e24), lmaxs(-1e24);
-            LVecBase2i lightmap_mins, lightmap_size;
             //
             // TRIANGLE 1
             //
-            PT(MapPoly) tri0 = new MapPoly;
-            tri0->_visible = true;
-            tri0->_side_id = side->_editor_id;
-            tri0->_vis_occluder = false;
-            tri0->_in_group = false;
-            tri0->_is_mesh = false;
-            LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
-            LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
-            LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
-            LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
+            //LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
+            //LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
+            //LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
+            //LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[0][ivert].first;
               size_t col = tri_verts[0][ivert].second;
               size_t dvertindex = row * num_cols;
               dvertindex += col;
-              const LPoint3 &dpoint = disp_points[dvertindex];
-              tri0->_winding.add_point(dpoint);
-              tri0->_normals.push_back(-tri_normal);
-              tri0->_uvs.push_back(disp_uvs[dvertindex]);
-              tri0->_blends.push_back(disp_blends[dvertindex]);
-
-              for (int l = 0; l < 2; l++) {
-                PN_stdfloat val = dpoint[0] * lightmap_vecs[l][0] +
-                                  dpoint[1] * lightmap_vecs[l][1] +
-                                  dpoint[2] * lightmap_vecs[l][2] +
-                                  lightmap_vecs[l][3];
-                lmins[l] = std::min(val, lmins[l]);
-                lmaxs[l] = std::max(val, lmaxs[l]);
-              }
+              geom->add_index(dvertindex);
             }
-            for (int l = 0; l < 2; l++) {
-              lmins[l] = std::floor(lmins[l]);
-              lmaxs[l] = std::ceil(lmaxs[l]);
-              lightmap_mins[l] = (int)lmins[l];
-              lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
-            }
-
-            tri0->_lightmap_size = lightmap_size;
-
-            for (size_t ivert = 0; ivert < 3; ivert++) {
-              const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
-              LVecBase2 lightcoord;
-              lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-              lightcoord[0] -= lmins[0];
-              //lightcoord[0] += 0.5;
-              lightcoord[0] /= tri0->_lightmap_size[0];// + 1;
-
-              lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-              lightcoord[1] -= lmins[1];
-              //lightcoord[1] += 0.5;
-              lightcoord[1] /= tri0->_lightmap_size[1];// + 1;
-
-              tri0->_lightmap_uvs.push_back(lightcoord);
-            }
-            tri0->_material = poly_material;
-            tri0->_base_tex = base_tex;
-            LPoint3 tmins(1e24), tmaxs(-1e24);
-            tri0->_winding.get_bounds(tmins, tmaxs);
-            tri0->_bounds = new BoundingBox(tmins, tmaxs);
-            solid_polys.push_back(tri0);
-            _side_polys[tri0->_side_id].push_back(tri0);
 
             //
             // TRIANGLE 2
             //
-            tri0 = new MapPoly;
-            tri0->_visible = true;
-            tri0->_side_id = side->_editor_id;
-            tri0->_vis_occluder = false;
-            tri0->_in_group = false;
-            tri0->_is_mesh = false;
-            p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
-            p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
-            p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
-            tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
-            lmins = LVecBase2(1e24);
-            lmaxs = LVecBase2(-1e24);
+            //p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
+            //p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
+            //p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
+            //tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[1][ivert].first;
               size_t col = tri_verts[1][ivert].second;
               size_t dvertindex = row * num_cols;
               dvertindex += col;
-              const LPoint3 &dpoint = disp_points[dvertindex];
-              tri0->_winding.add_point(dpoint);
-              tri0->_normals.push_back(-tri_normal);
-              tri0->_uvs.push_back(disp_uvs[dvertindex]);
-              tri0->_blends.push_back(disp_blends[dvertindex]);
-
-              for (int l = 0; l < 2; l++) {
-                PN_stdfloat val = dpoint[0] * lightmap_vecs[l][0] +
-                                  dpoint[1] * lightmap_vecs[l][1] +
-                                  dpoint[2] * lightmap_vecs[l][2] +
-                                  lightmap_vecs[l][3];
-                lmins[l] = std::min(val, lmins[l]);
-                lmaxs[l] = std::max(val, lmaxs[l]);
-              }
+              geom->add_index(dvertindex);
             }
-            for (int l = 0; l < 2; l++) {
-              lmins[l] = std::floor(lmins[l]);
-              lmaxs[l] = std::ceil(lmaxs[l]);
-              lightmap_mins[l] = (int)lmins[l];
-              lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
-            }
-
-            tri0->_lightmap_size = lightmap_size;
-
-            for (size_t ivert = 0; ivert < 3; ivert++) {
-              const LPoint3 &dpoint = tri0->_winding.get_point(ivert);
-              LVecBase2 lightcoord;
-              lightcoord[0] = dpoint.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-              lightcoord[0] -= lmins[0];
-              //lightcoord[0] += 0.5;
-              lightcoord[0] /= tri0->_lightmap_size[0];// + 1;
-
-              lightcoord[1] = dpoint.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-              lightcoord[1] -= lmins[1];
-              //lightcoord[1] += 0.5;
-              lightcoord[1] /= tri0->_lightmap_size[1];// + 1;
-
-              tri0->_lightmap_uvs.push_back(lightcoord);
-            }
-            tri0->_material = poly_material;
-            tri0->_base_tex = base_tex;
-            tmins.set(1e24, 1e24, 1e24);
-            tmaxs.set(-1e24, -1e24, -1e24);
-            tri0->_winding.get_bounds(tmins, tmaxs);
-            tri0->_bounds = new BoundingBox(tmins, tmaxs);
-            solid_polys.push_back(tri0);
-            _side_polys[tri0->_side_id].push_back(tri0);
+            //solid_polys.push_back(tri0);
+            //_side_polys[tri0->_side_id].push_back(tri0);
           }
         }
       }
@@ -2598,13 +2482,12 @@ build_entity_physics(int mesh_index, MapModel &model) {
   // brush planes, and displacement polygons.
   pmap<std::string, CollideGroupWorkingData> collide_type_groups;
 
-  for (MapPoly *poly : mesh->_polys) {
-    Material *mat = poly->_material;
-    Winding *w = &poly->_winding;
-
-    if (w->is_empty()) {
+  for (MapGeom *poly : mesh->_polys) {
+    if (poly->is_empty()) {
       continue;
     }
+
+    Material *mat = poly->get_material();
 
     std::string surface_prop = "default";
     std::string collide_type = "";
@@ -2645,11 +2528,11 @@ build_entity_physics(int mesh_index, MapModel &model) {
     // Add the polygon to the physics triangle mesh.
     // Need to reverse the vertex order.
     pvector<LPoint3> phys_verts;
-    phys_verts.resize(w->get_num_points());
-    for (int i = 0; i < w->get_num_points(); ++i) {
-      phys_verts[i] = w->get_point(i);
+    phys_verts.resize(poly->get_num_vertex_rows());
+    for (int i = 0; i < poly->get_num_vertex_rows(); ++i) {
+      phys_verts[i] = poly->get_pos(i);
     }
-    std::reverse(phys_verts.begin(), phys_verts.end());
+    //std::reverse(phys_verts.begin(), phys_verts.end());
     group->tri_mesh_data->add_polygon(phys_verts, mat_index);
   }
 
@@ -2791,14 +2674,15 @@ build_overlays() {
     CPT(TransformState) uv_transform = TransformState::make_pos_hpr_scale(uv_offset, LVecBase3(0.0f), uv_scale);
 
     for (int side_id : sides) {
-      for (MapPoly *poly : _side_polys[side_id]) {
-        if (poly->_geom_node == nullptr ||
-            poly->_geom_index == -1) {
+      for (MapGeom *poly : _side_polys[side_id]) {
+        if (!poly->has_geom()) {
           // Poly didn't result in visible geometry, so don't try to decal it.
           continue;
         }
+        GeomNode *pgn = poly->get_geom_node();
+        int pgi = poly->get_geom_index();
         NodePath np("tmp");
-        np.set_state(poly->_geom_node->get_geom_state(poly->_geom_index));
+        np.set_state(pgn->get_geom_state(pgi));
         np.set_depth_offset(offset);
         np.set_material(mat);
         DecalProjector proj;
@@ -2812,8 +2696,8 @@ build_overlays() {
         proj.set_decal_uv_transform(uv_transform);
 
         PT(GeomNode) tmp_geom_node = new GeomNode("tmp");
-        tmp_geom_node->add_geom(poly->_geom_node->get_geom(poly->_geom_index)->make_copy(),
-          poly->_geom_node->get_geom_state(poly->_geom_index));
+        tmp_geom_node->add_geom(pgn->get_geom(pgi)->make_copy(),
+          pgn->get_geom_state(pgi));
         np = NodePath(tmp_geom_node);
         np.reparent_to(np_ident);
 
@@ -2831,4 +2715,24 @@ build_overlays() {
     NodePath(overlay_geom_node).flatten_strong();
     _out_data->add_overlay(overlay_geom_node);
   }
+}
+
+/**
+ * Creates a winding from the vertex positions of the MapGeom.
+ * This only works for non-indexed coplanar MapGeoms (aka brush faces).
+ * Displacements are non-coplanar and indexed.
+ */
+bool MapGeom::
+get_winding(Winding &w) const {
+  w.clear();
+
+  if (has_index()) {
+    return false;
+  }
+
+  for (LPoint3 pos : _pos) {
+    w.add_point(pos);
+  }
+
+  return true;
 }
