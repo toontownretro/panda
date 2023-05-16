@@ -131,6 +131,28 @@ add_triangles_from_geom_node(GeomNode *node, bool world_space, int material_inde
 /**
  *
  */
+void PhysTriangleMeshData::
+add_vertices(const pvector<LPoint3> &vertices) {
+  for (LPoint3 p : vertices) {
+    _vertices.push_back(panda_vec_to_physx(p));
+  }
+}
+
+/**
+ *
+ */
+void PhysTriangleMeshData::
+add_triangle_indices(int v0, int v1, int v2, int material_index) {
+  _indices.push_back(v0);
+  _indices.push_back(v1);
+  _indices.push_back(v2);
+  _mat_indices.push_back(material_index);
+  invalidate_mesh();
+}
+
+/**
+ *
+ */
 bool PhysTriangleMeshData::
 generate_mesh() {
   invalidate_mesh();

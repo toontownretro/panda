@@ -39,6 +39,9 @@ PUBLISHED:
   void add_triangles_from_geom(const Geom *geom, const LMatrix4 &mat = LMatrix4::ident_mat(), int material_index = 0);
   void add_triangles_from_geom_node(GeomNode *node, bool world_space = false, int material_index = 0);
 
+  void add_vertices(const pvector<LPoint3> &vertices);
+  void add_triangle_indices(int v0, int v1, int v2, int material_index = 0);
+
   INLINE size_t get_num_vertices() const;
   INLINE LPoint3 get_vertex(size_t n) const;
 
