@@ -39,6 +39,7 @@ public:
   MapGeom(int side_id, Material *mat, Texture *base_tex);
 
   INLINE void set_lightmap_size(const LVecBase2i &size) { _lightmap_size = size; }
+  INLINE LVecBase2i get_lightmap_size() const { return _lightmap_size; }
 
   INLINE int get_side_id() const { return _side_id; }
 
@@ -52,7 +53,9 @@ public:
   void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv);
   void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv, PN_stdfloat alpha);
   void add_triangle(int v0, int v1, int v2);
-  void add_index(int vertex) { _index.push_back(vertex); }
+  INLINE void add_index(int vertex) { _index.push_back(vertex); }
+
+  INLINE void set_normal(int n, const LVector3 &normal) { _normal[n] = normal; }
 
   INLINE bool has_normal() const { return !_normal.empty(); }
   INLINE bool has_alpha() const { return !_alpha.empty(); }
@@ -83,9 +86,22 @@ public:
     }
   }
 
+  INLINE void set_visible(bool flag) { _visible = flag; }
   INLINE bool is_visible() const { return _visible; }
 
+  INLINE bool set_can_see_sky(bool flag) { _sees_sky = flag; }
+  INLINE bool can_see_sky() const { return _sees_sky; }
+
   bool get_winding(Winding &w) const;
+  void get_winding(int triangle, Winding &w) const;
+
+  INLINE int get_num_windings() const {
+    if (!has_index()) {
+      return 1;
+    } else {
+      return get_num_triangles();
+    }
+  }
 
   INLINE bool has_geom() const {
     return _geom_node != nullptr && _geom_index != -1;
@@ -94,6 +110,27 @@ public:
   INLINE bool is_empty() const {
     return _pos.empty();
   }
+
+  INLINE int get_num_triangles() const {
+    if (!has_index()) {
+      assert(get_num_vertex_rows() >= 3);
+      return get_num_vertex_rows() - 2;
+    } else {
+      assert((get_num_vertices() % 3) == 0);
+      return get_num_vertices() / 3;
+    }
+  }
+
+  INLINE void insert_leaf(int leaf) {
+    _leaves.insert(leaf);
+  }
+
+  INLINE const pset<int> &get_leaves() const {
+    return _leaves;
+  }
+
+  INLINE void set_in_3d_sky(bool flag) { _in_3d_sky; }
+  INLINE bool is_in_3d_sky() const { return _in_3d_sky; }
 
 protected:
   PT(Material) _material;
@@ -111,6 +148,9 @@ protected:
   // fully in solid-space.  In this case, the geom won't be
   // part of the scene graph.
   bool _visible;
+  bool _sees_sky;
+  pset<int> _leaves;
+  bool _in_3d_sky;
 
   // Vertex data.
   pvector<LPoint3> _pos;
@@ -132,7 +172,7 @@ public:
   bool _is_mesh;
   bool _in_group;
 
-  virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const=0;
+  //virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const=0;
 };
 
 #if 0
@@ -197,7 +237,7 @@ public:
 
   int _entity;
 
-  virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
+ // virtual bool overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const override;
 };
 
 class EXPCL_PANDA_MAPBUILDER MapBuilder {

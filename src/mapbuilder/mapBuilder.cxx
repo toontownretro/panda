@@ -99,6 +99,7 @@ static LColor cluster_colors[6] = {
   LColor(0.5, 0.5, 1.0, 1.0),
 };
 
+#if 0
 /**
  *
  */
@@ -134,6 +135,8 @@ overlaps_box(const LPoint3 &box_center, const LVector3 &box_half) const {
 
   return false;
 }
+
+#endif
 
 /**
  *
@@ -264,7 +267,7 @@ build() {
       continue;
     }
 
-    for (MapPoly *poly : mesh->_polys) {
+    for (MapGeom *poly : mesh->_polys) {
       _meshes[0]->_polys.push_back(poly);
     }
     it = _meshes.erase(it);
@@ -287,10 +290,9 @@ build() {
   for (size_t i = 0; i < _meshes.size(); i++) {
     MapMesh *mesh = _meshes[i];
     for (size_t j = 0; j < mesh->_polys.size(); j++) {
-      MapPoly *poly = mesh->_polys[j];
-      Winding *w = &(poly->_winding);
-      for (int k = 0; k < w->get_num_points(); k++) {
-        LPoint3 point = w->get_point(k);
+      MapGeom *poly = mesh->_polys[j];
+      for (int k = 0; k < poly->get_num_vertex_rows(); k++) {
+        LPoint3 point = poly->get_pos(k);
 
         _scene_mins[0] = std::min(point[0], _scene_mins[0]);
         _scene_mins[1] = std::min(point[1], _scene_mins[1]);
@@ -660,15 +662,15 @@ build() {
     model._geom_node = new GeomNode(ss.str());
     GeomNode *geom_node = model._geom_node;
 
-    for (MapPoly *poly : mesh->_polys) {
+    for (MapGeom *poly : mesh->_polys) {
       PT(GeomVertexData) vdata = new GeomVertexData(
-        geom_node->get_name(), poly->_blends.empty() ? format : blend_format,
+        geom_node->get_name(), poly->has_alpha() ? blend_format : format,
         GeomEnums::UH_static);
       add_poly_to_geom_node(poly, vdata, geom_node);
 
-      for (int j = 0; j < poly->_winding.get_num_points(); ++j) {
-        mmins = mmins.fmin(poly->_winding.get_point(j));
-        mmaxs = mmaxs.fmax(poly->_winding.get_point(j));
+      for (int j = 0; j < poly->get_num_vertex_rows(); ++j) {
+        mmins = mmins.fmin(poly->get_pos(j));
+        mmaxs = mmaxs.fmax(poly->get_pos(j));
       }
     }
 
@@ -1378,7 +1380,7 @@ build_polygons() {
  */
 class PolyVertRef {
 public:
-  MapPoly *poly;
+  MapGeom *poly;
   int vertex;
   LVector3 normal;
 };
@@ -1415,7 +1417,7 @@ build_entity_polygons(int i) {
 
     bool bad_solid = false;
 
-    pvector<PT(MapPoly)> solid_polys;
+    pvector<PT(MapGeom)> solid_polys;
 
     bool solid_has_disp_sides = false;
     for (size_t k = 0; k < solid->_sides.size(); k++) {
@@ -1562,6 +1564,7 @@ build_entity_polygons(int i) {
       if (side->_displacement == nullptr) {
         // A regular non-displacement brush face.
         PT(MapGeom) poly = new MapGeom(side->_editor_id, poly_material, base_tex);
+        poly->set_lightmap_size(lightmap_size);
         LPoint3 polymin, polymax;
         w.get_bounds(polymin, polymax);
 
@@ -1598,6 +1601,7 @@ build_entity_polygons(int i) {
         // for each displacement triangle.
 
         PT(MapGeom) geom = new MapGeom(side->_editor_id, poly_material, base_tex);
+        geom->set_lightmap_size(lightmap_size);
 
         int start_index = w.get_closest_point(side->_displacement->_start_position);
         int ul = start_index;
@@ -1763,15 +1767,15 @@ build_entity_polygons(int i) {
   PolyVertCollection collection;
   PN_stdfloat cos_angle = cos(deg_2_rad(45.0f));
   for (size_t i = 0; i < ent_mesh->_polys.size(); ++i) {
-    MapPoly *poly = ent_mesh->_polys[i];
+    MapGeom *poly = ent_mesh->_polys[i];
     PolyVertRef ref;
     ref.poly = poly;
-    ref.normal = poly->_normals[0];
+    ref.normal = poly->get_normal(0);
 
     // Now add each vertex from the polygon separately to our collection.
-    for (int j = 0; j < poly->_winding.get_num_points(); ++j) {
+    for (int j = 0; j < poly->get_num_vertex_rows(); ++j) {
       ref.vertex = j;
-      collection[poly->_winding.get_point(j)].push_back(ref);
+      collection[poly->get_pos(j)].push_back(ref);
     }
   }
 
@@ -1810,7 +1814,7 @@ build_entity_polygons(int i) {
       // Now we have the common normal; apply it to all the vertices.
       for (auto ngi = new_group.begin(); ngi != new_group.end(); ++ngi) {
         const PolyVertRef &ref = (*ngi);
-        ref.poly->_normals[ref.vertex] = normal;
+        ref.poly->set_normal(ref.vertex, normal);
       }
 
       group.swap(leftover_group);
@@ -1843,43 +1847,50 @@ build_lighting() {
   for (size_t i = 0; i < _meshes.size(); i++) {
     MapMesh *mesh = _meshes[i];
     for (size_t j = 0; j < mesh->_polys.size(); j++) {
-      MapPoly *poly = mesh->_polys[j];
+      MapGeom *poly = mesh->_polys[j];
 
-      if (poly->_geom_node == nullptr || poly->_geom_index == -1) {
+      if (!poly->has_geom()) {
         continue;
       }
 
       bool is_sky = false;
 
-      if (poly->_material != nullptr) {
-        if (poly->_material->has_tag("compile_trigger")) {
+      Material *mat = poly->get_material();
+
+      if (mat != nullptr) {
+        if (mat->has_tag("compile_trigger")) {
           continue;
-        } else if (poly->_material->has_tag("compile_sky")) {
+        } else if (mat->has_tag("compile_sky")) {
           is_sky = true;
         }
       }
 
       if (!is_sky) {
-        NodePath geom_np(poly->_geom_node);
+        NodePath geom_np(poly->get_geom_node());
 
         uint32_t contents = 0;
-        if (poly->_material != nullptr) {
-          if (poly->_material->has_tag("compile_water")) {
+        if (mat != nullptr) {
+          if (mat->has_tag("compile_water")) {
             // Water don't block or reflect light, but we want a lightmap for it.
             contents |= LightBuilder::C_dont_block_light;
             contents |= LightBuilder::C_dont_reflect_light;
           }
         }
 
-        builder.add_geom(poly->_geom_node->get_geom(poly->_geom_index),
-                        poly->_geom_node->get_geom_state(poly->_geom_index),
-                        geom_np.get_net_transform(), poly->_lightmap_size,
-                        poly->_geom_node, poly->_geom_index, contents);
+        GeomNode *pgn = poly->get_geom_node();
+        int pgi = poly->get_geom_index();
+
+        builder.add_geom(pgn->get_geom(pgi),
+                        pgn->get_geom_state(pgi),
+                        geom_np.get_net_transform(), poly->get_lightmap_size(),
+                        pgn, pgi, contents);
 
       } else {
+        assert(!poly->has_index());
         // Add sky triangles as occluders (not lightmapped) with the sky
         // contents, so rays that hit them bring in the sky/sun color.
-        const Winding &w = poly->_winding;
+        Winding w;
+        poly->get_winding(w);
         for (size_t ipoint = 1; ipoint < (w.get_num_points() - 1); ++ipoint) {
           LightBuilder::OccluderTri otri;
           otri.a = w.get_point(ipoint + 1);
@@ -2315,13 +2326,13 @@ build_lighting() {
   // Assign the sun light to any polys that can see the sky.
   if (!dlnp.is_empty()) {
     for (size_t i = 0; i < _meshes[0]->_polys.size(); ++i) {
-      MapPoly *poly = _meshes[0]->_polys[i];
-      if ((poly->_sees_sky || !poly->_blends.empty()) && poly->_geom_node != nullptr) {
-        CPT(RenderState) state = poly->_geom_node->get_geom_state(poly->_geom_index);
+      MapGeom *poly = _meshes[0]->_polys[i];
+      if ((poly->can_see_sky() || poly->has_alpha()) && poly->has_geom()) {
+        CPT(RenderState) state = poly->get_geom_node()->get_geom_state(poly->get_geom_index());
         CPT(LightAttrib) lattr;
         state->get_attrib_def(lattr);
         state = state->set_attrib(lattr->add_on_light(dlnp));
-        poly->_geom_node->set_geom_state(poly->_geom_index, state);
+        poly->get_geom_node()->set_geom_state(poly->get_geom_index(), state);
       }
     }
   }
@@ -2406,12 +2417,12 @@ render_cube_maps() {
   for (size_t i = 0; i < _meshes.size(); i++) {
     MapMesh *mesh = _meshes[i];
     for (size_t j = 0; j < mesh->_polys.size(); j++) {
-      MapPoly *poly = mesh->_polys[j];
-      if (poly->_material == nullptr) {
+      MapGeom *poly = mesh->_polys[j];
+      if (poly->get_material() == nullptr) {
         continue;
       }
 
-      MaterialParamBase *envmap_p = poly->_material->get_param("envmap");
+      MaterialParamBase *envmap_p = poly->get_material()->get_param("envmap");
       if (envmap_p == nullptr || !envmap_p->is_of_type(MaterialParamBool::get_class_type())) {
         continue;
       }
@@ -2421,13 +2432,18 @@ render_cube_maps() {
         continue;
       }
 
-      LPoint3 center = poly->_winding.get_center();
+      LPoint3 center(0.0f);
+      for (int k = 0; k < poly->get_num_vertex_rows(); ++k) {
+        center += poly->get_pos(k);
+      }
+      center /= poly->get_num_vertex_rows();
+
       PN_stdfloat closest_distance = 1e24;
       int closest = -1;
       for (size_t k = 0; k < cm_states.size(); k++) {
         const MapCubeMap *mcm = _out_data->get_cube_map(k);
 
-        if (std::find(cm_side_lists[k].begin(), cm_side_lists[k].end(), poly->_side_id) != cm_side_lists[k].end()) {
+        if (std::find(cm_side_lists[k].begin(), cm_side_lists[k].end(), poly->get_side_id()) != cm_side_lists[k].end()) {
           // This side was explicitly assigned to this cube map.  Use it.
           closest = k;
           break;
@@ -2441,11 +2457,13 @@ render_cube_maps() {
         }
       }
 
-      if (closest != -1 && poly->_geom_node != nullptr && poly->_geom_index >= 0) {
+      if (closest != -1 && poly->has_geom()) {
         // Apply the texture of the selected cube map to the polygon's render state.
-        CPT(RenderState) state = poly->_geom_node->get_geom_state(poly->_geom_index);
+        GeomNode *pgn = poly->get_geom_node();
+        int pgi = poly->get_geom_index();
+        CPT(RenderState) state = pgn->get_geom_state(pgi);
         state = state->compose(cm_states[closest]);
-        poly->_geom_node->set_geom_state(poly->_geom_index, state);
+        pgn->set_geom_state(pgi, state);
       }
     }
   }
@@ -2532,8 +2550,22 @@ build_entity_physics(int mesh_index, MapModel &model) {
     for (int i = 0; i < poly->get_num_vertex_rows(); ++i) {
       phys_verts[i] = poly->get_pos(i);
     }
-    //std::reverse(phys_verts.begin(), phys_verts.end());
-    group->tri_mesh_data->add_polygon(phys_verts, mat_index);
+    int start = group->tri_mesh_data->get_num_vertices();
+    group->tri_mesh_data->add_vertices(phys_verts);
+    if (!poly->has_index()) {
+      for (int i = 1; i < poly->get_num_vertices() - 1; ++i) {
+        group->tri_mesh_data->add_triangle_indices(start + i + 1, start + i, start, mat_index);
+      }
+    } else {
+      int num_tris = poly->get_num_triangles();
+      int start = group->tri_mesh_data->get_num_indices();
+      for (int i = 0; i < num_tris; ++i) {
+        int v0 = start + (i * 3);
+        int v1 = start + (i * 3 + 1);
+        int v2 = start + (i * 3 + 2);
+        group->tri_mesh_data->add_triangle_indices(v2, v1, v0, mat_index);
+      }
+    }
   }
 
   // Cook a triangle mesh for each collide group, output collide group info.
@@ -2718,6 +2750,57 @@ build_overlays() {
 }
 
 /**
+ *
+ */
+MapGeom::
+MapGeom(int side_id, Material *mat, Texture *base_tex) :
+  _side_id(side_id),
+  _material(mat),
+  _base_tex(base_tex),
+  _sees_sky(false),
+  _in_3d_sky(false),
+  _visible(true),
+  _geom_node(nullptr),
+  _geom_index(-1),
+  _lightmap_size(1)
+{
+}
+
+/**
+ *
+ */
+void MapGeom::
+add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv) {
+  _pos.push_back(pos);
+  _normal.push_back(normal);
+  _uv.push_back(uv);
+  _lightmap_uv.push_back(lightmap_uv);
+}
+
+/**
+ *
+ */
+void MapGeom::
+add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv,
+                PN_stdfloat alpha) {
+  _pos.push_back(pos);
+  _normal.push_back(normal);
+  _uv.push_back(uv);
+  _lightmap_uv.push_back(lightmap_uv);
+  _alpha.push_back(alpha);
+}
+
+/**
+ *
+ */
+void MapGeom::
+add_triangle(int v0, int v1, int v2) {
+  _index.push_back(v0);
+  _index.push_back(v1);
+  _index.push_back(v2);
+}
+
+/**
  * Creates a winding from the vertex positions of the MapGeom.
  * This only works for non-indexed coplanar MapGeoms (aka brush faces).
  * Displacements are non-coplanar and indexed.
@@ -2735,4 +2818,21 @@ get_winding(Winding &w) const {
   }
 
   return true;
+}
+
+/**
+ * Creates a winding from the vertex positions of the MapGeom.
+ */
+void MapGeom::
+get_winding(int triangle, Winding &w) const {
+  if (!has_index()) {
+    get_winding(w);
+    return;
+  }
+
+  w.clear();
+
+  for (int i = 0; i < 3; ++i) {
+    w.add_point(_pos[get_index(triangle * 3 + i)]);
+  }
 }
