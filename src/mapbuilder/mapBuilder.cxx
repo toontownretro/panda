@@ -1603,6 +1603,9 @@ build_entity_polygons(int i) {
         PT(MapGeom) geom = new MapGeom(side->_editor_id, poly_material, base_tex);
         geom->set_lightmap_size(lightmap_size);
 
+        _side_polys[geom->get_side_id()].push_back(geom);
+        solid_polys.push_back(geom);
+
         int start_index = w.get_closest_point(side->_displacement->_start_position);
         int ul = start_index;
         int ur = (start_index + 3) % w.get_num_points();
@@ -1611,15 +1614,6 @@ build_entity_polygons(int i) {
 
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
 
-        //LVector3 ad = w.get_point((start_index + 3) % w.get_num_points()) - w.get_point(start_index);
-        //LVector3 ab = w.get_point((start_index + 1) % w.get_num_points()) - w.get_point(start_index);
-
-        //pvector<LPoint3> disp_points;
-        //pvector<LVector3> disp_normals;
-        //pvector<LVecBase2> disp_uvs;
-        //pvector<LVecBase2> disp_lightmap_uvs;
-        //vector_stdfloat disp_blends;
-
         size_t num_rows = side->_displacement->_rows.size();
         size_t num_cols = side->_displacement->_rows[0]._vertices.size();
 
@@ -1627,10 +1621,6 @@ build_entity_polygons(int i) {
         for (size_t irow = 0; irow < num_rows; irow++) {
           for (size_t icol = 0; icol < num_cols; icol++) {
             const MapDisplacementVertex &dvert = side->_displacement->_rows[irow]._vertices[icol];
-
-            //disp_normals.push_back(winding_normal);
-
-            //disp_blends.push_back(dvert._alpha);
 
             PN_stdfloat ooint = 1.0f / (PN_stdfloat)(num_rows - 1);
 
@@ -1651,17 +1641,15 @@ build_entity_polygons(int i) {
             );
             duv[0] /= tex_dim[0];
             duv[1] /= -tex_dim[1];
-            //disp_uvs.push_back(duv);
 
             LVecBase2 luv(
               lightmap_vecs[0].get_xyz().dot(dpoint) + lightmap_vecs[0][3],
               lightmap_vecs[1].get_xyz().dot(dpoint) + lightmap_vecs[1][3]
             );
-            luv[0] -= lightmap_mins[0];
-            luv[1] -= lightmap_mins[1];
+            luv[0] -= lmins[0];
             luv[0] /= lightmap_size[0];
+            luv[1] -= lmins[1];
             luv[1] /= lightmap_size[1];
-            //disp_lightmap_uvs.push_back(luv);
 
             geom->add_vertex_data(dpoint, winding_normal, duv, luv, dvert._alpha);
           }
@@ -1694,10 +1682,6 @@ build_entity_polygons(int i) {
             //
             // TRIANGLE 1
             //
-            //LPoint3 p0 = disp_points[(tri_verts[0][0].first * num_cols) + tri_verts[0][0].second];
-            //LPoint3 p1 = disp_points[(tri_verts[0][1].first * num_cols) + tri_verts[0][1].second];
-            //LPoint3 p2 = disp_points[(tri_verts[0][2].first * num_cols) + tri_verts[0][2].second];
-            //LVector3 tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[0][ivert].first;
               size_t col = tri_verts[0][ivert].second;
@@ -1709,10 +1693,6 @@ build_entity_polygons(int i) {
             //
             // TRIANGLE 2
             //
-            //p0 = disp_points[(tri_verts[1][0].first * num_cols) + tri_verts[1][0].second];
-            //p1 = disp_points[(tri_verts[1][1].first * num_cols) + tri_verts[1][1].second];
-            //p2 = disp_points[(tri_verts[1][2].first * num_cols) + tri_verts[1][2].second];
-            //tri_normal = ((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
             for (size_t ivert = 0; ivert < 3; ivert++) {
               size_t row = tri_verts[1][ivert].first;
               size_t col = tri_verts[1][ivert].second;
@@ -1720,8 +1700,6 @@ build_entity_polygons(int i) {
               dvertindex += col;
               geom->add_index(dvertindex);
             }
-            //solid_polys.push_back(tri0);
-            //_side_polys[tri0->_side_id].push_back(tri0);
           }
         }
       }
@@ -1768,17 +1746,49 @@ build_entity_polygons(int i) {
   PN_stdfloat cos_angle = cos(deg_2_rad(45.0f));
   for (size_t i = 0; i < ent_mesh->_polys.size(); ++i) {
     MapGeom *poly = ent_mesh->_polys[i];
+
+    if (poly->has_index()) {
+      // For displacements, average all triangle normals using a vertex.
+      for (int k = 0; k < poly->get_num_vertex_rows(); ++k) {
+        int tri_count = 0;
+        LVector3 norm(0.0f);
+        for (int ti = 0; ti < poly->get_num_triangles(); ++ti) {
+          int start = ti * 3;
+
+          // See if the triangle references this vertex.
+          if ((poly->get_index(start) == k) || (poly->get_index(start + 1) == k) ||
+              (poly->get_index(start + 2) == k)) {
+
+            // It does!  Calculate the triangle normal and add it in.
+            LPoint3 p0 = poly->get_pos(poly->get_index(start));
+            LPoint3 p1 = poly->get_pos(poly->get_index(start + 1));
+            LPoint3 p2 = poly->get_pos(poly->get_index(start + 2));
+            LVector3 tri_normal = -((p1 - p0).normalized().cross(p2 - p0).normalized()).normalized();
+            norm += tri_normal;
+            tri_count++;
+          }
+        }
+
+        if (tri_count > 0) {
+          norm /= tri_count;
+          norm.normalize();
+          poly->set_normal(k, norm);
+        }
+
+      }
+    }
+
     PolyVertRef ref;
     ref.poly = poly;
-    ref.normal = poly->get_normal(0);
-
-    // Now add each vertex from the polygon separately to our collection.
     for (int j = 0; j < poly->get_num_vertex_rows(); ++j) {
       ref.vertex = j;
+      ref.normal = poly->get_normal(j);
       collection[poly->get_pos(j)].push_back(ref);
     }
   }
 
+  // This algorithm will smooth normals of connected brush faces and
+  // displacement edges.
   for (auto ci = collection.begin(); ci != collection.end(); ++ci) {
     PolyVertGroup &group = (*ci).second;
 
@@ -2563,7 +2573,7 @@ build_entity_physics(int mesh_index, MapModel &model) {
         int v0 = start + (i * 3);
         int v1 = start + (i * 3 + 1);
         int v2 = start + (i * 3 + 2);
-        group->tri_mesh_data->add_triangle_indices(v2, v1, v0, mat_index);
+        group->tri_mesh_data->add_triangle_indices(v0, v1, v2, mat_index);
       }
     }
   }

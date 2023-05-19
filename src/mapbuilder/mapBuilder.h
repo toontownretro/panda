@@ -89,7 +89,7 @@ public:
   INLINE void set_visible(bool flag) { _visible = flag; }
   INLINE bool is_visible() const { return _visible; }
 
-  INLINE bool set_can_see_sky(bool flag) { _sees_sky = flag; }
+  INLINE void set_can_see_sky(bool flag) { _sees_sky = flag; }
   INLINE bool can_see_sky() const { return _sees_sky; }
 
   bool get_winding(Winding &w) const;
@@ -129,7 +129,7 @@ public:
     return _leaves;
   }
 
-  INLINE void set_in_3d_sky(bool flag) { _in_3d_sky; }
+  INLINE void set_in_3d_sky(bool flag) { _in_3d_sky = flag; }
   INLINE bool is_in_3d_sky() const { return _in_3d_sky; }
 
 protected:
