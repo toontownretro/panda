@@ -1628,12 +1628,16 @@ build_entity_polygons(int i) {
             end_pts[0] = (w.get_point(ul) * (1.0f - irow * ooint)) + (w.get_point(ll) * irow * ooint);
             end_pts[1] = (w.get_point(ur) * (1.0f - irow * ooint)) + (w.get_point(lr) * irow * ooint);
 
+            LVector3 v;
+            v = dvert._normal * dvert._distance;
+            v += dvert._offset;
+
+            float dist = v.length();
+            v.normalize();
+
             LPoint3 dpoint = (end_pts[0] * (1.0f - icol * ooint)) + (end_pts[1] * icol * ooint);
             dpoint += winding_normal * side->_displacement->_elevation;
-            dpoint += dvert._normal.normalized() * dvert._distance;
-            dpoint += dvert._offset;
-
-            //disp_points.push_back(dpoint);
+            dpoint += v * dist;
 
             LVecBase2 duv(
               texture_vecs[0].get_xyz().dot(dpoint) + texture_vecs[0][3],
