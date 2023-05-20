@@ -1555,11 +1555,37 @@ build_entity_polygons(int i) {
       }
 
       for (int l = 0; l < 2; l++) {
-          lmins[l] = std::floor(lmins[l]);
-          lmaxs[l] = std::ceil(lmaxs[l]);
-          lightmap_mins[l] = (int)lmins[l];
-          lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
-        }
+        lmins[l] = std::floor(lmins[l]);
+        lmaxs[l] = std::ceil(lmaxs[l]);
+        lightmap_mins[l] = (int)lmins[l];
+        lightmap_size[l] = (int)(lmaxs[l] - lmins[l]);
+      }
+
+      pvector<LVecBase2> texcoords, lightcoords;
+
+      for (int ipt = 0; ipt < w.get_num_points(); ++ipt) {
+        const LPoint3 &point = w.get_point(ipt);
+
+        // Calc texture uv.
+        LVecBase2 uv(
+          texture_vecs[0].get_xyz().dot(point) + texture_vecs[0][3],
+          texture_vecs[1].get_xyz().dot(point) + texture_vecs[1][3]
+        );
+        uv[0] /= tex_dim[0];
+        uv[1] /= -tex_dim[1];
+
+        // Calc lightmap uv.
+        LVecBase2 lightcoord;
+        lightcoord[0] = point.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
+        lightcoord[0] -= lmins[0];
+        lightcoord[0] /= lightmap_size[0];
+        lightcoord[1] = point.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
+        lightcoord[1] -= lmins[1];
+        lightcoord[1] /= lightmap_size[1];
+
+        texcoords.push_back(uv);
+        lightcoords.push_back(lightcoord);
+      }
 
       if (side->_displacement == nullptr) {
         // A regular non-displacement brush face.
@@ -1573,25 +1599,7 @@ build_entity_polygons(int i) {
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
           const LPoint3 &point = w.get_point(ivert);
-
-          // Calc texture uv.
-          LVecBase2 uv(
-            texture_vecs[0].get_xyz().dot(point) + texture_vecs[0][3],
-            texture_vecs[1].get_xyz().dot(point) + texture_vecs[1][3]
-          );
-          uv[0] /= tex_dim[0];
-          uv[1] /= -tex_dim[1];
-
-          // Calc lightmap uv.
-          LVecBase2 lightcoord;
-          lightcoord[0] = point.dot(lightmap_vecs[0].get_xyz()) + lightmap_vecs[0][3];
-          lightcoord[0] -= lmins[0];
-          lightcoord[0] /= lightmap_size[0];
-          lightcoord[1] = point.dot(lightmap_vecs[1].get_xyz()) + lightmap_vecs[1][3];
-          lightcoord[1] -= lmins[1];
-          lightcoord[1] /= lightmap_size[1];
-
-          poly->add_vertex_data(point, winding_normal, uv, lightcoord);
+          poly->add_vertex_data(point, winding_normal, texcoords[ivert], lightcoords[ivert]);
         }
 
         solid_polys.push_back(poly);
@@ -1624,9 +1632,20 @@ build_entity_polygons(int i) {
 
             PN_stdfloat ooint = 1.0f / (PN_stdfloat)(num_rows - 1);
 
+            PN_stdfloat frac = irow * ooint;
+            PN_stdfloat e0 = 1.0f - frac;
+
             LPoint3 end_pts[2];
-            end_pts[0] = (w.get_point(ul) * (1.0f - irow * ooint)) + (w.get_point(ll) * irow * ooint);
-            end_pts[1] = (w.get_point(ur) * (1.0f - irow * ooint)) + (w.get_point(lr) * irow * ooint);
+            end_pts[0] = w.get_point(ul) * e0 + w.get_point(ll) * frac;
+            end_pts[1] = w.get_point(ur) * e0 + w.get_point(lr) * frac;
+
+            LVecBase2 end_uvs[2];
+            end_uvs[0] = texcoords[ul] * e0 + texcoords[ll] * frac;
+            end_uvs[1] = texcoords[ur] * e0 + texcoords[lr] * frac;
+
+            LVecBase2 end_luvs[2];
+            end_luvs[0] = lightcoords[ul] * e0 + lightcoords[ll] * frac;
+            end_luvs[1] = lightcoords[ur] * e0 + lightcoords[lr] * frac;
 
             LVector3 v;
             v = dvert._normal * dvert._distance;
@@ -1635,11 +1654,17 @@ build_entity_polygons(int i) {
             float dist = v.length();
             v.normalize();
 
-            LPoint3 dpoint = (end_pts[0] * (1.0f - icol * ooint)) + (end_pts[1] * icol * ooint);
+            PN_stdfloat cfrac = icol * ooint;
+            PN_stdfloat ce0 = 1.0f - cfrac;
+
+            LPoint3 dpoint = end_pts[0] * ce0 + end_pts[1] * cfrac;
             dpoint += winding_normal * side->_displacement->_elevation;
             dpoint += v * dist;
 
-            LVecBase2 duv(
+            LVecBase2 duv = end_uvs[0] * ce0 + end_uvs[1] * cfrac;
+            LVecBase2 luv = end_luvs[0] * ce0 + end_luvs[1] * cfrac;
+
+            /*LVecBase2 duv(
               texture_vecs[0].get_xyz().dot(dpoint) + texture_vecs[0][3],
               texture_vecs[1].get_xyz().dot(dpoint) + texture_vecs[1][3]
             );
@@ -1653,7 +1678,7 @@ build_entity_polygons(int i) {
             luv[0] -= lmins[0];
             luv[0] /= lightmap_size[0];
             luv[1] -= lmins[1];
-            luv[1] /= lightmap_size[1];
+            luv[1] /= lightmap_size[1];*/
 
             geom->add_vertex_data(dpoint, winding_normal, duv, luv, dvert._alpha);
           }
