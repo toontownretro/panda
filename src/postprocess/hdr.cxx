@@ -214,9 +214,9 @@ apply_program_auto(float focal_length, float target_ev, float &aperature,
 	// Start with the assumption that we want a shutter speed of 1/f.
 	shutter_speed = 1.0f / focal_length;
 	// Compute the resulting ISO if we left both shutter and aperture here.
-	//iso = clamp(compute_iso(aperature, shutter_speed, target_ev),
-	//						(float)hdr_min_iso, (float)hdr_max_iso);
-	iso = hdr_iso_value.get_value();
+	iso = std::clamp(compute_iso(aperature, shutter_speed, target_ev),
+							(float)hdr_min_iso, (float)hdr_max_iso);
+	//iso = hdr_iso_value.get_value();
 
 	// Apply half the difference in EV to the aperture.
 	float ev_diff = target_ev - compute_ev(aperature, shutter_speed, iso);

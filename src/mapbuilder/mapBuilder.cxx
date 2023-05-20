@@ -2572,12 +2572,11 @@ build_entity_physics(int mesh_index, MapModel &model) {
       }
     } else {
       int num_tris = poly->get_num_triangles();
-      int start = group->tri_mesh_data->get_num_indices();
       for (int i = 0; i < num_tris; ++i) {
-        int v0 = start + (i * 3);
-        int v1 = start + (i * 3 + 1);
-        int v2 = start + (i * 3 + 2);
-        group->tri_mesh_data->add_triangle_indices(v0, v1, v2, mat_index);
+        group->tri_mesh_data->add_triangle_indices(
+          start + poly->get_index(i * 3 + 2),
+          start + poly->get_index(i * 3 + 1),
+          start + poly->get_index(i * 3), mat_index);
       }
     }
   }
