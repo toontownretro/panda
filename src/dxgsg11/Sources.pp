@@ -25,7 +25,7 @@
     dxTextureContext11.I dxTextureContext11.h \
     dxVertexBufferContext11.I dxVertexBufferContext11.h \
     wdxGraphicsBuffer11.I wdxGraphicsBuffer11.h \
-    wdxGraphicsPipe11.I wdxGraphicsBuffer11.h \
+    wdxGraphicsPipe11.I wdxGraphicsPipe11.h \
     wdxGraphicsWindow11.I wdxGraphicsWindow11.h
 
   #define COMPOSITE_SOURCES \
