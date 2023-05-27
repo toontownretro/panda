@@ -4,29 +4,29 @@
 #define BUILD_DIRECTORY $[HAVE_AUDIO]
 
 // FIXME: Could possibly restore Miles support
-//#begin lib_target
-//  #define TARGET miles_audio
-//  #define BUILD_TARGET $[HAVE_RAD_MSS]
-//  #define USE_PACKAGES rad_mss
-//  #define BUILDING_DLL BUILDING_MILES_AUDIO
-//  #define LOCAL_LIBS audio event pipeline
-//  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
+#begin lib_target
+  #define TARGET miles_audio
+  #define BUILD_TARGET $[HAVE_RAD_MSS]
+  #define USE_PACKAGES rad_mss
+  #define BUILDING_DLL BUILDING_MILES_AUDIO
+  #define LOCAL_LIBS audio event pipeline
+  #define WIN_SYS_LIBS $[WIN_SYS_LIBS] user32.lib advapi32.lib winmm.lib
 
-//  #define SOURCES \
-//      config_milesAudio.h \
-//      milesAudioManager.h \
-//      milesAudioSound.I milesAudioSound.h \
-//      milesAudioSample.I milesAudioSample.h \
-//      milesAudioSequence.I milesAudioSequence.h \
-//      milesAudioStream.I milesAudioStream.h \
-//      globalMilesManager.I globalMilesManager.h
+  #define SOURCES \
+      config_milesAudio.h \
+      milesAudioManager.h \
+      milesAudioSound.I milesAudioSound.h \
+      milesAudioSample.I milesAudioSample.h \
+      milesAudioSequence.I milesAudioSequence.h \
+      milesAudioStream.I milesAudioStream.h \
+      globalMilesManager.I globalMilesManager.h
 
-//  #define COMPOSITE_SOURCES \
-//      config_milesAudio.cxx milesAudioManager.cxx milesAudioSound.cxx \
-//      milesAudioStream.cxx globalMilesManager.cxx milesAudioSample.cxx \
-//      milesAudioSequence.cxx
+  #define COMPOSITE_SOURCES \
+      config_milesAudio.cxx milesAudioManager.cxx milesAudioSound.cxx \
+      milesAudioStream.cxx globalMilesManager.cxx milesAudioSample.cxx \
+      milesAudioSequence.cxx
 
-//#end lib_target
+#end lib_target
 
 #begin lib_target
   #define TARGET fmod_audio
