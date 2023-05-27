@@ -44,8 +44,8 @@ public:
 
   virtual bool is_valid();
 
-  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, int mode=SM_heuristic);
-  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, int mode=SM_heuristic);
+  virtual PT(AudioSound) get_sound(const Filename &file_name, bool positional = false, bool stream = false);
+  virtual PT(AudioSound) get_sound(MovieAudio *sound, bool positional = false, bool stream = false);
   virtual void uncache_sound(const Filename &file_name);
   virtual void clear_cache();
   virtual void set_cache_limit(unsigned int count);
