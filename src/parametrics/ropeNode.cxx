@@ -396,7 +396,7 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
 
   CPT(TransformState) rel_transform =
     net_transform->invert_compose(camera_transform);
-  LVector3 camera_vec = LVector3::forward() * rel_transform->get_mat();
+  LVector3 camera_vec = rel_transform->get_pos();//LVector3::forward() * rel_transform->get_mat();
 
   CurveSegments curve_segments;
   int num_curve_verts = get_connected_segments(curve_segments, result);
@@ -656,7 +656,9 @@ compute_billboard_vertices(GeomVertexData *vdata,
       LVector3 tangent;
       compute_tangent(tangent, segment, j, result);
 
-      LVector3 norm = cross(tangent, camera_vec);
+      LVector3 to_seg = segment[j]._p - camera_vec;
+
+      LVector3 norm = cross(tangent, to_seg);
       norm.normalize();
 
       if (use_vertex_thickness) {
