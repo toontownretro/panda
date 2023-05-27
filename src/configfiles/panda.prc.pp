@@ -6,7 +6,9 @@
 // parameters, in particular the default display types.
 //
 
-#output 20_panda.prc notouch
+#mkdir $[ODIR_GEN]
+
+#output $[ODIR_GEN]/20_panda.prc notouch
 #### Generated automatically by $[PPREMAKE] $[PPREMAKE_VERSION] from $[notdir $[THISFILENAME]].
 ################################# DO NOT EDIT ###########################
 
@@ -181,4 +183,4 @@ hardware-animated-vertices 1
 
 textures-power-2 none
 
-#end 20_panda.prc
+#end $[ODIR_GEN]/20_panda.prc

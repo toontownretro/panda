@@ -1,6 +1,6 @@
 
 #define INSTALL_CONFIG \
-  panda.emacs panda.emacs.Xdefaults 20_panda.prc
+  panda.emacs panda.emacs.Xdefaults $[ODIR_GEN]/20_panda.prc
 
 
 #if $[CTPROJS]

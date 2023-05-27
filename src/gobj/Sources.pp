@@ -21,7 +21,7 @@
     bufferContext.I bufferContext.h \
     bufferContextChain.I bufferContextChain.h \
     bufferResidencyTracker.I bufferResidencyTracker.h \
-    cg_preamble.cxx \
+    $[ODIR_GEN]/cg_preamble.cxx \
     config_gobj.h \
     fp16_bitcasts.h fp16.h \
     geom.h geom.I \
@@ -319,4 +319,5 @@
 
 #end lib_target
 
-#concatcxx $[PATH]/cg_preamble.cxx, cg_preamble, $[PATH]/cg_preamble.hlsl
+#mkdir $[ODIR_GEN]
+#concatcxx $[PATH]/$[ODIR_GEN]/cg_preamble.cxx, cg_preamble, $[PATH]/cg_preamble.hlsl
