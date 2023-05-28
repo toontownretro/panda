@@ -52,7 +52,7 @@ GlobalMilesManager() :
  * when the first audio manager is added.
  */
 void GlobalMilesManager::
-add_manager(MilesAudioManager *manager) {
+add_manager(MilesAudioManager *mgr) {
   LightMutexHolder holder(_managers_lock);
   _managers.insert(manager);
   if (!_is_open) {

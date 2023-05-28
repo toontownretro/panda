@@ -44,8 +44,8 @@ private:
   GlobalMilesManager();
 
 public:
-  void add_manager(MilesAudioManager *manager);
-  void remove_manager(MilesAudioManager *manager);
+  void add_manager(MilesAudioManager *mgr);
+  void remove_manager(MilesAudioManager *mgr);
   void cleanup();
   INLINE bool is_open() const;
 
