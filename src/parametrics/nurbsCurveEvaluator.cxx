@@ -45,6 +45,8 @@ reset(int num_vertices) {
   }
   _knots_dirty = true;
   _basis_dirty = true;
+  recompute_knots();
+  recompute_basis();
 }
 
 /**

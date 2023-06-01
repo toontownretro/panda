@@ -23,6 +23,8 @@ set_order(int order) {
   _order = order;
   _knots_dirty = true;
   _basis_dirty = true;
+  recompute_knots();
+  recompute_basis();
 }
 
 /**
