@@ -27,6 +27,7 @@
 #include "geom.h"
 #include "geomLines.h"
 #include "geomTristrips.h"
+#include "geomTriangles.h"
 #include "geomVertexWriter.h"
 #include "boundingSphere.h"
 
@@ -394,6 +395,8 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
   const TransformState *net_transform = data.get_net_transform(trav);
   const TransformState *camera_transform = trav->get_camera_transform();
 
+  Thread *current_thread = Thread::get_current_thread();
+
   CPT(TransformState) rel_transform =
     net_transform->invert_compose(camera_transform);
   LVector3 camera_vec = rel_transform->get_pos();//LVector3::forward() * rel_transform->get_mat();
@@ -411,14 +414,27 @@ render_billboard(CullTraverser *trav, CullTraverserData &data,
 
   // Since this will be a nonindexed primitive, no need to pre-reserve the
   // number of vertices.
-  PT(GeomTristrips) strip = new GeomTristrips(Geom::UH_stream);
-  CurveSegments::const_iterator si;
-  for (si = curve_segments.begin(); si != curve_segments.end(); ++si) {
-    const CurveSegment &segment = (*si);
-
-    strip->add_next_vertices(segment.size() * 2);
-    strip->close_primitive();
+  PT(GeomTriangles) strip = new GeomTriangles(Geom::UH_stream);
+  strip->set_index_type(GeomEnums::NT_uint16);
+  {
+    PT(GeomVertexArrayDataHandle) handle = strip->modify_vertices_handle(current_thread);
+    handle->unclean_set_num_rows((num_curve_verts - 1) * 6);
+    uint16_t *ptr = (uint16_t *)handle->get_write_pointer();
+    for (int i = 0; i < num_curve_verts - 1; ++i) {
+      int ll = i * 2 + 1;
+      int ul = i * 2;
+      int lr = (i + 1) * 2 + 1;
+      int ur = (i + 1) * 2;
+      *ptr++ = ul;
+      *ptr++ = ll;
+      *ptr++ = ur;
+      *ptr++ = ll;
+      *ptr++ = lr;
+      *ptr++ = ur;
+    }
   }
+  strip->close_primitive();
+  strip->calc_num_vertices();
 
   PT(Geom) geom = new Geom(vdata);
   geom->add_primitive(strip);
