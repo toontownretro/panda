@@ -20,3 +20,7 @@ DOSH fi
 DOBAT if "%CFG_PATH%" == "" (
 DOBAT   set CFG_PATH=.;%USERPROFILE%;%USERPROFILE%\etc;C:\etc
 DOBAT )
+
+DOPS1 if (!($env:CFG_PATH)) {
+DOPS1   $env:CFG_PATH=".;$HOME;$HOME\etc;C:\etc"
+DOPS1 }
