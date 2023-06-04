@@ -24,6 +24,7 @@
 #include "jobSystem.h"
 #include "pStatCollector.h"
 #include "pStatTimer.h"
+#include "lightMutexHolder.h"
 
 static PStatCollector dvn_trav_pcollector("DynamicVisNode:Traverse");
 static PStatCollector dvn_trav_node_pcollector("DynamicVisNode:TraverseNode");
@@ -179,6 +180,9 @@ void DynamicVisNode::
 child_added(PandaNode *node, int pipeline_stage) {
   // This should not be called from Cull or Draw.
   nassertv(Thread::get_current_pipeline_stage() == 0);
+  //nassertv(Thread::get_current_thread() == Thread::get_main_thread());
+
+  LightMutexHolder holder(_lock);
 
   auto it = _children.find(node);
   if (it != _children.end()) {
@@ -208,6 +212,9 @@ void DynamicVisNode::
 child_removed(PandaNode *node, int pipeline_stage) {
   // This should not be called from Cull or Draw.
   nassertv(Thread::get_current_pipeline_stage() == 0);
+  //nassertv(Thread::get_current_thread() == Thread::get_main_thread());
+
+  LightMutexHolder holder(_lock);
 
   auto it = _children.find(node);
   if (it == _children.end()) {
@@ -241,6 +248,8 @@ child_bounds_stale(PandaNode *node, int pipeline_stage) {
   //if (Thread::get_current_pipeline_stage() != 0) {
   //  return;
   //}
+
+  LightMutexHolder holder(_lock);
 
   ChildInfos::const_iterator it = _children.find(node);
   if (it != _children.end()) {

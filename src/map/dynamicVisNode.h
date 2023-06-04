@@ -100,6 +100,7 @@ private:
 
   typedef pflat_hash_map<PandaNode *, PT(ChildInfo), pointer_hash> ChildInfos;
 
+  LightMutex _lock;
   ChildInfos _children;
   pvector<ChildInfo *> _dirty_children;
 
