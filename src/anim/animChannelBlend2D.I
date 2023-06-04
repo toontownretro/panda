@@ -53,7 +53,6 @@ add_channel(AnimChannel *channel, const LPoint2 &coord) {
   Channel chan;
   chan._channel = channel;
   chan._point = coord;
-  chan._weight = 0.0f;
   _channels.push_back(std::move(chan));
 
   // The overall frame rate and number of frames in the multi-channel is the

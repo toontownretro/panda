@@ -29,8 +29,7 @@ PUBLISHED:
   AnimChannelBlend2D(const std::string &name);
 
   void build_triangles();
-  void compute_weights();
-  void compute_weights_if_necessary(Character *character);
+  bool compute_weights(Character *character, int &triangle, PN_stdfloat weights[3]) const;
 
   virtual PT(AnimChannel) make_copy() const override;
 
@@ -51,7 +50,7 @@ PUBLISHED:
 
 private:
   void blend_triangle(const LPoint2 &a, const LPoint2 &b, const LPoint2 &c,
-                      const LPoint2 &point, PN_stdfloat *weights);
+                      const LPoint2 &point, PN_stdfloat *weights) const;
   bool point_in_triangle(const LPoint2 &a, const LPoint2 &b,
                          const LPoint2 &c, const LPoint2 &point) const;
   PN_stdfloat triangle_sign(const LPoint2 &a, const LPoint2 &b,
@@ -85,15 +84,11 @@ private:
   typedef pvector<Triangle> Triangles;
   Triangles _triangles;
   bool _has_triangles;
-  Triangle *_active_tri;
-
-  LPoint2 _input_coord;
 
   class Channel {
   public:
     PT(AnimChannel) _channel;
     LPoint2 _point;
-    PN_stdfloat _weight;
   };
   typedef pvector<Channel> Channels;
   Channels _channels;

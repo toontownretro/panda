@@ -69,6 +69,25 @@ add_channel(AnimChannel *channel, PN_stdfloat coord) {
     _fps = std::max(_fps, channel->get_frame_rate());
     _num_frames = std::max(_num_frames, channel->get_num_frames());
   }
+
+  _sorted = false;
+}
+
+/**
+ * Sorts the list of channels by increasing blend coordinate.  This must be
+ * called before the channel is used on a Character.
+ */
+void AnimChannelBlend1D::
+sort_channels() {
+  if (_sorted) {
+    return;
+  }
+  std::sort(_channels.begin(), _channels.end(),
+    [](const Channel &a, const Channel &b) -> bool {
+      return a._blend_coord < b._blend_coord;
+    }
+  );
+  _sorted = true;
 }
 
 /**
@@ -77,11 +96,13 @@ add_channel(AnimChannel *channel, PN_stdfloat coord) {
 PN_stdfloat AnimChannelBlend1D::
 get_length(Character *character) const {
   if (_channels.empty() || _blend_param < 0) {
-    return 0.0f;
+    return 0.01f;
   }
 
   const Channel *from, *to;
   PN_stdfloat frac = ((AnimChannelBlend1D *)this)->get_blend_targets(character, from, to);
+
+  nassertr(from != nullptr || to != nullptr, 0.01f);
 
   if (to == nullptr) {
     return from->_channel->get_length(character);
@@ -115,14 +136,7 @@ get_blend_targets(Character *character, const Channel *&from, const Channel *&to
     return 0.0f;
   }
 
-  // Sort the channels by increasing blend coordinate if we haven't yet.
-  if (!_sorted) {
-    std::sort(_channels.begin(), _channels.end(),
-      [](const Channel &a, const Channel &b) -> bool {
-        return a._blend_coord < b._blend_coord;
-      });
-    _sorted = true;
-  }
+  nassertr(_sorted, 0.0f);
 
   PN_stdfloat coord = character->get_pose_parameter(_blend_param).get_norm_value();
 
@@ -173,6 +187,8 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   const Channel *from, *to;
   PN_stdfloat frac = get_blend_targets(context._character, from, to);
+
+  nassertv(from != nullptr || to != nullptr);
 
   if (to == nullptr) {
     from->_channel->calc_pose(context, data);

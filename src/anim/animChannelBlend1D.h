@@ -36,6 +36,8 @@ PUBLISHED:
 
   void add_channel(AnimChannel *channel, PN_stdfloat coord);
 
+  void sort_channels();
+
   virtual PN_stdfloat get_length(Character *character) const override;
   virtual void do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) override;
   virtual LVector3 get_root_motion_vector(Character *character) const override;
