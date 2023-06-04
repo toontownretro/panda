@@ -18,3 +18,14 @@ INLINE PyObject *Extension<SharedEnum>::
 __getattr__(PyObject *self, const std::string &attr_name) const {
   return Dtool_WrapValue(_this->get_value_id(attr_name));
 }
+
+/**
+ * Sets all the enumerations as native Python attributes on the given
+ * object.  This allows for quicker value lookup from Python code.
+ */
+INLINE void Extension<SharedEnum>::
+fill_python_object(PyObject *obj) const {
+  for (auto it = _this->_value_ids.begin(); it != _this->_value_ids.end(); ++it) {
+    PyObject_SetAttrString(obj, it->first.c_str(), PyLong_FromLong((long)it->second));
+  }
+}

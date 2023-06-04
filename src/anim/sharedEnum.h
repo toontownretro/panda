@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "pmap.h"
 #include "configVariableList.h"
+#include "extension.h"
 
 /**
  * This is a base class for pseudo-enumerated types whose values are defined
@@ -37,7 +38,8 @@ PUBLISHED:
 
   void load_values();
 
-  EXTENSION(INLINE PyObject *__getattr__(PyObject *self, const std::string &attr_name) const);
+  PY_EXTENSION(INLINE PyObject *__getattr__(PyObject *self, const std::string &attr_name) const);
+  PY_EXTENSION(INLINE void fill_python_object(PyObject *obj) const);
 
 protected:
   SharedEnum();
@@ -51,6 +53,8 @@ private:
   phash_map<int, std::string, int_hash> _value_names;
   bool _loaded_values;
   int _last_id;
+
+  friend class Extension<SharedEnum>;
 };
 
 #include "sharedEnum.I"

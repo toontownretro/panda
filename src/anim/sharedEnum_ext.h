@@ -30,6 +30,7 @@ template<>
 class Extension<SharedEnum> : public ExtensionBase<SharedEnum> {
 public:
   INLINE PyObject *__getattr__(PyObject *self, const std::string &attr_name) const;
+  INLINE void fill_python_object(PyObject *obj) const;
 };
 
 #include "sharedEnum_ext.I"
