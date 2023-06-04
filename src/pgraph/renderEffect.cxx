@@ -235,6 +235,8 @@ validate_effects() {
 CPT(RenderEffect) RenderEffect::
 return_new(RenderEffect *effect) {
   nassertr(effect != nullptr, effect);
+  return effect;
+#if 0
 
   // This should be a newly allocated pointer, not one that was used for
   // anything else.
@@ -260,6 +262,7 @@ return_new(RenderEffect *effect) {
   // The effect was not inserted; there must be an equivalent one already in
   // the set.  Return that one.
   return *(result.first);
+#endif
 }
 
 /**
