@@ -328,4 +328,8 @@ fillin(DatagramIterator &scan, BamReader *manager) {
     _channels[i]._blend_coord = scan.get_stdfloat();
     manager->read_pointer(scan);
   }
+
+  if (!_sorted) {
+    sort_channels();
+  }
 }
