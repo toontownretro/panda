@@ -66,6 +66,15 @@ static ConfigVariableBool fmod_steam_audio_reflection_job
  PRC_DESC("Set true to schedule the Steam Audio reflection update as a job in "
           "the worker thread pool, or false to use a dedicated thread for it."));
 
+static ConfigVariableBool fmod_clip_output
+("fmod-clip-output", false);
+
+static ConfigVariableBool fmod_vol0_becomes_virtual
+("fmod-vol0-virtual", true);
+
+static ConfigVariableDouble fmod_vol0_virtual_vol
+("fmod-vol0-virtual-vol", 0.01);
+
 #ifdef HAVE_STEAM_AUDIO
 
 #include <phonon.h>
@@ -462,6 +471,12 @@ initialize() {
   // Now initialize the system.
   int nchan = fmod_number_of_sound_channels;
   int flags = FMOD_INIT_NORMAL;
+  if (fmod_clip_output) {
+    flags |= FMOD_INIT_CLIP_OUTPUT;
+  }
+  if (fmod_vol0_becomes_virtual) {
+    flags |= FMOD_INIT_VOL0_BECOMES_VIRTUAL;
+  }
   if (fmod_profile) {
     fmodAudio_cat.info()
       << "Enabling FMOD profiling, connect to application with FMOD "
@@ -479,6 +494,18 @@ initialize() {
   } else if (!fmod_audio_errcheck("_system->init()", result)) {
     return false;
   }
+
+  if (fmod_vol0_becomes_virtual) {
+    FMOD_ADVANCEDSETTINGS adv;
+    memset(&adv, 0, sizeof(FMOD_ADVANCEDSETTINGS));
+    adv.cbSize = sizeof(FMOD_ADVANCEDSETTINGS);
+    adv.vol0virtualvol = fmod_vol0_virtual_vol;
+    result = _system->setAdvancedSettings(&adv);
+    if (!fmod_audio_errcheck("_system->setAdvancedSettings()", result)) {
+      return false;
+    }
+  }
+
 
   fmodAudio_cat.info()
     << "FMOD initialized successfully\n";
