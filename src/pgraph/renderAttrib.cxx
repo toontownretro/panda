@@ -26,7 +26,7 @@ TypeHandle RenderAttrib::_type_handle;
 
 size_t RenderAttrib::_garbage_index = 0;
 
-PStatCollector RenderAttrib::_garbage_collect_pcollector("*:State Cache:Garbage Collect");
+PStatCollector RenderAttrib::_garbage_collect_pcollector("*:RAttrib Cache:Garbage Collect");
 
 /**
  *
