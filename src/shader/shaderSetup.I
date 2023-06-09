@@ -462,6 +462,14 @@ get_inputs() const {
 }
 
 /**
+ *
+ */
+INLINE pvector<ShaderInput> &&ShaderSetup::
+move_inputs() {
+  return std::move(_setup._inputs);
+}
+
+/**
  * Sets the shader flags.
  */
 INLINE void ShaderSetup::

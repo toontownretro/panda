@@ -273,6 +273,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         ShaderBase::ObjectSetupCache::value_type(setup._obj_setup, shader_obj));
     }
 
+#if 0
     cache_collector.start();
     // Now see if we've already created a shader attrib with the same setup.
     ShaderBase::SetupCache::const_iterator it = shader->_cache.find(setup._setup);
@@ -293,44 +294,19 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         generated_attr = shattr->set_shader(shader_obj);
       }
 
-    } else {
+    } else
+#endif
+    {
       make_attrib_collector.start();
 
-      generated_attr = ShaderAttrib::make(shader_obj);
-
-      if (setup.get_num_inputs() > (size_t)0) {
-        if (shadermgr_cat.is_debug()) {
-          shadermgr_cat.debug()
-            << "Applying shader inputs\n";
-        }
-        generated_attr = DCAST(ShaderAttrib, generated_attr)
-          ->set_shader_inputs(setup.get_inputs());
-      }
-
-      if (setup.get_flags() != 0) {
-        if (shadermgr_cat.is_debug()) {
-          shadermgr_cat.debug()
-            << "Setting shader flags\n";
-        }
-        generated_attr = DCAST(ShaderAttrib, generated_attr)
-          ->set_flag(setup.get_flags(), true);
-      }
-
-      if (setup.get_instance_count() > 0) {
-        if (shadermgr_cat.is_debug()) {
-          shadermgr_cat.debug()
-            << "Setting shader instance count to "
-            << setup.get_instance_count() << "\n";
-        }
-        generated_attr = DCAST(ShaderAttrib, generated_attr)
-          ->set_instance_count(setup.get_instance_count());
-      }
+      generated_attr = ShaderAttrib::make(shader_obj, std::move(setup.move_inputs()),
+                                          setup.get_flags(), setup.get_instance_count());
 
       make_attrib_collector.stop();
 
       // Throw it in the cache.
-      shader->_cache.insert(
-        ShaderBase::SetupCache::value_type(setup._setup, generated_attr));
+      //shader->_cache.insert(
+      //  ShaderBase::SetupCache::value_type(setup._setup, generated_attr));
     }
   }
 

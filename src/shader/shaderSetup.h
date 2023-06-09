@@ -91,6 +91,7 @@ public:
 
   INLINE size_t get_num_inputs() const;
   INLINE const pvector<ShaderInput> &get_inputs() const;
+  INLINE pvector<ShaderInput> &&move_inputs();
 
   INLINE ShaderStage &get_stage(Stage stage);
   INLINE bool has_stage(StageFlags flags) const;
