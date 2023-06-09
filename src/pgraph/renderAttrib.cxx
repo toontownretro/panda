@@ -180,12 +180,14 @@ list_attribs(ostream &out) {
  */
 int RenderAttrib::
 garbage_collect() {
-  if (!garbage_collect_states) {
+  if (!garbage_collect_states || !state_cache) {
     return 0;
   }
-  LightReMutexHolder holder(*_attribs_lock);
 
   PStatTimer timer(_garbage_collect_pcollector);
+
+  LightReMutexHolder holder(*_attribs_lock);
+
   size_t orig_size = _attribs.get_num_entries();
 
 #ifdef _DEBUG

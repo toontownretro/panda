@@ -948,13 +948,14 @@ int RenderState::
 garbage_collect() {
   int num_attribs = RenderAttrib::garbage_collect();
 
-  if (!garbage_collect_states) {
+  if (!garbage_collect_states || !state_cache) {
     return num_attribs;
   }
 
+  PStatTimer timer(_garbage_collect_pcollector);
+
   LightReMutexHolder holder(*_states_lock);
 
-  PStatTimer timer(_garbage_collect_pcollector);
   size_t orig_size = _states.get_num_entries();
 
   // How many elements to process this pass?

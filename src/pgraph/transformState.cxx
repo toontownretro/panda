@@ -1134,13 +1134,14 @@ clear_cache() {
  */
 int TransformState::
 garbage_collect() {
-  if (!garbage_collect_states) {
+  if (!garbage_collect_states || !transform_cache) {
     return 0;
   }
 
+  PStatTimer timer(_garbage_collect_pcollector);
+
   LightReMutexHolder holder(*_states_lock);
 
-  PStatTimer timer(_garbage_collect_pcollector);
   size_t orig_size = _states.get_num_entries();
 
   // How many elements to process this pass?
