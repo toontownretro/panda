@@ -84,6 +84,25 @@ make(const std::string &shader_name, int priority) {
 }
 
 /**
+ *
+ */
+CPT(RenderAttrib) ShaderAttrib::
+make(const Shader *shader, pvector<ShaderInput> &&inputs, int flags, int instance_count) {
+  ShaderAttrib *attr = new ShaderAttrib;
+  attr->_shader = shader;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    const InternalName *name = inputs[i].get_name();
+    attr->_inputs.insert({ name, std::move(inputs[i]) });
+  }
+  attr->_has_shader = true;
+  attr->_flags = flags;
+  attr->_has_flags = true;
+  attr->_instance_count = instance_count;
+  attr->build_texture_inputs();
+  return return_new(attr);
+}
+
+/**
  * Returns a RenderAttrib that corresponds to whatever the standard default
  * properties for render attributes of this type ought to be.
  */

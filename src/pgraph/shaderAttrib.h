@@ -44,6 +44,8 @@ private:
 PUBLISHED:
   static CPT(RenderAttrib) make(const Shader *shader = nullptr, int priority = 0);
   static CPT(RenderAttrib) make(const std::string &shader_name, int priority = 0);
+  static CPT(RenderAttrib) make(const Shader *shader, pvector<ShaderInput> &&inputs,
+                                int flags, int instance_count);
   static CPT(RenderAttrib) make_off();
   static CPT(RenderAttrib) make_default();
 
