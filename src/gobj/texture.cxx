@@ -384,7 +384,7 @@ Texture(const string &name) :
   _cvar(_lock)
 {
   _reloading = false;
-  _view_context = nullptr;
+  _context = nullptr;
 
   CDWriter cdata(_cycler, true);
   cdata->inc_properties_modified();
@@ -400,7 +400,7 @@ Texture(const Texture &copy) :
   _lock(copy.get_name()),
   _cvar(_lock)
 {
-  _view_context = nullptr;
+  _context = nullptr;
   _reloading = false;
 }
 
@@ -2012,7 +2012,11 @@ set_orig_file_size(int x, int y, int z) {
 TextureContext *Texture::
 prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  MutexHolder holder(_lock);
+  //MutexHolder holder(_lock);
+
+  if (_context != nullptr) {
+    return _context;
+  }
 
   Contexts::const_iterator ci;
   ci = _contexts.find(prepared_objects);
@@ -2022,6 +2026,7 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
 
   TextureContext *tc = prepared_objects->prepare_texture_now(this, gsg);
   _contexts[prepared_objects] = tc;
+  _context = tc;
 
   return tc;
 }
@@ -9424,10 +9429,12 @@ read_dds_level_bc5(Texture *tex, CData *cdata, const DDSHeader &header, int n, i
  */
 void Texture::
 clear_prepared(PreparedGraphicsObjects *prepared_objects) {
+  _context = nullptr;
   Contexts::iterator ci;
   ci = _contexts.find(prepared_objects);
   if (ci != _contexts.end()) {
     _contexts.erase(ci);
+    _context = nullptr;
   }
 }
 

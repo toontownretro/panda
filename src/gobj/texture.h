@@ -1089,6 +1089,8 @@ protected:
   typedef pmap<PreparedGraphicsObjects *, TextureContext *> Contexts;
   Contexts _contexts;
 
+  TextureContext *_context;
+
   // It is common, when using normal maps, specular maps, gloss maps, and
   // such, to use a file naming convention where the filenames of the special
   // maps are derived by concatenating a suffix to the name of the diffuse
