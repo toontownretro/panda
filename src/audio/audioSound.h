@@ -131,6 +131,10 @@ PUBLISHED:
   virtual LQuaternion get_3d_quat() const;
   virtual LVector3 get_3d_velocity() const;
 
+  // Controls the direction of this sound emitter. Currently implemented only for OpenAL.
+  virtual void set_3d_direction(LVector3 d);
+  virtual LVector3 get_3d_direction() const;
+
   // Controls the distance (in units) that this sound begins to fall off.
   // Also affects the rate it falls off.  Default is 1.0 CloserFaster, <1.0
   // FartherSlower, >1.0
@@ -138,6 +142,21 @@ PUBLISHED:
   virtual PN_stdfloat get_3d_min_distance() const;
 
   virtual PN_stdfloat get_sound_frequency() const;
+
+  // Sets the angle of the inner cone of a directional sound source. In the zone inside of the inner cone
+  // sound is emitted with the (normal) volume set by set_volume().
+  virtual void set_3d_cone_inner_angle(PN_stdfloat angle);
+  virtual PN_stdfloat get_3d_cone_inner_angle() const;
+
+  // Sets the angle of the outer cone of a directional sound source. In the zone between
+  // the inner and the outer cone the volume is attenuated.
+  virtual void set_3d_cone_outer_angle(PN_stdfloat angle);
+  virtual PN_stdfloat get_3d_cone_outer_angle() const;
+
+  // Sets a factor applied to the volume set by set_volume() for the zone outside the outer cone.
+  // By default this is 0 (so no sound is heard inside the outer zone).
+  virtual void set_3d_cone_outer_gain(PN_stdfloat gain);
+  virtual PN_stdfloat get_3d_cone_outer_gain() const;
 
   virtual int get_priority();
   virtual void set_priority(int priority);

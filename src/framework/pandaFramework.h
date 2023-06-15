@@ -30,6 +30,7 @@
 #include "genericAsyncTask.h"
 
 #include "pvector.h"
+#include "small_vector.h"
 
 /**
  * This class serves to provide a high-level framework for basic applications
@@ -173,7 +174,7 @@ private:
   EventHandler &_event_handler;
   AsyncTaskManager &_task_mgr;
 
-  typedef pvector< PT(WindowFramework) > Windows;
+  typedef small_vector< PT(WindowFramework) > Windows;
   Windows _windows;
 
   typedef pmap< const GraphicsOutput *, NodePath > Mouses;

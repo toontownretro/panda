@@ -77,6 +77,20 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
         _used_caps |= C_atomic_counters;
         break;
 
+      case spv::CapabilityUniformBufferArrayDynamicIndexing:
+      case spv::CapabilitySampledImageArrayDynamicIndexing:
+      case spv::CapabilityStorageBufferArrayDynamicIndexing:
+      case spv::CapabilityStorageImageArrayDynamicIndexing:
+      case spv::CapabilityInputAttachmentArrayDynamicIndexing:
+      case spv::CapabilityUniformTexelBufferArrayDynamicIndexing:
+      case spv::CapabilityStorageTexelBufferArrayDynamicIndexing:
+        // It would be great if we could rely on this and call this a day.
+        // However, glslang is not currently capable of detecting and generating
+        // this capability (see KhronosGroup/glslang#2056).  So we still have to
+        // go through the trouble of determining this ourselves.
+        _used_caps |= C_dynamic_indexing;
+        break;
+
       case spv::CapabilityClipDistance:
         _used_caps |= C_clip_distance;
         break;
@@ -209,22 +223,29 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
           case Texture::TT_2d_texture_array:
             _used_caps |= C_texture_array;
             break;
+          default:
+            break;
           }
+        }
+        if (def._flags & DF_dynamically_indexed &&
+            (sampled_image_type != nullptr || def._type->contains_opaque_type())) {
+          _used_caps |= C_dynamic_indexing;
         }
         _parameters.push_back(std::move(var));
       }
       else if (def._storage_class == spv::StorageClassStorageBuffer) {
-        _used_caps |= C_storage_buffer;
-      }
-      else if (def._storage_class == spv::StorageClassUniform) {
-        // Older versions of SPIR-V defined SSBOs differently.
+        // For whatever reason, in GLSL, the name of an SSBO is derived from the
+        // name of the struct type.
         const Definition &type_pointer_def = writer.get_definition(def._type_id);
         nassertd(type_pointer_def._dtype == DT_type_pointer) continue;
         const Definition &type_def = writer.get_definition(type_pointer_def._type_id);
         nassertd(type_def._dtype == DT_type) continue;
-        if (type_def._flags & DF_buffer_block) {
-          _used_caps |= C_storage_buffer;
-        }
+        nassertd(!type_def._name.empty()) continue;
+
+        var.name = InternalName::make(type_def._name);
+        _parameters.push_back(std::move(var));
+
+        _used_caps |= C_storage_buffer;
       }
     }
     else if (def._dtype == DT_variable && def.is_used() &&
@@ -331,6 +352,8 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
         break;
       case spv::DecorationComponent:
         _used_caps |= C_enhanced_layouts;
+        break;
+      default:
         break;
       }
     }
@@ -1146,6 +1169,7 @@ remove_unused_variables() {
     case spv::OpAccessChain:
     case spv::OpInBoundsAccessChain:
     case spv::OpPtrAccessChain:
+    case spv::OpInBoundsPtrAccessChain:
     case spv::OpCopyObject:
     case spv::OpBitcast:
     case spv::OpCopyLogical:
@@ -1266,6 +1290,7 @@ flatten_struct(uint32_t type_id) {
     case spv::OpAccessChain:
     case spv::OpInBoundsAccessChain:
     case spv::OpPtrAccessChain:
+    case spv::OpInBoundsPtrAccessChain:
       if (deleted_ids.count(op.args[2])) {
         uint32_t index = _defs[op.args[3]]._constant;
         if (op.nargs > 4) {
@@ -2166,17 +2191,16 @@ r_define_type(InstructionIterator &it, const ShaderType *type) {
 
     uint32_t nargs = 8;
     switch (image_type->get_access()) {
-    case ShaderType::Image::Access::unknown:
-      break;
-    case ShaderType::Image::Access::read_only:
+    case ShaderType::Access::none:
+    case ShaderType::Access::read_only:
       args[8] = spv::AccessQualifierReadOnly;
       ++nargs;
       break;
-    case ShaderType::Image::Access::write_only:
+    case ShaderType::Access::write_only:
       args[8] = spv::AccessQualifierWriteOnly;
       ++nargs;
       break;
-    case ShaderType::Image::Access::read_write:
+    case ShaderType::Access::read_write:
       args[8] = spv::AccessQualifierReadWrite;
       ++nargs;
       break;
@@ -2496,23 +2520,29 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
         return;
       }
 
-      ShaderType::Image::Access access = ShaderType::Image::Access::unknown;
+      ShaderType::Access access = ShaderType::Access::read_write;
       if (op.nargs > 8) {
         switch ((spv::AccessQualifier)op.args[8]) {
         case spv::AccessQualifierReadOnly:
-          access = ShaderType::Image::Access::read_only;
+          access = ShaderType::Access::read_only;
           break;
         case spv::AccessQualifierWriteOnly:
-          access = ShaderType::Image::Access::write_only;
+          access = ShaderType::Access::write_only;
           break;
         case spv::AccessQualifierReadWrite:
-          access = ShaderType::Image::Access::read_write;
+          access = ShaderType::Access::read_write;
           break;
         default:
           shader_cat.error()
             << "Invalid access qualifier in OpTypeImage instruction.\n";
           break;
         }
+      }
+      if (_defs[op.args[0]]._flags & DF_non_writable) {
+        access = (access & ShaderType::Access::read_only);
+      }
+      if (_defs[op.args[0]]._flags & DF_non_readable) {
+        access = (access & ShaderType::Access::write_only);
       }
 
       record_type(op.args[0], ShaderType::register_type(
@@ -2553,6 +2583,7 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
   case spv::OpTypeStruct:
     {
       Definition &struct_def = _defs[op.args[0]];
+      int access_flags = DF_non_writable | DF_non_readable;
       ShaderType::Struct type;
       for (size_t i = 0; i < op.nargs - 1; ++i) {
         uint32_t member_type_id = op.args[i + 1];
@@ -2569,13 +2600,42 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
           // Ignore built-in member.
           continue;
         }
-        if (member_def._offset >= 0) {
-          type.add_member(_defs[member_type_id]._type, member_def._name, (uint32_t)member_def._offset);
-        } else {
-          type.add_member(_defs[member_type_id]._type, member_def._name);
+
+        const ShaderType *member_type = _defs[member_type_id]._type;
+        if (member_def._flags & (DF_non_writable | DF_non_readable)) {
+          // If an image member has the readonly/writeonly qualifiers,
+          // then we'll inject those back into the type.
+          if (const ShaderType::Image *image = member_type->as_image()) {
+            ShaderType::Access access = image->get_access();
+            if (member_def._flags & DF_non_writable) {
+              access = (access & ShaderType::Access::read_only);
+            }
+            if (member_def._flags & DF_non_readable) {
+              access = (access & ShaderType::Access::write_only);
+            }
+            if (access != image->get_access()) {
+              member_type = ShaderType::register_type(ShaderType::Image(
+                image->get_texture_type(),
+                image->get_sampled_type(),
+                access));
+            }
+          }
         }
+        if (member_def._offset >= 0) {
+          type.add_member(member_type, member_def._name, (uint32_t)member_def._offset);
+        } else {
+          type.add_member(member_type, member_def._name);
+        }
+
+        // If any member is writable, the struct shan't be marked readonly.
+        access_flags &= member_def._flags;
       }
       record_type(op.args[0], ShaderType::register_type(std::move(type)));
+
+      // If all struct members are flagged readonly/writeonly, we tag the type
+      // so as well, since glslang doesn't decorate an SSBO in its entirety as
+      // readonly/writeonly properly (it applies it to all members instead)
+      _defs[op.args[0]]._flags |= access_flags;
     }
     break;
 
@@ -2597,10 +2657,14 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
     record_constant(op.args[1], op.args[0], nullptr, 0);
     break;
 
+  case spv::OpConstantComposite:
+  case spv::OpSpecConstantComposite:
+    modify_definition(op.args[1])._flags |= DF_constant_expression;
+    break;
+
   case spv::OpSpecConstantTrue:
   case spv::OpSpecConstantFalse:
   case spv::OpSpecConstant:
-    // A specialization constant.
     record_spec_constant(op.args[1], op.args[0]);
     break;
 
@@ -2713,19 +2777,35 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
     mark_used(op.args[0]);
     break;
 
-  case spv::OpAccessChain:
-  case spv::OpInBoundsAccessChain:
-  case spv::OpPtrAccessChain:
-  case spv::OpCopyObject:
-    // Record the access chain or pointer copy, so that as soon as something is
-    // loaded through them we can transitively mark everything as "used".
-    record_temporary(op.args[1], op.args[0], op.args[2], current_function_id);
-    break;
-
   case spv::OpCopyMemory:
   case spv::OpCopyMemorySized:
     mark_used(op.args[0]);
     mark_used(op.args[1]);
+    break;
+
+  case spv::OpAccessChain:
+  case spv::OpInBoundsAccessChain:
+  case spv::OpPtrAccessChain:
+  case spv::OpInBoundsPtrAccessChain:
+    // Record the access chain or pointer copy, so that as soon as something is
+    // loaded through them we can transitively mark everything as "used".
+    record_temporary(op.args[1], op.args[0], op.args[2], current_function_id);
+
+    // If one of the indices (including the base element for OpPtrAccessChain)
+    // isn't a constant expression, we mark the variable as dynamically-indexed.
+    for (size_t i = 3; i < op.nargs; ++i) {
+      if ((_defs[op.args[i]]._flags & DF_constant_expression) == 0) {
+        const Definition &def = get_definition(op.args[1]);
+        nassertv(def._origin_id != 0);
+        _defs[def._origin_id]._flags |= DF_dynamically_indexed;
+        break;
+      }
+    }
+    break;
+
+  case spv::OpArrayLength:
+  case spv::OpConvertPtrToU:
+    mark_used(op.args[2]);
     break;
 
   case spv::OpDecorate:
@@ -2736,6 +2816,14 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
 
     case spv::DecorationBuiltIn:
       _defs[op.args[0]]._builtin = (spv::BuiltIn)op.args[2];
+      break;
+
+    case spv::DecorationNonWritable:
+      _defs[op.args[0]]._flags |= DF_non_writable;
+      break;
+
+    case spv::DecorationNonReadable:
+      _defs[op.args[0]]._flags |= DF_non_readable;
       break;
 
     case spv::DecorationLocation:
@@ -2761,8 +2849,30 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
       _defs[op.args[0]].modify_member(op.args[1])._builtin = (spv::BuiltIn)op.args[3];
       break;
 
+    case spv::DecorationNonWritable:
+      _defs[op.args[0]].modify_member(op.args[1])._flags |= DF_non_writable;
+      break;
+
+    case spv::DecorationNonReadable:
+      _defs[op.args[0]].modify_member(op.args[1])._flags |= DF_non_readable;
+      break;
+
+    case spv::DecorationLocation:
+      _defs[op.args[0]].modify_member(op.args[1])._location = op.args[3];
+      break;
+
+    case spv::DecorationBinding:
+      shader_cat.error()
+        << "Invalid " << "binding" << " decoration on struct member\n";
+      break;
+
+    case spv::DecorationDescriptorSet:
+      shader_cat.error()
+        << "Invalid " << "set" << " decoration on struct member\n";
+      break;
+
     case spv::DecorationOffset:
-      _defs[op.args[0]].modify_member(op.args[1])._offset = (spv::BuiltIn)op.args[3];
+      _defs[op.args[0]].modify_member(op.args[1])._offset = op.args[3];
       break;
 
     default:
@@ -2778,9 +2888,15 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
     }
     break;
 
-  case spv::OpArrayLength:
-  case spv::OpConvertPtrToU:
-    mark_used(op.args[2]);
+  case spv::OpCopyObject:
+    record_temporary(op.args[1], op.args[0], op.args[2], current_function_id);
+    // fall through
+
+  case spv::OpCompositeExtract:
+    // Composite types are used for some arithmetic ops.
+    if (_defs[op.args[2]]._flags & DF_constant_expression) {
+      _defs[op.args[1]]._flags |= DF_constant_expression;
+    }
     break;
 
   case spv::OpImageSampleImplicitLod:
@@ -2823,19 +2939,85 @@ parse_instruction(const Instruction &op, uint32_t &current_function_id) {
     }
     break;
 
-  case spv::OpSelect:
-    // This can in theory operate on pointers, which is why we handle this
-    //mark_used(op.args[2]);
-    mark_used(op.args[3]);
-    mark_used(op.args[4]);
-    break;
-
   case spv::OpBitcast:
     record_temporary(op.args[1], op.args[0], op.args[2], current_function_id);
 
     // Treat this like a load if it is casting to a non-pointer type.
     if (_defs[op.args[0]]._dtype != DT_type_pointer) {
       mark_used(op.args[1]);
+    }
+    // fall through, counts as unary arithmetic
+  case spv::OpConvertFToU:
+  case spv::OpConvertFToS:
+  case spv::OpConvertSToF:
+  case spv::OpConvertUToF:
+  case spv::OpQuantizeToF16:
+  case spv::OpSatConvertSToU:
+  case spv::OpSatConvertUToS:
+  case spv::OpConvertUToPtr:
+  case spv::OpSNegate:
+  case spv::OpFNegate:
+  case spv::OpAny:
+  case spv::OpAll:
+  case spv::OpIsNan:
+  case spv::OpIsInf:
+  case spv::OpIsFinite:
+  case spv::OpIsNormal:
+  case spv::OpSignBitSet:
+  case spv::OpNot:
+    if ((_defs[op.args[2]]._flags & DF_constant_expression) != 0) {
+      _defs[op.args[1]]._flags |= DF_constant_expression;
+    }
+    break;
+
+  // Binary arithmetic operators
+  case spv::OpIAdd:
+  case spv::OpFAdd:
+  case spv::OpISub:
+  case spv::OpFSub:
+  case spv::OpIMul:
+  case spv::OpFMul:
+  case spv::OpUDiv:
+  case spv::OpSDiv:
+  case spv::OpFDiv:
+  case spv::OpUMod:
+  case spv::OpSRem:
+  case spv::OpSMod:
+  case spv::OpFRem:
+  case spv::OpFMod:
+  case spv::OpVectorTimesScalar:
+  case spv::OpMatrixTimesScalar:
+  case spv::OpVectorTimesMatrix:
+  case spv::OpMatrixTimesVector:
+  case spv::OpMatrixTimesMatrix:
+  case spv::OpOuterProduct:
+  case spv::OpDot:
+  case spv::OpIAddCarry:
+  case spv::OpISubBorrow:
+  case spv::OpUMulExtended:
+  case spv::OpSMulExtended:
+  case spv::OpShiftRightLogical:
+  case spv::OpShiftRightArithmetic:
+  case spv::OpShiftLeftLogical:
+  case spv::OpBitwiseOr:
+  case spv::OpBitwiseXor:
+  case spv::OpBitwiseAnd:
+    if ((_defs[op.args[2]]._flags & DF_constant_expression) != 0 &&
+        (_defs[op.args[3]]._flags & DF_constant_expression) != 0) {
+      _defs[op.args[1]]._flags |= DF_constant_expression;
+    }
+    break;
+
+  case spv::OpSelect:
+    // This can in theory operate on pointers, which is why we handle this
+    //mark_used(op.args[2]);
+    mark_used(op.args[3]);
+    mark_used(op.args[4]);
+
+    if ((_defs[op.args[2]]._flags & DF_constant_expression) != 0 &&
+        (_defs[op.args[3]]._flags & DF_constant_expression) != 0 &&
+        (_defs[op.args[4]]._flags & DF_constant_expression) != 0) {
+      _defs[op.args[1]]._flags |= DF_constant_expression;
     }
     break;
 
@@ -2923,12 +3105,38 @@ record_variable(uint32_t id, uint32_t type_pointer_id, spv::StorageClass storage
     return;
   }
 
+  // In older versions of SPIR-V, an SSBO was defined using BufferBlock.
+  if (storage_class == spv::StorageClassUniform &&
+      (type_def._flags & DF_buffer_block) != 0) {
+    storage_class = spv::StorageClassStorageBuffer;
+  }
+
   def._dtype = DT_variable;
   def._type = type_def._type;
   def._type_id = type_pointer_id;
   def._storage_class = storage_class;
   def._origin_id = id;
   def._function_id = function_id;
+
+  if (def._flags & (DF_non_writable | DF_non_readable)) {
+    // If an image variable has the readonly/writeonly qualifiers, then we'll
+    // inject those back into the type.
+    if (const ShaderType::Image *image = def._type->as_image()) {
+      ShaderType::Access access = image->get_access();
+      if (def._flags & DF_non_writable) {
+        access = (access & ShaderType::Access::read_only);
+      }
+      if (def._flags & DF_non_readable) {
+        access = (access & ShaderType::Access::write_only);
+      }
+      if (access != image->get_access()) {
+        def._type = ShaderType::register_type(ShaderType::Image(
+          image->get_texture_type(),
+          image->get_sampled_type(),
+          access));
+      }
+    }
+  }
 
 #ifndef NDEBUG
   if (storage_class == spv::StorageClassUniformConstant && shader_cat.is_debug()) {
@@ -2987,6 +3195,7 @@ record_constant(uint32_t id, uint32_t type_id, const uint32_t *words, uint32_t n
   def._type_id = type_id;
   def._type = (type_def._dtype == DT_type) ? type_def._type : nullptr;
   def._constant = (nwords > 0) ? words[0] : 0;
+  def._flags |= DF_constant_expression;
 }
 
 /**
@@ -3053,6 +3262,7 @@ record_spec_constant(uint32_t id, uint32_t type_id) {
   def._dtype = DT_spec_constant;
   def._type_id = type_id;
   def._type = type_def._type;
+  def._flags |= DF_constant_expression;
 }
 
 /**

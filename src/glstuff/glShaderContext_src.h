@@ -20,8 +20,7 @@
 #include "shaderContext.h"
 #include "deletedChain.h"
 #include "paramTexture.h"
-
-#include <pmap.h>
+#include "small_vector.h"
 
 class CLP(GraphicsStateGuardian);
 
@@ -82,7 +81,7 @@ private:
     GLuint _handle;
     bool _needs_compile;
   };
-  typedef pvector<Module> Modules;
+  typedef small_vector<Module, 2> Modules;
   Modules _modules;
   bool _needs_reflection = false;
   bool _needs_query_uniform_locations = false;
@@ -112,9 +111,6 @@ private:
   GLsizei _slider_table_size;
   GLint _frame_number_loc;
   GLint _frame_number;
-#ifndef OPENGLES
-  pflat_hash_map<GLint, GLuint64, integer_hash<GLint>> _glsl_uniform_handles;
-#endif
 
 #ifndef OPENGLES
   struct StorageBlock {

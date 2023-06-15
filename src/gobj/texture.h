@@ -532,6 +532,7 @@ PUBLISHED:
   MAKE_PROPERTY(image_modified, get_image_modified);
 
   SparseArray get_image_modified_pages(UpdateSeq since, int n = 0, Thread *current_thread = Thread::get_current_thread()) const;
+  SparseArray get_view_modified_pages(UpdateSeq since, int view, int n = 0) const;
 
   INLINE bool has_auto_texture_scale() const;
   INLINE AutoTextureScale get_auto_texture_scale() const;
@@ -604,6 +605,8 @@ PUBLISHED:
   MAKE_PROPERTY(post_load_store_cache, get_post_load_store_cache,
                                        set_post_load_store_cache);
 
+  TextureContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
+                              GraphicsStateGuardianBase *gsg);
   TextureContext *prepare_now(int view,
                               PreparedGraphicsObjects *prepared_objects,
                               GraphicsStateGuardianBase *gsg);
@@ -873,7 +876,7 @@ private:
                                       const DDSHeader &header,
                                       int n, std::istream &in);
 
-  void clear_prepared(int view, PreparedGraphicsObjects *prepared_objects);
+  void clear_prepared(PreparedGraphicsObjects *prepared_objects);
 
   static void consider_downgrade(PNMImage &pnmimage, int num_channels, const std::string &name);
 
@@ -1083,11 +1086,8 @@ protected:
   // conversely keeps a list (a set) of all the Textures that have been
   // prepared there.  When either destructs, it removes itself from the
   // other's list.
-  TextureContext *_view_context;
-
-  typedef pflat_hash_map<int, TextureContext *, int_hash> Contexts;
-  typedef pflat_hash_map<PreparedGraphicsObjects *, Contexts, pointer_hash> PreparedViews;
-  PreparedViews _prepared_views;
+  typedef pmap<PreparedGraphicsObjects *, TextureContext *> Contexts;
+  Contexts _contexts;
 
   // It is common, when using normal maps, specular maps, gloss maps, and
   // such, to use a file naming convention where the filenames of the special

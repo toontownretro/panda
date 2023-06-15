@@ -78,6 +78,10 @@ compile_now(Stage stage, const Filename &fn, const Options &options,
     }
   }
 
+  if (record2 != nullptr) {
+    record2->add_dependent_file(vf);
+  }
+
   std::istream *in = vf->open_read_file(true);
   if (vf == nullptr) {
     shader_cat.error()

@@ -18,6 +18,7 @@
 #include "config_pgraphnodes.h"
 #include "pandaNode.h"
 #include "luse.h"
+#include "memoryBase.h"
 #include "pvector.h"
 
 /**
@@ -119,7 +120,7 @@ private:
   static const LColor &get_default_show_color(int index);
 
 protected:
-  class Switch {
+  class Switch : public MemoryBase {
   public:
     INLINE Switch(PN_stdfloat in, PN_stdfloat out);
     INLINE PN_stdfloat get_in() const;

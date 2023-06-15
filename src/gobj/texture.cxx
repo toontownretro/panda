@@ -1457,16 +1457,54 @@ get_image_modified_pages(UpdateSeq since, int n, Thread *current_thread) const {
   if (n > 0 && cdata->_texture_type == Texture::TT_3d_texture) {
     // Don't bother handling this special case, just consider all mipmap pages
     // modified.
+    result.set_range(0, do_get_expected_mipmap_num_pages(cdata, n));
+    return result;
+  }
+
+  size_t num_pages = cdata->_z_size * cdata->_num_views;
+  for (const ModifiedPageRange &range : cdata->_modified_pages) {
+    if (range._z_begin >= num_pages) {
+      break;
+    }
+    if (since < range._modified) {
+      result.set_range(range._z_begin, std::min(range._z_end, num_pages) - range._z_begin);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Like get_image_modified_pages, but returns the result for a particular view.
+ */
+SparseArray Texture::
+get_view_modified_pages(UpdateSeq since, int view, int n) const {
+  CDReader cdata(_cycler);
+
+  SparseArray result;
+  if (since == cdata->_image_modified) {
+    // Early-out since no range is more recent than _image_modified.
+    return result;
+  }
+
+  if (n > 0 && cdata->_texture_type == Texture::TT_3d_texture) {
+    // Don't bother handling this special case, just consider all mipmap pages
+    // modified.
     result.set_range(0, do_get_expected_mipmap_z_size(cdata, n));
     return result;
   }
 
+  size_t offset = cdata->_z_size * view;
   for (const ModifiedPageRange &range : cdata->_modified_pages) {
-    if (range._z_begin >= cdata->_z_size) {
+    if (range._z_end <= offset) {
+      continue;
+    }
+    if (range._z_begin >= offset + (size_t)cdata->_z_size) {
       break;
     }
     if (since < range._modified) {
-      result.set_range(range._z_begin, std::min(range._z_end, (size_t)cdata->_z_size) - range._z_begin);
+      size_t begin = std::max(range._z_begin, offset) - offset;
+      result.set_range(begin, std::min(range._z_end - offset, (size_t)cdata->_z_size) - begin);
     }
   }
 
@@ -1494,9 +1532,9 @@ prepare(PreparedGraphicsObjects *prepared_objects) {
 bool Texture::
 is_prepared(PreparedGraphicsObjects *prepared_objects) const {
   MutexHolder holder(_lock);
-  PreparedViews::const_iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
     return true;
   }
   return prepared_objects->is_texture_queued(this);
@@ -1510,24 +1548,11 @@ is_prepared(PreparedGraphicsObjects *prepared_objects) const {
 bool Texture::
 was_image_modified(PreparedGraphicsObjects *prepared_objects) const {
   MutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-
-  PreparedViews::const_iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    const Contexts &contexts = (*pvi).second;
-    for (int view = 0; view < cdata->_num_views; ++view) {
-      Contexts::const_iterator ci;
-      ci = contexts.find(view);
-      if (ci == contexts.end()) {
-        return true;
-      }
-      TextureContext *tc = (*ci).second;
-      if (tc->was_image_modified()) {
-        return true;
-      }
-    }
-    return false;
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    TextureContext *tc = (*ci).second;
+    return tc->was_image_modified();
   }
   return true;
 }
@@ -1542,24 +1567,13 @@ was_image_modified(PreparedGraphicsObjects *prepared_objects) const {
 size_t Texture::
 get_data_size_bytes(PreparedGraphicsObjects *prepared_objects) const {
   MutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-
-  PreparedViews::const_iterator pvi;
-  size_t total_size = 0;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    const Contexts &contexts = (*pvi).second;
-    for (int view = 0; view < cdata->_num_views; ++view) {
-      Contexts::const_iterator ci;
-      ci = contexts.find(view);
-      if (ci != contexts.end()) {
-        TextureContext *tc = (*ci).second;
-        total_size += tc->get_data_size_bytes();
-      }
-    }
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    TextureContext *tc = (*ci).second;
+    return tc->get_data_size_bytes();
   }
-
-  return total_size;
+  return 0;
 }
 
 /**
@@ -1569,24 +1583,13 @@ get_data_size_bytes(PreparedGraphicsObjects *prepared_objects) const {
 bool Texture::
 get_active(PreparedGraphicsObjects *prepared_objects) const {
   MutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-
-  PreparedViews::const_iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    const Contexts &contexts = (*pvi).second;
-    for (int view = 0; view < cdata->_num_views; ++view) {
-      Contexts::const_iterator ci;
-      ci = contexts.find(view);
-      if (ci != contexts.end()) {
-        TextureContext *tc = (*ci).second;
-        if (tc->get_active()) {
-          return true;
-        }
-      }
-    }
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    TextureContext *tc = (*ci).second;
+    return tc->get_active();
   }
-  return false;
+  return 0;
 }
 
 /**
@@ -1596,24 +1599,13 @@ get_active(PreparedGraphicsObjects *prepared_objects) const {
 bool Texture::
 get_resident(PreparedGraphicsObjects *prepared_objects) const {
   MutexHolder holder(_lock);
-  CDReader cdata(_cycler);
-
-  PreparedViews::const_iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    const Contexts &contexts = (*pvi).second;
-    for (int view = 0; view < cdata->_num_views; ++view) {
-      Contexts::const_iterator ci;
-      ci = contexts.find(view);
-      if (ci != contexts.end()) {
-        TextureContext *tc = (*ci).second;
-        if (tc->get_resident()) {
-          return true;
-        }
-      }
-    }
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    TextureContext *tc = (*ci).second;
+    return tc->get_resident();
   }
-  return false;
+  return 0;
 }
 
 /**
@@ -1622,23 +1614,14 @@ get_resident(PreparedGraphicsObjects *prepared_objects) const {
  */
 bool Texture::
 release(PreparedGraphicsObjects *prepared_objects) {
-  MutexHolder holder(_lock);
-  PreparedViews::iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    bool erased = false;
-    Contexts temp;
-    temp.swap((*pvi).second);
-    Contexts::iterator ci;
-    for (ci = temp.begin(); ci != temp.end(); ++ci) {
-      TextureContext *tc = (*ci).second;
-      if (tc != nullptr) {
-        prepared_objects->release_texture(tc);
-        erased = true;
-      }
-    }
-    if (!erased) {
-      _prepared_views.erase(pvi);
+  Contexts::iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    TextureContext *tc = (*ci).second;
+    if (tc != nullptr) {
+      prepared_objects->release_texture(tc);
+    } else {
+      _contexts.erase(ci);
     }
   }
 
@@ -1654,25 +1637,19 @@ int Texture::
 release_all() {
   MutexHolder holder(_lock);
 
-  // We have to traverse a copy of the _prepared_views list, because the
+  // We have to traverse a copy of the _contexts list, because the
   // PreparedGraphicsObjects object will call clear_prepared() in response to
   // each release_texture(), and we don't want to be modifying the
-  // _prepared_views list while we're traversing it.
-  PreparedViews temp;
-  temp.swap(_prepared_views);
-  int num_freed = (int)temp.size();
+  // _contexts list while we're traversing it.
+  Contexts temp = _contexts;
+  int num_freed = (int)_contexts.size();
 
-  PreparedViews::iterator pvi;
-  for (pvi = temp.begin(); pvi != temp.end(); ++pvi) {
-    PreparedGraphicsObjects *prepared_objects = (*pvi).first;
-    Contexts temp;
-    temp.swap((*pvi).second);
-    Contexts::iterator ci;
-    for (ci = temp.begin(); ci != temp.end(); ++ci) {
-      TextureContext *tc = (*ci).second;
-      if (tc != nullptr) {
-        prepared_objects->release_texture(tc);
-      }
+  Contexts::const_iterator ci;
+  for (ci = temp.begin(); ci != temp.end(); ++ci) {
+    PreparedGraphicsObjects *prepared_objects = (*ci).first;
+    TextureContext *tc = (*ci).second;
+    if (tc != nullptr) {
+      prepared_objects->release_texture(tc);
     }
   }
 
@@ -2033,34 +2010,29 @@ set_orig_file_size(int x, int y, int z) {
  * be rendered.
  */
 TextureContext *Texture::
-prepare_now(int view,
-            PreparedGraphicsObjects *prepared_objects,
+prepare_now(PreparedGraphicsObjects *prepared_objects,
             GraphicsStateGuardianBase *gsg) {
-  //MutexHolder holder(_lock);
-  //CDReader cdata(_cycler);
+  MutexHolder holder(_lock);
 
-  // Don't exceed the actual number of views.
-  //view = max(min(view, cdata->_num_views - 1), 0);
-
-  nassertr(view == 0, nullptr);
-
-  if (_view_context != nullptr) {
-    return _view_context;
+  Contexts::const_iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    return (*ci).second;
   }
 
-  // Get the list of PreparedGraphicsObjects for this view.
-  Contexts &contexts = _prepared_views[prepared_objects];
-  //Contexts::const_iterator pvi;
-  //pvi = contexts.find(view);
-  //if (pvi != contexts.end()) {
-  //  return (*pvi).second;
-  //}
-
-  TextureContext *tc = prepared_objects->prepare_texture_now(this, view, gsg);
-  contexts[view] = tc;
-  _view_context = tc;
+  TextureContext *tc = prepared_objects->prepare_texture_now(this, gsg);
+  _contexts[prepared_objects] = tc;
 
   return tc;
+}
+
+/**
+ * @deprecated See prepare_now() without a view parameter.
+ */
+TextureContext *Texture::
+prepare_now(int view, PreparedGraphicsObjects *prepared_objects,
+            GraphicsStateGuardianBase *gsg) {
+  return prepare_now(prepared_objects, gsg);
 }
 
 /**
@@ -6344,14 +6316,6 @@ do_compress_ram_image(CData *cdata, Texture::CompressionMode compression,
     }
   }
 
-  // Choose an appropriate quality level.
-  if (quality_level == Texture::QL_default) {
-    quality_level = cdata->_quality_level;
-  }
-  if (quality_level == Texture::QL_default) {
-    quality_level = texture_quality_level;
-  }
-
   if (compression == CM_rgtc) {
     // We should compress RGTC ourselves, as squish does not support it.
     if (cdata->_component_type != T_unsigned_byte) {
@@ -6424,6 +6388,14 @@ do_compress_ram_image(CData *cdata, Texture::CompressionMode compression,
   }
 
 #ifdef HAVE_SQUISH
+  // Choose an appropriate quality level.
+  if (quality_level == Texture::QL_default) {
+    quality_level = cdata->_quality_level;
+  }
+  if (quality_level == Texture::QL_default) {
+    quality_level = texture_quality_level;
+  }
+
   if (cdata->_texture_type != TT_3d_texture &&
       cdata->_texture_type != TT_2d_texture_array &&
       cdata->_component_type == T_unsigned_byte) {
@@ -9451,23 +9423,11 @@ read_dds_level_bc5(Texture *tex, CData *cdata, const DDSHeader &header, int n, i
  * never be called by user code.
  */
 void Texture::
-clear_prepared(int view, PreparedGraphicsObjects *prepared_objects) {
-  nassertv(view == 0);
-
-  PreparedViews::iterator pvi;
-  pvi = _prepared_views.find(prepared_objects);
-  if (pvi != _prepared_views.end()) {
-    Contexts &contexts = (*pvi).second;
-    Contexts::iterator ci;
-    ci = contexts.find(view);
-    if (ci != contexts.end()) {
-      _view_context = nullptr;
-      contexts.erase(ci);
-    }
-
-    if (contexts.empty()) {
-      _prepared_views.erase(pvi);
-    }
+clear_prepared(PreparedGraphicsObjects *prepared_objects) {
+  Contexts::iterator ci;
+  ci = _contexts.find(prepared_objects);
+  if (ci != _contexts.end()) {
+    _contexts.erase(ci);
   }
 }
 
@@ -11075,6 +11035,7 @@ Texture::CData::
 CData(const Texture::CData &copy) {
   _num_mipmap_levels_read = 0;
   _render_to_texture = copy._render_to_texture;
+  _post_load_store_cache = copy._post_load_store_cache;
 
   do_assign(&copy);
 

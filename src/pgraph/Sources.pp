@@ -346,7 +346,9 @@
     shaderInput_ext.cxx \
     shaderInput_ext.h \
     transformState_ext.cxx \
-    transformState_ext.h
+    transformState_ext.h \
+    bamFile_ext.h \
+    bamFile_ext.cxx
 
 // Uncomment these lines to compile everything individually instead of
 // combining into pgraph_composite*.cxx.

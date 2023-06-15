@@ -29,7 +29,7 @@
   #include <AL/alc.h>
 #endif
 
-class EXPCL_OPENAL_AUDIO OpenALAudioSound : public AudioSound {
+class EXPCL_OPENAL_AUDIO OpenALAudioSound final : public AudioSound {
   friend class OpenALAudioManager;
 
 public:
@@ -91,6 +91,10 @@ public:
                          PN_stdfloat fx = 0.0f, PN_stdfloat fy = 0.0f, PN_stdfloat fz = 0.0f, PN_stdfloat ux = 0.0f, PN_stdfloat uy = 0.0f, PN_stdfloat uz = 0.0f);
   void get_3d_attributes(PN_stdfloat *px, PN_stdfloat *py, PN_stdfloat *pz, PN_stdfloat *vx, PN_stdfloat *vy, PN_stdfloat *vz);
 
+  // Controls the direction of this sound emitter.
+  void set_3d_direction(LVector3 d);
+  LVector3 get_3d_direction() const;
+
   void set_3d_min_distance(PN_stdfloat dist);
   PN_stdfloat get_3d_min_distance() const;
 
@@ -99,6 +103,15 @@ public:
 
   void set_3d_drop_off_factor(PN_stdfloat factor);
   PN_stdfloat get_3d_drop_off_factor() const;
+
+  void set_3d_cone_inner_angle(PN_stdfloat angle);
+  PN_stdfloat get_3d_cone_inner_angle() const;
+
+  void set_3d_cone_outer_angle(PN_stdfloat angle);
+  PN_stdfloat get_3d_cone_outer_angle() const;
+
+  void set_3d_cone_outer_gain(PN_stdfloat gain);
+  PN_stdfloat get_3d_cone_outer_gain() const;
 
   AudioSound::SoundStatus status() const;
 
@@ -159,6 +172,7 @@ private:
 
   ALfloat _location[3];
   ALfloat _velocity[3];
+  ALfloat _direction[3];
 
   PN_stdfloat _min_dist;
   PN_stdfloat _max_dist;
@@ -195,6 +209,14 @@ private:
   // status() for info on whether the sound is playing.
   bool _active;
   bool _paused;
+
+  // these settings are used to define a directional sound source. The inner angle
+  // defines a cone wherein the sound can be heard with normal volume. _cone_outer_angle defines a second cone.
+  // Between the inner and the outer cone the volume is attenuated.
+  // _cone_outer_gain is a factor applied to the volume setting to define the volume in the zone outside of the outer cone.
+  PN_stdfloat _cone_inner_angle;
+  PN_stdfloat _cone_outer_angle;
+  PN_stdfloat _cone_outer_gain;
 
 public:
   static TypeHandle get_class_type() {

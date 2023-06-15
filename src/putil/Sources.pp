@@ -223,6 +223,8 @@
   #define IGATEEXT \
     bamReader_ext.cxx \
     bamReader_ext.h \
+    bamWriter_ext.cxx \
+    bamWriter_ext.h \
     bitArray_ext.cxx \
     bitArray_ext.h \
     bitArray_ext.I \

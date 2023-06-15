@@ -13,7 +13,7 @@
 
 #define COMPONENT_LIBS \
     glgsg x11display glxdisplay  \
-    wgldisplay cocoadisplay
+    wgldisplay cocoagldisplay cocoadisplay
 
 #if $[BUILD_COMPONENTS]
   #define BUILDING_DLL BUILDING_PANDAGL_STUB
