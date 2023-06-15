@@ -11437,15 +11437,15 @@ do_issue_texture() {
  */
 void CLP(GraphicsStateGuardian)::
 apply_white_texture(GLuint unit) {
+  GLuint index = get_white_texture();
 #ifndef OPENGLES
   if (_supports_dsa) {
-    _glBindTextureUnit(unit, get_white_texture());
+    _glBindTextureUnit(unit, index);
   } else
 #endif
   {
     set_active_texture_stage(unit);
 
-    GLuint index = get_white_texture();
     glBindTexture(GL_TEXTURE_2D, index);
 
     if (GLCAT.is_spam()) {
