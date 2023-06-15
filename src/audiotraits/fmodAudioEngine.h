@@ -14,6 +14,8 @@
 #ifndef FMODAUDIOENGINE_H
 #define FMODAUDIOENGINE_H
 
+//#define HAVE_FMOD_STUDIO 1
+
 #include "pandabase.h"
 #include "typedReferenceCount.h"
 #include "pointerTo.h"
@@ -28,6 +30,10 @@
 #include "job.h"
 
 #include <fmod.hpp>
+#ifdef HAVE_FMOD_STUDIO
+#include <fmod_studio.hpp>
+#include "fmodAudioEvent.h"
+#endif
 
 #ifdef HAVE_STEAM_AUDIO
 #include <phonon.h>
@@ -77,6 +83,7 @@ public:
   INLINE FMODSoundCache *get_sound_cache() const;
 
   INLINE bool is_using_steam_audio() const;
+  INLINE bool is_using_studio() const;
 
   bool calc_sound_occlusion(FMODAudioSound *sound, float *transmission);
 
@@ -87,11 +94,22 @@ public:
           CPTA_uchar tri_materials, CPTA_uchar materials);
   virtual void clear_audio_scene_data();
 
+  // Studio-specific methods.
+  virtual bool load_bank(const Filename &filename) override;
+
+  virtual PT(AudioSound) get_event(const std::string &path) override;
+
 public:
   FMODAudioEngine();
   ~FMODAudioEngine();
 
   virtual bool initialize() override;
+
+#ifdef HAVE_FMOD_STUDIO
+  void starting_event(FMODAudioEvent *event);
+  void release_event(FMODAudioEvent *event);
+  void stopping_event(FMODAudioEvent *event);
+#endif
 
 #ifdef HAVE_STEAM_AUDIO
   bool init_steam_audio();
@@ -104,6 +122,14 @@ public:
 private:
   FMOD::System *_system;
   FMOD::ChannelGroup *_master_channel_group;
+
+#ifdef HAVE_FMOD_STUDIO
+  FMOD::Studio::System *_studio_system;
+  typedef pflat_hash_set<FMODAudioEvent *, pointer_hash> AllEvents;
+  typedef pflat_hash_set<PT(FMODAudioEvent)> EventsPlaying;
+  AllEvents _all_events;
+  EventsPlaying _events_playing;
+#endif
 
   PT(AudioTracer) _tracer;
 

@@ -1157,6 +1157,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterFloat(18, props._directivity_dipole_weight);
   _sa_spatial_dsp->setParameterFloat(19, props._directivity_dipole_power);
   _sa_spatial_dsp->setParameterFloat(20, 1.0f); // OCCLUSION
+  _sa_spatial_dsp->setParameterInt(21, 1); // TRANSMISSION_TYPE: freq dependent
   _sa_spatial_dsp->setParameterFloat(25, 1.0f); // DIRECT_MIXLEVEL
   _sa_spatial_dsp->setParameterBool(26, props._binaural_reflections);
   _sa_spatial_dsp->setParameterFloat(27, 1.0f); // REFLECTIONS_MIXLEVEL

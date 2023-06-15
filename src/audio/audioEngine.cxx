@@ -16,6 +16,7 @@
 #include "load_dso.h"
 #include "config_putil.h"
 #include "nullAudioEngine.h"
+#include "nullAudioSound.h"
 
 IMPLEMENT_CLASS(AudioEngine);
 
@@ -120,4 +121,20 @@ set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris, CPTA_uchar tri_materials
  */
 void AudioEngine::
 clear_audio_scene_data() {
+}
+
+/**
+ * Specific to FMOD studio integration: Loads a bank file.
+ */
+bool AudioEngine::
+load_bank(const Filename &filename) {
+  return false;
+}
+
+/**
+ *
+ */
+PT(AudioSound) AudioEngine::
+get_event(const std::string &path) {
+  return new NullAudioSound;
 }

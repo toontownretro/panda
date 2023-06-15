@@ -37,6 +37,12 @@
 #include "config_putil.h"
 #include "pStatClient.h"
 #include "jobSystem.h"
+#include "virtualFileSystem.h"
+#include "virtualFile.h"
+#include "fmod_filesystem_hooks.h"
+#include "nullAudioSound.h"
+#include "throw_event.h"
+#include "eventParameter.h"
 
 IMPLEMENT_CLASS(FMODAudioEngine);
 
@@ -74,6 +80,11 @@ static ConfigVariableBool fmod_vol0_becomes_virtual
 
 static ConfigVariableDouble fmod_vol0_virtual_vol
 ("fmod-vol0-virtual-vol", 0.01);
+
+#ifdef HAVE_FMOD_STUDIO
+static ConfigVariableBool fmod_studio_live_update
+("fmod-studio-live-update", false);
+#endif
 
 #ifdef HAVE_STEAM_AUDIO
 
@@ -353,9 +364,19 @@ FMODAudioEngine::
 #endif
   _master_channel_group = nullptr;
   if (_system != nullptr) {
+#ifndef HAVE_FMOD_STUDIO
     _system->close();
+#endif
     _system->release();
+    _system = nullptr;
   }
+#ifdef HAVE_FMOD_STUDIO
+  if (_studio_system != nullptr) {
+    _studio_system->unloadAll();
+    _studio_system->release();
+    _studio_system = nullptr;
+  }
+#endif
 
   if (fmodAudio_cat.is_debug()) {
     fmodAudio_cat.debug()
@@ -385,10 +406,21 @@ initialize() {
     return false;
   }
 
+#ifdef HAVE_FMOD_STUDIO
+  result = FMOD::Studio::System::create(&_studio_system);
+  if (!fmod_audio_errcheck("FMOD::Studio::System::create", result)) {
+    return false;
+  }
+  result = _studio_system->getCoreSystem(&_system);
+  if (!fmod_audio_errcheck("_studio_system->getCoreSystem()", result)) {
+    return false;
+  }
+#else
   result = FMOD::System_Create(&_system);
   if (!fmod_audio_errcheck("FMOD::System_Create", result)) {
     return false;
   }
+#endif
 
   if (fmod_debug) {
     fmodAudio_cat.info()
@@ -484,7 +516,16 @@ initialize() {
     flags |= FMOD_INIT_PROFILE_ENABLE | FMOD_INIT_PROFILE_METER_ALL;
   }
 
+#ifdef HAVE_FMOD_STUDIO
+  int studioflags = FMOD_STUDIO_INIT_NORMAL;
+  if (fmod_studio_live_update) {
+    studioflags |= FMOD_STUDIO_INIT_LIVEUPDATE;
+  }
+  result = _studio_system->initialize(nchan, studioflags, flags, 0);
+#else
   result = _system->init(nchan, flags, 0);
+#endif
+
   if (result == FMOD_ERR_TOOMANYCHANNELS) {
     fmodAudio_cat.error()
       << "Value too large for fmod-number-of-sound-channels: " << nchan
@@ -870,7 +911,16 @@ set_3d_listener_attributes(const LPoint3 &pos, const LQuaternion &quat, const LV
   fvel = lvec_to_fmod(_listener_vel);
   fup = lvec_to_fmod(up);
   ffwd = lvec_to_fmod(fwd);
+#ifdef HAVE_FMOD_STUDIO
+  FMOD_3D_ATTRIBUTES attr;
+  attr.forward = ffwd;
+  attr.up = fup;
+  attr.position = fpos;
+  attr.velocity = fvel;
+  result = _studio_system->setListenerAttributes(0, &attr);
+#else
   result = _system->set3DListenerAttributes(0, &fpos, &fvel, &ffwd, &fup);
+#endif
   fmod_audio_errcheck("_system->set3DListenerAttributes()", result);
 }
 
@@ -936,9 +986,35 @@ update() {
     (*it)->update();
   }
 
+#ifdef HAVE_FMOD_STUDIO
+
+  // Update playing events.
+  for (EventsPlaying::const_iterator it = _events_playing.begin(); it != _events_playing.end();) {
+    FMODAudioEvent *ev = (*it);
+
+    AudioSound::SoundStatus status = ev->status();
+    if (status != AudioSound::PLAYING) {
+      // If the sound in the playing list is no longer playing, remove it from the list.
+      // Throw the finished event if one was specified.  The event will destruct
+      // if there are no more references to the sound after we remove it from the list.
+      const std::string &finished_event = ev->get_finished_event();
+      if (!finished_event.empty()) {
+        throw_event(finished_event, EventParameter(ev));
+      }
+      it = _events_playing.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  FMOD_RESULT result;
+  result = _studio_system->update();
+  fmod_audio_errcheck("_studio_system->update()", result);
+#else
   FMOD_RESULT result;
   result = _system->update();
   fmod_audio_errcheck("_system->update()", result);
+#endif
 
 #ifdef HAVE_STEAM_AUDIO
   if (is_using_steam_audio() && _ipl_reflections_job != nullptr) {
@@ -1454,3 +1530,108 @@ clear_audio_scene_data() {
   iplSimulatorCommit(_ipl_simulator);
 #endif
 }
+
+/**
+ *
+ */
+bool FMODAudioEngine::
+load_bank(const Filename &filename) {
+#ifndef HAVE_FMOD_STUDIO
+  return false;
+#else
+
+  // Find the virtual file.
+  VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
+  Filename resolved = filename;
+  if (!vfs->resolve_filename(resolved, get_model_path().get_value())) {
+    fmodAudio_cat.warning()
+      << "Could not find bank file " << filename << " on model-path " << get_model_path() << "\n";
+    return false;
+  }
+  PT(VirtualFile) vfile = vfs->get_file(resolved);
+  if (vfile == nullptr) {
+    fmodAudio_cat.warning()
+      << "Could not get bank file " << resolved << "\n";
+    return false;
+  }
+
+  // Yep, we leak this.
+  vfile->ref();
+
+  // Pass hooks to read file through Panda's VFS.
+  FMOD_STUDIO_BANK_INFO info;
+  memset(&info, 0, sizeof(FMOD_STUDIO_BANK_INFO));
+  info.size = sizeof(FMOD_STUDIO_BANK_INFO);
+  info.opencallback = pfmod_open_callback;
+  info.closecallback = pfmod_close_callback;
+  info.readcallback = pfmod_read_callback;
+  info.seekcallback = pfmod_seek_callback;
+  info.userdata = vfile.p();
+  //info.userdatalength = sizeof(uintptr_t);
+
+  FMOD::Studio::Bank *bank;
+  FMOD_RESULT ret = _studio_system->loadBankCustom(&info, FMOD_STUDIO_LOAD_BANK_NORMAL, &bank);
+  fmod_audio_errcheck("loadBankCustom", ret);
+
+  return (ret == FMOD_OK);
+#endif // HAVE_FMOD_STUDIO
+}
+
+/**
+ *
+ */
+PT(AudioSound) FMODAudioEngine::
+get_event(const std::string &path) {
+#ifndef HAVE_FMOD_STUDIO
+  return new NullAudioSound;
+#else
+  FMOD::Studio::EventDescription *desc = nullptr;
+  FMOD_RESULT ret = _studio_system->getEvent(path.c_str(), &desc);
+  if (ret != FMOD_OK || desc == nullptr || !desc->isValid()) {
+    return new NullAudioSound;
+  }
+  FMOD::Studio::EventInstance *event = nullptr;
+  ret = desc->createInstance(&event);
+  if (ret != FMOD_OK || event == nullptr || !event->isValid()) {
+    return new NullAudioSound;
+  }
+  PT(FMODAudioEvent) pev = new FMODAudioEvent(this, desc, event);
+  _all_events.insert(pev);
+  return pev;
+#endif
+}
+
+#ifdef HAVE_FMOD_STUDIO
+/**
+ *
+ */
+void FMODAudioEngine::
+starting_event(FMODAudioEvent *ev) {
+  EventsPlaying::const_iterator it = _events_playing.find(ev);
+  if (it == _events_playing.end()) {
+    _events_playing.insert(ev);
+  }
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+stopping_event(FMODAudioEvent *ev) {
+  EventsPlaying::const_iterator it = _events_playing.find(ev);
+  if (it != _events_playing.end()) {
+    _events_playing.erase(ev);
+  }
+}
+
+/**
+ *
+ */
+void FMODAudioEngine::
+release_event(FMODAudioEvent *ev) {
+  AllEvents::const_iterator it = _all_events.find(ev);
+  if (it != _all_events.end()) {
+    _all_events.erase(it);
+  }
+}
+#endif

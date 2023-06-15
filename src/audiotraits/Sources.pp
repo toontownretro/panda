@@ -43,19 +43,31 @@
     #define C++FLAGS $[C++FLAGS] -DHAVE_STEAM_AUDIO
   #endif
 
+  #if $[HAVE_FMOD_STUDIO]
+    #define USE_PACKAGES $[USE_PACKAGES] fmod_studio
+    #define C++FLAGS $[C++FLAGS] -DHAVE_FMOD_STUDIO
+  #endif
+
   #define SOURCES \
       config_fmodAudio.h \
       fmodAudioEngine.h fmodAudioEngine.I \
       fmodAudioManager.h \
       fmodAudioSound.I fmodAudioSound.h \
-      fmodSoundCache.I fmodSoundCache.h
+      fmodSoundCache.I fmodSoundCache.h \
+      fmod_filesystem_hooks.h
 
   #define COMPOSITE_SOURCES \
       config_fmodAudio.cxx \
       fmodAudioEngine.cxx \
       fmodAudioManager.cxx \
       fmodAudioSound.cxx \
-      fmodSoundCache.cxx
+      fmodSoundCache.cxx \
+      fmod_filesystem_hooks.cxx
+
+  #if $[HAVE_FMOD_STUDIO]
+    #define SOURCES $[SOURCES] fmodAudioEvent.h fmodAudioEvent.I
+    #define COMPOSITE_SOURCES $[COMPOSITE_SOURCES] fmodAudioEvent.cxx
+  #endif
 
 #end lib_target
 

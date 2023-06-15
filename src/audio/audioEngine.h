@@ -20,6 +20,7 @@
 #include "pointerTo.h"
 #include "audioManager.h"
 #include "memoryBase.h"
+#include "audioSound.h"
 
 class AudioEngineProxy;
 class AudioTracer;
@@ -56,6 +57,9 @@ PUBLISHED:
   virtual void set_audio_scene_data(CPTA_uchar verts, CPTA_uchar tris,
           CPTA_uchar tri_materials, CPTA_uchar materials);
   virtual void clear_audio_scene_data();
+
+  virtual bool load_bank(const Filename &filename);
+  virtual PT(AudioSound) get_event(const std::string &path);
 
 public:
   static void register_engine_proxy(AudioEngineProxy *proxy);
