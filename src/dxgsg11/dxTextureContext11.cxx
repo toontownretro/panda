@@ -22,8 +22,8 @@ TypeHandle DXTextureContext11::_type_handle;
  *
  */
 DXTextureContext11::
-DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex, int view) :
-  TextureContext(pgo, tex, view),
+DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex) :
+  TextureContext(pgo, tex),
   _texture(tex),
   _device(gsg->get_device()),
   _d3d_tex(nullptr),

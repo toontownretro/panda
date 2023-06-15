@@ -718,8 +718,8 @@ release_shader(ShaderContext *sc) {
  * call Texture::prepare().
  */
 TextureContext *DXGraphicsStateGuardian11::
-prepare_texture(Texture *tex, int view) {
-  DXTextureContext11 *dtc = new DXTextureContext11(_prepared_objects, this, tex, view);
+prepare_texture(Texture *tex) {
+  DXTextureContext11 *dtc = new DXTextureContext11(_prepared_objects, this, tex);
   dtc->upload_texture(_context);
   return dtc;
 }

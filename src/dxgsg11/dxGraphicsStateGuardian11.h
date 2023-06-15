@@ -88,7 +88,7 @@ public:
   virtual ShaderContext *prepare_shader(Shader *shader) override;
   virtual void release_shader(ShaderContext *sc) override;
 
-  virtual TextureContext *prepare_texture(Texture *tex, int view) override;
+  virtual TextureContext *prepare_texture(Texture *tex) override;
   virtual bool update_texture(TextureContext *tc, bool force) override;
   virtual void release_texture(TextureContext *tc) override;
   virtual bool extract_texture_data(Texture *tex) override;

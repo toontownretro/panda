@@ -28,7 +28,7 @@ class PreparedGraphicsObjects;
  */
 class EXPCL_PANDA_DXGSG11 DXTextureContext11 : public TextureContext {
 public:
-  DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex, int view);
+  DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, Texture *tex);
   DXTextureContext11(PreparedGraphicsObjects *pgo, DXGraphicsStateGuardian11 *gsg, ID3D11Texture2D *d3d_tex);
   virtual ~DXTextureContext11();
 
