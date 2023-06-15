@@ -1334,9 +1334,6 @@ check_texture_attributes(Texture *tex, SamplerState sampler, const EggTexture *e
     case EggTexture::F_luminance:
     case EggTexture::F_sluminance:
       break;
-    case EggTexture::F_sluminance:
-      tex->set_format(Texture::F_sluminance);
-      break;
 
     default:
       egg2pg_cat.warning()
@@ -1351,10 +1348,7 @@ check_texture_attributes(Texture *tex, SamplerState sampler, const EggTexture *e
     case EggTexture::F_luminance_alpha:
     case EggTexture::F_luminance_alphamask:
     case EggTexture::F_sluminance:
-      break;
-
     case EggTexture::F_sluminance_alpha:
-      tex->set_format(Texture::F_sluminance_alpha);
       break;
 
     default:
