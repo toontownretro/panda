@@ -465,6 +465,8 @@ public:
 
   virtual void finish() override;
 
+  INLINE void bind_texture(GLenum target, GLuint texture);
+
 protected:
   void do_issue_transform();
   void do_issue_render_mode();

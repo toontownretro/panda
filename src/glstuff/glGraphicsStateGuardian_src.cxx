@@ -3220,7 +3220,7 @@ reset() {
     }
   }
 
-  _active_texture_stage = -1;
+  _active_texture_stage = 0;
   _num_active_texture_stages = 0;
 
   // Check availability of anisotropic texture filtering.
@@ -4361,7 +4361,7 @@ end_frame(Thread *current_thread) {
 #endif
 
   // Respecify the active texture next frame, for good measure.
-  _active_texture_stage = -1;
+  //_active_texture_stage = -1;
 
   // Calling glFlush() at the end of the frame is particularly necessary if
   // this is a single-buffered visual, so that the frame will be finished
@@ -6032,7 +6032,7 @@ extract_texture_data(Texture *tex) {
   int num_views = tex->get_num_views();
   for (int view = 0; view < num_views; ++view) {
     GLuint index = gtc->get_view_index(view);
-    glBindTexture(target, index);
+    bind_texture(target, index);
     if (GLCAT.is_spam()) {
       GLCAT.spam()
         << "glBindTexture(0x" << hex << target << dec << ", " << index << "): "
@@ -6050,7 +6050,7 @@ extract_texture_data(Texture *tex) {
     }
   }
 
-  glBindTexture(target, 0);
+  bind_texture(target, 0);
   if (GLCAT.is_spam()) {
     GLCAT.spam()
       << "glBindTexture(0x" << hex << target << dec << ", 0)\n";
@@ -7423,8 +7423,7 @@ framebuffer_copy_to_texture(Texture *tex, int view, int z,
   if (new_image && gtc->_immutable) {
     gtc->reset_data(target, view + 1);
     GLuint index = gtc->get_view_index(view);
-    glBindTexture(target, index);
-    _bound_textures[_active_texture_stage] = index;
+    bind_texture(target, index);
 
     if (GLCAT.is_spam()) {
       GLCAT.spam()
@@ -11122,7 +11121,7 @@ reissue_transforms() {
   prepare_lens();
   do_issue_transform();
 
-  _active_texture_stage = -1;
+  //_active_texture_stage = -1;
 
 #ifndef OPENGLES_1
   // Might also want to reissue the vertex format, for good measure.
@@ -11441,19 +11440,18 @@ apply_white_texture(GLuint unit) {
 #ifndef OPENGLES
   if (_supports_dsa) {
     _glBindTextureUnit(unit, index);
+    _bound_textures[unit] = index;
   } else
 #endif
   {
     set_active_texture_stage(unit);
-
-    glBindTexture(GL_TEXTURE_2D, index);
+    bind_texture(GL_TEXTURE_2D, index);
 
     if (GLCAT.is_spam()) {
       GLCAT.spam()
         << "glBindTexture(GL_TEXTURE_2D, " << index << "): all-white texture\n";
     }
   }
-  _bound_textures[unit] = index;
 
   // Also apply the default sampler, if there's a chance we'd applied anything
   // else.
@@ -11490,8 +11488,7 @@ get_white_texture() {
 #endif
   {
     glGenTextures(1, &_white_texture);
-    glBindTexture(GL_TEXTURE_2D, _white_texture);
-    _bound_textures[_active_texture_stage] = _white_texture;
+    bind_texture(GL_TEXTURE_2D, _white_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -11562,8 +11559,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
     if (ui == _usage_textures.end()) {
       // Need to create a new texture for this size.
       glGenTextures(1, &index);
-      glBindTexture(GL_TEXTURE_2D, index);
-      _bound_textures[i] = index;
+      bind_texture(GL_TEXTURE_2D, index);
       // TODO: this could be a lot simpler with glTexStorage2D followed by a
       // call to glClearTexImage.
       upload_usage_texture(texture->get_x_size(), texture->get_y_size());
@@ -11572,8 +11568,7 @@ update_show_usage_texture_bindings(int show_stage_index) {
     } else {
       // Just bind the previously-created texture.
       index = (*ui).second;
-      glBindTexture(GL_TEXTURE_2D, index);
-      _bound_textures[i] = index;
+      bind_texture(GL_TEXTURE_2D, index);
     }
 
     if (GLCAT.is_spam()) {
@@ -11805,17 +11800,15 @@ apply_texture(CLP(TextureContext) *gtc, int view) {
   }
 
   GLuint index = gtc->get_view_index(view);
-  if (_bound_textures[_active_texture_stage] != index) {
-    _bound_textures[_active_texture_stage] = index;
-    glBindTexture(target, index);
-    if (GLCAT.is_spam()) {
+  bind_texture(target, index);
+#ifndef NDEBUG
+  if (GLCAT.is_spam()) {
     Texture *tex = gtc->get_texture();
-      GLCAT.spam()
-        << "glBindTexture(GL_TEXTURE_2D, " << index << "): " << *tex
-      << " view " << view << "\n";
-    }
+    GLCAT.spam()
+      << "glBindTexture(GL_TEXTURE_2D, " << index << "): " << *tex
+    << " view " << view << "\n";
   }
-
+#endif
 
   report_my_gl_errors(this);
   return true;
@@ -12302,13 +12295,15 @@ upload_texture_image(CLP(TextureContext) *gtc, int view, bool needs_reload,
   Texture::TextureType texture_type = tex->get_texture_type();
 
   GLuint index = gtc->get_view_index(view);
-  glBindTexture(target, index);
+  bind_texture(target, index);
 
+#ifndef NDEBUG
   if (GLCAT.is_spam()) {
     GLCAT.spam()
       << "glBindTexture(0x" << hex << target << dec << ", " << index << "): "
       << *tex << " view " << view << "\n";
   }
+#endif
 
   if (_use_object_labels && needs_reload) {
     // This seems like a good time to assign a label for the debug messages.
@@ -12938,19 +12933,20 @@ generate_mipmaps(CLP(TextureContext) *gtc) {
 
     GLenum target = gtc->_target;
     for (int view = 0; view < gtc->_num_views; ++view) {
-      glBindTexture(target, gtc->_indices[view]);
+      bind_texture(target, gtc->_indices[view]);
       _glGenerateMipmap(target);
 
     }
-    glBindTexture(target, 0);
-    _bound_textures[_active_texture_stage] = 0;
+    bind_texture(target, 0);
 
+#ifndef NDEBUG
     if (GLCAT.is_spam()) {
       GLCAT.spam()
         << "glBindTexture(0x" << hex << target << dec << ", 0)\n";
     }
+#endif
 
-    report_my_gl_errors();
+    report_my_gl_errors(this);
   }
 }
 
@@ -12970,12 +12966,7 @@ upload_simple_texture(CLP(TextureContext) *gtc) {
 
   gtc->set_num_views(1);
   GLuint index = gtc->get_view_index(0);
-  glBindTexture(GL_TEXTURE_2D, index);
-
-  if (GLCAT.is_spam()) {
-    GLCAT.spam()
-      << "glBindTexture(GL_TEXTURE_2D, " << index << "): " << *tex << " simple\n";
-  }
+  bind_texture(GL_TEXTURE_2D, index);
 
 #ifdef OPENGLES
   GLenum internal_format = GL_BGRA;

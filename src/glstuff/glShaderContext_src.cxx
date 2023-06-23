@@ -3144,6 +3144,9 @@ disable_shader_texture_bindings() {
 #ifndef OPENGLES
   if (_glgsg->_supports_multi_bind) {
     _glgsg->_glBindTextures(0, _shader->_tex_spec.size(), nullptr);
+    for (size_t i = 0; i < _shader->_tex_spec.size(); ++i) {
+      _glgsg->_bound_textures[i] = 0;
+    }
   }
   else if (_glgsg->_supports_dsa) {
     for (size_t i = 0; i < _shader->_tex_spec.size(); ++i) {
@@ -3156,11 +3159,9 @@ disable_shader_texture_bindings() {
     for (size_t i = 0; i < _shader->_tex_spec.size(); ++i) {
       _glgsg->set_active_texture_stage(i);
 
-    _glgsg->_bound_textures[i] = 0;
-
       GLenum target = _glgsg->get_texture_target((Texture::TextureType)_shader->_tex_spec[i]._desired_type);
       if (target != GL_NONE) {
-        glBindTexture(target, 0);
+        _glgsg->bind_texture(target, 0);
       }
     }
   }

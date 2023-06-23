@@ -677,3 +677,14 @@ operator < (const CLP(GraphicsStateGuardian)::UsageTextureKey &other) const {
   return _y_size < other._y_size;
 }
 #endif  // NDEBUG
+
+/**
+ * Guards redundant state change.
+ */
+INLINE void CLP(GraphicsStateGuardian)::
+bind_texture(GLenum target, GLuint texture) {
+  if (_bound_textures[_active_texture_stage] != texture) {
+    glBindTexture(target, texture);
+    _bound_textures[_active_texture_stage] = texture;
+  }
+}
