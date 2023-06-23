@@ -252,6 +252,15 @@ do_cull_callback(CullTraverser *trav, CullTraverserData &data,
                         parent_net_transform);
   }
 
+  // Lerp the probe color.
+  if (_probe != nullptr) {
+    float lerp_ratio = 0.15f;
+    lerp_ratio = 1.0f - cpow((1.0f - lerp_ratio), (float)ClockObject::get_global_clock()->get_dt() * 30.0f);
+    for (int i = 0; i < 9; ++i) {
+      _probe_color[i] = _probe_color[i] * (1.0f - lerp_ratio) + _probe->_color[i] * lerp_ratio;
+    }
+  }
+
   // Put the computed map lighting state onto the running render state.
   data._state = data._state->compose(_lighting_state);
 }
@@ -408,10 +417,14 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
   }
 
   if (closest_probe != _probe && closest_probe != nullptr) {
-    _probe = closest_probe;
-    for (int i = 0; i < 9; i++) {
-      _probe_color[i] = closest_probe->_color[i];
+    if (_probe == nullptr) {
+      // Apply it immediately if we don't currently have a probe,
+      // otherwise it will smoothly lerp to the new probe.
+      for (int i = 0; i < 9; i++) {
+        _probe_color[i] = closest_probe->_color[i];
+      }
     }
+    _probe = closest_probe;
     if (!_lighting_state->has_attrib(ShaderAttrib::get_class_slot())) {
       CPT(RenderAttrib) sattr = ShaderAttrib::make();
       sattr = DCAST(ShaderAttrib, sattr)->set_shader_input(ShaderInput("ambientProbe", _probe_color));
