@@ -26,6 +26,8 @@
 #include "mapRoot.h"
 #include "bitArray.h"
 #include "pset.h"
+#include "boundingBox.h"
+#include "pointerTo.h"
 
 #define NUM_LIGHTMAPS (NUM_BUMP_VECTS + 1)
 

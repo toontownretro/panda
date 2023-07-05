@@ -94,6 +94,12 @@ PUBLISHED:
   virtual void get_leaf_values_containing_box(const LPoint3 &mins, const LPoint3 &maxs, ov_set<int> &values) const override;
   virtual void get_leaf_values_containing_sphere(const LPoint3 &center, PN_stdfloat radius, ov_set<int> &values) const override;
 
+  INLINE const Node *get_node(int n) const;
+  INLINE const Leaf *get_leaf(int n) const;
+
+  INLINE int get_node_parent(int n) const;
+  INLINE int get_leaf_parent(int n) const;
+
 public:
   typedef pvector<Node> Nodes;
   Nodes _nodes;

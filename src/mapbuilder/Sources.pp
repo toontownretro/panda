@@ -19,6 +19,7 @@
     mapBuilder.h mapBuilder.I \
     mapBuildOptions.h mapBuildOptions.I \
     mapObjects.h mapObjects.I \
+    mapTraceScene.h mapTraceScene.I \
     //portal.h portal.I \
     //visBuilder.h visBuilder.I \
     visBuilderBSP.h visBuilderBSP.I \
@@ -34,6 +35,7 @@
     mapBuilder.cxx \
     mapBuildOptions.cxx \
     mapObjects.cxx \
+    mapTraceScene.cxx \
     //portal.cxx \
     //visBuilder.cxx \
     visBuilderBSP.cxx \

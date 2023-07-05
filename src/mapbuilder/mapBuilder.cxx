@@ -2218,6 +2218,7 @@ build_lighting() {
   // Add ambient probes.
 
   // Start at the lowest corner of the level bounds and work our way to the top.
+#if 0
   for (PN_stdfloat z = _scene_mins[2]; z <= _scene_maxs[2]; z += 128.0f) {
     for (PN_stdfloat y = _scene_mins[1]; y <= _scene_maxs[1]; y += 128.0f) {
       for (PN_stdfloat x = _scene_mins[0]; x <= _scene_maxs[0]; x += 128.0f) {
@@ -2231,16 +2232,24 @@ build_lighting() {
       }
     }
   }
-
-  //VisClusterSampler sampler(_out_data);
-  //LVecBase3 probe_density(128.0f, 128.0f, 128.0f);
-  //for (int i = 0; i < _out_data->get_num_clusters(); i++) {
-  //  pset<LPoint3> samples;
-  //  sampler.generate_samples(i, probe_density, 128, 1, samples);
-  //  for (const LPoint3 &sample : samples) {
-  //    builder._probes.push_back({ sample });
-  //  }
-  //}
+#else
+  {
+    const BSPTree *tree = (const BSPTree *)_out_data->get_area_cluster_tree();
+    VisClusterSampler sampler(_out_data);
+    LVecBase3 probe_density(128.0f, 128.0f, 128.0f);
+    for (int i = 0; i < (int)tree->_leaves.size(); i++) {
+      const BSPTree::Leaf *leaf = tree->get_leaf(i);
+      if (leaf->is_solid() || leaf->get_value() < 0) {
+        continue;
+      }
+      pset<LPoint3> samples;
+      sampler.generate_samples(i, probe_density, 128, 1, samples);
+      for (const LPoint3 &sample : samples) {
+        builder._probes.push_back({ sample });
+      }
+    }
+  }
+#endif
 
   mapbuilder_cat.info()
     << builder._probes.size() << " ambient probes\n";

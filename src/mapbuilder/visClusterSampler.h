@@ -17,9 +17,11 @@
 #include "pandabase.h"
 #include "luse.h"
 #include "randomizer.h"
+#include "mapTraceScene.h"
+#include "plane.h"
+#include "pvector.h"
 
 class MapData;
-class AreaClusterPVS;
 
 /**
  * This class is reponsible for generating sample positions within a vis
@@ -33,11 +35,12 @@ public:
 
   void generate_samples(int cluster_id, const LVecBase3 &density, int max_samples,
                         int min_samples, pset<LPoint3> &sample_positions);
-  LPoint3 generate_sample_position(const AreaClusterPVS *cluster, const LPoint3 &mins, const LPoint3 &maxs);
+  LPoint3 generate_sample_position(const pvector<LPlane> &planes, const LPoint3 &center, const LPoint3 &mins, const LPoint3 &maxs);
 
 private:
   MapData *_data;
   Randomizer _random;
+  MapTraceScene _trace;
 };
 
 #include "visClusterSampler.I"
