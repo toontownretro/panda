@@ -72,6 +72,14 @@ static ConfigVariableBool fmod_steam_audio_reflection_job
  PRC_DESC("Set true to schedule the Steam Audio reflection update as a job in "
           "the worker thread pool, or false to use a dedicated thread for it."));
 
+static ConfigVariableBool fmod_steam_audio_normalized_hrtf
+("fmod-steam-audio-normalized-hrtf", false,
+ PRC_DESC("If true, tries to ensure equal volume from all directions of HRTF."));
+
+static ConfigVariableDouble fmod_steam_audio_hrtf_volume
+("fmod-steam-audio-hrtf-volume", 1.0,
+ PRC_DESC("Volume factor for HRTF."));
+
 static ConfigVariableBool fmod_clip_output
 ("fmod-clip-output", false);
 
@@ -664,6 +672,10 @@ init_steam_audio() {
 
   IPLHRTFSettings hrtf_settings{};
   hrtf_settings.type = IPL_HRTFTYPE_DEFAULT;
+  if (fmod_steam_audio_normalized_hrtf) {
+    hrtf_settings.normType = IPL_HRTFNORMTYPE_RMS;
+  }
+  hrtf_settings.volume = fmod_steam_audio_hrtf_volume;
   err = iplHRTFCreate(_ipl_context, &audio_settings, &hrtf_settings, &_ipl_hrtf);
   if (!IPL_ERRCHECK("create HRTF", err)) {
     return false;
