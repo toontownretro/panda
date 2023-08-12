@@ -284,9 +284,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   bool has_rimlight = false;
+  bool has_phong = false;
   if ((param = src_mat->get_param("phong")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     // Phong enabled on material.
     setup.set_pixel_shader_combo(IN_PHONG, 1);
+    has_phong = true;
 
     bool has_phong_exponent_texture = false;
     // Phong exponent texture?  This contains per-texel phong exponent in R,
@@ -385,7 +387,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 #endif
 
-  if (has_direct_light && (param = src_mat->get_param("halflambert")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
+  if (has_phong || ((param = src_mat->get_param("halflambert")) != nullptr && DCAST(MaterialParamBool, param)->get_value())) {
     // Half-lambert diffuse.
     setup.set_spec_constant(IN_HALFLAMBERT, true);
   }
