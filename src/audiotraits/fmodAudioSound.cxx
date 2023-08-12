@@ -73,6 +73,8 @@ IPLCoordinateSpace3 fmod_coordinates_to_ipl(const FMOD_VECTOR &origin, const FMO
   coords.right = ipl_unit_vector(ipl_cross(coords.ahead, coords.up));
   return coords;
 }
+
+static ConfigVariableDouble fmod_spatialized_volume("fmod-spatialized-volume", 0.75);
 #endif
 
 extern FMOD_VECTOR lvec_to_fmod(const LVecBase3 &vec);
@@ -1158,7 +1160,7 @@ apply_steam_audio_properties(const SteamAudioProperties &props) {
   _sa_spatial_dsp->setParameterFloat(19, props._directivity_dipole_power);
   _sa_spatial_dsp->setParameterFloat(20, 1.0f); // OCCLUSION
   _sa_spatial_dsp->setParameterInt(21, 1); // TRANSMISSION_TYPE: freq dependent
-  _sa_spatial_dsp->setParameterFloat(25, 1.0f); // DIRECT_MIXLEVEL
+  _sa_spatial_dsp->setParameterFloat(25, fmod_spatialized_volume); // DIRECT_MIXLEVEL
   _sa_spatial_dsp->setParameterBool(26, props._binaural_reflections);
   _sa_spatial_dsp->setParameterFloat(27, 1.0f); // REFLECTIONS_MIXLEVEL
   _sa_spatial_dsp->setParameterBool(28, props._binaural_pathing);
