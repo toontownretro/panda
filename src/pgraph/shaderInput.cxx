@@ -77,6 +77,9 @@ add_hash(size_t hash) const {
   case M_vector:
     return _stored_vector.add_hash(hash);
 
+  case M_matrix:
+    return _stored_matrix.add_hash(hash);
+
   case M_numeric:
     return pointer_hash::add_hash(hash, _stored_ptr._ptr);
 

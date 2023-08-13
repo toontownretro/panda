@@ -575,7 +575,11 @@ get_shader_input_matrix(const InternalName *id, LMatrix4 &matrix) const {
   if (i != _inputs.end()) {
     const ShaderInput &p = (*i).second;
 
-    if (p.get_value_type() == ShaderInput::M_nodepath) {
+    if (p.get_value_type() == ShaderInput::M_matrix) {
+      matrix = p.get_matrix();
+      return matrix;
+
+    } else if (p.get_value_type() == ShaderInput::M_nodepath) {
       const NodePath &np = p.get_nodepath();
       nassertr(!np.is_empty(), LMatrix4::ident_mat());
       matrix = np.get_transform()->get_mat();

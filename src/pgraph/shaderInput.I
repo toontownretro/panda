@@ -176,10 +176,11 @@ ShaderInput(CPT_InternalName name, const PTA_LMatrix3f &ptr, int priority) :
  */
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LMatrix4f &mat, int priority) :
+  _stored_matrix(mat),
   _stored_ptr(mat),
   _name(std::move(name)),
   _priority(priority),
-  _type(M_numeric)
+  _type(M_matrix)
 {
 }
 
@@ -188,10 +189,11 @@ ShaderInput(CPT_InternalName name, const LMatrix4f &mat, int priority) :
  */
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LMatrix3f &mat, int priority) :
+  _stored_matrix(mat),
   _stored_ptr(mat),
   _name(std::move(name)),
   _priority(priority),
-  _type(M_numeric)
+  _type(M_matrix)
 {
 }
 
@@ -311,10 +313,11 @@ ShaderInput(CPT_InternalName name, const PTA_LMatrix3d &ptr, int priority) :
  */
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LMatrix4d &mat, int priority) :
+  _stored_matrix(LCAST(PN_stdfloat, mat)),
   _stored_ptr(mat),
   _name(std::move(name)),
   _priority(priority),
-  _type(M_numeric)
+  _type(M_matrix)
 {
 }
 
@@ -323,10 +326,11 @@ ShaderInput(CPT_InternalName name, const LMatrix4d &mat, int priority) :
  */
 INLINE ShaderInput::
 ShaderInput(CPT_InternalName name, const LMatrix3d &mat, int priority) :
+  _stored_matrix(LCAST(PN_stdfloat, mat)),
   _stored_ptr(mat),
   _name(std::move(name)),
   _priority(priority),
-  _type(M_numeric)
+  _type(M_matrix)
 {
 }
 
@@ -440,6 +444,9 @@ operator == (const ShaderInput &other) const {
   case M_vector:
     return _stored_vector == other._stored_vector;
 
+  case M_matrix:
+    return _stored_matrix == other._stored_matrix;
+
   case M_numeric:
     return _stored_ptr._ptr == other._stored_ptr._ptr;
 
@@ -462,6 +469,9 @@ operator != (const ShaderInput &other) const {
 
   case M_vector:
     return _stored_vector != other._stored_vector;
+
+  case M_matrix:
+    return _stored_matrix != other._stored_matrix;
 
   case M_numeric:
     return _stored_ptr._ptr != other._stored_ptr._ptr;
@@ -504,6 +514,12 @@ operator < (const ShaderInput &other) const {
     }
     return false;
 
+  case M_matrix:
+    {
+      int cmp = _stored_matrix.compare_to(other._stored_matrix);
+      return cmp < 0;
+    }
+
   case M_numeric:
     return _stored_ptr._ptr < other._stored_ptr._ptr;
 
@@ -542,6 +558,14 @@ get_priority() const {
 INLINE const LVecBase4 &ShaderInput::
 get_vector() const {
   return _stored_vector;
+}
+
+/**
+ *
+ */
+INLINE const LMatrix4 &ShaderInput::
+get_matrix() const {
+  return _stored_matrix;
 }
 
 /**
