@@ -15,6 +15,7 @@
 #include "indent.h"
 #include "bamReader.h"
 #include "bamWriter.h"
+#include "lightReMutexHolder.h"
 
 TypeHandle MatrixLens::_type_handle;
 
@@ -52,6 +53,8 @@ write(std::ostream &out, int indent_level) const {
  */
 void MatrixLens::
 do_compute_projection_mat(Lens::CData *lens_cdata) {
+  LightReMutexHolder holder(lens_cdata->_comp_lock);
+
   lens_cdata->_projection_mat = do_get_lens_mat_inv(lens_cdata) * _user_mat * do_get_film_mat(lens_cdata);
 
   if (_ml_flags & MF_has_left_eye) {

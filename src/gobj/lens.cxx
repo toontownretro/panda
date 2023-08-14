@@ -22,6 +22,7 @@
 #include "indent.h"
 #include "config_gobj.h"
 #include "plane.h"
+#include "lightReMutexHolder.h"
 
 using std::max;
 using std::min;
@@ -937,6 +938,7 @@ do_get_projection_mat_inv(const CData *cdata, StereoChannel stereo_channel) cons
   case SC_left:
     {
       if ((cdata->_comp_flags & CF_projection_mat_left_inv) == 0) {
+        LightReMutexHolder holder(cdata->_comp_lock);
         const LMatrix4 &projection_mat_left = do_get_projection_mat(cdata, SC_left);
         ((CData *)cdata)->_projection_mat_left_inv.invert_from(projection_mat_left);
         ((Lens *)this)->do_adjust_comp_flags((CData *)cdata, 0, CF_projection_mat_left_inv);
@@ -947,6 +949,7 @@ do_get_projection_mat_inv(const CData *cdata, StereoChannel stereo_channel) cons
   case SC_right:
     {
       if ((cdata->_comp_flags & CF_projection_mat_right_inv) == 0) {
+        LightReMutexHolder holder(cdata->_comp_lock);
         const LMatrix4 &projection_mat_right = do_get_projection_mat(cdata, SC_right);
         ((CData *)cdata)->_projection_mat_right_inv.invert_from(projection_mat_right);
         ((Lens *)this)->do_adjust_comp_flags((CData *)cdata, 0, CF_projection_mat_right_inv);
@@ -960,6 +963,7 @@ do_get_projection_mat_inv(const CData *cdata, StereoChannel stereo_channel) cons
   }
 
   if ((cdata->_comp_flags & CF_projection_mat_inv) == 0) {
+    LightReMutexHolder holder(cdata->_comp_lock);
     const LMatrix4 &projection_mat = do_get_projection_mat(cdata);
     ((CData *)cdata)->_projection_mat_inv.invert_from(projection_mat);
     ((Lens *)this)->do_adjust_comp_flags((CData *)cdata, 0, CF_projection_mat_inv);
@@ -984,6 +988,7 @@ do_get_film_mat(const CData *cdata) const {
 const LMatrix4 &Lens::
 do_get_film_mat_inv(const CData *cdata) const {
   if ((cdata->_comp_flags & CF_film_mat_inv) == 0) {
+    LightReMutexHolder holder(cdata->_comp_lock);
     const LMatrix4 &film_mat = do_get_film_mat(cdata);
     ((CData *)cdata)->_film_mat_inv.invert_from(film_mat);
     ((Lens *)this)->do_adjust_comp_flags((CData *)cdata, 0, CF_film_mat_inv);
@@ -1008,6 +1013,7 @@ do_get_lens_mat(const CData *cdata) const {
 const LMatrix4 &Lens::
 do_get_lens_mat_inv(const CData *cdata) const {
   if ((cdata->_comp_flags & CF_lens_mat_inv) == 0) {
+    LightReMutexHolder holder(cdata->_comp_lock);
     const LMatrix4 &lens_mat = do_get_lens_mat(cdata);
     ((CData *)cdata)->_lens_mat_inv.invert_from(lens_mat);
     ((Lens *)this)->do_adjust_comp_flags((CData *)cdata, 0, CF_lens_mat_inv);
@@ -1231,6 +1237,8 @@ do_project(const CData *cdata, const LPoint3 &point3d, LPoint3 &point2d) const {
  */
 void Lens::
 do_compute_film_size(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   if ((cdata->_user_flags & (UF_min_fov | UF_focal_length)) == (UF_min_fov | UF_focal_length)) {
     // If we just have a min FOV and a focal length, that determines the
     // smaller of the two film_sizes, and the larger is simply chosen
@@ -1291,6 +1299,7 @@ do_compute_film_size(CData *cdata) {
  */
 void Lens::
 do_compute_focal_length(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
   if ((cdata->_user_flags & UF_focal_length) == 0) {
     const LVecBase2 &film_size = do_get_film_size(cdata);
     const LVecBase2 &fov = do_get_fov(cdata);
@@ -1306,6 +1315,8 @@ do_compute_focal_length(CData *cdata) {
  */
 void Lens::
 do_compute_fov(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   const LVecBase2 &film_size = do_get_film_size(cdata);
 
   bool got_hfov = ((cdata->_user_flags & UF_hfov) != 0);
@@ -1381,6 +1392,8 @@ do_compute_fov(CData *cdata) {
  */
 void Lens::
 do_compute_aspect_ratio(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   if ((cdata->_user_flags & UF_aspect_ratio) == 0) {
     const LVecBase2 &film_size = do_get_film_size(cdata);
     if (film_size[1] == 0.0f) {
@@ -1397,6 +1410,8 @@ do_compute_aspect_ratio(CData *cdata) {
  */
 void Lens::
 do_compute_view_hpr(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   if ((cdata->_user_flags & UF_view_hpr) == 0) {
     const LMatrix4 &view_mat = do_get_view_mat(cdata);
     LVecBase3 scale, shear, translate;
@@ -1410,6 +1425,8 @@ do_compute_view_hpr(CData *cdata) {
  */
 void Lens::
 do_compute_view_vector(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   if ((cdata->_user_flags & UF_view_vector) == 0) {
     const LMatrix4 &view_mat = do_get_view_mat(cdata);
     cdata->_view_vector = LVector3::forward(cdata->_cs) * view_mat;
@@ -1424,6 +1441,8 @@ do_compute_view_vector(CData *cdata) {
  */
 void Lens::
 do_compute_projection_mat(CData *lens_cdata) {
+  LightReMutexHolder holder(lens_cdata->_comp_lock);
+
   // This is the implementation used by non-linear lenses.  The linear lenses
   // (PerspectiveLens and OrthographicLens) will customize this method
   // appropriate for themselves.
@@ -1453,6 +1472,8 @@ do_compute_projection_mat(CData *lens_cdata) {
  */
 void Lens::
 do_compute_film_mat(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   // The lens will return a point in the range [-film_size2, film_size2] in
   // each dimension.  Convert this to [-1, 1], and also apply the offset.
 
@@ -1488,6 +1509,8 @@ do_compute_film_mat(CData *cdata) {
  */
 void Lens::
 do_compute_lens_mat(CData *cdata) {
+  LightReMutexHolder holder(cdata->_comp_lock);
+
   if ((cdata->_user_flags & UF_view_mat) == 0) {
     if ((cdata->_user_flags & UF_view_hpr) != 0) {
       compose_matrix(cdata->_lens_mat,

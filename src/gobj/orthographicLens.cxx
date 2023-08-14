@@ -14,6 +14,7 @@
 #include "orthographicLens.h"
 #include "indent.h"
 #include "bamReader.h"
+#include "lightReMutexHolder.h"
 
 TypeHandle OrthographicLens::_type_handle;
 
@@ -70,6 +71,8 @@ do_extrude_depth(const CData *cdata,
  */
 void OrthographicLens::
 do_compute_projection_mat(Lens::CData *lens_cdata) {
+  LightReMutexHolder holder(lens_cdata->_comp_lock);
+
   CoordinateSystem cs = lens_cdata->_cs;
   if (cs == CS_default) {
     cs = get_default_coordinate_system();

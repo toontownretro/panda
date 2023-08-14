@@ -26,6 +26,7 @@
 #include "cycleDataReader.h"
 #include "cycleDataWriter.h"
 #include "pipelineCycler.h"
+#include "lightReMutex.h"
 
 class BoundingVolume;
 
@@ -323,6 +324,8 @@ protected:
     virtual TypeHandle get_parent_type() const {
       return Lens::get_class_type();
     }
+
+    LightReMutex _comp_lock;
 
     void clear();
 
