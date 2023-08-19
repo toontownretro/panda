@@ -27,6 +27,7 @@
     geom.h geom.I \
     geomContext.I geomContext.h \
     geomEnums.h \
+    geomIndexArrayData.h geomIndexArrayData.I \
     geomMunger.h geomMunger.I \
     geomPrimitive.h geomPrimitive.I \
     geomPatches.h \
@@ -122,6 +123,7 @@
     geomContext.cxx \
     geom.cxx \
     geomEnums.cxx \
+    geomIndexArrayData.cxx \
     geomMunger.cxx \
     geomPrimitive.cxx \
     geomPatches.cxx \
@@ -217,6 +219,7 @@
     textureContext.I textureContext.h \
     geomContext.I geomContext.h \
     geomEnums.h \
+    geomIndexArrayData.h geomIndexArrayData.I \
     geomMunger.h geomMunger.I \
     geomPrimitive.h geomPrimitive.I \
     geomPatches.h \

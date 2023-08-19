@@ -20,6 +20,7 @@
 #include "samplerState.h"
 #include "geom.h"
 #include "geomVertexArrayData.h"
+#include "geomIndexArrayData.h"
 #include "geomPrimitive.h"
 #include "shader.h"
 #include "shaderBuffer.h"
@@ -133,17 +134,17 @@ PUBLISHED:
   prepare_vertex_buffer_now(GeomVertexArrayData *data,
                             GraphicsStateGuardianBase *gsg);
 
-  void enqueue_index_buffer(GeomPrimitive *data);
-  bool is_index_buffer_queued(const GeomPrimitive *data) const;
-  bool dequeue_index_buffer(GeomPrimitive *data);
-  bool is_index_buffer_prepared(const GeomPrimitive *data) const;
+  void enqueue_index_buffer(GeomIndexArrayData *data);
+  bool is_index_buffer_queued(const GeomIndexArrayData *data) const;
+  bool dequeue_index_buffer(GeomIndexArrayData *data);
+  bool is_index_buffer_prepared(const GeomIndexArrayData *data) const;
   void release_index_buffer(IndexBufferContext *ibc);
   int release_all_index_buffers();
   int get_num_queued_index_buffers() const;
   int get_num_prepared_index_buffers() const;
 
   IndexBufferContext *
-  prepare_index_buffer_now(GeomPrimitive *data,
+  prepare_index_buffer_now(GeomIndexArrayData *data,
                            GraphicsStateGuardianBase *gsg);
 
   void enqueue_shader_buffer(ShaderBuffer *data);

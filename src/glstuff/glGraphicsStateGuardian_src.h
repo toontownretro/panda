@@ -37,6 +37,7 @@
 #include "pset.h"
 #include "pmap.h"
 #include "geomVertexArrayData.h"
+#include "geomIndexArrayData.h"
 #include "lightMutex.h"
 #include "pStatGPUTimer.h"
 
@@ -397,7 +398,7 @@ public:
                         const GeomVertexArrayDataHandle *data,
                         bool force);
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data);
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexArrayData *data);
   bool apply_index_buffer(IndexBufferContext *ibc,
                           const GeomPrimitivePipelineReader *reader,
                           bool force);

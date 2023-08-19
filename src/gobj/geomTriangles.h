@@ -38,7 +38,7 @@ public:
 protected:
   virtual CPT(GeomPrimitive) doubleside_impl() const;
   virtual CPT(GeomPrimitive) reverse_impl() const;
-  virtual CPT(GeomVertexArrayData) rotate_impl() const;
+  virtual CPT(GeomIndexArrayData) rotate_impl() const;
 
 public:
   static void register_with_read_factory();

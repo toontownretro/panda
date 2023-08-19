@@ -56,7 +56,7 @@ class SimpleAllocatorBlock;
  * actual vertex data.
  */
 class EXPCL_PANDA_GOBJ GeomVertexArrayData : public CopyOnWriteObject, public SimpleLruPage, public GeomEnums {
-private:
+protected:
   GeomVertexArrayData();
 
 protected:
@@ -188,6 +188,7 @@ private:
     static TypeHandle _type_handle;
 
     friend class GeomVertexArrayData;
+    friend class GeomIndexArrayData;
   };
 
   PipelineCycler<CData> _cycler;

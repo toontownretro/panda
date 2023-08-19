@@ -42,6 +42,7 @@ class GeomPipelineReader;
 class GeomVertexData;
 class GeomVertexDataPipelineReader;
 class GeomVertexArrayData;
+class GeomIndexArrayData;
 class GeomPrimitive;
 class GeomPrimitivePipelineReader;
 class GeomTriangles;
@@ -166,7 +167,7 @@ public:
   virtual void release_vertex_buffer(VertexBufferContext *vbc)=0;
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts)=0;
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data)=0;
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexArrayData *data)=0;
   virtual void release_index_buffer(IndexBufferContext *ibc)=0;
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts)=0;
 

@@ -233,24 +233,25 @@ decompose_impl() const {
 /**
  * The virtual implementation of do_rotate().
  */
-CPT(GeomVertexArrayData) GeomLinestrips::
+CPT(GeomIndexArrayData) GeomLinestrips::
 rotate_impl() const {
   // To rotate a line strip, we just reverse the vertices.
   CPTA_int ends = get_ends();
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->set_num_rows(get_num_vertices());
 
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) vertices = get_vertices();
+    CPT(GeomIndexArrayData) vertices = get_vertices();
     GeomVertexReader from(vertices, 0);
     GeomVertexWriter to(new_vertices, 0);
+    int first_vertex = get_first_vertex();
 
     int begin = 0;
     CPTA_int::const_iterator ei;
     for (ei = ends.begin(); ei != ends.end(); ++ei) {
       int end = (*ei);
       for (int vi = end - 1; vi >= begin; --vi) {
-        from.set_row_unsafe(vi);
+        from.set_row_unsafe(vi + first_vertex);
         to.set_data1i(from.get_data1i());
       }
       begin = end;
@@ -294,7 +295,7 @@ requires_unused_vertices() const {
  * the new primitive.
  */
 void GeomLinestrips::
-append_unused_vertices(GeomVertexArrayData *vertices, int vertex) {
+append_unused_vertices(GeomIndexArrayData *vertices, int vertex) {
   GeomVertexWriter to(vertices, 0);
   to.set_row_unsafe(vertices->get_num_rows());
   to.add_data1i(get_strip_cut_index());

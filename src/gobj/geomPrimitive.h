@@ -16,7 +16,7 @@
 
 #include "pandabase.h"
 #include "geomEnums.h"
-#include "geomVertexArrayData.h"
+#include "geomIndexArrayData.h"
 #include "geomVertexData.h"
 #include "copyOnWriteObject.h"
 #include "luse.h"
@@ -167,11 +167,11 @@ PUBLISHED:
  * interfaces instead.
  */
 
-  INLINE CPT(GeomVertexArrayData) get_vertices() const;
+  INLINE CPT(GeomIndexArrayData) get_vertices() const;
   INLINE CPT(GeomVertexArrayDataHandle) get_vertices_handle(Thread *current_thread) const;
-  PT(GeomVertexArrayData) modify_vertices(int num_vertices = -1);
+  PT(GeomIndexArrayData) modify_vertices(int num_vertices = -1);
   INLINE PT(GeomVertexArrayDataHandle) modify_vertices_handle(Thread *current_thread);
-  void set_vertices(const GeomVertexArrayData *vertices, int num_vertices = -1);
+  void set_vertices(const GeomIndexArrayData *vertices, int num_vertices = -1, int first_vertex = 0);
   void set_nonindexed_vertices(int first_vertex, int num_vertices);
 
   INLINE int get_index_stride() const;
@@ -183,13 +183,13 @@ PUBLISHED:
   PTA_int modify_ends();
   void set_ends(PTA_int ends);
 
-  INLINE CPT(GeomVertexArrayData) get_mins() const;
-  INLINE CPT(GeomVertexArrayData) get_maxs() const;
+  INLINE CPT(GeomIndexArrayData) get_mins() const;
+  INLINE CPT(GeomIndexArrayData) get_maxs() const;
   MAKE_PROPERTY(mins, get_mins);
   MAKE_PROPERTY(maxs, get_maxs);
 
   void set_minmax(int min_vertex, int max_vertex,
-                  GeomVertexArrayData *mins, GeomVertexArrayData *maxs);
+                  GeomIndexArrayData *mins, GeomIndexArrayData *maxs);
   void clear_minmax();
 
   virtual int get_num_vertices_per_primitive() const;
@@ -200,17 +200,9 @@ PUBLISHED:
   MAKE_PROPERTY(num_unused_vertices_per_primitive, get_num_unused_vertices_per_primitive);
 
 public:
-  void prepare(PreparedGraphicsObjects *prepared_objects);
-  bool is_prepared(PreparedGraphicsObjects *prepared_objects) const;
-
-  IndexBufferContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
-                                  GraphicsStateGuardianBase *gsg);
-  bool release(PreparedGraphicsObjects *prepared_objects);
-  int release_all();
-
   static const GeomVertexArrayFormat *get_index_format(NumericType index_type);
   INLINE const GeomVertexArrayFormat *get_index_format() const;
-  INLINE PT(GeomVertexArrayData) make_index_data() const;
+  INLINE PT(GeomIndexArrayData) make_index_data() const;
 
 private:
   static CPT(GeomVertexArrayFormat) make_index_format(NumericType index_type);
@@ -238,11 +230,11 @@ public:
 
 protected:
   virtual CPT(GeomPrimitive) decompose_impl() const;
-  virtual CPT(GeomVertexArrayData) rotate_impl() const;
+  virtual CPT(GeomIndexArrayData) rotate_impl() const;
   virtual CPT(GeomPrimitive) doubleside_impl() const;
   virtual CPT(GeomPrimitive) reverse_impl() const;
   virtual bool requires_unused_vertices() const;
-  virtual void append_unused_vertices(GeomVertexArrayData *vertices,
+  virtual void append_unused_vertices(GeomIndexArrayData *vertices,
                                       int vertex);
 
 private:
@@ -252,23 +244,9 @@ private:
   void do_make_indexed(CData *cdata);
   void consider_elevate_index_type(CData *cdata, int vertex);
   void do_set_index_type(CData *cdata, NumericType index_type);
-  PT(GeomVertexArrayData) do_modify_vertices(CData *cdata);
+  PT(GeomIndexArrayData) do_modify_vertices(CData *cdata);
 
 private:
-  // A GeomPrimitive keeps a list (actually, a map) of all the
-  // PreparedGraphicsObjects tables that it has been prepared into.  Each PGO
-  // conversely keeps a list (a set) of all the Geoms that have been prepared
-  // there.  When either destructs, it removes itself from the other's list.
-
-  // Contexts by GSG ID.
-  //typedef pvector<IndexBufferContext *> IDContexts;
-  //IDContexts _id_contexts;
-
-  IndexBufferContext *_context;
-
-  typedef pflat_hash_map<PreparedGraphicsObjects *, IndexBufferContext *, pointer_hash> Contexts;
-  Contexts _contexts;
-
   // This is the data that must be cycled between pipeline stages.
   class EXPCL_PANDA_GOBJ CData : public CycleData {
   public:
@@ -284,15 +262,15 @@ private:
       return GeomPrimitive::get_class_type();
     }
 
-    COWPT(GeomVertexArrayData) _vertices;
+    COWPT(GeomIndexArrayData) _vertices;
 
     int _num_vertices;
     bool _got_minmax;
 
     PTA_int _ends;
 
-    COWPT(GeomVertexArrayData) _mins;
-    COWPT(GeomVertexArrayData) _maxs;
+    COWPT(GeomIndexArrayData) _mins;
+    COWPT(GeomIndexArrayData) _maxs;
 
     UpdateSeq _modified;
 
@@ -401,29 +379,27 @@ public:
   INLINE int get_data_size_bytes() const;
   INLINE UpdateSeq get_modified() const;
   bool check_valid(const GeomVertexDataPipelineReader *data_reader) const;
-  INLINE const GeomVertexArrayData *get_vertices() const;
+  INLINE const GeomIndexArrayData *get_vertices() const;
   INLINE int get_index_stride() const;
   INLINE const unsigned char *get_read_pointer(bool force) const;
   INLINE int get_strip_cut_index() const;
   INLINE CPTA_int get_ends() const;
-  INLINE CPT(GeomVertexArrayData) get_mins() const;
-  INLINE CPT(GeomVertexArrayData) get_maxs() const;
+  INLINE CPT(GeomIndexArrayData) get_mins() const;
+  INLINE CPT(GeomIndexArrayData) get_maxs() const;
 
   INLINE void acquire_rw_lock() const;
   INLINE void release_rw_lock() const;
 
   INLINE void fetch_vertices_cdata(bool lock) const;
 
-  INLINE IndexBufferContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
-                                         GraphicsStateGuardianBase *gsg) const;
   INLINE bool draw(GraphicsStateGuardianBase *gsg, bool force) const;
 
 private:
   const GeomPrimitive::CData *_cdata;
   const GeomPrimitive *_object;
 
-  const GeomVertexArrayData *_vertices;
-  const GeomVertexArrayData::CData *_vertices_cdata;
+  const GeomIndexArrayData *_vertices;
+  const GeomIndexArrayData::CData *_vertices_cdata;
 
   Thread *_current_thread;
 

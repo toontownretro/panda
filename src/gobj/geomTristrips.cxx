@@ -376,7 +376,7 @@ reverse_impl() const {
 /**
  * The virtual implementation of do_rotate().
  */
-CPT(GeomVertexArrayData) GeomTristrips::
+CPT(GeomIndexArrayData) GeomTristrips::
 rotate_impl() const {
   // To rotate a triangle strip with an even number of vertices, we just
   // reverse the vertices.  But if we have an odd number of vertices, that
@@ -385,13 +385,14 @@ rotate_impl() const {
   // tristrip.
   CPTA_int ends = get_ends();
 
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->set_num_rows(get_num_vertices());
 
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) vertices = get_vertices();
+    CPT(GeomIndexArrayData) vertices = get_vertices();
     GeomVertexReader from(vertices, 0);
     GeomVertexWriter to(new_vertices, 0);
+    int first_vertex = get_first_vertex();
 
     int begin = 0;
     int last_added = 0;
@@ -403,7 +404,7 @@ rotate_impl() const {
       if (begin != 0) {
         // Copy in the unused vertices between tristrips.
         to.set_data1i(last_added);
-        from.set_row_unsafe(end - 1);
+        from.set_row_unsafe(end - 1 + first_vertex);
         to.set_data1i(from.get_data1i());
         begin += 2;
       }
@@ -412,7 +413,7 @@ rotate_impl() const {
       // odd number of vertices, which is not allowed.
       nassertr((num_vertices & 1) == 0, nullptr);
       for (int vi = end - 1; vi >= begin; --vi) {
-        from.set_row_unsafe(vi);
+        from.set_row_unsafe(vi + first_vertex);
         last_added = from.get_data1i();
         to.set_data1i(last_added);
       }
@@ -473,7 +474,7 @@ requires_unused_vertices() const {
  * the new primitive.
  */
 void GeomTristrips::
-append_unused_vertices(GeomVertexArrayData *vertices, int vertex) {
+append_unused_vertices(GeomIndexArrayData *vertices, int vertex) {
   size_t offset = vertices->get_num_rows();
   vertices->set_num_rows(offset + 2);
 

@@ -47,8 +47,7 @@ PStatCollector GeomPrimitive::_rotate_pcollector("*:Munge:Rotate");
  * Constructs an invalid object.  Only used when reading from bam.
  */
 GeomPrimitive::
-GeomPrimitive() :
-  _context(nullptr) {
+GeomPrimitive() {
 }
 
 /**
@@ -66,7 +65,6 @@ GeomPrimitive::
 GeomPrimitive(GeomPrimitive::UsageHint usage_hint) {
   CDWriter cdata(_cycler, true);
   cdata->_usage_hint = usage_hint;
-  _context = nullptr;
 }
 
 /**
@@ -76,8 +74,7 @@ GeomPrimitive::
 GeomPrimitive(const GeomPrimitive &copy) :
   CopyOnWriteObject(copy),
   _cycler(copy._cycler),
-  _geom_primitive_type(copy._geom_primitive_type),
-  _context(nullptr)
+  _geom_primitive_type(copy._geom_primitive_type)
 {
 }
 
@@ -86,7 +83,6 @@ GeomPrimitive(const GeomPrimitive &copy) :
  */
 GeomPrimitive::
 ~GeomPrimitive() {
-  release_all();
 }
 
 /**
@@ -170,7 +166,7 @@ add_vertex(int vertex) {
       if (cdata->_vertices.is_null()) {
         do_make_indexed(cdata);
       }
-      append_unused_vertices(cdata->_vertices.get_write_pointer(), vertex);
+      append_unused_vertices(do_modify_vertices(cdata), vertex);
       cdata->_num_vertices += get_num_unused_vertices_per_primitive();
     }
   }
@@ -198,7 +194,7 @@ add_vertex(int vertex) {
   }
 
   {
-    GeomVertexArrayDataHandle handle(cdata->_vertices.get_write_pointer(),
+    GeomVertexArrayDataHandle handle(do_modify_vertices(cdata),
                                      Thread::get_current_thread());
     int num_rows = handle.get_num_rows();
     handle.set_num_rows(num_rows + 1);
@@ -252,7 +248,7 @@ add_consecutive_vertices(int start, int num_vertices) {
     if (cdata->_vertices.is_null()) {
       do_make_indexed(cdata);
     }
-    append_unused_vertices(cdata->_vertices.get_write_pointer(), start);
+    append_unused_vertices(do_modify_vertices(cdata), start);
     cdata->_num_vertices += get_num_unused_vertices_per_primitive();
   }
 
@@ -278,7 +274,7 @@ add_consecutive_vertices(int start, int num_vertices) {
     do_make_indexed(cdata);
   }
 
-  PT(GeomVertexArrayData) array_obj = cdata->_vertices.get_write_pointer();
+  PT(GeomIndexArrayData) array_obj = do_modify_vertices(cdata);
   int old_num_rows = array_obj->get_num_rows();
   array_obj->set_num_rows(old_num_rows + num_vertices);
 
@@ -337,7 +333,7 @@ reserve_num_vertices(int num_vertices) {
   CDWriter cdata(_cycler, true);
   consider_elevate_index_type(cdata, num_vertices);
   do_make_indexed(cdata);
-  PT(GeomVertexArrayData) array_obj = cdata->_vertices.get_write_pointer();
+  PT(GeomIndexArrayData) array_obj = do_modify_vertices(cdata);
   array_obj->reserve_num_rows(num_vertices);
 }
 
@@ -441,7 +437,7 @@ offset_vertices(int offset) {
     consider_elevate_index_type(cdata, cdata->_max_vertex + offset);
 
     {
-      GeomVertexArrayDataHandle handle(cdata->_vertices.get_write_pointer(),
+      GeomVertexArrayDataHandle handle(do_modify_vertices(cdata),
                                        Thread::get_current_thread());
 
       size_t num_rows = (size_t)handle.get_num_rows();
@@ -541,7 +537,7 @@ offset_vertices(int offset, int begin_row, int end_row) {
     consider_elevate_index_type(cdata, max_vertex + offset);
 
     {
-      GeomVertexArrayDataHandle handle(cdata->_vertices.get_write_pointer(),
+      GeomVertexArrayDataHandle handle(do_modify_vertices(cdata),
                                        Thread::get_current_thread());
 
       unsigned char *ptr = handle.get_write_pointer();
@@ -605,10 +601,11 @@ void GeomPrimitive::
 make_nonindexed(GeomVertexData *dest, const GeomVertexData *source) {
   Thread *current_thread = Thread::get_current_thread();
 
-  int num_vertices, dest_start;
+  int num_vertices, first_vertex, dest_start;
   {
     GeomPrimitivePipelineReader reader(this, current_thread);
     num_vertices = reader.get_num_vertices();
+    first_vertex = reader.get_first_vertex();
     int strip_cut_index = reader.get_strip_cut_index();
 
     GeomVertexDataPipelineWriter data_writer(dest, false, current_thread);
@@ -619,7 +616,7 @@ make_nonindexed(GeomVertexData *dest, const GeomVertexData *source) {
     GeomVertexDataPipelineReader data_reader(source, current_thread);
     data_reader.check_array_readers();
 
-    for (int i = 0; i < num_vertices; ++i) {
+    for (int i = first_vertex; i < first_vertex + num_vertices; ++i) {
       int v = reader.get_vertex(i);
       nassertd(v != strip_cut_index) continue;
       data_writer.copy_row_from(dest_start + i, data_reader, v);
@@ -643,17 +640,18 @@ pack_vertices(GeomVertexData *dest, const GeomVertexData *source) {
 
   } else {
     // The indexed case: build up a new index as we go.
-    CPT(GeomVertexArrayData) orig_vertices = get_vertices();
-    PT(GeomVertexArrayData) new_vertices = make_index_data();
+    CPT(GeomIndexArrayData) orig_vertices = get_vertices();
+    PT(GeomIndexArrayData) new_vertices = make_index_data();
     GeomVertexWriter index(new_vertices, 0);
     typedef pmap<int, int> CopiedIndices;
     CopiedIndices copied_indices;
 
     int num_vertices = get_num_vertices();
+    int first_vertex = get_first_vertex();
     int dest_start = dest->get_num_rows();
     int strip_cut_index = get_strip_cut_index();
 
-    for (int i = 0; i < num_vertices; ++i) {
+    for (int i = first_vertex; i < first_vertex + num_vertices; ++i) {
       int v = get_vertex(i);
       if (v == strip_cut_index) {
         continue;
@@ -706,7 +704,7 @@ calc_num_vertices() {
     // by the index stride.  This is an important optimization, as it allows
     // us to completely avoid reading from the GVAD (and its CData) when
     // drawing the GeomPrimitive.
-    const GeomVertexArrayData *vertices = cdata->_vertices.get_read_pointer();
+    const GeomIndexArrayData *vertices = cdata->_vertices.get_read_pointer();
     cdata->_num_vertices = vertices->get_data_size_bytes() / vertices->get_array_format()->get_stride();
     cdata->_first_vertex = 0;
   }
@@ -820,7 +818,7 @@ get_num_used_vertices() const {
 int GeomPrimitive::
 get_primitive_min_vertex(int n) const {
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) mins = get_mins();
+    CPT(GeomIndexArrayData) mins = get_mins();
     nassertr(n >= 0 && n < mins->get_num_rows(), -1);
 
     GeomVertexReader index(mins, 0);
@@ -838,7 +836,7 @@ get_primitive_min_vertex(int n) const {
 int GeomPrimitive::
 get_primitive_max_vertex(int n) const {
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) maxs = get_maxs();
+    CPT(GeomIndexArrayData) maxs = get_maxs();
     nassertr(n >= 0 && n < maxs->get_num_rows(), -1);
 
     GeomVertexReader index(maxs, 0);
@@ -887,7 +885,7 @@ rotate() const {
   }
 
   PStatTimer timer(_rotate_pcollector);
-  CPT(GeomVertexArrayData) rotated_vertices = rotate_impl();
+  CPT(GeomIndexArrayData) rotated_vertices = rotate_impl();
 
   if (rotated_vertices == nullptr) {
     // This primitive type can't be rotated.
@@ -1012,7 +1010,7 @@ make_points() const {
   }
 
   // Now construct a new index array with just those bits.
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->unclean_set_num_rows(bits.get_num_on_bits());
 
   GeomVertexWriter new_index(new_vertices, 0);
@@ -1066,7 +1064,7 @@ make_lines() const {
   int num_primitives = get_num_primitives();
   int verts_per_prim = get_num_vertices_per_primitive();
 
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->unclean_set_num_rows(num_primitives * verts_per_prim * 2);
 
   GeomVertexWriter new_index(new_vertices, 0);
@@ -1243,10 +1241,10 @@ write(std::ostream &out, int indent_level) const {
  * methods for more common usage.  We recommend you do not use this method
  * directly.  If you do, be sure you know what you are doing!
  */
-PT(GeomVertexArrayData) GeomPrimitive::
+PT(GeomIndexArrayData) GeomPrimitive::
 modify_vertices(int num_vertices) {
   CDWriter cdata(_cycler, true);
-  PT(GeomVertexArrayData) vertices = do_modify_vertices(cdata);
+  PT(GeomIndexArrayData) vertices = do_modify_vertices(cdata);
   if (num_vertices != -1) {
     cdata->_num_vertices = num_vertices;
   }
@@ -1271,20 +1269,26 @@ modify_vertices(int num_vertices) {
  * directly.  If you do, be sure you know what you are doing!
  */
 void GeomPrimitive::
-set_vertices(const GeomVertexArrayData *vertices, int num_vertices) {
+set_vertices(const GeomIndexArrayData *vertices, int num_vertices, int first_vertex) {
   CDWriter cdata(_cycler, true);
-  cdata->_vertices = (GeomVertexArrayData *)vertices;
+  cdata->_vertices = (GeomIndexArrayData *)vertices;
 
   // Validate the format and make sure to copy its numeric type.
   const GeomVertexArrayFormat *format = vertices->get_array_format();
   nassertv(format->get_num_columns() == 1);
   cdata->_index_type = format->get_column(0)->get_numeric_type();
 
+  size_t buffer_size = vertices->get_data_size_bytes() / format->get_stride();
+  nassertv(first_vertex < buffer_size);
+
   if (num_vertices != -1) {
+    nassertv(first_vertex + num_vertices <= buffer_size);
     cdata->_num_vertices = num_vertices;
   } else {
-    cdata->_num_vertices = vertices->get_data_size_bytes() / format->get_stride();
+    cdata->_num_vertices = buffer_size;
   }
+
+  cdata->_first_vertex = first_vertex;
 
   cdata->_modified = Geom::get_next_modified();
   cdata->_got_minmax = false;
@@ -1389,7 +1393,7 @@ set_ends(PTA_int ends) {
  */
 void GeomPrimitive::
 set_minmax(int min_vertex, int max_vertex,
-           GeomVertexArrayData *mins, GeomVertexArrayData *maxs) {
+           GeomIndexArrayData *mins, GeomIndexArrayData *maxs) {
   CDWriter cdata(_cycler, true);
   cdata->_min_vertex = min_vertex;
   cdata->_max_vertex = max_vertex;
@@ -1459,128 +1463,6 @@ get_num_unused_vertices_per_primitive() const {
 }
 
 /**
- * Indicates that the data should be enqueued to be prepared in the indicated
- * prepared_objects at the beginning of the next frame.  This will ensure the
- * data is already loaded into the GSG if it is expected to be rendered soon.
- *
- * Use this function instead of prepare_now() to preload datas from a user
- * interface standpoint.
- */
-void GeomPrimitive::
-prepare(PreparedGraphicsObjects *prepared_objects) {
-  if (is_indexed()) {
-    prepared_objects->enqueue_index_buffer(this);
-  }
-}
-
-/**
- * Returns true if the data has already been prepared or enqueued for
- * preparation on the indicated GSG, false otherwise.
- */
-bool GeomPrimitive::
-is_prepared(PreparedGraphicsObjects *prepared_objects) const {
-  Contexts::const_iterator ci;
-  ci = _contexts.find(prepared_objects);
-  if (ci != _contexts.end()) {
-    return true;
-  }
-  return prepared_objects->is_index_buffer_queued(this);
-}
-
-/**
- * Creates a context for the data on the particular GSG, if it does not
- * already exist.  Returns the new (or old) IndexBufferContext.  This assumes
- * that the GraphicsStateGuardian is the currently active rendering context
- * and that it is ready to accept new datas.  If this is not necessarily the
- * case, you should use prepare() instead.
- *
- * Normally, this is not called directly except by the GraphicsStateGuardian;
- * a data does not need to be explicitly prepared by the user before it may be
- * rendered.
- */
-IndexBufferContext *GeomPrimitive::
-prepare_now(PreparedGraphicsObjects *prepared_objects,
-            GraphicsStateGuardianBase *gsg) {
-  //nassertr(is_indexed(), nullptr);
-
-  //if (prepared_objects->_gsg_id < _id_contexts.size() &&
-  //    _id_contexts[prepared_objects->_gsg_id] != nullptr) {
-  //  return _id_contexts[prepared_objects->_gsg_id];
-  //}
-
-  //if (!_id_contexts.empty() && _id_contexts[0] != nullptr) {
-  //  return _id_contexts[0];
-  //}
-
-  if (_context != nullptr) {
-    return _context;
-  }
-
-  IndexBufferContext *ibc = prepared_objects->prepare_index_buffer_now(this, gsg);
-  if (ibc != nullptr) {
-    _contexts[prepared_objects] = ibc;
-
-    //if (prepared_objects->_gsg_id >= _id_contexts.size()) {
-    //  size_t orig_size = _id_contexts.size();
-    //  _id_contexts.resize(prepared_objects->_gsg_id + 1);
-    //  for (size_t i = orig_size; i < _id_contexts.size(); ++i) {
-    //    _id_contexts[i] = nullptr;
-    //  }
-    //}
-    //_id_contexts[prepared_objects->_gsg_id] = ibc;
-
-    _context = ibc;
-  }
-
-  return ibc;
-}
-
-/**
- * Frees the data context only on the indicated object, if it exists there.
- * Returns true if it was released, false if it had not been prepared.
- */
-bool GeomPrimitive::
-release(PreparedGraphicsObjects *prepared_objects) {
-  Contexts::iterator ci;
-  ci = _contexts.find(prepared_objects);
-  if (ci != _contexts.end()) {
-    IndexBufferContext *ibc = (*ci).second;
-    prepared_objects->release_index_buffer(ibc);
-    return true;
-  }
-
-  // Maybe it wasn't prepared yet, but it's about to be.
-  return prepared_objects->dequeue_index_buffer(this);
-}
-
-/**
- * Frees the context allocated on all objects for which the data has been
- * declared.  Returns the number of contexts which have been freed.
- */
-int GeomPrimitive::
-release_all() {
-  // We have to traverse a copy of the _contexts list, because the
-  // PreparedGraphicsObjects object will call clear_prepared() in response to
-  // each release_index_buffer(), and we don't want to be modifying the
-  // _contexts list while we're traversing it.
-  Contexts temp = _contexts;
-  int num_freed = (int)_contexts.size();
-
-  Contexts::const_iterator ci;
-  for (ci = temp.begin(); ci != temp.end(); ++ci) {
-    PreparedGraphicsObjects *prepared_objects = (*ci).first;
-    IndexBufferContext *ibc = (*ci).second;
-    prepared_objects->release_index_buffer(ibc);
-  }
-
-  // Now that we've called release_index_buffer() on every known context, the
-  // _contexts list should have completely emptied itself.
-  nassertr(_contexts.empty(), num_freed);
-
-  return num_freed;
-}
-
-/**
  * Returns a registered GeomVertexArrayFormat of the indicated unsigned
  * integer numeric type for storing index values.
  */
@@ -1619,32 +1501,6 @@ get_index_format(NumericType index_type) {
   }
 
   return nullptr;
-}
-
-/**
- * Removes the indicated PreparedGraphicsObjects table from the data array's
- * table, without actually releasing the data array.  This is intended to be
- * called only from PreparedGraphicsObjects::release_index_buffer(); it should
- * never be called by user code.
- */
-void GeomPrimitive::
-clear_prepared(PreparedGraphicsObjects *prepared_objects) {
-  Contexts::iterator ci;
-  ci = _contexts.find(prepared_objects);
-  if (ci != _contexts.end()) {
-    _contexts.erase(ci);
-
-    _context = nullptr;
-
-    //if (prepared_objects->_gsg_id < _id_contexts.size()) {
-    //  _id_contexts[prepared_objects->_gsg_id] = nullptr;
-    //}
-
-  } else {
-    // If this assertion fails, clear_prepared() was given a prepared_objects
-    // which the data array didn't know about.
-    nassert_raise("unknown PreparedGraphicsObjects");
-  }
 }
 
 /**
@@ -1795,9 +1651,13 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
 
     int strip_cut_index = get_strip_cut_index(cdata->_index_type);
 
+    index.set_row(cdata->_first_vertex);
+
+    int last_vertex = cdata->_first_vertex + cdata->_num_vertices;
+
     if (got_mat) {
       // Find the first non-NaN vertex.
-      while (!found_any && !index.is_at_end()) {
+      while (!found_any && !index.is_at_end() && index.get_read_row() < last_vertex) {
         int ii = index.get_data1i();
         if (ii != strip_cut_index) {
           reader.set_row(ii);
@@ -1811,7 +1671,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
         }
       }
 
-      while (!index.is_at_end()) {
+      while (!index.is_at_end() && index.get_read_row() < last_vertex) {
         int ii = index.get_data1i();
         if (ii == strip_cut_index) {
           continue;
@@ -1831,7 +1691,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
       }
     } else {
       // Find the first non-NaN vertex.
-      while (!found_any && !index.is_at_end()) {
+      while (!found_any && !index.is_at_end() && index.get_read_row() < last_vertex) {
         int ii = index.get_data1i();
         if (ii != strip_cut_index) {
           reader.set_row(ii);
@@ -1845,7 +1705,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point,
         }
       }
 
-      while (!index.is_at_end()) {
+      while (!index.is_at_end() && index.get_read_row() < last_vertex) {
         int ii = index.get_data1i();
         if (ii == strip_cut_index) {
           continue;
@@ -1915,7 +1775,9 @@ calc_sphere_radius(const LPoint3 &center, PN_stdfloat &sq_radius,
 
     int strip_cut_index = get_strip_cut_index(cdata->_index_type);
 
-    while (!index.is_at_end()) {
+    index.set_row(cdata->_first_vertex);
+
+    while (!index.is_at_end() && index.get_read_row() < (cdata->_first_vertex + cdata->_num_vertices)) {
       int ii = index.get_data1i();
       if (ii == strip_cut_index) {
         continue;
@@ -1946,7 +1808,7 @@ decompose_impl() const {
 /**
  * The virtual implementation of rotate().
  */
-CPT(GeomVertexArrayData) GeomPrimitive::
+CPT(GeomIndexArrayData) GeomPrimitive::
 rotate_impl() const {
   // The default implementation doesn't even try to do anything.
   nassertr(false, nullptr);
@@ -1988,7 +1850,7 @@ requires_unused_vertices() const {
  * true.
  */
 void GeomPrimitive::
-append_unused_vertices(GeomVertexArrayData *, int) {
+append_unused_vertices(GeomIndexArrayData *, int) {
 }
 
 /**
@@ -2006,9 +1868,8 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
     cdata->_maxs.clear();
 
   } else {
-    int num_vertices = cdata->_vertices.get_read_pointer()->get_num_rows();
-    nassertv(num_vertices >= cdata->_num_vertices);
-    num_vertices = cdata->_num_vertices;
+    int num_vertices = cdata->_num_vertices;
+    nassertv((cdata->_first_vertex + num_vertices) <= cdata->_vertices.get_read_pointer()->get_num_rows());
 
     if (num_vertices == 0) {
       // Or if we don't have any vertices, the minmax is also trivial.
@@ -2021,12 +1882,13 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
       // This is a complex primitive type like a triangle strip; compute the
       // minmax of each primitive (as well as the overall minmax).
       GeomVertexReader index(cdata->_vertices.get_read_pointer(), 0);
+      index.set_row(cdata->_first_vertex);
 
       cdata->_mins = make_index_data();
       cdata->_maxs = make_index_data();
 
-      GeomVertexArrayData *mins_data = cdata->_mins.get_write_pointer();
-      GeomVertexArrayData *maxs_data = cdata->_maxs.get_write_pointer();
+      GeomIndexArrayData *mins_data = cdata->_mins.get_write_pointer();
+      GeomIndexArrayData *maxs_data = cdata->_maxs.get_write_pointer();
 
       mins_data->unclean_set_num_rows(cdata->_ends.size());
       maxs_data->unclean_set_num_rows(cdata->_ends.size());
@@ -2083,6 +1945,7 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
       // This is a simple primitive type like a triangle; just compute the
       // overall minmax.
       GeomVertexReader index(cdata->_vertices.get_read_pointer(), 0);
+      index.set_row(cdata->_first_vertex);
 
       cdata->_mins.clear();
       cdata->_maxs.clear();
@@ -2117,7 +1980,7 @@ do_make_indexed(CData *cdata) {
     nassertv(cdata->_num_vertices != -1);
     cdata->_vertices = make_index_data();
 
-    GeomVertexArrayData *array_data = cdata->_vertices.get_write_pointer();
+    GeomIndexArrayData *array_data = do_modify_vertices(cdata);
     array_data->unclean_set_num_rows(cdata->_num_vertices);
     GeomVertexWriter index(array_data, 0);
 
@@ -2179,21 +2042,23 @@ do_set_index_type(CData *cdata, GeomPrimitive::NumericType index_type) {
   if (!cdata->_vertices.is_null()) {
     CPT(GeomVertexArrayFormat) new_format = get_index_format();
 
-    CPT(GeomVertexArrayData) array_obj = cdata->_vertices.get_read_pointer();
+    CPT(GeomIndexArrayData) array_obj = cdata->_vertices.get_read_pointer();
     if (array_obj->get_array_format() != new_format) {
-      PT(GeomVertexArrayData) new_vertices = make_index_data();
-      new_vertices->set_num_rows(array_obj->get_num_rows());
+      PT(GeomIndexArrayData) new_vertices = make_index_data();
+      new_vertices->set_num_rows(cdata->_num_vertices);
 
       GeomVertexReader from(array_obj, 0);
+      from.set_row(cdata->_first_vertex);
       GeomVertexWriter to(new_vertices, 0);
 
-      while (!from.is_at_end()) {
+      while (!from.is_at_end() && from.get_read_row() < (cdata->_first_vertex + cdata->_num_vertices)) {
         int index = from.get_data1i();
         if (index == old_strip_cut_index) {
           index = new_strip_cut_index;
         }
         to.set_data1i(index);
       }
+      cdata->_first_vertex = 0;
       cdata->_vertices = new_vertices;
       cdata->_got_minmax = false;
     }
@@ -2203,13 +2068,62 @@ do_set_index_type(CData *cdata, GeomPrimitive::NumericType index_type) {
 /**
  * The private implementation of modify_vertices().
  */
-PT(GeomVertexArrayData) GeomPrimitive::
+PT(GeomIndexArrayData) GeomPrimitive::
 do_modify_vertices(GeomPrimitive::CData *cdata) {
   if (cdata->_vertices.is_null()) {
     do_make_indexed(cdata);
   }
 
-  PT(GeomVertexArrayData) vertices = cdata->_vertices.get_write_pointer();
+  CPT(GeomIndexArrayData) vertices_read = cdata->_vertices.get_read_pointer();
+  PT(GeomIndexArrayData) vertices;
+  if (vertices_read->get_cache_ref_count() <= 1 ||
+    (cdata->_first_vertex == 0 && (cdata->_num_vertices == -1 ||
+      cdata->_num_vertices == (vertices_read->get_data_size_bytes() / vertices_read->get_array_format()->get_stride())))) {
+    // We are the only one holding the vertices or the primitive is using all the vertices,
+    // so go the normal route.
+    vertices = cdata->_vertices.get_write_pointer();
+  } else {
+    assert(cdata->_num_vertices != -1);
+    // Otherwise we need to copy it.  Copy just the range that the primitive specifies.
+    vertices = new GeomIndexArrayData(vertices_read->get_array_format(), vertices_read->get_usage_hint());
+    vertices->unclean_set_num_rows(cdata->_num_vertices);
+    {
+      PT(GeomVertexArrayDataHandle) handle = vertices->modify_handle();
+      CPT(GeomVertexArrayDataHandle) rhandle = vertices_read->get_handle();
+      switch (vertices_read->get_array_format()->get_column(0)->get_numeric_type()) {
+      case GeomEnums::NT_uint8:
+        {
+          uint8_t *ptr = (uint8_t *)handle->get_write_pointer();
+          const uint8_t *rptr = (const uint8_t *)rhandle->get_read_pointer(true);
+          for (int i = cdata->_first_vertex; i < cdata->_first_vertex + cdata->_num_vertices; ++i) {
+            (*ptr++) = rptr[i];
+          }
+        }
+        break;
+      case GeomEnums::NT_uint16:
+        {
+          uint16_t *ptr = (uint16_t *)handle->get_write_pointer();
+          const uint16_t *rptr = (const uint16_t *)rhandle->get_read_pointer(true);
+          for (int i = cdata->_first_vertex; i < cdata->_first_vertex + cdata->_num_vertices; ++i) {
+            (*ptr++) = rptr[i];
+          }
+        }
+        break;
+      case GeomEnums::NT_uint32:
+        {
+          uint32_t *ptr = (uint32_t *)handle->get_write_pointer();
+          const uint32_t *rptr = (const uint32_t *)rhandle->get_read_pointer(true);
+          for (int i = cdata->_first_vertex; i < cdata->_first_vertex + cdata->_num_vertices; ++i) {
+            (*ptr++) = rptr[i];
+          }
+        }
+        break;
+      default:
+        assert(false);
+        break;
+      }
+    }
+  }
 
   cdata->_modified = Geom::get_next_modified();
   cdata->_got_minmax = false;
@@ -2234,7 +2148,7 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void GeomPrimitive::
 finalize(BamReader *manager) {
-  const GeomVertexArrayData *vertices = get_vertices();
+  const GeomIndexArrayData *vertices = get_vertices();
   if (vertices != nullptr) {
     set_usage_hint(vertices->get_usage_hint());
 
@@ -2293,7 +2207,7 @@ int GeomPrimitive::CData::
 complete_pointers(TypedWritable **p_list, BamReader *manager) {
   int pi = CycleData::complete_pointers(p_list, manager);
 
-  _vertices = DCAST(GeomVertexArrayData, p_list[pi++]);
+  _vertices = DCAST(GeomIndexArrayData, p_list[pi++]);
 
   return pi;
 }
@@ -2357,17 +2271,7 @@ check_minmax() const {
  */
 int GeomPrimitivePipelineReader::
 get_first_vertex() const {
-  if (_vertices == nullptr) {
-    return _cdata->_first_vertex;
-  }
-
-  size_t size = _vertices_cdata->_buffer.get_size();
-  if (size == 0) {
-    return 0;
-  }
-
-  GeomVertexReader index(_vertices, 0);
-  return index.get_data1i();
+  return _cdata->_first_vertex;
 }
 
 /**
@@ -2382,13 +2286,13 @@ get_vertex(int i) const {
     const unsigned char *ptr = get_read_pointer(true);
     switch (_cdata->_index_type) {
     case GeomEnums::NT_uint8:
-      return ((uint8_t *)ptr)[i];
+      return ((uint8_t *)ptr)[i + _cdata->_first_vertex];
       break;
     case GeomEnums::NT_uint16:
-      return ((uint16_t *)ptr)[i];
+      return ((uint16_t *)ptr)[i + _cdata->_first_vertex];
       break;
     case GeomEnums::NT_uint32:
-      return ((uint32_t *)ptr)[i];
+      return ((uint32_t *)ptr)[i + _cdata->_first_vertex];
       break;
     default:
       nassert_raise("unsupported index type");
@@ -2446,13 +2350,14 @@ get_num_faces() const {
 void GeomPrimitivePipelineReader::
 get_referenced_vertices(BitArray &bits) const {
   int num_vertices = get_num_vertices();
+  int first_vertex = get_first_vertex();
 
   if (is_indexed()) {
     int strip_cut_index = get_strip_cut_index();
     const unsigned char *ptr = get_read_pointer(true);
     switch (get_index_type()) {
     case GeomEnums::NT_uint8:
-      for (int vi = 0; vi < num_vertices; ++vi) {
+      for (int vi = first_vertex; vi < first_vertex + num_vertices; ++vi) {
         int index = ((const uint8_t *)ptr)[vi];
         if (index != strip_cut_index) {
           bits.set_bit(index);
@@ -2460,7 +2365,7 @@ get_referenced_vertices(BitArray &bits) const {
       }
       break;
     case GeomEnums::NT_uint16:
-      for (int vi = 0; vi < num_vertices; ++vi) {
+      for (int vi = first_vertex; vi < first_vertex + num_vertices; ++vi) {
         int index = ((const uint16_t *)ptr)[vi];
         if (index != strip_cut_index) {
           bits.set_bit(index);
@@ -2468,7 +2373,7 @@ get_referenced_vertices(BitArray &bits) const {
       }
       break;
     case GeomEnums::NT_uint32:
-      for (int vi = 0; vi < num_vertices; ++vi) {
+      for (int vi = first_vertex; vi < first_vertex + num_vertices; ++vi) {
         int index = ((const uint32_t *)ptr)[vi];
         if (index != strip_cut_index) {
           bits.set_bit(index);

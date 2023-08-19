@@ -306,7 +306,7 @@ public:
   virtual void release_vertex_buffer(VertexBufferContext *vbc);
   virtual void release_vertex_buffers(const pvector<BufferContext *> &contexts);
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data);
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexArrayData *data);
   virtual void release_index_buffer(IndexBufferContext *ibc);
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts);
 

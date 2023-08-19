@@ -34,7 +34,7 @@ public:
 
 protected:
   virtual CPT(GeomPrimitive) decompose_impl() const;
-  virtual CPT(GeomVertexArrayData) rotate_impl() const;
+  virtual CPT(GeomIndexArrayData) rotate_impl() const;
 
 public:
   static void register_with_read_factory();

@@ -40,7 +40,7 @@ public:
 protected:
   virtual CPT(GeomPrimitive) decompose_impl() const;
   virtual bool requires_unused_vertices() const;
-  virtual void append_unused_vertices(GeomVertexArrayData *vertices,
+  virtual void append_unused_vertices(GeomIndexArrayData *vertices,
                                       int vertex);
 
 public:

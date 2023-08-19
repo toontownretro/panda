@@ -84,7 +84,7 @@ make_adjacency() const {
   GeomPrimitivePipelineReader from(this, current_thread);
   int num_vertices = from.get_num_vertices();
 
-  PT(GeomVertexArrayData) new_vertices = adj->make_index_data();
+  PT(GeomIndexArrayData) new_vertices = adj->make_index_data();
   new_vertices->set_num_rows(num_vertices * 2);
 
   // First, build a map of each triangle's halfedges to its opposing vertices.
@@ -230,30 +230,31 @@ reverse_impl() const {
 /**
  * The virtual implementation of rotate().
  */
-CPT(GeomVertexArrayData) GeomTriangles::
+CPT(GeomIndexArrayData) GeomTriangles::
 rotate_impl() const {
   // To rotate triangles, we just move one vertex from the front to the back,
   // or vice-versa; but we have to know what direction we're going.
   ShadeModel shade_model = get_shade_model();
   int num_vertices = get_num_vertices();
 
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->set_num_rows(num_vertices);
 
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) vertices = get_vertices();
+    CPT(GeomIndexArrayData) vertices = get_vertices();
     GeomVertexReader from(vertices, 0);
     GeomVertexWriter to(new_vertices, 0);
+    int first_vertex = get_first_vertex();
 
     switch (shade_model) {
     case SM_flat_first_vertex:
       // Move the first vertex to the end.
       {
         for (int begin = 0; begin < num_vertices; begin += 3) {
-          from.set_row_unsafe(begin + 1);
+          from.set_row_unsafe(begin + 1 + first_vertex);
           to.set_data1i(from.get_data1i());
           to.set_data1i(from.get_data1i());
-          from.set_row_unsafe(begin);
+          from.set_row_unsafe(begin + first_vertex);
           to.set_data1i(from.get_data1i());
         }
       }
@@ -263,9 +264,9 @@ rotate_impl() const {
       // Move the last vertex to the front.
       {
         for (int begin = 0; begin < num_vertices; begin += 3) {
-          from.set_row_unsafe(begin + 2);
+          from.set_row_unsafe(begin + 2 + first_vertex);
           to.set_data1i(from.get_data1i());
-          from.set_row_unsafe(begin);
+          from.set_row_unsafe(begin + first_vertex);
           to.set_data1i(from.get_data1i());
           to.set_data1i(from.get_data1i());
         }

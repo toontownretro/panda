@@ -258,7 +258,7 @@ check_valid(const GeomVertexDataPipelineReader *data_reader) const {
  * methods for more common usage.  We recommend you do not use this method
  * directly.  If you do, be sure you know what you are doing!
  */
-INLINE CPT(GeomVertexArrayData) GeomPrimitive::
+INLINE CPT(GeomIndexArrayData) GeomPrimitive::
 get_vertices() const {
   CDReader cdata(_cycler);
   return cdata->_vertices.get_read_pointer();
@@ -337,7 +337,7 @@ get_ends() const {
  * methods for more common usage.  We recommend you do not use this method
  * directly.  If you do, be sure you know what you are doing!
  */
-INLINE CPT(GeomVertexArrayData) GeomPrimitive::
+INLINE CPT(GeomIndexArrayData) GeomPrimitive::
 get_mins() const {
   GeomPrimitivePipelineReader reader(this, Thread::get_current_thread());
   reader.check_minmax();
@@ -355,7 +355,7 @@ get_mins() const {
  * methods for more common usage.  We recommend you do not use this method
  * directly.  If you do, be sure you know what you are doing!
  */
-INLINE CPT(GeomVertexArrayData) GeomPrimitive::
+INLINE CPT(GeomIndexArrayData) GeomPrimitive::
 get_maxs() const {
   GeomPrimitivePipelineReader reader(this, Thread::get_current_thread());
   reader.check_minmax();
@@ -403,9 +403,9 @@ get_index_format() const {
 /**
  * Creates and returns a new, empty index table.
  */
-INLINE PT(GeomVertexArrayData) GeomPrimitive::
+INLINE PT(GeomIndexArrayData) GeomPrimitive::
 make_index_data() const {
-  return new GeomVertexArrayData(get_index_format(), get_usage_hint());
+  return new GeomIndexArrayData(get_index_format(), get_usage_hint());
 }
 
 /**
@@ -679,7 +679,7 @@ get_modified() const {
 /**
  *
  */
-INLINE const GeomVertexArrayData *GeomPrimitivePipelineReader::
+INLINE const GeomIndexArrayData *GeomPrimitivePipelineReader::
 get_vertices() const {
   return _vertices/*.p()*/;
 }
@@ -700,7 +700,7 @@ get_index_stride() const {
 INLINE const unsigned char *GeomPrimitivePipelineReader::
 get_read_pointer(bool force) const {
   nassertr(_vertices_cdata != nullptr, nullptr);
-  ((GeomVertexArrayData *)_vertices)->mark_used();
+  ((GeomIndexArrayData *)_vertices)->mark_used();
   return _vertices_cdata->_buffer.get_read_pointer(force);
 }
 
@@ -723,7 +723,7 @@ get_ends() const {
 /**
  *
  */
-INLINE CPT(GeomVertexArrayData) GeomPrimitivePipelineReader::
+INLINE CPT(GeomIndexArrayData) GeomPrimitivePipelineReader::
 get_mins() const {
   nassertr(is_indexed(), nullptr);
   nassertr(_cdata->_got_minmax, nullptr);
@@ -733,7 +733,7 @@ get_mins() const {
 /**
  *
  */
-INLINE CPT(GeomVertexArrayData) GeomPrimitivePipelineReader::
+INLINE CPT(GeomIndexArrayData) GeomPrimitivePipelineReader::
 get_maxs() const {
   nassertr(is_indexed(), nullptr);
   nassertr(_cdata->_got_minmax, nullptr);
@@ -777,15 +777,6 @@ fetch_vertices_cdata(bool lock) const {
       ncthis->_has_lock = true;
     }
   }
-}
-
-/**
- *
- */
-INLINE IndexBufferContext *GeomPrimitivePipelineReader::
-prepare_now(PreparedGraphicsObjects *prepared_objects,
-            GraphicsStateGuardianBase *gsg) const {
-  return ((GeomPrimitive *)_object)->prepare_now(prepared_objects, gsg);
 }
 
 /**

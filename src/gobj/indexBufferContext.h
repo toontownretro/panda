@@ -21,6 +21,8 @@
 #include "preparedGraphicsObjects.h"
 #include "adaptiveLru.h"
 
+class GeomIndexArrayData;
+
 /**
  * This is a special class object that holds all the information returned by a
  * particular GSG to indicate the vertex data array's internal context
@@ -32,18 +34,18 @@
  */
 class EXPCL_PANDA_GOBJ IndexBufferContext : public BufferContext, public AdaptiveLruPage {
 public:
-  INLINE IndexBufferContext(PreparedGraphicsObjects *pgo, GeomPrimitive *data);
+  INLINE IndexBufferContext(PreparedGraphicsObjects *pgo, GeomIndexArrayData *data);
 
 PUBLISHED:
-  INLINE GeomPrimitive *get_data() const;
+  INLINE GeomIndexArrayData *get_data() const;
 
-  INLINE bool changed_size(const GeomPrimitivePipelineReader *reader) const;
-  INLINE bool changed_usage_hint(const GeomPrimitivePipelineReader *reader) const;
-  INLINE bool was_modified(const GeomPrimitivePipelineReader *reader) const;
+  INLINE bool changed_size(const GeomVertexArrayDataHandle *reader) const;
+  INLINE bool changed_usage_hint(const GeomVertexArrayDataHandle *reader) const;
+  INLINE bool was_modified(const GeomVertexArrayDataHandle *reader) const;
 
 public:
   INLINE void update_data_size_bytes(size_t new_data_size_bytes);
-  INLINE void mark_loaded(const GeomPrimitivePipelineReader *reader);
+  INLINE void mark_loaded(const GeomVertexArrayDataHandle *reader);
   INLINE void mark_unloaded();
 
   virtual void output(std::ostream &out) const;

@@ -365,7 +365,7 @@ get_num_prepared_textures() const {
  */
 TextureContext *PreparedGraphicsObjects::
 prepare_texture_now(Texture *tex, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Ask the GSG to create a brand new TextureContext.  There might be several
   // GSG's sharing the same set of textures; if so, it doesn't matter which of
@@ -522,7 +522,7 @@ get_num_prepared_samplers() const {
  */
 SamplerContext *PreparedGraphicsObjects::
 prepare_sampler_now(const SamplerState &sampler, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   PreparedSamplers::const_iterator it = _prepared_samplers.find(sampler);
   if (it != _prepared_samplers.end()) {
@@ -683,7 +683,7 @@ get_num_prepared_geoms() const {
  */
 GeomContext *PreparedGraphicsObjects::
 prepare_geom_now(Geom *geom, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Ask the GSG to create a brand new GeomContext.  There might be several
   // GSG's sharing the same set of geoms; if so, it doesn't matter which of
@@ -868,7 +868,7 @@ get_num_prepared_shaders() const {
  */
 ShaderContext *PreparedGraphicsObjects::
 prepare_shader_now(Shader *se, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Ask the GSG to create a brand new ShaderContext.  There might be several
   // GSG's sharing the same set of shaders; if so, it doesn't matter which of
@@ -1058,7 +1058,7 @@ get_num_prepared_vertex_buffers() const {
  */
 VertexBufferContext *PreparedGraphicsObjects::
 prepare_vertex_buffer_now(GeomVertexArrayData *data, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // First, see if there might be a cached context of the appropriate size.
   size_t data_size_bytes = data->get_data_size_bytes();
@@ -1090,7 +1090,7 @@ prepare_vertex_buffer_now(GeomVertexArrayData *data, GraphicsStateGuardianBase *
  * when the GSG is next ready to do this (presumably at the next frame).
  */
 void PreparedGraphicsObjects::
-enqueue_index_buffer(GeomPrimitive *data) {
+enqueue_index_buffer(GeomIndexArrayData *data) {
   ReMutexHolder holder(_lock);
 
   _enqueued_index_buffers.insert({ get_enqueue_key(data), nullptr });
@@ -1101,10 +1101,10 @@ enqueue_index_buffer(GeomPrimitive *data) {
  * otherwise.
  */
 bool PreparedGraphicsObjects::
-is_index_buffer_queued(const GeomPrimitive *data) const {
+is_index_buffer_queued(const GeomIndexArrayData *data) const {
   ReMutexHolder holder(_lock);
 
-  EnqueuedObjects::const_iterator qi = _enqueued_index_buffers.find(get_enqueue_key((GeomPrimitive *)data));
+  EnqueuedObjects::const_iterator qi = _enqueued_index_buffers.find(get_enqueue_key((GeomIndexArrayData *)data));
   return (qi != _enqueued_index_buffers.end());
 }
 
@@ -1118,7 +1118,7 @@ is_index_buffer_queued(const GeomPrimitive *data) const {
  * it had not been queued.
  */
 bool PreparedGraphicsObjects::
-dequeue_index_buffer(GeomPrimitive *data) {
+dequeue_index_buffer(GeomIndexArrayData *data) {
   ReMutexHolder holder(_lock);
 
   EnqueuedObjects::iterator qi = _enqueued_index_buffers.find(get_enqueue_key(data));
@@ -1134,7 +1134,7 @@ dequeue_index_buffer(GeomPrimitive *data) {
  * otherwise.
  */
 bool PreparedGraphicsObjects::
-is_index_buffer_prepared(const GeomPrimitive *data) const {
+is_index_buffer_prepared(const GeomIndexArrayData *data) const {
   return data->is_prepared((PreparedGraphicsObjects *)this);
 }
 
@@ -1258,8 +1258,8 @@ get_num_prepared_index_buffers() const {
  * IndexBufferContext will be deleted.
  */
 IndexBufferContext *PreparedGraphicsObjects::
-prepare_index_buffer_now(GeomPrimitive *data, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+prepare_index_buffer_now(GeomIndexArrayData *data, GraphicsStateGuardianBase *gsg) {
+  //ReMutexHolder holder(_lock);
 
   // First, see if there might be a cached context of the appropriate size.
   size_t data_size_bytes = data->get_data_size_bytes();
@@ -1432,7 +1432,7 @@ get_num_prepared_shader_buffers() const {
  */
 BufferContext *PreparedGraphicsObjects::
 prepare_shader_buffer_now(ShaderBuffer *data, GraphicsStateGuardianBase *gsg) {
-  ReMutexHolder holder(_lock);
+  //ReMutexHolder holder(_lock);
 
   // Ask the GSG to create a brand new BufferContext.  There might be
   // several GSG's sharing the same set of datas; if so, it doesn't matter
@@ -1502,11 +1502,11 @@ cancel() {
   } else if (_object->is_of_type(Shader::get_class_type())) {
     return pgo->dequeue_shader((Shader *)_object.p());
 
+  } else if (_object->is_of_type(GeomIndexArrayData::get_class_type())) {
+    return pgo->dequeue_index_buffer((GeomIndexArrayData *)_object.p());
+
   } else if (_object->is_of_type(GeomVertexArrayData::get_class_type())) {
     return pgo->dequeue_vertex_buffer((GeomVertexArrayData *)_object.p());
-
-  } else if (_object->is_of_type(GeomPrimitive::get_class_type())) {
-    return pgo->dequeue_index_buffer((GeomPrimitive *)_object.p());
 
   } else if (_object->is_of_type(ShaderBuffer::get_class_type())) {
     return pgo->dequeue_shader_buffer((ShaderBuffer *)_object.p());
@@ -1672,10 +1672,8 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   for (qibi = _enqueued_index_buffers.begin();
        qibi != _enqueued_index_buffers.end();) {
     if (qibi->first._pipeline_version == pipeline_version) {
-      GeomPrimitive *data = DCAST(GeomPrimitive, qibi->first._object);
-      if (data->is_indexed()) {
-        data->prepare_now(this, gsg);
-      }
+      GeomIndexArrayData *data = DCAST(GeomIndexArrayData, qibi->first._object);
+      data->prepare_now(this, gsg);
       qibi = _enqueued_index_buffers.erase(qibi);
     } else {
       ++qibi;

@@ -127,7 +127,7 @@ decompose_impl() const {
 /**
  * The virtual implementation of do_rotate().
  */
-CPT(GeomVertexArrayData) GeomTrifans::
+CPT(GeomIndexArrayData) GeomTrifans::
 rotate_impl() const {
   // Actually, we can't rotate fans without chaging the winding order.  It's
   // an error to define a flat shade model for a GeomTrifan.

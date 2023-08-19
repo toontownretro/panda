@@ -6627,7 +6627,7 @@ setup_array_data(const unsigned char *&client_pointer,
  * call Geom::prepare().
  */
 IndexBufferContext *CLP(GraphicsStateGuardian)::
-prepare_index_buffer(GeomPrimitive *data) {
+prepare_index_buffer(GeomIndexArrayData *data) {
   if (_supports_buffers) {
     PStatGPUTimer timer(this, _prepare_index_buffer_pcollector);
 
@@ -6645,8 +6645,8 @@ prepare_index_buffer(GeomPrimitive *data) {
 #endif
 
     report_my_gl_errors(this);
-    GeomPrimitivePipelineReader reader(data, Thread::get_current_thread(), false);
-    apply_index_buffer(gibc, &reader, false);
+    CPT(GeomVertexArrayDataHandle) handle = data->get_handle();
+    apply_index_buffer(gibc, handle, false);
     return gibc;
   }
 
@@ -6658,7 +6658,7 @@ prepare_index_buffer(GeomPrimitive *data) {
  */
 bool CLP(GraphicsStateGuardian)::
 apply_index_buffer(IndexBufferContext *ibc,
-                   const GeomPrimitivePipelineReader *reader,
+                   const GeomVertexArrayDataHandle *reader,
                    bool force) {
   nassertr(_supports_buffers, false);
   nassertr(_current_vao != nullptr, false);
@@ -6865,7 +6865,7 @@ setup_primitive(const unsigned char *&client_pointer,
   }
 
   // NULL is the OpenGL convention for the first byte of the buffer object.
-  client_pointer = nullptr;
+  client_pointer = (unsigned char *)((uintptr_t)reader->get_first_vertex());
   return true;
 }
 
@@ -8294,6 +8294,7 @@ do_issue_depth_bias() {
     enable_polygon_offset(true);
   }
   else {
+    glPolygonOffset((GLfloat)0.0f, (GLfloat)0.0f);
     enable_polygon_offset(false);
   }
 

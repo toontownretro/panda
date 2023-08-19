@@ -15,7 +15,7 @@
  *
  */
 INLINE IndexBufferContext::
-IndexBufferContext(PreparedGraphicsObjects *pgo, GeomPrimitive *data) :
+IndexBufferContext(PreparedGraphicsObjects *pgo, GeomIndexArrayData *data) :
   BufferContext(&pgo->_ibuffer_residency, data),
   AdaptiveLruPage(0)
 {
@@ -24,9 +24,9 @@ IndexBufferContext(PreparedGraphicsObjects *pgo, GeomPrimitive *data) :
 /**
  * Returns the pointer to the client-side array data object.
  */
-INLINE GeomPrimitive *IndexBufferContext::
+INLINE GeomIndexArrayData *IndexBufferContext::
 get_data() const {
-  return (GeomPrimitive *)_object;
+  return (GeomIndexArrayData *)_object;
 }
 
 /**
@@ -34,7 +34,7 @@ get_data() const {
  * was called.
  */
 INLINE bool IndexBufferContext::
-changed_size(const GeomPrimitivePipelineReader *reader) const {
+changed_size(const GeomVertexArrayDataHandle *reader) const {
   nassertr(reader->get_object() == get_data(), false);
   return get_data_size_bytes() != (size_t)reader->get_data_size_bytes();
 }
@@ -44,7 +44,7 @@ changed_size(const GeomPrimitivePipelineReader *reader) const {
  * mark_loaded() was called.
  */
 INLINE bool IndexBufferContext::
-changed_usage_hint(const GeomPrimitivePipelineReader *reader) const {
+changed_usage_hint(const GeomVertexArrayDataHandle *reader) const {
   nassertr(reader->get_object() == get_data(), false);
   return _usage_hint != reader->get_usage_hint();
 }
@@ -54,7 +54,7 @@ changed_usage_hint(const GeomPrimitivePipelineReader *reader) const {
  * mark_loaded() was called.
  */
 INLINE bool IndexBufferContext::
-was_modified(const GeomPrimitivePipelineReader *reader) const {
+was_modified(const GeomVertexArrayDataHandle *reader) const {
   nassertr(reader->get_object() == get_data(), false);
   return get_modified() != reader->get_modified();
 }
@@ -74,7 +74,7 @@ update_data_size_bytes(size_t new_data_size_bytes) {
  * memory, this updates the internal flags for changed_size() and modified().
  */
 INLINE void IndexBufferContext::
-mark_loaded(const GeomPrimitivePipelineReader *reader) {
+mark_loaded(const GeomVertexArrayDataHandle *reader) {
   nassertv(reader->get_object() == get_data());
   update_data_size_bytes(reader->get_data_size_bytes());
   update_modified(reader->get_modified());

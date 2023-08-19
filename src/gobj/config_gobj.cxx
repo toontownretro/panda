@@ -31,6 +31,7 @@
 #include "geomLinestripsAdjacency.h"
 #include "geomPoints.h"
 #include "geomVertexArrayData.h"
+#include "geomIndexArrayData.h"
 #include "geomVertexArrayFormat.h"
 #include "geomVertexData.h"
 #include "geomVertexFormat.h"
@@ -623,6 +624,7 @@ init_libgobj() {
   GeomTristripsAdjacency::init_type();
   GeomPatches::init_type();
   GeomVertexArrayData::init_type();
+  GeomIndexArrayData::init_type();
   GeomVertexArrayDataHandle::init_type();
   GeomVertexArrayFormat::init_type();
   GeomVertexData::init_type();
@@ -699,6 +701,7 @@ init_libgobj() {
   GeomTristripsAdjacency::register_with_read_factory();
   GeomPatches::register_with_read_factory();
   GeomVertexArrayData::register_with_read_factory();
+  GeomIndexArrayData::register_with_read_factory();
   GeomVertexArrayFormat::register_with_read_factory();
   GeomVertexData::register_with_read_factory();
   GeomVertexFormat::register_with_read_factory();

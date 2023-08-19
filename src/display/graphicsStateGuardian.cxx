@@ -692,7 +692,7 @@ release_vertex_buffers(const pvector<BufferContext *> &contexts) {
  * Prepares the indicated buffer for retained-mode rendering.
  */
 IndexBufferContext *GraphicsStateGuardian::
-prepare_index_buffer(GeomPrimitive *) {
+prepare_index_buffer(GeomIndexArrayData *) {
   return nullptr;
 }
 

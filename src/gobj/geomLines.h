@@ -37,7 +37,7 @@ public:
   virtual int get_min_num_vertices_per_primitive() const;
 
 protected:
-  virtual CPT(GeomVertexArrayData) rotate_impl() const;
+  virtual CPT(GeomIndexArrayData) rotate_impl() const;
 
 public:
   static void register_with_read_factory();

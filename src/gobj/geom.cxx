@@ -1658,8 +1658,8 @@ combine_primitives(GeomPrimitive *a_prim, CPT(GeomPrimitive) b_prim,
     b_prim = b_prim_copy;
   }
 
-  PT(GeomVertexArrayData) a_vertices = a_prim->modify_vertices();
-  CPT(GeomVertexArrayData) b_vertices = b_prim->get_vertices();
+  PT(GeomIndexArrayData) a_vertices = a_prim->modify_vertices();
+  CPT(GeomIndexArrayData) b_vertices = b_prim->get_vertices();
 
   if (a_prim->requires_unused_vertices()) {
     GeomVertexReader index(b_vertices, 0);

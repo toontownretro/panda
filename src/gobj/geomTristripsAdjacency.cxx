@@ -121,7 +121,7 @@ requires_unused_vertices() const {
  * the new primitive.
  */
 void GeomTristripsAdjacency::
-append_unused_vertices(GeomVertexArrayData *vertices, int vertex) {
+append_unused_vertices(GeomIndexArrayData *vertices, int vertex) {
   GeomVertexWriter to(vertices, 0);
   to.set_row_unsafe(vertices->get_num_rows());
   to.add_data1i(get_strip_cut_index());

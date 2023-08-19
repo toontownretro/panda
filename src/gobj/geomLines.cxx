@@ -83,7 +83,7 @@ make_adjacency() const {
   GeomPrimitivePipelineReader from(this, current_thread);
   int num_vertices = from.get_num_vertices();
 
-  PT(GeomVertexArrayData) new_vertices = adj->make_index_data();
+  PT(GeomIndexArrayData) new_vertices = adj->make_index_data();
   new_vertices->set_num_rows(num_vertices * 2);
 
   // First, build a map of each vertex to its next vertex, and another map
@@ -156,23 +156,24 @@ get_min_num_vertices_per_primitive() const {
 /**
  * The virtual implementation of do_rotate().
  */
-CPT(GeomVertexArrayData) GeomLines::
+CPT(GeomIndexArrayData) GeomLines::
 rotate_impl() const {
   // To rotate lines, we just move reverse the pairs of vertices.
   int num_vertices = get_num_vertices();
 
-  PT(GeomVertexArrayData) new_vertices = make_index_data();
+  PT(GeomIndexArrayData) new_vertices = make_index_data();
   new_vertices->set_num_rows(num_vertices);
 
   if (is_indexed()) {
-    CPT(GeomVertexArrayData) vertices = get_vertices();
+    int first_vertex = get_first_vertex();
+    CPT(GeomIndexArrayData) vertices = get_vertices();
     GeomVertexReader from(vertices, 0);
     GeomVertexWriter to(new_vertices, 0);
 
     for (int begin = 0; begin < num_vertices; begin += 2) {
-      from.set_row_unsafe(begin + 1);
+      from.set_row_unsafe(begin + 1 + first_vertex);
       to.set_data1i(from.get_data1i());
-      from.set_row_unsafe(begin);
+      from.set_row_unsafe(begin + first_vertex);
       to.set_data1i(from.get_data1i());
     }
 
