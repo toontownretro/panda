@@ -91,7 +91,7 @@ protected:
   PT(Texture) _shadow_map;
 
   // This is really a map of GSG -> GraphicsOutput.
-  typedef pflat_hash_map<PT(GraphicsStateGuardianBase), PT(GraphicsOutputBase) > ShadowBuffers;
+  typedef pflat_hash_map<GraphicsStateGuardianBase *, PT(GraphicsOutputBase), pointer_hash> ShadowBuffers;
   ShadowBuffers _sbuffers;
 
   // This counts how many LightAttribs in the world are referencing this
