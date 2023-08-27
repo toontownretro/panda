@@ -294,11 +294,11 @@ get_prim_vertex(int i, const unsigned char *read_pointer, const GeomPrimitivePip
   if (read_pointer != nullptr) {
     switch (reader.get_index_type()) {
     case GeomEnums::NT_uint8:
-      return ((uint8_t *)read_pointer)[i];
+      return ((uint8_t *)read_pointer)[i + reader.get_first_vertex()];
     case GeomEnums::NT_uint16:
-      return ((uint16_t *)read_pointer)[i];
+      return ((uint16_t *)read_pointer)[i + reader.get_first_vertex()];
     case GeomEnums::NT_uint32:
-      return ((uint32_t *)read_pointer)[i];
+      return ((uint32_t *)read_pointer)[i + reader.get_first_vertex()];
     default:
       return 0;
     }
