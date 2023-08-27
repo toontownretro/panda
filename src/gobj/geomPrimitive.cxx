@@ -2148,8 +2148,15 @@ write_datagram(BamWriter *manager, Datagram &dg) {
  */
 void GeomPrimitive::
 finalize(BamReader *manager) {
-  const GeomIndexArrayData *vertices = get_vertices();
+  const GeomVertexArrayData *vertices = get_vertices();
   if (vertices != nullptr) {
+    if (!vertices->is_of_type(GeomIndexArrayData::get_class_type())) {
+      PT(GeomIndexArrayData) nverts = new GeomIndexArrayData(GeomVertexArrayFormat::register_format(vertices->get_array_format()), vertices->get_usage_hint());
+      PT(GeomVertexArrayDataHandle) handle = nverts->modify_handle();
+      handle->copy_data_from(vertices->get_handle());
+      set_vertices(nverts);
+      vertices = nverts;
+    }
     set_usage_hint(vertices->get_usage_hint());
 
     int num_vertices;
@@ -2279,7 +2286,7 @@ get_first_vertex() const {
  */
 int GeomPrimitivePipelineReader::
 get_vertex(int i) const {
-  if (_vertices != nullptr) {
+  if (_vertices_handle.get_object() != nullptr) {
     // The indexed case.
     nassertr(i >= 0 && i < get_num_vertices(), -1);
 

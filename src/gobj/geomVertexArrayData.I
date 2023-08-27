@@ -135,9 +135,9 @@ INLINE bool GeomVertexArrayData::
 request_resident(Thread *current_thread) const {
   const GeomVertexArrayData::CData *cdata = _cycler.read_unlocked(current_thread);
 
-#ifdef DO_PIPELINING
-  cdata->ref();
-#endif
+// #ifdef DO_PIPELINING
+//   cdata->ref();
+// #endif
 
   cdata->_rw_lock.acquire();
 
@@ -146,9 +146,9 @@ request_resident(Thread *current_thread) const {
 
   cdata->_rw_lock.release();
 
-#ifdef DO_PIPELINING
-  unref_delete((CycleData *)cdata);
-#endif
+// #ifdef DO_PIPELINING
+//   unref_delete((CycleData *)cdata);
+// #endif
 
   return is_resident;
 }
@@ -383,9 +383,8 @@ assign(CPT(GeomVertexArrayData) object) {
  * NOTE: Assumes the handle does not reference an existing object.
  */
 INLINE void GeomVertexArrayDataHandle::
-assign(const GeomVertexArrayData *object, bool lock) {
+assign(const GeomVertexArrayData *object, bool lock, bool fetch_cdata) {
   _object = (GeomVertexArrayData *)object;
-  _cdata = (GeomVertexArrayData::CData *)object->_cycler.read_unlocked(_current_thread);
   _writable = false;
 
 #ifdef _DEBUG
@@ -396,9 +395,13 @@ assign(const GeomVertexArrayData *object, bool lock) {
 //#endif  // DO_PIPELINING
   // We must grab the lock *after* we have incremented the reference count,
   // above.
-  if (lock) {
-    _cdata->_rw_lock.acquire();
-    _has_lock = true;
+
+  if (fetch_cdata) {
+    _cdata = (GeomVertexArrayData::CData *)object->_cycler.read_unlocked(_current_thread);
+    if (lock) {
+      _cdata->_rw_lock.acquire();
+      _has_lock = true;
+    }
   }
 }
 
@@ -431,22 +434,25 @@ assign(PT(GeomVertexArrayData) object) {
  * NOTE: Assumes the handle does not reference an existing object.
  */
 INLINE void GeomVertexArrayDataHandle::
-assign(GeomVertexArrayData *object, bool lock) {
+assign(GeomVertexArrayData *object, bool lock, bool fetch_cdata) {
   _object = object;
-  _cdata = object->_cycler.write_upstream(true, _current_thread);
   _writable = true;
 
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
 #endif // _DEBUG
-#ifdef DO_PIPELINING
-  _cdata->ref();
-#endif  // DO_PIPELINING
-  // We must grab the lock *after* we have incremented the reference count,
-  // above.
-  if (lock) {
-    _cdata->_rw_lock.acquire();
-    _has_lock = true;
+
+  if (fetch_cdata) {
+    _cdata = object->_cycler.write_upstream(true, _current_thread);
+// #ifdef DO_PIPELINING
+//     _cdata->ref();
+// #endif  // DO_PIPELINING
+    // We must grab the lock *after* we have incremented the reference count,
+    // above.
+    if (lock) {
+      _cdata->_rw_lock.acquire();
+      _has_lock = true;
+    }
   }
 }
 
@@ -475,9 +481,9 @@ release() {
     }
 
     if (_writable) {
-#ifdef DO_PIPELINING
-      unref_delete((CycleData *)_cdata);
-#endif  // DO_PIPELINING
+// #ifdef DO_PIPELINING
+//       unref_delete((CycleData *)_cdata);
+// #endif  // DO_PIPELINING
     }
   }
 
@@ -511,6 +517,7 @@ get_current_thread() const {
  */
 INLINE const unsigned char *GeomVertexArrayDataHandle::
 get_read_pointer(bool force) const {
+  nassertr(_cdata != nullptr, nullptr);
   mark_used();
   return _cdata->_buffer.get_read_pointer(force);
 }
@@ -544,6 +551,7 @@ get_array_format() const {
  */
 INLINE GeomVertexArrayDataHandle::UsageHint GeomVertexArrayDataHandle::
 get_usage_hint() const {
+  nassertr(_cdata != nullptr, UsageHint::UH_unspecified);
   return _cdata->_usage_hint;
 }
 
@@ -569,6 +577,7 @@ clear_rows() {
  */
 INLINE size_t GeomVertexArrayDataHandle::
 get_data_size_bytes() const {
+  nassertr(_cdata != nullptr, 0);
   return _cdata->_buffer.get_size();
 }
 
@@ -577,6 +586,7 @@ get_data_size_bytes() const {
  */
 INLINE UpdateSeq GeomVertexArrayDataHandle::
 get_modified() const {
+  nassertr(_cdata != nullptr, UpdateSeq::initial());
   return _cdata->_modified;
 }
 
@@ -615,6 +625,7 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
  */
 INLINE vector_uchar GeomVertexArrayDataHandle::
 get_data() const {
+  nassertr(_cdata != nullptr, vector_uchar());
   mark_used();
   const unsigned char *ptr = _cdata->_buffer.get_read_pointer(true);
   return vector_uchar(ptr, ptr + _cdata->_buffer.get_size());
@@ -627,6 +638,7 @@ get_data() const {
  */
 INLINE vector_uchar GeomVertexArrayDataHandle::
 get_subdata(size_t start, size_t size) const {
+  nassertr(_cdata != nullptr, vector_uchar());
   mark_used();
   start = (std::min)(start, _cdata->_buffer.get_size());
   size = (std::min)(size, _cdata->_buffer.get_size() - start);
@@ -647,8 +659,8 @@ mark_used() const {
  */
 INLINE void GeomVertexArrayDataHandle::
 acquire_rw_lock() const {
-  if (_cdata != nullptr) {
-    nassertv(!_has_lock);
+  nassertv(_cdata != nullptr);
+  if (!_has_lock) {
     _cdata->_rw_lock.acquire();
     ((GeomVertexArrayDataHandle *)this)->_has_lock = true;
   }
@@ -659,10 +671,30 @@ acquire_rw_lock() const {
  */
 INLINE void GeomVertexArrayDataHandle::
 release_rw_lock() const {
-  if (_cdata != nullptr) {
-    nassertv(_has_lock);
+  nassertv(_cdata != nullptr);
+  if (_has_lock) {
     _cdata->_rw_lock.release();
     ((GeomVertexArrayDataHandle *)this)->_has_lock = false;
+  }
+}
+
+/**
+ *
+ */
+INLINE void GeomVertexArrayDataHandle::
+fetch_cdata(bool lock) const {
+  if (_cdata == nullptr) {
+    if (!_writable) {
+      ((GeomVertexArrayDataHandle *)this)->_cdata = (GeomVertexArrayData::CData *)_object->_cycler.read_unlocked(_current_thread);
+    } else {
+      ((GeomVertexArrayDataHandle *)this)->_cdata = _object->_cycler.write_upstream(true, _current_thread);
+// #ifdef DO_PIPELINING
+//       _cdata->ref();
+// #endif  // DO_PIPELINING
+    }
+    if (lock) {
+      acquire_rw_lock();
+    }
   }
 }
 

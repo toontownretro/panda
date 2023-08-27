@@ -267,9 +267,9 @@ private:
                                    Thread *current_thread);
 
   //INLINE void assign(CPT(GeomVertexArrayData) object);
-  INLINE void assign(const GeomVertexArrayData *object, bool lock = true);
+  INLINE void assign(const GeomVertexArrayData *object, bool lock = true, bool fetch_cdata = true);
   //INLINE void assign(PT(GeomVertexArrayData) object);
-  INLINE void assign(GeomVertexArrayData *object, bool lock = true);
+  INLINE void assign(GeomVertexArrayData *object, bool lock = true, bool fetch_cdata = true);
   INLINE void release();
 
 PUBLISHED:
@@ -340,6 +340,8 @@ PUBLISHED:
   INLINE void acquire_rw_lock() const;
   INLINE void release_rw_lock() const;
 
+  INLINE void fetch_cdata(bool lock) const;
+
 private:
   GeomVertexArrayData *_object;
   GeomVertexArrayData::CData *_cdata;
@@ -367,6 +369,7 @@ private:
   friend class GeomVertexDataPipelineWriter;
   friend class GeomVertexArrayData;
   friend class GraphicsStateGuardian;
+  friend class GeomPrimitivePipelineReader;
 };
 
 INLINE std::ostream &operator << (std::ostream &out, const GeomVertexArrayData &obj);

@@ -6638,8 +6638,8 @@ prepare_index_buffer(GeomIndexArrayData *data) {
     if (_debug_buffers && GLCAT.is_debug()) {
       GLCAT.debug()
         << "creating index buffer " << (int)gibc->_index << ": "
-        << data->get_num_vertices() << " indices ("
-        << data->get_vertices()->get_array_format()->get_column(0)->get_numeric_type()
+        << data->get_num_rows() << " indices ("
+        << data->get_array_format()->get_column(0)->get_numeric_type()
         << ")\n";
     }
 #endif
@@ -6682,8 +6682,8 @@ apply_index_buffer(IndexBufferContext *ibc,
     //gibc->set_active(true);
   }
 
+  reader->fetch_cdata(false);
   if (gibc->was_modified(reader)) {
-    reader->fetch_vertices_cdata(false);
     reader->acquire_rw_lock();
     int num_bytes = reader->get_data_size_bytes();
 #ifndef NDEBUG
@@ -6860,12 +6860,12 @@ setup_primitive(const unsigned char *&client_pointer,
   // Prepare the buffer object and bind it.
   IndexBufferContext *ibc = reader->prepare_now(_prepared_objects, this);
   nassertr(ibc != nullptr, false);
-  if (!apply_index_buffer(ibc, reader, force)) {
+  if (!apply_index_buffer(ibc, reader->get_vertices_handle(), force)) {
     return false;
   }
 
   // NULL is the OpenGL convention for the first byte of the buffer object.
-  client_pointer = (unsigned char *)((uintptr_t)reader->get_first_vertex());
+  client_pointer = (unsigned char *)((uintptr_t)reader->get_first_vertex() * reader->get_index_stride());
   return true;
 }
 

@@ -22,7 +22,7 @@ class EXPCL_GL CLP(IndexBufferContext) : public IndexBufferContext {
 public:
   INLINE CLP(IndexBufferContext)(CLP(GraphicsStateGuardian) *glgsg,
                                  PreparedGraphicsObjects *pgo,
-                                 GeomPrimitive *data);
+                                 GeomIndexArrayData *data);
   ALLOC_DELETED_CHAIN(CLP(IndexBufferContext));
 
   virtual void evict_lru();

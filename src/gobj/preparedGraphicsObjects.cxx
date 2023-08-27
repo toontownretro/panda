@@ -1673,7 +1673,9 @@ begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
        qibi != _enqueued_index_buffers.end();) {
     if (qibi->first._pipeline_version == pipeline_version) {
       GeomIndexArrayData *data = DCAST(GeomIndexArrayData, qibi->first._object);
-      data->prepare_now(this, gsg);
+      if (data != nullptr) {
+        data->prepare_now(this, gsg);
+      }
       qibi = _enqueued_index_buffers.erase(qibi);
     } else {
       ++qibi;

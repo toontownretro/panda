@@ -400,7 +400,7 @@ public:
 
   virtual IndexBufferContext *prepare_index_buffer(GeomIndexArrayData *data);
   bool apply_index_buffer(IndexBufferContext *ibc,
-                          const GeomPrimitivePipelineReader *reader,
+                          const GeomVertexArrayDataHandle *reader,
                           bool force);
   virtual void release_index_buffer(IndexBufferContext *ibc);
   virtual void release_index_buffers(const pvector<BufferContext *> &contexts);

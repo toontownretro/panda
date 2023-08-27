@@ -19,6 +19,7 @@
 #include "dxBufferBase11.h"
 
 class GeomPrimitive;
+class GeomIndexArrayData;
 class PreparedGraphicsObjects;
 class ID3D11Device;
 class ID3D11DeviceContext;
@@ -31,11 +32,11 @@ class DXGraphicsStateGuardian11;
  */
 class EXPCL_PANDA_DXGSG11 DXIndexBufferContext11 : public IndexBufferContext, public DXBufferBase11 {
 public:
-  DXIndexBufferContext11(DXGraphicsStateGuardian11 *gsg, PreparedGraphicsObjects *pgo, GeomPrimitive *data);
+  DXIndexBufferContext11(DXGraphicsStateGuardian11 *gsg, PreparedGraphicsObjects *pgo, GeomIndexArrayData *data);
   virtual ~DXIndexBufferContext11();
 
   void update_buffer(ID3D11DeviceContext *context,
-                     const GeomPrimitivePipelineReader *reader);
+                     const GeomVertexArrayDataHandle *reader);
 
 public:
   static TypeHandle get_class_type() {

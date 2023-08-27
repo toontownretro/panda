@@ -392,18 +392,19 @@ public:
 
   INLINE void fetch_vertices_cdata(bool lock) const;
 
+  INLINE const GeomVertexArrayDataHandle *get_vertices_handle() const;
+
+  INLINE IndexBufferContext *prepare_now(PreparedGraphicsObjects *prepared_objects,
+                                         GraphicsStateGuardianBase *gsg) const;
   INLINE bool draw(GraphicsStateGuardianBase *gsg, bool force) const;
 
 private:
   const GeomPrimitive::CData *_cdata;
   const GeomPrimitive *_object;
 
-  const GeomIndexArrayData *_vertices;
-  const GeomIndexArrayData::CData *_vertices_cdata;
+  GeomVertexArrayDataHandle _vertices_handle;
 
   Thread *_current_thread;
-
-  bool _has_lock;
 
 public:
   static TypeHandle get_class_type() {

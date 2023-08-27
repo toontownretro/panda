@@ -675,7 +675,7 @@ release_vertex_buffer(VertexBufferContext *vbc) {
  * Prepares the indicated buffer for retained-mode rendering.
  */
 IndexBufferContext *DXGraphicsStateGuardian11::
-prepare_index_buffer(GeomPrimitive *prim) {
+prepare_index_buffer(GeomIndexArrayData *prim) {
   DXIndexBufferContext11 *dibc = new DXIndexBufferContext11(this, _prepared_objects, prim);
   return dibc;
 }
@@ -1118,7 +1118,7 @@ apply_index_buffer(const GeomPrimitivePipelineReader *reader) {
   DXIndexBufferContext11 *dibc = (DXIndexBufferContext11 *)reader->prepare_now(_prepared_objects, this);
   nassertr(dibc != nullptr, false);
 
-  dibc->update_buffer(_context, reader);
+  dibc->update_buffer(_context, reader->get_vertices_handle());
 
   ID3D11Buffer *index_buffer = dibc->get_buffer();
   nassertr(index_buffer != nullptr, false);
@@ -1182,9 +1182,9 @@ draw(const GeomPrimitivePipelineReader *reader, D3D11_PRIMITIVE_TOPOLOGY topolog
     }
 
     if (_instance_count != 1) {
-      _context->DrawIndexedInstanced(reader->get_num_vertices(), _instance_count, 0, 0, 0);
+      _context->DrawIndexedInstanced(reader->get_num_vertices(), _instance_count, reader->get_first_vertex(), 0, 0);
     } else {
-      _context->DrawIndexed(reader->get_num_vertices(), 0, 0);
+      _context->DrawIndexed(reader->get_num_vertices(), reader->get_first_vertex(), 0);
     }
 
   } else {

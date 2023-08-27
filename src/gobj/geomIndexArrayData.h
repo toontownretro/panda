@@ -70,7 +70,7 @@ public:
   }
   static void init_type() {
     GeomVertexArrayData::init_type();
-    register_type(_type_handle, "GeomVertexArrayData",
+    register_type(_type_handle, "GeomIndexArrayData",
                   GeomVertexArrayData::get_class_type());
   }
   virtual TypeHandle get_type() const {

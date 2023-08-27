@@ -180,6 +180,11 @@ auto compare_objects_state = [](const CullableObject &ca, const CullableObject &
     return a->_munged_data < b->_munged_data;
   }
 
+  // And then index buffers.
+  if (a->_primitive && b->_primitive && a->_primitive->get_vertices() != b->_primitive->get_vertices()) {
+    return a->_primitive->get_vertices() < b->_primitive->get_vertices();
+  }
+
   if (sa != sb) {
     const RenderAttrib *ra = sa->get_attrib(ColorAttrib::get_class_slot());
     const RenderAttrib *rb = sb->get_attrib(ColorAttrib::get_class_slot());

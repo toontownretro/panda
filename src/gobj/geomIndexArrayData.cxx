@@ -20,6 +20,14 @@ TypeHandle GeomIndexArrayData::_type_handle;
 /**
  *
  */
+static CPT(GeomVertexArrayFormat)
+get_index_format(GeomEnums::NumericType nt) {
+  return GeomVertexArrayFormat::register_format(new GeomVertexArrayFormat(InternalName::get_index(), 1, nt, GeomEnums::C_index));
+}
+
+/**
+ *
+ */
 GeomIndexArrayData::
 GeomIndexArrayData() :
   _context(nullptr)
@@ -41,6 +49,16 @@ GeomIndexArrayData(const GeomVertexArrayFormat *format, UsageHint usage_hint) :
  *
  */
 GeomIndexArrayData::
+GeomIndexArrayData(NumericType numeric_type, UsageHint usage_hint) :
+  GeomVertexArrayData(get_index_format(numeric_type), usage_hint),
+  _context(nullptr)
+{
+}
+
+/**
+ *
+ */
+GeomIndexArrayData::
 GeomIndexArrayData(const GeomIndexArrayData &copy) :
   GeomVertexArrayData(copy),
   _context(nullptr)
@@ -53,6 +71,14 @@ GeomIndexArrayData(const GeomIndexArrayData &copy) :
 GeomIndexArrayData::
 ~GeomIndexArrayData() {
   release_all();
+}
+
+/**
+ * Required to implement CopyOnWriteObject.
+ */
+PT(CopyOnWriteObject) GeomIndexArrayData::
+make_cow_copy() {
+  return new GeomIndexArrayData(*this);
 }
 
 /**

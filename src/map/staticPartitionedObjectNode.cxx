@@ -239,7 +239,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
       int num_primitives = geom->get_num_primitives();
       for (int i = 0; i < num_primitives; ++i) {
         CPT(GeomPrimitive) prim = geom->get_primitive(i);
-        prepared_objects->enqueue_index_buffer((GeomPrimitive *)prim.p());
+        prepared_objects->enqueue_index_buffer((GeomIndexArrayData *)prim->get_vertices().p());
       }
 
       // And the material's textures.

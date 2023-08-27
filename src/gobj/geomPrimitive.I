@@ -515,10 +515,8 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
   _cdata(object->_cycler.read_unlocked(current_thread)),
 #endif
   _object(std::move(object)),
-  _vertices_cdata(nullptr),
-  _vertices(nullptr),
-  _current_thread(current_thread),
-  _has_lock(false)
+  _vertices_handle(current_thread),
+  _current_thread(current_thread)
 {
 #ifdef _DEBUG
   nassertv(_object->test_ref_count_nonzero());
@@ -527,20 +525,9 @@ GeomPrimitivePipelineReader(const GeomPrimitive *object,
 //  _cdata->ref();
 //#endif  // DO_PIPELINING
 
+  _vertices_handle.local_object();
   if (!_cdata->_vertices.is_null()) {
-    _vertices = _cdata->_vertices.get_read_pointer(current_thread);
-    if (fetch_vertices_cdata) {
-      _vertices_cdata = _vertices->_cycler.read_unlocked(current_thread);
-//#ifdef DO_PIPELINING
-//    _vertices_cdata->ref();
-//#endif  // DO_PIPELINING
-      // We must grab the lock *after* we have incremented the reference count,
-      // above.
-      if (lock) {
-        _vertices_cdata->_rw_lock.acquire();
-        _has_lock = true;
-      }
-    }
+    _vertices_handle.assign(_cdata->_vertices.get_read_pointer(), lock, fetch_vertices_cdata);
   }
 }
 
@@ -557,20 +544,6 @@ INLINE GeomPrimitivePipelineReader::
 //#ifdef DO_PIPELINING
 //  unref_delete((CycleData *)_cdata);
 //#endif  // DO_PIPELINING
-
-  if (_vertices_cdata != nullptr) {
-    // We must release the lock *before* we decrement the reference count,
-    // below.
-    if (_has_lock) {
-      _vertices_cdata->_rw_lock.release();
-    }
-
-    //_vertices->_cycler.release_read(_vertices_cdata);
-
-//#ifdef DO_PIPELINING
-//    unref_delete((CycleData *)_vertices_cdata);
-//#endif  // DO_PIPELINING
-  }
 
 #ifdef _DEBUG
   _object = nullptr;
@@ -623,7 +596,7 @@ get_index_type() const {
  */
 INLINE bool GeomPrimitivePipelineReader::
 is_indexed() const {
-  return (_vertices != nullptr);
+  return (_vertices_handle.get_object() != nullptr);
 }
 
 /**
@@ -664,8 +637,7 @@ get_max_vertex() const {
  */
 INLINE int GeomPrimitivePipelineReader::
 get_data_size_bytes() const {
-  nassertr(_vertices_cdata != nullptr, 0);
-  return _vertices_cdata->_buffer.get_size();
+  return _vertices_handle.get_data_size_bytes();
 }
 
 /**
@@ -681,7 +653,7 @@ get_modified() const {
  */
 INLINE const GeomIndexArrayData *GeomPrimitivePipelineReader::
 get_vertices() const {
-  return _vertices/*.p()*/;
+  return (const GeomIndexArrayData *)_vertices_handle.get_object();
 }
 
 /**
@@ -699,9 +671,8 @@ get_index_stride() const {
  */
 INLINE const unsigned char *GeomPrimitivePipelineReader::
 get_read_pointer(bool force) const {
-  nassertr(_vertices_cdata != nullptr, nullptr);
-  ((GeomIndexArrayData *)_vertices)->mark_used();
-  return _vertices_cdata->_buffer.get_read_pointer(force);
+  ((GeomIndexArrayData *)_vertices_handle.get_object())->mark_used();
+  return _vertices_handle.get_read_pointer(force);
 }
 
 /**
@@ -745,11 +716,7 @@ get_maxs() const {
  */
 INLINE void GeomPrimitivePipelineReader::
 acquire_rw_lock() const {
-  if (_vertices_cdata != nullptr) {
-    nassertv(!_has_lock);
-    _vertices_cdata->_rw_lock.acquire();
-    ((GeomPrimitivePipelineReader *)this)->_has_lock = true;
-  }
+  _vertices_handle.acquire_rw_lock();
 }
 
 /**
@@ -757,11 +724,7 @@ acquire_rw_lock() const {
  */
 INLINE void GeomPrimitivePipelineReader::
 release_rw_lock() const {
-  if (_vertices_cdata != nullptr) {
-    nassertv(_has_lock);
-    _vertices_cdata->_rw_lock.release();
-    ((GeomPrimitivePipelineReader *)this)->_has_lock = false;
-  }
+  _vertices_handle.release_rw_lock();
 }
 
 /**
@@ -769,14 +732,26 @@ release_rw_lock() const {
  */
 INLINE void GeomPrimitivePipelineReader::
 fetch_vertices_cdata(bool lock) const {
-  if (_vertices != nullptr && _vertices_cdata == nullptr) {
-    GeomPrimitivePipelineReader *ncthis = (GeomPrimitivePipelineReader *)this;
-    ncthis->_vertices_cdata = _vertices->_cycler.read_unlocked(_current_thread);
-    if (lock) {
-      ncthis->_vertices_cdata->_rw_lock.acquire();
-      ncthis->_has_lock = true;
-    }
-  }
+  _vertices_handle.fetch_cdata(lock);
+}
+
+/**
+ *
+ */
+INLINE const GeomVertexArrayDataHandle *GeomPrimitivePipelineReader::
+get_vertices_handle() const {
+  return &_vertices_handle;
+}
+
+/**
+ * Ensures the underlying index buffer of the primitive is prepared in the
+ * graphics pipe.  Returns the IndexBufferContext.
+ */
+INLINE IndexBufferContext *GeomPrimitivePipelineReader::
+prepare_now(PreparedGraphicsObjects *prepared_objects,
+            GraphicsStateGuardianBase *gsg) const {
+  nassertr(_vertices_handle.get_object() != nullptr, nullptr);
+  return ((GeomIndexArrayData *)_vertices_handle.get_object())->prepare_now(prepared_objects, gsg);
 }
 
 /**

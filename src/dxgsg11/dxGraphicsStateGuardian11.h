@@ -82,7 +82,7 @@ public:
   virtual VertexBufferContext *prepare_vertex_buffer(GeomVertexArrayData *data) override;
   virtual void release_vertex_buffer(VertexBufferContext *vbc) override;
 
-  virtual IndexBufferContext *prepare_index_buffer(GeomPrimitive *data) override;
+  virtual IndexBufferContext *prepare_index_buffer(GeomIndexArrayData *data) override;
   virtual void release_index_buffer(IndexBufferContext *ibc) override;
 
   virtual ShaderContext *prepare_shader(Shader *shader) override;
