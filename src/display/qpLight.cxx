@@ -12,6 +12,7 @@
  */
 
 #include "qpLight.h"
+#include "qpLightManager.h"
 
 IMPLEMENT_CLASS(qpLight);
 
@@ -31,7 +32,8 @@ qpLight(Type type) :
   _direction(LVector3::forward()),
   _inner_cone(deg_2_rad(35.0f)),
   _outer_cone(deg_2_rad(45.0f)),
-  _exponent(1.0f)
+  _exponent(1.0f),
+  _manager(nullptr)
 {
 }
 
@@ -55,5 +57,15 @@ get_cull_radius() const {
     x += csqrt(cabs(b * b - 4 * a * (c - 1.0f / y)));
     x /= 2 * a;
     return x;
+  }
+}
+
+/**
+ *
+ */
+INLINE void qpLight::
+mark_dirty() {
+  if (_manager != nullptr) {
+    _manager->mark_dynamic_lights_dirty();
   }
 }

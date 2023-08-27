@@ -57,6 +57,8 @@ PUBLISHED:
   INLINE int get_num_dynamic_lights() const { return (int)_dynamic_lights.size(); }
   INLINE qpLight *get_dynamic_light(int n) const { return _dynamic_lights[n]; }
 
+  INLINE void mark_dynamic_lights_dirty() { _dynamic_lights_dirty = true; }
+
 public:
   void update_light_buffer(Texture *buffer, PT(qpLight) *lights, int num_lights);
 
@@ -84,6 +86,8 @@ private:
 
   LightList _static_lights;
   LightSet _dynamic_lights;
+
+  bool _dynamic_lights_dirty;
 };
 
 #include "qpLightManager.I"

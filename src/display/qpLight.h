@@ -19,6 +19,8 @@
 #include "typedReferenceCount.h"
 #include "deg_2_rad.h"
 
+class qpLightManager;
+
 /**
  *
  */
@@ -43,30 +45,35 @@ PUBLISHED:
   INLINE PN_stdfloat get_linear_atten() const { return _linear_atten; }
   INLINE PN_stdfloat get_quadratic_atten() const { return _quadratic_atten; }
 
-  INLINE void set_attenuation_radius(PN_stdfloat radius) { _atten_radius = radius; }
+  INLINE void set_attenuation_radius(PN_stdfloat radius) { _atten_radius = radius; mark_dirty(); }
   INLINE PN_stdfloat get_attenuation_radius() const { return _atten_radius; }
 
-  INLINE void set_cull_radius(PN_stdfloat radius) { _cull_radius = radius; }
+  INLINE void set_cull_radius(PN_stdfloat radius) { _cull_radius = radius; mark_dirty(); }
 
   PN_stdfloat get_cull_radius() const;
 
-  INLINE void set_pos(const LPoint3 &pos) { _pos = pos; }
+  INLINE void set_pos(const LPoint3 &pos) { _pos = pos; mark_dirty(); }
   INLINE const LPoint3 &get_pos() const;
 
-  INLINE void set_direction(const LVector3 &dir) { _direction = dir; }
+  INLINE void set_direction(const LVector3 &dir) { _direction = dir; mark_dirty(); }
   INLINE const LVector3 &get_direction() const { return _direction; }
   INLINE void set_hpr(const LVecBase3 &hpr);
   INLINE void set_quat(const LQuaternion &quat);
 
-  INLINE void set_inner_cone(PN_stdfloat angle) { _inner_cone = deg_2_rad(angle); }
+  INLINE void set_inner_cone(PN_stdfloat angle) { _inner_cone = deg_2_rad(angle); mark_dirty(); }
   INLINE PN_stdfloat get_inner_cone() const { return _inner_cone; }
-  INLINE void set_outer_cone(PN_stdfloat angle) { _outer_cone = deg_2_rad(angle); }
+  INLINE void set_outer_cone(PN_stdfloat angle) { _outer_cone = deg_2_rad(angle); mark_dirty(); }
   INLINE PN_stdfloat get_outer_cone() const { return _outer_cone; }
-  INLINE void set_exponent(PN_stdfloat exp) { _exponent = exp; }
+  INLINE void set_exponent(PN_stdfloat exp) { _exponent = exp; mark_dirty(); }
   INLINE PN_stdfloat get_exponent() const { return _exponent; }
 
-  INLINE void set_light_type(Type type) { _light_type = type; }
+  INLINE void set_light_type(Type type) { _light_type = type; mark_dirty(); }
   INLINE Type get_light_type() const { return _light_type; }
+
+  void mark_dirty();
+
+public:
+  INLINE void set_manager(qpLightManager *mgr) { _manager = mgr; }
 
 private:
   Type _light_type;
@@ -96,6 +103,8 @@ private:
   PN_stdfloat _inner_cone;
   PN_stdfloat _outer_cone;
   PN_stdfloat _exponent;
+
+  qpLightManager *_manager;
 };
 
 #include "qpLight.I"

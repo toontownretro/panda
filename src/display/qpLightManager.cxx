@@ -22,7 +22,8 @@ static PStatCollector update_buffer_pcollector("LightManager:UpdateBuffer");
  */
 qpLightManager::
 qpLightManager() :
-  _dynamic_buffer_index(0)
+  _dynamic_buffer_index(0),
+  _dynamic_lights_dirty(true)
 {
 }
 
@@ -102,6 +103,7 @@ update_light_buffer(Texture *buffer, PT(qpLight) *lights, int num_lights) {
  */
 void qpLightManager::
 add_static_light(qpLight *light) {
+  light->set_manager(this);
   _static_lights.push_back(light);
 }
 
@@ -111,6 +113,9 @@ add_static_light(qpLight *light) {
 void qpLightManager::
 clear_static_lights() {
   _static_lights.clear();
+  for (qpLight *light : _static_lights) {
+    light->set_manager(nullptr);
+  }
 }
 
 /**
@@ -118,7 +123,9 @@ clear_static_lights() {
  */
 void qpLightManager::
 add_dynamic_light(qpLight *light) {
+  light->set_manager(this);
   _dynamic_lights.insert(light);
+  _dynamic_lights_dirty = true;
 }
 
 /**
@@ -126,7 +133,9 @@ add_dynamic_light(qpLight *light) {
  */
 void qpLightManager::
 remove_dynamic_light(qpLight *light) {
+  light->set_manager(nullptr);
   _dynamic_lights.erase(light);
+  _dynamic_lights_dirty = true;
 }
 
 /**
@@ -134,7 +143,11 @@ remove_dynamic_light(qpLight *light) {
  */
 void qpLightManager::
 clear_dynamic_lights() {
+  for (qpLight *light : _dynamic_lights) {
+    light->set_manager(nullptr);
+  }
   _dynamic_lights.clear();
+  _dynamic_lights_dirty = true;
 }
 
 /**
@@ -142,11 +155,17 @@ clear_dynamic_lights() {
  */
 void qpLightManager::
 update() {
-  CDWriter cdata(_cycler);
-  cdata->_dynamic_light_buffer = _dynamic_light_buffers[_dynamic_buffer_index];
-  update_light_buffer(cdata->_dynamic_light_buffer, &_dynamic_lights.front(), _dynamic_lights.size());
-  ++_dynamic_buffer_index;
-  _dynamic_buffer_index %= num_buffers;
+  if (_dynamic_lights_dirty) {
+    Texture *buffer = _dynamic_light_buffers[_dynamic_buffer_index];
+    {
+      CDWriter cdata(_cycler);
+      cdata->_dynamic_light_buffer = buffer;
+    }
+    update_light_buffer(buffer, &_dynamic_lights.front(), _dynamic_lights.size());
+    ++_dynamic_buffer_index;
+    _dynamic_buffer_index %= num_buffers;
+    _dynamic_lights_dirty = false;
+  }
 }
 
 /**

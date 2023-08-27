@@ -17,6 +17,7 @@
 INLINE void qpLight::
 set_color_linear(const LVecBase3 &color) {
   _linear_color = color;
+  mark_dirty();
 }
 
 /**
@@ -27,6 +28,7 @@ set_color_srgb(const LVecBase3 &color) {
   _linear_color[0] = cpow(color[0], 2.2f);
   _linear_color[1] = cpow(color[1], 2.2f);
   _linear_color[2] = cpow(color[2], 2.2f);
+  mark_dirty();
 }
 
 /**
@@ -54,6 +56,7 @@ set_attenuation(PN_stdfloat constant, PN_stdfloat linear, PN_stdfloat quadratic)
   _constant_atten = constant;
   _linear_atten = linear;
   _quadratic_atten = quadratic;
+  mark_dirty();
 }
 
 /**
@@ -70,6 +73,7 @@ get_pos() const {
 INLINE void qpLight::
 set_quat(const LQuaternion &quat) {
   _direction = quat.get_forward();
+  mark_dirty();
 }
 
 /**
@@ -80,4 +84,5 @@ set_hpr(const LVecBase3 &hpr) {
   LQuaternion quat;
   quat.set_hpr(hpr);
   _direction = quat.get_forward();
+  mark_dirty();
 }

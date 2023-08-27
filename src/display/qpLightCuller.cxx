@@ -17,6 +17,9 @@
 
 static PStatCollector bin_lights_pcollector("LightCuller:BinLights");
 
+// If this is changed, also update $DMODELS/src/shadersnew/common_clustered_lighting.inc.glsl!
+#define MAX_LIGHTS_PER_CLUSTER 64
+
 /**
  *
  */
@@ -29,7 +32,8 @@ qpLightCuller(qpLightManager *light_mgr) :
   _last_lens_seq(UpdateSeq::initial()),
   _lens(nullptr),
   _light_mgr(light_mgr),
-  _buffer_index(0)
+  _buffer_index(0),
+  _last_dynamic_light_count(-1)
 {
 }
 
@@ -59,7 +63,7 @@ initialize() {
 
   for (int i = 0; i < num_buffers; ++i) {
     _light_list_buffers[i] = new Texture("light-list-buffer");
-    _light_list_buffers[i]->setup_buffer_texture(_num_sectors * 64, Texture::T_int, Texture::F_r32i, GeomEnums::UH_dynamic);
+    _light_list_buffers[i]->setup_buffer_texture(_num_sectors * MAX_LIGHTS_PER_CLUSTER, Texture::T_short, Texture::F_r16i, GeomEnums::UH_dynamic);
     _light_list_buffers[i]->set_compression(Texture::CM_off);
     _light_list_buffers[i]->set_keep_ram_image(true);
   }
@@ -90,6 +94,13 @@ bin_lights(const NodePath &camera, const Lens *lens) {
 
   _lens = nullptr;
 
+  if (_last_dynamic_light_count == 0 && _light_mgr->get_num_dynamic_lights() == 0) {
+    // Light count remains at 0, so we don't have to cull anything!
+    return;
+  }
+
+  _last_dynamic_light_count = _light_mgr->get_num_dynamic_lights();
+
   for (Sector &s : _sectors) {
     s._num_lights = 0;
   }
@@ -106,7 +117,7 @@ bin_lights(const NodePath &camera, const Lens *lens) {
   }
 
   PTA_uchar light_list_img = light_list_buffer->modify_ram_image();
-  int *light_list_data = (int *)light_list_img.p();
+  int16_t *light_list_data = (int16_t *)light_list_img.p();
   memset(light_list_data, 0, light_list_img.size());
 
   // Cull each static light.
@@ -159,7 +170,7 @@ qp_aabb_sphere_overlap(const LPoint3 &mins, const LPoint3 &maxs, const LPoint3 &
  *
  */
 void qpLightCuller::
-r_bin_light(TreeNode *node, const LPoint3 &center, PN_stdfloat radius_sqr, int light_index, bool is_dynamic, int *light_list) {
+r_bin_light(TreeNode *node, const LPoint3 &center, PN_stdfloat radius_sqr, int light_index, bool is_dynamic, int16_t *light_list) {
   if (!qp_aabb_sphere_overlap(node->_mins, node->_maxs, center, radius_sqr)) {
     return;
   }
@@ -168,14 +179,15 @@ r_bin_light(TreeNode *node, const LPoint3 &center, PN_stdfloat radius_sqr, int l
     // Leaf node.  Test and mark each sector.
     for (int i : node->_sectors) {
       Sector *s = &_sectors[i];
-      if (s->_num_lights < 64 && qp_aabb_sphere_overlap(s->_mins, s->_maxs, center, radius_sqr)) {
+      if (s->_num_lights < MAX_LIGHTS_PER_CLUSTER && qp_aabb_sphere_overlap(s->_mins, s->_maxs, center, radius_sqr)) {
         int index;
         if (is_dynamic) {
           index = ~light_index;
         } else {
           index = light_index + 1;
         }
-        light_list[i * 64 + s->_num_lights] = index;
+        assert(light_index < INT16_MAX && light_index >= INT16_MIN);
+        light_list[i * MAX_LIGHTS_PER_CLUSTER + s->_num_lights] = index;
         ++(s->_num_lights);
       }
     }

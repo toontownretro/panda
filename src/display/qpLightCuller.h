@@ -100,7 +100,7 @@ PUBLISHED:
                           LPoint3 &mins, LPoint3 &maxs);
 
   void r_bin_light(TreeNode *node, const LPoint3 &center, PN_stdfloat radius_sqr,
-                   int light_index, bool is_dynamic, int *light_list);
+                   int light_index, bool is_dynamic, int16_t *light_list);
 
 
   INLINE void set_frustum_div(int x, int y, int z);
@@ -150,6 +150,8 @@ private:
   Sectors _sectors;
 
   PT(qpLightManager) _light_mgr;
+
+  int _last_dynamic_light_count;
 };
 
 #include "qpLightCuller.I"
