@@ -200,7 +200,8 @@ update(const NodePath &root) {
   }
 
   // Do the actual PSSM
-  compute_pssm_splits(transform, _csm_distance / lens->get_far(), cam, root);
+  float far_recip = std::max(1.0f / lens->get_far(), (float)lens_far_limit);
+  compute_pssm_splits(transform, _csm_distance * far_recip, cam, root);
 }
 
 /**
@@ -378,7 +379,7 @@ compute_pssm_splits(const LMatrix4 &transform, float max_distance,
       cdata->_cascade_nearfar[i] = LVecBase2(best_min_extent[2],
                                              best_max_extent[2]);
     }
-    c.lens->set_near_far(10.0f, _sun_distance * 2);
+    c.lens->set_near_far(10.0f, best_max_extent[2]);
 
    if (i == 0) {
       // Reflect the first cascade on the lens of the camera... idk.
