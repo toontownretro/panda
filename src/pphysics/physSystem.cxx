@@ -97,6 +97,8 @@ initialize() {
     return false;
   }
 
+  physx::PxCookingParams cooking_params(_scale);
+  cooking_params.midphaseDesc.setToDefault(physx::PxMeshMidPhase::eBVH34);
   _cooking = PxCreateCooking(PX_PHYSICS_VERSION, *_foundation,
                              physx::PxCookingParams(_scale));
   if (_cooking == nullptr) {
