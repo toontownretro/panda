@@ -86,11 +86,13 @@ TransformState::
   delete _inv_mat;
   _inv_mat = nullptr;
 
-  LightReMutexHolder holder(*_states_lock);
+  if (transform_cache) {
+    LightReMutexHolder holder(*_states_lock);
 
-  // unref() should have cleared these.
-  nassertv(_saved_entry == -1);
-  nassertv(_composition_cache.is_empty() && _invert_composition_cache.is_empty());
+    // unref() should have cleared these.
+    nassertv(_saved_entry == -1);
+    nassertv(_composition_cache.is_empty() && _invert_composition_cache.is_empty());
+  }
 
   // If this was true at the beginning of the destructor, but is no longer
   // true now, probably we've been double-deleted.
