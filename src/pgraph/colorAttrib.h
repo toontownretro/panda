@@ -63,7 +63,7 @@ private:
   static CPT(RenderAttrib) _vertex;
 
 PUBLISHED:
-  static int get_class_slot() {
+  INLINE static int get_class_slot() {
     return _attrib_slot;
   }
   virtual int get_slot() const {

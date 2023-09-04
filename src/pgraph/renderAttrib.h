@@ -236,7 +236,7 @@ protected:\
   virtual int compare_to_impl( const RenderAttrib *other ) const;\
   virtual size_t get_hash_impl() const;\
 PUBLISHED:\
-  static int get_class_slot() {\
+  INLINE static int get_class_slot() {\
     return _attrib_slot;\
   }\
   virtual int get_slot() const {\

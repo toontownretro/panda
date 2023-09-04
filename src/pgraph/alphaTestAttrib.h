@@ -52,7 +52,7 @@ private:
   PN_stdfloat _reference_alpha;  // should be in range [0.0-1.0]
 
 PUBLISHED:
-  static int get_class_slot() {
+  INLINE static int get_class_slot() {
     return _attrib_slot;
   }
   virtual int get_slot() const {

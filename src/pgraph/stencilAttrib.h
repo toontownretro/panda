@@ -149,7 +149,7 @@ private:
   unsigned int _stencil_render_states [SRS_total];
 
 PUBLISHED:
-  static int get_class_slot() {
+  INLINE static int get_class_slot() {
     return _attrib_slot;
   }
   virtual int get_slot() const {
