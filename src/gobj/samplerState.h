@@ -134,6 +134,9 @@ PUBLISHED:
   INLINE bool operator == (const SamplerState &other) const;
   INLINE bool operator != (const SamplerState &other) const;
   INLINE bool operator < (const SamplerState &other) const;
+  INLINE size_t get_hash() const;
+
+  void calc_hash() const;
 
   void prepare(PreparedGraphicsObjects *prepared_objects) const;
   bool is_prepared(PreparedGraphicsObjects *prepared_objects) const;
@@ -163,6 +166,8 @@ private:
   WrapMode _wrap_v : 4;
   WrapMode _wrap_w : 4;
   int _anisotropic_degree : 12;
+
+  size_t _hash;
 
   static SamplerState _default;
 

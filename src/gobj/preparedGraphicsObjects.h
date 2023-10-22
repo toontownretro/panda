@@ -31,6 +31,7 @@
 #include "bufferResidencyTracker.h"
 #include "adaptiveLru.h"
 #include "asyncFuture.h"
+#include "simpleHashMap.h"
 
 class TextureContext;
 class SamplerContext;
@@ -258,9 +259,9 @@ private:
 
   // Sampler states are stored a little bit differently, as they are mapped by
   // value and can't store the list of prepared samplers.
-  typedef pmap<SamplerState, SamplerContext *> PreparedSamplers;
+  typedef SimpleHashMap<SamplerState, SamplerContext *, method_hash<SamplerState>> PreparedSamplers;
   typedef pflat_hash_set<SamplerContext *, pointer_hash> ReleasedSamplers;
-  typedef pset<SamplerState> EnqueuedSamplers;
+  typedef pflat_set<SamplerState> EnqueuedSamplers;
 
   class BufferCacheKey {
   public:

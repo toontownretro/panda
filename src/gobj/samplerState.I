@@ -25,7 +25,8 @@ SamplerState() :
   _wrap_u(WM_repeat),
   _wrap_v(WM_repeat),
   _wrap_w(WM_repeat),
-  _anisotropic_degree(0)
+  _anisotropic_degree(0),
+  _hash(0u)
 {
 }
 
@@ -45,6 +46,7 @@ get_default() {
 INLINE void SamplerState::
 set_wrap_u(SamplerState::WrapMode wrap) {
   _wrap_u = wrap;
+  calc_hash();
 }
 
 /**
@@ -55,6 +57,7 @@ set_wrap_u(SamplerState::WrapMode wrap) {
 INLINE void SamplerState::
 set_wrap_v(SamplerState::WrapMode wrap) {
   _wrap_v = wrap;
+  calc_hash();
 }
 
 /**
@@ -63,6 +66,7 @@ set_wrap_v(SamplerState::WrapMode wrap) {
 INLINE void SamplerState::
 set_wrap_w(SamplerState::WrapMode wrap) {
   _wrap_w = wrap;
+  calc_hash();
 }
 
 /**
@@ -72,6 +76,7 @@ set_wrap_w(SamplerState::WrapMode wrap) {
 INLINE void SamplerState::
 set_minfilter(SamplerState::FilterType filter) {
   _minfilter = filter;
+  calc_hash();
 }
 
 /**
@@ -81,6 +86,7 @@ set_minfilter(SamplerState::FilterType filter) {
 INLINE void SamplerState::
 set_magfilter(SamplerState::FilterType filter) {
   _magfilter = filter;
+  calc_hash();
 }
 
 /**
@@ -95,6 +101,7 @@ set_magfilter(SamplerState::FilterType filter) {
 INLINE void SamplerState::
 set_anisotropic_degree(int anisotropic_degree) {
   _anisotropic_degree = anisotropic_degree;
+  calc_hash();
 }
 
 /**
@@ -105,6 +112,7 @@ set_anisotropic_degree(int anisotropic_degree) {
 INLINE void SamplerState::
 set_border_color(const LColor &color) {
   _border_color = color;
+  calc_hash();
 }
 
 /**
@@ -114,6 +122,7 @@ set_border_color(const LColor &color) {
 INLINE void SamplerState::
 set_min_lod(PN_stdfloat min_lod) {
   _min_lod = min_lod;
+  calc_hash();
 }
 
 /**
@@ -123,6 +132,7 @@ set_min_lod(PN_stdfloat min_lod) {
 INLINE void SamplerState::
 set_max_lod(PN_stdfloat max_lod) {
   _max_lod = max_lod;
+  calc_hash();
 }
 
 /**
@@ -133,6 +143,7 @@ set_max_lod(PN_stdfloat max_lod) {
 INLINE void SamplerState::
 set_lod_bias(PN_stdfloat lod_bias) {
   _lod_bias = lod_bias;
+  calc_hash();
 }
 
 /**
@@ -289,4 +300,12 @@ operator != (const SamplerState &other) const {
 INLINE bool SamplerState::
 operator < (const SamplerState &other) const {
   return compare_to(other) < 0;
+}
+
+/**
+ *
+ */
+INLINE size_t SamplerState::
+get_hash() const {
+  return _hash;
 }
