@@ -65,6 +65,11 @@ public:
   void disable_shader_texture_bindings() override;
   void update_shader_texture_bindings(ShaderContext *prev) override;
   void update_shader_buffer_bindings(ShaderContext *prev) override;
+  void update_shader_image_bindings(GLuint &barriers);
+#ifndef OPENGLES
+  void do_multibind_textures(GLuint &barriers);
+#endif
+  void do_bind_textures(GLuint &barriers);
 
   bool uses_standard_vertex_arrays(void) override {
     return _uses_standard_vertex_arrays;
