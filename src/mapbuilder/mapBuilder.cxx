@@ -1313,22 +1313,8 @@ add_poly_to_geom_node(MapGeom *poly, GeomVertexData *vdata, GeomNode *geom_node)
     if (bwriter.has_column() && poly->has_alpha()) {
       bwriter.add_data1i((unsigned char)poly->get_alpha(i));
     }
-
-    // Calculate tangent and binormal from the normal.
-    // FIXME: This isn't the greatest.
-    LVector3 x;
-    if (cabs(normal[0]) >= cabs(normal[1]) && cabs(normal[0]) >= cabs(normal[2])) {
-      x = LVector3::unit_x();
-    } else if (cabs(normal[1]) >= cabs(normal[2])) {
-      x = LVector3::unit_y();
-    } else {
-      x = LVector3::unit_z();
-    }
-    LVector3 v0 = (x == LVector3::unit_z()) ? LVector3::unit_x() : LVector3::unit_z();
-    LVector3 tangent = v0.cross(normal).normalized();
-    LVector3 binormal = tangent.cross(normal).normalized();
-    tanwriter.add_data3f(tangent);
-    binwriter.add_data3f(binormal);
+    tanwriter.add_data3f(poly->get_tangent(i));
+    binwriter.add_data3f(poly->get_binormal(i));
   }
 
   PT(GeomTriangles) tris = new GeomTriangles(GeomEnums::UH_static);
@@ -1411,6 +1397,8 @@ build_entity_polygons(int i) {
   LPoint3 minp, maxp;
   minp.set(1e+9, 1e+9, 1e+9);
   maxp.set(-1e+9, -1e+9, -1e+9);
+
+  pmap<MapGeom *, MapSide *> poly_sides;
 
   for (size_t j = 0; j < ent->_solids.size(); j++) {
     MapSolid *solid = ent->_solids[j];
@@ -1599,10 +1587,11 @@ build_entity_polygons(int i) {
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
           const LPoint3 &point = w.get_point(ivert);
-          poly->add_vertex_data(point, winding_normal, texcoords[ivert], lightcoords[ivert]);
+          poly->add_vertex_data(point, winding_normal, texcoords[ivert], lightcoords[ivert], LVecBase3(), LVecBase3());
         }
 
         solid_polys.push_back(poly);
+        poly_sides[poly] = side;
 
       } else {
         // This is a displacement brush face.  Build up a set of MapPolys
@@ -1613,6 +1602,7 @@ build_entity_polygons(int i) {
 
         _side_polys[geom->get_side_id()].push_back(geom);
         solid_polys.push_back(geom);
+        poly_sides[geom] = side;
 
         int start_index = w.get_closest_point(side->_displacement->_start_position);
         int ul = start_index;
@@ -1680,7 +1670,7 @@ build_entity_polygons(int i) {
             luv[1] -= lmins[1];
             luv[1] /= lightmap_size[1];*/
 
-            geom->add_vertex_data(dpoint, winding_normal, duv, luv, dvert._alpha);
+            geom->add_vertex_data(dpoint, winding_normal, duv, luv, dvert._alpha, LVecBase3(), LVecBase3());
           }
         }
 
@@ -1771,6 +1761,7 @@ build_entity_polygons(int i) {
   // First, collect all the common vertices and the polygons that reference
   // them.
 
+#if 1
   PolyVertCollection collection;
   PN_stdfloat cos_angle = cos(deg_2_rad(45.0f));
   for (size_t i = 0; i < ent_mesh->_polys.size(); ++i) {
@@ -1860,6 +1851,30 @@ build_entity_polygons(int i) {
       gi = group.begin();
     }
   }
+#endif
+
+  // Now calculate tangents and binormals after smoothing out the normals.
+  for (size_t i = 0; i < ent_mesh->_polys.size(); ++i) {
+    MapGeom *poly = ent_mesh->_polys[i];
+    auto it = poly_sides.find(poly);
+    if (it == poly_sides.end()) {
+      continue;
+    }
+    MapSide *side = (*it).second;
+
+    for (int j = 0; j < poly->get_num_vertex_rows(); ++j) {
+      LVector3 normal = poly->get_normal(j);
+      LVector3 binormal = side->_v_axis.normalized();
+      LVector3 tangent = normal.cross(binormal).normalized();
+      binormal = tangent.cross(normal).normalized();
+      // Flip tangent if backwards.
+      if (normal.dot(side->_u_axis.cross(side->_v_axis)) > 0.0f) {
+        tangent = -tangent;
+      }
+      poly->set_tangent_binormal(j, tangent, binormal);
+    }
+
+  }
 
   ThreadManager::lock();
   if (i == 0) {
@@ -1885,6 +1900,13 @@ build_lighting() {
   // Add map polygons to lightmapper.
   for (size_t i = 0; i < _meshes.size(); i++) {
     MapMesh *mesh = _meshes[i];
+    int ent_index = mesh->_entity;
+    MapEntitySrc *ent = _source_map->_entities[ent_index];
+    bool ent_has_disable_shadows = false;
+    if (ent->_properties.find("disableshadows") != ent->_properties.end()) {
+      ent_has_disable_shadows = (bool)atoi(ent->_properties["disableshadows"].c_str());
+    }
+
     for (size_t j = 0; j < mesh->_polys.size(); j++) {
       MapGeom *poly = mesh->_polys[j];
 
@@ -1914,6 +1936,9 @@ build_lighting() {
             contents |= LightBuilder::C_dont_block_light;
             contents |= LightBuilder::C_dont_reflect_light;
           }
+        }
+        if (ent_has_disable_shadows) {
+          contents |= LightBuilder::C_dont_block_light | LightBuilder::C_dont_reflect_light;
         }
 
         GeomNode *pgn = poly->get_geom_node();
@@ -2817,11 +2842,13 @@ MapGeom(int side_id, Material *mat, Texture *base_tex) :
  *
  */
 void MapGeom::
-add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv) {
+add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv, LVecBase3 tangent, LVecBase3 binormal) {
   _pos.push_back(pos);
   _normal.push_back(normal);
   _uv.push_back(uv);
   _lightmap_uv.push_back(lightmap_uv);
+  _tangent.push_back(tangent);
+  _binormal.push_back(binormal);
 }
 
 /**
@@ -2829,12 +2856,14 @@ add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_u
  */
 void MapGeom::
 add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv,
-                PN_stdfloat alpha) {
+                PN_stdfloat alpha, LVecBase3 tangent, LVecBase3 binormal) {
   _pos.push_back(pos);
   _normal.push_back(normal);
   _uv.push_back(uv);
   _lightmap_uv.push_back(lightmap_uv);
   _alpha.push_back(alpha);
+  _tangent.push_back(tangent);
+  _binormal.push_back(binormal);
 }
 
 /**
