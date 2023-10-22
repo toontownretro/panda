@@ -26,6 +26,11 @@
 #include "jobSystem.h"
 #include "job.h"
 #include "trueClock.h"
+#include "clockObject.h"
+
+AtomicAdjust::Integer result;
+
+PStatCollector main_coll("App:Main");
 
 int
 main(int argc, char *argv[]) {
@@ -33,23 +38,54 @@ main(int argc, char *argv[]) {
 
   Thread::sleep(1.0);
 
-  int array[1000];
+  std::string blah;
+  std::cout << "enter to start ";
+  std::cin >> blah;
 
-  for (int i = 0; i < 1000; ++i) {
-    array[i] = rand() % 1000;
+  PStatClient::connect();
+
+
+  int array[500];
+
+  for (int i = 0; i < 500; ++i) {
+    array[i] = rand() % 500;
   }
 
   TrueClock *clock = TrueClock::get_global_ptr();
 
   double start = clock->get_short_time();
-  parallel_quicksort(array, 1000, [](int a, int b) { return a < b; }, 10000);
+
+  while (true) {
+    ClockObject::get_global_clock()->tick();
+    PStatClient::main_tick();
+    sys->new_frame();
+
+    main_coll.start();
+
+    sys->parallel_process(500, [&] (int i) {
+
+
+      int answer = array[i];
+      AtomicAdjust::add(result, answer);
+      Thread::sleep(0.0005);
+
+
+    });
+    std::cout << "done\n";
+
+    main_coll.stop();
+  }
+
+
+
   double end = clock->get_short_time();
 
   std::cout << "Elapsed: " << end - start << "\n";
 
-  //for (int i = 0; i < 1000; ++i) {
-  //  std::cout << array[i] << "\n";
-  //}
+  std::cout << "Result: " << result << "\n";
+
+  std::cout << "any key to exit ";
+  std::cin >> blah;
 
   return 0;
 }

@@ -846,6 +846,7 @@ render_frame() {
 
 #ifdef DO_PSTATS
     PStatClient::main_tick();
+    JobSystem::get_global_ptr()->new_frame();
 
     // Reset our pcollectors that track data across the frame.
     CullTraverser::_nodes_pcollector.clear_level();
