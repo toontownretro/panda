@@ -250,8 +250,14 @@ set_shader_input(CPT_InternalName name, PyObject *value, int priority) {
     attrib = new ShaderAttrib(*(const ShaderAttrib *)prev_attrib.p());
   }
 
-  ShaderInput &input = attrib->_inputs[name];
-  invoke_extension(&input).__init__(std::move(name), value, priority);
+  auto it = attrib->find_input(name);
+  if (it == attrib->_inputs.end()) {
+    ShaderInput input;
+    invoke_extension(&input).__init__(std::move(name), value, priority);
+    attrib->_inputs.push_back(std::move(input));
+  } else {
+    invoke_extension(&(*it)).__init__(std::move(name), value, priority);
+  }
 
   if (!PyErr_Occurred()) {
     node->set_attrib(ShaderAttrib::return_new(attrib));
@@ -291,8 +297,15 @@ set_shader_inputs(PyObject *args, PyObject *kwargs) {
     }
 
     CPT_InternalName name(std::string(buffer, length));
-    ShaderInput &input = attrib->_inputs[name];
-    invoke_extension(&input).__init__(std::move(name), value);
+
+    auto it = attrib->find_input(name);
+    if (it == attrib->_inputs.end()) {
+      ShaderInput input;
+      invoke_extension(&input).__init__(std::move(name), value);
+      attrib->_inputs.push_back(std::move(input));
+    } else {
+      invoke_extension(&(*it)).__init__(std::move(name), value);
+    }
   }
 
   if (!PyErr_Occurred()) {

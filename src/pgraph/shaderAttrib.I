@@ -102,7 +102,7 @@ get_flag(int flag) const {
  */
 INLINE bool ShaderAttrib::
 has_shader_input(const InternalName *id) const {
-  return (_inputs.find(id) != _inputs.end());
+  return (find_input(id) != _inputs.end());
 }
 
 /**
@@ -265,4 +265,79 @@ set_shader_input(CPT_InternalName id, const NodePath &np, int priority) const {
 INLINE CPT(RenderAttrib) ShaderAttrib::
 set_shader_input(CPT_InternalName id, double n1, double n2, double n3, double n4, int priority) const {
   return set_shader_input(ShaderInput(std::move(id), LVecBase4((PN_stdfloat)n1, (PN_stdfloat)n2, (PN_stdfloat)n3, (PN_stdfloat)n4), priority));
+}
+
+/**
+ *
+ */
+INLINE ShaderAttrib::Inputs::iterator ShaderAttrib::
+find_input(const InternalName *name) {
+  return std::find_if(_inputs.begin(), _inputs.end(), [name](const ShaderInput &x) { return x.get_name() == name; });
+}
+
+/**
+ *
+ */
+INLINE ShaderAttrib::Inputs::const_iterator ShaderAttrib::
+find_input(const InternalName *name) const {
+  return std::find_if(_inputs.cbegin(), _inputs.cend(), [name](const ShaderInput &x) { return x.get_name() == name; });
+}
+
+/**
+ *
+ */
+INLINE void ShaderAttrib::
+insert_input(const ShaderInput &input) {
+  Inputs::iterator it = find_input(input.get_name());
+  if (it != _inputs.end()) {
+    (*it) = input;
+  } else {
+    _inputs.push_back(input);
+  }
+}
+
+/**
+ *
+ */
+INLINE void ShaderAttrib::
+insert_input(ShaderInput &&input) {
+  Inputs::iterator it = find_input(input.get_name());
+  if (it != _inputs.end()) {
+    (*it) = std::move(input);
+  } else {
+    _inputs.push_back(std::move(input));
+  }
+}
+
+/**
+ * Returns the shader object associated with the node.  If get_override
+ * returns true, but get_shader returns NULL, that means that this attribute
+ * should disable the shader.
+ */
+INLINE const Shader *ShaderAttrib::
+get_shader() const {
+  return _shader;
+}
+
+/**
+ * Returns the ShaderInput of the given name.  If no such name is found, this
+ * function does not return NULL --- it returns the "blank" ShaderInput.
+ */
+INLINE const ShaderInput &ShaderAttrib::
+get_shader_input(const InternalName *id) const {
+  Inputs::const_iterator i = find_input(id);
+  if (i != _inputs.end()) {
+    return (*i);
+  } else {
+    return ShaderInput::get_blank();
+  }
+}
+
+/**
+ * Returns the ShaderInput of the given name.  If no such name is found, this
+ * function does not return NULL --- it returns the "blank" ShaderInput.
+ */
+INLINE const ShaderInput &ShaderAttrib::
+get_shader_input(const std::string &id) const {
+  return get_shader_input(InternalName::make(id));
 }
