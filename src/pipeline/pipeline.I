@@ -30,11 +30,7 @@ get_render_pipeline() {
  */
 INLINE unsigned int Pipeline::
 get_version(Thread *current_thread) const {
-  if (_cycler == nullptr) {
-    return 0;
-  }
-  CDReader cdata(*_cycler, current_thread);
-  return cdata->_pipeline_version;
+  return _next_cycle_seq - current_thread->get_pipeline_stage();
 }
 
 /**
@@ -77,21 +73,3 @@ get_num_dirty_cyclers() const {
   return _num_dirty_cyclers;
 }
 #endif  // THREADED_PIPELINE
-
-/**
- *
- */
-INLINE Pipeline::CData::
-CData() :
-  _pipeline_version(0)
-{
-}
-
-/**
- *
- */
-INLINE Pipeline::CData::
-CData(const CData &copy) :
-  _pipeline_version(copy._pipeline_version)
-{
-}

@@ -19,7 +19,7 @@
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(Pipeline *pipeline) :
   PipelineCyclerBase(new CycleDataType, pipeline)
 {
@@ -29,7 +29,7 @@ PipelineCycler(Pipeline *pipeline) :
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline) :
   PipelineCyclerBase(new CycleDataType(std::move(initial_data)), pipeline)
 {
@@ -39,7 +39,7 @@ PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline) :
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(const PipelineCycler<CycleDataType> &copy) :
   PipelineCyclerBase(copy)
 {
@@ -49,7 +49,7 @@ PipelineCycler(const PipelineCycler<CycleDataType> &copy) :
  *
  */
 template<class CycleDataType>
-INLINE void PipelineCycler<CycleDataType>::
+ALWAYS_INLINE void PipelineCycler<CycleDataType>::
 operator = (const PipelineCycler<CycleDataType> &copy) {
   PipelineCyclerBase::operator = (copy);
 }
@@ -58,7 +58,7 @@ operator = (const PipelineCycler<CycleDataType> &copy) {
  * See PipelineCyclerBase::read_unlocked().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_unlocked(Thread *current_thread) const {
   return (const CycleDataType *)PipelineCyclerBase::read_unlocked(current_thread);
 }
@@ -67,7 +67,7 @@ read_unlocked(Thread *current_thread) const {
  * See PipelineCyclerBase::read().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read(Thread *current_thread) const {
   return (const CycleDataType *)PipelineCyclerBase::read(current_thread);
 }
@@ -76,7 +76,7 @@ read(Thread *current_thread) const {
  * See PipelineCyclerBase::write().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write(Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::write(current_thread);
 }
@@ -85,7 +85,7 @@ write(Thread *current_thread) {
  * See PipelineCyclerBase::write_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_upstream(bool force_to_0, Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::write_upstream(force_to_0, current_thread);
 }
@@ -94,7 +94,7 @@ write_upstream(bool force_to_0, Thread *current_thread) {
  * See PipelineCyclerBase::elevate_read().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read(const CycleDataType *pointer, Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::elevate_read(pointer, current_thread);
 }
@@ -103,7 +103,7 @@ elevate_read(const CycleDataType *pointer, Thread *current_thread) {
  * See PipelineCyclerBase::elevate_read_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_upstream(const CycleDataType *pointer, bool force_to_0,
                       Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::elevate_read_upstream(pointer, force_to_0, current_thread);
@@ -113,7 +113,7 @@ elevate_read_upstream(const CycleDataType *pointer, bool force_to_0,
  * See PipelineCyclerBase::read_stage_unlocked().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_stage_unlocked(int pipeline_stage) const {
   return (const CycleDataType *)PipelineCyclerBase::read_stage_unlocked(pipeline_stage);
 }
@@ -122,7 +122,7 @@ read_stage_unlocked(int pipeline_stage) const {
  * See PipelineCyclerBase::read_stage().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_stage(int pipeline_stage, Thread *current_thread) const {
   return (const CycleDataType *)PipelineCyclerBase::read_stage(pipeline_stage, current_thread);
 }
@@ -131,7 +131,7 @@ read_stage(int pipeline_stage, Thread *current_thread) const {
  * See PipelineCyclerBase::elevate_read_stage().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_stage(int pipeline_stage, const CycleDataType *pointer,
                    Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::elevate_read_stage(pipeline_stage, pointer, current_thread);
@@ -141,7 +141,7 @@ elevate_read_stage(int pipeline_stage, const CycleDataType *pointer,
  * See PipelineCyclerBase::elevate_read_stage_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_stage_upstream(int pipeline_stage, const CycleDataType *pointer,
                             bool force_to_0, Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::elevate_read_stage_upstream(pipeline_stage, pointer, force_to_0, current_thread);
@@ -151,7 +151,7 @@ elevate_read_stage_upstream(int pipeline_stage, const CycleDataType *pointer,
  * See PipelineCyclerBase::write_stage().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_stage(int pipeline_stage, Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::write_stage(pipeline_stage, current_thread);
 }
@@ -160,7 +160,7 @@ write_stage(int pipeline_stage, Thread *current_thread) {
  * See PipelineCyclerBase::write_stage_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_stage_upstream(int pipeline_stage, bool force_to_0,
                      Thread *current_thread) {
   return (CycleDataType *)PipelineCyclerBase::write_stage_upstream(pipeline_stage, force_to_0, current_thread);
@@ -173,7 +173,7 @@ write_stage_upstream(int pipeline_stage, bool force_to_0,
  * You should never call this function directly.
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 cheat() const {
   return (CycleDataType *)PipelineCyclerBase::cheat();
 }
@@ -186,7 +186,7 @@ cheat() const {
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(Pipeline *pipeline) :
   PipelineCyclerBase(&_typed_data, pipeline)
 {
@@ -196,7 +196,7 @@ PipelineCycler(Pipeline *pipeline) :
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline) :
   PipelineCyclerBase(&_typed_data, pipeline),
   _typed_data(std::move(initial_data))
@@ -207,7 +207,7 @@ PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline) :
  *
  */
 template<class CycleDataType>
-INLINE PipelineCycler<CycleDataType>::
+ALWAYS_INLINE PipelineCycler<CycleDataType>::
 PipelineCycler(const PipelineCycler<CycleDataType> &copy) :
   PipelineCyclerBase(&_typed_data),
   _typed_data(copy._typed_data)
@@ -218,7 +218,7 @@ PipelineCycler(const PipelineCycler<CycleDataType> &copy) :
  *
  */
 template<class CycleDataType>
-INLINE void PipelineCycler<CycleDataType>::
+ALWAYS_INLINE void PipelineCycler<CycleDataType>::
 operator = (const PipelineCycler<CycleDataType> &copy) {
   _typed_data = copy._typed_data;
 }
@@ -227,7 +227,7 @@ operator = (const PipelineCycler<CycleDataType> &copy) {
  * See PipelineCyclerBase::read_unlocked().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_unlocked(Thread *) const {
   return &_typed_data;
 }
@@ -236,7 +236,7 @@ read_unlocked(Thread *) const {
  * See PipelineCyclerBase::read().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read(Thread *) const {
   return &_typed_data;
 }
@@ -245,7 +245,7 @@ read(Thread *) const {
  * See PipelineCyclerBase::write().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write(Thread *) {
   return &_typed_data;
 }
@@ -254,7 +254,7 @@ write(Thread *) {
  * See PipelineCyclerBase::write_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_upstream(bool, Thread *) {
   return &_typed_data;
 }
@@ -263,7 +263,7 @@ write_upstream(bool, Thread *) {
  * See PipelineCyclerBase::elevate_read().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read(const CycleDataType *, Thread *) {
   return &_typed_data;
 }
@@ -272,7 +272,7 @@ elevate_read(const CycleDataType *, Thread *) {
  * See PipelineCyclerBase::elevate_read_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_upstream(const CycleDataType *, bool, Thread *) {
   return &_typed_data;
 }
@@ -281,7 +281,7 @@ elevate_read_upstream(const CycleDataType *, bool, Thread *) {
  * See PipelineCyclerBase::read_stage_unlocked().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_stage_unlocked(int) const {
   return &_typed_data;
 }
@@ -290,7 +290,7 @@ read_stage_unlocked(int) const {
  * See PipelineCyclerBase::read_stage().
  */
 template<class CycleDataType>
-INLINE const CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE const CycleDataType *PipelineCycler<CycleDataType>::
 read_stage(int, Thread *) const {
   return &_typed_data;
 }
@@ -299,7 +299,7 @@ read_stage(int, Thread *) const {
  * See PipelineCyclerBase::elevate_read_stage().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_stage(int, const CycleDataType *, Thread *) {
   return &_typed_data;
 }
@@ -308,7 +308,7 @@ elevate_read_stage(int, const CycleDataType *, Thread *) {
  * See PipelineCyclerBase::elevate_read_stage_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 elevate_read_stage_upstream(int, const CycleDataType *, bool, Thread *) {
   return &_typed_data;
 }
@@ -317,7 +317,7 @@ elevate_read_stage_upstream(int, const CycleDataType *, bool, Thread *) {
  * See PipelineCyclerBase::write_stage().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_stage(int, Thread *) {
   return &_typed_data;
 }
@@ -326,7 +326,7 @@ write_stage(int, Thread *) {
  * See PipelineCyclerBase::write_stage_upstream().
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 write_stage_upstream(int, bool, Thread *) {
   return &_typed_data;
 }
@@ -338,7 +338,7 @@ write_stage_upstream(int, bool, Thread *) {
  * You should never call this function directly.
  */
 template<class CycleDataType>
-INLINE CycleDataType *PipelineCycler<CycleDataType>::
+ALWAYS_INLINE CycleDataType *PipelineCycler<CycleDataType>::
 cheat() const {
   return (CycleDataType *)&_typed_data;
 }

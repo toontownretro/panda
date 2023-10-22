@@ -49,46 +49,46 @@ public:
   void operator = (const PipelineCyclerTrueImpl &copy);
   ~PipelineCyclerTrueImpl();
 
-  INLINE void acquire();
-  INLINE void acquire(Thread *current_thread);
-  INLINE void release();
+  ALWAYS_INLINE void acquire();
+  ALWAYS_INLINE void acquire(Thread *current_thread);
+  ALWAYS_INLINE void release();
 
-  INLINE const CycleData *read_unlocked(Thread *current_thread) const;
+  ALWAYS_INLINE const CycleData *read_unlocked(Thread *current_thread) const;
 
-  INLINE const CycleData *read(Thread *current_thread) const;
-  INLINE void increment_read(const CycleData *pointer) const;
-  INLINE void release_read(const CycleData *pointer) const;
+  ALWAYS_INLINE const CycleData *read(Thread *current_thread) const;
+  ALWAYS_INLINE void increment_read(const CycleData *pointer) const;
+  ALWAYS_INLINE void release_read(const CycleData *pointer) const;
 
-  INLINE CycleData *write(Thread *current_thread);
-  INLINE CycleData *write_upstream(bool force_to_0, Thread *current_thread);
-  INLINE CycleData *elevate_read(const CycleData *pointer, Thread *current_thread);
-  INLINE CycleData *elevate_read_upstream(const CycleData *pointer, bool force_to_0, Thread *current_thread);
-  INLINE void increment_write(CycleData *pointer) const;
-  INLINE void release_write(CycleData *pointer);
+  ALWAYS_INLINE CycleData *write(Thread *current_thread);
+  ALWAYS_INLINE CycleData *write_upstream(bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE CycleData *elevate_read(const CycleData *pointer, Thread *current_thread);
+  ALWAYS_INLINE CycleData *elevate_read_upstream(const CycleData *pointer, bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE void increment_write(CycleData *pointer) const;
+  ALWAYS_INLINE void release_write(CycleData *pointer);
 
   ALWAYS_INLINE bool is_dirty() const;
-  INLINE bool is_dirty(unsigned int seq) const;
-  INLINE void mark_dirty(unsigned int seq);
-  INLINE void clear_dirty();
+  ALWAYS_INLINE bool is_dirty(unsigned int seq) const;
+  ALWAYS_INLINE void mark_dirty(unsigned int seq);
+  ALWAYS_INLINE void clear_dirty();
 
-  INLINE int get_num_stages() const;
-  INLINE const CycleData *read_stage_unlocked(int pipeline_stage) const;
-  INLINE const CycleData *read_stage(int pipeline_stage, Thread *current_thread) const;
-  INLINE void release_read_stage(int pipeline_stage, const CycleData *pointer) const;
+  ALWAYS_INLINE int get_num_stages() const;
+  ALWAYS_INLINE const CycleData *read_stage_unlocked(int pipeline_stage) const;
+  ALWAYS_INLINE const CycleData *read_stage(int pipeline_stage, Thread *current_thread) const;
+  ALWAYS_INLINE void release_read_stage(int pipeline_stage, const CycleData *pointer) const;
   CycleData *write_stage(int pipeline_stage, Thread *current_thread);
   CycleData *write_stage_upstream(int pipeline_stage, bool force_to_0,
                                   Thread *current_thread);
-  INLINE CycleData *elevate_read_stage(int pipeline_stage, const CycleData *pointer,
+  ALWAYS_INLINE CycleData *elevate_read_stage(int pipeline_stage, const CycleData *pointer,
                                        Thread *current_thread);
-  INLINE CycleData *elevate_read_stage_upstream(int pipeline_stage, const CycleData *pointer,
+  ALWAYS_INLINE CycleData *elevate_read_stage_upstream(int pipeline_stage, const CycleData *pointer,
                                                 bool force_to_0, Thread *current_thread);
-  INLINE void release_write_stage(int pipeline_stage, CycleData *pointer);
+  ALWAYS_INLINE void release_write_stage(int pipeline_stage, CycleData *pointer);
 
-  INLINE TypeHandle get_parent_type() const;
+  ALWAYS_INLINE TypeHandle get_parent_type() const;
 
-  INLINE CycleData *cheat() const;
-  INLINE int get_read_count() const;
-  INLINE int get_write_count() const;
+  ALWAYS_INLINE CycleData *cheat() const;
+  ALWAYS_INLINE int get_read_count() const;
+  ALWAYS_INLINE int get_write_count() const;
 
 public:
   // We redefine the ReMutex class, solely so we can define the output()
@@ -96,7 +96,7 @@ public:
   // production case.
   class CyclerMutex : public ReMutex {
   public:
-    INLINE CyclerMutex(PipelineCyclerTrueImpl *cycler);
+    ALWAYS_INLINE CyclerMutex(PipelineCyclerTrueImpl *cycler);
 
 #ifdef DEBUG_THREADS
     virtual void output(std::ostream &out) const;
@@ -106,21 +106,19 @@ public:
 
 private:
   PT(CycleData) cycle();
-  INLINE PT(CycleData) cycle_2();
-  INLINE PT(CycleData) cycle_3();
+  ALWAYS_INLINE PT(CycleData) cycle_2();
+  //ALWAYS_INLINE PT(CycleData) cycle_3();
   void set_num_stages(int num_stages);
 
 private:
-  Pipeline *_pipeline;
-
   // An array of PT(CycleData) objects representing the different copies of
   // the cycled data, one for each stage.
-  class CycleDataNode {
+  class ALIGN_64BYTE CycleDataNode {
   public:
     CycleDataNode() = default;
-    INLINE CycleDataNode(const CycleDataNode &copy);
-    INLINE ~CycleDataNode();
-    INLINE void operator = (const CycleDataNode &copy);
+    ALWAYS_INLINE CycleDataNode(const CycleDataNode &copy);
+    ALWAYS_INLINE ~CycleDataNode();
+    ALWAYS_INLINE void operator = (const CycleDataNode &copy);
 
     NPT(CycleData) _cdata;
     int _writes_outstanding;
@@ -128,9 +126,11 @@ private:
   // We used to heap allocate this array to the number of pipeline stages,
   // but we're never going to have more than 3 pipeline stages and I want
   // to avoid the extra indirection.
-  CycleDataNode _data[3];
+  CycleDataNode _data[2];
   int _num_stages;
   unsigned int _dirty;
+
+  Pipeline *_pipeline;
 
   CyclerMutex _lock;
 
