@@ -18,6 +18,7 @@
 #include "materialParamBool.h"
 #include "materialParamVector.h"
 #include "materialParamFloat.h"
+#include "materialParamInt.h"
 #include "materialParamColor.h"
 #include "shaderAttrib.h"
 #include "textureAttrib.h"
@@ -79,6 +80,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BASETEXTURE2("BASETEXTURE2");
   static const CPT_InternalName IN_BUMPMAP2("BUMPMAP2");
   static const CPT_InternalName IN_CLIPPING("CLIPPING");
+  static const CPT_InternalName IN_DETAIL("DETAIL");
+  static const CPT_InternalName IN_LIGHTMAP("LIGHTMAP");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -90,6 +93,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NUM_CASCADES("NUM_CASCADES");
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
+  static const CPT_InternalName IN_DETAIL_BLEND_MODE("DETAIL_BLEND_MODE");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -185,20 +189,22 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   Texture *lm_tex = tattr->get_on_texture(lm_stage);
   if (lm_tex != nullptr) {
+    setup.set_spec_constant(IN_LIGHTMAP, 1);
     setup.set_input(ShaderInput("lightmapTextureL0", lm_tex));
+    Texture *lm_tex_l1y = tattr->get_on_texture(lm_stage_l1y);
+    if (lm_tex_l1y != nullptr) {
+      setup.set_input(ShaderInput("lightmapTextureL1y", lm_tex_l1y));
+    }
+    Texture *lm_tex_l1z = tattr->get_on_texture(lm_stage_l1z);
+    if (lm_tex_l1z != nullptr) {
+      setup.set_input(ShaderInput("lightmapTextureL1z", lm_tex_l1z));
+    }
+    Texture *lm_tex_l1x = tattr->get_on_texture(lm_stage_l1x);
+    if (lm_tex_l1x != nullptr) {
+      setup.set_input(ShaderInput("lightmapTextureL1x", lm_tex_l1x));
+    }
   }
-  Texture *lm_tex_l1y = tattr->get_on_texture(lm_stage_l1y);
-  if (lm_tex_l1y != nullptr) {
-    setup.set_input(ShaderInput("lightmapTextureL1y", lm_tex_l1y));
-  }
-  Texture *lm_tex_l1z = tattr->get_on_texture(lm_stage_l1z);
-  if (lm_tex_l1z != nullptr) {
-    setup.set_input(ShaderInput("lightmapTextureL1z", lm_tex_l1z));
-  }
-  Texture *lm_tex_l1x = tattr->get_on_texture(lm_stage_l1x);
-  if (lm_tex_l1x != nullptr) {
-    setup.set_input(ShaderInput("lightmapTextureL1x", lm_tex_l1x));
-  }
+
   if (env_cubemap) {
     envmap_tex = tattr->get_on_texture(envmap_stage);
   }
@@ -255,6 +261,34 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       selfillum_tint = DCAST(MaterialParamVector, param)->get_value();
     }
     setup.set_input(ShaderInput("selfIllumTint", selfillum_tint));
+  }
+
+  // Detail texture.
+  if ((param = material->get_param("detail")) != nullptr) {
+    setup.set_pixel_shader_combo(IN_DETAIL, 1);
+
+    Texture *detail_tex = DCAST(MaterialParamTexture, param)->get_value();
+
+    LVecBase2 params(1.0f, 4.0f);
+    if ((param = material->get_param("detailblendfactor")) != nullptr) {
+      params[0] = DCAST(MaterialParamFloat, param)->get_value();
+    }
+    if ((param = material->get_param("detailscale")) != nullptr) {
+      params[1] = DCAST(MaterialParamFloat, param)->get_value();
+    }
+    LVecBase3 detail_tint(1.0f);
+    if ((param = material->get_param("detailtint")) != nullptr) {
+      detail_tint = DCAST(MaterialParamVector, param)->get_value();
+    }
+    int blend_mode = 0;
+    if ((param = material->get_param("detailblendmode")) != nullptr) {
+      blend_mode = DCAST(MaterialParamInt, param)->get_value();
+    }
+
+    setup.set_input(ShaderInput("detailSampler", detail_tex));
+    setup.set_input(ShaderInput("detailParams", params));
+    setup.set_input(ShaderInput("detailTint", detail_tint));
+    setup.set_spec_constant(IN_DETAIL_BLEND_MODE, blend_mode);
   }
 
   const LightAttrib *la;
