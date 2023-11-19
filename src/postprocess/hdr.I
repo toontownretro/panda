@@ -68,3 +68,21 @@ INLINE float HDRPass::
 get_exposure_value() const {
   return _exposure_value;
 }
+
+/**
+ *
+ */
+INLINE HDRPass::CData::
+CData() :
+  _query(nullptr)
+{
+}
+
+/**
+ *
+ */
+INLINE HDRPass::CData::
+CData(const CData &copy) :
+  _query(copy._query)
+{
+}
