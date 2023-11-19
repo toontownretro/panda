@@ -189,7 +189,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   Texture *lm_tex = tattr->get_on_texture(lm_stage);
   if (lm_tex != nullptr) {
-    setup.set_spec_constant(IN_LIGHTMAP, 1);
+    setup.set_pixel_shader_combo(IN_LIGHTMAP, 1);
     setup.set_input(ShaderInput("lightmapTextureL0", lm_tex));
     Texture *lm_tex_l1y = tattr->get_on_texture(lm_stage_l1y);
     if (lm_tex_l1y != nullptr) {
