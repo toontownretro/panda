@@ -47,10 +47,12 @@ PandaNode::SceneRootFunc *PandaNode::_scene_root_func;
 UpdateSeq PandaNode::_reset_prev_transform_seq;
 DrawMask PandaNode::_overall_bit = DrawMask::bit(31);
 
+
 PStatCollector PandaNode::_update_bounds_pcollector("*:Bounds");
 PStatCollector PandaNode::_update_masks_pcollector("*:Bounds:Masks");
 PStatCollector PandaNode::_update_clipping_pcollector("*:Bounds:Clipping");
 PStatCollector PandaNode::_update_cache_pcollector("*:Bounds:Cache");
+PStatCollector PandaNode::_update_nested_vertices_pcollector("*:Nested Vertices");
 
 TypeHandle PandaNode::_type_handle;
 TypeHandle PandaNode::DetectCallbackData::_type_handle;
@@ -2004,7 +2006,7 @@ get_nested_vertices(Thread *current_thread) const {
     // The cache is stale; it needs to be rebuilt.
     int result;
     {
-      PStatTimer timer(_update_bounds_pcollector);
+      PStatTimer timer(_update_nested_vertices_pcollector);
       CDStageWriter cdataw =
         ((PandaNode *)this)->update_cached(true, pipeline_stage, cdata);
       result = cdataw->_nested_vertices;
