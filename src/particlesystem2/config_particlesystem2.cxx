@@ -66,6 +66,7 @@ init_libparticlesystem2() {
   LinearMotionParticleFunction::init_type();
   AngularMotionParticleFunction::init_type();
   LifespanKillerParticleFunction::init_type();
+  VelocityKillerParticleFunction::init_type();
   LerpParticleFunction::init_type();
   VelocityJitterParticleFunction::init_type();
   BounceParticleFunction::init_type();
@@ -83,6 +84,7 @@ init_libparticlesystem2() {
 
   ParticleConstraint2::init_type();
   PathParticleConstraint::init_type();
+  CollisionParticleConstraint::init_type();
 
   ParticleSystem2::init_type();
 
@@ -107,6 +109,7 @@ init_libparticlesystem2() {
   LinearMotionParticleFunction::register_with_read_factory();
   AngularMotionParticleFunction::register_with_read_factory();
   LifespanKillerParticleFunction::register_with_read_factory();
+  VelocityKillerParticleFunction::register_with_read_factory();
   LerpParticleFunction::register_with_read_factory();
   VelocityJitterParticleFunction::register_with_read_factory();
   BounceParticleFunction::register_with_read_factory();
@@ -118,6 +121,7 @@ init_libparticlesystem2() {
   SpriteParticleRenderer2::register_with_read_factory();
 
   PathParticleConstraint::register_with_read_factory();
+  CollisionParticleConstraint::register_with_read_factory();
 
   VectorParticleForce::register_with_read_factory();
   CylinderVortexParticleForce::register_with_read_factory();

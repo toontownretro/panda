@@ -16,7 +16,16 @@
  */
 INLINE ParticleManager2::
 ParticleManager2() :
-  _removed_systems_lock("removed-systems-lock")
+  _removed_systems_lock("removed-systems-lock"),
+  _tracer(nullptr),
+  _trace_mask(CollideMask::all_on()),
+  _want_fixed_timestep(false),
+  _fixed_timestep(1 / 60.0),
+  _local_time(0.0),
+  _last_frame_time(0.0),
+  _max_substeps(10),
+  _tick_count(0),
+  _frame_time(0.0)
 {
 }
 

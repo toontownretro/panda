@@ -18,6 +18,7 @@
 
 IMPLEMENT_CLASS(ParticleConstraint2);
 IMPLEMENT_CLASS(PathParticleConstraint);
+IMPLEMENT_CLASS(CollisionParticleConstraint);
 
 /**
  *
@@ -234,6 +235,127 @@ make_from_bam(const FactoryParams &params) {
  *
  */
 void PathParticleConstraint::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+CollisionParticleConstraint::
+CollisionParticleConstraint() :
+  _slide(0.0f),
+  _bounce(0.5f),
+  _accuracy_tolerance(1.0f),
+  _kill_on_collision(false),
+  _radius_scale(1.0f)
+{
+}
+
+/**
+ *
+ */
+bool CollisionParticleConstraint::
+enforce_constraint(double time, double dt, ParticleSystem2 *system) {
+  if (system->_tracer == nullptr) {
+    return false;
+  }
+
+  bool bounce_or_slide = (_bounce != 0.0f) || (_slide != 0.0f);
+
+  bool changed = false;
+
+  for (Particle &p : system->_particles) {
+    if (!p._alive || p._velocity.length_squared() <= 0.1f) {
+      p._velocity.set(0, 0, 0);
+      continue;
+    }
+
+    PN_stdfloat radius_factor = std::max(p._scale[0], p._scale[1]) * _radius_scale;
+
+    LVector3 delta = p._pos - p._prev_pos;
+    LVector3 delta_norm = delta;
+    if (!delta_norm.normalize()) {
+      continue;
+    }
+    LPoint3 end_point = p._pos + delta_norm * radius_factor;
+
+    TraceInterface::TraceResult tr = system->_tracer->trace_line(p._prev_pos, end_point, system->_trace_mask);
+    if (tr.has_hit()) {
+      changed = true;
+
+      PN_stdfloat frac = tr.get_frac();
+      PN_stdfloat leftover_frac = tr.get_starts_solid() ? 0.0f : 1.0f - frac;
+
+      LPoint3 new_point = p._prev_pos + delta * frac;
+
+      if (bounce_or_slide) {
+        LVector3 bounce = 2.0f * tr.get_surface_normal() * tr.get_surface_normal().dot(p._velocity) - p._velocity;
+        bounce *= _bounce;
+        LVector3 new_vel = -bounce;
+        //bounce *= leftover_frac;
+        new_point -= bounce * dt;
+
+        /* LVector3 slide = tr.get_surface_normal() * tr.get_surface_normal().dot(delta) - delta;
+        slide *= _slide;
+        new_vel += slide;
+        slide *= leftover_frac;
+        new_point += slide; */
+
+        //p._prev_pos = new_point - (new_vel * dt);
+        p._velocity = new_vel;
+      }
+
+      p._pos = new_point;
+    }
+  }
+
+  return changed;
+}
+
+/**
+ *
+ */
+void CollisionParticleConstraint::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_slide);
+  me.add_stdfloat(_bounce);
+  me.add_stdfloat(_accuracy_tolerance);
+  me.add_stdfloat(_radius_scale);
+  me.add_bool(_kill_on_collision);
+}
+
+/**
+ *
+ */
+void CollisionParticleConstraint::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _slide = scan.get_stdfloat();
+  _bounce = scan.get_stdfloat();
+  _accuracy_tolerance = scan.get_stdfloat();
+  _radius_scale = scan.get_stdfloat();
+  _kill_on_collision = scan.get_bool();
+}
+
+/**
+ *
+ */
+TypedWritable *CollisionParticleConstraint::
+make_from_bam(const FactoryParams &params) {
+  CollisionParticleConstraint *obj = new CollisionParticleConstraint;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void CollisionParticleConstraint::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

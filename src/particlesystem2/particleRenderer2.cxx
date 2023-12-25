@@ -248,7 +248,7 @@ update(ParticleSystem2 *system) {
       continue;
     }
 
-    vwriter.set_data3f(p->_pos);
+    vwriter.set_data3f(p->_smooth_pos);
     cwriter.set_data4f(p->_color);
     swriter.set_data2f(p->_scale);
     rwriter.set_data1f(p->_rotation);

@@ -102,6 +102,53 @@ private:
   PN_stdfloat _max_distance, _max_distance_mid, _max_distance_end;
 };
 
+/**
+ * Makes particles collide with the scene.  Requires the system/manager to be given a
+ * valid TraceInterface pointer.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 CollisionParticleConstraint : public ParticleConstraint2 {
+  DECLARE_CLASS(CollisionParticleConstraint, ParticleConstraint2);
+
+PUBLISHED:
+  CollisionParticleConstraint();
+
+  INLINE void set_slide(PN_stdfloat slide) { _slide = slide; }
+  INLINE PN_stdfloat get_slide() const { return _slide; }
+  MAKE_PROPERTY(slide, get_slide, set_slide);
+
+  INLINE void set_bounce(PN_stdfloat bounce) { _bounce = bounce; }
+  INLINE PN_stdfloat get_bounce() const { return _bounce; }
+  MAKE_PROPERTY(bounce, get_bounce, set_bounce);
+
+  INLINE void set_accuracy_tolerance(PN_stdfloat tolerance) { _accuracy_tolerance = tolerance; }
+  INLINE PN_stdfloat get_accuracy_tolerance() const { return _accuracy_tolerance; }
+  MAKE_PROPERTY(accuracy_tolerance, get_accuracy_tolerance, set_accuracy_tolerance);
+
+  INLINE void set_kill_on_collision(bool flag) { _kill_on_collision = flag; }
+  INLINE bool get_kill_on_collision() const { return _kill_on_collision; }
+  MAKE_PROPERTY(kill_on_collision, get_kill_on_collision, set_kill_on_collision);
+
+  INLINE void set_radius_scale(PN_stdfloat scale) { _radius_scale = scale; }
+  INLINE PN_stdfloat get_radius_scale() const { return _radius_scale; }
+  MAKE_PROPERTY(radius_scale, get_radius_scale, set_radius_scale);
+
+public:
+  virtual bool enforce_constraint(double time, double dt, ParticleSystem2 *system) override;
+
+public:
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+
+private:
+  PN_stdfloat _slide;
+  PN_stdfloat _bounce;
+  PN_stdfloat _radius_scale;
+  bool _kill_on_collision;
+  PN_stdfloat _accuracy_tolerance;
+};
+
 #include "particleConstraint2.I"
 
 #endif // PARTICLECONSTRAINT2_H

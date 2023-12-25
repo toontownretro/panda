@@ -38,7 +38,13 @@ ParticleSystem2(const std::string &name) :
   _pool_size(256),
   _num_alive_particles(0),
   _dt(0.0),
-  _prev_dt(0.05)
+  _prev_dt(0.05),
+  _tracer(nullptr),
+  _trace_mask(CollideMask::all_on()),
+  _num_phys_steps(0),
+  _phys_remainder(0.0),
+  _phys_timestep(1 / 60.0),
+  _phys_tick(0)
 {
 }
 
@@ -62,7 +68,13 @@ ParticleSystem2(const ParticleSystem2 &copy) :
   _functions(copy._functions),
   _forces(copy._forces),
   _constraints(copy._constraints),
-  _renderers(copy._renderers)
+  _renderers(copy._renderers),
+  _tracer(copy._tracer),
+  _trace_mask(copy._trace_mask),
+  _phys_timestep(copy._phys_timestep),
+  _phys_remainder(0.0),
+  _num_phys_steps(0),
+  _phys_tick(0)
 {
 }
 
@@ -265,6 +277,9 @@ priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
   _soft_stopped = false;
 
   _elapsed = time;
+  _phys_tick = 0;
+  _phys_remainder = time;
+  _num_phys_steps = 0;
   _start_time = ClockObject::get_global_clock()->get_frame_time() - time;
 
   _num_alive_particles = 0;
@@ -275,6 +290,7 @@ priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
   for (int i = 0; i < (int)_particles.size(); ++i) {
     Particle *p = &_particles[i];
     p->_pos.fill(0.0f);
+    p->_smooth_pos.fill(0.0f);
     p->_prev_pos.fill(0.0f);
     p->_velocity.fill(0.0f);
     p->_duration = 0.0f;
@@ -381,6 +397,15 @@ update(double dt) {
 
   _dt = dt;
 
+  // Accumulate physics timestep(s).
+  _phys_remainder += dt;
+  int num_steps = 0;
+  if (_phys_remainder >= _phys_timestep) {
+    num_steps = (int)(_phys_remainder / _phys_timestep);
+    _phys_remainder -= num_steps * _phys_timestep;
+  }
+  _num_phys_steps = num_steps;
+
   nassertr(!_np.is_empty(), false);
 
   // If we have a follow parent, synchronize our position with the
@@ -433,6 +458,7 @@ update(double dt) {
 
   // Accumulate time.
   _elapsed += dt;
+  _phys_tick += num_steps;
 
   _prev_dt = dt;
 
@@ -510,6 +536,7 @@ birth_particles(int count) {
     // Reset some data.
     Particle *p = &_particles[particle_index];
     p->_pos.set(0, 0, 0);
+    p->_smooth_pos.set(0, 0, 0);
     p->_prev_pos.set(0, 0, 0);
     p->_velocity.set(0, 0, 0);
     p->_duration = 0.0f;
@@ -537,6 +564,8 @@ birth_particles(int count) {
   // the chosen initial value, for instance.
   for (int i = 0; i < count; ++i) {
     Particle *p = &_particles[indices[i]];
+    p->_prev_pos = p->_pos;
+    p->_smooth_pos = p->_pos;
     p->_initial_pos = p->_pos;
     p->_initial_vel = p->_velocity;
     p->_initial_scale = p->_scale;

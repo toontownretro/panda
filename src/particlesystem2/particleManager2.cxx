@@ -20,7 +20,42 @@ ParticleManager2 *ParticleManager2::_global_ptr = nullptr;
  *
  */
 void ParticleManager2::
-update(double dt) {
+update(double frame_time) {
+
+  double dt = frame_time - _last_frame_time;
+  _last_frame_time = frame_time;
+  _local_time += dt;
+
+  if (!_want_fixed_timestep) {
+    run_sim_step(dt);
+    _frame_time += dt;
+    ++_tick_count;
+
+  } else {
+    int num_steps = 0;
+    if (_local_time >= _fixed_timestep) {
+      num_steps = (int)(_local_time / _fixed_timestep);
+      _local_time -= num_steps * _fixed_timestep;
+    }
+
+    if (num_steps > 0) {
+      num_steps = std::min(num_steps, _max_substeps);
+
+      for (int i = 0; i < num_steps; ++i) {
+        run_sim_step(_fixed_timestep);
+        _frame_time += _fixed_timestep;
+        ++_tick_count;
+      }
+    }
+  }
+
+}
+
+/**
+ *
+ */
+void ParticleManager2::
+run_sim_step(double dt) {
   if (_systems.empty()) {
     return;
   }
@@ -53,6 +88,10 @@ update(double dt) {
  */
 void ParticleManager2::
 add_system(ParticleSystem2 *system) {
+  if (system->get_tracer() == nullptr) {
+    // Use the default tracer.
+    system->set_tracer(_tracer, _trace_mask);
+  }
   _systems.push_back(system);
 }
 
