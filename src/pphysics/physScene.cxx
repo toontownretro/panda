@@ -24,6 +24,7 @@
 #include "physGeometry.h"
 #include "clockObject.h"
 #include "jobSystem.h"
+#include "physSphere.h"
 
 /**
  *
@@ -238,6 +239,76 @@ simulate(double frame_time) {
   }
 
   return num_steps;
+}
+
+TraceInterface::TraceResult PhysScene::
+trace_line(const LPoint3 &start, const LPoint3 &end, CollideMask mask, int collision_group) {
+  PhysRayCastResult ret;
+  TraceInterface::TraceResult result;
+  result._frac = 1.0f;
+  LVector3 dir = end - start;
+  PN_stdfloat len = dir.length();
+  if (!dir.normalize()) {
+    dir = LVector3::forward();
+    len = 0.001f;
+  }
+  if (raycast(ret, start, dir, len, mask, 0, nullptr)) {
+    PhysRayCastHit hit = ret.get_block();
+    result._frac = hit.get_distance() / len;
+    result._hit_pos = hit.get_position();
+    result._surface_normal = hit.get_normal();
+    result._trace_dir = dir;
+    result._trace_start = start;
+    result._trace_end = end;
+  }
+  return result;
+}
+
+TraceInterface::TraceResult PhysScene::
+trace_sphere(const LPoint3 &start, const LPoint3 &end, PN_stdfloat radius, CollideMask mask, int collision_group) {
+  PhysSweepResult ret;
+  TraceInterface::TraceResult result;
+  result._frac = 1.0f;
+  LVector3 dir = end - start;
+  PN_stdfloat len = dir.length();
+  if (!dir.normalize()) {
+    dir = LVector3::forward();
+    len = 0.001f;
+  }
+  PhysSphere sphere(radius);
+  if (sweep(ret, sphere, start, LVecBase3(0.0f), dir, len, mask, 0, nullptr)) {
+    PhysSweepHit hit = ret.get_block();
+    result._frac = hit.get_distance() / len;
+    result._hit_pos = hit.get_position();
+    result._surface_normal = hit.get_normal();
+    result._trace_dir = dir;
+    result._trace_start = start;
+    result._trace_end = end;
+  }
+  return result;
+}
+
+TraceInterface::TraceResult PhysScene::
+trace_box(const LPoint3 &start, const LPoint3 &end, const LPoint3 &min_point, const LPoint3 &max_point, const LVecBase3 &hpr, CollideMask mask, int collision_group) {
+  PhysSweepResult ret;
+  TraceInterface::TraceResult result;
+  result._frac = 1.0f;
+  LVector3 dir = end - start;
+  PN_stdfloat len = dir.length();
+  if (!dir.normalize()) {
+    dir = LVector3::forward();
+    len = 0.001f;
+  }
+  if (boxcast(ret, start - min_point, start + max_point, dir, len, hpr, mask, 0, nullptr)) {
+    PhysSweepHit hit = ret.get_block();
+    result._frac = hit.get_distance() / len;
+    result._hit_pos = hit.get_position();
+    result._surface_normal = hit.get_normal();
+    result._trace_dir = dir;
+    result._trace_start = start;
+    result._trace_end = end;
+  }
+  return result;
 }
 
 /**
