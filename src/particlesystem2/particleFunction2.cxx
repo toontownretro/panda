@@ -708,6 +708,8 @@ update(double time, double dt, ParticleSystem2 *system) {
 
     p._velocity.set(0, 0, 0);
     p._pos = pos;
+    p._smooth_pos = pos;
+    p._prev_pos = pos;
   }
 }
 
