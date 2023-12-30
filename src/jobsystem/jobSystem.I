@@ -113,15 +113,25 @@ parallel_process(T begin, int count, std::function<void(const T &)> func, int co
 }
 
 /**
- * Returns the global JobSystem pointer.
+ * Returns the global JobSystem pointer.  It is an error to call this
+ * if the job system has not been initialized yet.
  */
 INLINE JobSystem *JobSystem::
 get_global_ptr() {
+  nassertr(_global_ptr != nullptr, nullptr);
+  return _global_ptr;
+}
+
+/**
+ *
+ */
+INLINE void JobSystem::
+init_global_job_system() {
+  // Ensure we call from the main thread only.
+  assert(Thread::get_current_thread() == Thread::get_main_thread());
   if (_global_ptr == nullptr) {
     _global_ptr = new JobSystem;
   }
-
-  return _global_ptr;
 }
 
 /**

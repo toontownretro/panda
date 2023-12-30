@@ -61,7 +61,7 @@ initialize() {
   for (int i = 0; i < num_workers; ++i) {
     std::ostringstream ss;
     ss << "job-worker-" << i;
-    PT(JobWorkerThread) thread = new JobWorkerThread(ss.str(), i);
+    PT(JobWorkerThread) thread = new JobWorkerThread(ss.str(), i, this);
     thread->start(TP_normal, true);
     _randomizers.push_back(Randomizer(i + 2));
     _worker_threads.push_back(thread);

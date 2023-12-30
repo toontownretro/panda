@@ -34,6 +34,7 @@ PStatCollector main_coll("App:Main");
 
 int
 main(int argc, char *argv[]) {
+  JobSystem::init_global_job_system();
   JobSystem *sys = JobSystem::get_global_ptr();
 
   Thread::sleep(1.0);

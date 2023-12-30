@@ -155,6 +155,8 @@ GraphicsEngine(Pipeline *pipeline) :
     _pipeline = Pipeline::get_render_pipeline();
   }
 
+  JobSystem::init_global_job_system();
+
   _windows_sorted = true;
   _window_sort_index = 0;
 
