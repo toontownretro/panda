@@ -808,9 +808,9 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     case A_rotation_velocity:
       src = p->_rotation_speed;
       break;
-    case A_vel:
-      src = p->_velocity[_src_component];
-      break;
+    //case A_vel:
+     // src = p->_velocity[_src_component];
+     // break;
     }
 
     float cval = (src - _src_min) / _src_range;
@@ -849,9 +849,9 @@ init_particles(double time, int *particles, int num_particles, ParticleSystem2 *
     case A_rotation_velocity:
       p->_rotation_speed = dest;
       break;
-    case A_vel:
-      p->_velocity[_dest_component] = dest;
-      break;
+    //case A_vel:
+    //  p->_velocity[_dest_component] = dest;
+    //  break;
     }
   }
 }

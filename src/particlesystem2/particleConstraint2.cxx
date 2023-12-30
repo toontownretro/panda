@@ -172,8 +172,10 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
 
       if (too_close) {
         p._pos = clamp_near;
+        p._velocity = (p._pos - p._prev_pos) / system->_phys_timestep;
       } else if (too_far) {
         p._pos = clamp_far;
+        p._velocity = (p._pos - p._prev_pos) / system->_phys_timestep;
       }
       changed_something = true;
     }
@@ -266,8 +268,7 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
   bool changed = false;
 
   for (Particle &p : system->_particles) {
-    if (!p._alive || p._velocity.length_squared() <= 0.1f) {
-      p._velocity.set(0, 0, 0);
+    if (!p._alive) {
       continue;
     }
 
@@ -280,6 +281,8 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
     }
     LPoint3 end_point = p._pos + delta_norm * radius_factor;
 
+    LVector3 vel = p._velocity;
+
     TraceInterface::TraceResult tr = system->_tracer->trace_line(p._prev_pos, end_point, system->_trace_mask);
     if (tr.has_hit()) {
       changed = true;
@@ -289,8 +292,8 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
 
       LPoint3 new_point = p._prev_pos + delta * frac;
 
-      if (bounce_or_slide) {
-        LVector3 bounce = 2.0f * tr.get_surface_normal() * tr.get_surface_normal().dot(p._velocity) - p._velocity;
+      if (bounce_or_slide && vel.length_squared() >= 5*5) {
+        LVector3 bounce = 2.0f * tr.get_surface_normal() * tr.get_surface_normal().dot(vel) - vel;
         bounce *= _bounce;
         LVector3 new_vel = -bounce;
         //bounce *= leftover_frac;
@@ -302,8 +305,11 @@ enforce_constraint(double time, double dt, ParticleSystem2 *system) {
         slide *= leftover_frac;
         new_point += slide; */
 
-        //p._prev_pos = new_point - (new_vel * dt);
         p._velocity = new_vel;
+      }
+      else
+      {
+        p._velocity.set(0, 0, 0);
       }
 
       p._pos = new_point;

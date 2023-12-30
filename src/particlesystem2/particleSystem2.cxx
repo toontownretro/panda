@@ -291,8 +291,8 @@ priv_start(const NodePath &parent, const NodePath &follow_parent, double time) {
     Particle *p = &_particles[i];
     p->_pos.fill(0.0f);
     p->_smooth_pos.fill(0.0f);
-    p->_prev_pos.fill(0.0f);
     p->_velocity.fill(0.0f);
+    p->_prev_pos.fill(0.0f);
     p->_duration = 0.0f;
     p->_scale.fill(1.0f);
     p->_rotation_speed = 0.0f;
@@ -536,9 +536,9 @@ birth_particles(int count) {
     // Reset some data.
     Particle *p = &_particles[particle_index];
     p->_pos.set(0, 0, 0);
-    p->_smooth_pos.set(0, 0, 0);
     p->_prev_pos.set(0, 0, 0);
     p->_velocity.set(0, 0, 0);
+    p->_smooth_pos.set(0, 0, 0);
     p->_duration = 0.0f;
     p->_scale.set(1.0f, 1.0f);
     p->_rotation_speed = 0.0f;
@@ -567,7 +567,7 @@ birth_particles(int count) {
     p->_prev_pos = p->_pos;
     p->_smooth_pos = p->_pos;
     p->_initial_pos = p->_pos;
-    p->_initial_vel = p->_velocity;
+    p->_inital_vel = p->_velocity;
     p->_initial_scale = p->_scale;
     p->_initial_color = p->_color;
     p->_initial_rotation = p->_rotation;

@@ -278,10 +278,10 @@ update(ParticleSystem2 *system) {
       ipwriter.set_data3f(p->_initial_pos);
     }
 
-    mins = mins.fmin(p->_pos - LPoint3(p->_scale[0]));
-    mins = mins.fmin(p->_pos - LPoint3(p->_scale[1]));
-    maxs = maxs.fmax(p->_pos + LPoint3(p->_scale[0]));
-    maxs = maxs.fmax(p->_pos + LPoint3(p->_scale[1]));
+    mins = mins.fmin(p->_smooth_pos - LPoint3(p->_scale[0]));
+    mins = mins.fmin(p->_smooth_pos - LPoint3(p->_scale[1]));
+    maxs = maxs.fmax(p->_smooth_pos + LPoint3(p->_scale[0]));
+    maxs = maxs.fmax(p->_smooth_pos + LPoint3(p->_scale[1]));
 
     num_alive++;
   }

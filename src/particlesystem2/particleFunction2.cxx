@@ -65,7 +65,7 @@ update(double time, double dt, ParticleSystem2 *system) {
         accel_vec -= p._velocity * _drag;
 
         p._prev_pos = p._pos;
-        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5);
+        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5f);
         p._velocity += accel_vec * phys_dt;
 
         ++force_accum;
@@ -79,10 +79,11 @@ update(double time, double dt, ParticleSystem2 *system) {
           continue;
         }
 
+
         LVector3 accel_vec(0.0f);
         accel_vec -= p._velocity * _drag;
         p._prev_pos = p._pos;
-        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5);
+        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5f);
         p._velocity += accel_vec * phys_dt;
       }
     }
@@ -122,8 +123,7 @@ update(double time, double dt, ParticleSystem2 *system) {
   // Interp the pos.
   double phys_time = (system->_phys_tick + system->_num_phys_steps) * system->_phys_timestep;
   double predicted_time = system->_elapsed + dt;
-  double interpolant = (predicted_time - (phys_time - system->_phys_timestep)) / system->_phys_timestep;
-  std::cout << "interpolant " << interpolant << "\n";
+  double interpolant = (predicted_time - phys_time) / system->_phys_timestep;
   for (Particle &p : system->_particles) {
     if (!p._alive) {
       continue;
@@ -257,10 +257,7 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
-    LVector3 delta = (p->_pos - p->_prev_pos) / system->_phys_timestep;
-    LVector3 velocity = delta.length_squared();
-
-    if (velocity.length_squared() <= thresh_sqr) {
+    if (p->_velocity.length_squared() <= thresh_sqr) {
       system->kill_particle(i);
     }
   }
@@ -634,13 +631,11 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
-    LVector3 particle_dir = p._velocity.normalized();
-
-    if (IS_NEARLY_ZERO(particle_dir.length_squared())) {
+    if (IS_NEARLY_ZERO(p._velocity.length_squared())) {
       continue;
     }
 
-    PN_stdfloat dist = _plane.dist_to_plane(p._pos + p._velocity * dt);
+    PN_stdfloat dist = _plane.dist_to_plane(p._pos);
     if (dist <= 0.0f) {
       // Hit plane, bounce.
       LVector3 reflect = 2.0f * normal * normal.dot(p._velocity) - p._velocity;
@@ -711,7 +706,7 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
-    p._prev_pos = p._pos;
+    p._velocity.set(0, 0, 0);
     p._pos = pos;
   }
 }
