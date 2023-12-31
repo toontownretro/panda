@@ -2385,15 +2385,36 @@ make_vertex_data(const EggRenderState *render_state,
     return (*di).second;
   }
 
+  bool has_dxyz = is_dynamic && std::any_of(vertex_pool->begin(), vertex_pool->end(), [](EggVertex *p) { return !p->_dxyzs.empty(); });
+  bool has_dnormal = is_dynamic && std::any_of(vertex_pool->begin(), vertex_pool->end(), [](EggVertex *p) { return !p->_dnormals.empty(); });
+  bool has_drgba = is_dynamic && std::any_of(vertex_pool->begin(), vertex_pool->end(), [](EggVertex *p) { return !p->_drgbas.empty(); });
+
+  // Store vertex columns with morphs in a separate array to minimize memory transfer
+  // bandwidth.
+  PT(GeomVertexArrayFormat) morph_format = new GeomVertexArrayFormat;
+
   PT(GeomVertexArrayFormat) array_format = new GeomVertexArrayFormat;
-  array_format->add_column
-    (InternalName::get_vertex(), vertex_pool->get_num_dimensions(),
-     Geom::NT_stdfloat, Geom::C_point);
+  if (has_dxyz) {
+    morph_format->add_column
+        (InternalName::get_vertex(), vertex_pool->get_num_dimensions(),
+        Geom::NT_stdfloat, Geom::C_point);
+  } else {
+    array_format->add_column
+        (InternalName::get_vertex(), vertex_pool->get_num_dimensions(),
+        Geom::NT_stdfloat, Geom::C_point);
+  }
 
   if (vertex_pool->has_normals()) {
-    array_format->add_column
-      (InternalName::get_normal(), 3,
-       Geom::NT_stdfloat, Geom::C_normal);
+    if (has_dnormal) {
+      morph_format->add_column
+        (InternalName::get_normal(), 3,
+        Geom::NT_stdfloat, Geom::C_normal);
+    } else {
+      array_format->add_column
+        (InternalName::get_normal(), 3,
+        Geom::NT_stdfloat, Geom::C_normal);
+    }
+
   }
 
   if (!ignore_color) {
@@ -2447,11 +2468,14 @@ make_vertex_data(const EggRenderState *render_state,
       (iname, 4, Geom::NT_stdfloat, Geom::C_other);
   }
 
-  PT(GeomVertexFormat) temp_format = new GeomVertexFormat(array_format);
+  PT(GeomVertexFormat) temp_format = new GeomVertexFormat;
 
   PT(SliderTable) slider_table;
   string name = _data->get_egg_filename().get_basename_wo_extension();
 
+  // Also store slider morph deltas in a separate array.  This is used only on
+  // the CPU.
+  PT(GeomVertexArrayFormat) slider_morph_format = new GeomVertexArrayFormat;
   if (is_dynamic) {
     // If it's a dynamic object, we need a TransformBlendTable and maybe a
     // SliderTable, and additional columns in the vertex data: one that
@@ -2472,24 +2496,24 @@ make_vertex_data(const EggRenderState *render_state,
     animation.set_hardware(max_grefs <= 4 ? 4 : 8, true);
     temp_format->set_animation(animation);
 
-    PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
-    anim_array_format->add_column
+    //PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
+    array_format->add_column
       (InternalName::get_transform_weight(), 4,
        GeomEnums::NT_stdfloat, GeomEnums::C_other);
-    anim_array_format->add_column
+    array_format->add_column
       (InternalName::get_transform_index(), 4,
        GeomEnums::NT_uint8, GeomEnums::C_index);
     if (max_grefs > 4) {
       // We require an additional column to support more vertex-joint
       // assignments.
-      anim_array_format->add_column
+      array_format->add_column
         (InternalName::get_transform_weight2(), 4,
         GeomEnums::NT_stdfloat, GeomEnums::C_other);
-      anim_array_format->add_column
+      array_format->add_column
         (InternalName::get_transform_index2(), 4,
         GeomEnums::NT_uint8, GeomEnums::C_index);
     }
-    temp_format->add_array(anim_array_format);
+    //temp_format->add_array(anim_array_format);
 
     //PT(GeomVertexArrayFormat) anim_array_format = new GeomVertexArrayFormat;
     //anim_array_format->add_column
@@ -2504,14 +2528,14 @@ make_vertex_data(const EggRenderState *render_state,
       EggMorphVertexList::const_iterator mvi;
       for (mvi = vertex->_dxyzs.begin(); mvi != vertex->_dxyzs.end(); ++mvi) {
         slider_names[(*mvi).get_name()].set_bit(vertex->get_index());
-        record_morph(anim_array_format, character_maker, (*mvi).get_name(),
+        record_morph(slider_morph_format, character_maker, (*mvi).get_name(),
                      InternalName::get_vertex(), 3);
       }
       if (vertex->has_normal()) {
         EggMorphNormalList::const_iterator mni;
         for (mni = vertex->_dnormals.begin(); mni != vertex->_dnormals.end(); ++mni) {
           slider_names[(*mni).get_name()].set_bit(vertex->get_index());
-          record_morph(anim_array_format, character_maker, (*mni).get_name(),
+          record_morph(slider_morph_format, character_maker, (*mni).get_name(),
                        InternalName::get_normal(), 3);
         }
       }
@@ -2519,7 +2543,7 @@ make_vertex_data(const EggRenderState *render_state,
         EggMorphColorList::const_iterator mci;
         for (mci = vertex->_drgbas.begin(); mci != vertex->_drgbas.end(); ++mci) {
           slider_names[(*mci).get_name()].set_bit(vertex->get_index());
-          record_morph(anim_array_format, character_maker, (*mci).get_name(),
+          record_morph(slider_morph_format, character_maker, (*mci).get_name(),
                        InternalName::get_color(), 4);
         }
       }
@@ -2533,7 +2557,7 @@ make_vertex_data(const EggRenderState *render_state,
         EggMorphTexCoordList::const_iterator mti;
         for (mti = egg_uv->_duvs.begin(); mti != egg_uv->_duvs.end(); ++mti) {
           slider_names[(*mti).get_name()].set_bit(vertex->get_index());
-          record_morph(anim_array_format, character_maker, (*mti).get_name(),
+          record_morph(slider_morph_format, character_maker, (*mti).get_name(),
                        iname, has_w ? 3 : 2);
         }
       }
@@ -2554,6 +2578,16 @@ make_vertex_data(const EggRenderState *render_state,
     // We'll also assign the character name to the vertex data, so it will
     // show up in PStats.
     name = character_maker->get_name();
+  }
+
+  if (array_format->get_num_columns() > 0) {
+    temp_format->add_array(array_format);
+  }
+  if (morph_format->get_num_columns() > 0) {
+    temp_format->add_array(morph_format);
+  }
+  if (slider_morph_format->get_num_columns() > 0) {
+    temp_format->add_array(slider_morph_format);
   }
 
   temp_format->maybe_align_columns_for_animation();
