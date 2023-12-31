@@ -1544,6 +1544,8 @@ make_blend_channel(const PMDLSequenceBlend &blend, int fps) {
       chan->add_channel(anim_bundle, (PN_stdfloat)col / (num_cols - 1));
     }
 
+    chan->sort_channels();
+
     chan->set_blend_param(_part_bundle->find_pose_parameter(blend._x_pose_param));
 
     return chan;
@@ -1564,6 +1566,8 @@ make_blend_channel(const PMDLSequenceBlend &blend, int fps) {
         chan->add_channel(anim_bundle, pt);
       }
     }
+
+    chan->build_triangles();
 
     chan->set_blend_x(_part_bundle->find_pose_parameter(blend._x_pose_param));
     chan->set_blend_y(_part_bundle->find_pose_parameter(blend._y_pose_param));
