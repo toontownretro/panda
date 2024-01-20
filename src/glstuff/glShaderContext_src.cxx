@@ -40,6 +40,53 @@ using std::string;
 
 TypeHandle CLP(ShaderContext)::_type_handle;
 
+#ifndef OPENGLES
+class CLP(MultiBindHelper) {
+public:
+  INLINE CLP(MultiBindHelper)(CLP(GraphicsStateGuardian) *gsg, int num_textures) :
+    _glgsg(gsg),
+    _num_textures(num_textures),
+    _min_tex_changed_slot(1000),
+    _min_samp_changed_slot(1000)
+  { }
+
+  INLINE void add_texture(int i, GLuint texture) {
+    if (_glgsg->_bound_textures[i] != texture) {
+      _glgsg->_bound_textures[i] = texture;
+      _min_tex_changed_slot = std::min(_min_tex_changed_slot, i);
+    }
+  }
+
+  INLINE void add_sampler(int i, GLuint sampler) {
+    if (_glgsg->_bound_samplers[i] != sampler) {
+      _glgsg->_bound_samplers[i] = sampler;
+      _min_samp_changed_slot = std::min(_min_samp_changed_slot, i);
+    }
+  }
+
+  INLINE void add(int i, GLuint texture, GLuint sampler) {
+    add_texture(i, texture);
+    add_sampler(i, sampler);
+  }
+
+  INLINE void bind() {
+    if (_min_tex_changed_slot != 1000) {
+      int num_changed = (_num_textures - _min_tex_changed_slot);
+      _glgsg->_glBindTextures(_min_tex_changed_slot, num_changed, _glgsg->_bound_textures + _min_tex_changed_slot);
+    }
+    if (_min_samp_changed_slot != 1000) {
+      int num_changed = (_num_textures - _min_samp_changed_slot);
+      _glgsg->_glBindSamplers(_min_samp_changed_slot, num_changed, _glgsg->_bound_samplers + _min_samp_changed_slot);
+    }
+  }
+
+  CLP(GraphicsStateGuardian) *_glgsg;
+  int _num_textures;
+  int _min_tex_changed_slot;
+  int _min_samp_changed_slot;
+};
+#endif
+
 /**
  * xyz
  */
@@ -2176,54 +2223,57 @@ set_state_and_transform(const RenderState *target_rs,
 
   } else if (state_rs != target_rs) {
     // The state has changed since last time.
-    int slot = ColorAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+
+    bool changed_color = state_rs->get_attrib(ColorAttrib::get_class_slot()) !=
+        target_rs->get_attrib(ColorAttrib::get_class_slot());
+    bool changed_color_scale = state_rs->get_attrib(ColorScaleAttrib::get_class_slot()) !=
+        target_rs->get_attrib(ColorScaleAttrib::get_class_slot());
+    bool changed_fog = state_rs->get_attrib(FogAttrib::get_class_slot()) !=
+        target_rs->get_attrib(FogAttrib::get_class_slot());
+    bool changed_light = state_rs->get_attrib(LightAttrib::get_class_slot()) !=
+        target_rs->get_attrib(LightAttrib::get_class_slot());
+    bool changed_clip_plane = state_rs->get_attrib(ClipPlaneAttrib::get_class_slot()) !=
+        target_rs->get_attrib(ClipPlaneAttrib::get_class_slot());
+    bool changed_tex_mat = state_rs->get_attrib(TexMatrixAttrib::get_class_slot()) !=
+        target_rs->get_attrib(TexMatrixAttrib::get_class_slot());
+    bool changed_tex = state_rs->get_attrib(TextureAttrib::get_class_slot()) !=
+        target_rs->get_attrib(TextureAttrib::get_class_slot());
+    bool changed_shader_inputs = _shader_attrib != _glgsg->_target_shader;
+    bool changed_tex_gen = state_rs->get_attrib(TexGenAttrib::get_class_slot()) !=
+        target_rs->get_attrib(TexGenAttrib::get_class_slot());
+    bool changed_render_mode = state_rs->get_attrib(RenderModeAttrib::get_class_slot()) !=
+        target_rs->get_attrib(TexGenAttrib::get_class_slot());
+
+    if (changed_color) {
       altered |= Shader::SSD_color;
       target_rs->get_attrib_def(_color_attrib);
     }
-    slot = ColorScaleAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_color_scale) {
       altered |= Shader::SSD_colorscale;
     }
-    slot = FogAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_fog) {
       altered |= Shader::SSD_fog;
     }
-    slot = LightAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_light) {
       altered |= Shader::SSD_light;
     }
-    slot = ClipPlaneAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_clip_plane) {
       altered |= Shader::SSD_clip_planes;
     }
-    slot = TexMatrixAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_tex_mat) {
       altered |= Shader::SSD_tex_matrix;
     }
-    slot = TextureAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_tex) {
       altered |= Shader::SSD_texture;
     }
-    if (_shader_attrib != _glgsg->_target_shader) {
+    if (changed_shader_inputs) {
       altered |= Shader::SSD_shaderinputs;
       _shader_attrib = _glgsg->_target_shader;
     }
-    slot = TexGenAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_tex_gen) {
       altered |= Shader::SSD_tex_gen;
     }
-    slot = RenderModeAttrib::get_class_slot();
-    if (state_rs->get_attrib(slot) !=
-        target_rs->get_attrib(slot)) {
+    if (changed_render_mode) {
       altered |= Shader::SSD_render_mode;
     }
     _state_rs = target_rs;
@@ -3205,322 +3255,27 @@ disable_shader_texture_bindings() {
  */
 void CLP(ShaderContext)::
 update_shader_texture_bindings(ShaderContext *prev) {
-  // if (prev) { prev->disable_shader_texture_bindings(); }
-
   if (_glsl_program == 0) {
     return;
   }
 
-#ifndef OPENGLES
-  GLbitfield barriers = 0;
-#endif
+  GLuint barriers = 0;
 
-  // First bind all the 'image units'; a bit of an esoteric OpenGL feature
-  // right now.
-  int num_image_units = min(_glsl_img_inputs.size(), (size_t)_glgsg->_max_image_units);
-
-  if (num_image_units > 0) {
-    for (int i = 0; i < num_image_units; ++i) {
-      ImageInput &input = _glsl_img_inputs[i];
-      const ParamTextureImage *param = nullptr;
-      Texture *tex;
-
-      const ShaderInput &sinp = _glgsg->_target_shader->get_shader_input(input._name);
-      switch (sinp.get_value_type()) {
-      case ShaderInput::M_texture_image:
-        param = (const ParamTextureImage *)sinp.get_param();
-        tex = param->get_texture();
-        break;
-
-      case ShaderInput::M_texture:
-        // People find it convenient to be able to pass a texture without
-        // further ado.
-        tex = sinp.get_texture();
-        break;
-
-      case ShaderInput::M_invalid:
-        GLCAT.error()
-          << "Missing texture image binding input " << *input._name << "\n";
-        continue;
-
-      default:
-        GLCAT.error()
-          << "Mismatching type for parameter " << *input._name << ", expected texture image binding\n";
-        continue;
-      }
-
-      GLuint gl_tex = 0;
-      CLP(TextureContext) *gtc;
-
-      if (tex != nullptr) {
-        gtc = DCAST(CLP(TextureContext), tex->prepare_now(_glgsg->_prepared_objects, _glgsg));
-        if (gtc != nullptr) {
-          input._gtc = gtc;
-
-          _glgsg->update_texture(gtc, true);
-
-          int view = _glgsg->get_current_tex_view_offset();
-          gl_tex = gtc->get_view_index(view);
-
-#ifndef OPENGLES
-          if (gtc->needs_barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)) {
-            barriers |= GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
-          }
-#endif
-        }
-      }
-      input._writable = false;
-
-      if (gl_tex == 0) {
-        _glgsg->_glBindImageTexture(i, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
-
-      } else {
-        // TODO: automatically convert to sized type instead of plain GL_RGBA
-        // If a base type is used, it will crash.
-        GLenum internal_format = gtc->_internal_format;
-        if (internal_format == GL_RGBA || internal_format == GL_RGB) {
-          GLCAT.error()
-            << "Texture " << tex->get_name() << " has an unsized format.  Textures bound "
-            << "to a shader as an image need a sized format.\n";
-
-          // This may not actually be right, but may still prevent a crash.
-          internal_format = _glgsg->get_internal_image_format(tex, true);
-        }
-
-        GLenum access = GL_READ_WRITE;
-        GLint bind_level = 0;
-        GLint bind_layer = 0;
-        GLboolean layered = GL_TRUE;
-
-        if (param != nullptr) {
-          layered = param->get_bind_layered();
-          bind_level = param->get_bind_level();
-          bind_layer = param->get_bind_layer();
-
-          bool has_read = param->has_read_access();
-          bool has_write = param->has_write_access();
-          input._writable = has_write;
-
-          if (gl_force_image_bindings_writeonly) {
-            access = GL_WRITE_ONLY;
-
-          } else if (has_read && has_write) {
-            access = GL_READ_WRITE;
-
-          } else if (has_read) {
-            access = GL_READ_ONLY;
-
-          } else if (has_write) {
-            access = GL_WRITE_ONLY;
-
-          } else {
-            access = GL_READ_ONLY;
-            gl_tex = 0;
-          }
-        }
-        _glgsg->_glBindImageTexture(i, gl_tex, bind_level, layered, bind_layer,
-                                    access, gtc->_internal_format);
-      }
-    }
-  }
-
-  size_t num_textures = _shader->_tex_spec.size();
-#ifdef OPENGLES
-  static const bool multi_bind = false;
-#else
-  bool multi_bind = false;
-  bool tex_changed = false;
-  size_t min_tex_changed_slot = 10000;
-  bool samp_changed = false;
-  size_t min_samp_changed_slot = 10000;
-  if (num_textures > 1 &&
-      _glgsg->_supports_multi_bind && _glgsg->_supports_sampler_objects) {
-    // Prepare to multi-bind the textures and samplers.
-    multi_bind = true;
-    // HACK: set glActiveTexture() to an unrealistically high number,
-    // so any textures that need to be updated don't stomp on textures
-    // we binded prior.  A better solution would be to update all textures
-    // then bind them in a separate pass.
-    _glgsg->set_active_texture_stage(31);
-  }
-#endif
-
-  for (size_t i = 0; i < num_textures; ++i) {
-    Shader::ShaderTexSpec &spec = _shader->_tex_spec[i];
-    const InternalName *id = spec._name;
-
-    int view = _glgsg->get_current_tex_view_offset();
-    SamplerState sampler;
-
-    Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
-    if (tex == nullptr) {
-      // Apply a white texture in order to make it easier to use a shader that
-      // takes a texture on a model that doesn't have a texture applied.
-#ifndef OPENGLES
-      if (multi_bind) {
-        GLuint white_tex = _glgsg->get_white_texture();
-        if (white_tex != _glgsg->_bound_textures[i]) {
-          tex_changed = true;
-          min_tex_changed_slot = std::min(min_tex_changed_slot, i);
-          _glgsg->_bound_textures[i] = white_tex;
-        }
-        if (_glgsg->_bound_samplers[i] != 0) {
-          samp_changed = true;
-          min_samp_changed_slot = std::min(min_samp_changed_slot, i);
-          _glgsg->_bound_samplers[i] = 0;
-        }
-      } else
-#endif
-      {
-        _glgsg->apply_white_texture(i);
-      }
-      continue;
-    }
-    else if (Texture::is_integer(tex->get_format(_glgsg->_current_thread))) {
-      // Required to satisfy Intel drivers, which will otherwise sample zero.
-      sampler.set_minfilter(sampler.uses_mipmaps() ? SamplerState::FT_nearest_mipmap_nearest : SamplerState::FT_nearest);
-      sampler.set_magfilter(SamplerState::FT_nearest);
-    }
-
-    if (tex->get_texture_type() != spec._desired_type) {
-      switch (spec._part) {
-      case Shader::STO_named_input:
-        GLCAT.error()
-          << "Sampler type of shader input '" << *id << "' does not "
-             "match type of texture " << *tex << ".\n";
-        break;
-
-      case Shader::STO_stage_i:
-        GLCAT.error()
-          << "Sampler type of shader input p3d_Texture" << spec._stage
-          << " does not match type of texture " << *tex << ".\n";
-        break;
-
-      case Shader::STO_light_i_shadow_map:
-        GLCAT.error()
-          << "Sampler type of shader input p3d_LightSource[" << spec._stage
-          << "].shadowMap does not match type of texture " << *tex << ".\n";
-        break;
-
-      default:
-        GLCAT.error()
-          << "Sampler type of GLSL shader input does not match type of "
-             "texture " << *tex << ".\n";
-        break;
-      }
-      // TODO: also check whether shadow sampler textures have shadow filter
-      // enabled.
-    }
-
-    CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tex->prepare_now(_glgsg->_prepared_objects, _glgsg));
-    if (gtc == nullptr) {
-#ifndef OPENGLES
-      if (multi_bind) {
-        if (_glgsg->_bound_textures[i] != 0) {
-          _glgsg->_bound_textures[i] = 0;
-          min_tex_changed_slot = std::min(min_tex_changed_slot, i);
-          tex_changed = true;
-        }
-        if (_glgsg->_bound_samplers[i] != 0) {
-          _glgsg->_bound_samplers[i] = 0;
-          min_samp_changed_slot = std::min(min_samp_changed_slot, i);
-          samp_changed = true;
-        }
-      }
-#endif
-      continue;
-    }
-
-#ifndef OPENGLES
-    // If it was recently written to, we will have to issue a memory barrier
-    // soon.
-    if (gtc->needs_barrier(GL_TEXTURE_FETCH_BARRIER_BIT)) {
-      barriers |= GL_TEXTURE_FETCH_BARRIER_BIT;
-    }
-#endif
-
-    // Note that simple RAM images are always 2-D for now, so to avoid errors,
-    // we must load the real texture if this is not for a sampler2D.
-    bool force = (spec._desired_type != Texture::TT_2d_texture);
-#ifndef OPENGLES
-    if (multi_bind) {
-      // Multi-bind case.
-      GLuint tindex;
-      if (!_glgsg->update_texture(gtc, force)) {
-        tindex = 0;
-      } else {
-        gtc->set_active(true);
-        tindex = gtc->get_view_index(view);
-      }
-
-      //_glgsg->_bound_textures[_glgsg->_active_texture_stage] = curr_tex;
-
-      //if (GLCAT.is_debug()) {
-      //  GLCAT.debug()
-      //    << "Shader needs tex unit " << i << " to have texture " << tindex << ": ";
-      //  tex->write(GLCAT.debug(false), 0);
-      //  GLCAT.debug(false) << ", we think currently bound tex is " << _glgsg->_bound_textures[i] << "\n";
-     // }
-
-      if (_glgsg->_bound_textures[i] != tindex) {
-        _glgsg->_bound_textures[i] = tindex;
-        //if (GLCAT.is_debug()) {
-        //  GLCAT.debug()
-        //    << "Binding texture " << tindex << " to tex unit " << i << ": ";
-        //  tex->write(GLCAT.debug(false), 0);
-        //  GLCAT.debug(false) << "\n";
-        //}
-        min_tex_changed_slot = std::min(min_tex_changed_slot, i);
-        tex_changed = true;
-      }
-
-      SamplerContext *sc = sampler.prepare_now(_prepared_objects, _glgsg);
-      GLuint sindex;
-      if (sc == nullptr) {
-        sindex = 0;
-      } else {
-        CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
-        //gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
-        sindex = gsc->_index;
-      }
-
-      //if (GLCAT.is_debug()) {
-      //  GLCAT.debug()
-      //    << "Shader needs samp unit " << i << " to have sampler " << sindex << ": ";
-       // sampler.output(GLCAT.debug(false));
-      //  GLCAT.debug(false) << ", we think currently bound samp is " << _glgsg->_bound_samplers[i] << "\n";
-      //}
-
-      if (_glgsg->_bound_samplers[i] != sindex) {
-        _glgsg->_bound_samplers[i] = sindex;
-        min_samp_changed_slot = std::min(min_samp_changed_slot, i);
-        samp_changed = true;
-      }
-    } else
-#endif  // !OPENGLES
-    {
-      // Non-multibind case.
-      _glgsg->set_active_texture_stage(i);
-      if (!_glgsg->update_texture(gtc, force)) {
-        continue;
-      }
-      _glgsg->apply_texture(gtc, view);
-      _glgsg->apply_sampler(i, sampler, gtc, view);
-    }
+  if (!_glsl_img_inputs.empty()) {
+    update_shader_image_bindings(barriers);
   }
 
 #ifndef OPENGLES
-  if (multi_bind && num_textures > 0) {
-    if (tex_changed) {
-      int num_changed = (num_textures - min_tex_changed_slot);
-      _glgsg->_glBindTextures(min_tex_changed_slot, num_changed, _glgsg->_bound_textures + min_tex_changed_slot);
-    }
-    if (samp_changed) {
-      int num_changed = (num_textures - min_samp_changed_slot);
-      _glgsg->_glBindSamplers(min_samp_changed_slot, num_changed, _glgsg->_bound_samplers + min_samp_changed_slot);
-    }
+  if (_shader->_tex_spec.size() > 1u && _glgsg->_supports_multi_bind && _glgsg->_supports_sampler_objects) {
+    do_multibind_textures(barriers);
+
+  } else
+#endif
+  {
+    do_bind_textures(barriers);
   }
 
+#ifndef OPENGLES
   if (barriers != 0) {
     // Issue a memory barrier prior to this shader's execution.
     _glgsg->issue_memory_barrier(barriers);
@@ -3528,6 +3283,300 @@ update_shader_texture_bindings(ShaderContext *prev) {
 #endif
 
   report_my_gl_errors(_glgsg);
+}
+
+/**
+ *
+ */
+void CLP(ShaderContext)::
+do_bind_textures(GLuint &barriers) {
+  int view = _glgsg->get_current_tex_view_offset();
+
+  for (size_t i = 0; i < _shader->_tex_spec.size(); ++i) {
+    Shader::ShaderTexSpec &spec = _shader->_tex_spec[i];
+    const InternalName *id = spec._name;
+
+    SamplerState sampler;
+
+    Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
+    if (tex != nullptr) {
+      if (tex->get_texture_type() != spec._desired_type) {
+        switch (spec._part) {
+        case Shader::STO_named_input:
+          GLCAT.error()
+            << "Sampler type of shader input '" << *id << "' does not "
+              "match type of texture " << *tex << ".\n";
+          break;
+
+        case Shader::STO_stage_i:
+          GLCAT.error()
+            << "Sampler type of shader input p3d_Texture" << spec._stage
+            << " does not match type of texture " << *tex << ".\n";
+          break;
+
+        case Shader::STO_light_i_shadow_map:
+          GLCAT.error()
+            << "Sampler type of shader input p3d_LightSource[" << spec._stage
+            << "].shadowMap does not match type of texture " << *tex << ".\n";
+          break;
+
+        default:
+          GLCAT.error()
+            << "Sampler type of GLSL shader input does not match type of "
+              "texture " << *tex << ".\n";
+          break;
+        }
+        // TODO: also check whether shadow sampler textures have shadow filter
+        // enabled.
+      }
+
+      CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tex->prepare_now(_glgsg->_prepared_objects, _glgsg));
+      if (gtc == nullptr) {
+        continue;
+      }
+
+#ifndef OPENGLES
+      // If it was recently written to, we will have to issue a memory barrier
+      // soon.
+      if (gtc->needs_barrier(GL_TEXTURE_FETCH_BARRIER_BIT)) {
+        barriers |= GL_TEXTURE_FETCH_BARRIER_BIT;
+      }
+#endif
+
+      // Note that simple RAM images are always 2-D for now, so to avoid errors,
+      // we must load the real texture if this is not for a sampler2D.
+      bool force = (spec._desired_type != Texture::TT_2d_texture);
+      // Non-multibind case.
+      _glgsg->set_active_texture_stage(i);
+      if (!_glgsg->update_texture(gtc, force)) {
+        continue;
+      }
+      _glgsg->apply_texture(gtc, view);
+      _glgsg->apply_sampler(i, sampler, gtc, view);
+
+    } else {
+      // Apply a white texture in order to make it easier to use a shader that
+      // takes a texture on a model that doesn't have a texture applied.
+      _glgsg->apply_white_texture(i);
+    }
+  }
+}
+
+#ifndef OPENGLES
+/**
+ *
+ */
+void CLP(ShaderContext)::
+do_multibind_textures(GLuint &barriers) {
+
+  CLP(MultiBindHelper) bind(_glgsg, (int)_shader->_tex_spec.size());
+
+  // HACK: set glActiveTexture() to an unrealistically high number,
+  // so any textures that need to be updated don't stomp on textures
+  // we binded prior.  A better solution would be to update all textures
+  // then bind them in a separate pass.
+  _glgsg->set_active_texture_stage(31);
+
+  int view = _glgsg->get_current_tex_view_offset();
+
+  for (size_t i = 0; i < _shader->_tex_spec.size(); ++i) {
+    Shader::ShaderTexSpec &spec = _shader->_tex_spec[i];
+    const InternalName *id = spec._name;
+
+    SamplerState sampler;
+
+    Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
+    if (tex != nullptr) {
+
+      if (tex->get_texture_type() != spec._desired_type) {
+        switch (spec._part) {
+        case Shader::STO_named_input:
+          GLCAT.error()
+            << "Sampler type of shader input '" << *id << "' does not "
+              "match type of texture " << *tex << ".\n";
+          break;
+
+        case Shader::STO_stage_i:
+          GLCAT.error()
+            << "Sampler type of shader input p3d_Texture" << spec._stage
+            << " does not match type of texture " << *tex << ".\n";
+          break;
+
+        case Shader::STO_light_i_shadow_map:
+          GLCAT.error()
+            << "Sampler type of shader input p3d_LightSource[" << spec._stage
+            << "].shadowMap does not match type of texture " << *tex << ".\n";
+          break;
+
+        default:
+          GLCAT.error()
+            << "Sampler type of GLSL shader input does not match type of "
+              "texture " << *tex << ".\n";
+          break;
+        }
+        // TODO: also check whether shadow sampler textures have shadow filter
+        // enabled.
+      }
+
+      CLP(TextureContext) *gtc = DCAST(CLP(TextureContext), tex->prepare_now(_glgsg->_prepared_objects, _glgsg));
+      if (gtc == nullptr) {
+        bind.add(i, 0, 0);
+        continue;
+      }
+
+#ifndef OPENGLES
+      // If it was recently written to, we will have to issue a memory barrier
+      // soon.
+      if (gtc->needs_barrier(GL_TEXTURE_FETCH_BARRIER_BIT)) {
+        barriers |= GL_TEXTURE_FETCH_BARRIER_BIT;
+      }
+#endif
+
+      // Note that simple RAM images are always 2-D for now, so to avoid errors,
+      // we must load the real texture if this is not for a sampler2D.
+      bool force = (spec._desired_type != Texture::TT_2d_texture);
+
+      // Multi-bind case.
+      GLuint tindex = 0;
+      if (_glgsg->update_texture(gtc, force)) {
+        gtc->set_active(true);
+        tindex = gtc->get_view_index(view);
+      }
+
+      SamplerContext *sc = sampler.prepare_now(_prepared_objects, _glgsg);
+      GLuint sindex = 0;
+      if (sc != nullptr) {
+        CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
+        //gsc->enqueue_lru(&_glgsg->_prepared_objects->_sampler_object_lru);
+        sindex = gsc->_index;
+      }
+
+      bind.add(i, tindex, sindex);
+
+    } else {
+      // Apply a white texture in order to make it easier to use a shader that
+      // takes a texture on a model that doesn't have a texture applied.
+      GLuint white_tex = _glgsg->get_white_texture();
+      bind.add(i, white_tex, 0);
+    }
+  }
+
+  bind.bind();
+}
+#endif
+
+/**
+ *
+ */
+void CLP(ShaderContext)::
+update_shader_image_bindings(GLuint &barriers) {
+
+  // First bind all the 'image units'; a bit of an esoteric OpenGL feature
+  // right now.
+  int num_image_units = min(_glsl_img_inputs.size(), (size_t)_glgsg->_max_image_units);
+
+  for (int i = 0; i < num_image_units; ++i) {
+    ImageInput &input = _glsl_img_inputs[i];
+    const ParamTextureImage *param = nullptr;
+    Texture *tex;
+
+    const ShaderInput &sinp = _glgsg->_target_shader->get_shader_input(input._name);
+    switch (sinp.get_value_type()) {
+    case ShaderInput::M_texture_image:
+      param = (const ParamTextureImage *)sinp.get_param();
+      tex = param->get_texture();
+      break;
+
+    case ShaderInput::M_texture:
+      // People find it convenient to be able to pass a texture without
+      // further ado.
+      tex = sinp.get_texture();
+      break;
+
+    case ShaderInput::M_invalid:
+      GLCAT.error()
+        << "Missing texture image binding input " << *input._name << "\n";
+      continue;
+
+    default:
+      GLCAT.error()
+        << "Mismatching type for parameter " << *input._name << ", expected texture image binding\n";
+      continue;
+    }
+
+    GLuint gl_tex = 0;
+    CLP(TextureContext) *gtc;
+
+    if (tex != nullptr) {
+      gtc = DCAST(CLP(TextureContext), tex->prepare_now(_glgsg->_prepared_objects, _glgsg));
+      if (gtc != nullptr) {
+        input._gtc = gtc;
+
+        _glgsg->update_texture(gtc, true);
+
+        int view = _glgsg->get_current_tex_view_offset();
+        gl_tex = gtc->get_view_index(view);
+
+#ifndef OPENGLES
+        if (gtc->needs_barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)) {
+          barriers |= GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
+        }
+#endif
+      }
+    }
+    input._writable = false;
+
+    if (gl_tex == 0) {
+      _glgsg->_glBindImageTexture(i, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+
+    } else {
+      // TODO: automatically convert to sized type instead of plain GL_RGBA
+      // If a base type is used, it will crash.
+      GLenum internal_format = gtc->_internal_format;
+      if (internal_format == GL_RGBA || internal_format == GL_RGB) {
+        GLCAT.error()
+          << "Texture " << tex->get_name() << " has an unsized format.  Textures bound "
+          << "to a shader as an image need a sized format.\n";
+
+        // This may not actually be right, but may still prevent a crash.
+        internal_format = _glgsg->get_internal_image_format(tex, true);
+      }
+
+      GLenum access = GL_READ_WRITE;
+      GLint bind_level = 0;
+      GLint bind_layer = 0;
+      GLboolean layered = GL_TRUE;
+
+      if (param != nullptr) {
+        layered = param->get_bind_layered();
+        bind_level = param->get_bind_level();
+        bind_layer = param->get_bind_layer();
+
+        bool has_read = param->has_read_access();
+        bool has_write = param->has_write_access();
+        input._writable = has_write;
+
+        if (gl_force_image_bindings_writeonly) {
+          access = GL_WRITE_ONLY;
+
+        } else if (has_read && has_write) {
+          access = GL_READ_WRITE;
+
+        } else if (has_read) {
+          access = GL_READ_ONLY;
+
+        } else if (has_write) {
+          access = GL_WRITE_ONLY;
+
+        } else {
+          access = GL_READ_ONLY;
+          gl_tex = 0;
+        }
+      }
+      _glgsg->_glBindImageTexture(i, gl_tex, bind_level, layered, bind_layer,
+                                  access, gtc->_internal_format);
+    }
+  }
 }
 
 /**

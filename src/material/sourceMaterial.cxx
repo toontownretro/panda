@@ -20,6 +20,7 @@
 #include "materialParamColor.h"
 #include "materialParamFloat.h"
 #include "materialParamMatrix.h"
+#include "materialParamInt.h"
 
 TypeHandle SourceMaterial::_type_handle;
 
@@ -61,7 +62,8 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
         key == "phongwarptexture" ||
         key == "selfillummask" ||
         key == "phongexponenttexture" ||
-        key == "albedo") {
+        key == "albedo"||
+        key == "detail") {
       if (key == "albedo" || key == "basetexture") {
         key = "base_color";
       }
@@ -89,14 +91,17 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
                key == "envmapfresnel" ||
                key == "rimlightexponent" ||
                key == "rimlightboost" ||
-               key == "phongexponentfactor") {
+               key == "phongexponentfactor" ||
+               key == "detailblendfactor" ||
+               key == "detailscale") {
       param = new MaterialParamFloat(key);
 
     // Vec3 types
     } else if (key == "selfillumtint" ||
                key == "envmaptint" ||
                key == "phongtint" ||
-               key == "phongfresnelranges") {
+               key == "phongfresnelranges" ||
+               key == "detailtint") {
       param = new MaterialParamVector(key);
 
     // Vec4 types, not necessarily color
@@ -116,6 +121,10 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
 
     } else if (key == "basetexturetransform") {
       param = new MaterialParamMatrix(key);
+
+    // Int types
+    } else if (key == "detailblendmode") {
+      param = new MaterialParamInt(key);
     }
 
     if (param != nullptr) {

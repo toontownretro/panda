@@ -20,6 +20,7 @@
 #include "atomicAdjust.h"
 
 class Job;
+class JobSystem;
 
 /**
  *
@@ -33,7 +34,7 @@ public:
     S_busy,
   };
 
-  JobWorkerThread(const std::string &name);
+  JobWorkerThread(const std::string &name, int index, JobSystem *mgr);
 
   virtual void thread_main() override;
 
@@ -44,8 +45,11 @@ public:
 
   AtomicAdjust::Integer _state;
 
-  typedef WorkStealingQueue<Job *> JobQueue;
-  JobQueue _local_queue;
+  patomic_flag _pstats_tick_signal;
+
+  int _thread_index;
+
+  JobSystem *_mgr;
 };
 
 #include "jobWorkerThread.I"

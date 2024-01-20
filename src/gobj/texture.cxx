@@ -7337,6 +7337,12 @@ do_set_format(CData *cdata, Texture::Format format) {
   cdata->_format = format;
   cdata->inc_properties_modified();
   cdata->_num_components = get_channel_count(format);
+
+  if (is_integer(cdata->_format)) {
+    // Integer textures must use nearest sampling.
+    cdata->_default_sampler.set_minfilter(SamplerState::FT_nearest);
+    cdata->_default_sampler.set_magfilter(SamplerState::FT_nearest);
+  }
 }
 
 /**
@@ -10797,6 +10803,11 @@ do_fillin_body(CData *cdata, DatagramIterator &scan, BamReader *manager) {
 
   if (cdata->_texture_type == TT_buffer_texture) {
     cdata->_usage_hint = (GeomEnums::UsageHint)scan.get_uint8();
+  }
+
+  if (is_integer(cdata->_format)) {
+    cdata->_default_sampler.set_minfilter(SamplerState::FT_nearest);
+    cdata->_default_sampler.set_magfilter(SamplerState::FT_nearest);
   }
 
   cdata->inc_properties_modified();

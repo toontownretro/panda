@@ -113,15 +113,25 @@ parallel_process(T begin, int count, std::function<void(const T &)> func, int co
 }
 
 /**
- * Returns the global JobSystem pointer.
+ * Returns the global JobSystem pointer.  It is an error to call this
+ * if the job system has not been initialized yet.
  */
 INLINE JobSystem *JobSystem::
 get_global_ptr() {
+  nassertr(_global_ptr != nullptr, nullptr);
+  return _global_ptr;
+}
+
+/**
+ *
+ */
+INLINE void JobSystem::
+init_global_job_system() {
+  // Ensure we call from the main thread only.
+  assert(Thread::get_current_thread() == Thread::get_main_thread());
   if (_global_ptr == nullptr) {
     _global_ptr = new JobSystem;
   }
-
-  return _global_ptr;
 }
 
 /**
@@ -224,13 +234,33 @@ r_parallel_quicksort(T *data, Pr pred, int left, int right, int cutoff, JobSyste
 /**
  *
  */
-ALWAYS_INLINE Job *JobSystem::
+INLINE Job *JobSystem::
 pop_job(Thread *thread, bool is_worker) {
-  Job *job = get_job_for_thread(thread, is_worker);
-  if (job != nullptr) {
-    AtomicAdjust::dec(_queued_jobs);
+  JobWorkerThread *jthread = nullptr;
+  int queue_index;
+  if (is_worker) {
+    jthread = DCAST(JobWorkerThread, thread);
+    queue_index = jthread->_thread_index + 1;
+  } else {
+    queue_index = 0;
   }
-  return job;
+
+  std::optional<Job *> job = _job_queues[queue_index].pop();
+  if (job.has_value()) {
+    _queued_jobs.fetch_sub(1u);
+    return job.value();
+  }
+
+  int steal_index = _randomizers[queue_index].random_int(_worker_threads.size() + 1);
+  if (steal_index != queue_index) {
+    job = _job_queues[steal_index].steal();
+    if (job.has_value()) {
+      _queued_jobs.fetch_sub(1u);
+      return job.value();
+    }
+  }
+
+  return nullptr;
 }
 
 /**
@@ -239,4 +269,32 @@ pop_job(Thread *thread, bool is_worker) {
 INLINE int JobSystem::
 get_num_threads() const {
   return (int)_worker_threads.size();
+}
+
+/**
+ *
+ */
+INLINE void JobSystem::
+push_event(JobSystemEvent::EventType type) {
+  JobSystemEvent *event = new JobSystemEvent;
+  event->time = TrueClock::get_global_ptr()->get_short_time();
+  event->type = type;
+  event->thread_name = Thread::get_current_thread()->get_name();
+
+  MutexHolder holder(_event_lock);
+  if (_events == nullptr) {
+    _events = event;
+    _events_tail = event;
+  } else {
+    _events_tail->next = event;
+    _events_tail = event;
+  }
+}
+
+/**
+ *
+ */
+INLINE JobSystem::JobQueue *JobSystem::
+get_job_queue(int thread) {
+  return &_job_queues[thread];
 }

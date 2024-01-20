@@ -75,6 +75,7 @@
     threadManager.I threadManager.h \
     timedCycle.I timedCycle.h \
     tokenFile.I tokenFile.h \
+    traceInterface.h \
     typedWritable.I typedWritable.h \
     typedWritableReferenceCount.I \
     typedWritableReferenceCount.h updateSeq.I updateSeq.h \
@@ -208,9 +209,11 @@
     sparseArray.I sparseArray.h \
     threadManager.I threadManager.h \
     timedCycle.I timedCycle.h \
-    tokenFile.I tokenFile.h typedWritable.I \
-    typedWritable.h typedWritableReferenceCount.I \
-    typedWritableReferenceCount.h updateSeq.I updateSeq.h \
+    tokenFile.I tokenFile.h \
+    traceInterface.h \
+    typedWritable.I typedWritable.h \
+    typedWritableReferenceCount.I typedWritableReferenceCount.h \
+    updateSeq.I updateSeq.h \
     uniqueIdAllocator.h \
     vector_typedWritable.h \
     vector_ulong.h \

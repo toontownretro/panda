@@ -1214,6 +1214,7 @@ private:
   friend class CLP(ShaderContext);
   friend class CLP(GraphicsBuffer);
   friend class CLP(OcclusionQueryContext);
+  friend class CLP(MultiBindHelper);
 };
 
 #include "glGraphicsStateGuardian_src.I"

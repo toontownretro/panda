@@ -17,6 +17,7 @@
 #include "pStatClient.h"
 #include "pStatTimer.h"
 #include "pStatCollector.h"
+#include "trueClock.h"
 
 PStatCollector exec_job_pcollector("JobSystem:ExecuteJob");
 static PStatCollector sleep_pcollector("JobSystem:Sleep");
@@ -27,10 +28,13 @@ IMPLEMENT_CLASS(JobWorkerThread);
  *
  */
 JobWorkerThread::
-JobWorkerThread(const std::string &name) :
+JobWorkerThread(const std::string &name, int index, JobSystem *mgr) :
   Thread(name, name),
+  _thread_index(index),
   _current_job(nullptr),
-  _state(S_idle)
+  _state(S_idle),
+  _pstats_tick_signal(false),
+  _mgr(mgr)
 {
 }
 
@@ -39,22 +43,17 @@ JobWorkerThread(const std::string &name) :
  */
 void JobWorkerThread::
 thread_main() {
-  JobSystem *sys = JobSystem::get_global_ptr();
+  JobSystem *sys = _mgr;
 
   while (true) {
-    PStatClient::thread_tick();
+
+    if (!_pstats_tick_signal.test_and_set()) {
+      PStatClient::thread_tick();
+    }
 
     Job *job = sys->pop_job(this, true);
-    if (job == nullptr) {
-      PStatTimer timer(sleep_pcollector);
+    if (job != nullptr) {
 
-      sys->_cv_mutex.acquire();
-      while (AtomicAdjust::get(sys->_queued_jobs) == 0) {
-        sys->_cv_work_available.wait();
-      }
-      sys->_cv_mutex.release();
-
-    } else {
       PStatTimer timer(exec_job_pcollector);
 
       AtomicAdjust::set(_state, S_busy);
@@ -78,6 +77,9 @@ thread_main() {
       _current_job = nullptr;
 
       AtomicAdjust::set(_state, S_idle);
+
+    } else {
+      sys->_queued_jobs.wait(0u);
     }
   }
 }

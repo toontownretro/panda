@@ -315,7 +315,7 @@ do_compute_lighting(const TransformState *net_transform, MapData *mdata,
     } else {
       pos = net_transform->get_mat().xform_point(_lighting_origin);
     }
-    pos[2] += 0.01f;
+    pos[2] += 0.1f;
 
   } else {
     if (!bounds->is_infinite() && !bounds->is_empty()) {

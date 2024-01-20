@@ -32,6 +32,7 @@
 #include "texture.h"
 #include "shaderBuffer.h"
 #include "extension.h"
+#include "paramTexture.h"
 
 /**
  * This is a small container class that can hold any one of the value types

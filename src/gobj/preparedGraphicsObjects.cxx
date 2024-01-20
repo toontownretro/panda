@@ -430,8 +430,7 @@ bool PreparedGraphicsObjects::
 is_sampler_prepared(const SamplerState &sampler) const {
   ReMutexHolder holder(_lock);
 
-  PreparedSamplers::const_iterator it = _prepared_samplers.find(sampler);
-  return (it != _prepared_samplers.end());
+  return _prepared_samplers.find(sampler) != -1;
 }
 
 /**
@@ -455,10 +454,10 @@ void PreparedGraphicsObjects::
 release_sampler(const SamplerState &sampler) {
   ReMutexHolder holder(_lock);
 
-  PreparedSamplers::iterator it = _prepared_samplers.find(sampler);
-  if (it != _prepared_samplers.end()) {
-    _released_samplers.insert(it->second);
-    _prepared_samplers.erase(it);
+  int it = _prepared_samplers.find(sampler);
+  if (it != -1) {
+    _released_samplers.insert(_prepared_samplers.get_data(it));
+    _prepared_samplers.remove_element(it);
   }
 
   _enqueued_samplers.erase(sampler);
@@ -474,11 +473,8 @@ release_all_samplers() {
 
   int num_samplers = (int)_prepared_samplers.size() + (int)_enqueued_samplers.size();
 
-  PreparedSamplers::iterator sci;
-  for (sci = _prepared_samplers.begin();
-       sci != _prepared_samplers.end();
-       ++sci) {
-    _released_samplers.insert(sci->second);
+  for (int i = 0; i < _prepared_samplers.size(); ++i) {
+    _released_samplers.insert(_prepared_samplers.get_data(i));
   }
 
   _prepared_samplers.clear();
@@ -524,10 +520,17 @@ SamplerContext *PreparedGraphicsObjects::
 prepare_sampler_now(const SamplerState &sampler, GraphicsStateGuardianBase *gsg) {
   //ReMutexHolder holder(_lock);
 
-  PreparedSamplers::const_iterator it = _prepared_samplers.find(sampler);
-  if (it != _prepared_samplers.end()) {
-    return it->second;
+  //std::cout << _prepared_samplers.size() << " samplers\n";
+  for (int i = 0; i < _prepared_samplers.size(); ++i) {
+    if (_prepared_samplers.get_key(i).get_hash() == sampler.get_hash()) {
+      return _prepared_samplers.get_data(i);
+    }
   }
+
+  //int it = _prepared_samplers.find(sampler);
+  //if (it != -1) {
+  //  return _prepared_samplers.get_data(it);
+  //}
 
   // Ask the GSG to create a brand new SamplerContext.
   SamplerContext *sc = gsg->prepare_sampler(sampler);

@@ -52,12 +52,13 @@ public:
   INLINE GeomNode *get_geom_node() const { return _geom_node; }
   INLINE int get_geom_index() const { return _geom_index; }
 
-  void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv);
-  void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv, PN_stdfloat alpha);
+  void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv, LVecBase3 tangent, LVecBase3 binormal);
+  void add_vertex_data(LPoint3 pos, LVector3 normal, LVecBase2 uv, LVecBase2 lightmap_uv, PN_stdfloat alpha, LVecBase3 tangent, LVecBase3 binormal);
   void add_triangle(int v0, int v1, int v2);
   INLINE void add_index(int vertex) { _index.push_back(vertex); }
 
   INLINE void set_normal(int n, const LVector3 &normal) { _normal[n] = normal; }
+  INLINE void set_tangent_binormal(int n, const LVector3 &tangent, const LVector3 &binormal) { _tangent[n] = tangent; _binormal[n] = binormal; }
 
   INLINE bool has_normal() const { return !_normal.empty(); }
   INLINE bool has_alpha() const { return !_alpha.empty(); }
@@ -80,6 +81,8 @@ public:
   INLINE PN_stdfloat get_alpha(int n) const { return _alpha[n]; }
   INLINE LVecBase2 get_uv(int n) const { return _uv[n]; }
   INLINE LVecBase2 get_lightmap_uv(int n) const { return _lightmap_uv[n]; }
+  INLINE LVector3 get_tangent(int n) const { return _tangent[n]; }
+  INLINE LVector3 get_binormal(int n) const { return _binormal[n]; }
   INLINE int get_index(int n) const {
     if (!has_index()) {
       return n;
@@ -160,6 +163,8 @@ protected:
   vector_stdfloat _alpha;
   pvector<LVecBase2> _uv;
   pvector<LVecBase2> _lightmap_uv;
+  pvector<LVector3> _tangent;
+  pvector<LVector3> _binormal;
   vector_int _index;
 
   LVecBase2i _lightmap_size;

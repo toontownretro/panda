@@ -253,9 +253,6 @@ compare_to(const SamplerState &other) const {
   if (_wrap_v != other._wrap_v) {
     return (_wrap_v < other._wrap_v) ? -1 : 1;
   }
-  if (_wrap_w != other._wrap_w) {
-    return (_wrap_w < other._wrap_w) ? -1 : 1;
-  }
   if (_minfilter != other._minfilter) {
     return (_minfilter < other._minfilter) ? -1 : 1;
   }
@@ -264,6 +261,9 @@ compare_to(const SamplerState &other) const {
   }
   if (_anisotropic_degree != other._anisotropic_degree) {
     return (_anisotropic_degree < other._anisotropic_degree) ? -1 : 1;
+  }
+  if (_wrap_w != other._wrap_w) {
+    return (_wrap_w < other._wrap_w) ? -1 : 1;
   }
   if (_border_color != other._border_color) {
     return (_border_color < other._border_color) ? -1 : 1;
@@ -348,4 +348,26 @@ read_datagram(DatagramIterator &scan, BamReader *manager) {
   _min_lod = scan.get_stdfloat();
   _max_lod = scan.get_stdfloat();
   _lod_bias = scan.get_stdfloat();
+
+  calc_hash();
+}
+
+void SamplerState::
+calc_hash() const {
+  size_t hash = 0u;
+
+  floating_point_hash<PN_stdfloat> fhasher;
+
+  hash = _border_color.add_hash(hash);
+  hash = fhasher.add_hash(hash, _min_lod);
+  hash = fhasher.add_hash(hash, _max_lod);
+  hash = fhasher.add_hash(hash, _lod_bias);
+  hash = int_hash::add_hash(hash, _minfilter);
+  hash = int_hash::add_hash(hash, _magfilter);
+  hash = int_hash::add_hash(hash, _wrap_u);
+  hash = int_hash::add_hash(hash, _wrap_v);
+  hash = int_hash::add_hash(hash, _wrap_w);
+  hash = int_hash::add_hash(hash, _anisotropic_degree);
+
+  ((SamplerState *)this)->_hash = hash;
 }

@@ -25,6 +25,11 @@
 #include "pta_float.h"
 #include "configVariableBool.h"
 #include "pvector.h"
+#include "cycleData.h"
+#include "pipelineCycler.h"
+#include "cycleDataReader.h"
+#include "cycleDataWriter.h"
+#include "cycleDataLockedReader.h"
 
 extern EXPCL_PANDA_POSTPROCESS ConfigVariableInt hdr_luminance_buffers;
 extern EXPCL_PANDA_POSTPROCESS ConfigVariableBool hdr_auto_exposure;
@@ -38,6 +43,7 @@ PUBLISHED:
 		AEM_program_auto,
 		AEM_shutter_priority,
 		AEM_aperature_priority,
+		AEM_manual,
 	};
 
 	enum ExposureMethod {
@@ -87,20 +93,31 @@ private:
 	CPT(Geom) _quad_geom;
 
 	CPT(RenderState) _histogram_compute_state;
-	PT(Texture) _histogram_buffer_texture;
+	//PT(Texture) _histogram_buffer_texture;
 
-	/**
-	 * Maintain a swap-chain of output textures for the luminance compute shader
-	 * to minimize pipeline stalling when reading from the texture.
-	 */
-	class LuminanceBuffer {
+	class HistogramQueryData : public ReferenceCount {
 	public:
-		CPT(RenderState) _compute_state;
-		PT(Texture) _result_texture;
+		PT(OcclusionQueryContext) _query = nullptr;
+		PT(Texture) _histogram = nullptr;
+		bool _data_is_available = false;
 	};
-	typedef pvector<LuminanceBuffer> LuminanceBuffers;
-	LuminanceBuffers _luminance_buffers;
-	int _luminance_buffer_index;
+
+	//PT(HistogramQueryData) _query_data;
+
+	class CData : public CycleData {
+	public:
+		INLINE CData();
+		INLINE CData(const CData &copy);
+
+		virtual CycleData *make_copy() const override;
+
+	public:
+		PT(HistogramQueryData) _query;
+	};
+	PipelineCycler<CData> _cycler;
+	typedef CycleDataReader<CData> CDReader;
+	typedef CycleDataWriter<CData> CDWriter;
+	typedef CycleDataLockedReader<CData> CDLockedReader;
 
 	// Calculated luminance based on histogram
 	float _luminance;
@@ -113,7 +130,8 @@ private:
 	float _exposure;
 	// exp2 of _exposure.
 	float _exposure_value;
-	float _last_target_ev;
+	float _last_avg_lum;
+	float _target_avg_lum;
 };
 
 class EXPCL_PANDA_POSTPROCESS HDREffect : public PostProcessEffect

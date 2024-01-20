@@ -20,6 +20,7 @@ TypeHandle ParticleFunction2::_type_handle;
 IMPLEMENT_CLASS(LinearMotionParticleFunction);
 IMPLEMENT_CLASS(AngularMotionParticleFunction);
 TypeHandle LifespanKillerParticleFunction::_type_handle;
+TypeHandle VelocityKillerParticleFunction::_type_handle;
 IMPLEMENT_CLASS(LerpParticleFunction);
 IMPLEMENT_CLASS(VelocityJitterParticleFunction);
 IMPLEMENT_CLASS(BounceParticleFunction);
@@ -40,78 +41,95 @@ LinearMotionParticleFunction(PN_stdfloat drag) :
 void LinearMotionParticleFunction::
 update(double time, double dt, ParticleSystem2 *system) {
 
-  if (!system->_forces.empty()) {
-    // The particle system has forces.  We need to accumulate them and
-    // integrate.
+  double phys_dt = system->_phys_timestep;
+  for (int i = 0; i < system->_num_phys_steps; ++i) {
+    if (!system->_forces.empty()) {
+      // The particle system has forces.  We need to accumulate them and
+      // integrate.
 
-    LVector3 *force_accum = (LVector3 *)alloca(sizeof(LVector3) * system->_num_alive_particles);
-    memset(force_accum, 0, sizeof(LVector3) * system->_num_alive_particles);
+      LVector3 *force_accum = (LVector3 *)alloca(sizeof(LVector3) * system->_num_alive_particles);
+      memset(force_accum, 0, sizeof(LVector3) * system->_num_alive_particles);
 
-    // Accumulate forces.
-    for (ParticleForce2 *force : system->_forces) {
-      force->accumulate(1.0f, force_accum, system);
-    }
-
-    // Integrate forces.
-    for (Particle &p : system->_particles) {
-      if (!p._alive) {
-        continue;
+      // Accumulate forces.
+      for (ParticleForce2 *force : system->_forces) {
+        force->accumulate(1.0f, force_accum, system);
       }
 
-      LVector3 accel_vec = *force_accum;
-      accel_vec -= p._velocity * _drag;
+      // Integrate forces.
+      for (Particle &p : system->_particles) {
+        if (!p._alive) {
+          continue;
+        }
 
-      p._prev_pos = p._pos;
-      p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
-      p._velocity += accel_vec * dt;
+        LVector3 accel_vec = *force_accum;
+        accel_vec -= p._velocity * _drag;
 
-      ++force_accum;
-    }
+        p._prev_pos = p._pos;
+        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5f);
+        p._velocity += accel_vec * phys_dt;
 
-  } else {
-    // No forces on particle system, simply add current velocity onto
-    // particle position.
-    for (Particle &p : system->_particles) {
-      if (!p._alive) {
-        continue;
+        ++force_accum;
       }
 
-      LVector3 accel_vec(0.0f);
-      accel_vec -= p._velocity * _drag;
-      p._prev_pos = p._pos;
-      p._pos += (p._velocity * dt) + (accel_vec * dt * dt * 0.5);
-      p._velocity += accel_vec * dt;
+    } else {
+      // No forces on particle system, simply add current velocity onto
+      // particle position.
+      for (Particle &p : system->_particles) {
+        if (!p._alive) {
+          continue;
+        }
+
+
+        LVector3 accel_vec(0.0f);
+        accel_vec -= p._velocity * _drag;
+        p._prev_pos = p._pos;
+        p._pos += (p._velocity * phys_dt) + (accel_vec * phys_dt * phys_dt * 0.5f);
+        p._velocity += accel_vec * phys_dt;
+      }
     }
-  }
 
-  // Enforce constraints.
-  if (!system->_constraints.empty() && system->_num_alive_particles > 0) {
-    bool constraint_satisifed[100];
-    bool final_constraint[100];
-    for (size_t i = 0; i < system->_constraints.size() && i < 100u; ++i) {
-      // TODO: final constraints.
-
-      constraint_satisifed[i] = false;
-    }
-
-    for (int p = 0; p < 3; ++p) {
+    // Enforce constraints.
+    if (!system->_constraints.empty() && system->_num_alive_particles > 0) {
+      bool constraint_satisifed[100];
+      bool final_constraint[100];
       for (size_t i = 0; i < system->_constraints.size() && i < 100u; ++i) {
-        if (!constraint_satisifed[i]) {
-          ParticleConstraint2 *constraint = system->_constraints[i];
-          bool did_something = constraint->enforce_constraint(time, dt, system);
-          if (did_something) {
-            // Invalidate other constraints.
-            for (size_t j = 0; j < system->_constraints.size() && j < 100; ++j) {
-              if (i != j) {
-                constraint_satisifed[j] = false;
+        // TODO: final constraints.
+
+        constraint_satisifed[i] = false;
+      }
+
+      for (int p = 0; p < 3; ++p) {
+        for (size_t i = 0; i < system->_constraints.size() && i < 100u; ++i) {
+          if (!constraint_satisifed[i]) {
+            constraint_satisifed[i] = true;
+            ParticleConstraint2 *constraint = system->_constraints[i];
+            bool did_something = constraint->enforce_constraint(time, phys_dt, system);
+            if (did_something) {
+              // Invalidate other constraints.
+              for (size_t j = 0; j < system->_constraints.size() && j < 100; ++j) {
+                if (i != j) {
+                  constraint_satisifed[j] = false;
+                }
               }
             }
           }
         }
       }
+
+      // TODO: run final constraints
+    }
+  }
+
+  // Interp the pos.
+  double phys_time = (system->_phys_tick + system->_num_phys_steps) * system->_phys_timestep;
+  double predicted_time = system->_elapsed + dt;
+  double interpolant = (predicted_time - phys_time) / system->_phys_timestep;
+  for (Particle &p : system->_particles) {
+    if (!p._alive) {
+      continue;
     }
 
-    // TODO: run final constraints
+    p._smooth_pos = p._prev_pos + (p._pos - p._prev_pos) * interpolant;
   }
 }
 
@@ -215,6 +233,73 @@ make_from_bam(const FactoryParams &params) {
 void LifespanKillerParticleFunction::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+VelocityKillerParticleFunction::
+VelocityKillerParticleFunction(PN_stdfloat thresh) :
+  _threshold(thresh)
+{
+}
+
+/**
+ *
+ */
+void VelocityKillerParticleFunction::
+update(double time, double dt, ParticleSystem2 *system) {
+  PN_stdfloat thresh_sqr = _threshold * _threshold;
+
+  for (int i = 0; i < (int)system->_particles.size(); ++i) {
+    const Particle *p = &system->_particles[i];
+    if (!p->_alive) {
+      continue;
+    }
+
+    if (p->_velocity.length_squared() <= thresh_sqr) {
+      system->kill_particle(i);
+    }
+  }
+}
+
+/**
+ *
+ */
+TypedWritable *VelocityKillerParticleFunction::
+make_from_bam(const FactoryParams &params) {
+  VelocityKillerParticleFunction *obj = new VelocityKillerParticleFunction(0.0f);
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void VelocityKillerParticleFunction::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+void VelocityKillerParticleFunction::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_threshold);
+}
+
+/**
+ *
+ */
+void VelocityKillerParticleFunction::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _threshold = scan.get_stdfloat();
 }
 
 /**
@@ -546,13 +631,11 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
-    LVector3 particle_dir = p._velocity.normalized();
-
-    if (IS_NEARLY_ZERO(particle_dir.length_squared())) {
+    if (IS_NEARLY_ZERO(p._velocity.length_squared())) {
       continue;
     }
 
-    PN_stdfloat dist = _plane.dist_to_plane(p._pos + p._velocity * dt);
+    PN_stdfloat dist = _plane.dist_to_plane(p._pos);
     if (dist <= 0.0f) {
       // Hit plane, bounce.
       LVector3 reflect = 2.0f * normal * normal.dot(p._velocity) - p._velocity;
@@ -623,8 +706,10 @@ update(double time, double dt, ParticleSystem2 *system) {
       continue;
     }
 
-    p._prev_pos = p._pos;
+    p._velocity.set(0, 0, 0);
     p._pos = pos;
+    p._smooth_pos = pos;
+    p._prev_pos = pos;
   }
 }
 

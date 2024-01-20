@@ -12,6 +12,33 @@
  */
 
 /**
+ * Sets the object that provides an interface to trace against a collision/physics
+ * scene.  Needed for particle collisions.  The mask is used to filter the set of
+ * objects particles should collide with.
+ */
+INLINE void ParticleSystem2::
+set_tracer(TraceInterface *tracer, CollideMask mask) {
+  _tracer = tracer;
+  _trace_mask = mask;
+}
+
+/**
+ *
+ */
+INLINE TraceInterface *ParticleSystem2::
+get_tracer() const {
+  return _tracer;
+}
+
+/**
+ *
+ */
+INLINE void ParticleSystem2::
+clear_tracer() {
+  _tracer = nullptr;
+}
+
+/**
  * Returns the particle pool size of the system.  This is the maximum number
  * of particles that can be alive simultaneously.  Memory for each particle in
  * the pool is pre-allocated.

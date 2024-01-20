@@ -85,7 +85,7 @@ register_engine_proxy(AudioEngineProxy *proxy) {
  *
  */
 void AudioEngine::
-set_tracer(AudioTracer *tracer) {
+set_tracer(TraceInterface *tracer, CollideMask mask) {
 }
 
 /**

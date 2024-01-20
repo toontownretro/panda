@@ -91,8 +91,7 @@ make(const Shader *shader, pvector<ShaderInput> &&inputs, int flags, int instanc
   ShaderAttrib *attr = new ShaderAttrib;
   attr->_shader = shader;
   for (size_t i = 0; i < inputs.size(); ++i) {
-    const InternalName *name = inputs[i].get_name();
-    attr->_inputs.insert({ name, std::move(inputs[i]) });
+    attr->insert_input(std::move(inputs[i]));
   }
   attr->_has_shader = true;
   attr->_flags = flags;
@@ -213,12 +212,7 @@ set_hardware_skinning(bool flag, int num_transforms) const {
 CPT(RenderAttrib) ShaderAttrib::
 set_shader_input(const ShaderInput &input) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
-  Inputs::iterator i = result->_inputs.find(input.get_name());
-  if (i == result->_inputs.end()) {
-    result->_inputs.insert(Inputs::value_type(input.get_name(), input));
-  } else {
-    i->second = input;
-  }
+  result->insert_input(input);
   result->build_texture_inputs();
   return return_new(result);
 }
@@ -229,12 +223,7 @@ set_shader_input(const ShaderInput &input) const {
 CPT(RenderAttrib) ShaderAttrib::
 set_shader_input(ShaderInput &&input) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
-  Inputs::iterator i = result->_inputs.find(input.get_name());
-  if (i == result->_inputs.end()) {
-    result->_inputs.insert(Inputs::value_type(input.get_name(), std::move(input)));
-  } else {
-    i->second = std::move(input);
-  }
+  result->insert_input(std::move(input));
   result->build_texture_inputs();
   return return_new(result);
 }
@@ -249,7 +238,7 @@ copy_shader_inputs_from(const ShaderAttrib *other) const {
 
   Inputs::const_iterator i = other->_inputs.begin();
   for (; i != other->_inputs.end(); i++) {
-    result->_inputs[i->first] = i->second;
+    result->insert_input((*i));
   }
 
   result->build_texture_inputs();
@@ -268,13 +257,7 @@ set_shader_inputs(const pvector<ShaderInput> &inputs) const {
 
   size_t num_inputs = inputs.size();
   for (size_t i = 0; i < num_inputs; i++) {
-    const ShaderInput &input = inputs[i];
-    Inputs::iterator itr = result->_inputs.find(input.get_name());
-    if (itr == result->_inputs.end()) {
-      result->_inputs.insert(Inputs::value_type(input.get_name(), input));
-    } else {
-      itr->second = input;
-    }
+    result->insert_input(inputs[i]);
   }
 
   result->build_texture_inputs();
@@ -302,7 +285,10 @@ set_instance_count(int instance_count) const {
 CPT(RenderAttrib) ShaderAttrib::
 clear_shader_input(const InternalName *id) const {
   ShaderAttrib *result = new ShaderAttrib(*this);
-  result->_inputs.erase(id);
+  Inputs::iterator it = result->find_input(id);
+  if (it != result->_inputs.end()) {
+    result->_inputs.erase(it);
+  }
   result->build_texture_inputs();
   return return_new(result);
 }
@@ -328,38 +314,15 @@ clear_all_shader_inputs() const {
 }
 
 /**
- * Returns the ShaderInput of the given name.  If no such name is found, this
- * function does not return NULL --- it returns the "blank" ShaderInput.
- */
-const ShaderInput &ShaderAttrib::
-get_shader_input(const InternalName *id) const {
-  Inputs::const_iterator i = _inputs.find(id);
-  if (i != _inputs.end()) {
-    return (*i).second;
-  } else {
-    return ShaderInput::get_blank();
-  }
-}
-
-/**
- * Returns the ShaderInput of the given name.  If no such name is found, this
- * function does not return NULL --- it returns the "blank" ShaderInput.
- */
-const ShaderInput &ShaderAttrib::
-get_shader_input(const std::string &id) const {
-  return get_shader_input(InternalName::make(id));
-}
-
-/**
  * Returns the ShaderInput as a nodepath.  Assertion fails if there is none,
  * or if it is not a nodepath.
  */
 const NodePath &ShaderAttrib::
 get_shader_input_nodepath(const InternalName *id) const {
   static NodePath resfail;
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
     if (p.get_value_type() == ShaderInput::M_nodepath) {
       return ((const ParamNodePath *)p.get_value())->get_value();
     } else {
@@ -386,9 +349,9 @@ get_shader_input_nodepath(const InternalName *id) const {
 LVecBase4 ShaderAttrib::
 get_shader_input_vector(const InternalName *id) const {
   static LVecBase4 resfail(0,0,0,0);
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
 
     if (p.get_value_type() == ShaderInput::M_vector) {
       return p.get_vector();
@@ -449,9 +412,9 @@ get_shader_input_vector(const InternalName *id) const {
  */
 const Shader::ShaderPtrData *ShaderAttrib::
 get_shader_input_ptr(const InternalName *id) const {
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
     if (p.get_value_type() != ShaderInput::M_numeric &&
         p.get_value_type() != ShaderInput::M_vector) {
       ostringstream strm;
@@ -474,9 +437,9 @@ get_shader_input_ptr(const InternalName *id) const {
  */
 bool ShaderAttrib::
 get_shader_input_ptr(const InternalName *id, Shader::ShaderPtrData &data) const {
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
     if (p.get_value_type() == ShaderInput::M_numeric ||
         p.get_value_type() == ShaderInput::M_vector) {
 
@@ -528,9 +491,9 @@ get_shader_input_ptr(const InternalName *id, Shader::ShaderPtrData &data) const 
  */
 Texture *ShaderAttrib::
 get_shader_input_texture(const InternalName *id, SamplerState *sampler) const {
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
     switch (p.get_value_type()) {
     case ShaderInput::M_texture:
       {
@@ -571,9 +534,9 @@ get_shader_input_texture(const InternalName *id, SamplerState *sampler) const {
  */
 const LMatrix4 &ShaderAttrib::
 get_shader_input_matrix(const InternalName *id, LMatrix4 &matrix) const {
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
 
     if (p.get_value_type() == ShaderInput::M_matrix) {
       matrix = p.get_matrix();
@@ -629,14 +592,14 @@ get_shader_input_matrix(const InternalName *id, LMatrix4 &matrix) const {
  */
 ShaderBuffer *ShaderAttrib::
 get_shader_input_buffer(const InternalName *id) const {
-  Inputs::const_iterator i = _inputs.find(id);
+  Inputs::const_iterator i = find_input(id);
   if (i == _inputs.end()) {
     ostringstream strm;
     strm << "Shader input " << id->get_name() << " is not present.\n";
     nassert_raise(strm.str());
     return nullptr;
   } else {
-    const ShaderInput &p = (*i).second;
+    const ShaderInput &p = (*i);
 
     if (p.get_value_type() == ShaderInput::M_buffer) {
       ShaderBuffer *value;
@@ -649,16 +612,6 @@ get_shader_input_buffer(const InternalName *id) const {
     nassert_raise(strm.str());
     return nullptr;
   }
-}
-
-/**
- * Returns the shader object associated with the node.  If get_override
- * returns true, but get_shader returns NULL, that means that this attribute
- * should disable the shader.
- */
-const Shader *ShaderAttrib::
-get_shader() const {
-  return _shader;
 }
 
 /**
@@ -731,8 +684,8 @@ compare_to_impl(const RenderAttrib *other) const {
   Inputs::const_iterator i1 = this->_inputs.begin();
   Inputs::const_iterator i2 = that->_inputs.begin();
   while ((i1 != this->_inputs.end()) && (i2 != that->_inputs.end())) {
-    if (i1->second != i2->second) {
-      return (i1->second < i2->second) ? -1 : 1;
+    if (*i1 != *i2) {
+      return (*i1 < *i2) ? -1 : 1;
     }
     ++i1;
     ++i2;
@@ -768,7 +721,7 @@ get_hash_impl() const {
 
   Inputs::const_iterator ii;
   for (ii = _inputs.begin(); ii != _inputs.end(); ++ii) {
-    hash = (*ii).second.add_hash(hash);
+    hash = (*ii).add_hash(hash);
   }
 
   return hash;
@@ -796,15 +749,15 @@ compose_impl(const RenderAttrib *other) const {
   // Update the shader-data portion.
   Inputs::const_iterator iover;
   for (iover=over->_inputs.begin(); iover!=over->_inputs.end(); ++iover) {
-    const InternalName *id = (*iover).first;
-    const ShaderInput &dover = (*iover).second;
-    Inputs::iterator iattr = attr->_inputs.find(id);
+    const ShaderInput &dover = (*iover);
+    const InternalName *id = (*iover).get_name();
+    Inputs::iterator iattr = attr->find_input(id);
     if (iattr == attr->_inputs.end()) {
-      attr->_inputs.insert(Inputs::value_type(id,dover));
+      attr->_inputs.push_back(dover);
     } else {
-      const ShaderInput &dattr = (*iattr).second;
+      const ShaderInput &dattr = (*iattr);
       if (dattr.get_priority() <= dover.get_priority()) {
-        iattr->second = iover->second;
+        *iattr = *iover;
       }
     }
   }
@@ -911,9 +864,9 @@ build_texture_inputs() {
   _texture_inputs.clear();
 
   for (auto it = _inputs.begin(); it != _inputs.end(); ++it) {
-    Texture *tex = (*it).second.get_texture();
+    Texture *tex = (*it).get_texture();
     if (tex != nullptr) {
-      _texture_inputs.insert({ (*it).first, tex });
+      _texture_inputs.insert({ (*it).get_name(), tex });
     }
   }
 

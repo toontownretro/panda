@@ -43,6 +43,8 @@ public:
 
   virtual std::string get_ir() const override;
 
+  void disassemble(std::ostream &out) const;
+
   class InstructionStream;
 
   /**

@@ -15,7 +15,7 @@
  * Grabs an overall lock on the cycler.  Release it with a call to release().
  * This lock should be held while walking the list of stages.
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 acquire() {
   TAU_PROFILE("void PipelineCyclerTrueImpl::acquire()", " ", TAU_USER);
   _lock.acquire();
@@ -25,7 +25,7 @@ acquire() {
  * Grabs an overall lock on the cycler.  Release it with a call to release().
  * This lock should be held while walking the list of stages.
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 acquire(Thread *current_thread) {
   TAU_PROFILE("void PipelineCyclerTrueImpl::acquire(Thread *)", " ", TAU_USER);
   _lock.acquire(current_thread);
@@ -34,7 +34,7 @@ acquire(Thread *current_thread) {
 /**
  * Release the overall lock on the cycler that was grabbed via acquire().
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 release() {
   TAU_PROFILE("void PipelineCyclerTrueImpl::release()", " ", TAU_USER);
   _lock.release();
@@ -49,7 +49,7 @@ release() {
  * thread modifies the data, it will perform a copy-on-write, and thereby
  * change the pointer stored within the object.)
  */
-INLINE const CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE const CycleData *PipelineCyclerTrueImpl::
 read_unlocked(Thread *current_thread) const {
   TAU_PROFILE("const CycleData *PipelineCyclerTrueImpl::read_unlocked(Thread *)", " ", TAU_USER);
   int pipeline_stage = current_thread->get_pipeline_stage();
@@ -67,7 +67,7 @@ read_unlocked(Thread *current_thread) const {
  * There should be no outstanding write pointers on the data when this
  * function is called.
  */
-INLINE const CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE const CycleData *PipelineCyclerTrueImpl::
 read(Thread *current_thread) const {
   TAU_PROFILE("const CycleData *PipelineCyclerTrueImpl::read(Thread *)", " ", TAU_USER);
   int pipeline_stage = current_thread->get_pipeline_stage();
@@ -82,7 +82,7 @@ read(Thread *current_thread) const {
  * Increments the count on a pointer previously retrieved by read(); now the
  * pointer will need to be released twice.
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 increment_read(const CycleData *pointer) const {
   TAU_PROFILE("void PipelineCyclerTrueImpl::increment_read(const CycleData *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -96,7 +96,7 @@ increment_read(const CycleData *pointer) const {
 /**
  * Releases a pointer previously obtained via a call to read().
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 release_read(const CycleData *pointer) const {
   TAU_PROFILE("void PipelineCyclerTrueImpl::release_read(const CycleData *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -118,7 +118,7 @@ release_read(const CycleData *pointer) const {
  * and if there is a write pointer there may be no read pointers on the same
  * stage (but see elevate_read).
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 write(Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::write(Thread *)", " ", TAU_USER);
   return write_stage(current_thread->get_pipeline_stage(), current_thread);
@@ -144,7 +144,7 @@ write(Thread *current_thread) {
  * are confident that there are no upstream changes to be lost (for instance,
  * for an object that has been recently created).
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 write_upstream(bool force_to_0, Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::write_upstream(bool, Thread *)", " ", TAU_USER);
   return write_stage_upstream(current_thread->get_pipeline_stage(), force_to_0,
@@ -156,7 +156,7 @@ write_upstream(bool force_to_0, Thread *current_thread) {
  * may not change the value of the pointer.  It is only valid to do this if
  * this is the only currently-outstanding read pointer on the current stage.
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 elevate_read(const CycleData *pointer, Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::elevate_read(const CycleData *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -174,7 +174,7 @@ elevate_read(const CycleData *pointer, Thread *current_thread) {
  * elevate_read(), but also propagates the pointer back to upstream stages,
  * like write_upstream().
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 elevate_read_upstream(const CycleData *pointer, bool force_to_0, Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::elevate_read_upstream(const CycleData *, bool)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -191,7 +191,7 @@ elevate_read_upstream(const CycleData *pointer, bool force_to_0, Thread *current
  * Increments the count on a pointer previously retrieved by write(); now the
  * pointer will need to be released twice.
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 increment_write(CycleData *pointer) const {
   TAU_PROFILE("void PipelineCyclerTrueImpl::increment_write(CycleData *)", " ", TAU_USER);
   int pipeline_stage = Thread::get_current_pipeline_stage();
@@ -206,7 +206,7 @@ increment_write(CycleData *pointer) const {
 /**
  * Releases a pointer previously obtained via a call to write().
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 release_write(CycleData *pointer) {
   TAU_PROFILE("void PipelineCyclerTrueImpl::release_write(CycleData *)", " ", TAU_USER);
   int pipeline_stage = Thread::get_current_pipeline_stage();
@@ -224,7 +224,7 @@ is_dirty() const {
 /**
  *
  */
-INLINE bool PipelineCyclerTrueImpl::
+ALWAYS_INLINE bool PipelineCyclerTrueImpl::
 is_dirty(unsigned int seq) const {
   return _dirty != 0 && _dirty != seq;
 }
@@ -232,7 +232,7 @@ is_dirty(unsigned int seq) const {
 /**
  *
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 mark_dirty(unsigned int seq) {
   _dirty = seq;
 }
@@ -240,7 +240,7 @@ mark_dirty(unsigned int seq) {
 /**
  *
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 clear_dirty() {
   _dirty = 0;
 }
@@ -248,7 +248,7 @@ clear_dirty() {
 /**
  * Returns the number of stages in the pipeline.
  */
-INLINE int PipelineCyclerTrueImpl::
+ALWAYS_INLINE int PipelineCyclerTrueImpl::
 get_num_stages() const {
   return _num_stages;
 }
@@ -258,7 +258,7 @@ get_num_stages() const {
  * stage of the pipeline.  As in read_unlocked(), no lock is held on the
  * returned pointer.
  */
-INLINE const CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE const CycleData *PipelineCyclerTrueImpl::
 read_stage_unlocked(int pipeline_stage) const {
   TAU_PROFILE("const CycleData *PipelineCyclerTrueImpl::read_stage_unlocked(int)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -277,7 +277,7 @@ read_stage_unlocked(int pipeline_stage) const {
  * There should be no outstanding write pointers on the data when this
  * function is called.
  */
-INLINE const CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE const CycleData *PipelineCyclerTrueImpl::
 read_stage(int pipeline_stage, Thread *current_thread) const {
   TAU_PROFILE("const CycleData *PipelineCyclerTrueImpl::read_stage(int, Thread *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -292,7 +292,7 @@ read_stage(int pipeline_stage, Thread *current_thread) const {
 /**
  * Releases a pointer previously obtained via a call to read_stage().
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 release_read_stage(int pipeline_stage, const CycleData *pointer) const {
   TAU_PROFILE("void PipelineCyclerTrueImpl::release_read_stage(int, const CycleData *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -307,7 +307,7 @@ release_read_stage(int pipeline_stage, const CycleData *pointer) const {
  * may not change the value of the pointer.  It is only valid to do this if
  * this is the only currently-outstanding read pointer on the indicated stage.
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 elevate_read_stage(int pipeline_stage, const CycleData *pointer,
                    Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::elevate_read_stage(int, const CycleData *)", " ", TAU_USER);
@@ -327,7 +327,7 @@ elevate_read_stage(int pipeline_stage, const CycleData *pointer,
  * may not change the value of the pointer.  It is only valid to do this if
  * this is the only currently-outstanding read pointer on the indicated stage.
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 elevate_read_stage_upstream(int pipeline_stage, const CycleData *pointer,
                             bool force_to_0, Thread *current_thread) {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::elevate_read_stage(int, const CycleData *)", " ", TAU_USER);
@@ -346,7 +346,7 @@ elevate_read_stage_upstream(int pipeline_stage, const CycleData *pointer,
 /**
  * Releases a pointer previously obtained via a call to write_stage().
  */
-INLINE void PipelineCyclerTrueImpl::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::
 release_write_stage(int pipeline_stage, CycleData *pointer) {
   TAU_PROFILE("void PipelineCyclerTrueImpl::release_write_stage(int, const CycleData *)", " ", TAU_USER);
 #ifdef _DEBUG
@@ -364,7 +364,7 @@ release_write_stage(int pipeline_stage, CycleData *pointer) {
  * Returns the type of object that owns this cycler, as reported by
  * CycleData::get_parent_type().
  */
-INLINE TypeHandle PipelineCyclerTrueImpl::
+ALWAYS_INLINE TypeHandle PipelineCyclerTrueImpl::
 get_parent_type() const {
   return _data[0]._cdata->get_parent_type();
 }
@@ -375,7 +375,7 @@ get_parent_type() const {
  * recover after a failure to manage the read and write pointers correctly.
  * You should never call this function directly.
  */
-INLINE CycleData *PipelineCyclerTrueImpl::
+ALWAYS_INLINE CycleData *PipelineCyclerTrueImpl::
 cheat() const {
   TAU_PROFILE("CycleData *PipelineCyclerTrueImpl::cheat()", " ", TAU_USER);
   int pipeline_stage = Thread::get_current_pipeline_stage();
@@ -389,7 +389,7 @@ cheat() const {
  * Returns the number of handles currently outstanding to read the current
  * stage of the data.  This should only be used for debugging purposes.
  */
-INLINE int PipelineCyclerTrueImpl::
+ALWAYS_INLINE int PipelineCyclerTrueImpl::
 get_read_count() const {
   return 0;
 }
@@ -399,7 +399,7 @@ get_read_count() const {
  * stage of the data.  This will normally only be either 0 or 1.  This should
  * only be used for debugging purposes.
  */
-INLINE int PipelineCyclerTrueImpl::
+ALWAYS_INLINE int PipelineCyclerTrueImpl::
 get_write_count() const {
   return 0;
 }
@@ -409,7 +409,7 @@ get_write_count() const {
  * two stages to the pipeline.  It does the same thing as cycle(), but is a
  * little bit faster because it knows there are exactly two stages.
  */
-INLINE PT(CycleData) PipelineCyclerTrueImpl::
+ALWAYS_INLINE PT(CycleData) PipelineCyclerTrueImpl::
 cycle_2() {
   TAU_PROFILE("PT(CycleData) PipelineCyclerTrueImpl::cycle_2()", " ", TAU_USER);
 
@@ -434,12 +434,13 @@ cycle_2() {
   return last_val;
 }
 
+#if 0
 /**
  * This is a special implementation of cycle() for the special case of exactly
  * three stages to the pipeline.  It does the same thing as cycle(), but is a
  * little bit faster because it knows there are exactly three stages.
  */
-INLINE PT(CycleData) PipelineCyclerTrueImpl::
+ALWAYS_INLINE PT(CycleData) PipelineCyclerTrueImpl::
 cycle_3() {
   TAU_PROFILE("PT(CycleData) PipelineCyclerTrueImpl::cycle_3()", " ", TAU_USER);
 
@@ -468,11 +469,12 @@ cycle_3() {
 
   return last_val;
 }
+#endif
 
 /**
  *
  */
-INLINE PipelineCyclerTrueImpl::CyclerMutex::
+ALWAYS_INLINE PipelineCyclerTrueImpl::CyclerMutex::
 CyclerMutex(PipelineCyclerTrueImpl *cycler) {
 #ifdef DEBUG_THREADS
   _cycler = cycler;
@@ -482,7 +484,7 @@ CyclerMutex(PipelineCyclerTrueImpl *cycler) {
 /**
  *
  */
-INLINE PipelineCyclerTrueImpl::CycleDataNode::
+ALWAYS_INLINE PipelineCyclerTrueImpl::CycleDataNode::
 CycleDataNode(const PipelineCyclerTrueImpl::CycleDataNode &copy) :
   _cdata(copy._cdata),
   _writes_outstanding(0)
@@ -492,7 +494,7 @@ CycleDataNode(const PipelineCyclerTrueImpl::CycleDataNode &copy) :
 /**
  *
  */
-INLINE PipelineCyclerTrueImpl::CycleDataNode::
+ALWAYS_INLINE PipelineCyclerTrueImpl::CycleDataNode::
 ~CycleDataNode() {
   nassertv(_writes_outstanding == 0);
 }
@@ -500,7 +502,7 @@ INLINE PipelineCyclerTrueImpl::CycleDataNode::
 /**
  *
  */
-INLINE void PipelineCyclerTrueImpl::CycleDataNode::
+ALWAYS_INLINE void PipelineCyclerTrueImpl::CycleDataNode::
 operator = (const PipelineCyclerTrueImpl::CycleDataNode &copy) {
   _cdata = copy._cdata;
 }

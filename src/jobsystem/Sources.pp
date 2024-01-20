@@ -3,7 +3,7 @@
 
   #define BUILDING_DLL BUILDING_PANDA_JOBSYSTEM
 
-  #define LOCAL_LIBS pipeline pstatclient mathutil
+  #define LOCAL_LIBS pipeline pstatclient mathutil express
 
   #define HEADERS \
     config_jobsystem.h \
@@ -25,6 +25,7 @@
 #end lib_target
 
 #begin test_bin_target
+  #define BUILD_TESTS 1
   #define TARGET test_jobs
   #define LOCAL_LIBS jobsystem
   #define OTHER_LIBS \

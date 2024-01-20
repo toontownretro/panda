@@ -27,17 +27,48 @@
 #include "workStealingQueue.h"
 #include "psemaphore.h"
 #include "randomizer.h"
+#include "trueClock.h"
 
 #include <functional>
+
+/**
+ * Event log for debugging purposes.
+ */
+class JobSystemEvent {
+public:
+  enum EventType {
+    // Worker thread states.
+    ET_thread_wake,
+    ET_thread_sleep,
+
+    // A job is scheduled.
+    ET_schedule_job,
+
+    // Job work tracking.
+    ET_start_job,
+    ET_finish_job,
+  };
+
+  EventType type;
+  std::string thread_name;
+  double time;
+
+  JobSystemEvent *next = nullptr;
+};
 
 /**
  *
  */
 class EXPCL_PANDA_JOBSYSTEM JobSystem {
+public:
+  typedef WorkStealingQueue<Job *> JobQueue;
+
 PUBLISHED:
   JobSystem();
 
   void initialize();
+
+  void new_frame();
 
   void schedule(Job *job);
   void schedule(Job **jobs, int count, bool wait);
@@ -50,26 +81,26 @@ PUBLISHED:
   void wait_job(Job *job, Thread *thread = Thread::get_current_thread());
 
   INLINE static JobSystem *get_global_ptr();
+  INLINE static void init_global_job_system();
 
   INLINE int get_num_threads() const;
 
-public:
-  Job *get_job_for_thread(Thread *thread, bool is_worker);
-  ALWAYS_INLINE Job *pop_job(Thread *thread, bool is_worker);
+  INLINE void push_event(JobSystemEvent::EventType type);
+  void write_events(const Filename &filename);
 
 public:
-  Mutex _cv_mutex;
-  // Signals to worker threads that a job has been added to the queue.
-  ConditionVar _cv_work_available;
-  // The condition is that we have at least 1 queued job on any thread
-  // queue.
-  AtomicAdjust::Integer _queued_jobs;
+  INLINE Job *pop_job(Thread *thread, bool is_worker);
 
+  INLINE JobQueue *get_job_queue(int thread);
+
+public:
   typedef pvector<PT(JobWorkerThread)> WorkerThreads;
   WorkerThreads _worker_threads;
+  pvector<Randomizer> _randomizers;
+  JobQueue *_job_queues;
 
-  typedef WorkStealingQueue<Job *> JobQueue;
-  JobQueue _job_queue;
+  patomic_unsigned_lock_free _queued_jobs;
+
   // We need to protect pushes onto this queue because jobs may be queued
   // by more than one non-worker threads, i.e. App and Cull.
   Mutex _queue_lock;
@@ -77,6 +108,10 @@ public:
   bool _initialized;
 
   friend class JobWorkerThread;
+
+  Mutex _event_lock;
+  JobSystemEvent *_events;
+  JobSystemEvent *_events_tail;
 
 private:
   static JobSystem *_global_ptr;

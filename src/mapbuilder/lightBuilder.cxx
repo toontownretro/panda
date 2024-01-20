@@ -951,6 +951,22 @@ collect_vertices_and_triangles() {
 }
 
 /**
+ *
+ */
+static uint32_t
+float_to_uint(float val) {
+  return *reinterpret_cast<std::uint32_t*>(&val);
+}
+
+/**
+ *
+ */
+static int32_t
+float_to_int(float val) {
+  return *reinterpret_cast<std::int32_t*>(&val);
+}
+
+/**
  * Creates the set of GPU buffers that contain the data for all of the
  * vertices, triangles, and lights in the scene, as well as the triangle
  * K-D tree for ray tracing acceleration.  They are created as buffer textures
@@ -1001,13 +1017,13 @@ make_gpu_buffers() {
 
   // Triangle buffer texture.  Three four-channel texels per triangle.
   PT(Texture) triangles = new Texture("lm_triangles");
-  triangles->setup_buffer_texture(_triangles.size() * 3, Texture::T_float,
-                                  Texture::F_rgba32, GeomEnums::UH_static);
+  triangles->setup_buffer_texture(_triangles.size() * 3, Texture::T_int,
+                                  Texture::F_rgba32i, GeomEnums::UH_static);
   triangles->set_keep_ram_image(false);
   PTA_uchar tri_data;
-  tri_data.resize(sizeof(float) * _triangles.size() * 12);
+  tri_data.resize(sizeof(int32_t) * _triangles.size() * 12);
   nassertr(triangles->get_expected_ram_image_size() == tri_data.size(), false);
-  float *tri_datap = (float *)tri_data.p();
+  int32_t *tri_datap = (int32_t *)tri_data.p();
   for (size_t i = 0; i < _triangles.size(); i++) {
     const LightmapTri &tri = _triangles[i];
 
@@ -1015,18 +1031,18 @@ make_gpu_buffers() {
     tri_datap[i * 12] = tri.indices[0];
     tri_datap[i * 12 + 1] = tri.indices[1];
     tri_datap[i * 12 + 2] = tri.indices[2];
-    tri_datap[i * 12 + 3] = 0.0f;
+    tri_datap[i * 12 + 3] = 0;
 
     // Texel 1: minx, miny, minz, contents
-    tri_datap[i * 12 + 4] = tri.mins[0];
-    tri_datap[i * 12 + 5] = tri.mins[1];
-    tri_datap[i * 12 + 6] = tri.mins[2];
+    tri_datap[i * 12 + 4] = float_to_int(tri.mins[0]);
+    tri_datap[i * 12 + 5] = float_to_int(tri.mins[1]);
+    tri_datap[i * 12 + 6] = float_to_int(tri.mins[2]);
     tri_datap[i * 12 + 7] = tri.contents;
 
     // Texel 2: maxx, maxy, maxz, unused
-    tri_datap[i * 12 + 8] = tri.maxs[0];
-    tri_datap[i * 12 + 9] = tri.maxs[1];
-    tri_datap[i * 12 + 10] = tri.maxs[2];
+    tri_datap[i * 12 + 8] = float_to_int(tri.maxs[0]);
+    tri_datap[i * 12 + 9] = float_to_int(tri.maxs[1]);
+    tri_datap[i * 12 + 10] = float_to_int(tri.maxs[2]);
     tri_datap[i * 12 + 11] = tri.palette;
   }
   triangles->set_ram_image(tri_data);
@@ -1038,13 +1054,13 @@ make_gpu_buffers() {
 
   // Light buffer texture.  Five four-channel texels per light.
   PT(Texture) lights = new Texture("lm_lights");
-  lights->setup_buffer_texture(_lights.size() * 5, Texture::T_float,
-                               Texture::F_rgba32, GeomEnums::UH_static);
+  lights->setup_buffer_texture(_lights.size() * 5, Texture::T_unsigned_int,
+                               Texture::F_rgba32i, GeomEnums::UH_static);
   lights->set_keep_ram_image(false);
   PTA_uchar light_data;
-  light_data.resize(sizeof(float) * _lights.size() * 20);
+  light_data.resize(sizeof(uint32_t) * _lights.size() * 20);
   nassertr(lights->get_expected_ram_image_size() == light_data.size(), false);
-  float *light_datap = (float *)light_data.p();
+  uint32_t *light_datap = (uint32_t *)light_data.p();
   for (size_t i = 0; i < _lights.size(); i++) {
     const LightmapLight &light = _lights[i];
 
@@ -1058,33 +1074,33 @@ make_gpu_buffers() {
 
     // Texel 0: type, constant, linear, quadratic
     light_datap[i * 20] = light.type;
-    light_datap[i * 20 + 1] = light.constant;
-    light_datap[i * 20 + 2] = light.linear;
-    light_datap[i * 20 + 3] = light.quadratic;
+    light_datap[i * 20 + 1] = float_to_uint(light.constant);
+    light_datap[i * 20 + 2] = float_to_uint(light.linear);
+    light_datap[i * 20 + 3] = float_to_uint(light.quadratic);
 
     // Texel 1: r, g, b, bake direct
-    light_datap[i * 20 + 4] = light.color[0];
-    light_datap[i * 20 + 5] = light.color[1];
-    light_datap[i * 20 + 6] = light.color[2];
+    light_datap[i * 20 + 4] = float_to_uint(light.color[0]);
+    light_datap[i * 20 + 5] = float_to_uint(light.color[1]);
+    light_datap[i * 20 + 6] = float_to_uint(light.color[2]);
     light_datap[i * 20 + 7] = light.bake_direct;
 
     // Texel 2: x, y, z, unused
-    light_datap[i * 20 + 8] = light.pos[0];
-    light_datap[i * 20 + 9] = light.pos[1];
-    light_datap[i * 20 + 10] = light.pos[2];
+    light_datap[i * 20 + 8] = float_to_uint(light.pos[0]);
+    light_datap[i * 20 + 9] = float_to_uint(light.pos[1]);
+    light_datap[i * 20 + 10] = float_to_uint(light.pos[2]);
     light_datap[i * 20 + 11] = 0.0f;
 
     // Texel 3: dirx, diry, dirz, unused
-    light_datap[i * 20 + 12] = dir[0];
-    light_datap[i * 20 + 13] = dir[1];
-    light_datap[i * 20 + 14] = dir[2];
+    light_datap[i * 20 + 12] = float_to_uint(dir[0]);
+    light_datap[i * 20 + 13] = float_to_uint(dir[1]);
+    light_datap[i * 20 + 14] = float_to_uint(dir[2]);
     light_datap[i * 20 + 15] = 0.0f;
 
     // Texel 4: exponent, stopdot, stopdot2, oodot
-    light_datap[i * 20 + 16] = light.exponent;
-    light_datap[i * 20 + 17] = stopdot;
-    light_datap[i * 20 + 18] = stopdot2;
-    light_datap[i * 20 + 19] = oodot;
+    light_datap[i * 20 + 16] = float_to_uint(light.exponent);
+    light_datap[i * 20 + 17] = float_to_uint(stopdot);
+    light_datap[i * 20 + 18] = float_to_uint(stopdot2);
+    light_datap[i * 20 + 19] = float_to_uint(oodot);
   }
   lights->set_ram_image(light_data);
   _gpu_buffers["lights"] = lights;
@@ -1134,14 +1150,14 @@ make_gpu_buffers() {
   }
 
   PT(Texture) kd_tree = new Texture("kd_tree");
-  kd_tree->setup_buffer_texture(node_count, Texture::T_float,
-                                Texture::F_rgba32, GeomEnums::UH_static);
+  kd_tree->setup_buffer_texture(node_count, Texture::T_int,
+                                Texture::F_rgba32i, GeomEnums::UH_static);
   kd_tree->set_compression(Texture::CM_off);
   kd_tree->set_keep_ram_image(false);
   PTA_uchar kd_tree_data;
-  kd_tree_data.resize(sizeof(float) * node_count * 4);
+  kd_tree_data.resize(sizeof(int32_t) * node_count * 4);
   nassertr(kd_tree_data.size() == kd_tree->get_expected_ram_image_size(), false);
-  float *kd_tree_datap = (float *)kd_tree_data.p();
+  int32_t *kd_tree_datap = (int32_t *)kd_tree_data.p();
 
   size_t node_num = 0;
   for (pnode = _kd_tree_head; pnode != nullptr; pnode = pnode->next) {
@@ -1157,7 +1173,7 @@ make_gpu_buffers() {
     kd_tree_datap[node_num * 4] = node.get_child_node_index(0);
     kd_tree_datap[node_num * 4 + 1] = node.get_child_node_index(1);
     kd_tree_datap[node_num * 4 + 2] = node.axis;
-    kd_tree_datap[node_num * 4 + 3] = node.dist;
+    kd_tree_datap[node_num * 4 + 3] = float_to_int(node.dist);
 
     ++node_num;
   }
@@ -1172,14 +1188,14 @@ make_gpu_buffers() {
     << "K-D leaves buffer texture is " << leaf_count * 4 << " RGBA32 texels\n";
 
   PT(Texture) kd_leaves = new Texture("kd_leaves");
-  kd_leaves->setup_buffer_texture(leaf_count * 4, Texture::T_float,
-                                  Texture::F_rgba32, GeomEnums::UH_static);
+  kd_leaves->setup_buffer_texture(leaf_count * 4, Texture::T_int,
+                                  Texture::F_rgba32i, GeomEnums::UH_static);
   kd_leaves->set_compression(Texture::CM_off);
   kd_leaves->set_keep_ram_image(false);
   PTA_uchar kd_leaves_data;
-  kd_leaves_data.resize(sizeof(float) * leaf_count * 16);
+  kd_leaves_data.resize(sizeof(int32_t) * leaf_count * 16);
   nassertr(kd_leaves_data.size() == kd_leaves->get_expected_ram_image_size(), false);
-  float *kd_leaves_datap = (float *)kd_leaves_data.p();
+  int32_t *kd_leaves_datap = (int32_t *)kd_leaves_data.p();
   int leaf_num = 0;
   for (pnode = _kd_tree_head; pnode != nullptr; pnode = pnode->next) {
     const KDNode &node = *pnode;
@@ -1190,15 +1206,15 @@ make_gpu_buffers() {
     assert(node.index == ~leaf_num);
 
     // Texel 1: mins, unused
-    kd_leaves_datap[leaf_num * 16] = node.mins[0];
-    kd_leaves_datap[leaf_num * 16 + 1] = node.mins[1];
-    kd_leaves_datap[leaf_num * 16 + 2] = node.mins[2];
+    kd_leaves_datap[leaf_num * 16] = float_to_int(node.mins[0]);
+    kd_leaves_datap[leaf_num * 16 + 1] = float_to_int(node.mins[1]);
+    kd_leaves_datap[leaf_num * 16 + 2] = float_to_int(node.mins[2]);
     kd_leaves_datap[leaf_num * 16 + 3] = 0.0f;
 
     // Texel 2: maxs, unused
-    kd_leaves_datap[leaf_num * 16 + 4] = node.maxs[0];
-    kd_leaves_datap[leaf_num * 16 + 5] = node.maxs[1];
-    kd_leaves_datap[leaf_num * 16 + 6] = node.maxs[2];
+    kd_leaves_datap[leaf_num * 16 + 4] = float_to_int(node.maxs[0]);
+    kd_leaves_datap[leaf_num * 16 + 5] = float_to_int(node.maxs[1]);
+    kd_leaves_datap[leaf_num * 16 + 6] = float_to_int(node.maxs[2]);
     kd_leaves_datap[leaf_num * 16 + 7] = 0.0f;
 
     // Texel 3: left, right, front, back neighbors
@@ -2109,14 +2125,16 @@ rasterize_geoms_into_lightmap_textures() {
 
   _gsg->finish();
 
-  //_graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
-  //_lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
+#ifdef WRITE_OUT_TEXS
+  _graphics_engine->extract_texture_data(_lm_textures["albedo"], _gsg);
+  _lm_textures["albedo"]->write("lm_albedo_#.png", 0, 0, true, false);
   //_graphics_engine->extract_texture_data(_lm_textures["emission"], _gsg);
   //_lm_textures["emission"]->write("lm_emission_#.png", 0, 0, true, false);
-  //_graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
-  //_lm_textures["position"]->write("lm_position_#.pfm", 0, 0, true, false);
-  //_graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
-  //_lm_textures["normal"]->write("lm_normal_#.pfm", 0, 0, true, false);
+  _graphics_engine->extract_texture_data(_lm_textures["position"], _gsg);
+  _lm_textures["position"]->write("lm_position_#.png", 0, 0, true, false);
+  _graphics_engine->extract_texture_data(_lm_textures["normal"], _gsg);
+  _lm_textures["normal"]->write("lm_normal_#.png", 0, 0, true, false);
+#endif
 
   _graphics_engine->remove_window(buffer);
 
@@ -2338,8 +2356,10 @@ compute_direct() {
   lightbuilder_cat.info()
     << "Done.\n";
 
-  //_graphics_engine->extract_texture_data(_lm_textures["direct"], _gsg);
-  //_lm_textures["direct"]->write("lm_direct_#.png", 0, 0, true, false);
+#ifdef WRITE_OUT_TEXS
+  _graphics_engine->extract_texture_data(_lm_textures["direct"], _gsg);
+  _lm_textures["direct"]->write("lm_direct_#.png", 0, 0, true, false);
+#endif
 
   return true;
 }

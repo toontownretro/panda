@@ -450,6 +450,10 @@ operator == (const ShaderInput &other) const {
   case M_numeric:
     return _stored_ptr._ptr == other._stored_ptr._ptr;
 
+  case M_texture_sampler:
+    return DCAST(ParamTextureSampler, _value)->get_texture() == DCAST(ParamTextureSampler, other._value)->get_texture() &&
+           DCAST(ParamTextureSampler, _value)->get_sampler() == DCAST(ParamTextureSampler, other._value)->get_sampler();
+
   default:
     return _value == other._value;
   }
@@ -475,6 +479,10 @@ operator != (const ShaderInput &other) const {
 
   case M_numeric:
     return _stored_ptr._ptr != other._stored_ptr._ptr;
+
+  case M_texture_sampler:
+    return DCAST(ParamTextureSampler, _value)->get_texture() != DCAST(ParamTextureSampler, other._value)->get_texture() ||
+           DCAST(ParamTextureSampler, _value)->get_sampler() != DCAST(ParamTextureSampler, other._value)->get_sampler();
 
   default:
     return _value != other._value;
@@ -522,6 +530,15 @@ operator < (const ShaderInput &other) const {
 
   case M_numeric:
     return _stored_ptr._ptr < other._stored_ptr._ptr;
+
+  case M_texture_sampler:
+    if (DCAST(ParamTextureSampler, _value)->get_texture() != DCAST(ParamTextureSampler, other._value)->get_texture()) {
+      return DCAST(ParamTextureSampler, _value)->get_texture() < DCAST(ParamTextureSampler, other._value)->get_texture();
+    }
+    if (DCAST(ParamTextureSampler, _value)->get_sampler() != DCAST(ParamTextureSampler, other._value)->get_sampler()) {
+      return DCAST(ParamTextureSampler, _value)->get_sampler() < DCAST(ParamTextureSampler, other._value)->get_sampler();
+    }
+    return false;
 
   default:
     return _value < other._value;

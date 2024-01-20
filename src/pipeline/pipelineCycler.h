@@ -45,27 +45,27 @@
 template<class CycleDataType>
 struct PipelineCycler : public PipelineCyclerBase {
 public:
-  INLINE PipelineCycler(Pipeline *pipeline = nullptr);
-  INLINE PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline = nullptr);
+  ALWAYS_INLINE PipelineCycler(Pipeline *pipeline = nullptr);
+  ALWAYS_INLINE PipelineCycler(CycleDataType &&initial_data, Pipeline *pipeline = nullptr);
 
-  INLINE PipelineCycler(const PipelineCycler<CycleDataType> &copy);
-  INLINE void operator = (const PipelineCycler<CycleDataType> &copy);
+  ALWAYS_INLINE PipelineCycler(const PipelineCycler<CycleDataType> &copy);
+  ALWAYS_INLINE void operator = (const PipelineCycler<CycleDataType> &copy);
 
-  INLINE const CycleDataType *read_unlocked(Thread *current_thread) const;
-  INLINE const CycleDataType *read(Thread *current_thread) const;
-  INLINE CycleDataType *write(Thread *current_thread);
-  INLINE CycleDataType *write_upstream(bool force_to_0, Thread *current_thread);
-  INLINE CycleDataType *elevate_read(const CycleDataType *pointer, Thread *current_thread);
-  INLINE CycleDataType *elevate_read_upstream(const CycleDataType *pointer, bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE const CycleDataType *read_unlocked(Thread *current_thread) const;
+  ALWAYS_INLINE const CycleDataType *read(Thread *current_thread) const;
+  ALWAYS_INLINE CycleDataType *write(Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *write_upstream(bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *elevate_read(const CycleDataType *pointer, Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *elevate_read_upstream(const CycleDataType *pointer, bool force_to_0, Thread *current_thread);
 
-  INLINE const CycleDataType *read_stage_unlocked(int pipeline_stage) const;
-  INLINE const CycleDataType *read_stage(int pipeline_stage, Thread *current_thread) const;
-  INLINE CycleDataType *elevate_read_stage(int pipeline_stage, const CycleDataType *pointer, Thread *current_thread);
-  INLINE CycleDataType *elevate_read_stage_upstream(int pipeline_stage, const CycleDataType *pointer, bool force_to_0, Thread *current_thread);
-  INLINE CycleDataType *write_stage_upstream(int pipeline_stage, bool force_to_0, Thread *current_thread);
-  INLINE CycleDataType *write_stage(int pipeline_stage, Thread *current_thread);
+  ALWAYS_INLINE const CycleDataType *read_stage_unlocked(int pipeline_stage) const;
+  ALWAYS_INLINE const CycleDataType *read_stage(int pipeline_stage, Thread *current_thread) const;
+  ALWAYS_INLINE CycleDataType *elevate_read_stage(int pipeline_stage, const CycleDataType *pointer, Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *elevate_read_stage_upstream(int pipeline_stage, const CycleDataType *pointer, bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *write_stage_upstream(int pipeline_stage, bool force_to_0, Thread *current_thread);
+  ALWAYS_INLINE CycleDataType *write_stage(int pipeline_stage, Thread *current_thread);
 
-  INLINE CycleDataType *cheat() const;
+  ALWAYS_INLINE CycleDataType *cheat() const;
 
 #ifndef DO_PIPELINING
 private:

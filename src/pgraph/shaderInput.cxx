@@ -83,6 +83,12 @@ add_hash(size_t hash) const {
   case M_numeric:
     return pointer_hash::add_hash(hash, _stored_ptr._ptr);
 
+  case M_texture_sampler:
+    {
+      hash = pointer_hash::add_hash(hash, DCAST(ParamTextureSampler, _value)->get_texture());
+      hash = size_t_hash::add_hash(hash, DCAST(ParamTextureSampler, _value)->get_sampler().get_hash());
+    }
+
   default:
     return pointer_hash::add_hash(hash, _value);
   }

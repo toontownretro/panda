@@ -32,6 +32,7 @@
 #include "pta_LVecBase3.h"
 #include "pta_LVecBase2.h"
 #include "extension.h"
+#include "ordered_vector.h"
 
 /**
  *
@@ -113,9 +114,9 @@ PUBLISHED:
   INLINE bool has_shader_input(const InternalName *id) const;
   INLINE bool has_shader_input(const std::string &id) const;
 
-  const Shader *get_shader() const;
-  const ShaderInput &get_shader_input(const InternalName *id) const;
-  const ShaderInput &get_shader_input(const std::string &id) const;
+  INLINE const Shader *get_shader() const;
+  INLINE const ShaderInput &get_shader_input(const InternalName *id) const;
+  INLINE const ShaderInput &get_shader_input(const std::string &id) const;
   INLINE size_t get_num_shader_inputs() const;
 
   INLINE const InternalName *get_shader_name() const;
@@ -160,8 +161,13 @@ private:
 
   // We don't keep a reference to the InternalName, since this is also already
   // stored on the ShaderInput object.
-  typedef pflat_hash_map<const InternalName *, ShaderInput, pointer_hash> Inputs;
+  typedef pvector<ShaderInput> Inputs;
   Inputs _inputs;
+
+  INLINE Inputs::iterator find_input(const InternalName *name);
+  INLINE Inputs::const_iterator find_input(const InternalName *name) const;
+  INLINE void insert_input(const ShaderInput &input);
+  INLINE void insert_input(ShaderInput &&input);
 
 public:
   bool _has_texture_inputs;
