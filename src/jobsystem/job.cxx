@@ -40,6 +40,7 @@ execute() {
     left_job._first_item = _first_item;
     left_job._num_items = left_count;
     left_job._function = _function;
+    
     ParallelProcessJob right_job;
     right_job.local_object();
     right_job._first_item = _first_item + left_count;
@@ -51,7 +52,6 @@ execute() {
     js->schedule(&right_job);
     js->wait_job(&left_job);
     js->wait_job(&right_job);
-
   } else {
     for (int i = 0; i < _num_items; ++i) {
       _function(_first_item + i);

@@ -99,8 +99,33 @@ ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
 template<class T>
 void ParallelProcessIterJob<T>::
 execute() {
-  T it = std::next(_begin, _first);
-  for (int i = 0; i < _count; ++it, ++i) {
-    _function(it);
+  if (_num_items > 1) {
+    int left_count = _num_items / 2;
+    int right_count = _num_items - left_count;
+
+    ParallelProcessIterJob<T> left_job;
+    left_job.local_object();
+    left_job._iter_start = _iter_start;
+    left_job._first_item = _first_item;
+    left_job._num_items = left_count;
+    left_job._function = _function;
+    
+    ParallelProcessIterJob<T> right_job;
+    right_job.local_object();
+    right_job._iter_start = _iter_start;
+    right_job._first_item = _first_item + left_count;
+    right_job._num_items = right_count;
+    right_job._function = _function;
+
+    JobSystem *js = JobSystem::get_global_ptr();
+    js->schedule(&left_job);
+    js->schedule(&right_job);
+    js->wait_job(&left_job);
+    js->wait_job(&right_job);
+  } else {
+    T it = std::next(_iter_start, _first_item);
+    for (size_t i = 0; i < _num_items; ++it, ++i) {
+      _function(it);
+    }
   }
 }
