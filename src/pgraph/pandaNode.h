@@ -780,6 +780,8 @@ private:
   static PStatCollector _update_masks_pcollector;
   static PStatCollector _update_clipping_pcollector;
   static PStatCollector _update_cache_pcollector;
+  static PStatCollector _update_children_cache_pcollector;
+  static PStatCollector _update_nested_vertices_pcollector;
 
 PUBLISHED:
   // This class is returned from get_children().  Use it to walk through the

@@ -26,6 +26,7 @@
 #include "mathutil_simd.h"
 #include "ikHelper.h"
 #include "characterVertexSlider.h"
+#include "jobSystem.h"
 
 TypeHandle Character::_type_handle;
 
@@ -607,6 +608,8 @@ find_attachment(const std::string &name) const {
 void Character::
 compute_attachment_transform(int index, bool force_update_node) {
   nassertv(index >= 0 && index < (int)_attachments.size());
+  
+  //ap_update_net_transform_nodes.start();
 
   CharacterAttachment &attach = _attachments[index];
   LMatrix4 transform = LMatrix4::zeros_mat();
@@ -632,6 +635,8 @@ compute_attachment_transform(int index, bool force_update_node) {
   if (attach._node != nullptr && (force_update_node || attach._node->get_num_children() > 0)) {
     attach._node->set_transform(attach._curr_transform);
   }
+  
+  //ap_update_net_transform_nodes.stop();
 }
 
 /**
@@ -749,7 +754,7 @@ copy_subgraph() const {
 bool Character::
 apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread,
            bool update_attachment_nodes) {
-  PStatTimer timer(apply_pose_collector);
+  //PStatTimer timer(apply_pose_collector);
 
   Character *merge_char = cdata->_joint_merge_character;
   if (merge_char != nullptr) {
@@ -771,11 +776,13 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
     parent_to_me = parent_path.get_transform(my_path)->get_mat();
   }
 
-  ap_compose_collector.start();
-
   size_t joint_count = _joints.size();
 
+  //JobSystem *js = JobSystem::get_global_ptr();
+  //js->parallel_process(joint_count, [&data, &root_xform, &merge_char, &parent_to_me, this] (int i) {
   for (size_t i = 0; i < joint_count; i++) {
+    //ap_compose_collector.start();
+    
     CharacterJointPoseData &joint = _joint_poses[i];
 
     if (joint._merge_joint == -1) {
@@ -815,15 +822,21 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         joint._value = joint._net_transform;
       }
     }
+    
+    //ap_compose_collector.stop();
   }
-  ap_compose_collector.stop();
+  //});
 
   {
     // Update data required to apply the computed animation to vertices.
+    //ap_skinning_collector.start();
     RenderCDWriter rcdata(_render_cycler, current_thread);
     for (size_t i = 0; i < joint_count; ++i) {
       rcdata->_joint_skinning_matrices[i] = _joint_poses[i]._initial_net_transform_inverse * _joint_poses[i]._net_transform;
     }
+    //ap_skinning_collector.stop();
+    
+    //ap_mark_jvt_collector.start();
     bool marked = false;
     for (size_t i = 0; i < _sliders.size(); ++i) {
       float value = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
@@ -834,14 +847,17 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         }
       }
     }
+    //ap_mark_jvt_collector.stop();
   }
 
-  ap_update_net_transform_nodes.start();
   // Compute attachment transforms from the updated character pose.
   for (size_t i = 0; i < _attachments.size(); i++) {
     compute_attachment_transform(i, update_attachment_nodes);
   }
-  ap_update_net_transform_nodes.stop();
+  //JobSystem *js = JobSystem::get_global_ptr();
+  //js->parallel_process(_attachments.size(), [&update_attachment_nodes, this] (int i) {
+  //  compute_attachment_transform(i, update_attachment_nodes);
+  //});
 
   return true;
 }

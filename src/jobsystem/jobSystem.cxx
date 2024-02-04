@@ -145,13 +145,12 @@ schedule(Job **jobs, int count, bool wait) {
     _queued_jobs.notify_all();
 
     if (wait) {
-      for (int i = 0; i < count; ++i) {
+      for (size_t i = 0; i < count; ++i) {
         wait_job(jobs[i], thread);
       }
     }
-
   } else {
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       jobs[i]->set_state(Job::S_working);
       jobs[i]->execute();
       jobs[i]->set_state(Job::S_complete);
@@ -175,7 +174,7 @@ parallel_process(int count, std::function<void(int)> func, int count_threshold, 
 
   } else if (count < count_threshold || _worker_threads.empty()) {
     // No worker threads or not enough items to prohibit scheduling jobs.
-    for (int i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
       func(i);
     }
     return;

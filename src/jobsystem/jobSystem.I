@@ -40,76 +40,14 @@ parallel_process(T begin, int count, std::function<void(const T &)> func, int co
     return;
   }
 
-  Thread *thread = Thread::get_current_thread();
-#ifdef THREADED_PIPELINE
-  int pipeline_stage = thread->get_pipeline_stage();
-#endif
-
-  // + 1 because the main thread chips in while waiting.
-  int thread_count = (int)_worker_threads.size() + 1;
-
-  int num_per_thread = count / thread_count;
-  int remainder = count % thread_count;
-
-  int job_count = std::min(count, thread_count);
-
-  pvector<ParallelProcessIterJob<T> > jobs;
-  jobs.resize(job_count);
-  if (num_per_thread > 0) {
-    for (size_t i = 0; i < thread_count; ++i) {
-      int first = num_per_thread * i;
-      int count = num_per_thread;
-      if (i == (thread_count - 1)) {
-        count += remainder;
-      }
-      jobs[i].local_object();
-      jobs[i].ref();
-#ifdef THREADED_PIPELINE
-      jobs[i].set_pipeline_stage(pipeline_stage);
-#endif
-      jobs[i].set_state(Job::S_queued);
-      jobs[i]._begin = begin;
-      jobs[i]._first = first;
-      jobs[i]._count = count;
-      jobs[i]._function = func;
-    }
-  } else {
-    // If there are fewer items than worker threads, create a job for
-    // each item.
-    for (int i = 0; i < count; ++i) {
-      jobs[i].local_object();
-      jobs[i].ref();
-#ifdef THREADED_PIPELINE
-      jobs[i].set_pipeline_stage(pipeline_stage);
-#endif
-      jobs[i].set_state(Job::S_queued);
-      jobs[i]._begin = begin;
-      jobs[i]._first = i;
-      jobs[i]._count = 1;
-      jobs[i]._function = func;
-    }
-  }
-
-  AtomicAdjust::add(_queued_jobs, job_count);
-
-  if (thread->get_type() == JobWorkerThread::get_class_type()) {
-    JobWorkerThread *jthread = DCAST(JobWorkerThread, thread);
-    for (int i = 0; i < job_count; ++i) {
-      jthread->_local_queue.push(&jobs[i]);
-    }
-  } else {
-    _queue_lock.acquire();
-    for (int i = 0; i < job_count; ++i) {
-      _job_queue.push(&jobs[i]);
-    }
-    _queue_lock.release();
-  }
-
-  _cv_work_available.notify_all();
-
-  for (int i = 0; i < job_count; ++i) {
-    wait_job(&jobs[i], thread);
-  }
+  ParallelProcessIterJob<T> job;
+  job.local_object();
+  job._iter_start = begin;
+  job._first_item = 0;
+  job._num_items = count;
+  job._function = func;
+  schedule(&job);
+  wait_job(&job);
 }
 
 /**

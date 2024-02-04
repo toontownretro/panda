@@ -493,11 +493,13 @@ set_state_and_transform(const RenderState *target,
     nassertv(_target_shader != nullptr);
     DXShaderContext11 *context = nullptr;
     Shader *shader = get_default_shader();
-    //dxgsg11_cat.info()
-    //  << "Default shader: " << shader << "\n";
-    //if (_target_shader != nullptr) {
-    //  shader = get_default_shader();//(Shader *)_target_shader->get_shader();
-    //}
+    dxgsg11_cat.info()
+      << "Default shader: " << shader << "\n";
+    if (_target_shader != nullptr) {
+      shader = (Shader *)_target_shader->get_shader();
+      dxgsg11_cat.info()
+        << "Target shader: " << shader << "\n";
+    }
 
     //if (shader == nullptr) {
     //  shader = get_default_shader();
@@ -506,8 +508,8 @@ set_state_and_transform(const RenderState *target,
     if (shader != nullptr) {
       context = (DXShaderContext11 *)shader->prepare_now(_prepared_objects, this);
 
-      //dxgsg11_cat.info()
-      //  << "Default shader context: " << context << "\n";
+      dxgsg11_cat.info()
+        << "Shader context: " << context << "\n";
     }
 
     nassertv(context != nullptr);

@@ -110,9 +110,9 @@ public:
   INLINE virtual void execute() override;
 
 public:
-  T _begin;
-  int _first;
-  int _count;
+  T _iter_start;
+  int _first_item;
+  int _num_items;
   ProcessFunc _function;
 };
 
