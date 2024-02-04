@@ -137,6 +137,7 @@
     sparseArray.cxx \
     threadManager.cxx \
     timedCycle.cxx \
+    traceInterface.cxx \
     tokenFile.cxx typedWritable.cxx \
     typedWritableReferenceCount.cxx updateSeq.cxx \
     uniqueIdAllocator.cxx \
