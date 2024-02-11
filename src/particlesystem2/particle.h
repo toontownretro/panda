@@ -88,11 +88,13 @@ public:
   int _anim_index;
 
   LPoint3 _initial_pos;
-  LVector3 _initial_vel;
+  LVector3 _inital_vel;
   LVecBase2 _initial_scale;
   LColor _initial_color;
   PN_stdfloat _initial_rotation;
   PN_stdfloat _initial_rotation_speed;
+
+  LPoint3 _smooth_pos;
 };
 
 #include "particle.I"

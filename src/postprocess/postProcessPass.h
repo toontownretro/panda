@@ -130,6 +130,8 @@ PUBLISHED:
 
 	virtual void shutdown();
 
+	void update_size();
+
 	static FrameBufferProperties get_default_fbprops();
 
 protected:

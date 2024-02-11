@@ -81,6 +81,7 @@ PUBLISHED:
   void wait_job(Job *job, Thread *thread = Thread::get_current_thread());
 
   INLINE static JobSystem *get_global_ptr();
+  INLINE static void init_global_job_system();
 
   INLINE int get_num_threads() const;
 

@@ -1532,8 +1532,8 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
 
             PN_stdfloat slider_value = slider->get_slider();
             if (slider_value != 0.0f) {
-              CPT(InternalName) base_name = orig_format->get_morph_base(mi);
-              CPT(InternalName) delta_name = orig_format->get_morph_delta(mi);
+              const InternalName *base_name = orig_format->get_morph_base(mi);
+              const InternalName *delta_name = orig_format->get_morph_delta(mi);
 
               GeomVertexRewriter data(new_data, base_name);
               GeomVertexReader delta(this, delta_name);

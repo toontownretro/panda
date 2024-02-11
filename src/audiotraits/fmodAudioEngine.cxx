@@ -343,7 +343,9 @@ FMODAudioEngine() :
   _sim_inputs{},
   _listener_inputs{},
 #endif
-  _unit_scale(1.0f)
+  _unit_scale(1.0f),
+  _tracer(nullptr),
+  _trace_collide_mask(CollideMask::all_on())
 {
 #ifdef HAVE_STEAM_AUDIO
   _steam_audio_initialized = false;
@@ -1370,11 +1372,8 @@ calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
   PN_stdfloat min_dist = sound->get_3d_min_distance();
   LPoint3 sound_pos = sound->get_3d_position();
   LPoint3 cam_pos = get_3d_listener_pos();
-  LVector3 to_listener = cam_pos - sound_pos;
-  PN_stdfloat length = to_listener.length();
-  to_listener.normalize();
-  bool occluded = _tracer->trace_ray(sound_pos + to_listener * 0.001f, to_listener, std::max(0.0f, length - 0.001f));
-  if (occluded) {
+  TraceInterface::TraceResult tr = _tracer->trace_line(sound_pos, cam_pos, _trace_collide_mask);
+  if (tr.has_hit()) {
     // There's something in the way between the sound source and the
     // listener (camera).
 
@@ -1430,8 +1429,9 @@ calc_sound_occlusion(FMODAudioSound *sound, float *transmission) {
  *
  */
 void FMODAudioEngine::
-set_tracer(AudioTracer *tracer) {
+set_tracer(TraceInterface *tracer, CollideMask mask) {
   _tracer = tracer;
+  _trace_collide_mask = mask;
 }
 
 /**

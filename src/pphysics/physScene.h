@@ -25,6 +25,7 @@
 #include "pset.h"
 #include "physRigidActorNode.h"
 #include "pvector.h"
+#include "traceInterface.h"
 
 #include "physx_utils.h"
 
@@ -39,7 +40,7 @@ class PhysGeometry;
  * may exis at the same time, but each body or constraint is specific to a
  * scene -- they may not be shared.
  */
-class EXPCL_PANDA_PPHYSICS PhysScene : public ReferenceCount {
+class EXPCL_PANDA_PPHYSICS PhysScene : public ReferenceCount, public TraceInterface {
 PUBLISHED:
   PhysScene();
   ~PhysScene();
@@ -56,6 +57,15 @@ PUBLISHED:
 
   INLINE void set_max_substeps(int count);
   INLINE int get_max_substeps() const;
+
+  // TraceInterface
+  virtual TraceResult trace_line(const LPoint3 &start, const LPoint3 &end, CollideMask mask = CollideMask::all_on(),
+                                 int collision_group = 0) override;
+  virtual TraceResult trace_sphere(const LPoint3 &start, const LPoint3 &end, PN_stdfloat radius,
+                                   CollideMask mask = CollideMask::all_on(), int collision_group = 0) override;
+  virtual TraceResult trace_box(const LPoint3 &start, const LPoint3 &end, const LPoint3 &min_point,
+                                const LPoint3 &max_point, const LVecBase3 &hpr = LVecBase3(0.0f, 0.0f, 0.0f),
+                                CollideMask mask = CollideMask::all_on(), int collision_group = 0) override;
 
   bool raycast(PhysRayCastResult &result, const LPoint3 &origin,
                const LVector3 &direction, PN_stdfloat distance,

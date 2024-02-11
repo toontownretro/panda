@@ -647,7 +647,7 @@ animate_characters(const NodePathCollection &node_paths) {
       CharacterNode *char_node;
       DCAST_INTO_V(char_node, node_paths.get_path(i).node());
       char_node->update(false);
-    });
+    }, 2, true);
 
   } else {
     for (int i = 0; i < node_paths.get_num_paths(); ++i) {

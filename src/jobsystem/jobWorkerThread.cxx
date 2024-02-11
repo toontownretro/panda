@@ -28,12 +28,13 @@ IMPLEMENT_CLASS(JobWorkerThread);
  *
  */
 JobWorkerThread::
-JobWorkerThread(const std::string &name, int index) :
+JobWorkerThread(const std::string &name, int index, JobSystem *mgr) :
   Thread(name, name),
   _thread_index(index),
   _current_job(nullptr),
   _state(S_idle),
-  _pstats_tick_signal(false)
+  _pstats_tick_signal(false),
+  _mgr(mgr)
 {
 }
 
@@ -42,7 +43,7 @@ JobWorkerThread(const std::string &name, int index) :
  */
 void JobWorkerThread::
 thread_main() {
-  JobSystem *sys = JobSystem::get_global_ptr();
+  JobSystem *sys = _mgr;
 
   while (true) {
 

@@ -12,6 +12,7 @@
     materialParamBool.I materialParamBool.h \
     materialParamColor.I materialParamColor.h \
     materialParamFloat.I materialParamFloat.h \
+    materialParamInt.I materialParamInt.h \
     materialParamMatrix.I materialParamMatrix.h \
     materialParamTexture.I materialParamTexture.h \
     materialParamVector.I materialParamVector.h \
@@ -34,6 +35,7 @@
     materialParamBool.cxx \
     materialParamColor.cxx \
     materialParamFloat.cxx \
+    materialParamInt.cxx \
     materialParamMatrix.cxx \
     materialParamTexture.cxx \
     materialParamVector.cxx \

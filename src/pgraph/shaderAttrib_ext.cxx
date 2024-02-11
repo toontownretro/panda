@@ -23,8 +23,14 @@ CPT(RenderAttrib) Extension<ShaderAttrib>::
 set_shader_input(CPT_InternalName name, PyObject *value, int priority) const {
   ShaderAttrib *attrib = new ShaderAttrib(*_this);
 
-  ShaderInput &input = attrib->_inputs[name];
-  invoke_extension(&input).__init__(std::move(name), value);
+  auto it = attrib->find_input(name);
+  if (it == attrib->_inputs.end()) {
+    ShaderInput input;
+    invoke_extension(&input).__init__(std::move(name), value, priority);
+    attrib->_inputs.push_back(std::move(input));
+  } else {
+    invoke_extension(&(*it)).__init__(std::move(name), value, priority);
+  }
 
   return ShaderAttrib::return_new(attrib);
 }
@@ -57,8 +63,14 @@ set_shader_inputs(PyObject *args, PyObject *kwargs) const {
     }
 
     CPT_InternalName name(std::string(buffer, length));
-    ShaderInput &input = attrib->_inputs[name];
-    invoke_extension(&input).__init__(std::move(name), value);
+    auto it = attrib->find_input(name);
+    if (it == attrib->_inputs.end()) {
+      ShaderInput input;
+      invoke_extension(&input).__init__(std::move(name), value);
+      attrib->_inputs.push_back(std::move(input));
+    } else {
+      invoke_extension(&(*it)).__init__(std::move(name), value);
+    }
   }
 
   return ShaderAttrib::return_new(attrib);

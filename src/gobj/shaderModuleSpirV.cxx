@@ -135,7 +135,7 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
   }
 
   // Remove unused variables before assigning locations.
-  writer.remove_unused_variables();
+  //writer.remove_unused_variables();
 
   // Add in location decorations for any inputs that are missing it.
   writer.assign_locations(stage);
@@ -328,7 +328,7 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
 
   // We no longer need the debugging information, so it can be safely stripped
   // from the module.
-  strip();
+  //strip();
 
   // Check for more caps, now that we've optimized the module.
   for (InstructionIterator it = _instructions.begin_annotations(); it != _instructions.end_annotations(); ++it) {
@@ -524,6 +524,15 @@ ShaderModuleSpirV(Stage stage, std::vector<uint32_t> words, BamCacheRecord *reco
 
 ShaderModuleSpirV::
 ~ShaderModuleSpirV() {
+}
+
+/**
+ *
+ */
+void ShaderModuleSpirV::
+disassemble(std::ostream &out) const {
+  spv::Disassemble(out
+      << "Disassembly for " << *this << ":\n", ((ShaderModuleSpirV *)this)->_instructions);
 }
 
 /**

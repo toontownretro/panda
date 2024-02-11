@@ -20,6 +20,7 @@
 #include "materialParamVector.h"
 #include "materialParamColor.h"
 #include "materialParamFloat.h"
+#include "materialParamInt.h"
 
 TypeHandle SourceLightmappedMaterial::_type_handle;
 
@@ -58,7 +59,8 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
     if (key == "basetexture" || key == "bumpmap" ||
         key == "basetexture2" || key == "bumpmap2" ||
         key == "envmapmask" ||
-        key == "albedo") {
+        key == "albedo" ||
+        key == "detail") {
       if (key == "albedo" || key == "basetexture") {
         key = "base_color";
       }
@@ -74,12 +76,15 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
 
     // Float types
     } else if (key == "envmapcontrast" ||
-               key == "envmapsaturation") {
+               key == "envmapsaturation" ||
+               key == "detailblendfactor" ||
+               key == "detailscale") {
       param = new MaterialParamFloat(key);
 
     // Vec3 types
     } else if (key == "selfillumtint" ||
-               key == "envmaptint") {
+               key == "envmaptint" ||
+               key == "detailtint") {
       param = new MaterialParamVector(key);
 
     // Vec4 types, not necessarily color
@@ -96,6 +101,10 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
       } else {
         param = new MaterialParamBool(key);
       }
+
+    // Int types
+    } else if (key == "detailblendmode") {
+      param = new MaterialParamInt(key);
     }
 
     if (param != nullptr) {

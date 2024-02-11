@@ -87,7 +87,7 @@ accumulate(PN_stdfloat strength, LVector3 *accum, ParticleSystem2 *system) {
 
     PN_stdfloat elapsed = system->_elapsed - p._spawn_time;
     PN_stdfloat frac = elapsed / p._duration;
-    if (frac < _start || frac > _end) {
+    if (_start >= 0.0f && (frac < _start || frac > _end)) {
       ++accum;
       continue;
     }

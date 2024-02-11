@@ -139,6 +139,44 @@ private:
   static TypeHandle _type_handle;
 };
 
+/**
+ * Function that kills particles that go under a velocity threshold.
+ */
+class EXPCL_PANDA_PARTICLESYSTEM2 VelocityKillerParticleFunction : public ParticleFunction2 {
+PUBLISHED:
+  VelocityKillerParticleFunction(PN_stdfloat threshold);
+
+  INLINE void set_threshold(PN_stdfloat threshold) { _threshold = threshold; }
+  INLINE PN_stdfloat get_threshold() const { return _threshold; }
+
+public:
+  virtual void update(double time, double dt, ParticleSystem2 *system) override;
+
+  static void register_with_read_factory();
+  static TypedWritable *make_from_bam(const FactoryParams &params);
+  virtual void write_datagram(BamWriter *manager, Datagram &me) override;
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
+
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+  static void init_type() {
+    ParticleFunction2::init_type();
+    register_type(_type_handle, "VelocityKillerParticleFunction",
+                  ParticleFunction2::get_class_type());
+  }
+  virtual TypeHandle get_type() const {
+    return get_class_type();
+  }
+  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+
+private:
+  static TypeHandle _type_handle;
+
+  PN_stdfloat _threshold;
+};
+
 class EXPCL_PANDA_PARTICLESYSTEM2 ParticleLerpSegment {
 PUBLISHED:
   enum LerpType {

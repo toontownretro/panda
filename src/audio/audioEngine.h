@@ -21,9 +21,10 @@
 #include "audioManager.h"
 #include "memoryBase.h"
 #include "audioSound.h"
+#include "collideMask.h"
+#include "traceInterface.h"
 
 class AudioEngineProxy;
-class AudioTracer;
 
 /**
  *
@@ -44,7 +45,7 @@ PUBLISHED:
   virtual void set_3d_unit_scale(PN_stdfloat scale) = 0;
   virtual PN_stdfloat get_3d_unit_scale() const = 0;
 
-  virtual void set_tracer(AudioTracer *tracer);
+  virtual void set_tracer(TraceInterface *tracer, CollideMask mask);
   virtual void clear_tracer();
 
   virtual bool initialize() = 0;

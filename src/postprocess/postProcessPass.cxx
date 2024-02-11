@@ -354,6 +354,32 @@ setup() {
  */
 void PostProcessPass::
 update() {
+	// Make sure the size is correct every frame.  Works around a current race
+	// condition/pipelining issue with GraphicsBuffer sizes.
+	update_size();
+}
+
+/**
+ *
+ */
+void PostProcessPass::
+update_size() {
+	if (!_force_size && _buffer != nullptr) {
+		GraphicsBuffer *buffer;
+		DCAST_INTO_V(buffer, _buffer);
+
+		GraphicsWindow *win;
+		DCAST_INTO_V(win, _pp->get_output());
+
+		WindowProperties props = win->get_properties();
+		if (props.has_size()) {
+			LVector2i size = props.get_size();
+			get_corrected_size(size);
+			if (size != buffer->get_size()) {
+				buffer->set_size(size[0], size[1]);
+			}
+		}
+	}
 }
 
 /**
@@ -366,16 +392,7 @@ window_event(GraphicsOutput *output) {
 		return;
 	}
 
-	if (!_force_size && _buffer != nullptr) {
-		GraphicsBuffer *buffer;
-		DCAST_INTO_V(buffer, _buffer);
-
-		LVector2i size = output->get_size();
-		get_corrected_size(size);
-		if (size != buffer->get_size()) {
-			buffer->set_size(size[0], size[1]);
-		}
-	}
+	update_size();
 }
 
 /**

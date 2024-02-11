@@ -22,7 +22,7 @@
 #include "audioEngine.h"
 #include "audioManager.h"
 #include "audioSound.h"
-#include "audioTracer.h"
+#include "traceInterface.h"
 #include "luse.h"
 #include "fmodAudioSound.h"
 #include "fmodSoundCache.h"
@@ -59,7 +59,7 @@ public:
   virtual void set_3d_unit_scale(PN_stdfloat factor) override;
   virtual PN_stdfloat get_3d_unit_scale() const override;
 
-  virtual void set_tracer(AudioTracer *tracer) override;
+  virtual void set_tracer(TraceInterface *tracer, CollideMask mask) override;
   virtual void clear_tracer() override;
 
   virtual void update() override;
@@ -131,7 +131,8 @@ private:
   EventsPlaying _events_playing;
 #endif
 
-  PT(AudioTracer) _tracer;
+  TraceInterface *_tracer;
+  CollideMask _trace_collide_mask;
 
   LPoint3 _listener_pos;
   LQuaternion _listener_quat;

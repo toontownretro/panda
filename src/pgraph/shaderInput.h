@@ -135,10 +135,8 @@ public:
   static void register_with_read_factory();
 
 private:
-  union {
-    LVecBase4 _stored_vector;
-    LMatrix4 _stored_matrix;
-  };
+  LVecBase4 _stored_vector;
+  LMatrix4 _stored_matrix;
   Shader::ShaderPtrData _stored_ptr;
   CPT_InternalName _name;
   PT(TypedWritableReferenceCount) _value;

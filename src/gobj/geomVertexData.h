@@ -211,7 +211,7 @@ private:
 private:
   std::string _name;
 
-  typedef small_vector<COWPT(GeomVertexArrayData), 2> Arrays;
+  typedef small_vector<COWPT(GeomVertexArrayData), 3> Arrays;
 
   // The pipelined data with each CacheEntry.
   class EXPCL_PANDA_GOBJ CDataCache : public CycleData {

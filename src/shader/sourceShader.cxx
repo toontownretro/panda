@@ -17,6 +17,7 @@
 #include "materialParamBool.h"
 #include "materialParamVector.h"
 #include "materialParamFloat.h"
+#include "materialParamInt.h"
 #include "materialParamColor.h"
 #include "materialParamMatrix.h"
 #include "shaderAttrib.h"
@@ -134,6 +135,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_ENVMAP("ENVMAP");
   static const CPT_InternalName IN_HAS_SHADOW_SUNLIGHT("HAS_SHADOW_SUNLIGHT");
   static const CPT_InternalName IN_CLIPPING("CLIPPING");
+  static const CPT_InternalName IN_DETAIL("DETAIL");
 
   // Specialization constant names.
   static const CPT_InternalName IN_FOG_MODE("FOG_MODE");
@@ -150,6 +152,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_NUM_CLIP_PLANES("NUM_CLIP_PLANES");
   static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
+  static const CPT_InternalName IN_DETAIL_BLEND_MODE("DETAIL_BLEND_MODE");
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -435,5 +438,33 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       (param = src_mat->get_param("bumpmap")) != nullptr) {
     setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
     setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
+  }
+
+  // Detail texture.
+  if ((param = material->get_param("detail")) != nullptr) {
+    setup.set_pixel_shader_combo(IN_DETAIL, 1);
+
+    Texture *detail_tex = DCAST(MaterialParamTexture, param)->get_value();
+
+    LVecBase2 params(1.0f, 4.0f);
+    if ((param = material->get_param("detailblendfactor")) != nullptr) {
+      params[0] = DCAST(MaterialParamFloat, param)->get_value();
+    }
+    if ((param = material->get_param("detailscale")) != nullptr) {
+      params[1] = DCAST(MaterialParamFloat, param)->get_value();
+    }
+    LVecBase3 detail_tint(1.0f);
+    if ((param = material->get_param("detailtint")) != nullptr) {
+      detail_tint = DCAST(MaterialParamVector, param)->get_value();
+    }
+    int blend_mode = 0;
+    if ((param = material->get_param("detailblendmode")) != nullptr) {
+      blend_mode = DCAST(MaterialParamInt, param)->get_value();
+    }
+
+    setup.set_input(ShaderInput("detailSampler", detail_tex));
+    setup.set_input(ShaderInput("detailParams", params));
+    setup.set_input(ShaderInput("detailTint", detail_tint));
+    setup.set_spec_constant(IN_DETAIL_BLEND_MODE, blend_mode);
   }
 }

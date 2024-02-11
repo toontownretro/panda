@@ -20,6 +20,7 @@
 #include "nodePath.h"
 #include "transformState.h"
 #include "namable.h"
+#include "traceInterface.h"
 
 #include "particle.h"
 #include "particleEmitter2.h"
@@ -40,6 +41,10 @@ PUBLISHED:
   ~ParticleSystem2();
 
   PT(ParticleSystem2) make_copy() const;
+
+  INLINE void set_tracer(TraceInterface *tracer, CollideMask mask);
+  INLINE TraceInterface *get_tracer() const;
+  INLINE void clear_tracer();
 
   void set_pool_size(int size);
   INLINE int get_pool_size() const;
@@ -190,6 +195,11 @@ public:
   double _prev_dt;
   double _dt;
 
+  int _num_phys_steps;
+  int _phys_tick;
+  double _phys_timestep;
+  double _phys_remainder;
+
   pdeque<int> _free_particles;
 
   typedef pvector<PT(ParticleSystem2)> Children;
@@ -218,6 +228,9 @@ public:
   NodePath _follow_parent;
 
   NodePath _np;
+
+  TraceInterface *_tracer;
+  CollideMask _trace_mask;
 
   friend class ParticleManager2;
 
