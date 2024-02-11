@@ -68,7 +68,8 @@ add_object(CullableObject *object, Thread *current_thread) {
   _objects.emplace_back(std::move(*object));
 }
 
-auto compare_objects_state = [](const CullableObject &ca, const CullableObject &cb) -> bool {
+INLINE static bool
+compare_objects_state_sorted(const CullableObject &ca, const CullableObject &cb) {
   const CullableObject *a = &ca;
   const CullableObject *b = &cb;
 
@@ -301,7 +302,7 @@ auto compare_objects_state = [](const CullableObject &ca, const CullableObject &
 #endif
 
   return false;
-};
+}
 
 /**
  * Called after all the geoms have been added, this indicates that the cull
@@ -314,7 +315,7 @@ finish_cull(SceneSetup *, Thread *current_thread) {
 //#ifdef HAVE_TBB
 //  oneapi::tbb::parallel_sort(_objects.begin(), _objects.end(), compare_objects_state);
 //#else
-  std::sort(_objects.begin(), _objects.end(), compare_objects_state);
+  std::sort(_objects.begin(), _objects.end(), compare_objects_state_sorted);
 //#endif
 }
 

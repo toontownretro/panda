@@ -50,7 +50,8 @@ add_object(CullableObject *object, Thread *current_thread) {
   _objects.emplace_back(std::move(*object));
 }
 
-auto compare_objects_fixed = [](const CullableObject &a, const CullableObject &b) -> bool {
+INLINE static bool
+compare_objects_fixed(const CullableObject &a, const CullableObject &b) {
   return a._sort_data._draw_order < b._sort_data._draw_order;
 };
 
