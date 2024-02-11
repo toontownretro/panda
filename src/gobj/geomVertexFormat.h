@@ -198,7 +198,7 @@ private:
 
   GeomVertexAnimationSpec _animation;
 
-  typedef small_vector<PT(GeomVertexArrayFormat), 2> Arrays;
+  typedef small_vector<PT(GeomVertexArrayFormat), 3> Arrays;
   Arrays _arrays;
 
   class DataTypeRecord {
