@@ -49,7 +49,6 @@ adjust_value(PN_stdfloat unclamped, PN_stdfloat start, PN_stdfloat range, PlayMo
 INLINE PN_stdfloat AnimTimer::
 clamp_value(PN_stdfloat unclamped, PN_stdfloat start, PN_stdfloat range, PlayMode mode) {
   PN_stdfloat temp = start + range;
-  PN_stdfloat end = std::max(start, temp);
   start = std::min(start, temp);
 
   switch (mode) {

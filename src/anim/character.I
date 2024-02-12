@@ -160,7 +160,6 @@ set_joint_forced_value(int n, const LMatrix4 &value) {
   CharacterJointPoseData &pose = _joint_poses[n];
   pose._has_forced_value = true;
   pose._forced_value = value;
-  LMatrix4 old_net = pose._net_transform;
   if (pose._parent != -1) {
     pose._net_transform = value * _joint_poses[pose._parent]._net_transform;
   } else {
