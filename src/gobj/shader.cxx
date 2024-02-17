@@ -50,9 +50,9 @@ static bool has_cg_header(const std::string &shader_text) {
  */
 Shader::
 Shader(ShaderLanguage lang) :
+  _mat_deps(0),
   _error_flag(false),
   _language(lang),
-  _mat_deps(0),
   _cache_compiled_shader(false),
   _context(nullptr)
 {
@@ -330,16 +330,20 @@ cp_dependency(ShaderMatInput inp) {
     }
   }
   if ((inp == SMO_light_ambient) ||
-      (inp == SMO_light_source_i) ||
-      (inp == SMO_light_source2_i) ||
-      (inp == SMO_light_source_shadow_view_matrix_i) ||
-      (inp == SMO_cascade_light_mvps_i)) {
+      (inp == SMO_cascade_light_mvps_i) ||
+      (inp == SMO_light_source_i_vec_attrib) ||
+      (inp == SMO_apiview_to_apiclip_light_source_i) ||
+      (inp == SMO_light_source_i_packed) ||
+      (inp == SMO_light_source_i_packed2)) {
     dep |= SSD_light | SSD_frame;
   }
-  if (inp == SMO_mat_constant_x_attrib ||
-      inp == SMO_vec_constant_x_attrib ||
-      inp == SMO_lens_exposure_scale ||
-      inp == SMO_light_source_shadow_view_matrix_i) {
+  if (inp == SMO_lens_exposure_scale ||
+      inp == SMO_light_source_i_vec_attrib ||
+      inp == SMO_apiview_to_apiclip_light_source_i ||
+      inp == SMO_light_source_i_packed ||
+      inp == SMO_light_source_i_packed2 ||
+      inp == SMO_mat_constant_x_attrib ||
+      inp == SMO_vec_constant_x_attrib) {
     // Some light attribs (eg. position) need to be transformed to view space.
     dep |= SSD_view_transform;
   }
@@ -449,14 +453,14 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
   // differing matrix convention.
   if (_language == SL_Cg) {
     switch (spec._piece) {
-    case SMP_whole: spec._piece = SMP_transpose; break;
-    case SMP_transpose: spec._piece = SMP_whole; break;
-    case SMP_upper3x3: spec._piece = SMP_transpose3x3; break;
-    case SMP_transpose3x3: spec._piece = SMP_upper3x3; break;
-    case SMP_upper3x4: spec._piece = SMP_transpose3x4; break;
-    case SMP_transpose3x4: spec._piece = SMP_upper3x4; break;
-    case SMP_upper4x3: spec._piece = SMP_transpose4x3; break;
-    case SMP_transpose4x3: spec._piece = SMP_upper4x3; break;
+    case SMP_mat4_whole: spec._piece = SMP_mat4_transpose; break;
+    case SMP_mat4_transpose: spec._piece = SMP_mat4_whole; break;
+    case SMP_mat4_upper3x3: spec._piece = SMP_mat4_transpose3x3; break;
+    case SMP_mat4_transpose3x3: spec._piece = SMP_mat4_upper3x3; break;
+    case SMP_mat4_upper3x4: spec._piece = SMP_mat4_transpose3x4; break;
+    case SMP_mat4_transpose3x4: spec._piece = SMP_mat4_upper3x4; break;
+    case SMP_mat4_upper4x3: spec._piece = SMP_mat4_transpose4x3; break;
+    case SMP_mat4_transpose4x3: spec._piece = SMP_mat4_upper4x3; break;
     default: break;
     }
   }
@@ -465,28 +469,51 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
   // index refer to.  (It can't be the case that both parts are arrays.)
   int begin[2] = {0, 0};
   int end[2] = {1, 1};
-  if (spec._index > 0) {
+  if (spec._index > 0 || spec._array_count > 1) {
     for (int i = 0; i < 2; ++i) {
       if (spec._part[i] == SMO_texmat_i ||
           spec._part[i] == SMO_inv_texmat_i ||
-          spec._part[i] == SMO_light_source_i ||
-          spec._part[i] == SMO_light_source2_i ||
-          spec._part[i] == SMO_light_source_shadow_view_matrix_i ||
           spec._part[i] == SMO_cascade_light_mvps_i ||
           spec._part[i] == SMO_cascade_light_atlas_min_max_i ||
           spec._part[i] == SMO_cascade_light_atlas_scale_i ||
+          spec._part[i] == SMO_light_source_i_vec_attrib ||
+          spec._part[i] == SMO_apiview_to_apiclip_light_source_i ||
+          spec._part[i] == SMO_light_product_i_ambient ||
+          spec._part[i] == SMO_light_product_i_diffuse ||
+          spec._part[i] == SMO_light_product_i_specular ||
           spec._part[i] == SMO_apiview_clipplane_i ||
           spec._part[i] == SMO_clipplane_i ||
           spec._part[i] == SMO_tex_is_alpha_i ||
           spec._part[i] == SMO_transform_i ||
           spec._part[i] == SMO_slider_i ||
+          spec._part[i] == SMO_light_source_i_packed ||
+          spec._part[i] == SMO_light_source_i_packed2 ||
           spec._part[i] == SMO_texscale_i ||
           spec._part[i] == SMO_texcolor_i) {
         begin[i] = spec._index;
-        end[i] = spec._index + 1;
+        end[i] = spec._index + spec._array_count;
       }
     }
     nassertv(end[0] == 1 || end[1] == 1);
+  }
+
+  // Determine the number of elements used from the cache per array item.
+  switch (spec._piece) {
+  case SMP_scalar: spec._size = 1; break;
+  case SMP_vec2: spec._size = 2; break;
+  case SMP_vec3: spec._size = 3; break;
+  case SMP_vec4: spec._size = 4; break;
+  case SMP_vec4_array: spec._size = 4; break;
+  case SMP_mat4_whole: spec._size = 16; break;
+  case SMP_mat4_array: spec._size = 16; break;
+  case SMP_mat4_transpose: spec._size = 16; break;
+  case SMP_mat4_column: spec._size = 13; break;
+  case SMP_mat4_upper3x3: spec._size = 11; break;
+  case SMP_mat4_transpose3x3: spec._size = 11; break;
+  case SMP_mat4_upper3x4: spec._size = 15; break;
+  case SMP_mat4_transpose3x4: spec._size = 15; break;
+  case SMP_mat4_upper4x3: spec._size = 15; break;
+  case SMP_mat4_transpose4x3: spec._size = 15; break;
   }
 
   // Make sure that we have a place in the part cache for both parts.
@@ -502,6 +529,9 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
     for (i = 0; i < _mat_parts.size(); ++i) {
       ShaderMatPart &part = _mat_parts[i];
       if (part._part == spec._part[p] && part._arg == spec._arg[p]) {
+        if (spec._func != SMF_first) {
+          assert(part._size == 4);
+        }
         int diff = end[p] - part._count;
         if (diff <= 0) {
           // The existing cache entry is big enough.
@@ -510,18 +540,18 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
           // It's not big enough.  Enlarge it, which means we have to change the
           // offset of some of the other spec entries.
           for (ShaderMatSpec &spec : _mat_spec) {
-            if (spec._cache_offset[0] >= offset + part._count) {
-              spec._cache_offset[0] += diff;
+            if (spec._cache_offset[0] >= offset + part._size * part._count) {
+              spec._cache_offset[0] += diff * part._size;
             }
-            if (spec._cache_offset[1] >= offset + part._count) {
-              spec._cache_offset[1] += diff;
+            if (spec._cache_offset[1] >= offset + part._size * part._count) {
+              spec._cache_offset[1] += diff * part._size;
             }
           }
           part._count = end[p];
           break;
         }
       }
-      offset += part._count;
+      offset += part._count * part._size;
     }
     if (i == _mat_parts.size()) {
       // Didn't find this part yet, create a new one.
@@ -530,6 +560,86 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
       part._count = end[p];
       part._arg = spec._arg[p];
       part._dep = dep;
+
+      switch (part._part) {
+      case SMO_INVALID:
+        part._size = 0;
+        break;
+
+      case SMO_window_size:
+      case SMO_pixel_size:
+      case SMO_texpad_x:
+      case SMO_texpix_x:
+      case SMO_attr_color:
+      case SMO_attr_colorscale:
+      case SMO_plane_x:
+      case SMO_clipplane_x:
+      case SMO_vec_constant_x:
+      case SMO_attr_fog:
+      case SMO_attr_fogcolor:
+      case SMO_frame_number:
+      case SMO_frame_time:
+      case SMO_frame_delta:
+      case SMO_vec_constant_x_attrib:
+      case SMO_light_ambient:
+      case SMO_light_source_i_vec_attrib:
+      case SMO_light_product_i_ambient:
+      case SMO_light_product_i_diffuse:
+      case SMO_light_product_i_specular:
+      case SMO_apiview_clipplane_i:
+      case SMO_tex_is_alpha_i:
+      case SMO_texscale_i:
+      case SMO_texcolor_i:
+      case SMO_texconst_i:
+      case SMO_attr_pointparams:
+      case SMO_cascade_light_atlas_min_max_i:
+      case SMO_cascade_light_atlas_scale_i:
+      case SMO_lens_exposure_scale:
+      case SMO_lens_near_far:
+      case SMO_light_lens_div:
+      case SMO_light_lens_z_scale_bias:
+        part._size = 1;
+        break;
+
+      case SMO_identity:
+      case SMO_texmat_i:
+      case SMO_mat_constant_x:
+      case SMO_world_to_view:
+      case SMO_view_to_world:
+      case SMO_model_to_view:
+      case SMO_view_to_model:
+      case SMO_apiview_to_view:
+      case SMO_view_to_apiview:
+      case SMO_clip_to_view:
+      case SMO_view_to_clip:
+      case SMO_apiclip_to_view:
+      case SMO_view_to_apiclip:
+      case SMO_view_x_to_view:
+      case SMO_view_to_view_x:
+      case SMO_apiview_x_to_view:
+      case SMO_view_to_apiview_x:
+      case SMO_clip_x_to_view:
+      case SMO_view_to_clip_x:
+      case SMO_apiclip_x_to_view:
+      case SMO_view_to_apiclip_x:
+      case SMO_mat_constant_x_attrib:
+      case SMO_apiview_to_apiclip_light_source_i:
+      case SMO_model_to_apiview:
+      case SMO_apiview_to_model:
+      case SMO_apiview_to_apiclip:
+      case SMO_apiclip_to_apiview:
+      case SMO_inv_texmat_i:
+      case SMO_light_source_i_packed:
+      case SMO_light_source_i_packed2:
+      case SMO_cascade_light_mvps_i:
+        part._size = 4;
+        break;
+      }
+
+      if (spec._func != SMF_first) {
+        assert(part._size == 4);
+      }
+
       _mat_parts.push_back(std::move(part));
     }
     spec._cache_offset[p] = offset + begin[p];
@@ -540,13 +650,14 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
 }
 
 /**
- * Returns the total size of the matrix part cache.
+ * Returns the total size of the matrix part cache in terms of number of
+ * vectors.
  */
 size_t Shader::
 cp_get_mat_cache_size() const {
   size_t size = 0;
   for (const ShaderMatPart &part : _mat_parts) {
-    size += part._count;
+    size += part._size * part._count;
   }
   return size;
 }
@@ -1188,14 +1299,14 @@ bind_parameter(const Parameter &param) {
       const ::ShaderType::Matrix *matrix = type->as_matrix();
       if (matrix->get_num_rows() >= 4) {
         if (matrix->get_num_columns() >= 4) {
-          bind._piece = transpose ? SMP_transpose : SMP_whole;
+          bind._piece = transpose ? SMP_mat4_transpose : SMP_mat4_whole;
         } else {
-          bind._piece = transpose ? SMP_transpose4x3 : SMP_upper4x3;
+          bind._piece = transpose ? SMP_mat4_transpose4x3 : SMP_mat4_upper4x3;
         }
       } else if (matrix->get_num_columns() >= 4) {
-        bind._piece = transpose ? SMP_transpose3x4 : SMP_upper3x4;
+        bind._piece = transpose ? SMP_mat4_transpose3x4 : SMP_mat4_upper3x4;
       } else {
-        bind._piece = transpose ? SMP_upper3x3 : SMP_transpose3x3;
+        bind._piece = transpose ? SMP_mat4_upper3x3 : SMP_mat4_transpose3x3;
       }
       bind._scalar_type = matrix->get_scalar_type();
 
@@ -1279,19 +1390,15 @@ bind_parameter(const Parameter &param) {
       bind._id = param;
       bind._id._type = array_type;
       bind._func = SMF_first;
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_array;
       bind._part[0] = SMO_texmat_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
       bind._scalar_type = array_type->as_matrix()->get_scalar_type();
-
-      // Add it once for each index.
-      for (uint32_t i = 0; i < num_elements; ++i) {
-        bind._index = i;
-        cp_add_mat_spec(bind);
-        ++bind._id._location;
-      }
+      bind._array_count = num_elements;
+      bind._index = 0;
+      cp_add_mat_spec(bind);
       return true;
     }
     if (pieces[1].compare(0, 7, "Texture") == 0) {
@@ -1373,9 +1480,9 @@ bind_parameter(const Parameter &param) {
       bind._arg[1] = nullptr;
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
       cp_add_mat_spec(bind);
       return true;
@@ -1393,9 +1500,9 @@ bind_parameter(const Parameter &param) {
       bind._arg[1] = nullptr;
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
       cp_add_mat_spec(bind);
       return true;
@@ -1410,7 +1517,7 @@ bind_parameter(const Parameter &param) {
       Shader::ShaderMatSpec bind;
       bind._id = param;
       bind._id._type = element_type;
-      bind._piece = Shader::SMP_row3;
+      bind._piece = Shader::SMP_vec4;
       bind._func = Shader::SMF_first;
       bind._part[0] = Shader::SMO_apiview_clipplane_i;
       bind._arg[0] = nullptr;
@@ -1434,7 +1541,7 @@ bind_parameter(const Parameter &param) {
       Shader::ShaderMatSpec bind;
       bind._id = param;
       bind._id._type = element_type;
-      bind._piece = Shader::SMP_row3;
+      bind._piece = Shader::SMP_vec4;
       bind._func = Shader::SMF_first;
       bind._part[0] = Shader::SMO_clipplane_i;
       bind._arg[0] = nullptr;
@@ -1457,7 +1564,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       cp_add_mat_spec(bind);
       return true;
     }
@@ -1487,9 +1594,9 @@ bind_parameter(const Parameter &param) {
           if (expect_float_vector(fqname, member.type, 3, 4)) {
             bind._part[0] = SMO_attr_fogcolor;
             if (member.type->as_vector()->get_num_components() == 3) {
-              bind._piece = Shader::SMP_row3x3;
+              bind._piece = Shader::SMP_vec3;
             } else {
-              bind._piece = Shader::SMP_row3;
+              bind._piece = Shader::SMP_vec4;
             }
             cp_add_mat_spec(bind);
             continue;
@@ -1497,29 +1604,30 @@ bind_parameter(const Parameter &param) {
         } else if (member.name == "density") {
           if (expect_float_vector(fqname, member.type, 1, 1)) {
             bind._part[0] = SMO_attr_fog;
-            bind._piece = SMP_row3x1;
+            bind._piece = SMP_scalar;
             cp_add_mat_spec(bind);
             continue;
           }
         } else if (member.name == "start") {
           if (expect_float_vector(fqname, member.type, 1, 1)) {
             bind._part[0] = SMO_attr_fog;
-            bind._piece = SMP_cell13;
+            bind._piece = SMP_scalar;
+            bind._offset = 1;
             cp_add_mat_spec(bind);
             continue;
           }
         } else if (member.name == "end") {
           if (expect_float_vector(fqname, member.type, 1, 1)) {
             bind._part[0] = SMO_attr_fog;
-            bind._piece = SMP_cell14;
-            cp_add_mat_spec(bind);
+            bind._piece = SMP_scalar;
+            bind._offset = 2;
             continue;
           }
         } else if (member.name == "scale") {
           if (expect_float_vector(fqname, member.type, 1, 1)) {
             bind._part[0] = SMO_attr_fog;
-            bind._piece = SMP_cell15;
-            cp_add_mat_spec(bind);
+            bind._piece = SMP_scalar;
+            bind._offset = 3;
             continue;
           }
         } else {
@@ -1558,9 +1666,9 @@ bind_parameter(const Parameter &param) {
         bind._arg[1] = nullptr;
 
         if (member.type->as_vector()->get_num_components() == 3) {
-          bind._piece = SMP_row3x3;
+          bind._piece = SMP_vec3;
         } else {
-          bind._piece = SMP_row3;
+          bind._piece = SMP_vec4;
         }
         cp_add_mat_spec(bind);
       }
@@ -1623,62 +1731,115 @@ bind_parameter(const Parameter &param) {
           bind._id._type = member.type;
           bind._id._location = location++;
           bind._func = SMF_first;
-          bind._arg[0] = nullptr;
-          bind._part[1] = SMO_identity;
-          bind._arg[1] = nullptr;
+          if (member.name == "shadowViewMatrix") {
+            if (!expect_float_matrix(fqname, member.type, 4, 4)) {
+              return false;
+            }
+            bind._piece = SMP_mat4_whole;
+            bind._part[0] = SMO_apiview_to_apiclip_light_source_i;
+            bind._arg[0] = nullptr;
+            bind._part[1] = SMO_identity;
+            bind._arg[1] = nullptr;
+            bind._scalar_type = member.type->as_matrix()->get_scalar_type();
+          }
+          else if (member.name == "shadowViewMatrixInverse") {
+            shader_cat.error()
+              << "p3d_LightSource struct does not provide a matrix named "
+              << "shadowViewMatrixInverse!\n";
+            return false;
+          }
+          else if (member.name == "shadowMatrix") {
+            // Only supported for backward compatibility: includes the model
+            // matrix.  Not very efficient to do this.
+            if (!expect_float_matrix(fqname, member.type, 4, 4)) {
+              return false;
+            }
 
-          if (member.name == "color") {
+            bind._func = SMF_compose;
+            bind._piece = SMP_mat4_whole;
+            bind._part[0] = SMO_model_to_apiview;
+            bind._arg[0] = nullptr;
+            bind._part[1] = SMO_apiview_to_apiclip_light_source_i;
+            bind._arg[1] = nullptr;
+            bind._scalar_type = member.type->as_matrix()->get_scalar_type();
+
+            static bool warned = false;
+            if (!warned) {
+              warned = true;
+              shader_cat.warning()
+                << "p3d_LightSource[].shadowMatrix is deprecated; use "
+                   "shadowViewMatrix instead, which transforms from view space "
+                   "instead of model space.\n";
+            }
+          }
+          else if (member.name == "color") {
             if (!expect_float_vector(fqname, member.type, 4, 4)) {
               report_parameter_error(fqname, member.type, "expected a vec4");
               return false;
             }
-            bind._part[0] = SMO_light_source_i;
-            bind._piece = SMP_row0;
+            bind._part[0] = SMO_light_source_i_packed;
+            bind._piece = SMP_vec4;
           } else if (member.name == "direction") {
             if (!expect_float_vector(fqname, member.type, 4, 4)) {
               report_parameter_error(fqname, member.type, "expected a vec4");
               return false;
             }
-            bind._part[0] = SMO_light_source_i;
-            bind._piece = SMP_row1;
+            bind._part[0] = SMO_light_source_i_packed;
+            bind._piece = SMP_vec4;
+            bind._offset = 4;
           } else if (member.name == "position") {
             if (!expect_float_vector(fqname, member.type, 4, 4)) {
               report_parameter_error(fqname, member.type, "expected a vec4");
               return false;
             }
-            bind._part[0] = SMO_light_source_i;
-            bind._piece = SMP_row2;
+            bind._part[0] = SMO_light_source_i_packed;
+            bind._piece = SMP_vec4;
+            bind._offset = 8;
           } else if (member.name == "spotParams") {
             if (!expect_float_vector(fqname, member.type, 4, 4)) {
               report_parameter_error(fqname, member.type, "expected a vec4");
               return false;
             }
-            bind._part[0] = SMO_light_source_i;
-            bind._piece = SMP_row3;
+            bind._part[0] = SMO_light_source_i_packed;
+            bind._piece = SMP_vec4;
+            bind._offset = 12;
           } else if (member.name == "attenuation") {
             if (!expect_float_vector(fqname, member.type, 3, 3)) {
               report_parameter_error(fqname, member.type, "expected a vec3");
               return false;
             }
-            bind._part[0] = SMO_light_source2_i;
-            bind._piece = SMP_row3x3;
+            bind._part[0] = SMO_light_source_i_packed2;
+            bind._piece = SMP_vec3;
           } else if (member.name == "hasShadows") {
             if (!expect_float_vector(fqname, member.type, 1, 1)) {
               report_parameter_error(fqname, member.type, "expected a float");
               return false;
             }
-            bind._part[0] = SMO_light_source2_i;
-            bind._piece = SMP_cell15;
-          } else if (member.name == "shadowViewMatrix") {
-            if (!expect_float_matrix(fqname, member.type, 4, 4)) {
-              report_parameter_error(fqname, member.type, "expected a mat4");
+            bind._part[0] = SMO_light_source_i_packed2;
+            bind._piece = SMP_scalar;
+            bind._offset = 3;
+          } else {
+            if (!expect_float_vector(fqname, member.type, 1, 4)) {
               return false;
             }
-            bind._part[0] = SMO_light_source_shadow_view_matrix_i;
-            bind._piece = SMP_whole;
-          } else {
-            report_parameter_error(fqname, type, "invalid light source parameter");
-            return false;
+            const ::ShaderType::Vector *vector = member.type->as_vector();
+            if (vector == nullptr || vector->get_num_components() == 1) {
+              bind._piece = SMP_scalar;
+            }
+            else if (vector->get_num_components() == 2) {
+              bind._piece = SMP_vec2;
+            }
+            else if (vector->get_num_components() == 3) {
+              bind._piece = SMP_vec3;
+            }
+            else {
+              bind._piece = SMP_vec4;
+            }
+            bind._part[0] = SMO_light_source_i_vec_attrib;
+            bind._arg[0] = InternalName::make(member.name);
+            bind._part[1] = SMO_identity;
+            bind._arg[1] = nullptr;
+            bind._scalar_type = ScalarType::ST_float;
           }
 
           for (bind._index = 0; bind._index < (int)array->get_num_elements(); ++bind._index) {
@@ -1735,17 +1896,14 @@ bind_parameter(const Parameter &param) {
       bind._id = param;
       bind._id._type = element_type;
       bind._func = SMF_first;
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_array;
       bind._part[0] = SMO_cascade_light_mvps_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-
-      for (uint32_t i = 0; i < num_elements; ++i) {
-        bind._index = i;
-        cp_add_mat_spec(bind);
-        ++bind._id._location;
-      }
+      bind._index = 0;
+      bind._array_count = num_elements;
+      cp_add_mat_spec(bind);
 
       return true;
     }
@@ -1763,17 +1921,13 @@ bind_parameter(const Parameter &param) {
       bind._id = param;
       bind._id._type = element_type;
       bind._func = SMF_first;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4_array;
       bind._part[0] = SMO_cascade_light_atlas_min_max_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-
-      for (uint32_t i = 0; i < num_elements; ++i) {
-        bind._index = i;
-        cp_add_mat_spec(bind);
-        ++bind._id._location;
-      }
+      bind._array_count = num_elements;
+      cp_add_mat_spec(bind);
 
       return true;
     }
@@ -1791,12 +1945,12 @@ bind_parameter(const Parameter &param) {
       bind._id = param;
       bind._id._type = element_type;
       bind._func = SMF_first;
-      bind._piece = SMP_row3x2;
+      bind._piece = SMP_vec2;
       bind._part[0] = SMO_cascade_light_atlas_scale_i;
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-
+      // Add it once for each index.
       for (uint32_t i = 0; i < num_elements; ++i) {
         bind._index = i;
         cp_add_mat_spec(bind);
@@ -1874,7 +2028,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-      bind._piece = SMP_row3x1;
+      bind._piece = SMP_scalar;
 
       cp_add_mat_spec(bind);
 
@@ -1893,7 +2047,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-      bind._piece = SMP_row3x2;
+      bind._piece = SMP_vec2;
 
       cp_add_mat_spec(bind);
 
@@ -1912,7 +2066,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-      bind._piece = SMP_row3x3;
+      bind._piece = SMP_vec3;
 
       cp_add_mat_spec(bind);
 
@@ -1931,7 +2085,7 @@ bind_parameter(const Parameter &param) {
       bind._arg[0] = nullptr;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
-      bind._piece = SMP_row3x2;
+      bind._piece = SMP_vec2;
 
       cp_add_mat_spec(bind);
 
@@ -1945,7 +2099,7 @@ bind_parameter(const Parameter &param) {
 
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3x2;
+      bind._piece = SMP_vec2;
       bind._func = SMF_first;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
@@ -1972,25 +2126,25 @@ bind_parameter(const Parameter &param) {
     bind._arg[1] = nullptr;
 
     if (pieces[1] == "ViewMatrix") {
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_whole;
       bind._func = SMF_compose;
       bind._part[0] = SMO_world_to_view;
       bind._part[1] = SMO_view_to_apiview;
     }
     else if (pieces[1] == "InverseViewMatrix" || pieces[1] == "ViewMatrixInverse") {
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_whole;
       bind._func = SMF_compose;
       bind._part[0] = SMO_apiview_to_view;
       bind._part[1] = SMO_view_to_world;
     }
     else if (pieces[1] == "FrameTime") {
-      bind._piece = SMP_row3x1;
+      bind._piece = SMP_scalar;
       bind._func = SMF_first;
       bind._part[0] = SMO_frame_time;
       bind._part[1] = SMO_identity;
     }
     else if (pieces[1] == "DeltaFrameTime") {
-      bind._piece = SMP_row3x1;
+      bind._piece = SMP_scalar;
       bind._func = SMF_first;
       bind._part[0] = SMO_frame_delta;
       bind._part[1] = SMO_identity;
@@ -2096,14 +2250,14 @@ bind_parameter(const Parameter &param) {
       const ::ShaderType::Matrix *matrix = type->as_matrix();
       if (matrix->get_num_rows() >= 4) {
         if (matrix->get_num_columns() >= 4) {
-          bind._piece = SMP_whole;
+          bind._piece = SMP_mat4_whole;
         } else {
-          bind._piece = SMP_upper4x3;
+          bind._piece = SMP_mat4_upper4x3;
         }
       } else if (matrix->get_num_columns() >= 4) {
-        bind._piece = SMP_upper3x4;
+        bind._piece = SMP_mat4_upper3x4;
       } else {
-        bind._piece = SMP_upper3x3;
+        bind._piece = SMP_mat4_upper3x3;
       }
       bind._scalar_type = matrix->get_scalar_type();
     }
@@ -2114,46 +2268,28 @@ bind_parameter(const Parameter &param) {
       const ::ShaderType::Matrix *matrix = type->as_matrix();
       if (matrix->get_num_rows() >= 4) {
         if (matrix->get_num_columns() >= 4) {
-          bind._piece = SMP_transpose;
+          bind._piece = SMP_mat4_transpose;
         } else {
-          bind._piece = SMP_transpose4x3;
+          bind._piece = SMP_mat4_transpose4x3;
         }
       } else if (matrix->get_num_columns() >= 4) {
-        bind._piece = SMP_transpose3x4;
+        bind._piece = SMP_mat4_transpose3x4;
       } else {
-        bind._piece = SMP_transpose3x3;
+        bind._piece = SMP_mat4_transpose3x3;
       }
       bind._scalar_type = matrix->get_scalar_type();
-    }
-    else if (pieces[0] == "row3") {
-      // We can exceptionally support row3 to have any number of components.
-      if (!expect_float_vector(name, type, 1, 4)) {
-        return false;
-      }
-      const ::ShaderType::Vector *vector = type->as_vector();
-      if (vector == nullptr || vector->get_num_components() == 1) {
-        bind._piece = SMP_row3x1;
-      }
-      else if (vector->get_num_components() == 2) {
-        bind._piece = SMP_row3x2;
-      }
-      else if (vector->get_num_components() == 3) {
-        bind._piece = SMP_row3x3;
-      }
-      else {
-        bind._piece = SMP_row3;
-      }
-      bind._scalar_type = ScalarType::ST_float;
     }
     else {
       if (!expect_float_vector(name, type, 4, 4)) {
         return false;
       }
       if (pieces[0][0] == 'r') {
-        bind._piece = (ShaderMatPiece)(SMP_row0 + (pieces[0][3] - '0'));
+        bind._piece = SMP_vec4;
+        bind._offset = (pieces[0][3] - '0') * 4;
       }
       else if (pieces[0][0] == 'c') {
-        bind._piece = (ShaderMatPiece)(SMP_col0 + (pieces[0][3] - '0'));
+        bind._piece = SMP_mat4_column;
+        bind._offset = pieces[0][3] - '0';
       }
       else {
         nassertr(false, false);
@@ -2195,7 +2331,7 @@ bind_parameter(const Parameter &param) {
   }
 
   // Other Cg-specific inputs.
-  bool k_prefix = false;
+  //bool k_prefix = false;
   if (_language == SL_Cg) {
     if (name_str.size() >= 2 && name_str.substr(0, 2) == "__") {
       return true;
@@ -2212,7 +2348,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_matrix(name, type, 4, 4)) {
           return false;
         }
-        bind._piece = SMP_transpose;
+        bind._piece = SMP_mat4_transpose;
         bind._func = SMF_first;
         bind._part[0] = SMO_attr_material;
         bind._arg[0] = nullptr;
@@ -2224,7 +2360,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
+        bind._piece = SMP_vec4;
         bind._func = SMF_first;
         bind._part[0] = SMO_attr_color;
         bind._arg[0] = nullptr;
@@ -2235,7 +2371,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
+        bind._piece = SMP_vec4;
         bind._func = SMF_first;
         bind._part[0] = SMO_attr_colorscale;
         bind._arg[0] = nullptr;
@@ -2246,7 +2382,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
+        bind._piece = SMP_vec4;
         bind._func = SMF_first;
         bind._part[0] = SMO_attr_fog;
         bind._arg[0] = nullptr;
@@ -2257,7 +2393,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
+        bind._piece = SMP_vec4;
         bind._func = SMF_first;
         bind._part[0] = SMO_attr_fogcolor;
         bind._arg[0] = nullptr;
@@ -2268,7 +2404,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
+        bind._piece = SMP_vec4;
         bind._func = SMF_first;
         bind._part[0] = SMO_light_ambient;
         bind._arg[0] = nullptr;
@@ -2280,7 +2416,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_matrix(name, type, 4, 4)) {
           return false;
         }
-        bind._piece = SMP_transpose;
+        bind._piece = SMP_mat4_transpose;
         bind._func = SMF_first;
         bind._part[0] = SMO_light_source_i_packed;
         bind._arg[0] = nullptr;
@@ -2293,13 +2429,18 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }
-        bind._piece = SMP_row3;
         bind._func = SMF_first;
-        bind._part[0] = SMO_light_source_i_attrib;
+        bind._part[0] = SMO_light_source_i_vec_attrib;
         bind._arg[0] = InternalName::make("specular");
         bind._part[1] = SMO_identity;
         bind._arg[1] = nullptr;
         bind._index = atoi(pieces[1].c_str() + 5);
+
+        if (type->as_vector()->get_num_components() == 3) {
+          bind._piece = Shader::SMP_vec3;
+        } else {
+          bind._piece = Shader::SMP_vec4;
+        }
       }
 #endif
       else if (pieces[1] == "pointparams") {
@@ -2313,9 +2454,9 @@ bind_parameter(const Parameter &param) {
         bind._arg[1] = nullptr;
 
         if (type->as_vector()->get_num_components() == 3) {
-          bind._piece = Shader::SMP_row3x3;
+          bind._piece = Shader::SMP_vec3;
         } else {
-          bind._piece = Shader::SMP_row3;
+          bind._piece = Shader::SMP_vec4;
         }
       }
       else {
@@ -2342,9 +2483,9 @@ bind_parameter(const Parameter &param) {
       bind._arg[1] = nullptr;
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
 
       cp_add_mat_spec(bind);
@@ -2358,7 +2499,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       bind._func = SMF_first;
       bind._part[0] = SMO_satten_x;
       bind._arg[0] = InternalName::make(pieces[1]);
@@ -2375,7 +2516,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_transpose;
+      bind._piece = SMP_mat4_transpose;
       int next = 1;
       pieces.push_back("");
       if (pieces[next] == "") {
@@ -2418,7 +2559,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_whole;
       bind._func = SMF_first;
       bind._part[0] = SMO_texmat_i;
       bind._arg[0] = nullptr;
@@ -2446,9 +2587,9 @@ bind_parameter(const Parameter &param) {
       bind._index = atoi(pieces[1].c_str());
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
 
       cp_add_mat_spec(bind);
@@ -2470,9 +2611,9 @@ bind_parameter(const Parameter &param) {
       bind._index = atoi(pieces[1].c_str());
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
 
       cp_add_mat_spec(bind);
@@ -2494,9 +2635,9 @@ bind_parameter(const Parameter &param) {
       bind._index = atoi(pieces[1].c_str());
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
 
       cp_add_mat_spec(bind);
@@ -2510,7 +2651,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       bind._func = SMF_first;
       bind._part[0] = SMO_plane_x;
       bind._arg[0] = InternalName::make(pieces[1]);
@@ -2528,7 +2669,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       bind._func = SMF_first;
       bind._part[0] = SMO_clipplane_x;
       bind._arg[0] = InternalName::make(pieces[1]);
@@ -2546,7 +2687,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       bind._func = SMF_first;
       bind._part[1] = SMO_identity;
       bind._arg[1] = nullptr;
@@ -2568,7 +2709,7 @@ bind_parameter(const Parameter &param) {
         if (!expect_float_vector(name, type, 1, 1)) {
           return false;
         }
-        bind._piece = SMP_row3x1;
+        bind._piece = SMP_scalar;
         bind._part[0] = SMO_frame_time;
         bind._arg[0] = nullptr;
 
@@ -2643,9 +2784,9 @@ bind_parameter(const Parameter &param) {
       bind._arg[1] = nullptr;
 
       if (type->as_vector()->get_num_components() == 3) {
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
       } else {
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
       }
 
       cp_add_mat_spec(bind);
@@ -2659,7 +2800,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_row3;
+      bind._piece = SMP_vec4;
       bind._func = SMF_first;
       bind._part[0] = SMO_texpix_x;
       bind._arg[0] = InternalName::make(pieces[1]);
@@ -2668,15 +2809,15 @@ bind_parameter(const Parameter &param) {
 
       switch (type->as_vector()->get_num_components()) {
       case 2:
-        bind._piece = Shader::SMP_row3x2;
+        bind._piece = Shader::SMP_vec2;
         break;
 
       case 3:
-        bind._piece = Shader::SMP_row3x3;
+        bind._piece = Shader::SMP_vec3;
         break;
 
       case 4:
-        bind._piece = Shader::SMP_row3;
+        bind._piece = Shader::SMP_vec4;
         break;
       }
 
@@ -2718,7 +2859,7 @@ bind_parameter(const Parameter &param) {
     // Previously, custom shader inputs needed the k_ prefix, so we have to
     // strip it now.
     if (pieces[0] == "k") {
-      k_prefix = true;
+      //k_prefix = true;
       name_str = name_str.substr(2);
       name = InternalName::make(name_str);
     }
@@ -2749,7 +2890,7 @@ bind_parameter(const Parameter &param) {
     if (matrix->get_num_columns() == 3 && matrix->get_num_rows() == 3) {
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_upper3x3;
+      bind._piece = SMP_mat4_upper3x3;
       bind._func = SMF_first;
       bind._part[0] = SMO_mat_constant_x;
       bind._arg[0] = name;
@@ -2762,7 +2903,7 @@ bind_parameter(const Parameter &param) {
     else if (matrix->get_num_columns() == 4 && matrix->get_num_rows() == 4) {
       ShaderMatSpec bind;
       bind._id = param;
-      bind._piece = SMP_whole;
+      bind._piece = SMP_mat4_whole;
       bind._func = SMF_first;
       bind._part[0] = SMO_mat_constant_x;
       bind._arg[0] = name;
@@ -2800,28 +2941,54 @@ bind_parameter(const Parameter &param) {
         bind._id._type = member.type;
         bind._id._location = location;
         bind._scalar_type = scalar_type;
-        bind._func = SMF_first;
-        if (dim[1] == 3) {
-          bind._piece = SMP_upper3x3;
-          bind._part[0] = SMO_mat_constant_x_attrib;
-        } else {
-          bind._part[0] = SMO_vec_constant_x_attrib;
-          if (dim[2] == 1) {
-            bind._piece = SMP_row3x1;
+        if (member.name == "shadowMatrix" && dim[1] == 4 && dim[2] == 4) {
+          // Special exception for shadowMatrix, which is deprecated because it
+          // includes the model transformation.  It is far more efficient to do
+          // that in the shader instead.
+          static bool warned = false;
+          if (!warned) {
+            warned = true;
+            shader_cat.warning()
+              << "light.shadowMatrix inputs are deprecated; use "
+                 "shadowViewMatrix instead, which transforms from view "
+                 "space instead of model space.\n";
           }
-          else if (dim[2] == 2) {
-            bind._piece = SMP_row3x2;
+          bind._piece = SMP_mat4_whole;
+          bind._func = SMF_compose;
+          bind._part[0] = SMO_model_to_apiview;
+          bind._arg[0] = nullptr;
+          bind._part[1] = SMO_mat_constant_x_attrib;
+          bind._arg[1] = ((InternalName *)name.p())->append("shadowViewMatrix");
+        }
+        else {
+          bind._func = SMF_first;
+          if (dim[1] == 4) {
+            bind._piece = SMP_mat4_whole;
+            bind._part[0] = SMO_mat_constant_x_attrib;
           }
-          else if (dim[2] == 3) {
-            bind._piece = SMP_row3x3;
+          else if (dim[1] == 3) {
+            bind._piece = SMP_mat4_upper3x3;
+            bind._part[0] = SMO_mat_constant_x_attrib;
           }
           else {
-            bind._piece = SMP_row3;
+            bind._part[0] = SMO_vec_constant_x_attrib;
+            if (dim[2] == 1) {
+              bind._piece = SMP_scalar;
+            }
+            else if (dim[2] == 2) {
+              bind._piece = SMP_vec2;
+            }
+            else if (dim[2] == 3) {
+              bind._piece = SMP_vec3;
+            }
+            else {
+              bind._piece = SMP_vec4;
+            }
           }
+          bind._arg[0] = fqname;
+          bind._part[1] = SMO_identity;
+          bind._arg[1] = nullptr;
         }
-        bind._arg[0] = fqname;
-        bind._part[1] = SMO_identity;
-        bind._arg[1] = nullptr;
         cp_add_mat_spec(bind);
       }
       else {

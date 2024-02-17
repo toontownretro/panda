@@ -151,7 +151,6 @@ public:
     SMO_texpad_x,
     SMO_texpix_x,
 
-    SMO_attr_material,
     SMO_attr_color,
     SMO_attr_colorscale,
 
@@ -199,6 +198,14 @@ public:
     SMO_mat_constant_x_attrib,
     SMO_vec_constant_x_attrib,
 
+    SMO_light_ambient,
+    SMO_light_source_i_vec_attrib,
+    SMO_apiview_to_apiclip_light_source_i,
+
+    SMO_light_product_i_ambient,
+    SMO_light_product_i_diffuse,
+    SMO_light_product_i_specular,
+
     // SMO_clipplane_x is world coords, GLSL needs eye coords
     SMO_apiview_clipplane_i,
     // Also an optional world space clip plane.
@@ -211,27 +218,14 @@ public:
 
     SMO_inv_texmat_i,
 
-    // Additional properties for PBR materials
-    SMO_attr_material2,
-
     // Hack for text rendering.  Don't use in user shaders.
     SMO_tex_is_alpha_i,
 
     SMO_transform_i,
     SMO_slider_i,
 
-    // Constant ambient
-    SMO_light_ambient,
-
-    // Parameters of a light source
-    SMO_light_source_i,
-    SMO_light_source2_i,
-    SMO_light_source_shadow_view_matrix_i,
-
-    // Cascaded shadow map projection matrices
-    SMO_cascade_light_mvps_i,
-    SMO_cascade_light_atlas_min_max_i,
-    SMO_cascade_light_atlas_scale_i,
+    SMO_light_source_i_packed,
+    SMO_light_source_i_packed2, // Brian
 
     // Texture scale component of texture matrix.
     SMO_texscale_i,
@@ -239,17 +233,23 @@ public:
     // Color of an M_blend texture stage.
     SMO_texcolor_i,
 
-    SMO_lens_exposure_scale,
-    SMO_lens_near_far,
-
-    SMO_light_lens_div,
-    SMO_light_lens_z_scale_bias,
-
     // Constant value of the TexGenAttrib of stage i.
     SMO_texconst_i,
 
     // Point parameters
     SMO_attr_pointparams,
+
+    ///////
+    // Brian-added params.
+    //////
+    // Cascaded shadow map projection matrices
+    SMO_cascade_light_mvps_i,
+    SMO_cascade_light_atlas_min_max_i,
+    SMO_cascade_light_atlas_scale_i,
+    SMO_lens_exposure_scale,
+    SMO_lens_near_far,
+    SMO_light_lens_div,
+    SMO_light_lens_z_scale_bias,
 
     SMO_INVALID
   };
@@ -292,28 +292,21 @@ public:
   };
 
   enum ShaderMatPiece {
-    SMP_whole,
-    SMP_transpose,
-    SMP_row0,
-    SMP_row1,
-    SMP_row2,
-    SMP_row3,
-    SMP_col0,
-    SMP_col1,
-    SMP_col2,
-    SMP_col3,
-    SMP_row3x1,
-    SMP_row3x2,
-    SMP_row3x3,
-    SMP_upper3x3,
-    SMP_transpose3x3,
-    SMP_cell15,
-    SMP_cell14,
-    SMP_cell13,
-    SMP_upper3x4,
-    SMP_upper4x3,
-    SMP_transpose3x4,
-    SMP_transpose4x3,
+    SMP_scalar,
+    SMP_vec2,
+    SMP_vec3,
+    SMP_vec4,
+    SMP_vec4_array,
+    SMP_mat4_whole,
+    SMP_mat4_array,
+    SMP_mat4_transpose,
+    SMP_mat4_column,
+    SMP_mat4_upper3x3,
+    SMP_mat4_transpose3x3,
+    SMP_mat4_upper3x4,
+    SMP_mat4_transpose3x4,
+    SMP_mat4_upper4x3,
+    SMP_mat4_transpose4x3,
   };
 
   enum ShaderStateDep {
@@ -341,11 +334,11 @@ public:
   };
 
   enum ShaderMatFunc {
+    SMF_first,
     SMF_compose,
     SMF_transform_dlight,
     SMF_transform_plight,
     SMF_transform_slight,
-    SMF_first,
   };
 
   struct Parameter {
@@ -414,12 +407,14 @@ public:
 
   /**
    * Describes a matrix making up a single part of the ShaderMatInput cache.
-   * The cache is made up of a continuous array of matrices, as described by
-   * a successive list of ShaderMatPart (each of which takes up _count matrices)
+   * The cache is made up of a continuous array of vectors, as described by
+   * a successive list of ShaderMatPart (each of which takes up _count times
+   * _size vectors)
    */
   struct ShaderMatPart {
     ShaderMatInput _part;
     CPT(InternalName) _arg;
+    int _size = 1;
     int _count = 1;
     int _dep = SSD_NONE;
   };
@@ -432,11 +427,14 @@ public:
     LMatrix4          _value;
     size_t            _cache_offset[2];
     ShaderMatFunc     _func;
-    ShaderMatPiece    _piece;
     Parameter         _id;
     ShaderMatInput    _part[2];
     CPT(InternalName) _arg[2];
     int               _index = 0;
+    ShaderMatPiece    _piece;
+    int               _offset = 0;
+    int               _size = 1;
+    int               _array_count = 1;
     ScalarType        _scalar_type = ScalarType::ST_float;
   };
 
@@ -627,7 +625,7 @@ public:
 
 protected:
   static TypedWritable *make_from_bam(const FactoryParams &params);
-  void fillin(DatagramIterator &scan, BamReader *manager);
+  virtual void fillin(DatagramIterator &scan, BamReader *manager) override;
 
 public:
   static TypeHandle get_class_type() {
@@ -638,10 +636,10 @@ public:
     register_type(_type_handle, "Shader",
                   TypedWritableReferenceCount::get_class_type());
   }
-  virtual TypeHandle get_type() const {
+  virtual TypeHandle get_type() const override {
     return get_class_type();
   }
-  virtual TypeHandle force_init_type() {init_type(); return get_class_type();}
+  virtual TypeHandle force_init_type() override {init_type(); return get_class_type();}
 
 private:
   static TypeHandle _type_handle;

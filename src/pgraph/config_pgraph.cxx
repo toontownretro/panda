@@ -222,7 +222,7 @@ ConfigVariableBool transform_cache
           "transforms, but imposes some overhead for maintaining the "
           "cache itself."));
 
-ConfigVariableBool state_cache
+ALIGN_16BYTE ConfigVariableBool state_cache
 ("state-cache", true,
  PRC_DESC("Set this true to enable the cache of RenderState objects, "
           "similar to the TransformState cache controlled via "
@@ -244,27 +244,7 @@ ConfigVariableBool uniquify_states
           "including the need to check for a composition cycle in "
           "the cache.  It is highly recommended to keep this on."));
 
-ConfigVariableBool &
-get_uniquify_states_ignore_filenames() {
-  static ConfigVariableBool *uniquify_states_ignore_filenames = nullptr;
-  if (uniquify_states_ignore_filenames == nullptr) {
-    uniquify_states_ignore_filenames = new ConfigVariableBool
-    ("uniquify-states-ignore-filenames", true,
-     PRC_DESC("Set this true to ignore the source filename of a RenderState when "
-              "comparing two RenderState objects.  This makes two RenderStates "
-              "with identical attribs deemed equivalent, even if the filename "
-              "references are different.  It is only useful to turn this off if "
-              "you need to write RenderStates and/or Bam files to disk, so the "
-              "correct filename references are kept in tact.  You may also have "
-              "less flattening capability if this is turned off."));
-  }
-
-
-  return *uniquify_states_ignore_filenames;
-}
-
-
-ConfigVariableBool uniquify_attribs
+ALIGN_16BYTE ConfigVariableBool uniquify_attribs
 ("uniquify-attribs", true,
  PRC_DESC("Set this true to ensure that equivalent RenderAttribs "
           "are pointerwise equal.  This may improve caching performance, "

@@ -22,7 +22,7 @@
 /**
  * A render attribute that contains a material object.
  */
-class EXPCL_PANDA_PGRAPH MaterialAttrib : public RenderAttrib {
+class EXPCL_PANDA_PGRAPH MaterialAttrib final : public RenderAttrib {
 private:
   INLINE MaterialAttrib();
 

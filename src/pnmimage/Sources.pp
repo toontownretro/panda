@@ -21,6 +21,7 @@
      pnmPainter.h pnmPainter.I \
      pnmReader.I \
      pnmReader.h pnmWriter.I pnmWriter.h pnmimage_base.h \
+     pnmReaderEmscripten.h \
      ppmcmap.h
 
   #define COMPOSITE_SOURCES \
@@ -34,6 +35,7 @@
      pnmFileTypeRegistry.cxx pnmImage.cxx pnmImageHeader.cxx  \
      pnmPainter.cxx \
      pnmReader.cxx pnmWriter.cxx pnmimage_base.cxx \
+     pnmReaderEmscripten.cxx \
      ppmcmap.cxx
 
   #define INSTALL_HEADERS \
@@ -45,7 +47,8 @@
      pnmImage.h pnmImageHeader.I pnmImageHeader.h \
      pnmPainter.h pnmPainter.I \
      pnmReader.I \
-     pnmReader.h pnmWriter.I pnmWriter.h pnmimage_base.h
+     pnmReader.h pnmWriter.I pnmWriter.h pnmimage_base.h \
+     pnmReaderEmscripten.h
 
   #define IGATESCAN all
 

@@ -29,8 +29,7 @@ PythonGraphicsWindowProc(PyObject* function, PyObject* name)
   PythonCallbackObject(function)
 #endif
 {
-  _name = name;
-  Py_INCREF(_name);
+  _name = Py_NewRef(name);
 }
 
 /**

@@ -1413,6 +1413,10 @@ assemble_row(TextAssembler::TextRow &row,
   PN_stdfloat xpos = 0.0f;
   align = TextProperties::A_left;
 
+  TextProperties::Direction dir = TextProperties::D_ltr;
+  size_t rtl_begin = 0;
+  PN_stdfloat rtl_begin_xpos = 0.0f;
+
   // Remember previous character, for kerning.
   int prev_char = -1;
 
@@ -1474,6 +1478,8 @@ assemble_row(TextAssembler::TextRow &row,
         // Shape the buffer accumulated so far.
         shape_buffer(harfbuff, placed_glyphs, xpos, prev_cprops->_properties);
         hb_buffer_reset(harfbuff);
+        rtl_begin = placed_glyphs.size();
+        rtl_begin_xpos = xpos;
 
       } else if (harfbuff == nullptr && text_use_harfbuzz &&
                  font->is_of_type(DynamicTextFont::get_class_type())) {
@@ -1487,6 +1493,29 @@ assemble_row(TextAssembler::TextRow &row,
       continue;
     }
 #endif
+
+    // When not using harfbuzz, check if the direction was set explicitly.
+    if (properties->has_direction() && properties->get_direction() != dir) {
+      if (dir == TextProperties::D_rtl) {
+        // Flip the preceding characters.
+        PN_stdfloat xpos2 = xpos;
+        size_t i = placed_glyphs.size();
+        while (i > rtl_begin) {
+          --i;
+          PN_stdfloat new_xpos = rtl_begin_xpos + (xpos - xpos2);
+          xpos2 = placed_glyphs[i]._xpos;
+          placed_glyphs[i]._xpos = new_xpos;
+        }
+        dir = TextProperties::D_ltr;
+      }
+      else if (dir == TextProperties::D_ltr) {
+        // When switching to right-to-left, keep track of the first glyph that
+        // was RTL so that we can later offset the X positions.
+        dir = TextProperties::D_rtl;
+        rtl_begin = placed_glyphs.size();
+        rtl_begin_xpos = xpos;
+      }
+    }
 
     if (character == ' ') {
       // A space is a special case.
@@ -1650,6 +1679,18 @@ assemble_row(TextAssembler::TextRow &row,
       }
 
       xpos += advance * glyph_scale;
+    }
+  }
+
+  if (dir == TextProperties::D_rtl) {
+    // Flip the preceding characters.
+    PN_stdfloat xpos2 = xpos;
+    size_t i = placed_glyphs.size();
+    while (i > rtl_begin) {
+      --i;
+      PN_stdfloat new_xpos = rtl_begin_xpos + (xpos - xpos2);
+      xpos2 = placed_glyphs[i]._xpos;
+      placed_glyphs[i]._xpos = new_xpos;
     }
   }
 
