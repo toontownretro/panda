@@ -18,4 +18,5 @@ src/configfiles/20_panda.prc
 src/egg/lexer.cxx
 src/egg/parser.cxx
 src/egg/parser.h
+src/egg/parser.yxx.h
 src/gobj/cg_preamble.cxx
