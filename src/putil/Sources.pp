@@ -63,7 +63,7 @@
     loaderOptions.I loaderOptions.h \
     modelIndex.I modelIndex.h \
     modifierButtons.I modifierButtons.h mouseButton.h \
-    mouseData.h nameUniquifier.I nameUniquifier.h \
+    nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \
     pbitops.I pbitops.h \
@@ -198,7 +198,7 @@
     loaderOptions.I loaderOptions.h \
     modelIndex.I modelIndex.h \
     modifierButtons.I \
-    modifierButtons.h mouseButton.h mouseData.h \
+    modifierButtons.h mouseButton.h  \
     nameUniquifier.I nameUniquifier.h \
     nodeCachedReferenceCount.h nodeCachedReferenceCount.I \
     paramValue.I paramValue.h \

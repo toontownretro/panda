@@ -249,6 +249,7 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
     _id_contexts[prepared_objects->_gsg_id] = vbc;
     */
   }
+
   return vbc;
 }
 

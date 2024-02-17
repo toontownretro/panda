@@ -6,22 +6,7 @@
  * license.  You should have received a copy of this license along
  * with this source code in a file named "LICENSE."
  *
- * @file mouseData.h
+ * @file webGLGraphicsWindow.I
  * @author rdb
- * @date 2018-09-24
+ * @date 2015-03-31
  */
-
-#ifndef MOUSEDATA_H
-#define MOUSEDATA_H
-
-#include "pointerData.h"
-
-BEGIN_PUBLISH
-/**
- * Deprecated alias for PointerData.
- */
-typedef PointerData MouseData;
-
-END_PUBLISH
-
-#endif
