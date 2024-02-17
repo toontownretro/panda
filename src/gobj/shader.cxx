@@ -122,7 +122,15 @@ expect_float_vector(const InternalName *name, const ::ShaderType *type, int lo, 
     nfloat = 0;
   }
   if (scalar_type != ScalarType::ST_float || nfloat < lo || nfloat > hi) {
-    return report_parameter_error(name, type, "expected floating-point vector");
+    std::ostringstream ss;
+    ss << "expected ";
+    for (int i = lo; i <= hi; ++i) {
+      ss << "float" << i;
+      if (i < hi) {
+        ss << " or ";
+      }
+    }
+    return report_parameter_error(name, type, ss.str().c_str());
   }
   return true;
 }
@@ -265,10 +273,7 @@ cp_dependency(ShaderMatInput inp) {
   if (inp == SMO_INVALID) {
     return SSD_NONE;
   }
-  if (inp == SMO_attr_material || inp == SMO_attr_material2) {
-    dep |= SSD_material | SSD_frame;
-  }
-  if (inp == SMO_attr_color || inp == SMO_attr_material2) {
+  if (inp == SMO_attr_color) {
     dep |= SSD_color;
   }
   if (inp == SMO_attr_colorscale) {
@@ -1932,7 +1937,7 @@ bind_parameter(const Parameter &param) {
       return true;
     }
 
-    if (pieces[1] == "CascadeAtlasScale") {
+    if (pieces[1] == "CascadeNearFar") {
       const ::ShaderType *element_type;
       uint32_t num_elements;
       type->unwrap_array(element_type, num_elements);
@@ -2279,6 +2284,27 @@ bind_parameter(const Parameter &param) {
       }
       bind._scalar_type = matrix->get_scalar_type();
     }
+    else if (pieces[0] == "row3") {
+      // We can exceptionally support row3 to have any number of components.
+      if (!expect_float_vector(name, type, 1, 4)) {
+        return false;
+      }
+      bind._offset = 12;
+      const ::ShaderType::Vector *vector = type->as_vector();
+      if (vector == nullptr || vector->get_num_components() == 1) {
+        bind._piece = SMP_scalar;
+      }
+      else if (vector->get_num_components() == 2) {
+        bind._piece = SMP_vec2;
+      }
+      else if (vector->get_num_components() == 3) {
+        bind._piece = SMP_vec3;
+      }
+      else {
+        bind._piece = SMP_vec4;
+      }
+      bind._scalar_type = ScalarType::ST_float;
+    }
     else {
       if (!expect_float_vector(name, type, 4, 4)) {
         return false;
@@ -2344,19 +2370,7 @@ bind_parameter(const Parameter &param) {
       }
       ShaderMatSpec bind;
       bind._id = param;
-      if (pieces[1] == "material") {
-        if (!expect_float_matrix(name, type, 4, 4)) {
-          return false;
-        }
-        bind._piece = SMP_mat4_transpose;
-        bind._func = SMF_first;
-        bind._part[0] = SMO_attr_material;
-        bind._arg[0] = nullptr;
-        bind._part[1] = SMO_identity;
-        bind._arg[1] = nullptr;
-        bind._scalar_type = type->as_matrix()->get_scalar_type();
-      }
-      else if (pieces[1] == "color") {
+      if (pieces[1] == "color") {
         if (!expect_float_vector(name, type, 3, 4)) {
           return false;
         }

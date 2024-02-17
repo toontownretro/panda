@@ -1122,11 +1122,11 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
 
       int k = 0;
       for (; k < clight->get_num_cascades(); k++) {
-        into[k] = clight->get_cascade_mvp(k, _current_thread);
+        ((LMatrix4 *)into)[k] = clight->get_cascade_mvp(k, _current_thread);
       }
 
       for (; k < count; k++) {
-        into[k] = LMatrix4::ident_mat();
+        ((LMatrix4 *)into)[k] = LMatrix4::ident_mat();
       }
 
       break;
@@ -1158,11 +1158,11 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       int k = 0;
       for (; k < clight->get_num_cascades(); k++) {
         clight->get_cascade_atlas_mins_maxs(k, mins, maxs);
-        into[k].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, mins[0], maxs[0], mins[1], maxs[1]);
+        into[k].set(mins[0], maxs[0], mins[1], maxs[1]);
       }
 
       for (; k < count; k++) {
-        into[k] = LMatrix4::ident_mat();
+        into[k].fill(0.0f);
       }
 
       break;
@@ -1193,12 +1193,12 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       LVecBase2 scale;
       int k = 0;
       for (; k < clight->get_num_cascades(); k++) {
-        clight->get_cascade_atlas_scale(k, scale);
-        into[k].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, scale[0], scale[1], 0.0f, 0.0f);
+        scale = clight->get_cascade_near_far(k);
+        into[k].set(scale[0], scale[1], 0.0f, 0.0f);
       }
 
       for (; k < count; k++) {
-        into[k] = LMatrix4::ident_mat();
+        into[k].set(0, 0, 0, 0);
       }
 
       break;
@@ -1389,16 +1389,16 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
       // Transform plane to world space
       CPT(TransformState) transform = np.get_net_transform();
       if (transform->is_identity()) {
-        into[i].set_row(3, plane_node->get_plane());
+        into[i] = plane_node->get_plane();
       } else {
         LPlane xformed_plane = plane_node->get_plane() * transform->get_mat();
-        into[i].set_row(3, xformed_plane);
+        into[i] =  xformed_plane;
       }
     }
 
     for (; i < count; ++i) {
       // Fill the remainder with zeroes.
-      into[i] = LMatrix4::zeros_mat();
+      into[i].fill(0);
     }
     return;
   }
@@ -1613,33 +1613,33 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
   }
   case Shader::SMO_lens_exposure_scale: {
     PN_stdfloat scale = _current_lens->get_exposure_scale();
-    into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, scale, scale, scale, scale);
+    into[0].set(scale, scale, scale, scale);
     return;
   }
   case Shader::SMO_lens_near_far: {
-    into[0] = LMatrix4::translate_mat(_current_lens->get_near(), _current_lens->get_far(), 0);
+    into[0].set(_current_lens->get_near(), _current_lens->get_far(), 0, 0);
     return;
   }
   case Shader::SMO_light_lens_div: {
     qpLightCuller *culler = _current_display_region->get_light_culler();
     if (culler == nullptr) {
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      into[0].set(0, 0, 0, 0);
     } else {
       LVecBase3i div = culler->get_frustum_div();
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, div[0], div[1], div[2], 0);
+      into[0].set(div[0], div[1], div[2], 0);
     }
     return;
   }
   case Shader::SMO_light_lens_z_scale_bias: {
     qpLightCuller *culler = _current_display_region->get_light_culler();
     if (culler == nullptr) {
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      into[0].set(0, 0, 0, 0);
     } else {
       const Lens *lens = _current_lens;
       LVecBase3i div = culler->get_frustum_div();
       PN_stdfloat scale = (float)div[2] / log2f(lens->get_far() / lens->get_near());
       PN_stdfloat bias = -((float)div[2] * log2f(lens->get_near()) / log2f(lens->get_far() / lens->get_near()));
-      into[0].set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, scale, bias, 0, 0);
+      into[0].set(scale, bias, 0, 0);
     }
     return;
   }

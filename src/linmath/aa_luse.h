@@ -42,10 +42,6 @@
 
 #define LCAST(numeric_type, object) lcast_to((numeric_type *)0, object)
 
-#define YAW 0
-#define PITCH 1
-#define ROLL 2
-
 BEGIN_PUBLISH
 
 // Now we define some handy typedefs for these classes.

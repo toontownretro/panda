@@ -295,15 +295,15 @@ INLINE void AngleMatrix(const LVector3 &angles, LMatrix4f &matrix)
 {
         float sr, sp, sy, cr, cp, cy;
 
-        float rady = deg_2_rad(angles[YAW]);
+        float rady = deg_2_rad(angles[0]);
         sy = std::sin(rady);
         cy = std::cos(rady);
 
-        float radp = deg_2_rad(angles[PITCH]);
+        float radp = deg_2_rad(angles[1]);
         sp = std::sin(radp);
         cp = std::cos(radp);
 
-        float radr = deg_2_rad(angles[ROLL]);
+        float radr = deg_2_rad(angles[2]);
         sr = std::sin(radr);
         cr = std::cos(radr);
 
