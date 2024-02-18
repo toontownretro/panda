@@ -603,6 +603,7 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
       case SMO_lens_near_far:
       case SMO_light_lens_div:
       case SMO_light_lens_z_scale_bias:
+      case SMO_light_source_i_packed2:
         part._size = 1;
         break;
 
@@ -635,7 +636,6 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
       case SMO_apiclip_to_apiview:
       case SMO_inv_texmat_i:
       case SMO_light_source_i_packed:
-      case SMO_light_source_i_packed2:
       case SMO_cascade_light_mvps_i:
         part._size = 4;
         break;
@@ -647,7 +647,7 @@ cp_add_mat_spec(ShaderMatSpec &spec) {
 
       _mat_parts.push_back(std::move(part));
     }
-    spec._cache_offset[p] = offset + begin[p];
+    spec._cache_offset[p] = offset + (begin[p] * _mat_parts[i]._size);
   }
 
   _mat_spec.push_back(spec);
@@ -1626,6 +1626,7 @@ bind_parameter(const Parameter &param) {
             bind._part[0] = SMO_attr_fog;
             bind._piece = SMP_scalar;
             bind._offset = 2;
+            cp_add_mat_spec(bind);
             continue;
           }
         } else if (member.name == "scale") {
@@ -1633,6 +1634,7 @@ bind_parameter(const Parameter &param) {
             bind._part[0] = SMO_attr_fog;
             bind._piece = SMP_scalar;
             bind._offset = 3;
+            cp_add_mat_spec(bind);
             continue;
           }
         } else {
@@ -1736,6 +1738,11 @@ bind_parameter(const Parameter &param) {
           bind._id._type = member.type;
           bind._id._location = location++;
           bind._func = SMF_first;
+          bind._scalar_type = ScalarType::ST_float;
+          bind._part[0] = SMO_identity;
+          bind._arg[0] = nullptr;
+          bind._part[1] = SMO_identity;
+          bind._arg[1] = nullptr;
           if (member.name == "shadowViewMatrix") {
             if (!expect_float_matrix(fqname, member.type, 4, 4)) {
               return false;
@@ -2927,6 +2934,27 @@ bind_parameter(const Parameter &param) {
       cp_add_mat_spec(bind);
       return true;
     }
+  }
+  else if (const ::ShaderType::Vector *vec = type->as_vector()) {
+    ShaderMatSpec bind;
+    bind._id = param;
+    if (vec->get_num_components() == 1) {
+      bind._piece = SMP_scalar;
+    } else if (vec->get_num_components() == 2) {
+      bind._piece = SMP_vec2;
+    } else if (vec->get_num_components() == 3) {
+      bind._piece = SMP_vec3;
+    } else {
+      bind._piece = SMP_vec4;
+    }
+    bind._func = SMF_first;
+    bind._part[0] = SMO_vec_constant_x;
+    bind._arg[0] = name;
+    bind._part[1] = SMO_identity;
+    bind._arg[1] = nullptr;
+    bind._scalar_type = vec->get_scalar_type();
+    cp_add_mat_spec(bind);
+    return true;
   }
   else if (const ::ShaderType::Struct *struct_type = type->as_struct()) {
     // Is this a struct?  If so, bind the individual members.

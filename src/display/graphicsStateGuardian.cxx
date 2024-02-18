@@ -1713,7 +1713,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
 
     size_t i = 0;
-    for (i = 0; i < num_lights && i < count; ++i) {
+    for (i = 0; i < num_lights; ++i) {
       const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
@@ -1781,7 +1781,7 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     size_t num_lights = std::min((size_t)count, target_light->get_num_non_ambient_lights());
 
     size_t i = 0;
-    for (; i < num_lights && i < count; ++i) {
+    for (; i < num_lights; ++i) {
       const NodePath &np = target_light->get_on_light_quick(i);
       nassertv(!np.is_empty());
       PandaNode *node = np.node();
