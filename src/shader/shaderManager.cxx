@@ -65,12 +65,14 @@ get_default_cube_map() {
  * Forces all shaders to be reloaded and regenerated.
  */
 void ShaderManager::
-reload_shaders() {
+reload_shaders(bool clear_file_cache) {
   GraphicsStateGuardianBase::mark_rehash_generated_shaders();
   for (auto it = _shaders.begin(); it != _shaders.end(); ++it) {
     (*it).second->clear_cache();
   }
-  ShaderStage::clear_sho_cache();
+  if (clear_file_cache) {
+    ShaderStage::clear_sho_cache();
+  }
 }
 
 /**
@@ -236,13 +238,6 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     } else {
       make_shader_collector.start();
-
-      if (shadermgr_cat.is_debug()) {
-        std::cout << "vsh:\n";
-        setup.get_stage(ShaderSetup::S_vertex).spew_variation();
-        std::cout << "psh:\n";
-        setup.get_stage(ShaderSetup::S_pixel).spew_variation();
-      }
 
       COWPT(ShaderModule) v_mod = setup.get_stage(ShaderSetup::S_vertex).get_module();
       COWPT(ShaderModule) p_mod = setup.get_stage(ShaderSetup::S_pixel).get_module();

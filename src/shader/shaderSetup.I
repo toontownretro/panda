@@ -293,7 +293,7 @@ operator == (const ShaderSetup::ShaderAttrSetup &other) const {
  */
 INLINE void ShaderSetup::
 set_vertex_shader(const Filename &filename) {
-  _obj_setup._stages[S_vertex].set_source_filename(filename);
+  _obj_setup._stages[S_vertex].set_source_filename(filename, _obj_setup._language, ShaderModule::Stage::vertex);
   _obj_setup._stage_flags |= SF_vertex;
 }
 
@@ -318,7 +318,7 @@ set_vertex_shader_combo(const InternalName *name, int value) {
  */
 INLINE void ShaderSetup::
 set_pixel_shader(const Filename &filename) {
-  _obj_setup._stages[S_pixel].set_source_filename(filename);
+  _obj_setup._stages[S_pixel].set_source_filename(filename, _obj_setup._language, ShaderModule::Stage::fragment);
   _obj_setup._stage_flags |= SF_pixel;
 }
 
@@ -343,7 +343,7 @@ set_pixel_shader_combo(const InternalName *name, int value) {
  */
 INLINE void ShaderSetup::
 set_geometry_shader(const Filename &filename) {
-  _obj_setup._stages[S_geometry].set_source_filename(filename);
+  _obj_setup._stages[S_geometry].set_source_filename(filename, _obj_setup._language, ShaderModule::Stage::geometry);
   _obj_setup._stage_flags |= SF_geometry;
 }
 
@@ -368,7 +368,7 @@ set_geometry_shader_combo(const InternalName *name, int value) {
  */
 INLINE void ShaderSetup::
 set_tess_shader(const Filename &filename) {
-  _obj_setup._stages[S_tess].set_source_filename(filename);
+  _obj_setup._stages[S_tess].set_source_filename(filename, _obj_setup._language, ShaderModule::Stage::tess_control);
   _obj_setup._stage_flags |= SF_tess;
 }
 
@@ -393,7 +393,7 @@ set_tess_shader_combo(const InternalName *name, int value) {
  */
 INLINE void ShaderSetup::
 set_tess_eval_shader(const Filename &filename) {
-  _obj_setup._stages[S_tess_eval].set_source_filename(filename);
+  _obj_setup._stages[S_tess_eval].set_source_filename(filename, _obj_setup._language, ShaderModule::Stage::tess_evaluation);
   _obj_setup._stage_flags |= SF_tess_eval;
 }
 

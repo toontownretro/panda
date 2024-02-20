@@ -87,6 +87,14 @@ ConfigVariableFilename default_cube_map
           "that requests an environmental cube map but there are no nearby "
           "cube maps."));
 
+ConfigVariableBool shader_dynamic_compilation
+("shader-dynamic-compilation", false,
+ PRC_DESC("If true, shaders will be read from source and variations compiled on the fly"
+          "when requested.  This helps save development time when working on shaders, as "
+          "you no longer have to recompile the all variations offline if you modify a "
+          "shader.  Note that enabling this will cause massive hitches the first time "
+          "a variation is requested."));
+
 /**
  * Initializes the library.  This must be called at least once before any of
  * the functions or classes in this library can be used.  Normally it will be

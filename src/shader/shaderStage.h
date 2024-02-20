@@ -18,6 +18,8 @@
 #include "filename.h"
 #include "shaderObject.h"
 #include "lightMutex.h"
+#include "shader.h"
+#include "shaderModule.h"
 
 #include <string>
 
@@ -33,7 +35,7 @@ public:
 
   INLINE void reset();
 
-  INLINE void set_source_filename(const Filename &filename);
+  INLINE void set_source_filename(const Filename &filename, Shader::ShaderLanguage lang, ShaderModule::Stage stage);
 
   INLINE size_t add_hash(size_t hash) const;
   INLINE bool operator < (const ShaderStage &other) const;
@@ -48,12 +50,10 @@ public:
   INLINE void calc_variation_index();
   INLINE size_t get_variation_index() const;
 
-  void spew_variation();
-
   INLINE const ShaderObject *get_object() const;
   INLINE ShaderModule *get_module() const;
 
-  static const ShaderObject *load_shader_object(const Filename &filename);
+  static const ShaderObject *load_shader_object(const Filename &filename, Shader::ShaderLanguage lang, ShaderModule::Stage stage);
   static void clear_sho_cache();
 
 private:
@@ -65,8 +65,7 @@ private:
   // By default, all combo values are initialized to 0.
   // At the end of shader generation, the variation index will be
   // computed from the values of all combos.
-  vector_int _combo_values;
-  pset<int> _specified_combos;
+  ShaderObject::VariationBuilder _builder;
   size_t _variation_index;
 
   typedef pflat_hash_map<Filename, CPT(ShaderObject), string_hash> ObjectCache;

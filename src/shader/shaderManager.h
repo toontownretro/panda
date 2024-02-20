@@ -41,7 +41,7 @@ PUBLISHED:
   INLINE ShaderQuality get_shader_quality() const;
   MAKE_PROPERTY(shader_quality, get_shader_quality, set_shader_quality);
 
-  void reload_shaders();
+  void reload_shaders(bool clear_file_cache = true);
 
   INLINE void set_default_cube_map(Texture *texture);
   Texture *get_default_cube_map();

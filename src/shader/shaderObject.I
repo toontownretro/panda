@@ -26,6 +26,8 @@ Combo() {
  */
 INLINE ShaderObject::
 ShaderObject() {
+  _stage = ShaderModule::Stage::vertex;
+  _lang = Shader::SL_none;
   _total_combos = 0;
 }
 
@@ -150,4 +152,74 @@ get_num_permutations() const {
 INLINE size_t ShaderObject::
 get_total_combos() const {
   return _total_combos;
+}
+
+/**
+ *
+ */
+INLINE void ShaderObject::
+add_skip_command(SkipCommand &&cmd) {
+  _skip_commands.push_back(std::move(cmd));
+}
+
+/**
+ *
+ */
+INLINE size_t ShaderObject::
+get_num_skip_commands() const {
+  return _skip_commands.size();
+}
+
+/**
+ *
+ */
+INLINE const ShaderObject::SkipCommand *ShaderObject::
+get_skip_command(size_t n) const {
+  nassertr(n < _skip_commands.size(), nullptr);
+  return &_skip_commands[n];
+}
+
+/**
+ *
+ */
+INLINE ShaderObject::VariationBuilder::
+VariationBuilder(ShaderObject *obj) {
+  reset(obj);
+}
+
+/**
+ *
+ */
+INLINE void ShaderObject::VariationBuilder::
+reset(ShaderObject *obj) {
+  _obj = obj;
+  if (_obj != nullptr) {
+    _combo_values.resize(obj->get_num_combos());
+    for (size_t i = 0; i < _combo_values.size(); ++i) {
+      _combo_values[i] = 0;
+    }
+  }
+}
+
+/**
+ *
+ */
+INLINE void ShaderObject::VariationBuilder::
+set_combo_value(int n, int value) {
+  nassertv(n >= 0 && n < (int)_combo_values.size());
+  const ShaderObject::Combo &combo = _obj->get_combo(n);
+  nassertv(value >= combo.min_val && value <= combo.max_val);
+  _combo_values[n] = value;
+}
+
+/**
+ *
+ */
+INLINE void ShaderObject::VariationBuilder::
+set_combo_value(const InternalName *combo_name, int value) {
+  int n = _obj->get_combo_index(combo_name);
+  nassertv(n != -1);
+  const ShaderObject::Combo &combo = _obj->get_combo(n);
+  nassertv(value >= combo.min_val && value <= combo.max_val);
+  _combo_values[n] = value;
 }
