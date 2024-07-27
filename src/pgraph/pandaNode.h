@@ -762,6 +762,20 @@ private:
   private:
     static TypeHandle _type_handle;
   };
+  
+  struct CacheData {
+    DownConnection *connection;
+    
+    CollideMask _collide_mask;
+    
+    DrawMask _control_mask;
+    DrawMask _show_mask;
+    
+    CPT(RenderAttrib) _off_clip_planes;
+    CPT(BoundingVolume) _external_bounds;
+    
+    int _nested_vertices;
+  };
 
   PipelineCycler<CData> _cycler;
   typedef CycleDataReader<CData> CDReader;

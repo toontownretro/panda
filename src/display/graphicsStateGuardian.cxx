@@ -3768,6 +3768,7 @@ determine_target_texture() {
  */
 void GraphicsStateGuardian::
 determine_target_shader() {
+  nassertv(_target_rs != nullptr);
   if (_target_rs->_generated_shader != nullptr) {
     _target_shader = (const ShaderAttrib *)_target_rs->_generated_shader.p();
   } else {

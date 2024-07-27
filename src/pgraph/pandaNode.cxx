@@ -3454,183 +3454,160 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         child_volumes[child_volumes_i++] = internal_bounds;
       }
     }
+    
+    // Seperate the dirty and fresh children.
+    pvector<CacheData> cached_children;
+    cached_children.resize(num_children);
+    
+    // Sort and seperate the children.
+    for (int i = 0; i < num_children; ++i) {
+#ifdef DO_PSTATS
+      PStatTimer timer(_update_children_cache_pcollector);
+#endif
+
+      DownConnection &connection = (*down)[i];
+      PandaNode *child = connection.get_child();
+      CacheData &data = cached_children[i];
+      
+      data.connection = &connection;
+      
+      // Only lock for accessing the lock-sensitive info we need.
+      {
+        CDLockedStageReader child_cdata(child->_cycler, pipeline_stage, current_thread);
+      
+        UpdateSeq last_child_update = update_bounds
+                                    ? child_cdata->_last_bounds_update
+                                    : child_cdata->_last_update;
+        if (last_child_update != child_cdata->_next_update) {
+          // Child needs update.
+          CDStageWriter child_cdataw = child->update_cached(update_bounds, pipeline_stage, child_cdata);
+          
+          data._nested_vertices = child_cdataw->_nested_vertices;
+          data._collide_mask = child_cdataw->_net_collide_mask;
+          data._control_mask = child_cdataw->_net_draw_control_mask;
+          data._show_mask = child_cdataw->_net_draw_show_mask;
+          data._off_clip_planes = child_cdataw->_off_clip_planes;
+          data._external_bounds = child_cdataw->_external_bounds;
+        } else {
+          data._nested_vertices = child_cdata->_nested_vertices;
+          data._collide_mask = child_cdata->_net_collide_mask;
+          data._control_mask = child_cdata->_net_draw_control_mask;
+          data._show_mask = child_cdata->_net_draw_show_mask;
+          data._off_clip_planes = child_cdata->_off_clip_planes;
+          data._external_bounds = child_cdata->_external_bounds;
+        }
+      }
+    }
 
     // Now expand those contents to include all of our children.
     int child_vertices = 0;
-
+    
+    const ClipPlaneAttrib *orig_cp = DCAST(ClipPlaneAttrib, off_clip_planes);
+    
+    // Process all of our childrens cached data.
     for (int i = 0; i < num_children; ++i) {
 #ifdef DO_PSTATS
       PStatTimer timer(_update_children_cache_pcollector);
 #endif
       
-      DownConnection &connection = (*down)[i];
-      PandaNode *child = connection.get_child();
+      CacheData &data = cached_children[i];
+      DownConnection *connection = data.connection;
+      PandaNode *child = connection->get_child();
 
-      const ClipPlaneAttrib *orig_cp = DCAST(ClipPlaneAttrib, off_clip_planes);
+      // Get all of the pre-cached data.
+      int child_nested_vertices = data._nested_vertices;
+      CollideMask child_collide_mask = data._collide_mask;
+      DrawMask child_control_mask = data._control_mask;
+      DrawMask child_show_mask = data._show_mask;
+      CPT(RenderAttrib) child_off_clip_planes = data._off_clip_planes;
+      CPT(BoundingVolume) child_external_bounds = data._external_bounds;
 
-      CDLockedStageReader child_cdata(child->_cycler, pipeline_stage, current_thread);
+      net_collide_mask |= child_collide_mask;
+      connection->_net_collide_mask = child_collide_mask;
 
-      UpdateSeq last_child_update = update_bounds
-                                  ? child_cdata->_last_bounds_update
-                                  : child_cdata->_last_update;
-
-      if (last_child_update != child_cdata->_next_update) {
-        // Child needs update.
-        CDStageWriter child_cdataw = child->update_cached(update_bounds, pipeline_stage, child_cdata);
-
-        CollideMask child_collide_mask = child_cdataw->_net_collide_mask;
-        net_collide_mask |= child_collide_mask;
-        connection._net_collide_mask = child_collide_mask;
-
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "\nchild update " << *child << ":\n";
-        }
-
-        DrawMask child_control_mask = child_cdataw->_net_draw_control_mask;
-        DrawMask child_show_mask = child_cdataw->_net_draw_show_mask;
-        if (!(child_control_mask | child_show_mask).is_zero()) {
-          // This child includes a renderable node or subtree.  Thus, we
-          // should propagate its draw masks.
-          renderable = true;
-
-          // For each bit position in the masks, we have assigned the
-          // following semantic meaning.  The number on the left represents
-          // the pairing of the corresponding bit from the control mask and
-          // from the show mask:
-
-          // 00 : not a renderable node   (control 0, show 0) 01 : a normally
-          // visible node (control 0, show 1) 10 : a hidden node
-          // (control 1, show 0) 11 : a show-through node     (control 1, show
-          // 1)
-
-          // Now, when we accumulate these masks, we want to do so according
-          // to the following table, for each bit position:
-
-          // 00   01   10   11     (child) --------------------- 00 | 00   01
-          // 10   11 01 | 01   01   01*  11 10 | 10   01*  10   11 11 | 11
-          // 11   11   11 (parent)
-
-          // This table is almost the same as the union of both masks, with
-          // one exception, marked with a * in the above table: if one is 10
-          // and the other is 01--that is, one is hidden and the other is
-          // normally visible--then the result should be 01, normally visible.
-          // This is because we only want to propagate the hidden bit upwards
-          // if *all* renderable nodes are hidden.
-
-          // Get the set of exception bits for which the above rule applies.
-          // These are the bits for which both bits have flipped, but which
-          // were not the same in the original.
-          DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
-          exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
-
-          if (drawmask_cat.is_debug()) {
-            drawmask_cat.debug(false)
-              << "exception_mask = " << exception_mask << "\n";
-          }
-
-          // Now compute the union, applying the above exception.
-          net_draw_control_mask |= child_control_mask;
-          net_draw_show_mask |= child_show_mask;
-
-          net_draw_control_mask &= ~exception_mask;
-          net_draw_show_mask |= exception_mask;
-        }
-
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "child_control_mask = " << child_control_mask
-            << "\nchild_show_mask = " << child_show_mask
-            << "\nnet_draw_control_mask = " << net_draw_control_mask
-            << "\nnet_draw_show_mask = " << net_draw_show_mask
-            << "\n";
-        }
-
-        off_clip_planes = orig_cp->compose_off(child_cdataw->_off_clip_planes);
-
-        if (update_bounds) {
-          if (child_cdataw->_external_bounds->is_infinite()) {
-            has_infinite = true;
-          }
-
-          if (!has_infinite && !child_cdataw->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdataw->_external_bounds);
-#endif
-            nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
-            child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
-          }
-          child_vertices += child_cdataw->_nested_vertices;
-
-          connection._external_bounds = child_cdataw->_external_bounds->as_geometric_bounding_volume();
-        }
-
-        connection._net_draw_control_mask = child_control_mask;
-        connection._net_draw_show_mask = child_show_mask;
-
-      } else {
-        // Child is good.
-        CollideMask child_collide_mask = child_cdata->_net_collide_mask;
-        net_collide_mask |= child_collide_mask;
-        connection._net_collide_mask = child_collide_mask;
-
-        // See comments in similar block above.
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "\nchild fresh " << *child << ":\n";
-        }
-        DrawMask child_control_mask = child_cdata->_net_draw_control_mask;
-        DrawMask child_show_mask = child_cdata->_net_draw_show_mask;
-        if (!(child_control_mask | child_show_mask).is_zero()) {
-          renderable = true;
-
-          DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
-          exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
-
-          if (drawmask_cat.is_debug()) {
-            drawmask_cat.debug(false)
-              << "exception_mask = " << exception_mask << "\n";
-          }
-
-          // Now compute the union, applying the above exception.
-          net_draw_control_mask |= child_control_mask;
-          net_draw_show_mask |= child_show_mask;
-
-          net_draw_control_mask &= ~exception_mask;
-          net_draw_show_mask |= exception_mask;
-        }
-
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "child_control_mask = " << child_control_mask
-            << "\nchild_show_mask = " << child_show_mask
-            << "\nnet_draw_control_mask = " << net_draw_control_mask
-            << "\nnet_draw_show_mask = " << net_draw_show_mask
-            << "\n";
-        }
-
-        off_clip_planes = orig_cp->compose_off(child_cdata->_off_clip_planes);
-
-        if (update_bounds) {
-          if (child_cdata->_external_bounds->is_infinite()) {
-            has_infinite = true;
-          }
-
-          if (!has_infinite && !child_cdata->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdata->_external_bounds);
-#endif
-            nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
-            child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
-          }
-          child_vertices += child_cdata->_nested_vertices;
-
-          connection._external_bounds = child_cdata->_external_bounds->as_geometric_bounding_volume();
-        }
-
-        connection._net_draw_control_mask = child_control_mask;
-        connection._net_draw_show_mask = child_show_mask;
+      if (drawmask_cat.is_debug()) {
+        drawmask_cat.debug(false)
+          << "\nchild update " << *child << ":\n";
       }
+
+      if (!(child_control_mask | child_show_mask).is_zero()) {
+        // This child includes a renderable node or subtree.  Thus, we
+        // should propagate its draw masks.
+        renderable = true;
+
+        // For each bit position in the masks, we have assigned the
+        // following semantic meaning.  The number on the left represents
+        // the pairing of the corresponding bit from the control mask and
+        // from the show mask:
+
+        // 00 : not a renderable node   (control 0, show 0) 01 : a normally
+        // visible node (control 0, show 1) 10 : a hidden node
+        // (control 1, show 0) 11 : a show-through node     (control 1, show
+        // 1)
+
+        // Now, when we accumulate these masks, we want to do so according
+        // to the following table, for each bit position:
+
+        // 00   01   10   11     (child) --------------------- 00 | 00   01
+        // 10   11 01 | 01   01   01*  11 10 | 10   01*  10   11 11 | 11
+        // 11   11   11 (parent)
+
+        // This table is almost the same as the union of both masks, with
+        // one exception, marked with a * in the above table: if one is 10
+        // and the other is 01--that is, one is hidden and the other is
+        // normally visible--then the result should be 01, normally visible.
+        // This is because we only want to propagate the hidden bit upwards
+        // if *all* renderable nodes are hidden.
+
+        // Get the set of exception bits for which the above rule applies.
+        // These are the bits for which both bits have flipped, but which
+        // were not the same in the original.
+        DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
+        exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
+
+        if (drawmask_cat.is_debug()) {
+          drawmask_cat.debug(false)
+            << "exception_mask = " << exception_mask << "\n";
+        }
+
+        // Now compute the union, applying the above exception.
+        net_draw_control_mask |= child_control_mask;
+        net_draw_show_mask |= child_show_mask;
+
+        net_draw_control_mask &= ~exception_mask;
+        net_draw_show_mask |= exception_mask;
+      }
+
+      if (drawmask_cat.is_debug()) {
+        drawmask_cat.debug(false)
+          << "child_control_mask = " << child_control_mask
+          << "\nchild_show_mask = " << child_show_mask
+          << "\nnet_draw_control_mask = " << net_draw_control_mask
+          << "\nnet_draw_show_mask = " << net_draw_show_mask
+          << "\n";
+      }
+
+      off_clip_planes = orig_cp->compose_off(child_off_clip_planes);
+
+      if (update_bounds) {
+        if (child_external_bounds->is_infinite()) {
+          has_infinite = true;
+        }
+
+        if (!has_infinite && !child_external_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+          child_volumes_ref.push_back(child_external_bounds);
+#endif
+          nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
+          child_volumes[child_volumes_i++] = child_external_bounds;
+        }
+        child_vertices += child_nested_vertices;
+
+        connection->_external_bounds = child_external_bounds->as_geometric_bounding_volume();
+      }
+
+      connection->_net_draw_control_mask = child_control_mask;
+      connection->_net_draw_show_mask = child_show_mask;
     }
 
     {

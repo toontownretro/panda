@@ -399,13 +399,14 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
   }
 
   int bin_index = object->_state->get_bin_index();
-  CullBin *bin = get_bin(bin_index);
-  nassertv(bin != nullptr);
+  nassertv(get_bin(bin_index) != nullptr);
   check_flash_bin(object->_state, bin_manager, bin_index);
 
   // Munge vertices as needed for the GSG's requirements, and the object's
   // current state.
   if (object->munge_geom(_gsg, /*_gsg->get_geom_munger(object->_state, current_thread)*/nullptr, traverser, force)) {
+    CullBin *bin = get_bin(bin_index);
+    nassertv(bin != nullptr);
     // The object may or may not now be fully resident, but this may not
     // matter, since the GSG may have the necessary buffers already loaded.
     // We'll let the GSG ultimately decide whether to render it.

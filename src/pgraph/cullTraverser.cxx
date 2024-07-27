@@ -36,6 +36,7 @@
 #include "geomLines.h"
 #include "geomVertexWriter.h"
 #include "configVariableBool.h"
+#include "jobSystem.h"
 
 PStatCollector CullTraverser::_nodes_pcollector("Nodes");
 PStatCollector CullTraverser::_geom_nodes_pcollector("Nodes:GeomNodes");
@@ -237,6 +238,9 @@ do_traverse(CullTraverserData &data) {
   PandaNode::Children children = node_reader->get_children();
   node_reader->release();
   int num_children = children.get_num_children();
+  // Is it possible to thread this?
+  // I actually got it to work a small bit. 
+  // I don't know if it will work right though.
   for (int i = 0; i < num_children; ++i) {
     const PandaNode::DownConnection &child = children.get_child_connection(i);
     traverse_down(data, child, data._state);

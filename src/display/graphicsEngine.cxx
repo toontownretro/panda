@@ -1551,25 +1551,26 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
   pvector<PT(DisplayRegion)> all_regions;
   for (size_t wi = 0; wi < wlist_size; ++wi) {
     GraphicsOutput *win = wlist[wi];
-    if (win->is_active() && win->get_gsg()->is_active()) {
-      int num_display_regions = win->get_num_active_display_regions();
-      for (int i = 0; i < num_display_regions; ++i) {
-        PT(DisplayRegion) dr = win->get_active_display_region(i);
-        if (dr != nullptr) {
-          all_regions.push_back(dr);
+    if (!win->is_active() || !win->get_gsg()->is_active()) { continue; } 
+        
+    int num_display_regions = win->get_num_active_display_regions();
+    for (int i = 0; i < num_display_regions; ++i) {
+      PT(DisplayRegion) dr = win->get_active_display_region(i);
+      if (dr == nullptr) { continue; }
+      
+      all_regions.push_back(dr);
 
-          // Force the scene root to have all of it's bounding information
-          // up-to-date before we start traversing in parallel.
-          NodePath cam = dr->get_camera();
-          if (!cam.is_empty()) {
-            NodePath top = cam.get_top(current_thread);
-            if (!top.is_empty()) {
-              PandaNodePipelineReader reader(top.node(), current_thread);
-              reader.check_cached(true);
-            }
-          }
-        }
-      }
+      // Force the scene root to have all of it's bounding information
+      // up-to-date before we start traversing in parallel.
+
+      NodePath cam = dr->get_camera();
+      if (cam.is_empty()) { continue; }
+      
+      NodePath top = cam.get_top(current_thread);
+      if (top.is_empty()) { continue; }
+      
+      PandaNodePipelineReader reader(top.node(), current_thread);
+      reader.check_cached(true);
     }
   }
 
