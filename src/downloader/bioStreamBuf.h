@@ -46,6 +46,8 @@ private:
   bool _write_open;
   char *_buffer;
 
+  bool _stream_lax_errorcheck;
+
   friend class IBioStream;
   friend class OBioStream;
   friend class BioStream;

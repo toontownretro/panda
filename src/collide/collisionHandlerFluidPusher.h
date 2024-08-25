@@ -18,6 +18,8 @@
 
 #include "collisionSolid.h"
 #include "collisionHandlerPusher.h"
+#include "plane.h"
+#include "plist.h"
 
 /**
  * A CollisionHandlerPusher that makes use of timing and spatial information
@@ -32,6 +34,8 @@ public:
 
 protected:
   virtual bool handle_entries();
+
+  typedef plist< LPlanef > PlaneList;
 
 public:
   static TypeHandle get_class_type() {
