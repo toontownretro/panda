@@ -81,7 +81,7 @@ handle_entries() {
 
     VARIABLES
     N = movement vector since most recent collision (or start of frame)
-	P = set of collision planes that have already been collided against
+    P = set of collision planes that have already been collided against
     SCS = 'sub collision set', all collidables that could still be collided with
     C = single collider currently being collided with
     PosX = new position given movement along N interrupted by collision with C
@@ -92,7 +92,7 @@ handle_entries() {
     1. N = M, SCS = CS, PosX = PosB
     2. compute, using SCS and N, which collidable C is the first collision
     3. if no collision found, DONE
-    4. if movement in direction M is now completely  blocked, then
+    4. if movement in direction M is now completely blocked, then
        PosX = initial point of contact with C along N, DONE
     5. calculate PosX (and new N) assuming that there will be no more collisions
     6. calculate new CP based on current CP and C's collision plane
