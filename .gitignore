@@ -20,3 +20,4 @@ src/egg/parser.cxx
 src/egg/parser.h
 src/egg/parser.yxx.h
 src/gobj/cg_preamble.cxx
+*~
