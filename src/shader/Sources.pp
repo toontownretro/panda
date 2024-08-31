@@ -13,6 +13,7 @@
     eyeRefractShader.h eyeRefractShader.I \
     //lightmappedShader.h lightmappedShader.I \
     //noMatShader.h noMatShader.I \
+    pbrShader.h pbrShader.I \
     shaderBase.h shaderBase.I \
     shaderManagerEnums.h \
     shaderManager.h shaderManager.I \
@@ -39,6 +40,7 @@
     eyeRefractShader.cxx \
     //lightmappedShader.cxx \
     //noMatShader.cxx \
+    pbrShader.cxx \
     shaderBase.cxx \
     shaderManagerEnums.cxx \
     shaderManager.cxx \

@@ -29,6 +29,7 @@
 #include "sourceLightmappedMaterial.h"
 #include "twoTextureMaterial.h"
 #include "spriteParticleMaterial.h"
+#include "pbrMaterial.h"
 
 ConfigureDef(config_material);
 ConfigureFn(config_material) {
@@ -93,4 +94,7 @@ init_libmaterial() {
 
   SpriteParticleMaterial::init_type();
   SpriteParticleMaterial::register_with_read_factory();
+
+  PBRMaterial::init_type();
+  PBRMaterial::register_with_read_factory();
 }

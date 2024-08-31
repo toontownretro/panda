@@ -18,6 +18,7 @@
     materialParamVector.I materialParamVector.h \
     materialPool.I materialPool.h \
     materialRegistry.I materialRegistry.h \
+    pbrMaterial.I pbrMaterial.h \
     skyBoxMaterial.I skyBoxMaterial.h \
     sourceLightmappedMaterial.I sourceLightmappedMaterial.h \
     sourceMaterial.I sourceMaterial.h \
@@ -41,6 +42,7 @@
     materialParamVector.cxx \
     materialPool.cxx \
     materialRegistry.cxx \
+    pbrMaterial.cxx \
     skyBoxMaterial.cxx \
     sourceLightmappedMaterial.cxx \
     sourceMaterial.cxx \
