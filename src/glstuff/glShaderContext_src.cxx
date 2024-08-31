@@ -3129,7 +3129,7 @@ do_bind_textures(GLuint &barriers) {
     Shader::ShaderTexSpec &spec = _shader->_tex_spec[i];
     const InternalName *id = spec._name;
 
-    SamplerState sampler;
+    const SamplerState *sampler = &SamplerState::get_default();
 
     Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
     if (tex != nullptr) {
@@ -3185,7 +3185,7 @@ do_bind_textures(GLuint &barriers) {
         continue;
       }
       _glgsg->apply_texture(gtc, view);
-      _glgsg->apply_sampler(i, sampler, gtc, view);
+      _glgsg->apply_sampler(i, *sampler, gtc, view);
 
     } else {
       // Apply a white texture in order to make it easier to use a shader that
@@ -3216,7 +3216,7 @@ do_multibind_textures(GLuint &barriers) {
     Shader::ShaderTexSpec &spec = _shader->_tex_spec[i];
     const InternalName *id = spec._name;
 
-    SamplerState sampler;
+    const SamplerState *sampler = &SamplerState::get_default();
 
     Texture *tex = _glgsg->fetch_specified_texture(spec, sampler, view);
     if (tex != nullptr) {
@@ -3276,7 +3276,7 @@ do_multibind_textures(GLuint &barriers) {
         tindex = gtc->get_view_index(view);
       }
 
-      SamplerContext *sc = sampler.prepare_now(_prepared_objects, _glgsg);
+      SamplerContext *sc = sampler->prepare_now(_prepared_objects, _glgsg);
       GLuint sindex = 0;
       if (sc != nullptr) {
         CLP(SamplerContext) *gsc = DCAST(CLP(SamplerContext), sc);
@@ -3650,6 +3650,7 @@ attach_shader(const ShaderModule *module, Shader::ModuleSpecConstants &consts) {
         GLCAT.debug()
           << "Attaching SPIR-V " << stage << " shader binary "
           << module->get_source_filename() << "\n";
+        spv->disassemble(GLCAT.debug());
       }
 
       if (_glgsg->_gl_vendor == "NVIDIA Corporation" && spv->get_num_parameters() > 0) {
@@ -3999,7 +4000,7 @@ compile_and_link() {
       if (status != GL_TRUE) {
         GLCAT.error()
           << "An error occurred while compiling shader module "
-          << module._module->get_source_filename() << ":\n";
+          << module._module->get_source_filename() << "( " << *(module._module) << " ):\n";
         report_shader_errors(module, true);
         any_failed = true;
       } else {

@@ -2935,7 +2935,8 @@ bind_parameter(const Parameter &param) {
       return true;
     }
   }
-  else if (const ::ShaderType::Vector *vec = type->as_vector()) {
+  else if (type->as_vector() && type->as_vector()->get_scalar_type() != ScalarType::ST_int) {
+    const ::ShaderType::Vector *vec = type->as_vector();
     ShaderMatSpec bind;
     bind._id = param;
     if (vec->get_num_components() == 1) {

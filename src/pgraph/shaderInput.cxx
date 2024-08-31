@@ -55,7 +55,7 @@ ShaderInput(CPT_InternalName name, Texture *tex, bool read, bool write, int z, i
 ShaderInput::
 ShaderInput(CPT_InternalName name, Texture *tex, const SamplerState &sampler, int priority) :
   _name(std::move(name)),
-  _value(new ParamTextureSampler(tex, sampler)),
+  _value(TexSampPair(tex, sampler)),
   _priority(priority),
   _type(M_texture_sampler)
 {
@@ -75,22 +75,24 @@ add_hash(size_t hash) const {
     return hash;
 
   case M_vector:
-    return _stored_vector.add_hash(hash);
+    return std::get<LVecBase4>(_value).add_hash(hash);
 
   case M_matrix:
-    return _stored_matrix.add_hash(hash);
+    return std::get<LMatrix4>(_value).add_hash(hash);
 
   case M_numeric:
-    return pointer_hash::add_hash(hash, _stored_ptr._ptr);
+    return pointer_hash::add_hash(hash, std::get<Shader::ShaderPtrData>(_value)._ptr);
 
   case M_texture_sampler:
     {
-      hash = pointer_hash::add_hash(hash, DCAST(ParamTextureSampler, _value)->get_texture());
-      hash = size_t_hash::add_hash(hash, DCAST(ParamTextureSampler, _value)->get_sampler().get_hash());
+      const TexSampPair *pts = &std::get<TexSampPair>(_value);
+      hash = pointer_hash::add_hash(hash, pts->_texture);
+      hash = size_t_hash::add_hash(hash, pts->_samp.get_hash());
     }
+    return hash;
 
   default:
-    return pointer_hash::add_hash(hash, _value);
+    return pointer_hash::add_hash(hash, std::get<PT(TypedWritableReferenceCount)>(_value).p());
   }
 }
 
@@ -100,7 +102,7 @@ add_hash(size_t hash) const {
  */
 NodePath ShaderInput::
 get_nodepath() const {
-  return DCAST(ParamNodePath, _value)->get_value();
+  return DCAST(ParamNodePath, std::get<PT(TypedWritableReferenceCount)>(_value))->get_value();
 }
 
 /**
@@ -110,13 +112,13 @@ Texture *ShaderInput::
 get_texture() const {
   switch (_type) {
   case M_texture_sampler:
-    return DCAST(ParamTextureSampler, _value)->get_texture();
+    return std::get<TexSampPair>(_value)._texture;
 
   case M_texture_image:
-    return DCAST(ParamTextureImage, _value)->get_texture();
+    return DCAST(ParamTextureImage, std::get<PT(TypedWritableReferenceCount)>(_value))->get_texture();
 
   case M_texture:
-    return DCAST(Texture, _value);
+    return DCAST(Texture, std::get<PT(TypedWritableReferenceCount)>(_value));
 
   default:
     return nullptr;
@@ -129,9 +131,9 @@ get_texture() const {
 const SamplerState &ShaderInput::
 get_sampler() const {
   if (_type == M_texture_sampler) {
-    return DCAST(ParamTextureSampler, _value)->get_sampler();
+    return std::get<TexSampPair>(_value)._samp;
 
-  } else if (!_value.is_null()) {
+  } else if (_type == M_texture || _type == M_texture_image) {
     return get_texture()->get_default_sampler();
 
   } else {

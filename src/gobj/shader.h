@@ -363,9 +363,9 @@ public:
 
   public:
     void *_ptr;
-    ScalarType _type;
-    bool _updated;
     size_t _size; //number of elements vec3[4]=12
+    ScalarType _type : 7;
+    bool _updated : 1;
 
   public:
     INLINE ShaderPtrData();
@@ -375,11 +375,6 @@ public:
     INLINE ShaderPtrData(const PTA_LVecBase2f &ptr);
     INLINE ShaderPtrData(const PTA_LMatrix4f &mat);
     INLINE ShaderPtrData(const PTA_LMatrix3f &mat);
-    INLINE ShaderPtrData(const LVecBase4f &vec);
-    INLINE ShaderPtrData(const LVecBase3f &vec);
-    INLINE ShaderPtrData(const LVecBase2f &vec);
-    INLINE ShaderPtrData(const LMatrix4f &mat);
-    INLINE ShaderPtrData(const LMatrix3f &mat);
 
     INLINE ShaderPtrData(const PTA_double &ptr);
     INLINE ShaderPtrData(const PTA_LVecBase4d &ptr);
@@ -387,11 +382,6 @@ public:
     INLINE ShaderPtrData(const PTA_LVecBase2d &ptr);
     INLINE ShaderPtrData(const PTA_LMatrix4d &mat);
     INLINE ShaderPtrData(const PTA_LMatrix3d &mat);
-    INLINE ShaderPtrData(const LVecBase4d &vec);
-    INLINE ShaderPtrData(const LVecBase3d &vec);
-    INLINE ShaderPtrData(const LVecBase2d &vec);
-    INLINE ShaderPtrData(const LMatrix4d &mat);
-    INLINE ShaderPtrData(const LMatrix3d &mat);
 
     INLINE ShaderPtrData(const PTA_int &ptr);
     INLINE ShaderPtrData(const PTA_LVecBase4i &ptr);
@@ -412,9 +402,9 @@ public:
    * _size vectors)
    */
   struct ShaderMatPart {
-    ShaderMatInput _part;
     CPT(InternalName) _arg;
     int _size = 1;
+    ShaderMatInput _part;
     int _count = 1;
     int _dep = SSD_NONE;
   };
@@ -423,28 +413,28 @@ public:
    * Describes a shader input that is sourced from the render state.
    */
   struct ShaderMatSpec {
-    int               _dep = SSD_NONE;
     LMatrix4          _value;
-    size_t            _cache_offset[2];
-    ShaderMatFunc     _func;
     Parameter         _id;
-    ShaderMatInput    _part[2];
     CPT(InternalName) _arg[2];
+    size_t            _cache_offset[2];
+    int               _dep = SSD_NONE;
     int               _index = 0;
-    ShaderMatPiece    _piece;
+    ShaderMatFunc     _func;
+    ShaderMatInput    _part[2];
     int               _offset = 0;
     int               _size = 1;
     int               _array_count = 1;
+    ShaderMatPiece    _piece;
     ScalarType        _scalar_type = ScalarType::ST_float;
   };
 
   struct ShaderTexSpec {
     Parameter         _id;
     CPT(InternalName) _name;
+    PT(InternalName)  _suffix;
     ShaderTexInput    _part;
     int               _stage;
     int               _desired_type;
-    PT(InternalName)  _suffix;
   };
 
   struct ShaderImgSpec {
@@ -464,8 +454,8 @@ public:
 
   struct ShaderPtrSpec {
     Parameter         _id;
-    uint32_t          _dim[3]; //n_elements,rows,cols
     CPT(InternalName) _arg;
+    uint32_t          _dim[3]; //n_elements,rows,cols
     ScalarType        _type;
   };
 

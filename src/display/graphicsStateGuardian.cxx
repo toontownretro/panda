@@ -1021,7 +1021,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     return;
   }
   case Shader::SMO_texpad_x: {
-    Texture *tex = _target_shader->get_shader_input_texture(name);
+    const SamplerState *samp = nullptr;
+    Texture *tex = _target_shader->get_shader_input_texture(name, samp);
     nassertv(tex != nullptr);
     int sx = tex->get_x_size() - tex->get_pad_x_size();
     int sy = tex->get_y_size() - tex->get_pad_y_size();
@@ -1033,7 +1034,8 @@ fetch_specified_part(Shader::ShaderMatInput part, const InternalName *name,
     return;
   }
   case Shader::SMO_texpix_x: {
-    Texture *tex = _target_shader->get_shader_input_texture(name);
+    const SamplerState* samp = nullptr;
+    Texture *tex = _target_shader->get_shader_input_texture(name, samp);
     nassertv(tex != nullptr);
     double px = 1.0 / tex->get_x_size();
     double py = 1.0 / tex->get_y_size();
@@ -1853,7 +1855,7 @@ fetch_specified_member(const NodePath &np, CPT_InternalName attrib, LVecBase4 &v
  * Like fetch_specified_value, but for texture inputs.
  */
 Texture *GraphicsStateGuardian::
-fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
+fetch_specified_texture(Shader::ShaderTexSpec &spec, const SamplerState *&sampler,
                         int &view) {
 
   static PT(Texture) default_add_tex;
@@ -1875,7 +1877,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         if (basename == "shadowMap") {
           Texture *tex = get_shadow_map(np);
           if (tex != nullptr) {
-            sampler = tex->get_default_sampler();
+            sampler = &tex->get_default_sampler();
           }
           return tex;
 
@@ -1899,7 +1901,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
       }
     } else {
       // Just a regular texture input.
-      return _target_shader->get_shader_input_texture(spec._name, &sampler);
+      return _target_shader->get_shader_input_texture(spec._name, sampler);
     }
     break;
 
@@ -1912,7 +1914,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
       if (spec._stage < texattrib->get_num_on_stages()) {
         TextureStage *stage = texattrib->get_on_stage(spec._stage);
-        sampler = texattrib->get_on_sampler(stage);
+        sampler = &texattrib->get_on_sampler(stage);
         view += stage->get_tex_view_offset();
         return texattrib->get_on_texture(stage);
       }
@@ -1947,14 +1949,14 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         }
 
         if (tex != nullptr) {
-          sampler = tex->get_default_sampler();
+          sampler = &tex->get_default_sampler();
         }
         return tex;
       } else {
         // There is no such light assigned.  Bind a dummy shadow map.
         Texture * tex = get_dummy_shadow_map((Texture::TextureType)spec._desired_type);
         if (tex != nullptr) {
-          sampler = tex->get_default_sampler();
+          sampler = &tex->get_default_sampler();
         }
         return tex;
       }
@@ -1987,7 +1989,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
         }
 
         if (tex != nullptr) {
-          sampler = tex->get_default_sampler();
+          sampler = &tex->get_default_sampler();
         }
         return tex;
       }
@@ -2035,7 +2037,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
       if (spec._stage < texattrib->get_num_on_ff_stages()) {
         TextureStage *stage = texattrib->get_on_ff_stage(spec._stage);
-        sampler = texattrib->get_on_sampler(stage);
+        sampler = &texattrib->get_on_sampler(stage);
         view += stage->get_tex_view_offset();
         return texattrib->get_on_texture(stage);
       }
@@ -2055,7 +2057,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
               mode == TextureStage::M_modulate_glow ||
               mode == TextureStage::M_modulate_gloss) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2076,7 +2078,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
           if (mode == TextureStage::M_add) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2106,7 +2108,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
           if (mode == TextureStage::M_normal ||
               mode == TextureStage::M_normal_height) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2137,7 +2139,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
               mode == TextureStage::M_modulate_gloss ||
               mode == TextureStage::M_normal_gloss) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2159,7 +2161,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
           if (mode == TextureStage::M_height ||
               mode == TextureStage::M_normal_height) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2188,7 +2190,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
           if (mode == TextureStage::M_selector) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }
@@ -2209,7 +2211,7 @@ fetch_specified_texture(Shader::ShaderTexSpec &spec, SamplerState &sampler,
 
           if (mode == TextureStage::M_emission) {
             if (si++ == spec._stage) {
-              sampler = texattrib->get_on_sampler(stage);
+              sampler = &texattrib->get_on_sampler(stage);
               view += stage->get_tex_view_offset();
               return texattrib->get_on_texture(stage);
             }

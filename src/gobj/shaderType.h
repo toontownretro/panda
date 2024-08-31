@@ -40,7 +40,7 @@ public:
   virtual int get_num_interface_locations() const { return 1; }
   virtual int get_num_parameter_locations() const { return 1; }
 
-  enum ScalarType {
+  enum ScalarType : uint8_t {
     ST_unknown,
     ST_float,
     ST_double,
@@ -49,7 +49,7 @@ public:
     ST_bool,
   };
 
-  enum class Access {
+  enum class Access : uint8_t {
     none = 0,
     read_only = 1,
     write_only = 2,

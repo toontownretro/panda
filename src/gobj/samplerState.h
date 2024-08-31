@@ -153,6 +153,7 @@ public:
 
 private:
   LColor _border_color;
+  size_t _hash;
   PN_stdfloat _min_lod;
   PN_stdfloat _max_lod;
   PN_stdfloat _lod_bias;
@@ -166,8 +167,6 @@ private:
   WrapMode _wrap_v : 4;
   WrapMode _wrap_w : 4;
   int _anisotropic_degree : 12;
-
-  size_t _hash;
 
   static SamplerState _default;
 

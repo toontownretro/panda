@@ -1052,7 +1052,7 @@ update_shader_texture_bindings(DXShaderContext9 *prev, GSG *gsg) {
     nassertd(reg.set == D3DXRS_SAMPLER) continue;
 
     int view = gsg->get_current_tex_view_offset();
-    SamplerState sampler;
+    const SamplerState *sampler = &SamplerState::get_default();
 
     Texture *tex = gsg->fetch_specified_texture(spec, sampler, view);
     if (tex.is_null()) {
@@ -1087,7 +1087,7 @@ update_shader_texture_bindings(DXShaderContext9 *prev, GSG *gsg) {
       continue;
     }
 
-    gsg->apply_texture(texunit, tc, view, sampler);
+    gsg->apply_texture(texunit, tc, view, *sampler);
   }
 }
 

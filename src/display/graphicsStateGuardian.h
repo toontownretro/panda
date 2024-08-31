@@ -342,7 +342,7 @@ public:
   void fetch_specified_member(const NodePath &np, CPT_InternalName member,
                               LVecBase4 &v);
   Texture *fetch_specified_texture(Shader::ShaderTexSpec &spec,
-                                   SamplerState &sampler, int &view);
+                                   const SamplerState *&sampler, int &view);
   const Shader::ShaderPtrData *fetch_ptr_parameter(const Shader::ShaderPtrSpec& spec);
   bool fetch_ptr_parameter(const Shader::ShaderPtrSpec &spec, Shader::ShaderPtrData &data);
 

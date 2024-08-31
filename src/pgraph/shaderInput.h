@@ -34,6 +34,8 @@
 #include "extension.h"
 #include "paramTexture.h"
 
+#include <variant>
+
 /**
  * This is a small container class that can hold any one of the value types
  * that can be passed as input to a shader.
@@ -45,6 +47,25 @@ PUBLISHED:
     A_read    = 0x01,
     A_write   = 0x02,
     A_layered = 0x04,
+  };
+
+  class TexSampPair {
+  public:
+    SamplerState _samp;
+    PT(Texture) _texture;
+
+    INLINE TexSampPair(Texture *tex, const SamplerState &samp) :
+      _texture(tex), _samp(samp)
+    {
+    }
+
+    INLINE const SamplerState &get_sampler() const {
+      return _samp;
+    }
+
+    INLINE Texture *get_texture() const {
+      return _texture;
+    }
   };
 
   static const ShaderInput &get_blank();
@@ -96,15 +117,15 @@ PUBLISHED:
 
   enum ShaderInputType {
     M_invalid = 0,
-    M_texture,
-    M_nodepath,
-    M_vector,
-    M_numeric,
-    M_texture_sampler,
-    M_param,
-    M_texture_image,
-    M_buffer,
-    M_matrix,
+    M_vector, // LVecBase4
+    M_numeric, // ShaderPtrData
+    M_matrix, // LMatrix4
+    M_texture, // TypedWritableReferenceCount
+    M_texture_sampler, // TexSampPair
+    M_param, // TypedWritableReferenceCount
+    M_texture_image, // TypedWritableReferenceCount
+    M_buffer, // TypedWritableReferenceCount
+    M_nodepath, // TypedWritableReferenceCount
   };
 
   INLINE operator bool() const;
@@ -135,11 +156,14 @@ public:
   static void register_with_read_factory();
 
 private:
-  LVecBase4 _stored_vector;
-  LMatrix4 _stored_matrix;
-  Shader::ShaderPtrData _stored_ptr;
+  // Holds all exclusive types the input can store in a shared memory block.
+  typedef std::variant<
+    LMatrix4, LVecBase4, Shader::ShaderPtrData,
+    PT(TypedWritableReferenceCount), TexSampPair> VariantTypes;
+  VariantTypes _value;
+
   CPT_InternalName _name;
-  PT(TypedWritableReferenceCount) _value;
+
   int _priority;
   int _type;
 
