@@ -23,29 +23,9 @@
 #include "materialParamVector.h"
 #include "renderState.h"
 #include "shaderAttrib.h"
+#include "shaderManager.h"
 
 TypeHandle TwoTextureShader::_type_handle;
-
-/**
- * Returns a dummy four-channel 1x1 white texture.
- */
-static Texture *
-tts_get_white_texture() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("white");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    PTA_uchar image;
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    tex->set_ram_image(image);
-  }
-  return tex;
-}
 
 /**
  * Synthesizes a shader for a given render state.
@@ -97,12 +77,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
   }
 
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
+
   MaterialParamBase *param;
 
   if ((param = material->get_param("base_color")) != nullptr) {
-    setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   } else {
-    setup.set_input(ShaderInput("baseTexture", tts_get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture", mgr->get_white_texture()));
   }
   if ((param = material->get_param("basetexturetransform")) != nullptr) {
     setup.set_input(ShaderInput("baseTextureTransform", DCAST(MaterialParamMatrix, param)->get_value()));
@@ -111,9 +93,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   }
 
   if ((param = material->get_param("texture2")) != nullptr) {
-    setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   } else {
-    setup.set_input(ShaderInput("baseTexture2", tts_get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture2", mgr->get_white_texture()));
   }
   if ((param = material->get_param("texture2transform")) != nullptr) {
     setup.set_input(ShaderInput("baseTexture2Transform", DCAST(MaterialParamMatrix, param)->get_value()));
@@ -152,7 +134,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     const std::string &name = stage->get_name();
 
     if (name == "lightmap") {
-      setup.set_input(ShaderInput("lightmapTexture", tattr->get_on_texture(stage)));
+      setup.set_input(ShaderInput("lightmapTexture", tattr->get_on_texture(stage), tattr->get_on_sampler(stage)));
       setup.set_vertex_shader_combo(IN_LIGHTMAP, 1);
       setup.set_pixel_shader_combo(IN_LIGHTMAP, 1);
       break;

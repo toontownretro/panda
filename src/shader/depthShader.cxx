@@ -79,15 +79,17 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if (material == nullptr) {
     Texture *tex = nullptr;
+    SamplerState samp;
     if (has_alpha) {
       const TextureAttrib *texattr;
       state->get_attrib_def(texattr);
       tex = texattr->get_on_texture(TextureStage::get_default());
+      samp = texattr->get_on_sampler(TextureStage::get_default());
     }
     if (tex != nullptr) {
       setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
       setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
-      setup.set_input(ShaderInput("baseTextureSampler", tex));
+      setup.set_input(ShaderInput("baseTextureSampler", tex, samp));
     } else {
       setup.set_input(ShaderInput("baseColor", LColor(1, 1, 1, 1)));
     }
@@ -101,7 +103,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       if (param->is_of_type(MaterialParamTexture::get_class_type())) {
         setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
         setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
-        setup.set_input(ShaderInput("baseTextureSampler", DCAST(MaterialParamTexture, param)->get_value()));
+        MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+        setup.set_input(ShaderInput("baseTextureSampler", tex_p->get_value(), tex_p->get_sampler_state()));
 
       } else if (param->is_of_type(MaterialParamColor::get_class_type())) {
         setup.set_input(ShaderInput("baseColor", DCAST(MaterialParamColor, param)->get_value()));

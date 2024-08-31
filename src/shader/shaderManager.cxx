@@ -31,6 +31,8 @@
 #include "textureAttrib.h"
 #include "textureStagePool.h"
 #include "lightMutexHolder.h"
+#include "randomizer.h"
+#include "texture.h"
 
 #include "sourceShader.h"
 #include "sourceMaterial.h"
@@ -50,6 +52,56 @@ typedef void (*ShaderLibInit)();
 ShaderManager *ShaderManager::_global_ptr = nullptr;
 
 /**
+ *
+ */
+void ShaderManager::
+build_default_textures() {
+  PT(Texture) tex;
+
+  tex = new Texture("white");
+  tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
+  tex->set_minfilter(SamplerState::FT_nearest);
+  tex->set_magfilter(SamplerState::FT_nearest);
+  tex->set_compression(Texture::CM_off);
+  PTA_uchar image;
+  image.push_back(255);
+  image.push_back(255);
+  image.push_back(255);
+  image.push_back(255);
+  tex->set_ram_image(image);
+  tex->set_keep_ram_image(false);
+  _white_texture = tex;
+
+  tex = new Texture("black");
+  tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
+  tex->set_minfilter(SamplerState::FT_nearest);
+  tex->set_magfilter(SamplerState::FT_nearest);
+  tex->set_compression(Texture::CM_off);
+  image.clear();
+  image.push_back(0);
+  image.push_back(0);
+  image.push_back(0);
+  image.push_back(0);
+  tex->set_ram_image(image);
+  tex->set_keep_ram_image(false);
+  _black_texture = tex;
+
+  tex = new Texture("flat_normal");
+  tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
+  tex->set_minfilter(SamplerState::FT_nearest);
+  tex->set_magfilter(SamplerState::FT_nearest);
+  tex->set_compression(Texture::CM_off);
+  image.clear();
+  image.push_back(128);
+  image.push_back(128);
+  image.push_back(255);
+  image.push_back(255);
+  tex->set_ram_image_as(image, "RGBA");
+  tex->set_keep_ram_image(false);
+  _flat_normal_map = tex;
+}
+
+/**
  * Returns the default cube map texture.  Loads the texture from the config
  * variable if it hasn't already been loaded.
  */
@@ -59,6 +111,49 @@ get_default_cube_map() {
     _default_cubemap = TexturePool::load_texture(default_cube_map);
   }
   return _default_cubemap;
+}
+
+/**
+ *
+ */
+Texture *ShaderManager::
+get_shadow_offset_texture() {
+  if (_shadow_offset_texture != nullptr) {
+    return _shadow_offset_texture;
+  }
+
+  int filter_size = shadow_offset_filter_size;
+  int window_size = shadow_offset_window_size;
+
+  size_t buf_size = window_size * window_size * filter_size * filter_size * 2;
+
+  PT(Texture) tex = new Texture("shadow-offset");
+  tex->setup_3d_texture((filter_size * filter_size) / 2, window_size, window_size, Texture::T_float, Texture::F_rgba32);
+  tex->set_minfilter(SamplerState::FT_nearest);
+  tex->set_magfilter(SamplerState::FT_nearest);
+
+  PTA_uchar ram_image = tex->modify_ram_image();
+  assert(buf_size * 4 == ram_image.size());
+  float *datap = (float *)ram_image.p();
+
+  Randomizer random;
+
+  float *ptr = datap;
+  for (int texy = 0; texy < window_size; ++texy) {
+    for (int texx = 0; texx < window_size; ++texx) {
+      for (int v = filter_size - 1; v >= 0; --v) {
+        for (int u = 0; u < filter_size; ++u) {
+          float x = ((float)u + 0.5f + random.random_real_unit()) / (float)filter_size;
+          float y = ((float)v + 0.5f + random.random_real_unit()) / (float)filter_size;
+          *ptr++ = csqrt(y) * ccos(2 * MathNumbers::pi_f * x);
+          *ptr++ = csqrt(y) * csin(2 * MathNumbers::pi_f * x);
+        }
+      }
+    }
+  }
+
+  _shadow_offset_texture = tex;
+  return _shadow_offset_texture;
 }
 
 /**

@@ -46,7 +46,13 @@ PUBLISHED:
   INLINE void set_default_cube_map(Texture *texture);
   Texture *get_default_cube_map();
 
+  Texture *get_shadow_offset_texture();
+
   INLINE static ShaderManager *get_global_ptr();
+
+  INLINE Texture *get_white_texture() const;
+  INLINE Texture *get_black_texture() const;
+  INLINE Texture *get_flat_normal_map() const;
 
 public:
   void load_shader_libraries();
@@ -61,6 +67,9 @@ public:
   INLINE ShaderBase *get_shader(CPT_InternalName name) const;
 
 private:
+  void build_default_textures();
+
+private:
   typedef pflat_hash_map<CPT(InternalName), ShaderBase *> ShaderRegistry;
   // This maps material types to the shader that can render it.
   typedef pflat_hash_map<TypeHandle, ShaderBase *> MaterialShaders;
@@ -70,6 +79,10 @@ private:
   ShaderQuality _quality;
 
   PT(Texture) _default_cubemap;
+  PT(Texture) _shadow_offset_texture;
+  PT(Texture) _white_texture;
+  PT(Texture) _black_texture;
+  PT(Texture) _flat_normal_map;
 
   static ShaderManager *_global_ptr;
 };

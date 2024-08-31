@@ -105,24 +105,29 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   MaterialParamBase *param = eye_mat->get_param("iris_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    setup.set_input(ShaderInput("irisSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+    setup.set_input(ShaderInput("irisSampler", tex_p->get_value(), tex_p->get_sampler_state()));
   }
 
   param = eye_mat->get_param("cornea_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    setup.set_input(ShaderInput("corneaSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+    setup.set_input(ShaderInput("corneaSampler", tex_p->get_value(), tex_p->get_sampler_state()));
   }
 
   param = eye_mat->get_param("ambient_occl_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    setup.set_input(ShaderInput("eyeAmbientOcclSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+    setup.set_input(ShaderInput("eyeAmbientOcclSampler", tex_p->get_value(), tex_p->get_sampler_state()));
   }
 
   param = eye_mat->get_param("env_map");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", tex_p->get_value(), tex_p->get_sampler_state()));
   } else {
-    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", ShaderManager::get_global_ptr()->get_default_cube_map()));
+    Texture *tex = ShaderManager::get_global_ptr()->get_default_cube_map();
+    setup.set_input(ShaderInput("eyeReflectionCubemapSampler", tex, tex->get_default_sampler()));
   }
 
   //Texture *envmap_tex = nullptr;
@@ -143,7 +148,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   param = eye_mat->get_param("lightwarp_texture");
   if (param && param->is_of_type(MaterialParamTexture::get_class_type())) {
-    setup.set_input(ShaderInput("lightwarpSampler", DCAST(MaterialParamTexture, param)->get_value()));
+    MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, param);
+    setup.set_input(ShaderInput("lightwarpSampler", tex_p->get_value(), tex_p->get_sampler_state()));
   }
 
   PN_stdfloat dilation = 0.5;

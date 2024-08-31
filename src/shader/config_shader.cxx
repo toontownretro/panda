@@ -87,6 +87,11 @@ ConfigVariableFilename default_cube_map
           "that requests an environmental cube map but there are no nearby "
           "cube maps."));
 
+ConfigVariableInt shadow_offset_window_size("shadow-offset-window-size", 16);
+ConfigVariableInt shadow_offset_filter_size("shadow-offset-filter-size", 8);
+ConfigVariableDouble shadow_pcss_light_size("shadow-pcss-light-size", 1.0);
+ConfigVariableDouble shadow_pcss_softness("shadow-pcss-softness", 1.0);
+
 ConfigVariableBool shader_dynamic_compilation
 ("shader-dynamic-compilation", false,
  PRC_DESC("If true, shaders will be read from source and variations compiled on the fly"
@@ -94,6 +99,10 @@ ConfigVariableBool shader_dynamic_compilation
           "you no longer have to recompile the all variations offline if you modify a "
           "shader.  Note that enabling this will cause massive hitches the first time "
           "a variation is requested."));
+
+ConfigVariableBool cubemaps_enabled
+("cubemaps-enabled", true,
+ PRC_DESC("Enable/disable cubemap reflections."));
 
 /**
  * Initializes the library.  This must be called at least once before any of
