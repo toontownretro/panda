@@ -37,7 +37,7 @@ make(DepthTestAttrib::PandaCompareFunc mode) {
  */
 CPT(RenderAttrib) DepthTestAttrib::
 make_default() {
-  return return_new(new DepthTestAttrib);
+  return return_new(new DepthTestAttrib(M_less_equal));
 }
 
 /**
