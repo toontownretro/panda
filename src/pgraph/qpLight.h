@@ -24,7 +24,7 @@ class qpLightManager;
 /**
  *
  */
-class EXPCL_PANDA_DISPLAY qpLight : public TypedReferenceCount {
+class EXPCL_PANDA_PGRAPH qpLight : public TypedReferenceCount {
   DECLARE_CLASS(qpLight, TypedReferenceCount);
 
 PUBLISHED:
@@ -33,7 +33,7 @@ PUBLISHED:
     T_spot,
   };
 
-  qpLight(Type type);
+  qpLight(Type type = T_point);
 
   INLINE void set_color_linear(const LVecBase3 &color);
   INLINE void set_color_srgb(const LVecBase3 &color);

@@ -94,6 +94,7 @@
 #include "transparencyAttrib.h"
 #include "materialAttrib.h"
 #include "depthPrepassAttrib.h"
+#include "qpLight.h"
 
 #include "dconfig.h"
 
@@ -501,6 +502,7 @@ init_libpgraph() {
   TexGenAttrib::init_type();
   TransformState::init_type();
   TransparencyAttrib::init_type();
+  qpLight::init_type();
 
   AlphaTestAttrib::register_with_read_factory();
   AntialiasAttrib::register_with_read_factory();

@@ -33,7 +33,7 @@
 /**
  *
  */
-class EXPCL_PANDA_DISPLAY qpLightManager : public ReferenceCount {
+class EXPCL_PANDA_PGRAPH qpLightManager : public ReferenceCount {
 PUBLISHED:
   qpLightManager();
 

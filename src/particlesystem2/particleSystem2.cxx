@@ -44,7 +44,8 @@ ParticleSystem2(const std::string &name) :
   _num_phys_steps(0),
   _phys_remainder(0.0),
   _phys_timestep(1 / 60.0),
-  _phys_tick(0)
+  _phys_tick(0),
+  _light_mgr(nullptr)
 {
 }
 
@@ -74,7 +75,8 @@ ParticleSystem2(const ParticleSystem2 &copy) :
   _phys_timestep(copy._phys_timestep),
   _phys_remainder(0.0),
   _num_phys_steps(0),
-  _phys_tick(0)
+  _phys_tick(0),
+  _light_mgr(copy._light_mgr)
 {
 }
 

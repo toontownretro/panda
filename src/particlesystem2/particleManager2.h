@@ -20,6 +20,7 @@
 #include "pointerTo.h"
 #include "lightMutex.h"
 #include "traceInterface.h"
+#include "qpLightManager.h"
 
 /**
  *
@@ -33,6 +34,9 @@ PUBLISHED:
   INLINE TraceInterface *get_tracer() const { return _tracer; }
   INLINE CollideMask get_trace_mask() const { return _trace_mask; }
   INLINE void clear_tracer() { _tracer = nullptr; }
+
+  INLINE void set_light_manager(qpLightManager *mgr) { _light_mgr = mgr; }
+  INLINE qpLightManager *get_light_manager() const { return _light_mgr; }
 
   INLINE void set_enable_fixed_timestep(bool flag) { _want_fixed_timestep = flag; }
   INLINE bool get_enable_fixed_timestep() const { return _want_fixed_timestep; }
@@ -73,6 +77,8 @@ private:
   // a system.
   TraceInterface *_tracer;
   CollideMask _trace_mask;
+
+  qpLightManager *_light_mgr;
 
   bool _want_fixed_timestep;
   double _fixed_timestep;

@@ -89,6 +89,9 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
+    qpLightCuller.h qpLightCuller.I \
+    qpLight.I qpLight.h \
+    qpLightManager.I qpLightManager.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \
@@ -191,6 +194,9 @@
     polylightNode.cxx \
     portalNode.cxx \
     portalClipper.cxx \
+    qpLight.cxx \
+    qpLightCuller.cxx \
+    qpLightManager.cxx \
     renderAttrib.cxx \
     renderAttribRegistry.cxx \
     renderEffect.cxx \
@@ -293,6 +299,9 @@
     polylightNode.I polylightNode.h \
     portalNode.I portalNode.h \
     portalClipper.I portalClipper.h \
+    qpLightCuller.h qpLightCuller.I \
+    qpLight.I qpLight.h \
+    qpLightManager.I qpLightManager.h \
     renderAttrib.I renderAttrib.h \
     renderAttribRegistry.I renderAttribRegistry.h \
     renderEffect.I renderEffect.h \
