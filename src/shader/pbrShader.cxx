@@ -281,7 +281,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     if (env_cubemap) {
       envmap_tex = tattr->get_on_texture(envmap_stage);
-      envmap_samp = tattr->get_on_sampler(envmap_stage);
+      if (envmap_tex != nullptr) {
+        envmap_samp = tattr->get_on_sampler(envmap_stage);
+      }
     }
 
     if (env_cubemap && envmap_tex == nullptr) {
