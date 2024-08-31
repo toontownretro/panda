@@ -243,6 +243,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_input(ShaderInput("ao_sampler", mgr->get_white_texture()));
   }
 
+  if ((param = material->get_param("emission")) != nullptr) {
+    setup.set_input(ShaderInput("emission_sampler", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
+  } else {
+    setup.set_input(ShaderInput("emission_sampler", mgr->get_black_texture()));
+  }
+
   LVecBase4 scales(1.0f, 1.0f, 1.0f, 1.0f);
   if ((param = material->get_param("roughness_scale")) != nullptr) {
     scales[0] = DCAST(MaterialParamFloat, param)->get_value();

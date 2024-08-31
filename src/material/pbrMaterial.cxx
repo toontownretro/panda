@@ -60,13 +60,14 @@ read_pdx(PDXElement *data, const DSearchPath &search_path) {
                key == "roughness" ||
                key == "metalness" ||
                key == "ao" ||
-               key == "height") {
+               key == "height" ||
+               key == "emission") {
       param = new MaterialParamTexture(key);
 
     } else if (key == "roughness_scale" ||
                key == "normal_scale" ||
                key == "ao_scale" ||
-               key == "normal_scale") {
+               key == "emission_scale") {
       param = new MaterialParamFloat(key);
 
     } else if (key == "albedo_val") {
