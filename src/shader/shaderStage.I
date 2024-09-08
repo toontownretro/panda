@@ -26,7 +26,7 @@ ShaderStage() {
 INLINE void ShaderStage::
 operator = (const ShaderStage &copy) {
   _object = copy._object;
-  _combo_values = copy._combo_values;
+  _builder = copy._builder;
   _variation_index = copy._variation_index;
 }
 
@@ -37,8 +37,7 @@ operator = (const ShaderStage &copy) {
 INLINE void ShaderStage::
 reset() {
   _object = nullptr;
-  _specified_combos.clear();
-  _combo_values.clear();
+  _builder.reset(nullptr);
   _variation_index = 0;
 }
 
@@ -46,13 +45,10 @@ reset() {
  * Sets the filename of the source code for this shader stage.
  */
 INLINE void ShaderStage::
-set_source_filename(const Filename &filename) {
-  _object = load_shader_object(filename);
+set_source_filename(const Filename &filename, Shader::ShaderLanguage lang, ShaderModule::Stage stage) {
+  _object = load_shader_object(filename, lang, stage);
   nassertv(_object != nullptr);
-
-  // Set all combo values to 0.
-  _combo_values.resize(_object->get_num_combos());
-  //memset(_combo_values.data(), 0, sizeof(int) * _combo_values.size());
+  _builder.reset((ShaderObject *)_object);
 }
 
 /**
@@ -102,13 +98,7 @@ operator == (const ShaderStage &other) const {
  */
 INLINE void ShaderStage::
 set_combo_value(size_t i, int value) {
-  nassertv(i < _combo_values.size());
-#ifndef NDEBUG
-  const ShaderObject::Combo &combo = _object->get_combo(i);
-  nassertv(value >= combo.min_val && value <= combo.max_val);
-#endif
-  _combo_values[i] = value;
-  _specified_combos.insert(i);
+  _builder.set_combo_value(i, value);
 }
 
 /**
@@ -116,14 +106,7 @@ set_combo_value(size_t i, int value) {
  */
 INLINE void ShaderStage::
 set_combo_value(const InternalName *name, int value) {
-  int index = _object->get_combo_index(name);
-  nassertv(index >= 0 && index < (int)_combo_values.size());
-#ifndef NDEBUG
-  const ShaderObject::Combo &combo = _object->get_combo(index);
-  nassertv(value >= combo.min_val && value <= combo.max_val);
-#endif
-  _combo_values[index] = value;
-  _specified_combos.insert(index);
+  _builder.set_combo_value(name, value);
 }
 
 /**
@@ -132,12 +115,7 @@ set_combo_value(const InternalName *name, int value) {
  */
 INLINE void ShaderStage::
 calc_variation_index() {
-  _variation_index = 0;
-  for (auto it = _specified_combos.begin(); it != _specified_combos.end(); ++it) {
-    int i = *it;
-    const ShaderObject::Combo &combo = _object->get_combo(i);
-    _variation_index += combo.scale * _combo_values[i];
-  }
+  _variation_index = _builder.get_module_index();
 }
 
 /**
@@ -165,5 +143,5 @@ get_module() const {
     return nullptr;
   }
 
-  return _object->get_permutation(_variation_index);
+  return _builder.get_module(shader_dynamic_compilation);
 }

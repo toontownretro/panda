@@ -21,6 +21,8 @@
 #include "configVariableEnum.h"
 #include "configVariableBool.h"
 #include "configVariableFilename.h"
+#include "configVariableDouble.h"
+#include "configVariableInt.h"
 #include "shaderManagerEnums.h"
 
 ConfigureDecl(config_shader, EXPCL_PANDA_SHADER, EXPTP_PANDA_SHADER);
@@ -34,6 +36,15 @@ config_get_shader_quality();
 extern EXPCL_PANDA_SHADER ConfigVariableBool &config_get_use_vertex_lit_for_no_material();
 
 extern EXPCL_PANDA_SHADER ConfigVariableFilename default_cube_map;
+
+extern EXPCL_PANDA_SHADER ConfigVariableInt shadow_offset_window_size;
+extern EXPCL_PANDA_SHADER ConfigVariableInt shadow_offset_filter_size;
+extern EXPCL_PANDA_SHADER ConfigVariableDouble shadow_pcss_light_size;
+extern EXPCL_PANDA_SHADER ConfigVariableDouble shadow_pcss_softness;
+
+extern EXPCL_PANDA_SHADER ConfigVariableBool shader_dynamic_compilation;
+
+extern EXPCL_PANDA_SHADER ConfigVariableBool cubemaps_enabled;
 
 extern EXPCL_PANDA_SHADER void init_libshader();
 

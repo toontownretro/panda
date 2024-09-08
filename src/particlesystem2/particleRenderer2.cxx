@@ -30,6 +30,7 @@
 
 TypeHandle ParticleRenderer2::_type_handle;
 TypeHandle SpriteParticleRenderer2::_type_handle;
+TypeHandle LightParticleRenderer::_type_handle;
 
 /**
  *
@@ -368,6 +369,132 @@ make_from_bam(const FactoryParams &params) {
  *
  */
 void SpriteParticleRenderer2::
+register_with_read_factory() {
+  BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
+}
+
+/**
+ *
+ */
+LightParticleRenderer::
+LightParticleRenderer(const LightParticleRenderer &copy) :
+  _light_intensity_scale(copy._light_intensity_scale),
+  _light_atten_radius(copy._light_atten_radius)
+{
+}
+
+/**
+ *
+ */
+PT(ParticleRenderer2) LightParticleRenderer::
+make_copy() const {
+  return new LightParticleRenderer(*this);
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
+initialize(const NodePath &parent, ParticleSystem2 *system) {
+  // Create qpLights for each particle in the pool.
+  _particle_lights.resize(system->_pool_size);
+  for (int i = 0; i < system->_pool_size; ++i) {
+    _particle_lights[i].local_object();
+    _particle_lights[i].set_light_type(qpLight::T_point);
+  }
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
+update(ParticleSystem2 *system) {
+  qpLightManager *mgr = system->get_light_manager();
+  if (mgr == nullptr) {
+    return;
+  }
+
+  LMatrix4 net_transform = system->_np.get_net_transform()->get_mat();
+
+  for (int i = 0; i < (int)system->_particles.size(); ++i) {
+    Particle *p = &system->_particles[i];
+    qpLight *light = &_particle_lights[i];
+
+    if (!p->_alive) {
+      if (_last_p_states.get_bit(i)) {
+        mgr->remove_dynamic_light(light);
+        _last_p_states.clear_bit(i);
+      }
+      continue;
+    }
+
+    if (!_last_p_states.get_bit(i)) {
+      mgr->add_dynamic_light(light);
+      _last_p_states.set_bit(i);
+    }
+
+    // Update light parameters based on the particle state.
+    light->set_color_linear(p->_color.get_xyz() * _light_intensity_scale * p->_color.get_w());
+    light->set_attenuation_radius(_light_atten_radius * p->_scale.length());
+    light->set_pos(net_transform.xform_point(p->_smooth_pos));
+  }
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
+shutdown(ParticleSystem2 *system) {
+  qpLightManager *mgr = system->get_light_manager();
+  if (mgr == nullptr) {
+    return;
+  }
+
+  for (int i = 0; i < (int)_particle_lights.size(); ++i) {
+    if (_last_p_states.get_bit(i)) {
+      mgr->remove_dynamic_light(&_particle_lights[i]);
+    }
+  }
+  _last_p_states.clear();
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
+write_datagram(BamWriter *manager, Datagram &me) {
+  me.add_stdfloat(_light_intensity_scale);
+  me.add_stdfloat(_light_atten_radius);
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
+fillin(DatagramIterator &scan, BamReader *manager) {
+  _light_intensity_scale = scan.get_stdfloat();
+  _light_atten_radius = scan.get_stdfloat();
+}
+
+/**
+ *
+ */
+TypedWritable *LightParticleRenderer::
+make_from_bam(const FactoryParams &params) {
+  LightParticleRenderer *obj = new LightParticleRenderer;
+
+  BamReader *manager;
+  DatagramIterator scan;
+  parse_params(params, scan, manager);
+
+  obj->fillin(scan, manager);
+  return obj;
+}
+
+/**
+ *
+ */
+void LightParticleRenderer::
 register_with_read_factory() {
   BamReader::get_factory()->register_factory(_type_handle, make_from_bam);
 }

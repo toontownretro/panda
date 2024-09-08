@@ -30,6 +30,8 @@
 #include "lightAttrib.h"
 #include "graphicsStateGuardianBase.h"
 #include "depthTestAttrib.h"
+#include "depthOffsetAttrib.h"
+#include "depthBiasAttrib.h"
 
 TypeHandle LightLensNode::_type_handle;
 
@@ -72,6 +74,8 @@ LightLensNode(const std::string &name, Lens *lens) :
   // Backface culling helps eliminate artifacts.
   state = state->set_attrib(CullFaceAttrib::make_reverse());
   state = state->set_attrib(FogAttrib::make_off(), 100);
+  state = state->set_attrib(DepthOffsetAttrib::make(0), 100);
+  state = state->set_attrib(DepthBiasAttrib::make(0.0f, 0.0f, 0.0f), 100);
   // Render it using the depth-only shader.
   state = state->set_attrib(ShaderAttrib::make("Depth"), 100);
 
@@ -216,8 +220,8 @@ setup_shadow_map() {
   _shadow_map->set_wrap_u(SamplerState::WM_border_color);
   _shadow_map->set_wrap_v(SamplerState::WM_border_color);
   _shadow_map->set_border_color(LColor(1));
-  _shadow_map->set_minfilter(SamplerState::FT_linear);
-  _shadow_map->set_magfilter(SamplerState::FT_linear);
+  _shadow_map->set_minfilter(SamplerState::FT_nearest);
+  _shadow_map->set_magfilter(SamplerState::FT_nearest);
 }
 
 /**

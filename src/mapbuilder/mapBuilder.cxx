@@ -423,7 +423,8 @@ build() {
             // Check if the side's material enables alpha of some sort.  If it
             // does, the side cannot be opaque.
 
-            Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_fullpath_wo_extension()) + ".mto");
+            Filename material_filename = Filename(downcase(side->_material_filename.get_fullpath_wo_extension()));
+            material_filename.set_extension("mto");
 
             PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -1459,7 +1460,8 @@ build_entity_polygons(int i) {
 
       // We now have the final polygon for the side.
 
-      Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_fullpath_wo_extension()) + ".mto");
+      Filename material_filename = Filename(downcase(side->_material_filename.get_fullpath_wo_extension()));
+      material_filename.set_extension("mto");
 
       PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -1806,7 +1808,9 @@ build_entity_polygons(int i) {
       collection[poly->get_pos(j)].push_back(ref);
     }
   }
+#endif
 
+#if 1
   // This algorithm will smooth normals of connected brush faces and
   // displacement edges.
   for (auto ci = collection.begin(); ci != collection.end(); ++ci) {
@@ -1910,11 +1914,8 @@ build_lighting() {
     for (size_t j = 0; j < mesh->_polys.size(); j++) {
       MapGeom *poly = mesh->_polys[j];
 
-      if (!poly->has_geom()) {
-        continue;
-      }
-
       bool is_sky = false;
+      bool occluder = false;
 
       Material *mat = poly->get_material();
 
@@ -1923,10 +1924,13 @@ build_lighting() {
           continue;
         } else if (mat->has_tag("compile_sky")) {
           is_sky = true;
+          occluder = true;
+        } else if (mat->has_tag("compile_nodraw")) {
+          occluder = true;
         }
       }
 
-      if (!is_sky) {
+      if (!occluder && poly->has_geom()) {
         NodePath geom_np(poly->get_geom_node());
 
         uint32_t contents = 0;
@@ -1949,10 +1953,10 @@ build_lighting() {
                         geom_np.get_net_transform(), poly->get_lightmap_size(),
                         pgn, pgi, contents);
 
-      } else {
-        assert(!poly->has_index());
+      } else if (!poly->has_index() && occluder) {
         // Add sky triangles as occluders (not lightmapped) with the sky
         // contents, so rays that hit them bring in the sky/sun color.
+        // This also adds nodraw to block light (consistent with source).
         Winding w;
         poly->get_winding(w);
         for (size_t ipoint = 1; ipoint < (w.get_num_points() - 1); ++ipoint) {
@@ -1960,7 +1964,7 @@ build_lighting() {
           otri.a = w.get_point(ipoint + 1);
           otri.b = w.get_point(ipoint);
           otri.c = w.get_point(0);
-          otri.contents = LightBuilder::C_sky;
+          otri.contents = is_sky ? LightBuilder::C_sky : LightBuilder::C_none;
           builder._occluder_tris.push_back(std::move(otri));
         }
       }
@@ -2746,7 +2750,8 @@ build_overlays() {
     m.set_row(2, basis_v);
     m.set_row(3, pos);
 
-    Filename mat_filename("materials/" + downcase(sent->_properties["material"]) + ".mto");
+    Filename mat_filename(downcase(sent->_properties["material"]));
+    mat_filename.set_extension("mto");
     PT(Material) mat = MaterialPool::load_material(mat_filename);
     if (mat == nullptr) {
       continue;

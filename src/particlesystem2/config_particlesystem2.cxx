@@ -74,6 +74,7 @@ init_libparticlesystem2() {
 
   ParticleRenderer2::init_type();
   SpriteParticleRenderer2::init_type();
+  LightParticleRenderer::init_type();
 
   ParticleForce2::init_type();
   VectorParticleForce::init_type();
@@ -119,6 +120,7 @@ init_libparticlesystem2() {
   ContinuousParticleEmitter::register_with_read_factory();
 
   SpriteParticleRenderer2::register_with_read_factory();
+  LightParticleRenderer::register_with_read_factory();
 
   PathParticleConstraint::register_with_read_factory();
   CollisionParticleConstraint::register_with_read_factory();

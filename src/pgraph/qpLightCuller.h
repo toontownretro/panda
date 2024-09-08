@@ -46,7 +46,7 @@
  * are uploaded to the GPU and made available to shaders to only compute and
  * apply the necessary set of lights to a pixel.
  */
-class EXPCL_PANDA_DISPLAY qpLightCuller : public ReferenceCount {
+class EXPCL_PANDA_PGRAPH qpLightCuller : public ReferenceCount {
 PUBLISHED:
   class TreeNode : public ReferenceCount {
   PUBLISHED:

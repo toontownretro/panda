@@ -39,6 +39,24 @@ clear_tracer() {
 }
 
 /**
+ * Sets the dynamic light manager to use for this particle system.
+ * Any dynamic lights created by the particle system will be managed
+ * by this object.
+ */
+INLINE void ParticleSystem2::
+set_light_manager(qpLightManager *mgr) {
+  _light_mgr = mgr;
+}
+
+/**
+ *
+ */
+INLINE qpLightManager *ParticleSystem2::
+get_light_manager() const {
+  return _light_mgr;
+}
+
+/**
  * Returns the particle pool size of the system.  This is the maximum number
  * of particles that can be alive simultaneously.  Memory for each particle in
  * the pool is pre-allocated.

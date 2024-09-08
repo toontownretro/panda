@@ -20,27 +20,7 @@
 #include "texture.h"
 #include "samplerState.h"
 #include "luse.h"
-
-/**
- * Returns a dummy four-channel 1x1 white texture.
- */
-static Texture *
-sks_get_white_texture() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("white");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    PTA_uchar image;
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    tex->set_ram_image(image);
-  }
-  return tex;
-}
+#include "shaderManager.h"
 
 TypeHandle SourceSkyShader::_type_handle;
 
@@ -55,6 +35,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
                 ShaderSetup &setup) {
 
   static CPT_InternalName IN_COMPRESSED_HDR("COMPRESSED_HDR");
+
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
 
   setup.set_language(Shader::SL_GLSL);
   setup.set_vertex_shader("shaders/source_sky.vert.sho.pz");
@@ -74,7 +56,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     sky_sampler = DCAST(MaterialParamTexture, param)->get_sampler_state();
 
   } else {
-    sky_tex = sks_get_white_texture();
+    sky_tex = mgr->get_white_texture();
     sky_sampler = sky_tex->get_default_sampler();
   }
 

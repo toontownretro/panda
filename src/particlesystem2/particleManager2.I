@@ -25,7 +25,8 @@ ParticleManager2() :
   _last_frame_time(0.0),
   _max_substeps(10),
   _tick_count(0),
-  _frame_time(0.0)
+  _frame_time(0.0),
+  _light_mgr(nullptr)
 {
 }
 

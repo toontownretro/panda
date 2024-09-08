@@ -22,75 +22,9 @@
 #include "materialParamBool.h"
 #include "materialParamFloat.h"
 #include "materialParamVector.h"
+#include "shaderManager.h"
 
 TypeHandle SourceWater::_type_handle;
-
-/**
- * Returns a dummy four-channel 1x1 white texture.
- */
-static Texture *
-sw_get_black_texture() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("sw_black");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgb);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    tex->set_compression(Texture::CM_off);
-    PTA_uchar image;
-    image.push_back(0);
-    image.push_back(0);
-    image.push_back(0);
-    tex->set_ram_image(image);
-    tex->set_keep_ram_image(false);
-  }
-  return tex;
-}
-
-/**
- * Returns a flat 1x1 normal map.
- */
-static Texture *
-sw_get_flat_normal_map() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("flat_normal");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    tex->set_compression(Texture::CM_off);
-    PTA_uchar image;
-    image.push_back(128);
-    image.push_back(128);
-    image.push_back(255);
-    image.push_back(255);
-    tex->set_ram_image_as(image, "RGBA");
-    tex->set_keep_ram_image(false);
-  }
-  return tex;
-}
-
-/**
- * Returns a flat 1x1 normal map.
- */
-static Texture *
-sw_get_black_lightmap() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("black_lightmap");
-    tex->setup_2d_texture_array(1, 1, 4, Texture::T_unsigned_byte, Texture::F_rgb);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    tex->set_compression(Texture::CM_off);
-    PTA_uchar image;
-    for (int i = 0; i < 4 * 3; ++i) {
-      image.push_back(0);
-    }
-    tex->set_ram_image(image);
-    tex->set_keep_ram_image(false);
-  }
-  return tex;
-}
 
 /**
  * Synthesizes a shader for a given render state.
@@ -105,12 +39,14 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static CPT_InternalName IN_ANIMATEDNORMALMAP("ANIMATEDNORMALMAP");
   static CPT_InternalName IN_FOG("FOG");
 
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
+
   setup.set_language(Shader::SL_GLSL);
 
   setup.set_vertex_shader("shaders/source_water.vert.sho.pz");
   setup.set_pixel_shader("shaders/source_water.frag.sho.pz");
 
-  static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
+  //static TextureStage *lm_stage = TextureStagePool::get_stage(new TextureStage("lightmap"));
   static TextureStage *refl_stage = TextureStagePool::get_stage(new TextureStage("reflection"));
   static TextureStage *refr_stage = TextureStagePool::get_stage(new TextureStage("refraction"));
   static TextureStage *refr_depth_stage = TextureStagePool::get_stage(new TextureStage("refraction_depth"));
@@ -118,24 +54,24 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   const TextureAttrib *ta;
   state->get_attrib_def(ta);
 
-  Texture *lm_tex = ta->get_on_texture(lm_stage);
-  if (lm_tex == nullptr) {
-    lm_tex = sw_get_black_lightmap();
-  }
+  //Texture *lm_tex = ta->get_on_texture(lm_stage);
+  //if (lm_tex == nullptr) {
+  //  lm_tex = mgr->get_black_lightmap();
+  //}
   //nassertv(lm_tex != nullptr);
 
   Texture *refl_tex = ta->get_on_texture(refl_stage);
   if (refl_tex == nullptr) {
-    refl_tex = sw_get_black_texture();
+    refl_tex = mgr->get_black_texture();
   }
   Texture *refr_tex = ta->get_on_texture(refr_stage);
   if (refr_tex == nullptr) {
-    refr_tex = sw_get_black_texture();
+    refr_tex = mgr->get_black_texture();
   }
 
-  setup.set_input(ShaderInput("lightmapSampler", lm_tex));
-  setup.set_input(ShaderInput("reflectionSampler", refl_tex));
-  setup.set_input(ShaderInput("refractionSampler", refr_tex));
+  //setup.set_input(ShaderInput("lightmapSampler", lm_tex, lm_tex->get_default_sampler()));
+  setup.set_input(ShaderInput("reflectionSampler", refl_tex, refl_tex->get_default_sampler()));
+  setup.set_input(ShaderInput("refractionSampler", refr_tex, refr_tex->get_default_sampler()));
 
   MaterialParamBase *param;
 
@@ -145,7 +81,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       DCAST(MaterialParamBool, param)->get_value()) {
 
     setup.set_pixel_shader_combo(IN_FOG, 1);
-    setup.set_input(ShaderInput("refractionDepthSampler", refr_depth_tex));
+    setup.set_input(ShaderInput("refractionDepthSampler", refr_depth_tex, refr_depth_tex->get_default_sampler()));
 
     LVecBase3 fog_color(0.5f);
     float fog_density = 1.0f;
@@ -162,7 +98,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if ((param = material->get_param("base_color")) != nullptr) {
     Texture *norm_tex = DCAST(MaterialParamTexture, param)->get_value();
-    setup.set_input(ShaderInput("normalSampler", norm_tex));
+    SamplerState norm_samp = DCAST(MaterialParamTexture, param)->get_sampler_state();
+    setup.set_input(ShaderInput("normalSampler", norm_tex, norm_samp));
 
     if ((norm_tex->get_texture_type() == Texture::TT_2d_texture_array) &&
         ((param = material->get_param("animatednormalmap")) != nullptr) &&
@@ -185,7 +122,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     }
 
   } else {
-    setup.set_input(ShaderInput("normalSampler", sw_get_flat_normal_map()));
+    setup.set_input(ShaderInput("normalSampler", mgr->get_flat_normal_map()));
   }
 
   // Scaling of the normal map distortion for reflection and refraction

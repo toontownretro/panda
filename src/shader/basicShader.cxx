@@ -76,7 +76,9 @@ generate_shader(GraphicsStateGuardianBase *gsg,
           // We have a color texture.
           setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
           setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
-          setup.set_input(ShaderInput("base_texture_sampler", ta->get_on_texture(stage)));
+          Texture *tex = ta->get_on_texture(stage);
+          const SamplerState &samp = ta->get_on_sampler(stage);
+          setup.set_input(ShaderInput("base_texture_sampler", tex, samp));
           break;
         }
       }
@@ -86,7 +88,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     if (p != nullptr && p->is_of_type(MaterialParamTexture::get_class_type())) {
       setup.set_vertex_shader_combo(IN_BASETEXTURE, 1);
       setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
-      setup.set_input(ShaderInput("base_texture_sampler", DCAST(MaterialParamTexture, p)->get_value()));
+      MaterialParamTexture *tex_p = DCAST(MaterialParamTexture, p);
+      setup.set_input(ShaderInput("base_texture_sampler", tex_p->get_value(), tex_p->get_sampler_state()));
     }
   }
 
@@ -98,7 +101,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       if (stage->get_name() == "reflection") {
         setup.set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
         setup.set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
-        setup.set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage)));
+        setup.set_input(ShaderInput("reflectionSampler", ta->get_on_texture(stage), ta->get_on_sampler(stage)));
         break;
       }
     }

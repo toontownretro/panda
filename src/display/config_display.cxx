@@ -34,7 +34,6 @@
 #include "stereoDisplayRegion.h"
 #include "subprocessWindow.h"
 #include "windowHandle.h"
-#include "qpLight.h"
 
 #if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_DISPLAY)
   #error Buildsystem error: BUILDING_PANDA_DISPLAY not defined
@@ -546,8 +545,6 @@ init_libdisplay() {
 #endif
   WindowHandle::init_type();
   WindowHandle::OSHandle::init_type();
-
-  qpLight::init_type();
 
 #if defined(HAVE_THREADS) && defined(DO_PIPELINING)
   PandaSystem *ps = PandaSystem::get_global_ptr();

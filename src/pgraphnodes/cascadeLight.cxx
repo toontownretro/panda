@@ -46,7 +46,7 @@ CascadeLight(const std::string &name) :
   // Make sure we render the shadow scene using the specialized CSMDepth
   // shader.
   CPT(RenderState) state = get_initial_state();
-  //state = state->set_attrib(CullFaceAttrib::make(CullFaceAttrib::M_cull_counter_clockwise), 100);
+  state = state->set_attrib(CullFaceAttrib::make_reverse());
   state = state->set_attrib(ShaderAttrib::make("CSMDepth"), 100);
   set_initial_state(state);
 
@@ -135,7 +135,7 @@ setup_shadow_map() {
 #endif
 
   _shadow_map->setup_2d_texture_array(_sb_size[0], _sb_size[1], _num_cascades,
-                                      Texture::T_unsigned_byte, Texture::F_depth_component);
+                                      Texture::T_float, Texture::F_depth_component32);
   _shadow_map->set_clear_color(LColor(1));
   _shadow_map->set_wrap_u(SamplerState::WM_clamp);
   _shadow_map->set_wrap_v(SamplerState::WM_clamp);
@@ -376,7 +376,7 @@ compute_pssm_splits(const LMatrix4 &transform, float max_distance,
 
     {
       CDWriter cdata(_cycler);
-      cdata->_cascade_nearfar[i] = LVecBase2(best_min_extent[2],
+      cdata->_cascade_nearfar[i] = LVecBase2(10.0f,
                                              best_max_extent[2]);
     }
     c.lens->set_near_far(10.0f, best_max_extent[2]);

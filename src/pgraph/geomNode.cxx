@@ -460,12 +460,12 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
     }
     // Prepare the texture shader inputs of the shader.
     for (auto it = sa->_texture_inputs.begin(); it != sa->_texture_inputs.end(); ++it) {
-      SamplerState samp;
-      Texture *tex = sa->get_shader_input_texture((*it).first, &samp);
+      const SamplerState *samp = &SamplerState::get_default();
+      Texture *tex = sa->get_shader_input_texture((*it).first, samp);
       if (tex != nullptr) {
         prepared_objects->enqueue_texture(tex);
       }
-      prepared_objects->enqueue_sampler(samp);
+      prepared_objects->enqueue_sampler(*samp);
     }
   }
 

@@ -34,6 +34,7 @@
 #include "alphaTestAttrib.h"
 #include "textureStagePool.h"
 #include "clipPlaneAttrib.h"
+#include "config_shader.h"
 
 TypeHandle SourceLightmappedShader::_type_handle;
 
@@ -95,6 +96,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
   static const CPT_InternalName IN_DETAIL_BLEND_MODE("DETAIL_BLEND_MODE");
 
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
+
   setup.set_language(Shader::SL_GLSL);
 
   setup.set_vertex_shader("shaders/source_lightmapped.vert.sho.pz");
@@ -138,43 +141,29 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   MaterialParamBase *param;
 
   if ((param = material->get_param("base_color")) != nullptr) {
-    setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   } else {
-    setup.set_input(ShaderInput("baseTexture", sls_get_white_texture()));
+    setup.set_input(ShaderInput("baseTexture", mgr->get_white_texture()));
   }
 
   if ((param = material->get_param("basetexture2")) != nullptr) {
     setup.set_pixel_shader_combo(IN_BASETEXTURE2, 1);
-    setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("baseTexture2", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   }
 
   bool has_bump = false;
   if ((param = material->get_param("bumpmap")) != nullptr) {
     has_bump = true;
     setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
-    setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   }
   if ((param = material->get_param("bumpmap2")) != nullptr) {
     has_bump = true;
     setup.set_pixel_shader_combo(IN_BUMPMAP2, 1);
-    setup.set_input(ShaderInput("normalTexture2", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("normalTexture2", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   }
   if (has_bump && (param = material->get_param("ssbump")) != nullptr && DCAST(MaterialParamBool, param)->get_value()) {
     setup.set_spec_constant(IN_SSBUMP, true);
-  }
-
-  Texture *envmap_tex = nullptr;
-  Texture *planar_tex = nullptr;
-  bool env_cubemap = false;
-  bool has_envmap = false;
-  if ((param = material->get_param("envmap")) != nullptr) {
-    if (param->get_type() == MaterialParamTexture::get_class_type()) {
-      envmap_tex = DCAST(MaterialParamTexture, param)->get_value();
-
-    } else if (param->get_type() == MaterialParamBool::get_class_type() &&
-               DCAST(MaterialParamBool, param)->get_value()) {
-      env_cubemap = true;
-    }
   }
 
   const TextureAttrib *tattr;
@@ -190,48 +179,69 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   Texture *lm_tex = tattr->get_on_texture(lm_stage);
   if (lm_tex != nullptr) {
     setup.set_pixel_shader_combo(IN_LIGHTMAP, 1);
-    setup.set_input(ShaderInput("lightmapTextureL0", lm_tex));
+    setup.set_input(ShaderInput("lightmapTextureL0", lm_tex, tattr->get_on_sampler(lm_stage)));
     Texture *lm_tex_l1y = tattr->get_on_texture(lm_stage_l1y);
     if (lm_tex_l1y != nullptr) {
-      setup.set_input(ShaderInput("lightmapTextureL1y", lm_tex_l1y));
+      setup.set_input(ShaderInput("lightmapTextureL1y", lm_tex_l1y, tattr->get_on_sampler(lm_stage_l1y)));
     }
     Texture *lm_tex_l1z = tattr->get_on_texture(lm_stage_l1z);
     if (lm_tex_l1z != nullptr) {
-      setup.set_input(ShaderInput("lightmapTextureL1z", lm_tex_l1z));
+      setup.set_input(ShaderInput("lightmapTextureL1z", lm_tex_l1z, tattr->get_on_sampler(lm_stage_l1z)));
     }
     Texture *lm_tex_l1x = tattr->get_on_texture(lm_stage_l1x);
     if (lm_tex_l1x != nullptr) {
-      setup.set_input(ShaderInput("lightmapTextureL1x", lm_tex_l1x));
+      setup.set_input(ShaderInput("lightmapTextureL1x", lm_tex_l1x, tattr->get_on_sampler(lm_stage_l1x)));
     }
   }
 
-  if (env_cubemap) {
-    envmap_tex = tattr->get_on_texture(envmap_stage);
-  }
-  if ((param = material->get_param("planarreflection")) != nullptr &&
-      DCAST(MaterialParamBool, param)->get_value()) {
-    planar_tex = tattr->get_on_texture(planar_stage);
-  }
+  Texture *envmap_tex = nullptr;
+  Texture *planar_tex = nullptr;
+  SamplerState envmap_samp, planar_samp;
+  bool env_cubemap = false;
+  bool has_envmap = false;
 
-  if (env_cubemap && envmap_tex == nullptr) {
-    envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
+  if (cubemaps_enabled) {
+    if ((param = material->get_param("envmap")) != nullptr) {
+      if (param->get_type() == MaterialParamTexture::get_class_type()) {
+        envmap_tex = DCAST(MaterialParamTexture, param)->get_value();
+
+      } else if (param->get_type() == MaterialParamBool::get_class_type() &&
+                DCAST(MaterialParamBool, param)->get_value()) {
+        env_cubemap = true;
+      }
+    }
+
+    if (env_cubemap) {
+      envmap_tex = tattr->get_on_texture(envmap_stage);
+      envmap_samp = tattr->get_on_sampler(envmap_stage);
+    }
+    if ((param = material->get_param("planarreflection")) != nullptr &&
+        DCAST(MaterialParamBool, param)->get_value()) {
+      planar_tex = tattr->get_on_texture(planar_stage);
+      planar_samp = tattr->get_on_sampler(planar_stage);
+    }
+
+    if (env_cubemap && envmap_tex == nullptr) {
+      envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
+      envmap_samp = envmap_tex->get_default_sampler();
+    }
   }
 
   if (envmap_tex != nullptr || planar_tex != nullptr) {
 
     if (envmap_tex != nullptr) {
       setup.set_pixel_shader_combo(IN_ENVMAP, 1);
-      setup.set_input(ShaderInput("envmapTexture", envmap_tex));
+      setup.set_input(ShaderInput("envmapTexture", envmap_tex, envmap_samp));
 
     } else {
       setup.set_vertex_shader_combo(IN_PLANAR_REFLECTION, 1);
       setup.set_pixel_shader_combo(IN_PLANAR_REFLECTION, 1);
-      setup.set_input(ShaderInput("reflectionSampler", planar_tex));
+      setup.set_input(ShaderInput("reflectionSampler", planar_tex, envmap_samp));
     }
 
     if ((param = material->get_param("envmapmask")) != nullptr) {
       setup.set_pixel_shader_combo(IN_ENVMAPMASK, 1);
-      setup.set_input(ShaderInput("envmapMaskTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_input(ShaderInput("envmapMaskTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
     }
 
     if ((param = material->get_param("basealphaenvmapmask")) != nullptr &&
@@ -268,6 +278,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_pixel_shader_combo(IN_DETAIL, 1);
 
     Texture *detail_tex = DCAST(MaterialParamTexture, param)->get_value();
+    const SamplerState &detail_samp = DCAST(MaterialParamTexture, param)->get_sampler_state();
 
     LVecBase2 params(1.0f, 4.0f);
     if ((param = material->get_param("detailblendfactor")) != nullptr) {
@@ -285,7 +296,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       blend_mode = DCAST(MaterialParamInt, param)->get_value();
     }
 
-    setup.set_input(ShaderInput("detailSampler", detail_tex));
+    setup.set_input(ShaderInput("detailSampler", detail_tex, detail_samp));
     setup.set_input(ShaderInput("detailParams", params));
     setup.set_input(ShaderInput("detailTint", detail_tint));
     setup.set_spec_constant(IN_DETAIL_BLEND_MODE, blend_mode);
@@ -301,6 +312,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         setup.set_vertex_shader_combo(IN_SUNLIGHT, 1);
         setup.set_pixel_shader_combo(IN_SUNLIGHT, 2);
         setup.set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
+        setup.set_input(ShaderInput("shadowOffsetTexture", mgr->get_shadow_offset_texture()));
+        setup.set_input(ShaderInput("shadowOffsetParams", LVecBase4((float)shadow_pcss_softness,
+                                                                    (float)shadow_offset_window_size,
+                                                                    (float)shadow_offset_filter_size,
+                                                                    (float)shadow_pcss_light_size)));
       } else {
         setup.set_pixel_shader_combo(IN_SUNLIGHT, 1);
       }

@@ -47,9 +47,6 @@
     subprocessWindow.h subprocessWindow.I \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.h subprocessWindowBuffer.I] \
     touchInfo.h \
-    qpLightCuller.h qpLightCuller.I \
-    qpLight.I qpLight.h \
-    qpLightManager.I qpLightManager.h \
     screenshotRequest.I screenshotRequest.h
 
 
@@ -83,9 +80,6 @@
     subprocessWindow.cxx \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.cxx] \
     touchInfo.cxx \
-    qpLightCuller.cxx \
-    qpLight.cxx \
-    qpLightManager.cxx \
     screenshotRequest.cxx
 
   #define INSTALL_HEADERS \
@@ -124,9 +118,6 @@
     subprocessWindow.h subprocessWindow.I \
     $[if $[OSX_PLATFORM], subprocessWindowBuffer.h subprocessWindowBuffer.I] \
     touchInfo.h \
-    qpLightCuller.h qpLightCuller.I \
-    qpLight.I qpLight.h \
-    qpLightManager.I qpLightManager.h \
     screenshotRequest.I screenshotRequest.h
 
   #define IGATESCAN all

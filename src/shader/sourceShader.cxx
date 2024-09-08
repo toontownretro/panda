@@ -37,6 +37,7 @@
 #include "textureStagePool.h"
 #include "clipPlaneAttrib.h"
 #include "texMatrixAttrib.h"
+#include "config_shader.h"
 
 static ConfigVariableBool use_orig_source_shader
 ("use-orig-source-shader", false);
@@ -45,69 +46,6 @@ static ConfigVariableDouble remap_param0("remap-param-0", 0.5);
 static ConfigVariableDouble remap_param1("remap-param-1", 0.5);
 
 TypeHandle SourceShader::_type_handle;
-
-/**
- * Returns a dummy four-channel 1x1 white texture.
- */
-static Texture *
-ss_get_white_texture() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("white");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    PTA_uchar image;
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    image.push_back(255);
-    tex->set_ram_image(image);
-  }
-  return tex;
-}
-
-/**
- * Returns a dummy four-channel 1x1 black texture.
- */
-static Texture *
-get_black_texture() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("black");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    PTA_uchar image;
-    image.push_back(0);
-    image.push_back(0);
-    image.push_back(0);
-    image.push_back(0);
-    tex->set_ram_image(image);
-  }
-  return tex;
-}
-
-/**
- * Returns a flat 1x1 normal map.
- */
-static Texture *
-get_flat_normal_map() {
-  static PT(Texture) tex = nullptr;
-  if (tex == nullptr) {
-    tex = new Texture("flat_normal");
-    tex->setup_2d_texture(1, 1, Texture::T_unsigned_byte, Texture::F_rgba);
-    tex->set_minfilter(SamplerState::FT_nearest);
-    tex->set_magfilter(SamplerState::FT_nearest);
-    PTA_uchar image;
-    image.push_back(128);
-    image.push_back(128);
-    image.push_back(255);
-    image.push_back(255);
-    tex->set_ram_image_as(image, "RGBA");
-  }
-  return tex;
-}
 
 /**
  * Synthesizes a shader for a given render state.
@@ -153,6 +91,8 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   static const CPT_InternalName IN_BAKED_VERTEX_LIGHT("BAKED_VERTEX_LIGHT");
   static const CPT_InternalName IN_BLEND_MODE("BLEND_MODE");
   static const CPT_InternalName IN_DETAIL_BLEND_MODE("DETAIL_BLEND_MODE");
+
+  ShaderManager *mgr = ShaderManager::get_global_ptr();
 
   setup.set_language(Shader::SL_GLSL);
 
@@ -255,6 +195,12 @@ generate_shader(GraphicsStateGuardianBase *gsg,
           setup.set_pixel_shader_combo(IN_HAS_SHADOW_SUNLIGHT, 1);
           setup.set_spec_constant(IN_CSM_LIGHT_ID, (int)i);
           setup.set_spec_constant(IN_NUM_CASCADES, clight->get_num_cascades());
+          Texture *shofs_tex = mgr->get_shadow_offset_texture();
+          setup.set_input(ShaderInput("shadowOffsetTexture", shofs_tex, shofs_tex->get_default_sampler()));
+          setup.set_input(ShaderInput("shadowOffsetParams", LVecBase4((float)shadow_pcss_softness,
+                                                                    (float)shadow_offset_window_size,
+                                                                    (float)shadow_offset_filter_size,
+                                                                    (float)shadow_pcss_light_size)));
         }
         break;
       }
@@ -266,7 +212,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((param = src_mat->get_param("base_color")) != nullptr) {
     setup.set_input(ShaderInput("albedoTexture", DCAST(MaterialParamTexture, param)->get_value()));
   } else {
-    setup.set_input(ShaderInput("albedoTexture", ss_get_white_texture()));
+    setup.set_input(ShaderInput("albedoTexture", mgr->get_white_texture()));
   }
 
   // Transform on UVs.
@@ -283,7 +229,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   if (has_direct_light && (param = src_mat->get_param("lightwarptexture")) != nullptr) {
     setup.set_pixel_shader_combo(IN_LIGHTWARP, 1);
-    setup.set_input(ShaderInput("lightWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("lightWarpTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   }
 
   bool has_rimlight = false;
@@ -299,11 +245,11 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     // and an optional rim lighting mask in A.
     if ((param = src_mat->get_param("phongexponenttexture")) != nullptr) {
       has_phong_exponent_texture = true;
-      setup.set_input(ShaderInput("phongExponentTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_input(ShaderInput("phongExponentTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
 
     } else {
       // If it wasn't specified, just use a default white texture.
-      setup.set_input(ShaderInput("phongExponentTexture", ss_get_white_texture()));
+      setup.set_input(ShaderInput("phongExponentTexture", mgr->get_white_texture()));
     }
 
     // Exponent, albedo tint mask, boost
@@ -343,7 +289,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     // How about a phong warp texture?
     if (has_direct_light && (param = src_mat->get_param("phongwarptexture")) != nullptr) {
       setup.set_pixel_shader_combo(IN_PHONGWARP, 1);
-      setup.set_input(ShaderInput("phongWarpTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_input(ShaderInput("phongWarpTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
     }
 
     if ((param = src_mat->get_param("basemapalphaphongmask")) != nullptr) {
@@ -385,7 +331,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
     if ((param = src_mat->get_param("selfillummask")) != nullptr) {
       setup.set_pixel_shader_combo(IN_SELFILLUMMASK, 1);
-      setup.set_input(ShaderInput("selfIllumMaskTexture", DCAST(MaterialParamTexture, param)->get_value()));
+      setup.set_input(ShaderInput("selfIllumMaskTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
     }
   }
 #endif
@@ -399,7 +345,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
 
   // If we're using the original source shader, respect the "envmap" material property.
   // Otherwise, always apply an envmap.
-  if (!use_orig_source_shader || ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value())) {
+  if ((!use_orig_source_shader || ((param = src_mat->get_param("envmap")) != nullptr && DCAST(MaterialParamBool, param)->get_value())) && cubemaps_enabled) {
     Texture *envmap_tex = nullptr;
 
     const TextureAttrib *ta;
@@ -408,7 +354,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     envmap_tex = ta->get_on_texture(envmap_stage);
 
     if (envmap_tex == nullptr) {
-      envmap_tex = ShaderManager::get_global_ptr()->get_default_cube_map();
+      envmap_tex = mgr->get_default_cube_map();
     }
 
     if (envmap_tex != nullptr) {
@@ -428,7 +374,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       }
       setup.set_input(ShaderInput("envMapTint", envmap_tint));
 
-      setup.set_input(ShaderInput("envMapTexture", envmap_tex));
+      setup.set_input(ShaderInput("envMapTexture", envmap_tex, envmap_tex->get_default_sampler()));
 
       has_envmap = true;
     }
@@ -437,7 +383,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if ((has_direct_light || has_ambient_probe || has_envmap || has_rimlight) &&
       (param = src_mat->get_param("bumpmap")) != nullptr) {
     setup.set_pixel_shader_combo(IN_BUMPMAP, 1);
-    setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value()));
+    setup.set_input(ShaderInput("normalTexture", DCAST(MaterialParamTexture, param)->get_value(), DCAST(MaterialParamTexture, param)->get_sampler_state()));
   }
 
   // Detail texture.
@@ -445,6 +391,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
     setup.set_pixel_shader_combo(IN_DETAIL, 1);
 
     Texture *detail_tex = DCAST(MaterialParamTexture, param)->get_value();
+    const SamplerState &detail_samp = DCAST(MaterialParamTexture, param)->get_sampler_state();
 
     LVecBase2 params(1.0f, 4.0f);
     if ((param = material->get_param("detailblendfactor")) != nullptr) {
@@ -462,7 +409,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
       blend_mode = DCAST(MaterialParamInt, param)->get_value();
     }
 
-    setup.set_input(ShaderInput("detailSampler", detail_tex));
+    setup.set_input(ShaderInput("detailSampler", detail_tex, detail_samp));
     setup.set_input(ShaderInput("detailParams", params));
     setup.set_input(ShaderInput("detailTint", detail_tint));
     setup.set_spec_constant(IN_DETAIL_BLEND_MODE, blend_mode);

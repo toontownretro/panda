@@ -92,6 +92,10 @@ add_system(ParticleSystem2 *system) {
     // Use the default tracer.
     system->set_tracer(_tracer, _trace_mask);
   }
+  if (system->get_light_manager() == nullptr) {
+    // Use the default light manager.
+    system->set_light_manager(_light_mgr);
+  }
   _systems.push_back(system);
 }
 

@@ -17,6 +17,8 @@
 INLINE ShaderManager::
 ShaderManager() {
   _quality = config_get_shader_quality();
+
+  build_default_textures();
 }
 
 /**
@@ -84,4 +86,28 @@ get_shader(CPT_InternalName name) const {
   }
 
   return nullptr;
+}
+
+/**
+ *
+ */
+INLINE Texture *ShaderManager::
+get_white_texture() const {
+  return _white_texture;
+}
+
+/**
+ *
+ */
+INLINE Texture *ShaderManager::
+get_black_texture() const {
+  return _black_texture;
+}
+
+/**
+ *
+ */
+INLINE Texture *ShaderManager::
+get_flat_normal_map() const {
+  return _flat_normal_map;
 }

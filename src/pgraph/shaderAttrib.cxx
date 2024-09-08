@@ -490,27 +490,19 @@ get_shader_input_ptr(const InternalName *id, Shader::ShaderPtrData &data) const 
  * assigned to it.
  */
 Texture *ShaderAttrib::
-get_shader_input_texture(const InternalName *id, SamplerState *sampler) const {
+get_shader_input_texture(const InternalName *id, const SamplerState *&sampler) const {
   Inputs::const_iterator i = find_input(id);
   if (i != _inputs.end()) {
     const ShaderInput &p = (*i);
     switch (p.get_value_type()) {
     case ShaderInput::M_texture:
-      {
-        Texture *tex = (Texture *)p.get_value();
-        if (sampler) {
-          *sampler = tex->get_default_sampler();
-        }
-        return tex;
-      }
-
     case ShaderInput::M_texture_sampler:
       {
-        const ParamTextureSampler *param = (const ParamTextureSampler *)p.get_value();
-        if (sampler) {
-          *sampler = param->get_sampler();
-        }
-        return param->get_texture();
+        Texture *tex = p.get_texture();
+        //if (sampler) {
+          sampler = &p.get_sampler();
+        //}
+        return tex;
       }
 
     default:
@@ -603,7 +595,7 @@ get_shader_input_buffer(const InternalName *id) const {
 
     if (p.get_value_type() == ShaderInput::M_buffer) {
       ShaderBuffer *value;
-      DCAST_INTO_R(value, p._value, nullptr);
+      DCAST_INTO_R(value, p.get_value(), nullptr);
       return value;
     }
 
@@ -861,6 +853,11 @@ fillin(DatagramIterator &scan, BamReader *manager) {
  */
 void ShaderAttrib::
 build_texture_inputs() {
+  // Sort the inputs by value type.
+  std::sort(_inputs.begin(), _inputs.end(), [](const ShaderInput &a, const ShaderInput &b) -> bool {
+    return a.get_value_type() < b.get_value_type();
+  });
+
   _texture_inputs.clear();
 
   for (auto it = _inputs.begin(); it != _inputs.end(); ++it) {

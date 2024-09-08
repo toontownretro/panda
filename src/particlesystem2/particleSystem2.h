@@ -21,6 +21,7 @@
 #include "transformState.h"
 #include "namable.h"
 #include "traceInterface.h"
+#include "qpLightManager.h"
 
 #include "particle.h"
 #include "particleEmitter2.h"
@@ -45,6 +46,9 @@ PUBLISHED:
   INLINE void set_tracer(TraceInterface *tracer, CollideMask mask);
   INLINE TraceInterface *get_tracer() const;
   INLINE void clear_tracer();
+
+  INLINE void set_light_manager(qpLightManager *mgr);
+  INLINE qpLightManager *get_light_manager() const;
 
   void set_pool_size(int size);
   INLINE int get_pool_size() const;
@@ -231,6 +235,8 @@ public:
 
   TraceInterface *_tracer;
   CollideMask _trace_mask;
+
+  qpLightManager *_light_mgr;
 
   friend class ParticleManager2;
 

@@ -118,7 +118,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
   if (tex_p != nullptr) {
     // Use the texture specified in the material.
     setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
-    setup.set_input(ShaderInput("baseTextureSampler", tex_p->get_value()));
+    setup.set_input(ShaderInput("baseTextureSampler", tex_p->get_value(), tex_p->get_sampler_state()));
 
     if (tex_p->get_num_animations() > 0) {
       setup.set_pixel_shader_combo(IN_ANIMATED, 1);
@@ -136,7 +136,7 @@ generate_shader(GraphicsStateGuardianBase *gsg,
         if (stage == TextureStage::get_default()) {
           setup.set_pixel_shader_combo(IN_BASETEXTURE, 1);
           Texture *tex = ta->get_on_texture(stage);
-          setup.set_input(ShaderInput("baseTextureSampler", tex));
+          setup.set_input(ShaderInput("baseTextureSampler", tex, ta->get_on_sampler(stage)));
           break;
         }
       }
