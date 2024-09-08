@@ -1013,6 +1013,8 @@ make_gpu_buffers() {
 
   lightbuilder_cat.info()
     << "Vertex buffer is " << (float)vertex_data.size() / 1000000.0f << " MB\n";
+  lightbuilder_cat.info()
+    << "Vertex count: " << _vertices.size() << "\n";
   total_buffer_size += vertex_data.size();
 
   // Triangle buffer texture.  Three four-channel texels per triangle.
@@ -1050,6 +1052,8 @@ make_gpu_buffers() {
 
   lightbuilder_cat.info()
     << "Triangle buffer is " << (float)tri_data.size() / 1000000.0f << " MB\n";
+  lightbuilder_cat.info()
+    << "Triangle count: " << _triangles.size() << "\n";
   total_buffer_size += tri_data.size();
 
   // Light buffer texture.  Five four-channel texels per light.
@@ -2118,6 +2122,7 @@ rasterize_geoms_into_lightmap_textures() {
   _gsg->set_conservative_raster(true);
 
   // Now render everything and block until it's done.
+
   _graphics_engine->render_frame();
   _graphics_engine->sync_frame();
 
