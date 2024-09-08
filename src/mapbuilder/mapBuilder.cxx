@@ -423,7 +423,8 @@ build() {
             // Check if the side's material enables alpha of some sort.  If it
             // does, the side cannot be opaque.
 
-            Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_fullpath_wo_extension()) + ".mto");
+            Filename material_filename = Filename(downcase(side->_material_filename.get_fullpath_wo_extension()));
+            material_filename.set_extension("mto");
 
             PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -1459,7 +1460,8 @@ build_entity_polygons(int i) {
 
       // We now have the final polygon for the side.
 
-      Filename material_filename = Filename("materials/" + downcase(side->_material_filename.get_fullpath_wo_extension()) + ".mto");
+      Filename material_filename = Filename(downcase(side->_material_filename.get_fullpath_wo_extension()));
+      material_filename.set_extension("mto");
 
       PT(Material) poly_material = MaterialPool::load_material(material_filename);
 
@@ -2748,7 +2750,8 @@ build_overlays() {
     m.set_row(2, basis_v);
     m.set_row(3, pos);
 
-    Filename mat_filename("materials/" + downcase(sent->_properties["material"]) + ".mto");
+    Filename mat_filename(downcase(sent->_properties["material"]));
+    mat_filename.set_extension("mto");
     PT(Material) mat = MaterialPool::load_material(mat_filename);
     if (mat == nullptr) {
       continue;
