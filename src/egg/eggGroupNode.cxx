@@ -1144,6 +1144,19 @@ has_normals() const {
 void EggGroupNode::
 rebuild_vertex_pools(EggVertexPools &vertex_pools, unsigned int max_vertices,
                      bool recurse) {
+
+  std::set<EggVertexPool *> morph_pools;
+  for (auto vpi = vertex_pools.begin(); vpi != vertex_pools.end(); ++vpi) {
+    EggVertexPool *pool = (*vpi);
+    for (auto vi = pool->begin(); vi != pool->end(); ++vi) {
+      EggVertex *vertex = (*vi);
+      if (!vertex->_dxyzs.empty()) {
+        morph_pools.insert(pool);
+        break;
+      }
+    }
+  }
+
   Children::iterator ci;
   for (ci = _children.begin(); ci != _children.end(); ++ci) {
     EggNode *child = *ci;
@@ -1153,10 +1166,15 @@ rebuild_vertex_pools(EggVertexPools &vertex_pools, unsigned int max_vertices,
       Vertices vertices;
       EggPrimitive *prim = DCAST(EggPrimitive, child);
 
+      bool has_morphs = false;
+
       // Copy all of the vertices out.
       EggPrimitive::const_iterator pi;
       for (pi = prim->begin(); pi != prim->end(); ++pi) {
         vertices.push_back(*pi);
+        if (!(*pi)->_dxyzs.empty()) {
+          has_morphs = true;
+        }
       }
 
       typedef epvector<EggAttributes> Attributes;
@@ -1188,6 +1206,12 @@ rebuild_vertex_pools(EggVertexPools &vertex_pools, unsigned int max_vertices,
            vpi != vertex_pools.end() && !found_pool;
            ++vpi) {
         EggVertexPool *vertex_pool = (*vpi);
+
+        if (has_morphs && morph_pools.find(vertex_pool) == morph_pools.end()) {
+          // Keep pools with morphs and without morphs separated.
+          continue;
+        }
+
         int num_new_vertices = 0;
 
         new_vertices.clear();
@@ -1229,6 +1253,9 @@ rebuild_vertex_pools(EggVertexPools &vertex_pools, unsigned int max_vertices,
           // a new vertex pool.
           best_pool = new EggVertexPool("");
           vertex_pools.push_back(best_pool);
+          if (has_morphs) {
+            morph_pools.insert(best_pool);
+          }
         }
 
         new_vertices.clear();
