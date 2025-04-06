@@ -402,6 +402,7 @@ protected:
   void set_internal_bounds(const BoundingVolume *volume);
 
   INLINE void mark_bounds_stale(int pipeline_stage, Thread *current_thread) const;
+  INLINE void mark_parents_stale(int pipeline_stage, Thread *current_thread) const;
   void force_bounds_stale(Thread *current_thread = Thread::get_current_thread());
   void force_bounds_stale(int pipeline_stage, Thread *current_thread);
   INLINE void mark_internal_bounds_stale(int pipeline_stage, Thread *current_thread);
@@ -628,6 +629,8 @@ private:
     CData(const CData &copy);
     virtual ~CData();
     ALLOC_DELETED_CHAIN(CData);
+    
+    INLINE bool is_stale(bool bounds) const;
 
     virtual CycleData *make_copy() const;
     virtual void write_datagram(BamWriter *manager, Datagram &dg) const;
@@ -771,8 +774,15 @@ private:
   typedef CycleDataStageWriter<CData> CDStageWriter;
 
   int do_find_child(PandaNode *node, const Down *down) const;
-  CDStageWriter update_cached(bool update_bounds, int pipeline_stage,
-                              CDLockedStageReader &cdata);
+  
+  CDStageWriter update_cached(bool update_bounds);
+  CDStageWriter update_cached_threaded(bool update_bounds, int pipeline_stage,
+                                       CDLockedStageReader &cdata);
+  
+  CDStageWriter update_cached_single(bool update_bounds, int pipeline_stage,
+                                     CDLockedStageReader &cdata);
+  CDStageWriter update_cached_full(bool update_bounds, int pipeline_stage,
+                                   CDLockedStageReader &cdata);
 
   static DrawMask _overall_bit;
 
@@ -952,6 +962,7 @@ public:
   INLINE void release();
 
   void check_cached(bool update_bounds) const;
+  void check_cached_single(bool update_bounds) const;
 
   INLINE void compose_draw_mask(DrawMask &running_draw_mask) const;
   INLINE bool compare_draw_mask(DrawMask running_draw_mask,
@@ -986,11 +997,14 @@ public:
   INLINE const BoundingVolume *get_bounds() const;
   INLINE int get_nested_vertices() const;
   INLINE bool is_final() const;
+  INLINE bool is_stale(bool bounds) const;
   INLINE int get_fancy_bits() const;
 
   INLINE PandaNode::Children get_children() const;
   INLINE PandaNode::Stashed get_stashed() const;
   INLINE PandaNode::Parents get_parents() const;
+  
+  INLINE void mark_parents_stale() const;
 
 private:
   const PandaNode *_node;

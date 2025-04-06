@@ -87,6 +87,7 @@
 #include "sheetNode.h"
 #include "look_at.h"
 #include "configVariableString.h"
+#include "jointVertexTransform.h"
 #include "transformBlendTable.h"
 #include "transformBlend.h"
 #include "sparseArray.h"
@@ -431,7 +432,7 @@ make_polyset(EggBin *egg_bin, PandaNode *parent, const LMatrix4d *transform,
       has_overall_color = false;
     }
 
-    PT(TransformTable) xform_table;
+    PT(JointTransformTable) xform_table;
     if (is_dynamic) {
       // Dynamic vertex pools will require a TransformTable to indicate
       // how the vertices are to be animated.
@@ -2371,7 +2372,7 @@ check_for_polysets(EggGroup *egg_group, bool &all_polysets, bool &any_hidden) {
 PT(GeomVertexData) EggLoader::
 make_vertex_data(const EggRenderState *render_state,
                  EggVertexPool *vertex_pool, EggNode *primitive_home,
-                 const LMatrix4d &transform, TransformTable *xform_table,
+                 const LMatrix4d &transform, JointTransformTable *xform_table,
                  bool is_dynamic, CharacterMaker *character_maker,
                  bool ignore_color) {
   VertexPoolTransform vpt;
@@ -2604,7 +2605,7 @@ make_vertex_data(const EggRenderState *render_state,
   vertex_data->reserve_num_rows(vertex_pool->size());
 
   if (xform_table != nullptr) {
-    vertex_data->set_transform_table(TransformTable::register_table(xform_table));
+    vertex_data->set_transform_table(JointTransformTable::register_table(xform_table));
   }
   if (slider_table != nullptr) {
     vertex_data->set_slider_table(SliderTable::register_table(slider_table));
@@ -2831,31 +2832,33 @@ make_vertex_data(const EggRenderState *render_state,
 /**
  *
  */
-PT(TransformTable) EggLoader::
+PT(JointTransformTable) EggLoader::
 make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
                  CharacterMaker *character_maker) {
-  PT(TransformTable) table = new TransformTable;
-
-  _vertex_transform_indices[table] = VertexTransformIndices();
-
-  pmap<PT(VertexTransform), size_t> transform_indices;
-
-  EggVertexPool::const_iterator vi;
-  for (vi = vertex_pool->begin(); vi != vertex_pool->end(); ++vi) {
+  // Before making the table. Let's sort the transforms.
+  // Joint Transforms should be stored first before Identity Transforms.
+  // Doing so should hopefully help the cache and lock times for our created
+  // Character.
+  
+  pvector<EggNode *> identity_nodes;
+  pmap<int, EggNode *> joint_nodes;
+  
+  // Collect all of our nodes and sort their types.
+  for (EggVertexPool::const_iterator vi = vertex_pool->begin(); vi != vertex_pool->end(); ++vi) {
     EggVertex *vertex = (*vi);
 
     // Figure out the transforms affecting this particular vertex.
     if (vertex->gref_size() == 0) {
       // If the vertex has no explicit membership, it belongs right where it
       // is.
-      PT(VertexTransform) vt = character_maker->egg_to_transform(primitive_home);
-      nassertr(vt != nullptr, nullptr);
-
-      auto it = transform_indices.find(vt);
-      if (it == transform_indices.end()) {
-        size_t index = table->add_transform(vt);
-        transform_indices[vt] = index;
-        _vertex_transform_indices[table][primitive_home] = index;
+      
+      // Check if our node is a joint.
+      int index = character_maker->egg_to_joint(primitive_home);
+      if (index < 0) {
+        // Not a joint in the hierarchy.
+        identity_nodes.push_back(primitive_home);
+      } else {
+        joint_nodes[index] = primitive_home;
       }
     } else {
       // If the vertex does have an explicit membership, ignore its parentage
@@ -2865,27 +2868,50 @@ make_transform_table(EggVertexPool *vertex_pool, EggNode *primitive_home,
       for (gri = vertex->gref_begin(); gri != vertex->gref_end(); ++gri) {
         EggGroup *egg_joint = (*gri);
 
-        PT(VertexTransform) vt = character_maker->egg_to_transform(egg_joint);
-        nassertr(vt != nullptr, nullptr);
-
-        auto it = transform_indices.find(vt);
-        if (it == transform_indices.end()) {
-          size_t index = table->add_transform(vt);
-          transform_indices[vt] = index;
-          _vertex_transform_indices[table][egg_joint] = index;
+        // Check if our node is a joint.
+        int index = character_maker->egg_to_joint(egg_joint);
+        if (index < 0) {
+          // Not a joint in the hierarchy.
+          identity_nodes.push_back(egg_joint);
+        } else {
+          joint_nodes[index] = egg_joint;
         }
       }
     }
-    //if (egg_vertex_max_num_joints >= 0) {
-    //  blend.limit_transforms(egg_vertex_max_num_joints);
-    //}
-    //blend.normalize_weights();
-
-    //int table_index = blend_table->add_blend(blend);
-
-    // We take advantage of the "external index" field of the EggVertex to
-    // temporarily store the transform blend index.
-    //vertex->set_external_index(table_index);
+  }
+  
+  PT(JointTransformTable) table = new JointTransformTable(character_maker->get_character());
+  
+  _vertex_transform_indices[table] = VertexTransformIndices();
+  pmap<PT(VertexTransform), size_t> transform_indices;
+  
+  // Add all of our joint transforms.
+  for (auto ji = joint_nodes.begin(); ji != joint_nodes.end(); ++ji) {
+    PT(VertexTransform) jt = character_maker->joint_index_to_transform((*ji).first);
+    nassertr(jt != nullptr, nullptr);
+    
+    auto it = transform_indices.find(jt);
+    if (it == transform_indices.end()) {
+      size_t index = table->add_transform(jt);
+      transform_indices[jt] = index;
+      _vertex_transform_indices[table][(*ji).second] = index;
+    }
+  }
+  
+  // Store the amount of joint transforms.
+  table->set_joint_count(table->get_num_transforms());
+  
+  // Add all of the identity transforms.
+  for (size_t i = 0; i < identity_nodes.size(); ++i) {
+    PT(VertexTransform) dt = character_maker->get_identity_transform();
+    nassertr(dt != nullptr, nullptr);
+  
+    auto it = transform_indices.find(dt);
+    if (it == transform_indices.end()) {
+      size_t index = table->add_transform(dt);
+      transform_indices[dt] = index;
+      _vertex_transform_indices[table][identity_nodes[i]] = index;
+    }
   }
 
   return table;

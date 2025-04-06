@@ -52,8 +52,8 @@ PUBLISHED:
   MAKE_PROPERTY(character, get_character);
 
 private:
-  WPT(Character) _char;
-  int _joint;
+  WPT(Character) _char = nullptr;
+  int _joint = -1;
 
 public:
   static void register_with_read_factory();

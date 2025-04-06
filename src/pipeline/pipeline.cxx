@@ -91,7 +91,9 @@ cycle() {
       << "Beginning the pipeline cycle\n";
   }
 
-  pvector< PT(CycleData) > saved_cdatas;
+  //pvector<PT(CycleData)> saved_cdatas;
+  PT(CycleData) *saved_cdatas = new PT(CycleData)[_num_dirty_cyclers + 1];
+  saved_cdatas[_num_dirty_cyclers] = nullptr;
   {
     ReMutexHolder cycle_holder(_cycle_lock);
     unsigned int prev_seq, next_seq;
@@ -120,11 +122,12 @@ cycle() {
       // Move the dirty list to prev_dirty, for processing.
       prev_dirty.make_head();
       prev_dirty.take_list(_dirty);
-
-      saved_cdatas.reserve(_num_dirty_cyclers);
+      
+      //saved_cdatas.reserve(_num_dirty_cyclers);
       _num_dirty_cyclers = 0;
     }
-
+    
+    size_t link_count = 0;
     while (prev_dirty._next != &prev_dirty) {
       PipelineCyclerLinks *link = prev_dirty._next;
       PipelineCyclerTrueImpl *cycler = (PipelineCyclerTrueImpl *)link;
@@ -134,7 +137,8 @@ cycle() {
       // We save the result of cycle(), so that we can defer the side-
       // effects that might occur when CycleDatas destruct, at least until
       // the end of this loop.
-      saved_cdatas.push_back(cycler->cycle_2());
+      //saved_cdatas.push_back(std::move(cycler->cycle_2()));
+      saved_cdatas[link_count] = cycler->cycle_2();
 
       // cycle_2() won't leave a cycler dirty.  Add it to the clean list.
       nassertd(!cycler->is_dirty()) break;
@@ -142,6 +146,7 @@ cycle() {
 #ifdef DEBUG_THREADS
       inc_cycler_type(_dirty_cycler_types, cycler->get_parent_type(), -1);
 #endif
+      link_count++;
     }
 
 #if 0
@@ -174,7 +179,7 @@ cycle() {
           MutexHolder holder(_lock);
           cycler->remove_from_list();
 
-          saved_cdatas.push_back(cycler->cycle_3());
+          saved_cdatas.push_back(std::move(cycler->cycle_3()));
 
           if (cycler->is_dirty()) {
             // The cycler is still dirty.  Add it back to the dirty list.
@@ -250,7 +255,8 @@ cycle() {
   // which may cause cascading deletes, and which will in turn cause
   // PipelineCyclers to remove themselves from (or add themselves to) the
   // _dirty list.
-  saved_cdatas.clear();
+  //saved_cdatas.clear();
+  delete[] saved_cdatas;
 
   if (pipeline_cat.is_debug()) {
     pipeline_cat.debug()

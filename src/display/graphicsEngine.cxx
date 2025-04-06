@@ -754,7 +754,8 @@ render_frame() {
 
       } else {
         new_windows.push_back(win);
-
+        
+        /*
         // Let's calculate each scene's bounding volume here in App, before we
         // cycle the pipeline.  The cull traversal will calculate it anyway,
         // but if we calculate it in App first before it gets calculated in
@@ -777,6 +778,7 @@ render_frame() {
             }
           }
         }
+        */
       }
     }
     _windows = std::move(new_windows);
@@ -1537,8 +1539,8 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
 
   // Keep track of the cameras we have already used in this thread to render
   // DisplayRegions.
-  typedef pmap<CullKey, DisplayRegion *> AlreadyCulled;
-  AlreadyCulled already_culled;
+  //typedef pmap<CullKey, DisplayRegion *> AlreadyCulled;
+  //AlreadyCulled already_culled;
 
   // We cull shadow passes last; whether we cull them depends on whether their
   // respective frusta are in view of a "normal" camera.
@@ -1557,9 +1559,10 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
         PT(DisplayRegion) dr = win->get_active_display_region(i);
         if (dr != nullptr) {
           all_regions.push_back(dr);
-
+          
           // Force the scene root to have all of it's bounding information
           // up-to-date before we start traversing in parallel.
+          
           NodePath cam = dr->get_camera();
           if (!cam.is_empty()) {
             NodePath top = cam.get_top(current_thread);
@@ -1573,7 +1576,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
     }
   }
 
-  js->parallel_process(all_regions.size(),
+  js->parallel_process_per_item(all_regions.size(),
   [&] (int i) {
     Thread *dr_thread = Thread::get_current_thread();
     DisplayRegion *dr = all_regions[i];
@@ -1645,7 +1648,7 @@ cull_to_bins(GraphicsEngine::Windows wlist, Thread *current_thread) {
 
     // Save the results for next frame.
     dr->set_cull_result(std::move(cull_result), std::move(scene_setup), dr_thread);
-  }, 2, true);
+  });
 
 #if 0
   // Now cull all the shadow passes if their cull bounds are in view.

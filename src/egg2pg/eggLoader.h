@@ -39,6 +39,7 @@
 #include "bamCacheRecord.h"
 #include "renderState.h"
 #include "transformTable.h"
+#include "jointTransformTable.h"
 
 class EggNode;
 class EggBin;
@@ -155,9 +156,9 @@ private:
                           bool &any_hidden);
   PT(GeomVertexData) make_vertex_data
   (const EggRenderState *render_state, EggVertexPool *vertex_pool,
-   EggNode *primitive_home, const LMatrix4d &transform, TransformTable *xform_table,
+   EggNode *primitive_home, const LMatrix4d &transform, JointTransformTable *xform_table,
    bool is_dynamic, CharacterMaker *character_maker, bool ignore_color);
-  PT(TransformTable) make_transform_table
+  PT(JointTransformTable) make_transform_table
   (EggVertexPool *vertex_bool, EggNode *primitive_home,
    CharacterMaker *character_maker);
   void record_morph

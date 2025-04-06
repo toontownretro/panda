@@ -667,6 +667,9 @@ protected:
 
   //typedef pflat_hash_map<PandaNode *, LMatrix4, pointer_hash> LightNetTransformCache;
   //LightNetTransformCache _light_net_transforms;
+  
+private:
+  static GeomVertexArrayDataHandle s_vertex_handles[max_array_handles];
 
 public:
   // Statistics

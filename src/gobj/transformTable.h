@@ -54,8 +54,11 @@ PUBLISHED:
   void insert_transform(size_t n, const VertexTransform *transform);
   void remove_transform(size_t n);
   size_t add_transform(const VertexTransform *transform);
+  
+  virtual LMatrix4f *get_transform_matrices(size_t num_matrices, Thread *current_thread = Thread::get_current_thread()) const;
+  virtual LVecBase4f *get_transform_vectors(size_t num_vectors, Thread *current_thread = Thread::get_current_thread()) const;
 
-  void write(std::ostream &out) const;
+  virtual void write(std::ostream &out) const;
 
   MAKE_PROPERTY(registered, is_registered);
   MAKE_PROPERTY(modified, get_modified);

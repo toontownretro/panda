@@ -51,8 +51,6 @@ private:
   int _pipeline_stage;
   //int _depth;
   AtomicAdjust::Integer _state;
-
-  //PT(Job) _parent;
 };
 
 /**
@@ -83,16 +81,16 @@ class ALIGN_64BYTE EXPCL_PANDA_JOBSYSTEM ParallelProcessJob : public Job {
 public:
   ALLOC_DELETED_CHAIN(ParallelProcessJob);
 
-  typedef std::function<void(int)> ProcessFunc;
+  typedef std::function<void(size_t)> ProcessFunc;
 
   INLINE ParallelProcessJob() = default;
-  INLINE ParallelProcessJob(int first_item, int num_items, ProcessFunc func);
+  INLINE ParallelProcessJob(size_t first_item, size_t num_items, ProcessFunc func);
 
   virtual void execute() override;
 
 public:
-  int _first_item;
-  int _num_items;
+  size_t _first_item;
+  size_t _num_items;
 
   ProcessFunc _function;
 };
@@ -110,10 +108,11 @@ public:
   INLINE virtual void execute() override;
 
 public:
-  T _iter_start;
-  int _first_item;
-  int _num_items;
+  size_t _first_item;
+  size_t _num_items;
+
   ProcessFunc _function;
+  T _iter_start;
 };
 
 #include "job.I"

@@ -51,6 +51,8 @@ ConfigVariableBool egg_flatten
           "an egg file.  Set it false if you want to see the complete "
           "and true hierarchy as the egg loader created it (although the "
           "extra nodes may have a small impact on render performance)."));
+ConfigVariableBool egg_flatten_strong
+("egg-flatten-strong", false);
 
 ConfigVariableDouble egg_flatten_radius
 ("egg-flatten-radius", 0.0,

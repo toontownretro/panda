@@ -2786,6 +2786,7 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
 }
 
 
+GeomVertexArrayDataHandle GraphicsStateGuardian::s_vertex_handles[max_array_handles] = { 0 };
 
 /**
  * Draws all primitives of the indicated Geom.
@@ -2793,7 +2794,6 @@ draw_object(CullableObject *object, bool force, Thread *current_thread) {
 bool GraphicsStateGuardian::
 draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, const GeomPrimitive *prim,
           bool force, Thread *current_thread) {
-  static GeomVertexArrayDataHandle s_handles[max_array_handles];
 
   const GeomVertexAnimationSpec &anim_spec = vdata->get_format(current_thread)->get_animation();
   if (anim_spec.get_animation_type() != GeomVertexAnimationSpec::AT_none) {
@@ -2801,12 +2801,12 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   }
 
   GeomVertexDataPipelineReader data_reader(vdata, current_thread);
-  int num_handles = (int)data_reader._cdata->_arrays.size();
-  for (int i = 0; i < num_handles; ++i) {
-    s_handles[i]._current_thread = current_thread;
-    s_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread), false);
+  size_t num_handles = data_reader._cdata->_arrays.size();
+  for (size_t i = 0; i < num_handles; ++i) {
+    s_vertex_handles[i]._current_thread = current_thread;
+    s_vertex_handles[i].assign(data_reader._cdata->_arrays[i].get_read_pointer(current_thread), false);
   }
-  data_reader.set_array_readers(s_handles);
+  data_reader.set_array_readers(s_vertex_handles);
 
   //GeomPipelineReader geom_reader(geom, current_thread);
 
@@ -2818,7 +2818,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
 
   if (!all_ok) {
     for (int i = 0; i < num_handles; ++i) {
-      s_handles[i].release();
+      s_vertex_handles[i].release();
     }
     return false;
   }
@@ -3001,7 +3001,7 @@ draw_geom(const Geom *geom, const GeomVertexData *vdata, int num_instances, cons
   end_draw_primitives();
 
   for (int i = 0; i < num_handles; ++i) {
-    s_handles[i].release();
+    s_vertex_handles[i].release();
   }
 
   return all_ok;

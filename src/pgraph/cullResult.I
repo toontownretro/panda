@@ -25,6 +25,8 @@ INLINE CullResult::
  */
 INLINE CullBin *CullResult::
 get_bin(int bin_index) {
+  ReMutexHolder lock(_mutex);
+  
   if (bin_index >= 0 && bin_index < (int)_bins.size() &&
       _bins[bin_index] != nullptr) {
     return _bins[bin_index];
@@ -37,6 +39,7 @@ get_bin(int bin_index) {
  */
 INLINE void CullResult::
 clear() {
+  ReMutexHolder lock(_mutex);
   _bins.clear();
 }
 

@@ -15,7 +15,7 @@
 
   #define SOURCES \
     animBundleMaker.h \
-    characterMaker.h \
+    characterMaker.h characterMaker.I \
     config_egg2pg.h \
     deferredNodeProperty.h \
     eggBinner.h \

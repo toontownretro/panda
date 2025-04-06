@@ -19,6 +19,7 @@
 #include "renderEffect.h"
 #include "luse.h"
 #include "nodePath.h"
+#include "pStatCollector.h"
 
 /**
  * Indicates that geometry at this node should automatically rotate to face
@@ -81,6 +82,8 @@ private:
   PN_stdfloat _offset;
   NodePath _look_at;
   LPoint3 _look_at_point;
+  
+  static PStatCollector _billboard_compute_pcollector;
 
 public:
   static void register_with_read_factory();
