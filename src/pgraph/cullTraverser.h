@@ -111,6 +111,7 @@ public:
   static PStatCollector _pgui_nodes_pcollector;
   static PStatCollector _geoms_pcollector;
   static PStatCollector _geoms_occluded_pcollector;
+  static PStatCollector _cull_traversal_pcollector;
 
 public:
   void show_bounds(CullTraverserData &data, bool tight);

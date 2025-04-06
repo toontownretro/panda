@@ -226,6 +226,8 @@ private:
 
   bool do_update(double now, CData *cdata, Thread *current_thread, bool update_attachment_nodes);
   void do_advance(double now, CData *cdata, Thread *current_thread);
+  void do_compose_joints(const LMatrix4 &root_xform, const AnimEvalData &data);
+  void do_compose_joints_with_merges(Character *merge_char, const LMatrix4 &root_xform, const AnimEvalData &data);
 
 private:
   typedef pvector<LMatrix4> Matrices;
@@ -301,12 +303,19 @@ private:
     bool _frame_blend_flag;
     bool _auto_advance_flag;
     bool _channel_transition_flag;
-    LMatrix4 _root_xform;
-    PT(Character) _joint_merge_character;
     bool _anim_changed;
     double _last_update;
+    PT(Character) _joint_merge_character;
+    LMatrix4 _root_xform;
   };
-
+  
+  PipelineCycler<CData> _cycler;
+  typedef CycleDataLockedReader<CData> CDLockedReader;
+  typedef CycleDataReader<CData> CDReader;
+  typedef CycleDataWriter<CData> CDWriter;
+  typedef CycleDataStageWriter<CData> CDStageWriter;
+  
+protected:
   // Contains data that is used to render the results of computed animation.
   // Contains the skinning matrix of each joint and slider values.
   // This data changes often and needs to be properly cycled for the Draw thread,
@@ -321,18 +330,27 @@ private:
     vector_float _slider_values;
   };
 
-  PipelineCycler<CData> _cycler;
-  typedef CycleDataLockedReader<CData> CDLockedReader;
-  typedef CycleDataReader<CData> CDReader;
-  typedef CycleDataWriter<CData> CDWriter;
-  typedef CycleDataStageWriter<CData> CDStageWriter;
-
   PipelineCycler<RenderCData> _render_cycler;
   typedef CycleDataReader<RenderCData> RenderCDReader;
   typedef CycleDataWriter<RenderCData> RenderCDWriter;
 
+private:
   // This is only used during Bam reading.
   pvector<ChannelBinding> _read_bindings;
+  
+#ifdef DO_PSTATS
+  // Statistics
+  PStatCollector _joints_pcollector;
+  PStatCollector _js_update_pcollector;
+  PStatCollector _js_advance_pcollector;
+  PStatCollector _apply_pose_pcollector;
+  PStatCollector _ap_compose_pcollector;
+  PStatCollector _ap_net_pcollector;
+  PStatCollector _ap_skinning_pcollector;
+  PStatCollector _ap_mark_jvt_pcollector;
+  PStatCollector _ap_attachment_transform_pcollector;
+  static PStatCollector _animation_pcollector;
+#endif
 
 public:
   static void register_with_read_factory();
@@ -369,6 +387,7 @@ private:
   friend class AnimChannelTable;
   friend class IKHelper;
   friend class PMDLLoader;
+  friend class JointTransformTable;
 };
 
 #include "character.I"

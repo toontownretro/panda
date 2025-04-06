@@ -21,7 +21,7 @@ static PStatCollector parallel_proc_iter_pcollector("JobSystem:ParallelProcessIt
  */
 template<typename T>
 INLINE void JobSystem::
-parallel_process(T begin, int count, std::function<void(const T &)> func, int count_threshold) {
+parallel_process(T begin, size_t count, std::function<void(const T &)> func, size_t count_threshold) {
   PStatTimer timer(parallel_proc_iter_pcollector);
 
   if (count == 0) {
@@ -31,10 +31,10 @@ parallel_process(T begin, int count, std::function<void(const T &)> func, int co
     func(begin);
     return;
 
-  } else if (count < count_threshold || _worker_threads.empty()) {
+  } else if (count < count_threshold || get_num_threads() <= 0) {
     // No worker threads or not enough items to prohibit scheduling jobs.
     T it = begin;
-    for (int i = 0; i < count; ++it, ++i) {
+    for (size_t i = 0; i < count; ++it, ++i) {
       func(it);
     }
     return;
@@ -174,10 +174,9 @@ r_parallel_quicksort(T *data, Pr pred, int left, int right, int cutoff, JobSyste
  */
 INLINE Job *JobSystem::
 pop_job(Thread *thread, bool is_worker) {
-  JobWorkerThread *jthread = nullptr;
-  int queue_index;
+  size_t queue_index;
   if (is_worker) {
-    jthread = DCAST(JobWorkerThread, thread);
+    JobWorkerThread *jthread = DCAST(JobWorkerThread, thread);
     queue_index = jthread->_thread_index + 1;
   } else {
     queue_index = 0;
@@ -188,8 +187,8 @@ pop_job(Thread *thread, bool is_worker) {
     _queued_jobs.fetch_sub(1u);
     return job.value();
   }
-
-  int steal_index = _randomizers[queue_index].random_int(_worker_threads.size() + 1);
+  
+  size_t steal_index = _randomizers[queue_index].random_int(get_num_threads() + 1);
   if (steal_index != queue_index) {
     job = _job_queues[steal_index].steal();
     if (job.has_value()) {
@@ -204,9 +203,9 @@ pop_job(Thread *thread, bool is_worker) {
 /**
  * Returns the number of worker threads.
  */
-INLINE int JobSystem::
+INLINE int32_t JobSystem::
 get_num_threads() const {
-  return (int)_worker_threads.size();
+  return _num_workers;
 }
 
 /**
@@ -233,6 +232,6 @@ push_event(JobSystemEvent::EventType type) {
  *
  */
 INLINE JobSystem::JobQueue *JobSystem::
-get_job_queue(int thread) {
+get_job_queue(size_t thread) {
   return &_job_queues[thread];
 }

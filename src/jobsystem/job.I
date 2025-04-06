@@ -86,7 +86,7 @@ GenericJob(Func func) :
  *
  */
 INLINE ParallelProcessJob::
-ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
+ParallelProcessJob(size_t first_item, size_t num_items, ProcessFunc func) :
   _first_item(first_item),
   _num_items(num_items),
   _function(func)
@@ -99,33 +99,33 @@ ParallelProcessJob(int first_item, int num_items, ProcessFunc func) :
 template<class T>
 void ParallelProcessIterJob<T>::
 execute() {
-  if (_num_items > 1) {
-    int left_count = _num_items / 2;
-    int right_count = _num_items - left_count;
-
-    ParallelProcessIterJob<T> left_job;
-    left_job.local_object();
-    left_job._iter_start = _iter_start;
-    left_job._first_item = _first_item;
-    left_job._num_items = left_count;
-    left_job._function = _function;
-    
-    ParallelProcessIterJob<T> right_job;
-    right_job.local_object();
-    right_job._iter_start = _iter_start;
-    right_job._first_item = _first_item + left_count;
-    right_job._num_items = right_count;
-    right_job._function = _function;
-
-    JobSystem *js = JobSystem::get_global_ptr();
-    js->schedule(&left_job);
-    js->schedule(&right_job);
-    js->wait_job(&left_job);
-    js->wait_job(&right_job);
-  } else {
+  nassertv(_num_items > 0);
+  if (_num_items == 1) {
     T it = std::next(_iter_start, _first_item);
-    for (size_t i = 0; i < _num_items; ++it, ++i) {
-      _function(it);
-    }
+    _function(it);
+    return;
   }
+
+  size_t left_count = _num_items / 2;
+  size_t right_count = _num_items - left_count;
+
+  ParallelProcessIterJob<T> left_job;
+  left_job.local_object();
+  left_job._iter_start = _iter_start;
+  left_job._first_item = _first_item;
+  left_job._num_items = left_count;
+  left_job._function = _function;
+  
+  ParallelProcessIterJob<T> right_job;
+  right_job.local_object();
+  right_job._iter_start = _iter_start;
+  right_job._first_item = _first_item + left_count;
+  right_job._num_items = right_count;
+  right_job._function = _function;
+
+  JobSystem *js = JobSystem::get_global_ptr();
+  js->schedule(&left_job);
+  js->schedule(&right_job);
+  js->wait_job(&left_job);
+  js->wait_job(&right_job);
 }

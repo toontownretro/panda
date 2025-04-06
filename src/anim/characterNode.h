@@ -17,6 +17,7 @@
 #include "pandabase.h"
 #include "pandaNode.h"
 #include "character.h"
+#include "jointTransformTable.h"
 #include "pointerTo.h"
 #include "pStatCollector.h"
 #include "lightMutex.h"
@@ -95,11 +96,6 @@ private:
   PT(Character) _char;
 
   double _last_auto_update;
-
-  // Statistics
-  PStatCollector _joints_pcollector;
-  PStatCollector _skinning_pcollector;
-  static PStatCollector _animation_pcollector;
 
   LightMutex _lock;
 

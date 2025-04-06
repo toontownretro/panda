@@ -1147,6 +1147,8 @@ add_collector(PStatClient::Collector *collector) {
  */
 void PStatClient::
 add_thread(PStatClient::InternalThread *thread) {
+  nassertv(thread != nullptr);
+  
   int num_threads = get_num_threads();
   _threads_by_name[thread->_name].push_back(num_threads);
   _threads_by_sync_name[thread->_sync_name].push_back(num_threads);
@@ -1197,6 +1199,8 @@ add_thread(PStatClient::InternalThread *thread) {
  */
 void PStatClient::
 deactivate_hook(Thread *thread) {
+  nassertv(thread != nullptr);
+  
   // We shouldn't use a mutex here, because this code is only called during
   // the SIMPLE_THREADS case, so a mutex isn't necessary; and because we are
   // called during a context switch, so a mutex might be dangerous.
@@ -1222,6 +1226,8 @@ deactivate_hook(Thread *thread) {
  */
 void PStatClient::
 activate_hook(Thread *thread) {
+  nassertv(thread != nullptr);
+  
   // We shouldn't use a mutex here, because this code is only called during
   // the SIMPLE_THREADS case, so a mutex isn't necessary; and because we are
   // called during a context switch, so a mutex might be dangerous.
@@ -1244,6 +1250,8 @@ activate_hook(Thread *thread) {
  */
 void PStatClient::
 delete_hook(Thread *thread) {
+  nassertv(thread != nullptr);
+  
   int thread_index = thread->get_pstats_index();
   if (thread_index < 0) {
     return;

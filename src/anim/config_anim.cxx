@@ -18,6 +18,7 @@
 #include "characterNode.h"
 #include "characterJointEffect.h"
 #include "characterVertexSlider.h"
+#include "jointTransformTable.h"
 #include "jointVertexTransform.h"
 #include "eyeballNode.h"
 
@@ -166,6 +167,7 @@ init_libanim() {
   CharacterJointEffect::init_type();
   CharacterVertexSlider::init_type();
   EyeballNode::init_type();
+  JointTransformTable::init_type();
   JointVertexTransform::init_type();
 
   // This isn't defined in this package, but it *is* essential that it be
@@ -184,6 +186,7 @@ init_libanim() {
   CharacterJointEffect::register_with_read_factory();
   CharacterVertexSlider::register_with_read_factory();
   EyeballNode::register_with_read_factory();
+  JointTransformTable::register_with_read_factory();
   JointVertexTransform::register_with_read_factory();
 
   WeightList::register_with_read_factory();

@@ -649,6 +649,21 @@ mark_bounds_stale(int pipeline_stage, Thread *current_thread) const {
   }
 }
 
+INLINE void PandaNode::
+mark_parents_stale(int pipeline_stage, Thread *current_thread) const {
+  Parents parents;
+  {
+    CDStageReader cdata(_cycler, pipeline_stage, current_thread);
+    parents = Parents(cdata);
+  }
+  int num_parents = parents.get_num_parents();
+  for (int i = 0; i < num_parents; ++i) {
+    PandaNode *parent = parents.get_parent(i);
+    parent->mark_bounds_stale(pipeline_stage, current_thread);
+    parent->mark_parents_stale(pipeline_stage, current_thread);
+  }
+}
+
 /**
  * Should be called by a derived class to mark the internal bounding volume
  * stale, so that recompute_internal_bounds() will be called when the bounding
@@ -1190,6 +1205,14 @@ get_parent(size_t n) const {
   return (*_up)[n].get_parent();
 }
 
+INLINE bool PandaNode::CData::
+is_stale(bool bounds) const {
+  UpdateSeq last_update = bounds
+                        ? _last_bounds_update
+                        : _last_update;
+  return (last_update != _next_update);
+}
+
 /**
  *
  */
@@ -1621,6 +1644,12 @@ is_final() const {
   return _cdata->_final_bounds;
 }
 
+
+INLINE bool PandaNodePipelineReader::
+is_stale(bool bounds) const {
+  return _cdata->is_stale(bounds);
+}
+
 /**
  * Returns the union of all of the enum FancyBits values corresponding to the
  * various "fancy" attributes that are set on the node.  If this returns 0,
@@ -1674,6 +1703,12 @@ get_stashed() const {
 INLINE PandaNode::Parents PandaNodePipelineReader::
 get_parents() const {
   return PandaNode::Parents(_cdata);
+}
+
+
+INLINE void PandaNodePipelineReader::
+mark_parents_stale() const {
+  ((PandaNode *)_node)->mark_parents_stale(_current_thread->get_pipeline_stage(), _current_thread);
 }
 
 /**

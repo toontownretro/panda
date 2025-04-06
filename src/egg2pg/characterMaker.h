@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 
+#include "jointVertexTransform.h"
 #include "vertexTransform.h"
 #include "vertexSlider.h"
 #include "characterNode.h"
@@ -46,7 +47,7 @@ public:
   std::string get_name() const;
 
   int egg_to_joint(EggNode *egg_node) const;
-
+  
   VertexTransform *egg_to_transform(EggNode *egg_node);
 
   PandaNode *part_to_node(int joint, const std::string &name) const;
@@ -62,9 +63,15 @@ private:
   void make_geometry(EggNode *egg_node);
 
   EggGroupNode *determine_bin_home(EggBin *egg_bin);
+  
+protected:
+  INLINE Character *get_character();
 
   VertexTransform *get_identity_transform();
+  
+  VertexTransform *joint_index_to_transform(int index);
 
+private:
   typedef pmap<EggNode *, int> NodeMap;
   NodeMap _slider_map;
   NodeMap _joint_map;
@@ -86,6 +93,9 @@ private:
 
   bool _structured;
 
+  friend class EggLoader;
 };
+
+#include "characterMaker.I"
 
 #endif

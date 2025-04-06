@@ -33,6 +33,8 @@ public:
   // By hiding this template from interrogate, we improve compile-time speed
   // and memory utilization.
 #ifndef CPPPARSER
+  INLINE CycleDataStageWriter(Thread *current_thread = Thread::get_current_thread());
+  
   INLINE CycleDataStageWriter(PipelineCycler<CycleDataType> &cycler, int stage,
                               Thread *current_thread = Thread::get_current_thread());
   INLINE CycleDataStageWriter(PipelineCycler<CycleDataType> &cycler, int stage,

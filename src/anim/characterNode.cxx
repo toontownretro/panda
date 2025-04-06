@@ -20,6 +20,7 @@
 #include "geom.h"
 #include "geomNode.h"
 #include "eyeballNode.h"
+#include "characterJointEffect.h"
 #include "characterVertexSlider.h"
 #include "configVariableBool.h"
 #include "jobSystem.h"
@@ -35,8 +36,6 @@ static ConfigVariableBool parallel_animation
             "animations for all characters should be computed in parallel."));
 
 TypeHandle CharacterNode::_type_handle;
-
-PStatCollector CharacterNode::_animation_pcollector("*:Animation");
 
 /**
  * Private constructor used during Bam reading only.
@@ -58,8 +57,6 @@ CharacterNode() :
 CharacterNode::
 CharacterNode(const CharacterNode &copy) :
   PandaNode(copy),
-  _joints_pcollector(copy._joints_pcollector),
-  _skinning_pcollector(copy._skinning_pcollector),
   _last_auto_update(-1.0f)
 {
   if (cull_animation) {
@@ -78,8 +75,6 @@ CharacterNode(const CharacterNode &copy) :
 CharacterNode::
 CharacterNode(const std::string &name) :
   PandaNode(name),
-  _joints_pcollector(PStatCollector(_animation_pcollector, name), "Joints"),
-  _skinning_pcollector(PStatCollector(_animation_pcollector, name), "Vertices"),
   _char(new Character(name)),
   _last_auto_update(-1.0f)
 {
@@ -392,7 +387,7 @@ copy_node_pointers(const CharacterNode::NodeMap &node_map,
 }
 
 /**
- * Creates a new TransformTable, similar to the indicated one, with the joint
+ * Creates a new JointTransformTable, similar to the indicated one, with the joint
  * and slider pointers redirected into this object.
  */
 CPT(TransformTable) CharacterNode::
@@ -402,18 +397,22 @@ redirect_transform_table(const TransformTable *source,
     return nullptr;
   }
 
-  PT(TransformTable) dest = new TransformTable(*source);
+  PT(JointTransformTable) dest = new JointTransformTable(*source, _char);
 
   int num_transforms = dest->get_num_transforms();
+  int num_joints = 0;
   for (int i = 0; i < num_transforms; ++i) {
     const VertexTransform *vt = dest->get_transform(i);
     PT(JointVertexTransform) new_jvt = redirect_joint(vt, gjmap);
     if (new_jvt != nullptr) {
       dest->set_transform(i, new_jvt);
+      num_joints++;
     }
   }
+  
+  dest->set_joint_count(num_joints);
 
-  return TransformTable::register_table(dest);
+  return JointTransformTable::register_table(dest);
 }
 
 /**
@@ -540,7 +539,6 @@ update(bool update_attachment_nodes) {
         << " at time " << now << "\n";
     }
 
-    PStatTimer timer(_joints_pcollector);
     do_update(update_attachment_nodes);
   }
 }
@@ -551,9 +549,6 @@ update(bool update_attachment_nodes) {
 void CharacterNode::
 force_update(bool update_attachment_nodes) {
   LightMutexHolder holder(_lock);
-
-  // Statistics
-  PStatTimer timer(_joints_pcollector);
 
   _char->force_update(update_attachment_nodes);
 }
@@ -623,16 +618,6 @@ void CharacterNode::
 fillin(DatagramIterator &scan, BamReader *manager) {
   PandaNode::fillin(scan, manager);
   manager->read_pointer(scan);
-
-#ifdef DO_PSTATS
-  // Reinitialize our collectors with our name, now that we know it.
-  if (has_name()) {
-    _joints_pcollector =
-      PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Joints");
-    _skinning_pcollector =
-      PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Vertices");
-  }
-#endif
 }
 
 /**
@@ -643,11 +628,11 @@ void CharacterNode::
 animate_characters(const NodePathCollection &node_paths) {
   if (parallel_animation) {
     JobSystem *js = JobSystem::get_global_ptr();
-    js->parallel_process(node_paths.get_num_paths(), [&node_paths] (int i) {
+    js->parallel_process_per_item(node_paths.get_num_paths(), [&node_paths] (int i) {
       CharacterNode *char_node;
       DCAST_INTO_V(char_node, node_paths.get_path(i).node());
       char_node->update(false);
-    }, 2, true);
+    });
 
   } else {
     for (int i = 0; i < node_paths.get_num_paths(); ++i) {

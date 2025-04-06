@@ -26,6 +26,7 @@
 #include "pset.h"
 #include "pmap.h"
 #include "rescaleNormalAttrib.h"
+#include "reMutex.h"
 
 class CullTraverser;
 class GraphicsStateGuardianBase;
@@ -96,6 +97,8 @@ private:
   Bins _bins;
 
   bool _show_transparency = false;
+  
+  ReMutex _mutex;
 
 public:
   static TypeHandle get_class_type() {

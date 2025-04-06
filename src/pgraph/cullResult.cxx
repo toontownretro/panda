@@ -36,6 +36,7 @@
 #include "depthTestAttrib.h"
 #include "depthPrepassAttrib.h"
 #include "depthBiasAttrib.h"
+#include "reMutexHolder.h"
 
 TypeHandle CullResult::_type_handle;
 
@@ -93,7 +94,8 @@ CullResult::
 CullResult(GraphicsStateGuardianBase *gsg,
            const PStatCollector &draw_region_pcollector) :
   _gsg(gsg),
-  _draw_region_pcollector(draw_region_pcollector)
+  _draw_region_pcollector(draw_region_pcollector),
+  _mutex("CullResult::_mutex")
 {
 #ifndef NDEBUG
   _show_transparency = show_transparency.get_value();
@@ -106,7 +108,8 @@ CullResult(GraphicsStateGuardianBase *gsg,
 CullResult::
 CullResult() :
   _gsg(nullptr),
-  _show_transparency(false)
+  _show_transparency(false),
+  _mutex("CullResult::_mutex")
 {
 }
 
@@ -118,7 +121,8 @@ CullResult(const CullResult &copy) :
   _gsg(copy._gsg),
   _draw_region_pcollector(copy._draw_region_pcollector),
   _bins(copy._bins),
-  _show_transparency(copy._show_transparency)
+  _show_transparency(copy._show_transparency),
+  _mutex("CullResult::_mutex")
 {
 }
 
@@ -130,7 +134,8 @@ CullResult(CullResult &&other) :
   _gsg(std::move(other._gsg)),
   _draw_region_pcollector(other._draw_region_pcollector),
   _bins(std::move(other._bins)),
-  _show_transparency(std::move(other._show_transparency))
+  _show_transparency(std::move(other._show_transparency)),
+  _mutex("CullResult::_mutex")
 {
 }
 
@@ -163,11 +168,13 @@ operator = (CullResult &&other) {
  */
 CullResult CullResult::
 make_next() const {
+  CullBinManager *bin_manager = CullBinManager::get_global_ptr();
+  
+  ReMutexHolder lock(_mutex);
+  
   CullResult new_result(_gsg, _draw_region_pcollector);
   new_result._bins.reserve(_bins.size());
-
-  CullBinManager *bin_manager = CullBinManager::get_global_ptr();
-
+  
   for (size_t i = 0; i < _bins.size(); ++i) {
     CullBin *old_bin = _bins[i];
     if (old_bin == nullptr ||
@@ -197,6 +204,8 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
   bool force = !traverser->get_effective_incomplete_render();
   Thread *current_thread = traverser->get_current_thread();
   CullBinManager *bin_manager = CullBinManager::get_global_ptr();
+  
+  ReMutexHolder lock(_mutex, current_thread);
 
 #if 0
   // This is probably a good time to check for an auto rescale setting.
@@ -423,7 +432,9 @@ add_object(CullableObject *object, const CullTraverser *traverser) {
 void CullResult::
 finish_cull(SceneSetup *scene_setup, Thread *current_thread) {
   CullBinManager *bin_manager = CullBinManager::get_global_ptr();
-
+  
+  ReMutexHolder lock(_mutex);
+  
   for (size_t i = 0; i < _bins.size(); ++i) {
     if (!bin_manager->get_bin_active(i)) {
       // If the bin isn't active, don't sort it, and don't draw it.  In fact,
@@ -448,6 +459,9 @@ draw(Thread *current_thread) {
 
   // Ask the bin manager for the correct order to draw all the bins.
   CullBinManager *bin_manager = CullBinManager::get_global_ptr();
+  
+  ReMutexHolder lock(_mutex);
+  
   int num_bins = bin_manager->get_num_bins();
   for (int i = 0; i < num_bins; i++) {
     int bin_index = bin_manager->get_bin(i);
@@ -475,10 +489,13 @@ draw(Thread *current_thread) {
 PT(PandaNode) CullResult::
 make_result_graph() {
   PT(PandaNode) root_node = new PandaNode("cull_result");
+  
+  ReMutexHolder lock(_mutex);
 
   // Ask the bin manager for the correct order to draw all the bins.
   CullBinManager *bin_manager = CullBinManager::get_global_ptr();
   int num_bins = bin_manager->get_num_bins();
+  
   for (int i = 0; i < num_bins; i++) {
     int bin_index = bin_manager->get_bin(i);
     nassertr(bin_index >= 0, nullptr);
@@ -514,6 +531,8 @@ make_new_bin(int bin_index) {
   CullBin *bin_ptr = bin.p();
 
   if (bin_ptr != nullptr) {
+    ReMutexHolder lock(_mutex);
+    
     // Now store it in the vector.
     while (bin_index >= (int)_bins.size()) {
       _bins.push_back(nullptr);

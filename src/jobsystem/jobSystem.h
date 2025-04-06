@@ -65,25 +65,27 @@ public:
 
 PUBLISHED:
   JobSystem();
+  ~JobSystem();
 
   void initialize();
 
   void new_frame();
 
   void schedule(Job *job);
-  void schedule(Job **jobs, int count, bool wait);
+  void schedule(Job **jobs, size_t count, bool wait);
 
-  void parallel_process(int count, std::function<void(int)> func, int count_threshold = 2, bool job_per_item = false);
+  void parallel_process(size_t count, std::function<void(size_t)> func, size_t count_threshold = 2);
+  void parallel_process_per_item(size_t count, std::function<void(size_t)> func, bool wait_for_jobs = true);
 
   template<typename T>
-  INLINE void parallel_process(T begin, int count, std::function<void(const T &)> func, int count_threshold = 2);
+  INLINE void parallel_process(T begin, size_t count, std::function<void(const T &)> func, size_t count_threshold = 2);
 
   void wait_job(Job *job, Thread *thread = Thread::get_current_thread());
 
   INLINE static JobSystem *get_global_ptr();
   INLINE static void init_global_job_system();
 
-  INLINE int get_num_threads() const;
+  INLINE int32_t get_num_threads() const;
 
   INLINE void push_event(JobSystemEvent::EventType type);
   void write_events(const Filename &filename);
@@ -91,27 +93,25 @@ PUBLISHED:
 public:
   INLINE Job *pop_job(Thread *thread, bool is_worker);
 
-  INLINE JobQueue *get_job_queue(int thread);
+  INLINE JobQueue *get_job_queue(size_t thread);
 
 public:
-  typedef pvector<PT(JobWorkerThread)> WorkerThreads;
+  friend class JobWorkerThread;
+  typedef PT(JobWorkerThread) *WorkerThreads;
+  typedef Randomizer *Randomizers;
+  
   WorkerThreads _worker_threads;
-  pvector<Randomizer> _randomizers;
+  Randomizers _randomizers;
   JobQueue *_job_queues;
-
-  patomic_unsigned_lock_free _queued_jobs;
-
+  JobSystemEvent *_events;
+  JobSystemEvent *_events_tail;
   // We need to protect pushes onto this queue because jobs may be queued
   // by more than one non-worker threads, i.e. App and Cull.
   Mutex _queue_lock;
-
-  bool _initialized;
-
-  friend class JobWorkerThread;
-
   Mutex _event_lock;
-  JobSystemEvent *_events;
-  JobSystemEvent *_events_tail;
+  patomic_unsigned_lock_free _queued_jobs;
+  int32_t _num_workers;
+  bool _initialized;
 
 private:
   static JobSystem *_global_ptr;
