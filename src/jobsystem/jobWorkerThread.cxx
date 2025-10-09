@@ -46,7 +46,6 @@ thread_main() {
   JobSystem *sys = _mgr;
 
   while (true) {
-
     if (!_pstats_tick_signal.test_and_set()) {
       PStatClient::thread_tick();
     }
@@ -78,7 +77,7 @@ thread_main() {
 
       AtomicAdjust::set(_state, S_idle);
 
-    } else {
+    } else if (sys->_queued_jobs.load() == 0) {
       sys->_queued_jobs.wait(0u);
     }
   }
