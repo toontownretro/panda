@@ -78,7 +78,6 @@ initialize() {
   _num_workers = std::max(0, _num_workers);
   
   _worker_threads = new PT(JobWorkerThread)[_num_workers + 1]();
-  _worker_threads[_num_workers] = nullptr;
   
   _randomizers = new Randomizer[_num_workers + 2]();
   
@@ -132,7 +131,7 @@ schedule(Job *job) {
     return;
   }
   
-  int queue_index = (thread->get_type() == JobWorkerThread::get_class_type()) ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : 0;
+  int queue_index = (thread->get_type() == JobWorkerThread::get_class_type()) ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : _randomizers[0].random_int(get_num_threads() + 1);
 
   job->ref();
   job->set_state(Job::S_queued);
@@ -172,8 +171,9 @@ schedule(Job **jobs, size_t count, bool wait) {
   
   bool is_worker = thread->get_type() == JobWorkerThread::get_class_type();
   for (size_t i = 0; i < count; ++i) {
-    //int queue_index = is_worker ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : i % num_threads;
-    int queue_index = is_worker ? (DCAST(JobWorkerThread, thread)->_thread_index + i) % num_threads : i % num_threads;
+    int queue_index = is_worker ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : i % num_threads;
+    //int queue_index = is_worker ? (DCAST(JobWorkerThread, thread)->_thread_index + i) % num_threads : i % num_threads;
+    //queue_index += 1;
     
     Job *&job = jobs[i];
     nassertv(job != nullptr);
