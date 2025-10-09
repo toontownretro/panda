@@ -96,6 +96,8 @@ public:
   INLINE JobQueue *get_job_queue(size_t thread);
 
 public:
+  #define CHUNK_SIZE 128
+  
   friend class JobWorkerThread;
   typedef PT(JobWorkerThread) *WorkerThreads;
   typedef Randomizer *Randomizers;
