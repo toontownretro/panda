@@ -117,11 +117,10 @@ execute() {
     right_job._num_items = right_count;
     right_job._function = _function;
 
-    JobSystem *js = JobSystem::get_global_ptr();
-    js->schedule(&left_job);
-    js->schedule(&right_job);
-    js->wait_job(&left_job);
-    js->wait_job(&right_job);
+    JobHelper::schedule_job(&left_job);
+    JobHelper::schedule_job(&right_job);
+    JobHelper::wait_job(&left_job);
+    JobHelper::wait_job(&right_job);
   } else {
     T it = std::next(_iter_start, _first_item);
     for (size_t i = 0; i < _num_items; ++it, ++i) {

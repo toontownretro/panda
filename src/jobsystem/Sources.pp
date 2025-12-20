@@ -9,7 +9,8 @@
     config_jobsystem.h \
     job.h job.I \
     jobSystem.h jobSystem.I \
-    jobWorkerThread.h jobWorkerThread.I
+    jobWorkerThread.h jobWorkerThread.I \
+    jobHelper.h jobHelper.I
 
   #define SOURCES \
     $[HEADERS]
@@ -18,7 +19,8 @@
     config_jobsystem.cxx \
     job.cxx \
     jobSystem.cxx \
-    jobWorkerThread.cxx
+    jobWorkerThread.cxx \
+    jobHelper.cxx
 
   #define INSTALL_HEADERS $[HEADERS]
 

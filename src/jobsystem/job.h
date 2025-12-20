@@ -18,6 +18,7 @@
 #include "typedReferenceCount.h"
 #include "atomicAdjust.h"
 #include "deletedChain.h"
+#include "jobHelper.h"
 #include <functional>
 
 /**
