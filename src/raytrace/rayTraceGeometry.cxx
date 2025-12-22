@@ -13,7 +13,7 @@
 #include "rayTraceGeometry.h"
 #include "rayTrace.h"
 #include "rayTraceScene.h"
-#include "embree3/rtcore.h"
+#include "rtcore.h"
 
 IMPLEMENT_CLASS( RayTraceGeometry );
 

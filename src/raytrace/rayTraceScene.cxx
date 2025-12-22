@@ -13,7 +13,7 @@
 #include "rayTraceScene.h"
 #include "rayTrace.h"
 #include "rayTraceGeometry.h"
-#include "embree3/rtcore.h"
+#include "rtcore.h"
 #include "nodePath.h"
 
 static const ALIGN_16BYTE int32_t Four_NegativeOnes_NonSIMD[4] = { -1, -1, -1, -1 };
@@ -101,9 +101,14 @@ RayTraceHitResult RayTraceScene::trace_ray( const LPoint3 &start, const LVector3
         //nassertr( RayTrace::get_device() != nullptr, result );
         //nassertr( _scene != nullptr, result );
 
+#if RTC_VERSION_MAJOR >= 4
+        RTCRayQueryContext ctx;
+        rtcInitRayQueryContext(&ctx);
+#else
         RTCIntersectContext ctx;
         rtcInitIntersectContext( &ctx );
         ctx.flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
+#endif
 
         ALIGN_16BYTE RTCRay ray;
         ray.mask = mask.get_word();
@@ -125,7 +130,15 @@ RayTraceHitResult RayTraceScene::trace_ray( const LPoint3 &start, const LVector3
         //        << "Tracing ray from " << start << ", direction " << dir << ", distance " << distance << ", mask " << mask << std::endl;
 
         // Trace a ray
+#if RTC_VERSION_MAJOR >= 4
+        RTCIntersectArguments iargs;
+        rtcInitIntersectArguments(&iargs);
+        iargs.context = &ctx;
+        iargs.flags = RTC_RAY_QUERY_FLAG_COHERENT;
+        rtcIntersect1(_scene, &rhit, &iargs);
+#else
         rtcIntersect1( _scene, &ctx, &rhit );
+#endif
 
         //RTCError err = rtcGetDeviceError( RayTrace::get_device() );
         //raytrace_cat.debug()

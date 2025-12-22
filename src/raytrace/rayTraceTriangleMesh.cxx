@@ -11,7 +11,7 @@
  */
 
 #include "rayTraceTriangleMesh.h"
-#include "embree3/rtcore.h"
+#include "rtcore.h"
 #include "geomVertexReader.h"
 #include "geomVertexData.h"
 

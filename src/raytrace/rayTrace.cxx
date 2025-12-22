@@ -13,9 +13,9 @@
 
 #include "rayTrace.h"
 
-#include <geomVertexReader.h>
+#include "geomVertexReader.h"
 
-#include <embree3/rtcore.h>
+#include "rtcore.h"
 
 bool RayTrace::_initialized = false;
 RTCDevice RayTrace::_device = nullptr;
