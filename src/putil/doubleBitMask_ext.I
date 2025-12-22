@@ -62,9 +62,9 @@ __int__() const {
     PyObject *lo = result;
     PyObject *hi = invoke_extension(&this->_this->_hi).__int__();
 #if PY_VERSION_HEX >= 0x30D0000 // 3.13+
-    uint64_t val;
-    PyLong_AsUInt64(hi, &val);
-    PyObject *shifted = PyLong_FromUInt64(val << DoubleBitMask<BMType>::half_bits);
+    PyObject *py_half_bits = PyLong_FromUInt64(DoubleBitMask<BMType>::half_bits);
+    PyObject *shifted = PyNumber_Lshift(hi, py_half_bits);
+    Py_DECREF(py_half_bits);
 #else
     PyObject *shifted = _PyLong_Lshift(hi, DoubleBitMask<BMType>::half_bits);
 #endif
