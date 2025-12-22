@@ -31,8 +31,11 @@ __init__(PyObject *init_value) {
   if (n > 0) {
     size_t num_bytes = (n + 7) / 8;
     unsigned char *bytes = (unsigned char *)alloca(num_bytes);
+#if PY_VERSION_HEX >= 0x30D0000 // 3.13+
+    PyLong_AsNativeBytes(init_value, bytes, num_bytes, -1);
+#else
     _PyLong_AsByteArray((PyLongObject *)init_value, bytes, num_bytes, 1, 0);
-
+#endif
     for (size_t i = 0; i < num_bytes; ++i) {
       this->_this->store(bytes[i], i * 8, 8);
     }
@@ -58,7 +61,13 @@ __int__() const {
   if (!this->_this->_hi.is_zero()) {
     PyObject *lo = result;
     PyObject *hi = invoke_extension(&this->_this->_hi).__int__();
+#if PY_VERSION_HEX >= 0x30D0000 // 3.13+
+    uint64_t val;
+    PyLong_AsUInt64(hi, &val);
+    PyObject *shifted = PyLong_FromUInt64(val << DoubleBitMask<BMType>::half_bits);
+#else
     PyObject *shifted = _PyLong_Lshift(hi, DoubleBitMask<BMType>::half_bits);
+#endif
     Py_DECREF(hi);
     result = PyNumber_Or(shifted, lo);
     Py_DECREF(shifted);

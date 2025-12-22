@@ -29,10 +29,15 @@ __init__(PyObject *init_value) {
   if (n > 0) {
     size_t num_words = (n + BitArray::num_bits_per_word - 1) / BitArray::num_bits_per_word;
     _this->_array.resize(num_words);
+#if PY_VERSION_HEX >= 0x30D0000 // 3.13+
+    PyLong_AsNativeBytes(init_value, (unsigned char *)&_this->_array[0],
+      num_words * sizeof(BitArray::WordType), -1);
+#else
     _PyLong_AsByteArray((PyLongObject *)init_value,
       (unsigned char *)&_this->_array[0],
       num_words * sizeof(BitArray::WordType),
       1, 0);
+#endif
   }
 }
 
