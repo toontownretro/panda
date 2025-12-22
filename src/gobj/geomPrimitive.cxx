@@ -1869,6 +1869,7 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
 
   } else {
     int num_vertices = cdata->_num_vertices;
+    int first_vertex = cdata->_first_vertex;
     nassertv((cdata->_first_vertex + num_vertices) <= cdata->_vertices.get_read_pointer()->get_num_rows());
 
     if (num_vertices == 0) {
@@ -1882,7 +1883,7 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
       // This is a complex primitive type like a triangle strip; compute the
       // minmax of each primitive (as well as the overall minmax).
       GeomVertexReader index(cdata->_vertices.get_read_pointer(), 0);
-      index.set_row(cdata->_first_vertex);
+      index.set_row(first_vertex);
 
       cdata->_mins = make_index_data();
       cdata->_maxs = make_index_data();
@@ -1917,7 +1918,7 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
           // contain a strip-cut index, which would distort the result.
           if (num_unused_vertices > 0) {
             vi += num_unused_vertices;
-            index.set_row_unsafe(vi);
+            index.set_row_unsafe(vi + first_vertex);
           }
           vertex = index.get_data1i();
 
@@ -1945,7 +1946,7 @@ recompute_minmax(GeomPrimitive::CData *cdata) {
       // This is a simple primitive type like a triangle; just compute the
       // overall minmax.
       GeomVertexReader index(cdata->_vertices.get_read_pointer(), 0);
-      index.set_row(cdata->_first_vertex);
+      index.set_row(first_vertex);
 
       cdata->_mins.clear();
       cdata->_maxs.clear();
