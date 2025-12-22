@@ -63,7 +63,7 @@ get_cull_radius() const {
 /**
  *
  */
-INLINE void qpLight::
+void qpLight::
 mark_dirty() {
   if (_manager != nullptr) {
     _manager->mark_dynamic_lights_dirty();
