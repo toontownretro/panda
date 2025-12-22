@@ -16,18 +16,18 @@
 
 #include <fmod.hpp>
 
-extern FMOD_RESULT F_CALLBACK
+extern FMOD_RESULT F_CALL
 pfmod_open_callback(const char *name, unsigned int *file_size,
                     void **handle, void *user_data);
 
-extern FMOD_RESULT F_CALLBACK
+extern FMOD_RESULT F_CALL
 pfmod_close_callback(void *handle, void *user_data);
 
-extern FMOD_RESULT F_CALLBACK
+extern FMOD_RESULT F_CALL
 pfmod_read_callback(void *handle, void *buffer, unsigned int size_bytes,
                     unsigned int *bytes_read, void *user_data);
 
-extern FMOD_RESULT F_CALLBACK
+extern FMOD_RESULT F_CALL
 pfmod_seek_callback(void *handle, unsigned int pos, void *user_data);
 
 #endif // FMOD_FILESYSTEM_HOOKS_H

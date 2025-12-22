@@ -20,7 +20,7 @@
 /**
  * A hook into Panda's virtual file system.
  */
-FMOD_RESULT F_CALLBACK
+FMOD_RESULT F_CALL
 pfmod_open_callback(const char *name, unsigned int *file_size,
                     void **handle, void *user_data) {
   // We actually pass in the VirtualFile pointer as the "name".
@@ -48,7 +48,7 @@ pfmod_open_callback(const char *name, unsigned int *file_size,
 /**
  * A hook into Panda's virtual file system.
  */
-FMOD_RESULT F_CALLBACK
+FMOD_RESULT F_CALL
 pfmod_close_callback(void *handle, void *user_data) {
   VirtualFile *file = (VirtualFile *)user_data;
   if (fmodAudio_cat.is_spam()) {
@@ -70,7 +70,7 @@ pfmod_close_callback(void *handle, void *user_data) {
 /**
  * A hook into Panda's virtual file system.
  */
-FMOD_RESULT F_CALLBACK
+FMOD_RESULT F_CALL
 pfmod_read_callback(void *handle, void *buffer, unsigned int size_bytes,
                     unsigned int *bytes_read, void *user_data) {
   VirtualFile *file = (VirtualFile *)user_data;
@@ -105,7 +105,7 @@ pfmod_read_callback(void *handle, void *buffer, unsigned int size_bytes,
 /**
  * A hook into Panda's virtual file system.
  */
-FMOD_RESULT F_CALLBACK
+FMOD_RESULT F_CALL
 pfmod_seek_callback(void *handle, unsigned int pos, void *user_data) {
   VirtualFile *file = (VirtualFile *)user_data;
   if (fmodAudio_cat.is_spam()) {
