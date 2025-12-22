@@ -2585,6 +2585,11 @@ issue_parameters(int altered) {
         }
       }
       else if (spec._scalar_type == ShaderType::ST_double) {
+#ifdef OPENGLES
+        GLCAT.error()
+          << "Double precision builtin shader input?  Not supported on GLES\n";
+        nassertd(false);
+#else
 #ifdef STDFLOAT_DOUBLE
         const double *data = val->get_data();
         data += spec._offset;
@@ -2638,6 +2643,7 @@ issue_parameters(int altered) {
           _glgsg->_glUniformMatrix4x3dv(p, 1, GL_TRUE, data);
           continue;
         }
+#endif
       }
       else if (spec._scalar_type == ShaderType::ST_int) {
         const int *data = (const int *)val->get_data();
