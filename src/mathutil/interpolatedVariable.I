@@ -91,6 +91,11 @@ InterpolatedVariable() {
   _interpolation_amount = 0.0;
   _looping = false;
   _angles = false;
+  _getter = nullptr;
+  _setter = nullptr;
+  _getter_data = nullptr;
+  _setter_data = nullptr;
+  _data_ptr = nullptr;
 }
 
 /**
@@ -138,6 +143,74 @@ interpolate_into(double now, void *dest) {
   int ret = interpolate(now);
   *(Type *)dest = _interpolated_value;
   return ret;
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE bool InterpolatedVariable<Type>::
+record_value(double timestamp, bool record_last_networked) {
+  Type val;
+  if (get_value(&val)) {
+    record_value(val, timestamp, record_last_networked);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+record_last_networked_value(double timestamp) {
+  Type val;
+  if (get_value(&val)) {
+    record_last_networked_value(val, timestamp);
+  }
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+copy_interpolated_value() const {
+  set_value(_interpolated_value);
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+copy_last_networked_value() const {
+  set_value(_last_networked_value);
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE int InterpolatedVariable<Type>::
+interpolate_into(double now) {
+  int ret = interpolate(now);
+  set_value(_interpolated_value);
+  return ret;
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+reset() {
+  Type val;
+  if (get_value(&val)) {
+    reset(val);
+  }
 }
 
 /**
@@ -675,6 +748,36 @@ get_interpolation_info(InterpolationInfo &info, double now, int &no_more_changes
  *
  */
 template<class Type>
+INLINE bool InterpolatedVariable<Type>::
+get_value(Type *val) const {
+  if (_getter != nullptr) {
+    *val = (*_getter)(_getter_data);
+    return true;
+  } else if (_data_ptr != nullptr) {
+    *val = *_data_ptr;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+set_value(const Type &val) const {
+  if (_setter != nullptr) {
+    (*_setter)(val, _setter_data);
+  } else if (_data_ptr != nullptr) {
+    *_data_ptr = val;
+  }
+}
+
+/**
+ *
+ */
+template<class Type>
 INLINE void InterpolatedVariable<Type>::
 time_fixup_hermite(SamplePoint &fixup, SamplePoint *&prev, SamplePoint *&start, SamplePoint *&end) {
   time_fixup2_hermite(fixup, prev, start, end->timestamp - start->timestamp);
@@ -832,4 +935,33 @@ extrapolate(Type *out, SamplePoint *old, SamplePoint *new_point, double dest_tim
       *out = tlerp(1.0 + extrapolation_amount * divisor, old->value, new_point->value);
     }
   }
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+set_getter_func(InterpolatedVariable<Type>::GetValueFn func, void *data) {
+  _getter = func;
+  _getter_data = data;
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+set_setter_func(InterpolatedVariable<Type>::SetValueFn func, void *data) {
+  _setter = func;
+  _setter_data = data;
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE void InterpolatedVariable<Type>::
+set_data_ptr(Type *ptr) {
+  _data_ptr = ptr;
 }

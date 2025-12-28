@@ -96,6 +96,13 @@ public:
   virtual void copy_interpolated_value(void *dest) const = 0;
   virtual void copy_last_networked_value(void *dest) const = 0;
   virtual int interpolate_into(double now, void *dest) = 0;
+
+  virtual bool record_value(double timestamp, bool record_last_networked = true) = 0;
+  virtual void record_last_networked_value(double timestamp) = 0;
+  virtual void copy_interpolated_value() const = 0;
+  virtual void copy_last_networked_value() const = 0;
+  virtual int interpolate_into(double now) = 0;
+  virtual void reset() = 0;
 };
 
 /**
@@ -110,14 +117,30 @@ public:
  */
 template <class Type>
 class InterpolatedVariable : public InterpolatedVariableBase {
+public:
+  typedef Type (*GetValueFn)(void *data);
+  typedef void (*SetValueFn)(Type val, void *data);
+
+  INLINE void set_getter_func(GetValueFn func, void *data);
+  INLINE void set_setter_func(SetValueFn func, void *data);
+  INLINE void set_data_ptr(Type *ptr);
+
 PUBLISHED:
   INLINE InterpolatedVariable();
 
+  // Versions for if we don't have a stored pointer/getter/setter for the real variable memory.
   virtual bool record_void_value(const void *value, double timestamp, bool record_last_networked) override;
   virtual void record_last_networked_void_value(const void *value, double timestamp) override;
   virtual void copy_interpolated_value(void *dest) const override;
   virtual void copy_last_networked_value(void *dest) const override;
   virtual int interpolate_into(double now, void *dest) override;
+
+  virtual bool record_value(double timestamp, bool record_last_networked = true) override;
+  virtual void record_last_networked_value(double timestamp) override;
+  virtual void copy_interpolated_value() const override;
+  virtual void copy_last_networked_value() const override;
+  virtual int interpolate_into(double now) override;
+  virtual void reset() override;
 
   INLINE bool record_value(const Type &value, double timestamp,
                            bool record_last_networked = true);
@@ -165,6 +188,9 @@ private:
   INLINE bool get_interpolation_info(InterpolationInfo &info, double now,
                                      int &no_more_changes) const;
 
+  INLINE bool get_value(Type *val) const;
+  INLINE void set_value(const Type &val) const;
+
 private:
   typedef SamplePointBase<Type> SamplePoint;
   typedef pdeque<SamplePoint> SamplePoints;
@@ -192,6 +218,13 @@ private:
   PN_stdfloat _interpolation_amount;
   bool _looping;
   bool _angles;
+
+  // Stuff to retrieve/store destination memory.
+  GetValueFn _getter;
+  void *_getter_data;
+  SetValueFn _setter;
+  void *_setter_data;
+  Type *_data_ptr;
 };
 
 BEGIN_PUBLISH
