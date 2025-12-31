@@ -22,6 +22,7 @@ get_render_pipeline() {
   return _render_pipeline;
 }
 
+#ifdef THREADED_PIPELINE
 /**
  * Returns the version of the pipeline that this thread is working on.
  *
@@ -32,6 +33,7 @@ INLINE unsigned int Pipeline::
 get_version(Thread *current_thread) const {
   return _next_cycle_seq - current_thread->get_pipeline_stage();
 }
+#endif
 
 /**
  * Ensures that at least the indicated number of stages are in the pipeline.

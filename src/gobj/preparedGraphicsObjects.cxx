@@ -35,11 +35,23 @@ int PreparedGraphicsObjects::_name_index = 0;
 /**
  *
  */
+static unsigned int
+get_pipeline_ver(Thread *current_thread = Thread::get_current_thread()) {
+#ifdef THREADED_PIPELINE
+  return Pipeline::get_render_pipeline()->get_version(current_thread);
+#else
+  return 0;
+#endif
+}
+
+/**
+ *
+ */
 static PreparedGraphicsObjects::EnqueuedObjectKey
 get_enqueue_key(TypedWritableReferenceCount *obj) {
   PreparedGraphicsObjects::EnqueuedObjectKey key;
   key._object = obj;
-  key._pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  key._pipeline_version = get_pipeline_ver();
   return key;
 }
 
@@ -50,7 +62,7 @@ static PreparedGraphicsObjects::ReleasedObjectKey
 get_release_key(SavedContext *obj) {
   PreparedGraphicsObjects::ReleasedObjectKey key;
   key._object = obj;
-  key._pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  key._pipeline_version = get_pipeline_ver();
   return key;
 }
 
@@ -312,7 +324,7 @@ release_all_textures() {
 
   _prepared_textures.clear();
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   // Mark any futures as cancelled.
   EnqueuedObjects::iterator qti;
   for (qti = _enqueued_textures.begin();
@@ -639,7 +651,7 @@ release_all_geoms() {
 
   _prepared_geoms.clear();
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   for (auto it = _enqueued_geoms.begin(); it != _enqueued_geoms.end();) {
     if (it->first._pipeline_version == pipeline_version) {
       it = _enqueued_geoms.erase(it);
@@ -819,7 +831,7 @@ release_all_shaders() {
   _prepared_shaders.clear();
 
   // Mark any futures as cancelled.
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   EnqueuedObjects::iterator qsi;
   for (qsi = _enqueued_shaders.begin();
        qsi != _enqueued_shaders.end();) {
@@ -996,7 +1008,7 @@ release_all_vertex_buffers() {
 
   _prepared_vertex_buffers.clear();
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   for (auto it = _enqueued_vertex_buffers.begin(); it != _enqueued_vertex_buffers.end();) {
     if (it->first._pipeline_version == pipeline_version) {
       it = _enqueued_vertex_buffers.erase(it);
@@ -1198,7 +1210,7 @@ release_all_index_buffers() {
 
   _prepared_index_buffers.clear();
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   for (auto it = _enqueued_index_buffers.begin(); it != _enqueued_index_buffers.end();) {
     if (it->first._pipeline_version == pipeline_version) {
       it = _enqueued_index_buffers.erase(it);
@@ -1387,7 +1399,7 @@ release_all_shader_buffers() {
 
   _prepared_shader_buffers.clear();
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()->get_version();
+  unsigned int pipeline_version = get_pipeline_ver();
   for (auto it = _enqueued_shader_buffers.begin(); it != _enqueued_shader_buffers.end();) {
     if (it->first._pipeline_version == pipeline_version) {
       it = _enqueued_shader_buffers.erase(it);
@@ -1529,8 +1541,7 @@ void PreparedGraphicsObjects::
 begin_frame(GraphicsStateGuardianBase *gsg, Thread *current_thread) {
   ReMutexHolder holder(_lock, current_thread);
 
-  unsigned int pipeline_version = Pipeline::get_render_pipeline()
-    ->get_version(current_thread);
+  unsigned int pipeline_version = get_pipeline_ver(current_thread);
 
   // First, release all the textures, geoms, and buffers awaiting release.
   for (auto it = _released_textures.begin(); it != _released_textures.end();) {

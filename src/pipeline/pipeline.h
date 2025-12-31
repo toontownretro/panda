@@ -45,8 +45,6 @@ public:
 
   void cycle();
 
-  INLINE unsigned int get_version(Thread *current_thread = Thread::get_current_thread()) const;
-
   void set_num_stages(int num_stages);
   INLINE void set_min_stages(int min_stages);
   INLINE int get_num_stages() const;
@@ -56,6 +54,8 @@ public:
   void add_cycler(PipelineCyclerTrueImpl *cycler, bool dirty);
   void add_dirty_cycler(PipelineCyclerTrueImpl *cycler);
   void remove_cycler(PipelineCyclerTrueImpl *cycler);
+
+  INLINE unsigned int get_version(Thread *current_thread = Thread::get_current_thread()) const;
 
   INLINE int get_num_cyclers() const;
   INLINE int get_num_dirty_cyclers() const;
