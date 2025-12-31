@@ -279,7 +279,8 @@ GeomVertexArrayDataHandle() :
   _current_thread(nullptr),
   _object(nullptr),
   _cdata(nullptr),
-  _has_lock(false)
+  _has_lock(false),
+  _writable(false)
 {
 }
 
@@ -291,7 +292,8 @@ GeomVertexArrayDataHandle(Thread *current_thread) :
   _current_thread(current_thread),
   _object(nullptr),
   _cdata(nullptr),
-  _has_lock(false)
+  _has_lock(false),
+  _writable(false)
 {
 }
 

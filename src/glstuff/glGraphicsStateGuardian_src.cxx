@@ -552,6 +552,10 @@ reset() {
   free_pointers();
   GraphicsStateGuardian::reset();
 
+  for (int i = 0; i < 32; ++i) {
+    _color_vertex_attribs[i].set(0.0f, 0.0f, 0.0f, 0.0f);
+  }
+
   // Build _inv_state_mask as a mask of 1's where we don't care, and 0's where
   // we do care, about the state.
 #ifndef OPENGLES_1
