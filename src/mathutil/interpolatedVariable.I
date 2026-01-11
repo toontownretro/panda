@@ -264,8 +264,7 @@ record_last_networked_value(const Type &value, double timestamp) {
  * to accumulate samples.  That means samples that come in too slow will not
  * be able to be interpolated.
  */
-template<class Type>
-INLINE void InterpolatedVariable<Type>::
+INLINE void InterpolatedVariableBase::
 set_interpolation_amount(PN_stdfloat amount) {
   _interpolation_amount = amount;
 }
@@ -273,8 +272,7 @@ set_interpolation_amount(PN_stdfloat amount) {
 /**
  * Returns the interpolation amount.  See set_interpolation_amount().
  */
-template<class Type>
-INLINE PN_stdfloat InterpolatedVariable<Type>::
+INLINE PN_stdfloat InterpolatedVariableBase::
 get_interpolation_amount() const {
   return _interpolation_amount;
 }

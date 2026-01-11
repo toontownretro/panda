@@ -103,6 +103,13 @@ public:
   virtual void copy_last_networked_value() const = 0;
   virtual int interpolate_into(double now) = 0;
   virtual void reset() = 0;
+
+PUBLISHED:
+  INLINE void set_interpolation_amount(PN_stdfloat amount);
+  INLINE PN_stdfloat get_interpolation_amount() const;
+
+protected:
+  PN_stdfloat _interpolation_amount;
 };
 
 /**
@@ -146,9 +153,6 @@ PUBLISHED:
                            bool record_last_networked = true);
 
   INLINE void record_last_networked_value(const Type &value, double timestamp);
-
-  INLINE void set_interpolation_amount(PN_stdfloat amount);
-  INLINE PN_stdfloat get_interpolation_amount() const;
 
   INLINE void set_looping(bool loop);
   INLINE bool get_looping() const;
@@ -215,7 +219,6 @@ private:
   Type _last_networked_value;
   double _last_networked_time;
 
-  PN_stdfloat _interpolation_amount;
   bool _looping;
   bool _angles;
 

@@ -161,7 +161,11 @@ update() {
       CDWriter cdata(_cycler);
       cdata->_dynamic_light_buffer = buffer;
     }
-    update_light_buffer(buffer, &_dynamic_lights.front(), _dynamic_lights.size());
+    PT(qpLight) *lights = nullptr;
+    if (!_dynamic_lights.empty()) {
+      lights = &_dynamic_lights.front();
+    }
+    update_light_buffer(buffer, lights, _dynamic_lights.size());
     ++_dynamic_buffer_index;
     _dynamic_buffer_index %= num_buffers;
     _dynamic_lights_dirty = false;

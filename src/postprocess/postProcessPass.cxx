@@ -364,7 +364,7 @@ update() {
  */
 void PostProcessPass::
 update_size() {
-	if (!_force_size && _buffer != nullptr) {
+	if (!_force_size && _buffer != nullptr && !is_window_layer()) {
 		GraphicsBuffer *buffer;
 		DCAST_INTO_V(buffer, _buffer);
 
