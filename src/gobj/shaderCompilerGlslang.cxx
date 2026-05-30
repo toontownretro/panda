@@ -44,6 +44,8 @@ public:
 
     Filename fn = header_name;
     DSearchPath path(get_model_path());
+    // Also append the directory of the including file to the search path.
+    path.append_directory(Filename::from_os_specific(includer_name).get_dirname());
 
     VirtualFileSystem *vfs = VirtualFileSystem::get_global_ptr();
     PT(VirtualFile) vf = vfs->find_file(fn, path);

@@ -144,7 +144,7 @@ void KeyValues::parse(TokenFile *tokens)
  * returns a new KeyValues object representing the root of the KeyValues tree.
  */
 PT(KeyValues)
-KeyValues::load(const Filename &filename) {
+KeyValues::load(const Filename &filename, const DSearchPath &path) {
   if (filename.empty()) {
     return nullptr;
   }
@@ -155,6 +155,7 @@ KeyValues::load(const Filename &filename) {
   if (filename.is_local()) {
     // Look along the model path for the file
     DSearchPath search_path(get_model_path());
+    search_path.prepend_path(path);
     for (int i = 0; i < search_path.get_num_directories(); i++) {
       Filename search(search_path.get_directory(i), filename);
       if (vfs->exists(search)) {

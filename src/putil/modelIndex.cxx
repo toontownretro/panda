@@ -189,7 +189,9 @@ read_index(const Filename &filename) {
     return true;
   }
 
-  PT(KeyValues) kv = KeyValues::load(filename);
+  DSearchPath search;
+  search.append_directory(ExecutionEnvironment::get_cwd());
+  PT(KeyValues) kv = KeyValues::load(filename, search);
   if (kv == nullptr) {
     return false;
   }

@@ -82,7 +82,7 @@ private:
 	void do_indent(std::ostringstream &out, int curr_indent);
 
 PUBLISHED:
-	static PT(KeyValues) load(const Filename &filename);
+	static PT(KeyValues) load(const Filename &filename, const DSearchPath &search_path = get_model_path());
 	static PT(KeyValues) from_string(const std::string &data);
 
   static vector_int parse_int_list(const std::string &str);
