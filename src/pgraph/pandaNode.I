@@ -744,6 +744,38 @@ verify_child_no_cycles(PandaNode *child_node) {
 /**
  *
  */
+template<class Type>
+INLINE void PandaNode::
+set_c_tag(Type *tag) {
+  _c_tags[Type::get_class_type()] = tag;
+}
+
+/**
+ *
+ */
+template<class Type>
+INLINE Type *PandaNode::
+get_c_tag() const {
+  TypeHandle type = Type::get_class_type();
+  return DCAST(Type, get_c_tag(type));
+}
+
+/**
+ *
+ */
+INLINE TypedReferenceCount *PandaNode::
+get_c_tag(TypeHandle type) const {
+  CTagDatas::const_iterator it = _c_tags.find(type);
+  if (it != _c_tags.end()) {
+    return (*it).second;
+  } else {
+    return nullptr;
+  }
+}
+
+/**
+ *
+ */
 INLINE PandaNode::DownConnection::
 DownConnection(PandaNode *child, int sort) :
   _child(child),
@@ -1522,7 +1554,7 @@ get_transform() const {
 /**
  * Returns the transform that has been set as this node's "previous" position.
  * See set_prev_transform().
- */
+pp */
 const TransformState *PandaNodePipelineReader::
 get_prev_transform() const {
   if (_node->_prev_transform_valid == PandaNode::_reset_prev_transform_seq) {

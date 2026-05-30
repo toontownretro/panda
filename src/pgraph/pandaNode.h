@@ -259,6 +259,12 @@ public:
   INLINE size_t get_num_tags() const;
   INLINE std::string get_tag_key(size_t i) const;
 
+  template<class Type>
+  INLINE void set_c_tag(Type *data);
+  template<class Type>
+  INLINE Type *get_c_tag() const;
+  INLINE TypedReferenceCount *get_c_tag(TypeHandle type) const;
+
 PUBLISHED:
   MAKE_MAP_PROPERTY(tags, has_tag, get_tag, set_tag, clear_tag);
   MAKE_MAP_KEYS_SEQ(tags, get_num_tags, get_tag_key);
@@ -617,6 +623,9 @@ private:
     virtual ~PythonTagData() {};
   };
   PT(PythonTagData) _python_tag_data;
+
+  typedef pflat_hash_map<TypeHandle, PT(TypedReferenceCount)> CTagDatas;
+  CTagDatas _c_tags;
 
   unsigned int _unexpected_change_flags = 0;
 
