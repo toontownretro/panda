@@ -90,7 +90,10 @@ create_modifier_state() {
     state = state->set_attrib(
       RenderModeAttrib::make((RenderModeAttrib::Mode)_material->_render_mode));
   }
+
   if (_material->_attrib_flags & Material::F_color_blend) {
+    bool has_special_blend = _material->_color_blend_mode != 0;
+
     switch (_material->_color_blend_mode) {
     case 0:
       state = state->set_attrib(
@@ -108,6 +111,19 @@ create_modifier_state() {
       break;
     default:
       break;
+    }
+
+    if (has_special_blend) {
+      // If the material uses a modulate or additive color blend mode,
+      // treat it as a transparent object -- put in transparent bin and disable
+      // depth writes.  Only if the material doesn't explicitly set them though.
+
+      if ((_material->_attrib_flags & Material::F_depth_write) == 0) {
+        state = state->set_attrib(DepthWriteAttrib::make(DepthWriteAttrib::M_off));
+      }
+      if ((_material->_attrib_flags & Material::F_bin) == 0) {
+        state = state->set_attrib(CullBinAttrib::make("transparent", 0));
+      }
     }
   }
 
