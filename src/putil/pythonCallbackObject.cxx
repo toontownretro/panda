@@ -58,7 +58,15 @@ PythonCallbackObject(PyObject *function) {
  */
 PythonCallbackObject::
 ~PythonCallbackObject() {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  // Use PyGILState to protect this asynchronous call.
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
+#endif
   Py_DECREF(_function);
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+  PyGILState_Release(gstate);
+#endif
 }
 
 /**
