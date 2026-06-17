@@ -14,6 +14,7 @@
 #include "qpLightManager.h"
 #include "pStatTimer.h"
 #include "pStatCollector.h"
+#include "lightMutexHolder.h"
 
 static PStatCollector update_buffer_pcollector("LightManager:UpdateBuffer");
 
@@ -123,6 +124,8 @@ clear_static_lights() {
  */
 void qpLightManager::
 add_dynamic_light(qpLight *light) {
+  LightMutexHolder holder(_lights_lock);
+
   light->set_manager(this);
   _dynamic_lights.insert(light);
   _dynamic_lights_dirty = true;
@@ -133,6 +136,8 @@ add_dynamic_light(qpLight *light) {
  */
 void qpLightManager::
 remove_dynamic_light(qpLight *light) {
+  LightMutexHolder holder(_lights_lock);
+
   light->set_manager(nullptr);
   _dynamic_lights.erase(light);
   _dynamic_lights_dirty = true;
@@ -143,6 +148,8 @@ remove_dynamic_light(qpLight *light) {
  */
 void qpLightManager::
 clear_dynamic_lights() {
+  LightMutexHolder holder(_lights_lock);
+
   for (qpLight *light : _dynamic_lights) {
     light->set_manager(nullptr);
   }

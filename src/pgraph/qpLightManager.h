@@ -29,6 +29,7 @@
 #include "pipelineCycler.h"
 #include "cycleDataReader.h"
 #include "cycleDataWriter.h"
+#include "lightMutex.h"
 
 /**
  *
@@ -88,6 +89,9 @@ private:
   LightSet _dynamic_lights;
 
   bool _dynamic_lights_dirty;
+
+  // Protects insertions/deletions from the dynamic light list.
+  LightMutex _lights_lock;
 };
 
 #include "qpLightManager.I"

@@ -13,6 +13,7 @@
 
 #include "particleManager2.h"
 #include "jobSystem.h"
+#include "pStatCollector.h"
 
 ParticleManager2 *ParticleManager2::_global_ptr = nullptr;
 

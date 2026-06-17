@@ -238,6 +238,8 @@ public:
 
   qpLightManager *_light_mgr;
 
+  PStatCollector _collector;
+
   friend class ParticleManager2;
 
 public:

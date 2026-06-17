@@ -22,6 +22,7 @@
 #include "pdxValue.h"
 #include "characterNode.h"
 #include "character.h"
+#include "pStatTimer.h"
 
 TypeHandle ParticleSystem2::_type_handle;
 
@@ -45,7 +46,8 @@ ParticleSystem2(const std::string &name) :
   _phys_remainder(0.0),
   _phys_timestep(1 / 60.0),
   _phys_tick(0),
-  _light_mgr(nullptr)
+  _light_mgr(nullptr),
+  _collector("*:Particles2" + (name.size() > 0u ? ((std::string)":" + name) : ""))
 {
 }
 
@@ -76,7 +78,8 @@ ParticleSystem2(const ParticleSystem2 &copy) :
   _phys_remainder(0.0),
   _num_phys_steps(0),
   _phys_tick(0),
-  _light_mgr(copy._light_mgr)
+  _light_mgr(copy._light_mgr),
+  _collector(copy._collector)
 {
 }
 
@@ -395,6 +398,8 @@ priv_stop() {
  */
 bool ParticleSystem2::
 update(double dt) {
+  PStatTimer timer(_collector);
+
   nassertr(_running, false);
 
   _dt = dt;
