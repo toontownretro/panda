@@ -77,7 +77,7 @@ egg_to_joint(EggNode *egg_node) const {
 }
 
 /**
- * Returns a JointVertexTransform suitable for applying the animation
+ * Returns a VertexTransform suitable for applying the animation
  * associated with the given egg node (which should be a joint).  Returns an
  * identity transform if the egg node is not a joint in the character's
  * hierarchy.
@@ -89,6 +89,21 @@ egg_to_transform(EggNode *egg_node) {
     // Not a joint in the hierarchy.
     return get_identity_transform();
   }
+
+  VertexTransforms::iterator vi = _vertex_transforms.find(index);
+  if (vi != _vertex_transforms.end()) {
+    return (*vi).second;
+  }
+
+  PT(VertexTransform) vt = new JointVertexTransform(_bundle, index);
+  _vertex_transforms[index] = vt;
+
+  return vt;
+}
+
+VertexTransform *CharacterMaker::
+joint_index_to_transform(int index) {
+  if (index < 0) { return nullptr; }
 
   VertexTransforms::iterator vi = _vertex_transforms.find(index);
   if (vi != _vertex_transforms.end()) {

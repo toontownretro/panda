@@ -13,6 +13,7 @@
 
 #include "pandaNode.h"
 #include "config_pgraph.h"
+#include "configVariableBool.h"
 #include "nodePathComponent.h"
 #include "bamReader.h"
 #include "bamWriter.h"
@@ -26,11 +27,13 @@
 #include "omniBoundingVolume.h"
 #include "pStatTimer.h"
 #include "config_mathutil.h"
+#include "lightReMutex.h"
 #include "lightReMutexHolder.h"
 #include "graphicsStateGuardianBase.h"
 #include "decalEffect.h"
 #include "showBoundsEffect.h"
 #include "globPattern.h"
+#include "jobSystem.h"
 
 using std::ostream;
 using std::ostringstream;
@@ -47,7 +50,6 @@ PandaNode::SceneRootFunc *PandaNode::_scene_root_func;
 UpdateSeq PandaNode::_reset_prev_transform_seq;
 DrawMask PandaNode::_overall_bit = DrawMask::bit(31);
 
-
 PStatCollector PandaNode::_update_bounds_pcollector("*:Bounds");
 PStatCollector PandaNode::_update_masks_pcollector("*:Bounds:Masks");
 PStatCollector PandaNode::_update_clipping_pcollector("*:Bounds:Clipping");
@@ -59,6 +61,12 @@ TypeHandle PandaNode::_type_handle;
 TypeHandle PandaNode::DetectCallbackData::_type_handle;
 TypeHandle PandaNode::CData::_type_handle;
 TypeHandle PandaNodePipelineReader::_type_handle;
+
+ConfigVariableBool parallel_node_cache
+("parallel-node-cache", true,
+ PRC_DESC("When parallel-node-cache is specified to true or false, "
+          "this controls whether or not the cache for all PandaNodes "
+          "should be computed in parallel or not."));
 
 /*
  * There are two different interfaces here for making and breaking parent-
@@ -1638,19 +1646,11 @@ adjust_draw_mask(DrawMask show_mask, DrawMask hide_mask, DrawMask clear_mask) {
  */
 DrawMask PandaNode::
 get_net_draw_control_mask() const {
-  Thread *current_thread = Thread::get_current_thread();
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
 #ifdef DO_PSTATS
-    PStatTimer timer(_update_masks_pcollector);
+  PStatTimer timer(_update_masks_pcollector);
 #endif
-    CDStageWriter cdataw =
-      ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
-    return cdataw->_net_draw_control_mask;
-  }
-  return cdata->_net_draw_control_mask;
+  CDStageWriter cdataw = ((PandaNode *)this)->update_cached(false);
+  return cdataw->_net_draw_control_mask;
 }
 
 /**
@@ -1667,19 +1667,11 @@ get_net_draw_control_mask() const {
  */
 DrawMask PandaNode::
 get_net_draw_show_mask() const {
-  Thread *current_thread = Thread::get_current_thread();
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
 #ifdef DO_PSTATS
-    PStatTimer timer(_update_masks_pcollector);
+  PStatTimer timer(_update_masks_pcollector);
 #endif
-    CDStageWriter cdataw =
-      ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
-    return cdataw->_net_draw_show_mask;
-  }
-  return cdata->_net_draw_show_mask;
+  CDStageWriter cdataw = ((PandaNode *)this)->update_cached(false);
+  return cdataw->_net_draw_show_mask;
 }
 
 /**
@@ -1734,18 +1726,11 @@ get_legal_collide_mask() const {
  */
 CollideMask PandaNode::
 get_net_collide_mask(Thread *current_thread) const {
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
 #ifdef DO_PSTATS
-    PStatTimer timer(_update_masks_pcollector);
+  PStatTimer timer(_update_masks_pcollector);
 #endif
-    CDStageWriter cdataw =
-      ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
-    return cdataw->_net_collide_mask;
-  }
-  return cdata->_net_collide_mask;
+  CDStageWriter cdataw = ((PandaNode *)this)->update_cached(false);
+  return cdataw->_net_collide_mask;
 }
 
 /**
@@ -1754,18 +1739,11 @@ get_net_collide_mask(Thread *current_thread) const {
  */
 CPT(RenderAttrib) PandaNode::
 get_off_clip_planes(Thread *current_thread) const {
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
 #ifdef DO_PSTATS
-    PStatTimer timer(_update_clipping_pcollector);
+  PStatTimer timer(_update_clipping_pcollector);
 #endif
-    CDStageWriter cdataw =
-      ((PandaNode *)this)->update_cached(false, pipeline_stage, cdata);
-    return cdataw->_off_clip_planes;
-  }
-  return cdata->_off_clip_planes;
+  CDStageWriter cdataw = ((PandaNode *)this)->update_cached(false);
+  return cdataw->_off_clip_planes;
 }
 
 /**
@@ -1951,22 +1929,15 @@ set_bounds(const BoundingVolume *volume) {
  */
 CPT(BoundingVolume) PandaNode::
 get_bounds(Thread *current_thread) const {
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_bounds_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
-    CPT(BoundingVolume) result;
-    {
+  CPT(BoundingVolume) result;
+  {
 #ifdef DO_PSTATS
-      PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_bounds_pcollector);
 #endif
-      CDStageWriter cdataw =
-        ((PandaNode *)this)->update_cached(true, pipeline_stage, cdata);
-      result = cdataw->_external_bounds;
-    }
-    return result;
+    CDStageWriter cdataw = ((PandaNode *)this)->update_cached(true);
+    result = cdataw->_external_bounds;
   }
-  return cdata->_external_bounds;
+  return result;
 }
 
 /**
@@ -1982,24 +1953,16 @@ get_bounds(Thread *current_thread) const {
  */
 CPT(BoundingVolume) PandaNode::
 get_bounds(UpdateSeq &seq, Thread *current_thread) const {
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_bounds_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
-    CPT(BoundingVolume) result;
-    {
+  CPT(BoundingVolume) result;
+  {
 #ifdef DO_PSTATS
-      PStatTimer timer(_update_bounds_pcollector);
+    PStatTimer timer(_update_bounds_pcollector);
 #endif
-      CDStageWriter cdataw =
-        ((PandaNode *)this)->update_cached(true, pipeline_stage, cdata);
-      result = cdataw->_external_bounds;
-      seq = cdataw->_last_bounds_update;
-    }
-    return result;
+    CDStageWriter cdataw = ((PandaNode *)this)->update_cached(true);
+    result = cdataw->_external_bounds;
+    seq = cdataw->_last_bounds_update;
   }
-  seq = cdata->_last_bounds_update;
-  return cdata->_external_bounds;
+  return result;
 }
 
 /**
@@ -2013,22 +1976,15 @@ get_bounds(UpdateSeq &seq, Thread *current_thread) const {
  */
 int PandaNode::
 get_nested_vertices(Thread *current_thread) const {
-  int pipeline_stage = current_thread->get_pipeline_stage();
-  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
-  if (cdata->_last_bounds_update != cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
-    int result;
-    {
+  int result;
+  {
 #ifdef DO_PSTATS
-      PStatTimer timer(_update_nested_vertices_pcollector);
+    PStatTimer timer(_update_nested_vertices_pcollector);
 #endif
-      CDStageWriter cdataw =
-        ((PandaNode *)this)->update_cached(true, pipeline_stage, cdata);
-      result = cdataw->_nested_vertices;
-    }
-    return result;
+    CDStageWriter cdataw = ((PandaNode *)this)->update_cached(true);
+    result = cdataw->_nested_vertices;
   }
-  return cdata->_nested_vertices;
+  return result;
 }
 
 /**
@@ -3357,21 +3313,115 @@ do_find_child(PandaNode *node, const PandaNode::Down *down) const {
  *
  * If update_bounds is false, it will not update the bounding volume or vertex
  * count.
+ */
+PandaNode::CDStageWriter PandaNode::
+update_cached(bool update_bounds) {
+  Thread *current_thread = Thread::get_current_thread();
+  int pipeline_stage = current_thread->get_pipeline_stage();
+    
+  // If we update the cache in parallel. Then we'll call the special
+  // function for that specfically.
+  if (parallel_node_cache) {
+    CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
+    CDStageWriter cdataw = update_cached_threaded(update_bounds, pipeline_stage, cdata);
+    return cdataw;
+  }
+  
+  // Otherwise we do it the old way.
+  
+  CDLockedStageReader cdata(_cycler, pipeline_stage, current_thread);
+  
+  UpdateSeq last_update = update_bounds
+                        ? cdata->_last_bounds_update
+                        : cdata->_last_update;
+
+  // Check if the cache is stale, If it isn't; 
+  // then just return our current cdata.
+  if (last_update == cdata->_next_update) {
+    return CDStageWriter(_cycler, pipeline_stage, cdata);
+  }
+  
+  // The cache is stale; it needs to be rebuilt.
+  CDStageWriter cdataw = update_cached_full(update_bounds, pipeline_stage, cdata);
+  return cdataw;
+}
+
+/**
+ * Updates the cached values of the node that are dependent on its children,
+ * such as the external bounding volume, the _net_collide_mask, and the
+ * _off_clip_planes.
+ *
+ * If update_bounds is false, it will not update the bounding volume or vertex
+ * count.
+ *
+ * THIS IS FOR INTERNAL USE ONLY! USE AT YOUR OWN RISK!
+ */
+PandaNode::CDStageWriter PandaNode::
+update_cached_threaded(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageReader &cdata) {
+  UpdateSeq last_update = update_bounds
+                        ? cdata->_last_bounds_update
+                        : cdata->_last_update;
+
+  // Check if the cache is stale, If it isn't; 
+  // then just return our current cdata.
+  if (last_update == cdata->_next_update) {
+    return CDStageWriter(_cycler, pipeline_stage, cdata);
+  }
+  // The cache is stale; it needs to be rebuilt.
+  
+  // First we'll update all of our children
+  PandaNode::Children children = get_children();
+  int num_children = children.get_num_children();
+  if (num_children > 0) {
+    JobSystem *js = JobSystem::get_global_ptr();
+    js->parallel_process_per_item(num_children, [&children, &update_bounds, &pipeline_stage] (int i) {
+      Thread *current_thread = Thread::get_current_thread();
+      const PandaNode::DownConnection &child = children.get_child_connection(i);
+      PandaNode *node = child.get_child();
+      CDLockedStageReader cdata(node->_cycler, pipeline_stage, current_thread);
+      node->update_cached_threaded(update_bounds, pipeline_stage, cdata);
+    });
+    
+    // Check again if the cache is stale-if not; We are ready to return.
+    // We may of been updated in a different job depending on the context.
+    // So we should account for that.
+    last_update = update_bounds
+                ? cdata->_last_bounds_update
+                : cdata->_last_update;
+    if (last_update == cdata->_next_update) {
+      return CDStageWriter(_cycler, pipeline_stage, cdata);
+    }
+  }
+  
+  // Now let's update ourself.
+  return update_cached_single(update_bounds, pipeline_stage, cdata);
+};
+
+/**
+ * Updates the cached values of the node that are dependent on its children,
+ * such as the external bounding volume, the _net_collide_mask, and the
+ * _off_clip_planes.
+ *
+ * If update_bounds is false, it will not update the bounding volume or vertex
+ * count.
  *
  * The old value should be passed in; it will be released.  The new value is
  * returned.
+ *
+ * No children caches will be updated, If you wish for that functionality please
+ * use update_cached_full instead.
  */
 PandaNode::CDStageWriter PandaNode::
-update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageReader &cdata) {
+update_cached_single(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageReader &cdata) {
 #ifdef DO_PSTATS
-  PStatTimer timer(PandaNode::_update_cache_pcollector);
+  PStatTimer timer(_update_cache_pcollector);
 #endif
 
   // We might need to try this a couple of times, in case someone else steps
   // on our result.
   if (drawmask_cat.is_debug()) {
     drawmask_cat.debug(false)
-      << *this << "::update_cached() {\n";
+      << *this << "::update_cached_single() {\n";
   }
   Thread *current_thread = cdata.get_current_thread();
 
@@ -3424,12 +3474,12 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
     int num_children = down->size();
 
+    const BoundingVolume **child_volumes;
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
     // We need to keep references to the bounding volumes, since in a threaded
     // environment the pointers might go away while we're working (since we're
     // not holding a lock on our set of children right now).  But we also need
     // the regular pointers, to pass to BoundingVolume::around().
-    const BoundingVolume **child_volumes;
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
     pvector<CPT(BoundingVolume) > child_volumes_ref;
     if (update_bounds && !has_infinite) {
       child_volumes_ref.reserve(num_children + 1);
@@ -3457,180 +3507,90 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
     // Now expand those contents to include all of our children.
     int child_vertices = 0;
-
+    
     for (int i = 0; i < num_children; ++i) {
 #ifdef DO_PSTATS
-      PStatTimer timer(_update_children_cache_pcollector);
+      PStatTimer child_timer(_update_children_cache_pcollector);
 #endif
-      
+
       DownConnection &connection = (*down)[i];
       PandaNode *child = connection.get_child();
 
       const ClipPlaneAttrib *orig_cp = DCAST(ClipPlaneAttrib, off_clip_planes);
-
+      
       CDLockedStageReader child_cdata(child->_cycler, pipeline_stage, current_thread);
 
-      UpdateSeq last_child_update = update_bounds
-                                  ? child_cdata->_last_bounds_update
-                                  : child_cdata->_last_update;
+      DrawMask child_control_mask = child_cdata->_net_draw_control_mask;
+      DrawMask child_show_mask = child_cdata->_net_draw_show_mask;
+      if (!(child_control_mask | child_show_mask).is_zero()) {
+        // This child includes a renderable node or subtree.  Thus, we
+        // should propagate its draw masks.
+        renderable = true;
 
-      if (last_child_update != child_cdata->_next_update) {
-        // Child needs update.
-        CDStageWriter child_cdataw = child->update_cached(update_bounds, pipeline_stage, child_cdata);
+        // For each bit position in the masks, we have assigned the
+        // following semantic meaning.  The number on the left represents
+        // the pairing of the corresponding bit from the control mask and
+        // from the show mask:
 
-        CollideMask child_collide_mask = child_cdataw->_net_collide_mask;
-        net_collide_mask |= child_collide_mask;
-        connection._net_collide_mask = child_collide_mask;
+        // 00 : not a renderable node   (control 0, show 0) 01 : a normally
+        // visible node (control 0, show 1) 10 : a hidden node
+        // (control 1, show 0) 11 : a show-through node     (control 1, show
+        // 1)
 
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "\nchild update " << *child << ":\n";
-        }
+        // Now, when we accumulate these masks, we want to do so according
+        // to the following table, for each bit position:
 
-        DrawMask child_control_mask = child_cdataw->_net_draw_control_mask;
-        DrawMask child_show_mask = child_cdataw->_net_draw_show_mask;
-        if (!(child_control_mask | child_show_mask).is_zero()) {
-          // This child includes a renderable node or subtree.  Thus, we
-          // should propagate its draw masks.
-          renderable = true;
+        // 00   01   10   11     (child) --------------------- 00 | 00   01
+        // 10   11 01 | 01   01   01*  11 10 | 10   01*  10   11 11 | 11
+        // 11   11   11 (parent)
 
-          // For each bit position in the masks, we have assigned the
-          // following semantic meaning.  The number on the left represents
-          // the pairing of the corresponding bit from the control mask and
-          // from the show mask:
+        // This table is almost the same as the union of both masks, with
+        // one exception, marked with a * in the above table: if one is 10
+        // and the other is 01--that is, one is hidden and the other is
+        // normally visible--then the result should be 01, normally visible.
+        // This is because we only want to propagate the hidden bit upwards
+        // if *all* renderable nodes are hidden.
 
-          // 00 : not a renderable node   (control 0, show 0) 01 : a normally
-          // visible node (control 0, show 1) 10 : a hidden node
-          // (control 1, show 0) 11 : a show-through node     (control 1, show
-          // 1)
+        // Get the set of exception bits for which the above rule applies.
+        // These are the bits for which both bits have flipped, but which
+        // were not the same in the original.
+        DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
+        exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
+        
+        // Now compute the union, applying the above exception.
+        net_draw_control_mask |= child_control_mask;
+        net_draw_show_mask |= child_show_mask;
 
-          // Now, when we accumulate these masks, we want to do so according
-          // to the following table, for each bit position:
-
-          // 00   01   10   11     (child) --------------------- 00 | 00   01
-          // 10   11 01 | 01   01   01*  11 10 | 10   01*  10   11 11 | 11
-          // 11   11   11 (parent)
-
-          // This table is almost the same as the union of both masks, with
-          // one exception, marked with a * in the above table: if one is 10
-          // and the other is 01--that is, one is hidden and the other is
-          // normally visible--then the result should be 01, normally visible.
-          // This is because we only want to propagate the hidden bit upwards
-          // if *all* renderable nodes are hidden.
-
-          // Get the set of exception bits for which the above rule applies.
-          // These are the bits for which both bits have flipped, but which
-          // were not the same in the original.
-          DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
-          exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
-
-          if (drawmask_cat.is_debug()) {
-            drawmask_cat.debug(false)
-              << "exception_mask = " << exception_mask << "\n";
-          }
-
-          // Now compute the union, applying the above exception.
-          net_draw_control_mask |= child_control_mask;
-          net_draw_show_mask |= child_show_mask;
-
-          net_draw_control_mask &= ~exception_mask;
-          net_draw_show_mask |= exception_mask;
-        }
-
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "child_control_mask = " << child_control_mask
-            << "\nchild_show_mask = " << child_show_mask
-            << "\nnet_draw_control_mask = " << net_draw_control_mask
-            << "\nnet_draw_show_mask = " << net_draw_show_mask
-            << "\n";
-        }
-
-        off_clip_planes = orig_cp->compose_off(child_cdataw->_off_clip_planes);
-
-        if (update_bounds) {
-          if (child_cdataw->_external_bounds->is_infinite()) {
-            has_infinite = true;
-          }
-
-          if (!has_infinite && !child_cdataw->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdataw->_external_bounds);
-#endif
-            nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
-            child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
-          }
-          child_vertices += child_cdataw->_nested_vertices;
-
-          connection._external_bounds = child_cdataw->_external_bounds->as_geometric_bounding_volume();
-        }
-
-        connection._net_draw_control_mask = child_control_mask;
-        connection._net_draw_show_mask = child_show_mask;
-
-      } else {
-        // Child is good.
-        CollideMask child_collide_mask = child_cdata->_net_collide_mask;
-        net_collide_mask |= child_collide_mask;
-        connection._net_collide_mask = child_collide_mask;
-
-        // See comments in similar block above.
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "\nchild fresh " << *child << ":\n";
-        }
-        DrawMask child_control_mask = child_cdata->_net_draw_control_mask;
-        DrawMask child_show_mask = child_cdata->_net_draw_show_mask;
-        if (!(child_control_mask | child_show_mask).is_zero()) {
-          renderable = true;
-
-          DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
-          exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
-
-          if (drawmask_cat.is_debug()) {
-            drawmask_cat.debug(false)
-              << "exception_mask = " << exception_mask << "\n";
-          }
-
-          // Now compute the union, applying the above exception.
-          net_draw_control_mask |= child_control_mask;
-          net_draw_show_mask |= child_show_mask;
-
-          net_draw_control_mask &= ~exception_mask;
-          net_draw_show_mask |= exception_mask;
-        }
-
-        if (drawmask_cat.is_debug()) {
-          drawmask_cat.debug(false)
-            << "child_control_mask = " << child_control_mask
-            << "\nchild_show_mask = " << child_show_mask
-            << "\nnet_draw_control_mask = " << net_draw_control_mask
-            << "\nnet_draw_show_mask = " << net_draw_show_mask
-            << "\n";
-        }
-
-        off_clip_planes = orig_cp->compose_off(child_cdata->_off_clip_planes);
-
-        if (update_bounds) {
-          if (child_cdata->_external_bounds->is_infinite()) {
-            has_infinite = true;
-          }
-
-          if (!has_infinite && !child_cdata->_external_bounds->is_empty()) {
-#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
-            child_volumes_ref.push_back(child_cdata->_external_bounds);
-#endif
-            nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
-            child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
-          }
-          child_vertices += child_cdata->_nested_vertices;
-
-          connection._external_bounds = child_cdata->_external_bounds->as_geometric_bounding_volume();
-        }
-
-        connection._net_draw_control_mask = child_control_mask;
-        connection._net_draw_show_mask = child_show_mask;
+        net_draw_control_mask &= ~exception_mask;
+        net_draw_show_mask |= exception_mask;
       }
+
+        
+      CollideMask child_collide_mask = child_cdata->_net_collide_mask;
+      net_collide_mask |= child_collide_mask;
+      connection._net_collide_mask = child_collide_mask;
+      
+      off_clip_planes = orig_cp->compose_off(child_cdata->_off_clip_planes);
+        
+      if (update_bounds) {
+        if (child_cdata->_external_bounds->is_infinite()) {
+          has_infinite = true;
+        }
+
+        if (!has_infinite && !child_cdata->_external_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+          child_volumes_ref.push_back(child_cdata->_external_bounds);
+#endif
+          nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
+          child_volumes[child_volumes_i++] = child_cdata->_external_bounds;
+        }
+        child_vertices += child_cdata->_nested_vertices;
+
+        connection._external_bounds = child_cdata->_external_bounds->as_geometric_bounding_volume();
+      }
+
+      connection._net_draw_control_mask = child_control_mask;
+      connection._net_draw_show_mask = child_show_mask;
     }
 
     {
@@ -3680,10 +3640,7 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
         if (update_bounds) {
           cdataw->_nested_vertices = cdataw->_internal_vertices + child_vertices;
 
-          BoundingVolume::BoundsType btype = cdataw->_bounds_type;
-          if (btype == BoundingVolume::BT_default) {
-            btype = bounds_type;
-          }
+          BoundingVolume::BoundsType btype = cdataw->_bounds_type == BoundingVolume::BT_default ? bounds_type : cdataw->_bounds_type;
 
           if (has_infinite) {
             if (cdataw->_external_bounds == nullptr ||
@@ -3705,7 +3662,314 @@ update_cached(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageRe
 
         if (drawmask_cat.is_debug()) {
           drawmask_cat.debug(false)
-            << "} " << *this << "::update_cached();\n";
+            << "} " << *this << "::update_cached_single();\n";
+        }
+
+        nassertr(cdataw->_last_update == cdataw->_next_update, cdataw);
+
+        // Even though implicit bounding volume is not (yet?) part of the bam
+        // stream.
+        mark_bam_modified();
+        return cdataw;
+      }
+
+      if (cdataw->_last_update == cdataw->_next_update &&
+          (!update_bounds || cdataw->_last_bounds_update == cdataw->_next_update)) {
+        // Someone else has computed the cache for us.  OK.
+        return cdataw;
+      }
+    }
+
+    // We need to go around again.  Release the write lock, and grab the read
+    // lock back.
+    cdata = CDLockedStageReader(_cycler, pipeline_stage, current_thread);
+
+    if (cdata->_last_update == cdata->_next_update &&
+        (!update_bounds || cdata->_last_bounds_update == cdata->_next_update)) {
+      // Someone else has computed the cache for us while we were diddling
+      // with the locks.  OK.
+      return CDStageWriter(_cycler, pipeline_stage, cdata);
+    }
+
+  } while (true);
+}
+
+/**
+ * Updates the cached values of the node that are dependent on its children,
+ * such as the external bounding volume, the _net_collide_mask, and the
+ * _off_clip_planes.
+ *
+ * If update_bounds is false, it will not update the bounding volume or vertex
+ * count.
+ *
+ * The old value should be passed in; it will be released.  The new value is
+ * returned.
+ */
+PandaNode::CDStageWriter PandaNode::
+update_cached_full(bool update_bounds, int pipeline_stage, PandaNode::CDLockedStageReader &cdata) {
+#ifdef DO_PSTATS
+  PStatTimer timer(_update_cache_pcollector);
+#endif
+
+  // We might need to try this a couple of times, in case someone else steps
+  // on our result.
+  if (drawmask_cat.is_debug()) {
+    drawmask_cat.debug(false)
+      << *this << "::update_cached_full() {\n";
+  }
+  Thread *current_thread = cdata.get_current_thread();
+
+  do {
+    // Grab the last_update counter.
+    UpdateSeq last_update = cdata->_last_update;
+    UpdateSeq next_update = cdata->_next_update;
+    UpdateSeq last_bounds_update = cdata->_last_bounds_update;
+    nassertr(last_update != next_update ||
+             (update_bounds && last_bounds_update != next_update),
+             CDStageWriter(_cycler, pipeline_stage, cdata));
+
+    // Start with a clean slate.
+    CollideMask net_collide_mask = cdata->_into_collide_mask;
+    DrawMask net_draw_control_mask, net_draw_show_mask;
+    bool renderable = (cdata->_fancy_bits & FB_renderable) != 0;
+
+    if (renderable) {
+      // If this node is itself renderable, it contributes to the net draw
+      // mask.
+      net_draw_control_mask = cdata->_draw_control_mask;
+      net_draw_show_mask = cdata->_draw_show_mask;
+    }
+
+    if (drawmask_cat.is_debug()) {
+      drawmask_cat.debug(false)
+        << "net_draw_control_mask = " << net_draw_control_mask
+        << "\nnet_draw_show_mask = " << net_draw_show_mask
+        << "\n";
+    }
+    CPT(RenderAttrib) off_clip_planes = cdata->_state->get_attrib(ClipPlaneAttrib::get_class_slot());
+    if (off_clip_planes == nullptr) {
+      off_clip_planes = ClipPlaneAttrib::make();
+    }
+
+    bool has_infinite = (cdata->_user_bounds != nullptr) && (cdata->_user_bounds->is_infinite());
+
+    // Also get the list of the node's children.  When the cdataw destructs, it
+    // will also release the lock, since we've got all the data we need from the
+    // node.
+    PT(Down) down;
+    {
+      CDStageWriter cdataw(_cycler, pipeline_stage, cdata);
+      down = cdataw->modify_down();
+    }
+
+    // Now that we've got all the data we need from the node, we can release
+    // the lock.
+    //_cycler.release_read_stage(pipeline_stage, cdata.take_pointer());
+
+    int num_children = down->size();
+
+    const BoundingVolume **child_volumes;
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+    // We need to keep references to the bounding volumes, since in a threaded
+    // environment the pointers might go away while we're working (since we're
+    // not holding a lock on our set of children right now).  But we also need
+    // the regular pointers, to pass to BoundingVolume::around().
+    pvector<CPT(BoundingVolume) > child_volumes_ref;
+    if (update_bounds && !has_infinite) {
+      child_volumes_ref.reserve(num_children + 1);
+    }
+#endif
+    int child_volumes_i = 0;
+
+    CPT(BoundingVolume) internal_bounds = nullptr;
+
+    if (update_bounds && !has_infinite) {
+      child_volumes = (const BoundingVolume **)alloca(sizeof(BoundingVolume *) * (num_children + 1));
+      internal_bounds = get_internal_bounds(pipeline_stage, current_thread);
+
+      if (internal_bounds->is_infinite()) {
+        has_infinite = true;
+
+      } else if (!internal_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+        child_volumes_ref.push_back(internal_bounds);
+#endif
+        nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
+        child_volumes[child_volumes_i++] = internal_bounds;
+      }
+    }
+
+    // Now expand those contents to include all of our children.
+    int child_vertices = 0;
+    
+    for (int i = 0; i < num_children; ++i) {
+#ifdef DO_PSTATS
+      PStatTimer child_timer(_update_children_cache_pcollector);
+#endif
+
+      DownConnection &connection = (*down)[i];
+      PandaNode *child = connection.get_child();
+
+      const ClipPlaneAttrib *orig_cp = DCAST(ClipPlaneAttrib, off_clip_planes);
+      
+      CDLockedStageReader child_cdata(child->_cycler, pipeline_stage, current_thread);
+
+      UpdateSeq last_child_update = update_bounds
+                                  ? child_cdata->_last_bounds_update
+                                  : child_cdata->_last_update;
+
+      CDStageWriter child_cdataw;
+      if (last_child_update != child_cdata->_next_update) {
+        // Child needs update.
+        child_cdataw = child->update_cached_full(update_bounds, pipeline_stage, child_cdata);
+      } else {
+        // Child is good.
+        child_cdataw = CDStageWriter(child->_cycler, pipeline_stage, child_cdata);
+      }
+
+      DrawMask child_control_mask = child_cdataw->_net_draw_control_mask;
+      DrawMask child_show_mask = child_cdataw->_net_draw_show_mask;
+      if (!(child_control_mask | child_show_mask).is_zero()) {
+        // This child includes a renderable node or subtree.  Thus, we
+        // should propagate its draw masks.
+        renderable = true;
+
+        // For each bit position in the masks, we have assigned the
+        // following semantic meaning.  The number on the left represents
+        // the pairing of the corresponding bit from the control mask and
+        // from the show mask:
+
+        // 00 : not a renderable node   (control 0, show 0) 01 : a normally
+        // visible node (control 0, show 1) 10 : a hidden node
+        // (control 1, show 0) 11 : a show-through node     (control 1, show
+        // 1)
+
+        // Now, when we accumulate these masks, we want to do so according
+        // to the following table, for each bit position:
+
+        // 00   01   10   11     (child) --------------------- 00 | 00   01
+        // 10   11 01 | 01   01   01*  11 10 | 10   01*  10   11 11 | 11
+        // 11   11   11 (parent)
+
+        // This table is almost the same as the union of both masks, with
+        // one exception, marked with a * in the above table: if one is 10
+        // and the other is 01--that is, one is hidden and the other is
+        // normally visible--then the result should be 01, normally visible.
+        // This is because we only want to propagate the hidden bit upwards
+        // if *all* renderable nodes are hidden.
+
+        // Get the set of exception bits for which the above rule applies.
+        // These are the bits for which both bits have flipped, but which
+        // were not the same in the original.
+        DrawMask exception_mask = (net_draw_control_mask ^ child_control_mask) & (net_draw_show_mask ^ child_show_mask);
+        exception_mask &= (net_draw_control_mask ^ net_draw_show_mask);
+        
+        // Now compute the union, applying the above exception.
+        net_draw_control_mask |= child_control_mask;
+        net_draw_show_mask |= child_show_mask;
+
+        net_draw_control_mask &= ~exception_mask;
+        net_draw_show_mask |= exception_mask;
+      }
+
+        
+      CollideMask child_collide_mask = child_cdataw->_net_collide_mask;
+      net_collide_mask |= child_collide_mask;
+      connection._net_collide_mask = child_collide_mask;
+      
+      off_clip_planes = orig_cp->compose_off(child_cdataw->_off_clip_planes);
+        
+      if (update_bounds) {
+        if (child_cdataw->_external_bounds->is_infinite()) {
+          has_infinite = true;
+        }
+
+        if (!has_infinite && !child_cdataw->_external_bounds->is_empty()) {
+#if defined(HAVE_THREADS) && !defined(SIMPLE_THREADS)
+          child_volumes_ref.push_back(child_cdataw->_external_bounds);
+#endif
+          nassertr(child_volumes_i < num_children + 1, CDStageWriter(_cycler, pipeline_stage, cdata));
+          child_volumes[child_volumes_i++] = child_cdataw->_external_bounds;
+        }
+        child_vertices += child_cdataw->_nested_vertices;
+
+        connection._external_bounds = child_cdataw->_external_bounds->as_geometric_bounding_volume();
+      }
+
+      connection._net_draw_control_mask = child_control_mask;
+      connection._net_draw_show_mask = child_show_mask;
+    }
+
+    {
+      // Now grab the write lock on this node.
+      CDStageWriter cdataw(_cycler, pipeline_stage, current_thread);
+      if (last_update == cdataw->_last_update &&
+          next_update == cdataw->_next_update) {
+        // Great, no one has monkeyed with these while we were computing the
+        // cache.  Safe to store the computed values and return.
+        cdataw->_net_collide_mask = net_collide_mask;
+
+        if (renderable) {
+          // Any explicit draw control mask on this node trumps anything
+          // inherited from below, except a show-through.
+          DrawMask draw_control_mask = cdataw->_draw_control_mask;
+          DrawMask draw_show_mask = cdataw->_draw_show_mask;
+
+          DrawMask show_through_mask = net_draw_control_mask & net_draw_show_mask;
+
+          net_draw_control_mask |= draw_control_mask;
+          net_draw_show_mask = (net_draw_show_mask & ~draw_control_mask) | (draw_show_mask & draw_control_mask);
+
+          net_draw_show_mask |= show_through_mask;
+
+          // There are renderable nodes below, so the implicit draw bits are
+          // all on.
+          cdataw->_net_draw_control_mask = net_draw_control_mask;
+          cdataw->_net_draw_show_mask = net_draw_show_mask | ~net_draw_control_mask;
+          if (drawmask_cat.is_debug()) {
+            drawmask_cat.debug(false)
+              << "renderable, set mask " << cdataw->_net_draw_show_mask << "\n";
+          }
+        } else {
+          // There are no renderable nodes below, so the implicit draw bits
+          // are all off.  Also, we don't care about the draw mask on this
+          // particular node (since nothing below it is renderable anyway).
+          cdataw->_net_draw_control_mask = net_draw_control_mask;
+          cdataw->_net_draw_show_mask = net_draw_show_mask;
+          if (drawmask_cat.is_debug()) {
+            drawmask_cat.debug(false)
+              << "not renderable, set mask " << cdataw->_net_draw_show_mask << "\n";
+          }
+        }
+
+        cdataw->_off_clip_planes = off_clip_planes;
+
+        if (update_bounds) {
+          cdataw->_nested_vertices = cdataw->_internal_vertices + child_vertices;
+
+          BoundingVolume::BoundsType btype = cdataw->_bounds_type == BoundingVolume::BT_default ? bounds_type : cdataw->_bounds_type;
+
+          if (has_infinite) {
+            if (cdataw->_external_bounds == nullptr ||
+                cdataw->_external_bounds->get_type() != OmniBoundingVolume::get_class_type()) {
+              cdataw->_external_bounds = new OmniBoundingVolume;
+            }
+          } else {
+            compute_external_bounds(cdataw->_external_bounds, btype,
+                                    child_volumes, child_volumes_i,
+                                    pipeline_stage, current_thread);
+          }
+
+          nassertr(cdataw->_external_bounds != nullptr, cdataw);
+
+          cdataw->_last_bounds_update = next_update;
+        }
+
+        cdataw->_last_update = next_update;
+
+        if (drawmask_cat.is_debug()) {
+          drawmask_cat.debug(false)
+            << "} " << *this << "::update_cached_full();\n";
         }
 
         nassertr(cdataw->_last_update == cdataw->_next_update, cdataw);
@@ -4273,42 +4537,53 @@ check_cached(bool update_bounds) const {
                         ? _cdata->_last_bounds_update
                         : _cdata->_last_update;
 
-  if (last_update != _cdata->_next_update) {
-    // The cache is stale; it needs to be rebuilt.
+  if (last_update == _cdata->_next_update) {
+    return; 
+  }
+  
+  // The cache is stale; it needs to be rebuilt.
 
-    // We'll need to get a fresh read pointer, since another thread might
-    // already have modified the pointer on the object since we queried it.
+  // We'll need to get a fresh read pointer, since another thread might
+  // already have modified the pointer on the object since we queried it.
 #ifdef DO_PIPELINING
-    //node_unref_delete((CycleData *)_cdata);
+  //node_unref_delete((CycleData *)_cdata);
 #endif  // DO_PIPELINING
-    ((PandaNodePipelineReader *)this)->_cdata = nullptr;
-    int pipeline_stage = _current_thread->get_pipeline_stage();
-    PandaNode::CDLockedStageReader fresh_cdata(_node->_cycler, pipeline_stage, _current_thread);
-    if (fresh_cdata->_last_update == fresh_cdata->_next_update &&
-        (!update_bounds || fresh_cdata->_last_bounds_update == fresh_cdata->_next_update)) {
-      // What luck, some other thread has already freshened the cache for us.
-      // Save the new pointer, and let the lock release itself.
-      if (_cdata != (const PandaNode::CData *)fresh_cdata) {
-        ((PandaNodePipelineReader *)this)->_cdata = fresh_cdata;
+  ((PandaNodePipelineReader *)this)->_cdata = nullptr;
+  int pipeline_stage = _current_thread->get_pipeline_stage();
+  PandaNode::CDLockedStageReader fresh_cdata(_node->_cycler, pipeline_stage, _current_thread);
+  if (fresh_cdata->_last_update == fresh_cdata->_next_update &&
+      (!update_bounds || fresh_cdata->_last_bounds_update == fresh_cdata->_next_update)) {
+    // What luck, some other thread has already freshened the cache for us.
+    // Save the new pointer, and let the lock release itself.
+    if (_cdata != (const PandaNode::CData *)fresh_cdata) {
+      ((PandaNodePipelineReader *)this)->_cdata = fresh_cdata;
 #ifdef DO_PIPELINING
-        //_cdata->node_ref();
+      //_cdata->node_ref();
 #endif  // DO_PIPELINING
-      }
-
-    } else {
-      // No, the cache is still stale.  We have to do the work of freshening
-      // it.
-      PandaNode::CDStageWriter cdataw = ((PandaNode *)_node)->update_cached(update_bounds, pipeline_stage, fresh_cdata);
-      nassertv(cdataw->_last_update == cdataw->_next_update);
-      // As above, we save the new pointer, and then let the lock release
-      // itself.
-      if (_cdata != (const PandaNode::CData *)cdataw) {
-        ((PandaNodePipelineReader *)this)->_cdata = cdataw;
-#ifdef DO_PIPELINING
-        //_cdata->node_ref();
-#endif  // DO_PIPELINING
-      }
     }
+
+    nassertv(_cdata->_last_update == _cdata->_next_update);
+    nassertv(!update_bounds || _cdata->_last_bounds_update == _cdata->_next_update);
+    return;
+  }
+
+  // No, the cache is still stale.  We have to do the work of freshening
+  // it.
+  PandaNode::CDStageWriter cdataw;
+  if (parallel_node_cache) {
+    cdataw = ((PandaNode *)_node)->update_cached_threaded(update_bounds, pipeline_stage, fresh_cdata);
+  } else {
+    cdataw = ((PandaNode *)_node)->update_cached_full(update_bounds, pipeline_stage, fresh_cdata);
+  }
+  //PandaNode::CDStageWriter cdataw = ((PandaNode *)_node)->update_cached_full(update_bounds, pipeline_stage, fresh_cdata);
+  
+  // As above, we save the new pointer, and then let the lock release
+  // itself.
+  if (_cdata != (const PandaNode::CData *)cdataw) {
+    ((PandaNodePipelineReader *)this)->_cdata = cdataw;
+#ifdef DO_PIPELINING
+    //_cdata->node_ref();
+#endif  // DO_PIPELINING
   }
 
   nassertv(_cdata->_last_update == _cdata->_next_update);

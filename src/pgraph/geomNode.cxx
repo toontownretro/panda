@@ -554,8 +554,8 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     geoms = cdata->get_geoms_quick();
   }
   //Geoms geoms = get_geoms(current_thread);
-  int num_geoms = (int)geoms->size();
-  trav->_geoms_pcollector.add_level(num_geoms);
+  size_t num_geoms = geoms->size();
+  trav->_geoms_pcollector.add_level((int)num_geoms);
   CPT(TransformState) internal_transform = data.get_internal_transform(trav);
 
   if (num_geoms == 1) {
@@ -587,7 +587,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
   }
   else {
     // More than one Geom.
-    for (int i = 0; i < num_geoms; i++) {
+    for (size_t i = 0; i < num_geoms; i++) {
       const Geom *geom = (*geoms)[i]._geom.get_read_pointer(current_thread);
       if (geom->get_fast_primitive(0) == nullptr) {
         continue;

@@ -36,12 +36,15 @@
 #include "geomLines.h"
 #include "geomVertexWriter.h"
 #include "configVariableBool.h"
+#include "pStatTimer.h"
+#include "jobSystem.h"
 
 PStatCollector CullTraverser::_nodes_pcollector("Nodes");
 PStatCollector CullTraverser::_geom_nodes_pcollector("Nodes:GeomNodes");
 PStatCollector CullTraverser::_pgui_nodes_pcollector("Nodes:GUI");
 PStatCollector CullTraverser::_geoms_pcollector("Geoms");
 PStatCollector CullTraverser::_geoms_occluded_pcollector("Geoms:Occluded");
+PStatCollector CullTraverser::_cull_traversal_pcollector("Cull:Traverse");
 
 TypeHandle CullTraverser::_type_handle;
 
@@ -115,6 +118,8 @@ set_scene(SceneSetup *scene_setup, GraphicsStateGuardianBase *gsg,
  */
 void CullTraverser::
 traverse(const NodePath &root) {
+  PStatTimer timer(_cull_traversal_pcollector);
+  
   nassertv(_cull_handler != nullptr);
   nassertv(_scene_setup != nullptr);
 
@@ -241,6 +246,17 @@ do_traverse(CullTraverserData &data) {
     const PandaNode::DownConnection &child = children.get_child_connection(i);
     traverse_down(data, child, data._state);
   }
+
+/*
+  // Now visit all the node's children.
+  PandaNode::Children children = node_reader->get_children();
+  node_reader->release();
+  JobSystem *js = JobSystem::get_global_ptr();
+  js->parallel_process_per_item(children.get_num_children(), [this, &data, &children] (int i) {
+    const PandaNode::DownConnection &child = children.get_child_connection(i);
+    traverse_down(data, child, data._state);
+  });
+*/
 }
 
 /**

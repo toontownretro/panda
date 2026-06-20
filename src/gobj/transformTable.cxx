@@ -110,6 +110,47 @@ add_transform(const VertexTransform *transform) {
 /**
  *
  */
+LMatrix4f *TransformTable::
+get_transform_matrices(size_t num_matrices, Thread *current_thread) const {
+  nassertr(num_matrices <= _transforms.size(), nullptr);
+  
+  LMatrix4f *matrices = (LMatrix4f *)alloca(num_matrices * sizeof(LMatrix4f));
+  for (size_t i = 0; i < num_matrices; ++i) {
+#ifdef STDFLOAT_DOUBLE
+    matrices[i] = LCAST(float, _transforms[i]->get_matrix(current_thread));
+#else
+    matrices[i] = _transforms[i]->get_matrix(current_thread);
+#endif
+  }
+  
+  return matrices;
+}
+
+/**
+ *
+ */
+LVecBase4f *TransformTable::
+get_transform_vectors(size_t num_vectors, Thread *current_thread) const {
+  nassertr(num_vectors <= _transforms.size(), nullptr);
+  
+  LVecBase4f *vectors = (LVecBase4f *)alloca(num_vectors * sizeof(LVecBase4f) * 3);
+  for (size_t i = 0; i < num_vectors; ++i) {
+#ifdef STDFLOAT_DOUBLE
+    LMatrix4f matrix = LCAST(float, _transforms[i]->get_matrix(current_thread));
+#else
+    const LMatrix4f &matrix = _transforms[i]->get_matrix(current_thread);
+#endif
+    vectors[i * 3 + 0] = matrix.get_row(0);
+    vectors[i * 3 + 1] = matrix.get_row(1);
+    vectors[i * 3 + 2] = matrix.get_row(2);
+  }
+  
+  return vectors;
+}
+
+/**
+ *
+ */
 void TransformTable::
 write(std::ostream &out) const {
   for (size_t i = 0; i < _transforms.size(); ++i) {

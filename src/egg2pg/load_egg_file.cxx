@@ -43,6 +43,10 @@ load_from_loader(EggLoader &loader) {
       combine_siblings_bits |= SceneGraphReducer::CS_within_radius;
       gr.set_combine_radius(egg_flatten_radius);
     }
+    if (egg_flatten_strong) {
+      combine_siblings_bits |= SceneGraphReducer::CS_other;
+      combine_siblings_bits |= SceneGraphReducer::CS_recurse;
+    }
 
     int num_reduced = gr.flatten(loader._root, combine_siblings_bits);
     egg2pg_cat.info() << "Flattened " << num_reduced << " nodes.\n";
@@ -53,7 +57,11 @@ load_from_loader(EggLoader &loader) {
       if (premunge_data) {
         gr.premunge(loader._root, RenderState::make_empty());
       }
-      gr.collect_vertex_data(loader._root);
+      if (egg_flatten_strong) {
+        gr.collect_vertex_data(loader._root, ~(SceneGraphReducer::CVD_format | SceneGraphReducer::CVD_name | SceneGraphReducer::CVD_animation_type));
+      } else {
+        gr.collect_vertex_data(loader._root);
+      }
       gr.unify(loader._root, true);
       if (egg2pg_cat.is_debug()) {
         egg2pg_cat.debug() << "Unified.\n";

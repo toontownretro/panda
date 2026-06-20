@@ -115,12 +115,16 @@ any_in_bounds() {
   }
 
   if (_node_gbv != nullptr) {
-    PandaNode *pnode = node();
-    CollideMask this_mask = pnode->get_net_collide_mask();
-
     int num_colliders = get_num_colliders();
-    for (int c = 0; c < num_colliders; c++) {
-      if (has_collider(c)) {
+    // Only iterate if we have a collider at all.
+    // We do this because get_net_collide_mask() can result in a call to
+    // update_cached().
+    if (num_colliders > 0) {
+      PandaNode *pnode = node();
+      CollideMask this_mask = pnode->get_net_collide_mask();
+      for (int c = 0; c < num_colliders; c++) {
+        if (!has_collider(c)) { continue; }
+        
         CollisionNode *cnode = get_collider_node(c);
         bool is_in = false;
 

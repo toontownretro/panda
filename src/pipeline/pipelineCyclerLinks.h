@@ -40,6 +40,8 @@ protected:
   INLINE void insert_before(PipelineCyclerLinks *node);
 
   INLINE void take_list(PipelineCyclerLinks &other);
+  
+  INLINE size_t size();
 
   PipelineCyclerLinks *_prev, *_next;
 #endif

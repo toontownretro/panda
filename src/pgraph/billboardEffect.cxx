@@ -20,8 +20,11 @@
 #include "bamWriter.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+#include "pStatTimer.h"
 
 TypeHandle BillboardEffect::_type_handle;
+
+PStatCollector BillboardEffect::_billboard_compute_pcollector("Cull:Billboard");
 
 /**
  * Constructs a new BillboardEffect object with the indicated properties.
@@ -124,6 +127,8 @@ bool BillboardEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
+  PStatTimer timer(_billboard_compute_pcollector);
+  
   CPT(TransformState) modelview_transform = data.get_modelview_transform(trav);
   if (modelview_transform->is_singular()) {
     // If we're under a singular transform, never mind.

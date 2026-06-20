@@ -71,6 +71,16 @@ main(int argc, char *argv[]) {
       Thread::sleep(0.0005);
 
 
+    }, 2);
+    
+    sys->parallel_process_per_item(500, [&] (int i) {
+
+
+      int answer = array[i];
+      AtomicAdjust::add(result, answer);
+      Thread::sleep(0.0005);
+
+
     });
     std::cout << "done\n";
 

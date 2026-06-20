@@ -26,16 +26,22 @@
 #include "mathutil_simd.h"
 #include "ikHelper.h"
 #include "characterVertexSlider.h"
+#include "patomic.h"
 #include "jobSystem.h"
 
 TypeHandle Character::_type_handle;
 
-static PStatCollector apply_pose_collector("*:Animation:Joints:ApplyPose");
-static PStatCollector ap_compose_collector("*:Animation:Joints:ApplyPose:Compose");
-static PStatCollector ap_net_collector("*:Animation:Joints:ApplyPose:NetTransform");
-static PStatCollector ap_skinning_collector("*:Animation:Joints:ApplyPose:SkinningMatrix");
-static PStatCollector ap_mark_jvt_collector("*:Animation:Joints:ApplyPose:MarkModified");
-static PStatCollector ap_update_net_transform_nodes("*:Animation:Joints:ApplyPose:UpdateNetTransformNodes");
+#ifdef DO_PSTATS
+PStatCollector Character::_animation_pcollector("*:Animation");
+
+#define PCOLLECT_START(x) x.start()
+#define PCOLLECT_STOP(x) x.stop()
+#define PTIMER(x) PStatTimer timer(x)
+#else
+#define PCOLLECT_START(x)
+#define PCOLLECT_STOP(x)
+#define PTIMER(x)
+#endif
 
 /**
  *
@@ -54,6 +60,19 @@ Character(const Character &copy) :
   cdata->_root_xform = cdata_from->_root_xform;
 
   ensure_layer_count(1);
+  
+#ifdef DO_PSTATS
+  // Statistics
+  _joints_pcollector = PStatCollector(copy._joints_pcollector);
+  _js_update_pcollector = PStatCollector(copy._js_update_pcollector);
+  _js_advance_pcollector = PStatCollector(copy._js_advance_pcollector);
+  _apply_pose_pcollector = PStatCollector(copy._apply_pose_pcollector);
+  _ap_compose_pcollector = PStatCollector(copy._ap_compose_pcollector);
+  _ap_net_pcollector = PStatCollector(copy._ap_net_pcollector);
+  _ap_skinning_pcollector = PStatCollector(copy._ap_skinning_pcollector);
+  _ap_mark_jvt_pcollector = PStatCollector(copy._ap_mark_jvt_pcollector);
+  _ap_attachment_transform_pcollector = PStatCollector(copy._ap_attachment_transform_pcollector);
+#endif
 }
 
 /**
@@ -67,6 +86,19 @@ Character(const std::string &name) :
   _built_bind_pose(false)
 {
   ensure_layer_count(1);
+
+#ifdef DO_PSTATS
+    // Statistics
+  _joints_pcollector = PStatCollector(PStatCollector(_animation_pcollector, name), "Joints");
+  _js_update_pcollector = PStatCollector(_joints_pcollector, "Update");
+  _js_advance_pcollector = PStatCollector(_js_update_pcollector, "Advance");
+  _apply_pose_pcollector = PStatCollector(_js_update_pcollector, "ApplyPose");
+  _ap_compose_pcollector = PStatCollector(_apply_pose_pcollector, "Compose");
+  _ap_net_pcollector = PStatCollector(_apply_pose_pcollector, "NetTransform");
+  _ap_skinning_pcollector = PStatCollector(_apply_pose_pcollector, "SkinningMatrix");
+  _ap_mark_jvt_pcollector = PStatCollector(_apply_pose_pcollector, "MarkModified");
+  _ap_attachment_transform_pcollector = PStatCollector(_apply_pose_pcollector, "ComputeAttachmentTransform");
+#endif
 }
 
 /**
@@ -215,14 +247,15 @@ bool Character::
 update(bool update_attachment_nodes) {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, false, current_thread);
+  
+  bool chngd = false;
 
   double now = ClockObject::get_global_clock()->get_frame_time();
   if (now > cdata->_last_update + _update_delay || cdata->_anim_changed) {
-    return do_update(now, cdata, current_thread, update_attachment_nodes);
-
-  } else {
-    return false;
+    chngd = do_update(now, cdata, current_thread, update_attachment_nodes);
   }
+  
+  return chngd;
 }
 
 /**
@@ -233,6 +266,8 @@ do_advance(double now, CData *cdata, Thread *current_thread) {
   // We must have at least 1 layer at all times, even if no animations are
   // playing.
   nassertv(!_anim_layers.empty());
+  
+  PTIMER(_js_advance_pcollector);
 
   double dt = ClockObject::get_global_clock()->get_dt();
 
@@ -301,6 +336,12 @@ do_advance(double now, CData *cdata, Thread *current_thread) {
  */
 bool Character::
 do_update(double now, CData *cdata, Thread *current_thread, bool update_attachment_nodes) {
+  PTIMER(_js_update_pcollector);
+  
+  // We must have at least 1 layer at all times, even if no animations are
+  // playing.
+  nassertr(!_anim_layers.empty(), false);
+
   if ((int)_joints.size() > max_character_joints) {
     anim_cat.error()
       << "Too many joints on character " << get_name() << "\n";
@@ -311,10 +352,6 @@ do_update(double now, CData *cdata, Thread *current_thread, bool update_attachme
       << "Too many sliders on character " << get_name() << "\n";
     return false;
   }
-
-  // We must have at least 1 layer at all times, even if no animations are
-  // playing.
-  nassertr(!_anim_layers.empty(), false);
 
   // If we are auto advancing animation time, do that now.
   if (cdata->_auto_advance_flag) {
@@ -348,9 +385,8 @@ do_update(double now, CData *cdata, Thread *current_thread, bool update_attachme
   // forced value.
   for (size_t i = 0; i < _joints.size(); i++) {
     PandaNode *controller = _joints[i]._controller;
-    if (controller != nullptr) {
-      _joint_poses[i]._forced_value = controller->get_transform()->get_mat();
-    }
+    if (controller == nullptr) { continue; }
+    _joint_poses[i]._forced_value = controller->get_transform()->get_mat();
   }
 
   AnimEvalData data;
@@ -609,12 +645,12 @@ void Character::
 compute_attachment_transform(int index, bool force_update_node) {
   nassertv(index >= 0 && index < (int)_attachments.size());
   
-  //ap_update_net_transform_nodes.start();
+  PTIMER(_ap_attachment_transform_pcollector);
 
   CharacterAttachment &attach = _attachments[index];
   LMatrix4 transform = LMatrix4::zeros_mat();
-  for (auto it = attach._parents.begin(); it != attach._parents.end(); ++it) {
-    CharacterAttachment::ParentInfluence &inf = *it;
+  for (size_t i = 0; i < attach._parents.size(); ++i) {
+    CharacterAttachment::ParentInfluence &inf = attach._parents[i];
     if (inf._parent != -1) {
       //if (!_changed_joints.get_bit(parent)) {
       //  continue;
@@ -635,8 +671,6 @@ compute_attachment_transform(int index, bool force_update_node) {
   if (attach._node != nullptr && (force_update_node || attach._node->get_num_children() > 0)) {
     attach._node->set_transform(attach._curr_transform);
   }
-  
-  //ap_update_net_transform_nodes.stop();
 }
 
 /**
@@ -748,29 +782,47 @@ copy_subgraph() const {
   return copy;
 }
 
-/**
- * Applies the final pose computed by the animation graph to each joint.
- */
-bool Character::
-apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread,
-           bool update_attachment_nodes) {
-  //PStatTimer timer(apply_pose_collector);
+void Character::
+do_compose_joints(const LMatrix4 &root_xform, const AnimEvalData &data) {
+  PTIMER(_ap_compose_pcollector);
 
-  Character *merge_char = cdata->_joint_merge_character;
-  if (merge_char != nullptr) {
-    if (merge_char->_active_owner == nullptr) {
-      merge_char = nullptr;
+  for (size_t i = 0; i < _joints.size(); i++) {
+    CharacterJointPoseData &joint = _joint_poses[i];
+
+    if (!joint._has_forced_value) {
+      // Use the transform calculated during the channel evaluation.
+      int group = i / SIMDFloatVector::num_columns;
+      int sub = i % SIMDFloatVector::num_columns;
+      joint._value = LMatrix4::scale_shear_mat(data._pose[group].scale.get_lvec(sub), data._pose[group].shear.get_lvec(sub)) * data._pose[group].quat.get_lquat(sub);
+      joint._value.set_row(3, data._pose[group].pos.get_lvec(sub));
+
+    } else {
+      // Take the local transform from the forced value.
+      joint._value = joint._forced_value;
+    }
+
+    // Now compute the net transform.
+    if (joint._parent != -1) {
+      joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
+    } else {
+      joint._net_transform = joint._value * root_xform;
     }
   }
-  LMatrix4 parent_to_me;
-  if (merge_char != nullptr) {
-    // Make sure the parent character's animation is up-to-date.
-    // Update through the managing CharacterNode so the lock gets
-    // acquired.
-    merge_char->_active_owner->update();
+}
 
-    // Compute the matrix that will transform joints from the parent
-    // coordinate space to my coordinate space.
+void Character::
+do_compose_joints_with_merges(Character *merge_char, const LMatrix4 &root_xform, const AnimEvalData &data) {
+  PTIMER(_ap_compose_pcollector);
+  
+  // Make sure the parent character's animation is up-to-date.
+  // Update through the managing CharacterNode so the lock gets
+  // acquired.
+  merge_char->_active_owner->update();
+
+  // Compute the matrix that will transform joints from the parent
+  // coordinate space to my coordinate space.
+  LMatrix4 parent_to_me;
+  {
     NodePath my_path = NodePath::any_path(_active_owner);
     NodePath parent_path = NodePath::any_path(merge_char->_active_owner);
     parent_to_me = parent_path.get_transform(my_path)->get_mat();
@@ -779,34 +831,11 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
   size_t joint_count = _joints.size();
 
   //JobSystem *js = JobSystem::get_global_ptr();
-  //js->parallel_process(joint_count, [&data, &root_xform, &merge_char, &parent_to_me, this] (int i) {
+  //js->parallel_process_per_item(joint_count, [this, &data, &root_xform, &merge_char, &parent_to_me] (int i) {
   for (size_t i = 0; i < joint_count; i++) {
-    //ap_compose_collector.start();
-    
     CharacterJointPoseData &joint = _joint_poses[i];
-
-    if (joint._merge_joint == -1) {
-
-      if (!joint._has_forced_value) {
-        // Use the transform calculated during the channel evaluation.
-        int group = i / SIMDFloatVector::num_columns;
-        int sub = i % SIMDFloatVector::num_columns;
-        joint._value = LMatrix4::scale_shear_mat(data._pose[group].scale.get_lvec(sub), data._pose[group].shear.get_lvec(sub)) * data._pose[group].quat.get_lquat(sub);
-        joint._value.set_row(3, data._pose[group].pos.get_lvec(sub));
-
-      } else {
-        // Take the local transform from the forced value.
-        joint._value = joint._forced_value;
-      }
-
-      // Now compute the net transform.
-      if (joint._parent != -1) {
-        joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
-      } else {
-        joint._net_transform = joint._value * root_xform;
-      }
-
-    } else if (merge_char != nullptr) {
+    
+    if (joint._merge_joint != -1) {
       // Use the transform of the parent merge joint.
 
       // Re-compute this joint's local transform such that it ends up
@@ -821,22 +850,60 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
       } else {
         joint._value = joint._net_transform;
       }
+      
+      continue;
     }
-    
-    //ap_compose_collector.stop();
+
+    if (!joint._has_forced_value) {
+      // Use the transform calculated during the channel evaluation.
+      int group = i / SIMDFloatVector::num_columns;
+      int sub = i % SIMDFloatVector::num_columns;
+      joint._value = LMatrix4::scale_shear_mat(data._pose[group].scale.get_lvec(sub), data._pose[group].shear.get_lvec(sub)) * data._pose[group].quat.get_lquat(sub);
+      joint._value.set_row(3, data._pose[group].pos.get_lvec(sub));
+
+    } else {
+      // Take the local transform from the forced value.
+      joint._value = joint._forced_value;
+    }
+
+    // Now compute the net transform.
+    if (joint._parent != -1) {
+      joint._net_transform = joint._value * _joint_poses[joint._parent]._net_transform;
+    } else {
+      joint._net_transform = joint._value * root_xform;
+    }
   }
   //});
+}
+
+/**
+ * Applies the final pose computed by the animation graph to each joint.
+ */
+bool Character::
+apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, Thread *current_thread,
+           bool update_attachment_nodes) {
+  PTIMER(_apply_pose_pcollector);
+
+  // If we don't have a valid merged character. Then there is no need to have a loop for code that
+  // requires it.
+  // This will hopefully help optimize joint animation a small bit.
+  if (cdata->_joint_merge_character != nullptr &&
+      cdata->_joint_merge_character->_active_owner != nullptr) {
+    do_compose_joints_with_merges(cdata->_joint_merge_character, root_xform, data);
+  } else {
+    do_compose_joints(root_xform, data);
+  }
 
   {
     // Update data required to apply the computed animation to vertices.
-    //ap_skinning_collector.start();
+    PCOLLECT_START(_ap_skinning_pcollector);
     RenderCDWriter rcdata(_render_cycler, current_thread);
-    for (size_t i = 0; i < joint_count; ++i) {
+    for (size_t i = 0; i < _joints.size(); ++i) {
       rcdata->_joint_skinning_matrices[i] = _joint_poses[i]._initial_net_transform_inverse * _joint_poses[i]._net_transform;
     }
-    //ap_skinning_collector.stop();
+    PCOLLECT_STOP(_ap_skinning_pcollector);
     
-    //ap_mark_jvt_collector.start();
+    PCOLLECT_START(_ap_mark_jvt_pcollector);
     bool marked = false;
     for (size_t i = 0; i < _sliders.size(); ++i) {
       float value = data._sliders[i / SIMDFloatVector::num_columns][i % SIMDFloatVector::num_columns];
@@ -847,15 +914,16 @@ apply_pose(CData *cdata, const LMatrix4 &root_xform, const AnimEvalData &data, T
         }
       }
     }
-    //ap_mark_jvt_collector.stop();
+    PCOLLECT_STOP(_ap_mark_jvt_pcollector);
   }
 
   // Compute attachment transforms from the updated character pose.
   for (size_t i = 0; i < _attachments.size(); i++) {
     compute_attachment_transform(i, update_attachment_nodes);
   }
+  
   //JobSystem *js = JobSystem::get_global_ptr();
-  //js->parallel_process(_attachments.size(), [&update_attachment_nodes, this] (int i) {
+  //js->parallel_process_per_item(_attachments.size(), [&update_attachment_nodes, this] (int i) {
   //  compute_attachment_transform(i, update_attachment_nodes);
   //});
 
@@ -1157,6 +1225,21 @@ fillin(DatagramIterator &scan, BamReader *manager) {
   }
 
   manager->read_cdata(scan, _cycler);
+  
+#ifdef DO_PSTATS
+  // Reinitialize our collectors with our name, now that we know it.
+  if (has_name()) {
+    _joints_pcollector = PStatCollector(PStatCollector(_animation_pcollector, get_name()), "Joints");
+    _js_update_pcollector = PStatCollector(_joints_pcollector, "Update");
+    _js_advance_pcollector = PStatCollector(_js_update_pcollector, "Advance");
+    _apply_pose_pcollector = PStatCollector(_js_update_pcollector, "ApplyPose");
+    _ap_compose_pcollector = PStatCollector(_apply_pose_pcollector, "Compose");
+    _ap_net_pcollector = PStatCollector(_apply_pose_pcollector, "NetTransform");
+    _ap_skinning_pcollector = PStatCollector(_apply_pose_pcollector, "SkinningMatrix");
+    _ap_mark_jvt_pcollector = PStatCollector(_apply_pose_pcollector, "MarkModified");
+    _ap_attachment_transform_pcollector = PStatCollector(_apply_pose_pcollector, "ComputeAttachmentTransform");
+  }
+#endif
 }
 
 /**
