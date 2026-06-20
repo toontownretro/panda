@@ -587,7 +587,7 @@ do_measure(CData *cdata) {
  */
 PT(PandaNode) TextNode::
 do_generate(CData *cdata) {
-  PStatTimer timer(_text_generate_pcollector);
+  //PStatTimer timer(_text_generate_pcollector);
   if (text_cat.is_debug()) {
     text_cat.debug()
       << "Rebuilding " << get_type() << " " << get_name()

@@ -36,6 +36,7 @@ extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_ignore_filters;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_ignore_clamp;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_ignore_decals;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_flatten;
+extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_flatten_strong;
 extern EXPCL_PANDA_EGG2PG ConfigVariableDouble egg_flatten_radius;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_unify;
 extern EXPCL_PANDA_EGG2PG ConfigVariableBool egg_combine_geoms;

@@ -22,6 +22,19 @@
  */
 template<class CycleDataType>
 INLINE CycleDataStageWriter<CycleDataType>::
+CycleDataStageWriter(Thread *current_thread) :
+  _cycler(nullptr),
+  _current_thread(current_thread),
+  _stage(0),
+  _pointer(nullptr)
+{
+}
+
+/**
+ *
+ */
+template<class CycleDataType>
+INLINE CycleDataStageWriter<CycleDataType>::
 CycleDataStageWriter(PipelineCycler<CycleDataType> &cycler, int stage,
                      Thread *current_thread) :
   _cycler(&cycler),

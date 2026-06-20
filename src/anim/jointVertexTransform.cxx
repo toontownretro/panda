@@ -61,6 +61,7 @@ JointVertexTransform::
  */
 LMatrix4 JointVertexTransform::
 get_matrix(Thread *current_thread) const {
+  nassertr(_char != nullptr, LMatrix4::ident_mat());
   return _char->get_joint_skinning_matrix(_joint, current_thread);
 }
 
@@ -70,8 +71,7 @@ get_matrix(Thread *current_thread) const {
 void JointVertexTransform::
 output(std::ostream &out) const {
   nassertv(_char != nullptr);
-
-  out << _char->get_joint_name(_joint);
+  out << _char << " " << _char->get_joint_name(_joint) << " " << _joint;
 }
 
 /**

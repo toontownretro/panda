@@ -115,4 +115,22 @@ take_list(PipelineCyclerLinks &other) {
   other._next = &other;
   other._prev = &other;
 }
+
+
+/**
+ * When called on the head of an list, returns the size of the list.
+ */
+INLINE size_t PipelineCyclerLinks::
+size() {
+  nassertr(_next != nullptr && _prev != nullptr, 0);
+  
+  size_t count = 0;
+  PipelineCyclerLinks *node = _next;
+  while (node != this) {
+      count++;
+      node = node->_next;
+  }
+  
+  return count;
+}
 #endif  // THREADED_PIPELINE

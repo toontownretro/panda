@@ -37,6 +37,7 @@
     ikHelper.h ikHelper.I \
     ikSolver.h \
     ikTarget.h ikTarget.I \
+    jointTransformTable.h jointTransformTable.I \
     jointVertexTransform.h jointVertexTransform.I \
     phonemes.h phonemes.I \
     poseParameter.h poseParameter.I \
@@ -70,6 +71,7 @@
     eyeballNode.cxx \
     ikChain.cxx \
     ikHelper.cxx \
+    jointTransformTable.cxx \
     jointVertexTransform.cxx \
     phonemes.cxx \
     poseParameter.cxx \

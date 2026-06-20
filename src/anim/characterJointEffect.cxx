@@ -12,6 +12,7 @@
  */
 
 #include "characterJointEffect.h"
+#include "configVariableBool.h"
 #include "cullTraverser.h"
 #include "cullTraverserData.h"
 #include "nodePath.h"
@@ -20,6 +21,12 @@
 #include "bamWriter.h"
 #include "datagram.h"
 #include "datagramIterator.h"
+
+static ConfigVariableBool cull_animation
+  ("cull-animation", true,
+   PRC_DESC("Set this true to calculate character animation during the Cull "
+            "traversal.  If this is false, the user is responsible for updating "
+            "necessary characters every frame."));
 
 TypeHandle CharacterJointEffect::_type_handle;
 
@@ -123,7 +130,7 @@ bool CharacterJointEffect::
 cull_callback(CullTraverser *trav, CullTraverserData &data,
               CPT(TransformState) &node_transform,
               CPT(RenderState) &) const {
-  if (!_character.was_deleted()) {
+  if (!_character.was_deleted() && cull_animation) {
     _character->update();
   }
   node_transform = data.node()->get_transform();
@@ -152,7 +159,7 @@ void CharacterJointEffect::
 adjust_transform(CPT(TransformState) &net_transform,
                  CPT(TransformState) &node_transform,
                  const PandaNode *node) const {
-  if (!_character.was_deleted()) {
+  if (!_character.was_deleted() && cull_animation) {
     _character->update();
   }
   node_transform = node->get_transform();

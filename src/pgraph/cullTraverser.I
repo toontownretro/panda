@@ -233,7 +233,7 @@ traverse_down(const CullTraverserData &data, PandaNode *node) {
 INLINE void CullTraverser::
 traverse_down(const CullTraverserData &data, PandaNode *node,
                const TransformState *net_transform, const RenderState *state) {
-  PandaNodePipelineReader node_reader(node, data._node_reader.get_current_thread());
+  PandaNodePipelineReader node_reader(node, Thread::get_current_thread()); // data._node_reader.get_current_thread()
 
   int result = data.is_child_in_view(node_reader, _camera_mask);
   if (result == BoundingVolume::IF_no_intersection) {
@@ -291,7 +291,7 @@ traverse_down(const CullTraverserData &data, const PandaNode::DownConnection &ch
 #endif
   }
 
-  PandaNodePipelineReader node_reader(child.get_child(), data._node_reader.get_current_thread());
+  PandaNodePipelineReader node_reader(child.get_child(), Thread::get_current_thread()); // data._node_reader.get_current_thread()
 
   GeometricBoundingVolume *view_frustum = nullptr;
   if ((result & BoundingVolume::IF_all) == 0 && !node_reader.is_final()) {
