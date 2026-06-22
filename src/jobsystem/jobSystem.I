@@ -174,23 +174,32 @@ r_parallel_quicksort(T *data, Pr pred, int left, int right, int cutoff, JobSyste
  */
 INLINE Job *JobSystem::
 pop_job(Thread *thread, bool is_worker) {
-  size_t queue_index;
+  size_t queue_index = 0;
   if (is_worker) {
     JobWorkerThread *jthread = DCAST(JobWorkerThread, thread);
     queue_index = jthread->_thread_index + 1;
-  } else {
-    queue_index = 0;
   }
 
+  // Try to get from our job queue.
   std::optional<Job *> job = _job_queues[queue_index].pop();
   if (job.has_value()) {
     _queued_jobs.fetch_sub(1u);
     return job.value();
   }
   
+  // Try to steal from a random job queue.
   size_t steal_index = _randomizers[queue_index].random_int(get_num_threads() + 1);
   if (steal_index != queue_index) {
     job = _job_queues[steal_index].steal();
+    if (job.has_value()) {
+      _queued_jobs.fetch_sub(1u);
+      return job.value();
+    }
+  }
+  
+  // Last resort; Try to steal from the main job queue, But only if we are a worker!
+  if (is_worker) {
+    job = _job_queues[0].steal();
     if (job.has_value()) {
       _queued_jobs.fetch_sub(1u);
       return job.value();

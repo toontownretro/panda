@@ -131,7 +131,7 @@ schedule(Job *job) {
     return;
   }
   
-  int queue_index = (thread->get_type() == JobWorkerThread::get_class_type()) ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : _randomizers[0].random_int(get_num_threads() + 1);
+  int queue_index = (thread->get_type() == JobWorkerThread::get_class_type()) ? DCAST(JobWorkerThread, thread)->_thread_index + 1 : 0;
 
   job->ref();
   job->set_state(Job::S_queued);
