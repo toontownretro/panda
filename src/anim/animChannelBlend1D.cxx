@@ -190,11 +190,13 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
 
   nassertv(from != nullptr || to != nullptr);
 
-  if (to == nullptr) {
-    from->_channel->calc_pose(context, data);
-
-  } else if (from == nullptr) {
-    to->_channel->calc_pose(context, data);
+  if (to == nullptr || from == nullptr) {
+    // Only one channel contributes.
+    const Channel *c = (to == nullptr) ? from : to;
+    float orig_weight = data._weight;
+    data._weight = 1.0f;
+    c->_channel->calc_pose(context, data);
+    data._weight = orig_weight;
 
   } else {
     // Evaluate both at full weight and blend between them.

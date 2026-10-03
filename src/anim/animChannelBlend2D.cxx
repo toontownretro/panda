@@ -284,16 +284,13 @@ do_calc_pose(const AnimEvalContext &context, AnimEvalData &data) {
   PN_stdfloat w1 = weights[1];
   PN_stdfloat w2 = weights[2];
 
-  if (w0 == 1.0f) {
-    c0._channel->calc_pose(context, data);
-    return;
-
-  } else if (w1 == 1.0f) {
-    c1._channel->calc_pose(context, data);
-    return;
-
-  } else if (w2 == 1.0f) {
-    c2._channel->calc_pose(context, data);
+  if (w0 == 1.0f || w1 == 1.0f || w2 == 1.0f) {
+    // Only one channel contributes.
+    const Channel &c = (w0 == 1.0f) ? c0 : ((w1 == 1.0f) ? c1 : c2);
+    PN_stdfloat orig_weight = data._weight;
+    data._weight = 1.0f;
+    c._channel->calc_pose(context, data);
+    data._weight = orig_weight;
     return;
   }
 
