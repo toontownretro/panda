@@ -1584,7 +1584,11 @@ build_entity_polygons(int i) {
         LPoint3 polymin, polymax;
         w.get_bounds(polymin, polymax);
 
+        // Entities are built on several threads at once, and they all add to
+        // this map.
+        ThreadManager::lock();
         _side_polys[poly->get_side_id()].push_back(poly);
+        ThreadManager::unlock();
 
         LVector3 winding_normal = w.get_plane().get_normal().normalized();
         for (size_t ivert = 0; ivert < w.get_num_points(); ivert++) {
@@ -1602,7 +1606,11 @@ build_entity_polygons(int i) {
         PT(MapGeom) geom = new MapGeom(side->_editor_id, poly_material, base_tex);
         geom->set_lightmap_size(lightmap_size);
 
+        // Entities are built on several threads at once, and they all add to
+        // this map.
+        ThreadManager::lock();
         _side_polys[geom->get_side_id()].push_back(geom);
+        ThreadManager::unlock();
         solid_polys.push_back(geom);
         poly_sides[geom] = side;
 
