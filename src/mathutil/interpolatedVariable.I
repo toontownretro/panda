@@ -650,8 +650,12 @@ remove_samples_before(double timestamp) {
     if (_sample_points[i].timestamp < timestamp) {
       // We need to preserve this sample (ie: the one right before this
       // timestamp) and the sample right before it (for hermite blending), and
-      // we can get rid of everything else.
-      _sample_points.resize(i + 3);
+      // we can get rid of everything else.  Only ever shrink: growing it would
+      // add samples with garbage values, eg. when a variable that's stopped
+      // changing has only a couple of samples left.
+      if (i + 3 < _sample_points.size()) {
+        _sample_points.resize(i + 3);
+      }
       break;
     }
   }
