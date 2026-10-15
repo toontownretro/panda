@@ -1,29 +1,30 @@
-// Filename: lerpchans.h
-// Created by:  frang (11Apr00)
-//
-////////////////////////////////////////////////////////////////////
-//
-// PANDA 3D SOFTWARE
-// Copyright (c) Carnegie Mellon University.  All rights reserved.
-//
-// All use of this software is subject to the terms of the revised BSD
-// license.  You should have received a copy of this license along
-// with this source code in a file named "LICENSE."
-//
-////////////////////////////////////////////////////////////////////
+/**
+ * PANDA 3D SOFTWARE
+ * Copyright (c) Carnegie Mellon University.  All rights reserved.
+ *
+ * All use of this software is subject to the terms of the revised BSD
+ * license.  You should have received a copy of this license along
+ * with this source code in a file named "LICENSE."
+ *
+ * @file lerpchans.h
+ * @author frang
+ * @date 2000-04-11
+ */
 
 #ifndef __LERPCHANS_H__
 #define __LERPCHANS_H__
 
-// There are three fundamental types of lerp channel: tabular/keyframe,
-// procedural, and composite.  Tabular channels may have an interpolator
-// associated with them, to determine values between samples.  Proceedural
-// channels compute each data point as needed.  Composite channels can be
-// either blending or concatenation objects.  Blending objects take some
-// number of channels as input, apply a blending function to them in order
-// to yield what appears to be a single channel.  Concatenation objects
-// take some number of channels as input and string them end-to-end to yield
-// what appears to be a single channel.
+/**
+ *There are three fundamental types of lerp channel: tabular/keyframe,
+ *procedural, and composite.  Tabular channels may have an interpolator
+ *associated with them, to determine values between samples.  Proceedural
+ *channels compute each data point as needed.  Composite channels can be
+ *either blending or concatenation objects.  Blending objects take some
+ *number of channels as input, apply a blending function to them in order
+ *to yield what appears to be a single channel.  Concatenation objects
+ *take some number of channels as input and string them end-to-end to yield
+ *what appears to be a single channel.
+ */
 
 class LerpChannelRange {
 private:
