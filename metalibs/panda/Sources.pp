@@ -14,7 +14,7 @@
 
 #define COMPONENT_LIBS \
   anim collide cull device dgraph display dxml \
-  event gobj grutil gsgbase linmath mathutil \
+  event gobj grutil gsgbase lerp linmath mathutil \
   movies parametrics pgraph pgraphnodes pgui pipeline \
   pnmimage pnmimagetypes pstatclient putil recorder text tform \
   nativenet net audio pnmtext steamnet shader \

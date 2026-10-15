@@ -4,7 +4,7 @@
   #define TARGET panda3d.core
   #define IGATE_LIBS \
     anim collide cull device dgraph display \
-    downloader dxml event express gobj grutil gsgbase linmath \
+    downloader dxml event express gobj grutil gsgbase lerp linmath \
     mathutil movies parametrics pgraph pgraphnodes pgui \
     pipeline pnmimage pstatclient putil recorder text tform \
     prc nativenet net audio pnmtext steamnet shader \

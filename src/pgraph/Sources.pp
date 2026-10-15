@@ -1,7 +1,7 @@
 #define OTHER_LIBS interrogatedb \
                    dtoolutil:c dtoolbase:c dtool:m prc
 #define LOCAL_LIBS \
-    event gsgbase gobj putil linmath \
+    lerp event gsgbase gobj putil linmath \
     downloader express pandabase pstatclient material
 
 #begin lib_target
@@ -80,6 +80,7 @@
     nodePath.I nodePath.h nodePath.cxx \
     nodePathCollection.I nodePathCollection.h \
     nodePathComponent.I nodePathComponent.h \
+    nodePathLerps.h \
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
@@ -185,6 +186,7 @@
     modelRoot.cxx \
     nodePathCollection.cxx \
     nodePathComponent.cxx \
+    nodePathLerps.cxx \
     occluderEffect.cxx \
     occluderNode.cxx \
     pandaNode.cxx \
@@ -290,6 +292,7 @@
     nodePath.I nodePath.h \
     nodePathCollection.I nodePathCollection.h \
     nodePathComponent.I nodePathComponent.h \
+    nodePathLerps.h \
     occluderEffect.I occluderEffect.h \
     occluderNode.I occluderNode.h \
     pandaNode.I pandaNode.h \
