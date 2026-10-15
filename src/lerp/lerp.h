@@ -18,14 +18,14 @@
 #include "pandabase.h"
 
 #include "lerpfunctor.h"
-#include "lerpblend.h"
+#include "legacylerpblend.h"
 
 #include "typedReferenceCount.h"
 #include "eventHandler.h"
 
 class EXPCL_PANDA_LERP Lerp : public TypedReferenceCount {
 private:
-  PT(LerpBlendType) _blend;
+  PT(LegacyLerpBlendType) _blend;
   PT(LerpFunctor) _func;
   std::string _event;
   PN_stdfloat _startt;
@@ -34,8 +34,8 @@ private:
   PN_stdfloat _t;
 
 PUBLISHED:
-  Lerp(LerpFunctor* func, PN_stdfloat endt, LerpBlendType* blend);
-  Lerp(LerpFunctor* func, PN_stdfloat startt, PN_stdfloat endt, LerpBlendType* blend);
+  Lerp(LerpFunctor* func, PN_stdfloat endt, LegacyLerpBlendType* blend);
+  Lerp(LerpFunctor* func, PN_stdfloat startt, PN_stdfloat endt, LegacyLerpBlendType* blend);
   Lerp(const Lerp&);
   virtual ~Lerp();
   Lerp& operator=(const Lerp&);
@@ -71,7 +71,7 @@ private:
 
 class EXPCL_PANDA_LERP AutonomousLerp : public TypedReferenceCount {
 private:
-  PT(LerpBlendType) _blend;
+  PT(LegacyLerpBlendType) _blend;
   PT(LerpFunctor) _func;
   EventHandler* _handler;
   std::string _event;
@@ -83,10 +83,10 @@ private:
   static void handle_event(const Event *, void*);
 
 PUBLISHED:
-  AutonomousLerp(LerpFunctor* func, PN_stdfloat endt, LerpBlendType* blend,
+  AutonomousLerp(LerpFunctor* func, PN_stdfloat endt, LegacyLerpBlendType* blend,
                  EventHandler* handler);
   AutonomousLerp(LerpFunctor* func, PN_stdfloat startt, PN_stdfloat endt,
-                 LerpBlendType* blend, EventHandler* handler);
+                 LegacyLerpBlendType* blend, EventHandler* handler);
   AutonomousLerp(const AutonomousLerp&);
   virtual ~AutonomousLerp();
   AutonomousLerp& operator=(const AutonomousLerp&);

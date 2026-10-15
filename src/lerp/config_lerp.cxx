@@ -54,9 +54,9 @@ ConfigureFn(config_lerp) {
   SimpleQueryLerpFunctor<LVector4>::init_type();
   MultiLerpFunctor::init_type();
 
-  LerpBlendType::init_type();
-  EaseInBlendType::init_type();
-  EaseOutBlendType::init_type();
-  EaseInOutBlendType::init_type();
-  NoBlendType::init_type();
+  LegacyLerpBlendType::init_type();
+  LegacyEaseInBlendType::init_type();
+  LegacyEaseOutBlendType::init_type();
+  LegacyEaseInOutBlendType::init_type();
+  LegacyNoBlendType::init_type();
 }

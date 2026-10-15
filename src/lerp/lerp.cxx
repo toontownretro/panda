@@ -33,12 +33,12 @@ static INLINE PN_stdfloat scale_t(PN_stdfloat t, PN_stdfloat start, PN_stdfloat 
   return ret / end;
 }
 
-Lerp::Lerp(LerpFunctor* func, PN_stdfloat endt, LerpBlendType* blend)
+Lerp::Lerp(LerpFunctor* func, PN_stdfloat endt, LegacyLerpBlendType* blend)
   : _blend(blend), _func(func), _startt(0.), _endt(endt),
     _delta(1.), _t(0.) {}
 
 Lerp::Lerp(LerpFunctor* func, PN_stdfloat startt, PN_stdfloat endt,
-           LerpBlendType* blend) : _blend(blend), _func(func),
+           LegacyLerpBlendType* blend) : _blend(blend), _func(func),
                                    _startt(startt),
                                    _endt(endt),
                                    _delta(1.),
@@ -70,7 +70,7 @@ void Lerp::step() {
     }
   } else {
     PN_stdfloat t = scale_t(_t, _startt, _endt);
-    t = (_blend==(LerpBlendType*)0L)?t:(*_blend)(t);
+    t = (_blend==(LegacyLerpBlendType*)0L)?t:(*_blend)(t);
     (*_func)(t);
   }
 }
@@ -86,7 +86,7 @@ PN_stdfloat Lerp::get_step_size() const {
 void Lerp::set_t(PN_stdfloat t) {
   _t = t;
   PN_stdfloat x = scale_t(_t, _startt, _endt);
-  x = (_blend==(LerpBlendType*)0L)?x:(*_blend)(x);
+  x = (_blend==(LegacyLerpBlendType*)0L)?x:(*_blend)(x);
   (*_func)(x);
 }
 
@@ -111,12 +111,12 @@ std::string Lerp::get_end_event() const {
 }
 
 AutonomousLerp::AutonomousLerp(LerpFunctor* func, PN_stdfloat endt,
-                               LerpBlendType* blend, EventHandler* handler)
+                               LegacyLerpBlendType* blend, EventHandler* handler)
   : _blend(blend), _func(func), _handler(handler),
     _startt(0.), _endt(endt), _t(0.) {}
 
 AutonomousLerp::AutonomousLerp(LerpFunctor* func, PN_stdfloat startt, PN_stdfloat endt,
-                               LerpBlendType* blend, EventHandler* handler)
+                               LegacyLerpBlendType* blend, EventHandler* handler)
   : _blend(blend), _func(func), _handler(handler),
     _startt(startt), _endt(endt), _t(startt) {}
 
@@ -165,7 +165,7 @@ LerpFunctor* AutonomousLerp::get_functor() const {
 void AutonomousLerp::set_t(PN_stdfloat t) {
   _t = t;
   PN_stdfloat x = scale_t(_t, _startt, _endt);
-  x = (_blend==(LerpBlendType*)0L)?x:(*_blend)(x);
+  x = (_blend==(LegacyLerpBlendType*)0L)?x:(*_blend)(x);
   (*_func)(x);
 }
 
@@ -191,7 +191,7 @@ void AutonomousLerp::step() {
   PN_stdfloat delta = ClockObject::get_global_clock()->get_dt();
   _t += delta;
   PN_stdfloat t = scale_t(_t, _startt, _endt);
-  t = (_blend==(LerpBlendType*)0L)?t:(*_blend)(t);
+  t = (_blend==(LegacyLerpBlendType*)0L)?t:(*_blend)(t);
   (*_func)(t);
   if (is_done() && !_event.empty())
     throw_event(_event);

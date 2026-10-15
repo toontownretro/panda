@@ -10,13 +10,13 @@
     event linmath putil
 
   #define SOURCES \
-    config_lerp.h lerp.h lerpblend.h lerpfunctor.h
+    config_lerp.h lerp.h legacylerpblend.h lerpfunctor.h
 
   #define COMPOSITE_SOURCES \
-    config_lerp.cxx lerp.cxx lerpblend.cxx lerpfunctor.cxx
+    config_lerp.cxx lerp.cxx legacylerpblend.cxx lerpfunctor.cxx
 
   #define INSTALL_HEADERS \
-    config_lerp.h lerp.h lerpblend.h lerpfunctor.h
+    config_lerp.h lerp.h legacylerpblend.h lerpfunctor.h
 
   #define IGATESCAN all
 
